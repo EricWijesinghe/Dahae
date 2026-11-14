@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 pub const MIN_COUNT_MINUTES: u32 = 60;
 /// Per-option ceiling for counts services that set no `max_each`.
 pub const MAX_COUNT: u8 = 20;
+/// Admin ceilings for one option: a unit price (VAT incl.) and its duration.
+pub const MAX_UNIT_PRICE: i64 = 10_000_000;
+pub const MAX_UNIT_MINUTES: u32 = 1_440;
 const FULL_BPS: i64 = 10_000;
 
 /// How a service is booked and priced.
@@ -75,9 +78,9 @@ impl Service {
         }
     }
 
-    /// Counts service: price and minutes for one count per option (catalogue order).
+    /// Counts service: list total, multi-item discount and minutes for one count per option (catalogue order).
     /// Two or more items take the multi-item discount, rounded like the other discounts.
-    pub fn count_price(&self, counts: &[u8]) -> Result<(Won, u32), DomainError> {
+    pub fn count_price(&self, counts: &[u8]) -> Result<CountsPrice, DomainError> {
         let Pricing::Counts {
             units,
             max_each,
@@ -94,16 +97,22 @@ impl Service {
         if items == 0 {
             return Err(DomainError::OutOfRange("counts"));
         }
-        let list = units.iter().zip(counts).fold(Won::ZERO, |sum, (u, n)| sum + Won(u.price.0 * i64::from(*n)));
-        let minutes = units
-            .iter()
-            .zip(counts)
-            .map(|(u, n)| u.minutes * u32::from(*n))
-            .sum::<u32>()
+        let list = sum_checked(units.iter().zip(counts).map(|(u, n)| u.price.0.checked_mul(i64::from(*n)))).ok_or(DomainError::OutOfRange("price"))?;
+        let raw_minutes = sum_checked(units.iter().zip(counts).map(|(u, n)| u.minutes.checked_mul(u32::from(*n)).map(i64::from)))
+            .ok_or(DomainError::OutOfRange("minutes"))?;
+        let minutes = u32::try_from(raw_minutes)
+            .map_err(|_| DomainError::OutOfRange("minutes"))?
             .max(MIN_COUNT_MINUTES);
-        let discount = multi_item_discount(list, *multi_discount_bps)?;
-        let total = if items >= 2 { list.saturating_sub(discount) } else { list };
-        Ok((total, minutes))
+        let multi_discount = if items >= 2 {
+            multi_item_discount(Won(list), *multi_discount_bps)?
+        } else {
+            Won::ZERO
+        };
+        Ok(CountsPrice {
+            list: Won(list),
+            multi_discount,
+            minutes,
+        })
     }
 
     /// Counts for a booking: its own `counts`, or a legacy `unit_index` read as one item of that option.
@@ -137,6 +146,19 @@ fn multi_item_discount(list: Won, bps: i64) -> Result<Won, DomainError> {
         return Err(DomainError::OutOfRange("multi_discount_bps"));
     }
     Ok(list.times_bps(bps).round100())
+}
+
+/// Sums checked terms; `None` when any term or the running total overflows.
+fn sum_checked<T: Into<i64>>(terms: impl Iterator<Item = Option<T>>) -> Option<i64> {
+    terms.into_iter().try_fold(0i64, |acc, term| acc.checked_add(term?.into()))
+}
+
+/// Priced counts before coupons: the catalogue list sum, the multi-item discount taken off it, and the minutes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CountsPrice {
+    pub list: Won,
+    pub multi_discount: Won,
+    pub minutes: u32,
 }
 
 fn unit(label_key: &str, minutes: u32, price: i64) -> UnitOption {
@@ -309,19 +331,43 @@ mod tests {
     #[test]
     fn spec_example_aircon_two_stand_one_wall() {
         // 2 x 119,000 + 1 x 79,000 = 317,000, -10% = 285,300; 2 x 120 + 90 = 330 minutes.
-        assert_eq!(by_code("aircon").count_price(&[1, 2, 0, 0]), Ok((Won(285_300), 330)));
+        let p = by_code("aircon").count_price(&[1, 2, 0, 0]).unwrap();
+        assert_eq!(
+            p,
+            CountsPrice {
+                list: Won(317_000),
+                multi_discount: Won(31_700),
+                minutes: 330
+            }
+        );
     }
 
     #[test]
     fn spec_example_window_three_small_two_large() {
         // 3 x 9,000 + 2 x 15,000 = 57,000 (no multi discount); 3 x 15 + 2 x 25 = 95 minutes.
-        assert_eq!(by_code("window").count_price(&[3, 2]), Ok((Won(57_000), 95)));
+        let p = by_code("window").count_price(&[3, 2]).unwrap();
+        assert_eq!(
+            p,
+            CountsPrice {
+                list: Won(57_000),
+                multi_discount: Won(0),
+                minutes: 95
+            }
+        );
     }
 
     #[test]
     fn spec_example_disinfection_pest_and_sanitize() {
         // 80,000 + 100,000 = 180,000, -10% = 162,000.
-        assert_eq!(by_code("disinfection").count_price(&[1, 0, 1, 0]), Ok((Won(162_000), 180)));
+        let p = by_code("disinfection").count_price(&[1, 0, 1, 0]).unwrap();
+        assert_eq!(
+            p,
+            CountsPrice {
+                list: Won(180_000),
+                multi_discount: Won(18_000),
+                minutes: 180
+            }
+        );
     }
 
     #[test]
@@ -341,7 +387,30 @@ mod tests {
     #[test]
     fn minimum_sixty_minutes() {
         // One small window is 15 minutes of work; the booking still takes an hour.
-        assert_eq!(by_code("window").count_price(&[1, 0]), Ok((Won(9_000), 60)));
+        let p = by_code("window").count_price(&[1, 0]).unwrap();
+        assert_eq!((p.list, p.minutes), (Won(9_000), 60));
+    }
+
+    #[test]
+    fn oversized_price_is_an_error_not_a_wrap() {
+        let mut huge = by_code("window");
+        huge.pricing = Pricing::Counts {
+            units: vec![unit("big", 60, i64::MAX / 2)],
+            max_each: None,
+            multi_discount_bps: 0,
+        };
+        assert_eq!(huge.count_price(&[3]), Err(DomainError::OutOfRange("price")));
+    }
+
+    #[test]
+    fn oversized_minutes_is_an_error_not_a_wrap() {
+        let mut long = by_code("window");
+        long.pricing = Pricing::Counts {
+            units: vec![unit("long", u32::MAX / 2, 1_000)],
+            max_each: None,
+            multi_discount_bps: 0,
+        };
+        assert_eq!(long.count_price(&[3]), Err(DomainError::OutOfRange("minutes")));
     }
 
     #[test]

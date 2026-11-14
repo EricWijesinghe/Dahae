@@ -29,7 +29,11 @@ pub struct WelcomeOffer {
 
 impl Default for WelcomeOffer {
     fn default() -> Self {
-        Self { enabled: false, kind: DiscountKind::Amount, value: 5_000 }
+        Self {
+            enabled: false,
+            kind: DiscountKind::Amount,
+            value: 5_000,
+        }
     }
 }
 
@@ -39,7 +43,11 @@ impl WelcomeOffer {
             DiscountKind::Amount => (1, MAX_AMOUNT),
             DiscountKind::Percent => (1, MAX_PERCENT),
         };
-        if (min..=max).contains(&self.value) { Ok(()) } else { Err(DomainError::OutOfRange("welcome_value")) }
+        if (min..=max).contains(&self.value) {
+            Ok(())
+        } else {
+            Err(DomainError::OutOfRange("welcome_value"))
+        }
     }
 
     /// Discount for a list price, never more than the price itself.
@@ -62,10 +70,11 @@ pub fn welcome_applies(offer: &WelcomeOffer, prior_bookings: i64, has_coupon: bo
 
 /// Applies the welcome discount to a server-computed price (the list price stays untouched).
 pub fn apply_welcome(price: PriceBreakdown, offer: &WelcomeOffer) -> PriceBreakdown {
-    let discount = offer.discount_for(price.list_price);
+    let after_multi = price.list_price.saturating_sub(price.multi_discount);
+    let discount = offer.discount_for(after_multi);
     PriceBreakdown {
         discount,
-        total: price.list_price.saturating_sub(discount),
+        total: after_multi.saturating_sub(discount),
         ..price
     }
 }
@@ -85,7 +94,11 @@ impl Default for ReferralOffer {
 
 impl ReferralOffer {
     pub fn validate(&self) -> Result<(), DomainError> {
-        if (1..=MAX_AMOUNT).contains(&self.amount) { Ok(()) } else { Err(DomainError::OutOfRange("referral_amount")) }
+        if (1..=MAX_AMOUNT).contains(&self.amount) {
+            Ok(())
+        } else {
+            Err(DomainError::OutOfRange("referral_amount"))
+        }
     }
 }
 
@@ -155,7 +168,11 @@ pub fn mask_name(name: &str) -> String {
         [only] => format!("{only}*"),
         [first, .., last] => {
             let middle = "*".repeat(chars.len() - 2);
-            if chars.len() == 2 { format!("{first}*") } else { format!("{first}{middle}{last}") }
+            if chars.len() == 2 {
+                format!("{first}*")
+            } else {
+                format!("{first}{middle}{last}")
+            }
         }
     }
 }
@@ -165,13 +182,23 @@ pub fn mask_name(name: &str) -> String {
 pub fn redact_contacts(text: &str) -> String {
     let words: Vec<String> = text
         .split(' ')
-        .map(|w| if w.contains('@') && w.contains('.') { "***".to_string() } else { w.to_string() })
+        .map(|w| {
+            if w.contains('@') && w.contains('.') {
+                "***".to_string()
+            } else {
+                w.to_string()
+            }
+        })
         .collect();
     let joined = words.join(" ");
     let mut out = String::with_capacity(joined.len());
     let mut run = String::new();
     let flush = |run: &mut String, out: &mut String| {
-        if run.chars().filter(char::is_ascii_digit).count() >= 4 { out.push_str("***") } else { out.push_str(run) }
+        if run.chars().filter(char::is_ascii_digit).count() >= 4 {
+            out.push_str("***")
+        } else {
+            out.push_str(run)
+        }
         run.clear();
     };
     for c in joined.chars() {
@@ -191,12 +218,22 @@ mod tests {
     use super::*;
 
     fn price(list: i64) -> PriceBreakdown {
-        PriceBreakdown { list_price: Won(list), discount: Won::ZERO, total: Won(list), minutes: 60 }
+        PriceBreakdown {
+            list_price: Won(list),
+            multi_discount: Won::ZERO,
+            discount: Won::ZERO,
+            total: Won(list),
+            minutes: 60,
+        }
     }
 
     #[test]
     fn welcome_is_first_booking_only_and_never_stacks_on_coupons() {
-        let on = WelcomeOffer { enabled: true, kind: DiscountKind::Amount, value: 5_000 };
+        let on = WelcomeOffer {
+            enabled: true,
+            kind: DiscountKind::Amount,
+            value: 5_000,
+        };
         assert!(welcome_applies(&on, 0, false));
         assert!(!welcome_applies(&on, 1, false), "second booking");
         assert!(!welcome_applies(&on, 0, true), "coupon wins, no stacking");
@@ -205,9 +242,17 @@ mod tests {
 
     #[test]
     fn welcome_discount_is_capped_and_rounded_server_side() {
-        let amount = WelcomeOffer { enabled: true, kind: DiscountKind::Amount, value: 10_000 };
+        let amount = WelcomeOffer {
+            enabled: true,
+            kind: DiscountKind::Amount,
+            value: 10_000,
+        };
         assert_eq!(amount.discount_for(Won(7_000)), Won(7_000), "never below zero");
-        let pct = WelcomeOffer { enabled: true, kind: DiscountKind::Percent, value: 10 };
+        let pct = WelcomeOffer {
+            enabled: true,
+            kind: DiscountKind::Percent,
+            value: 10,
+        };
         assert_eq!(pct.discount_for(Won(52_000)), Won(5_200).round100());
         assert_eq!(WelcomeOffer { enabled: false, ..pct }.discount_for(Won(52_000)), Won::ZERO);
         let p = apply_welcome(price(52_000), &amount);
@@ -216,10 +261,41 @@ mod tests {
 
     #[test]
     fn welcome_config_bounds() {
-        assert!(WelcomeOffer { enabled: true, kind: DiscountKind::Percent, value: 51 }.validate().is_err());
-        assert!(WelcomeOffer { enabled: true, kind: DiscountKind::Percent, value: 50 }.validate().is_ok());
-        assert!(WelcomeOffer { enabled: true, kind: DiscountKind::Amount, value: 0 }.validate().is_err());
-        assert!(ReferralOffer { enabled: true, amount: 100_001 }.validate().is_err());
+        assert!(
+            WelcomeOffer {
+                enabled: true,
+                kind: DiscountKind::Percent,
+                value: 51
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            WelcomeOffer {
+                enabled: true,
+                kind: DiscountKind::Percent,
+                value: 50
+            }
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            WelcomeOffer {
+                enabled: true,
+                kind: DiscountKind::Amount,
+                value: 0
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            ReferralOffer {
+                enabled: true,
+                amount: 100_001
+            }
+            .validate()
+            .is_err()
+        );
     }
 
     #[test]

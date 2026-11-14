@@ -202,7 +202,7 @@ pub async fn insert_paid(
     .bind(i16::from(b.start_hour))
     .bind(price.minutes as i32)
     .bind(price.list_price.0)
-    .bind(price.discount.0)
+    .bind(price.total_discount().0)
     .bind(price.total.0)
     .bind(b.coupon_id)
     .bind(&notes)

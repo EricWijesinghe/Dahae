@@ -264,9 +264,11 @@ async fn charge_visit(s: &AppState, d: &Due) -> ApiResult<Attempt> {
         Err(e) => return blocked(e),
     };
     let list = price_booking_with(&prep.service, body.unit_index, &body.counts, None, Utc::now())?;
-    let vp = visit_price(list.list_price.0, u8::try_from(sub.discount_percent).unwrap_or(0))?;
+    // The visit discount applies after the multi-item discount, which `list.total` already holds.
+    let vp = visit_price(list.total.0, u8::try_from(sub.discount_percent).unwrap_or(0))?;
     let price = PriceBreakdown {
         list_price: list.list_price,
+        multi_discount: list.multi_discount,
         discount: Won(vp.discount),
         total: Won(vp.total),
         minutes: list.minutes,
