@@ -46,7 +46,7 @@ Future<bool> requireSignIn(
   if (await completeSignIn(deps)) {
     await nav.push(
       MaterialPageRoute<void>(
-        builder: (_) => const ProfileScreen(popOne: true),
+        builder: (_) => const ProfileScreen(returnToCaller: true),
       ),
     );
   }

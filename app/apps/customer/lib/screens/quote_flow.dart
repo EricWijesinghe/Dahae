@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 import '../guest.dart';
 import '../guest_draft.dart';
 import '../state.dart';
+import 'auth.dart' show ensureCustomerName;
 import 'booking_flow.dart';
 import 'quote_price_hint.dart';
 import 'quote_review.dart';
@@ -281,6 +282,7 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
     if (!await requireSignIn(context, reason: SignInReason.book) || !mounted) {
       return;
     }
+    if (!await ensureCustomerName(context) || !mounted) return;
     setState(() => _busy = true);
     final app = context.appRead;
     app.analytics.track('booking_start', screen: 'quote');
