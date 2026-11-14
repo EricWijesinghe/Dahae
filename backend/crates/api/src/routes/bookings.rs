@@ -200,7 +200,7 @@ pub(crate) async fn create_core(s: &AppState, user: Uuid, req: &CreateBooking) -
 async fn create_quote(s: &AppState, user: Uuid, b: &BookingBody, prep: &Prepared) -> ApiResult<Uuid> {
     // Anything needing its own pool connection is read before the slot lock is taken.
     let formula = load_formula(&s.db).await?;
-    let sent = b.answers.clone().ok_or(ApiError::BadRequest("answers_required"))?;
+    let sent = b.answers.clone().ok_or(ApiError::BadRequest("answers_required"))?.with_home_building();
     let answers = domain::quote::fixed_answers_for(&prep.service.code, sent);
     let addons = super::catalog::addon_lines(&s.db, &answers).await?;
     let mut tx = s.db.begin().await?;
