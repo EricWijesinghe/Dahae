@@ -759,3 +759,19 @@ async fn transfer_to_a_non_admin_spends_no_code(db: PgPool) {
     .await;
     assert_eq!(st, StatusCode::OK, "the refused transfer left the code unspent: {b}");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn admin_invite_needs_the_owner_code_and_a_consultant_invite_does_not(db: PgPool) {
+    let app = common::app(db.clone());
+    let owner = enrolled(&db, &app, "invite-owner@test.local", true).await;
+    let plain = enrolled(&db, &app, "invite-plain@test.local", false).await;
+    let admin_invite = json!({ "email": "invite-admin@test.local", "name": "Admin", "phone": "01055556666", "role": "admin", "channel": "copy" });
+    let (st, b) = call(&app, "POST", "/v1/admin/staff/invite", Some(owner.token.as_str()), Some(admin_invite.clone())).await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "admin invite without owner code: {b}");
+    let code = fresh(&db, &owner).await;
+    let (st, b) = owner_call(&app, "POST", "/v1/admin/staff/invite", &owner.token, Some(code.as_str()), Some(admin_invite)).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let consultant = json!({ "email": "invite-consult@test.local", "name": "Consult", "phone": "01077778888", "role": "consultant", "channel": "copy" });
+    let (st, b) = call(&app, "POST", "/v1/admin/staff/invite", Some(plain.token.as_str()), Some(consultant)).await;
+    assert_eq!(st, StatusCode::OK, "consultant invite needs no owner code: {b}");
+}
