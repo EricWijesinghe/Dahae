@@ -8,7 +8,6 @@ use reqwest::{StatusCode, header::AUTHORIZATION};
 use serde::Serialize;
 use serde_json::Value;
 
-const API: &str = "https://api.portone.io";
 /// PortOne `Currency` value for won (SDK `Currency`; SANDBOX-VERIFY).
 const CURRENCY_KRW: &str = "KRW";
 
@@ -130,11 +129,6 @@ pub async fn cancel(http: &reqwest::Client, base: &str, secret: &str, payment_id
         .await
         .map_err(upstream)?;
     read(resp).await.map(|_| ())
-}
-
-/// Production base URL for the default helpers in the routes layer.
-pub fn api_base() -> &'static str {
-    API
 }
 
 #[cfg(test)]

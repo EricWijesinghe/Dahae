@@ -343,7 +343,9 @@ struct Refunds {
 impl Refunds {
     async fn close_receipts(&self, s: &AppState) {
         for (pid, tx) in &self.closed {
-            super::cash_receipts::on_full_refund(s, *pid, tx).await;
+            if let Err(e) = super::cash_receipts::on_full_refund(s, *pid, tx).await {
+                tracing::error!(error = %e, payment = %pid, "cash receipt cancel not recorded; counted for a check");
+            }
         }
     }
 }
