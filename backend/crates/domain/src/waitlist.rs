@@ -41,9 +41,7 @@ pub struct WaitEntry {
 /// Index of the entry that should receive the freed slot: first come, first served among entries
 /// whose range overlaps the freed range and that have no live offer. `queue` must be in join order.
 pub fn pick_next_offer(queue: &[WaitEntry], freed: &SlotRange) -> Option<usize> {
-    queue
-        .iter()
-        .position(|e| !e.has_live_offer && e.range.overlaps(freed))
+    queue.iter().position(|e| !e.has_live_offer && e.range.overlaps(freed))
 }
 
 /// Expiry instant for an offer made at `offered_at`.
@@ -53,11 +51,7 @@ pub fn offer_expires_at(offered_at: DateTime<Utc>) -> DateTime<Utc> {
 
 /// An offer can be accepted only strictly before its expiry.
 pub fn check_offer_open(expires_at: DateTime<Utc>, now: DateTime<Utc>) -> Result<(), DomainError> {
-    if now < expires_at {
-        Ok(())
-    } else {
-        Err(DomainError::OfferExpired)
-    }
+    if now < expires_at { Ok(()) } else { Err(DomainError::OfferExpired) }
 }
 
 #[cfg(test)]
@@ -66,7 +60,11 @@ mod tests {
     use chrono::TimeZone;
 
     fn range(day: u32, start: u32, end: u32) -> SlotRange {
-        SlotRange { date: NaiveDate::from_ymd_opt(2026, 11, day).unwrap(), start_hour: start, end_hour: end }
+        SlotRange {
+            date: NaiveDate::from_ymd_opt(2026, 11, day).unwrap(),
+            start_hour: start,
+            end_hour: end,
+        }
     }
 
     fn entry(id: i64, r: SlotRange, minute: u32) -> WaitEntry {

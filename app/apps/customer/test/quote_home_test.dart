@@ -202,10 +202,8 @@ void main() {
     (tester) async {
       final fake = await _pump(
         tester,
-        (app) => QuoteFlowScreen(
-          service: _wholeHome,
-          home: MoveHome.oneTwoRoom,
-        ),
+        (app) =>
+            QuoteFlowScreen(service: _wholeHome, home: MoveHome.oneTwoRoom),
       );
       await _tap(tester, find.text(koT.dfLayoutOneHalf));
       await _tap(tester, find.text(koT.dfNone).first); // duplex: no
@@ -222,7 +220,10 @@ void main() {
       for (var i = 0; i < 4; i++) {
         await _tap(tester, _next());
       }
-      await _tap(tester, find.widgetWithText(PrimaryButton, koT.dfSubmitRequest));
+      await _tap(
+        tester,
+        find.widgetWithText(PrimaryButton, koT.dfSubmitRequest),
+      );
 
       final body = fake.lastCall('POST', '/bookings')!.json;
       final answers = body['answers'] as Map<String, dynamic>;

@@ -32,12 +32,10 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
 
   Future<void> _load() async {
     try {
-      final r =
-          await context.api.get(
-                '/admin/threads',
-                query: {'audience': _audience},
-              )
-              as List;
+      final r = await context.api.get(
+        '/admin/threads',
+        query: {'audience': _audience},
+      ) as List;
       if (!mounted) return;
       setState(() {
         _threads = r.map((e) => ChatThread.fromJson(e as Json)).toList();
@@ -293,9 +291,9 @@ class _ThreadViewState extends State<ThreadView> {
   }
 
   Future<void> _load() async {
-    final r =
-        await context.api.get('/admin/threads/${widget.threadId}/messages')
-            as List;
+    final r = await context.api.get(
+      '/admin/threads/${widget.threadId}/messages',
+    ) as List;
     if (!mounted) return;
     setState(
       () => _msgs = r.map((e) => ChatMessage.fromJson(e as Json)).toList(),
@@ -308,11 +306,9 @@ class _ThreadViewState extends State<ThreadView> {
 
   Future<void> _toggleAi() async {
     try {
-      final r =
-          await context.api.put('/admin/threads/${widget.threadId}/ai', {
-                'paused': !_aiPaused,
-              })
-              as Json;
+      final r = await context.api.put('/admin/threads/${widget.threadId}/ai', {
+        'paused': !_aiPaused,
+      }) as Json;
       if (!mounted) return;
       setState(() => _aiPaused = r['ai_paused'] == true);
       widget.onAiChanged?.call();
@@ -327,10 +323,9 @@ class _ThreadViewState extends State<ThreadView> {
     try {
       final m = ChatMessage.fromJson(
         await context.api.post('/admin/threads/${widget.threadId}/messages', {
-              'kind': 'text',
-              'text': _input.text,
-            })
-            as Json,
+          'kind': 'text',
+          'text': _input.text,
+        }) as Json,
       );
       if (!mounted) return;
       setState(() => _msgs = [..._msgs.where((x) => x.id != m.id), m]);

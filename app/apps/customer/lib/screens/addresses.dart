@@ -597,9 +597,8 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                     FilteringTextInputFormatter.digitsOnly,
                     LengthLimitingTextInputFormatter(3),
                   ],
-                  decoration: deco(
-                    t.addressSize,
-                  ).copyWith(suffixText: t.pyeong('').trim()),
+                  decoration: deco(t.addressSize)
+                      .copyWith(suffixText: t.pyeong('').trim()),
                   onChanged: (_) => setState(() {}),
                 ),
               ),

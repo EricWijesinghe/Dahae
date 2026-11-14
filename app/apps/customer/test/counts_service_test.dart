@@ -141,10 +141,8 @@ void main() {
       ServiceScreen(
         service: ac,
         initialUnit: 1,
-        initialCounts: Booking.fromJson({
-          'id': 'b',
-          'unit_index': 1,
-        }).countsOf(4),
+        initialCounts: Booking.fromJson({'id': 'b', 'unit_index': 1})
+            .countsOf(4),
       ),
     );
     await settle(tester);

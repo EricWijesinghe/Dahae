@@ -49,9 +49,9 @@ class _PhoneAttachScreenState extends State<PhoneAttachScreen> {
   }
 
   Future<void> _send() => _run(() async {
-    final r =
-        await widget.api.post('/auth/otp', {'phone': _digits})
-            as Map<String, dynamic>;
+    final r = await widget.api.post('/auth/otp', {
+      'phone': _digits,
+    }) as Map<String, dynamic>;
     if (!mounted) return;
     setState(() {
       _sent = true;

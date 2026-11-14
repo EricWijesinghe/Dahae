@@ -58,13 +58,10 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
   }
 
   Future<void> _find() => _run(() async {
-    final rows =
-        (await context.api.get(
-                  '/admin/privacy/customers',
-                  query: {'phone': _phone.text.trim()},
-                )
-                as List)
-            .cast<Json>();
+    final rows = (await context.api.get(
+      '/admin/privacy/customers',
+      query: {'phone': _phone.text.trim()},
+    ) as List).cast<Json>();
     if (mounted) setState(() => _found = rows);
   });
 

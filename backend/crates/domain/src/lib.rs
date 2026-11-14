@@ -2,19 +2,19 @@
 //! Everything here is pure and deterministic: callers pass "today" and data in.
 
 pub mod booking;
-pub mod cash_receipt;
 pub mod cancel_policy;
+pub mod cash_receipt;
 pub mod catalog;
 pub mod coupon;
 pub mod error;
-pub mod finance;
 pub mod feed;
+pub mod finance;
 pub mod growth;
 pub mod household;
 pub mod money;
 pub mod partner;
-pub mod points;
 pub mod peak;
+pub mod points;
 pub mod pricing;
 pub mod quality;
 pub mod quote;

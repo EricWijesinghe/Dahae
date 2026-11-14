@@ -69,7 +69,10 @@ pub struct WelcomePack(pub Vec<WelcomeCoupon>);
 impl Default for WelcomePack {
     /// One "first cleaning" coupon for any service.
     fn default() -> Self {
-        Self(vec![WelcomeCoupon { amount: Won(DEFAULT_WELCOME_AMOUNT), service_code: None }])
+        Self(vec![WelcomeCoupon {
+            amount: Won(DEFAULT_WELCOME_AMOUNT),
+            service_code: None,
+        }])
     }
 }
 
@@ -139,12 +142,25 @@ mod tests {
         assert_eq!(issued.len(), 1);
         assert_eq!((issued[0].amount, issued[0].service_code.clone()), (Won(15_000), None));
         assert_eq!(issued[0].expires_at, now() + Duration::days(COUPON_LIFETIME_DAYS));
-        assert_eq!(serde_json::to_value(WelcomePack::default()).unwrap(), serde_json::json!([{ "amount": 15000, "service_code": null }]));
+        assert_eq!(
+            serde_json::to_value(WelcomePack::default()).unwrap(),
+            serde_json::json!([{ "amount": 15000, "service_code": null }])
+        );
     }
 
     #[test]
     fn welcome_pack_bounds() {
-        let pack = |amounts: &[i64]| WelcomePack(amounts.iter().map(|a| WelcomeCoupon { amount: Won(*a), service_code: None }).collect());
+        let pack = |amounts: &[i64]| {
+            WelcomePack(
+                amounts
+                    .iter()
+                    .map(|a| WelcomeCoupon {
+                        amount: Won(*a),
+                        service_code: None,
+                    })
+                    .collect(),
+            )
+        };
         assert!(pack(&[]).validate().is_ok(), "empty = switched off");
         assert!(pack(&[15_000, 35_000]).validate().is_ok(), "exactly the 50,000 total");
         assert!(pack(&[10_000; 3]).validate().is_ok(), "exactly three coupons");
@@ -159,7 +175,17 @@ mod tests {
 
     #[test]
     fn issue_caps_a_stored_pack_at_three_coupons_and_50000() {
-        let pack = |amounts: &[i64]| WelcomePack(amounts.iter().map(|a| WelcomeCoupon { amount: Won(*a), service_code: None }).collect());
+        let pack = |amounts: &[i64]| {
+            WelcomePack(
+                amounts
+                    .iter()
+                    .map(|a| WelcomeCoupon {
+                        amount: Won(*a),
+                        service_code: None,
+                    })
+                    .collect(),
+            )
+        };
         let won = |p: WelcomePack| p.issue(now()).iter().map(|c| c.amount.0).collect::<Vec<_>>();
         // The old limit allowed 5 x 100,000; a pack stored back then issues nothing above the caps.
         assert_eq!(won(pack(&[100_000; 5])), Vec::<i64>::new());

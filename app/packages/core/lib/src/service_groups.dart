@@ -82,7 +82,8 @@ class ServiceGroup {
   static int _sortOrder(Json j, String code) {
     final v = j['sort_order'];
     if (v == null) return 0;
-    if (v is! num) throw FormatException('group $code: sort_order not a number');
+    if (v is! num)
+      throw FormatException('group $code: sort_order not a number');
     return v.toInt();
   }
 

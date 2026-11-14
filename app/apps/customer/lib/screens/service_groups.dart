@@ -19,9 +19,7 @@ void openServiceGroup(
     'direct' when members.isNotEmpty => ServiceScreen(service: members.first),
     _ => ServiceGroupScreen(group: group),
   };
-  Navigator.of(
-    context,
-  ).push(MaterialPageRoute<void>(builder: (_) => page));
+  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 }
 
 /// Member services of [group] in its own order; services not in the catalogue are left out.
@@ -53,10 +51,7 @@ class ServiceGroupScreen extends StatelessWidget {
         children: [
           for (final s in members)
             ListTile(
-              leading: Icon3D(
-                Icon3DRegistry.serviceId(s.code),
-                size: 44,
-              ),
+              leading: Icon3D(Icon3DRegistry.serviceId(s.code), size: 44),
               title: Text(t.service(s.code)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(

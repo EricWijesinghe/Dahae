@@ -32,12 +32,10 @@ Future<List<AddressHit>> searchAddresses(
   String query, {
   int page = 1,
 }) async {
-  final r =
-      await api.get(
-            '/address/search',
-            query: {'q': query.trim(), 'page': '$page'},
-          )
-          as Map<String, dynamic>;
+  final r = await api.get(
+    '/address/search',
+    query: {'q': query.trim(), 'page': '$page'},
+  ) as Map<String, dynamic>;
   return [
     for (final h in r['results'] as List)
       AddressHit.fromJson(h as Map<String, dynamic>),

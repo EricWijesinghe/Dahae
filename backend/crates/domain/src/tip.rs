@@ -38,7 +38,10 @@ pub struct TipSplit {
 }
 
 pub fn split_tip(tip: Won) -> TipSplit {
-    TipSplit { partner: tip, platform: Won::ZERO }
+    TipSplit {
+        partner: tip,
+        platform: Won::ZERO,
+    }
 }
 
 #[cfg(test)]
