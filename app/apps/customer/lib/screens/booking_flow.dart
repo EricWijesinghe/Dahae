@@ -270,6 +270,7 @@ class VisitDateRow extends StatelessWidget {
               initialDate: date,
               firstDate: _firstDay,
               lastDate: _firstDay.add(const Duration(days: _maxDaysAhead - 1)),
+              builder: koreanPickerBuilder,
             );
             if (picked != null) onChanged(picked);
           },
@@ -655,4 +656,22 @@ class _SlotTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Date picker builder: Hangul falls back to system faces while the bundled Dahae Sans is still loading (no boxes).
+Widget koreanPickerBuilder(BuildContext ctx, Widget? child) {
+  final base = Theme.of(ctx);
+  return Theme(
+    data: base.copyWith(
+      textTheme: base.textTheme.apply(
+        fontFamilyFallback: const [
+          'Apple SD Gothic Neo',
+          'Noto Sans KR',
+          'Malgun Gothic',
+          'sans-serif',
+        ],
+      ),
+    ),
+    child: child!,
+  );
 }

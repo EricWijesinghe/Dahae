@@ -5051,6 +5051,21 @@ class TEn extends T {
   }
 
   @override
+  String get popularServices => 'Popular services';
+
+  @override
+  String get reviewsSeeAll => 'See all reviews';
+
+  @override
+  String get reviewsAllTitle => 'Reviews';
+
+  @override
+  String get reviewsEmpty => 'No reviews yet';
+
+  @override
+  String get reviewMenu => 'Review options';
+
+  @override
   String get oFlags => 'Feature switches';
 
   @override

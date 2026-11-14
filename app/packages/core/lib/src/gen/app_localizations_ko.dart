@@ -4929,6 +4929,21 @@ class TKo extends T {
   }
 
   @override
+  String get popularServices => '인기 서비스';
+
+  @override
+  String get reviewsSeeAll => '후기 전체 보기';
+
+  @override
+  String get reviewsAllTitle => '후기';
+
+  @override
+  String get reviewsEmpty => '아직 후기가 없어요';
+
+  @override
+  String get reviewMenu => '후기 메뉴';
+
+  @override
   String get oFlags => '기능 스위치';
 
   @override
