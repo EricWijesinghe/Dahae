@@ -238,12 +238,75 @@ async fn exports_are_bom_csv_with_guarded_cells_and_admin_only(pool: PgPool) {
     assert_eq!(lines[1], "2026-03,3,1,340000,50000,290000,60000,6000,80000,160000,0");
     assert!(lines.last().expect("total").starts_with("합계,"));
 
-    // A consultant (staff, not owner) may read the summary but not export.
+    // A consultant (staff, not owner) may not export, and the summary carries payouts so it is admin-only too.
     let consultant = auth::issue_access(SECRET, Uuid::now_v7(), Role::StaffConsultant).expect("token");
     let (s, _) = call(&app, "GET", uri, Some(&consultant), None).await;
     assert_eq!(s, StatusCode::FORBIDDEN);
     let (s, _) = call(&app, "GET", PERIOD, Some(&consultant), None).await;
-    assert_eq!(s, StatusCode::OK);
+    assert_eq!(s, StatusCode::FORBIDDEN);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn consultant_cannot_read_payout_series(pool: PgPool) {
+    seed_march(&pool).await;
+    let app = common::app(pool.clone());
+    let consultant = auth::issue_access(SECRET, Uuid::now_v7(), Role::StaffConsultant).expect("token");
+    for uri in [
+        "/v1/admin/finance/series?grain=week",
+        "/v1/admin/finance/partners?period=custom&from=2026-03-01&to=2026-03-31",
+        "/v1/admin/finance/services?period=custom&from=2026-03-01&to=2026-03-31",
+    ] {
+        let (s, _) = call(&app, "GET", uri, Some(&consultant), None).await;
+        assert_eq!(s, StatusCode::FORBIDDEN, "{uri}");
+    }
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn held_settlements_stay_out_of_fee_vat_and_summary(pool: PgPool) {
+    let pro = seed_march(&pool).await;
+    let user: Uuid = sqlx::query_scalar("SELECT user_id FROM bookings WHERE number = 'BKF-1'")
+        .fetch_one(&pool)
+        .await
+        .expect("user");
+    let held = insert_booking(&pool, user, "BKF-4", 100_000, 0, 3, "2026-03-22T10:00:00+09").await;
+    insert_settlement(&pool, pro, held, 100_000, 30_000, "held", "2026-03-25", None, "2026-03-22T12:00:00+09").await;
+    let app = common::app(pool.clone());
+    let token = admin_token().await;
+    let (_, s) = call(&app, "GET", PERIOD, Some(&token), None).await;
+    assert_eq!(s["platform_fee"], 60_000, "held fee is not earned yet");
+    assert_eq!(s["vat_estimate"], 6_000);
+    assert_eq!(s["payouts"]["held"], 70_000);
+    let csv = fetch_csv(&app, "/v1/admin/finance/export/vat?year=2026&quarter=1", &token).await;
+    assert!(csv.lines().any(|l| l == "플랫폼수수료(과세표준 추정),0,60000"), "{csv}");
+    assert!(csv.lines().any(|l| l == "부가세 추정(수수료의 10%),0,6000"), "{csv}");
+    assert!(csv.lines().any(|l| l == "환불액,0,50000"), "{csv}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn dashboard_revenue_matches_the_finance_summary(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let user: Uuid = sqlx::query_scalar("INSERT INTO users (phone, name) VALUES ('01070000002', 'recent') RETURNING id")
+        .fetch_one(&pool)
+        .await
+        .expect("user");
+    let recent = (chrono::Utc::now() - chrono::Duration::days(1)).to_rfc3339();
+    let b = insert_booking(&pool, user, "BKD-1", 80_000, 0, 3, &recent).await;
+    insert_payment(&pool, b, 80_000, 10_000, "partially_refunded", "dash-1", &recent).await;
+    let today = (chrono::Utc::now() + chrono::Duration::hours(9)).date_naive();
+    let from = today - chrono::Duration::days(29);
+    let app = common::app(pool.clone());
+    let token = admin_token().await;
+    let (_, dash) = call(&app, "GET", "/v1/admin/dashboard", Some(&token), None).await;
+    let (_, s) = call(
+        &app,
+        "GET",
+        &format!("/v1/admin/finance/summary?period=custom&from={from}&to={today}"),
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(dash["revenue_30d"], 70_000);
+    assert_eq!(dash["revenue_30d"], s["net_revenue"]);
 }
 
 #[sqlx::test(migrations = "../../migrations")]

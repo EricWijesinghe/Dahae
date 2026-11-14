@@ -5,7 +5,7 @@ use super::{
     bookings::{BOOKING_COLS, BookingRow, MAX_NOTE, apply_cancel, load_booking},
     catalog::load_formula,
     chat::{self, MessageRow, THREAD_COLS, ThreadRow},
-    growth,
+    finance, growth,
 };
 use crate::{
     auth::{Role, Staff, live_staff_role},
@@ -58,13 +58,12 @@ struct Dashboard {
 }
 
 async fn dashboard(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Dashboard>> {
-    let row: (i64, i64, i64, i64, i64, i64) = sqlx::query_as(
+    let row: (i64, i64, i64, i64, i64) = sqlx::query_as(
         "SELECT
            (SELECT count(*) FROM bookings WHERE visit_date = (now() AT TIME ZONE 'Asia/Seoul')::date AND status BETWEEN 1 AND 3),
            (SELECT count(*) FROM bookings WHERE status = 0),
            (SELECT count(*) FROM bookings WHERE status = 1 AND pro_id IS NULL AND team_name IS NULL),
            (SELECT count(*) FROM chat_threads WHERE unread_staff > 0),
-           (SELECT COALESCE(sum(amount - refunded_amount), 0)::bigint FROM payments WHERE status IN ('paid','partially_refunded') AND created_at > now() - interval '30 days'),
            (SELECT count(*) FROM bookings WHERE created_at > now() - interval '30 days')",
     )
     .fetch_one(&s.db)
@@ -80,8 +79,8 @@ async fn dashboard(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Dash
         open_quotes: row.1,
         unassigned: row.2,
         unread_threads: row.3,
-        revenue_30d: row.4,
-        bookings_30d: row.5,
+        revenue_30d: finance::net_revenue_30d(&s.db).await?,
+        bookings_30d: row.4,
         by_service,
         average_rating: growth.average_rating,
         referrals_invited: growth.invited,

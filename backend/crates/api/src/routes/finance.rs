@@ -4,7 +4,7 @@
 
 use super::audit;
 use crate::{
-    auth::{Admin, Pro, Staff},
+    auth::{Admin, Pro},
     error::{ApiError, ApiResult},
     state::AppState,
     util::today_kst,
@@ -267,7 +267,15 @@ struct Summary {
     vat_basis: &'static str,
 }
 
-async fn summary(State(s): State<AppState>, _st: Staff, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Summary>> {
+/// Net revenue (gross minus refunds) over the last 30 KST days including today. The console dashboard tile uses
+/// this so it agrees with the finance summary.
+pub(super) async fn net_revenue_30d(db: &PgPool) -> ApiResult<i64> {
+    let to = today_kst();
+    let from = to - chrono::Duration::days(29);
+    Ok(Metrics::from(total_of(&aggregate(db, from, to, "year").await?)).net_revenue)
+}
+
+async fn summary(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Summary>> {
     let (from, to) = resolve(&q)?;
     let rows = aggregate(&s.db, from, to, "year").await?;
     Ok(Json(Summary {
@@ -307,7 +315,7 @@ struct SeriesQuery {
     days: Option<u32>,
 }
 
-async fn series(State(s): State<AppState>, _st: Staff, Query(q): Query<SeriesQuery>) -> ApiResult<Json<Vec<Point>>> {
+async fn series(State(s): State<AppState>, _a: Admin, Query(q): Query<SeriesQuery>) -> ApiResult<Json<Vec<Point>>> {
     let grain = match q.grain.as_deref() {
         Some(g) => Grain::parse(g).ok_or(ApiError::BadRequest("invalid_grain"))?,
         None => Grain::Day,
@@ -341,7 +349,7 @@ struct ProName {
     team_name: String,
 }
 
-async fn partners(State(s): State<AppState>, _st: Staff, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<PartnerRow>>> {
+async fn partners(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<PartnerRow>>> {
     let (from, to) = resolve(&q)?;
     let rows = aggregate(&s.db, from, to, "year").await?;
     let by_pro = fold_by(&rows, |r| r.pro);
@@ -379,7 +387,7 @@ struct ServiceRow {
     m: Metrics,
 }
 
-async fn services(State(s): State<AppState>, _st: Staff, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<ServiceRow>>> {
+async fn services(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<ServiceRow>>> {
     let (from, to) = resolve(&q)?;
     let rows = aggregate(&s.db, from, to, "year").await?;
     let by_svc = fold_by(&rows, |r| r.svc.clone());
@@ -732,24 +740,13 @@ struct VatQuery {
     quarter: u32,
 }
 
-/// Quarterly VAT summary (owner only). Sales are paid checkouts by method; fee and refunds follow the
-/// settlement and payment dates already used by the other exports. ACCOUNTANT: confirm these bases.
+/// Quarterly VAT summary (owner only). Sales are paid checkouts by method; fee and refunds come from the same
+/// event aggregate as the summary, so held settlements are excluded and the figures match the finance screen.
+/// ACCOUNTANT: confirm these bases.
 async fn export_vat(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<VatQuery>) -> ApiResult<Response> {
     let (from, to) = tax::quarter_range(q.year, q.quarter)?;
     let methods = payment_methods(&s.db, from, to).await?;
-    let platform_fee: i64 =
-        sqlx::query_scalar("SELECT COALESCE(SUM(fee), 0)::bigint FROM settlements WHERE (created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2")
-            .bind(from)
-            .bind(to)
-            .fetch_one(&s.db)
-            .await?;
-    let refunds: i64 = sqlx::query_scalar(
-        "SELECT COALESCE(SUM(refunded_amount), 0)::bigint FROM payments WHERE (created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2",
-    )
-    .bind(from)
-    .bind(to)
-    .fetch_one(&s.db)
-    .await?;
+    let totals = total_of(&aggregate(&s.db, from, to, "year").await?);
     let input = VatInput {
         methods: methods
             .into_iter()
@@ -759,8 +756,8 @@ async fn export_vat(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<
                 amount: m.amount,
             })
             .collect(),
-        platform_fee: Won(platform_fee),
-        refunds: Won(refunds),
+        platform_fee: Won(totals.fee),
+        refunds: Won(totals.refunds),
     };
     audit(&s.db, "staff", Some(a.id), "finance.export", "vat", json!({ "from": from, "to": to })).await?;
     csv_response(&export_name("vat", from, to), finance::csv_document(&tax::vat_document(&input)))
