@@ -1,6 +1,7 @@
 //! Provider webhooks over HTTP. PortOne: the Standard Webhooks signature is the gate, and a
 //! replayed event changes nothing. Toss: the body is ignored and each delivery kicks one payout pass.
-//! Events name unknown payments, so no provider API is called. Needs DATABASE_URL (sqlx::test).
+//! Events name unknown payments, so no provider API is called; the replay test settles a real checkout.
+//! Needs DATABASE_URL (sqlx::test).
 
 mod common;
 
@@ -13,6 +14,7 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
 use chrono::Utc;
+use common::{call, customer, seed_catalog};
 use hmac::{Hmac, Mac};
 use serde_json::json;
 use sha2::Sha256;
@@ -118,14 +120,38 @@ async fn portone_event_with_a_stale_timestamp_is_rejected(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn portone_replayed_event_is_acknowledged_again_without_effect(pool: PgPool) {
+async fn portone_replayed_event_settles_a_checkout_once(pool: PgPool) {
+    seed_catalog(&pool).await;
     let app = app(pool.clone());
-    let body = payment_event(PAYMENT_ID);
+    let c = customer(&app, &pool, "010-7100-0009").await;
+    let visit = api::util::today_kst() + chrono::Duration::days(10);
+    let intent_body = json!({ "kind": "booking", "method": "card",
+        "booking": { "service_code": "studio", "address_id": c.address, "visit_date": visit, "start_hour": 9, "visit_notes": {} } });
+    let (st, intent) = call(&app, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(intent_body)).await;
+    assert_eq!(st, StatusCode::OK, "{intent}");
+    let checkout = intent["id"].as_str().expect("id").to_string();
+    let body = payment_event(&checkout);
     let headers = signed_headers(KEY, "msg_replay", &body);
     assert_eq!(post(&app, "/v1/webhooks/portone", &headers, body.clone()).await, StatusCode::OK);
+    let (status, booking): (String, Option<String>) = sqlx::query_as("SELECT status, result_booking_id::text FROM checkouts WHERE id = $1::uuid")
+        .bind(&checkout)
+        .fetch_one(&pool)
+        .await
+        .expect("checkout");
+    assert_eq!(status, "paid", "the first delivery settles the checkout");
     assert_eq!(post(&app, "/v1/webhooks/portone", &headers, body).await, StatusCode::OK);
-    let (payments,): (i64,) = sqlx::query_as("SELECT count(*) FROM payments").fetch_one(&pool).await.expect("count");
-    assert_eq!(payments, 0, "an unknown payment must not book anything");
+    let (after_status, after_booking): (String, Option<String>) = sqlx::query_as("SELECT status, result_booking_id::text FROM checkouts WHERE id = $1::uuid")
+        .bind(&checkout)
+        .fetch_one(&pool)
+        .await
+        .expect("checkout");
+    assert_eq!((after_status, after_booking), (status, booking), "the replay changes nothing");
+    let (payments,): (i64,) = sqlx::query_as("SELECT count(*) FROM payments WHERE provider_tx_id = $1")
+        .bind(&checkout)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(payments, 1, "one PortOne payment is recorded once");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
