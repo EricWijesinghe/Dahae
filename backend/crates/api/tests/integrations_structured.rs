@@ -47,7 +47,7 @@ async fn call_with_totp(app: &Router, method: &str, uri: &str, token: &str, totp
 async fn enrolled_admin(db: &PgPool) -> (String, Uuid) {
     let (token, id) = staff_token(db, Role::StaffAdmin).await;
     let enc = crypto::encrypt(&test_config().data_key, crypto::aad::STAFF_TOTP, &totp::encode_secret(TOTP_SEED));
-    sqlx::query("UPDATE staff SET totp_secret = $2, totp_enabled_at = now() WHERE id = $1")
+    sqlx::query("UPDATE staff SET totp_secret = $2, totp_enabled_at = now(), recovery_confirmed_at = now(), is_owner = true WHERE id = $1")
         .bind(id)
         .bind(enc)
         .execute(db)
@@ -67,10 +67,10 @@ async fn toss_payout_change_needs_owner_totp_and_manual_does_not(db: PgPool) {
     let toss = json!({ "mode": "toss", "secret_key": "test_sk_x", "security_key": "x" });
 
     let (st, _) = call_with_totp(&app, "PUT", "/v1/admin/setup/payout", &token, None, toss.clone()).await;
-    assert_eq!(st, StatusCode::UNAUTHORIZED, "toss without a code must be refused");
+    assert_eq!(st, StatusCode::BAD_REQUEST, "toss without a code must be refused");
 
     let (st, _) = call_with_totp(&app, "PUT", "/v1/admin/setup/payout", &token, Some("000000"), toss.clone()).await;
-    assert_eq!(st, StatusCode::UNAUTHORIZED, "a wrong code must be refused");
+    assert_eq!(st, StatusCode::BAD_REQUEST, "a wrong code must be refused");
 
     let manual = json!({ "mode": "manual" });
     let (st, body) = call_with_totp(&app, "PUT", "/v1/admin/setup/payout", &token, None, manual).await;
@@ -98,7 +98,7 @@ async fn clearing_a_saved_toss_payout_needs_owner_totp_and_manual_does_not(db: P
         .await
         .expect("seed toss payout");
     let (st, _) = call_with_totp(&app, "DELETE", "/v1/admin/setup/payout", &token, None, Value::Null).await;
-    assert_eq!(st, StatusCode::UNAUTHORIZED, "clearing a Toss payout without a code must be refused");
+    assert_eq!(st, StatusCode::BAD_REQUEST, "clearing a Toss payout without a code must be refused");
     let kept = integrations::load_section(&db, &test_config().data_key, Section::Payout).await.expect("load");
     assert_eq!(kept.get("mode"), Some(&json!("toss")), "a refused clear keeps the saved config");
 

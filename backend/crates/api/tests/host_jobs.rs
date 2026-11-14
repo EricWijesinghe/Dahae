@@ -79,7 +79,7 @@ async fn send(app: &Router, method: &str, uri: &str, token: &str, totp: Option<&
 async fn enrolled_admin(db: &PgPool) -> String {
     let (token, id) = staff_token(db, api::auth::Role::StaffAdmin).await;
     let enc = crypto::encrypt(&test_config().data_key, crypto::aad::STAFF_TOTP, &totp::encode_secret(TOTP_SEED));
-    sqlx::query("UPDATE staff SET totp_secret = $2, totp_enabled_at = now() WHERE id = $1")
+    sqlx::query("UPDATE staff SET totp_secret = $2, totp_enabled_at = now(), recovery_confirmed_at = now(), is_owner = true WHERE id = $1")
         .bind(id)
         .bind(enc)
         .execute(db)
@@ -103,9 +103,9 @@ async fn owner_kinds_need_an_admin_and_a_totp_code(db: PgPool) {
     let (st, _) = send(&h.app, "POST", "/v1/admin/host/jobs", &consultant, Some(&code_now()), Some(KEY), body.clone()).await;
     assert_eq!(st, StatusCode::FORBIDDEN, "consultant");
     let (st, _) = send(&h.app, "POST", "/v1/admin/host/jobs", &admin, None, Some(KEY), body.clone()).await;
-    assert_eq!(st, StatusCode::UNAUTHORIZED, "owner kind without TOTP");
+    assert_eq!(st, StatusCode::BAD_REQUEST, "owner kind without TOTP");
     let (st, _) = send(&h.app, "POST", "/v1/admin/host/jobs", &admin, Some("000000"), Some(KEY), body).await;
-    assert_eq!(st, StatusCode::UNAUTHORIZED, "wrong TOTP");
+    assert_eq!(st, StatusCode::BAD_REQUEST, "wrong TOTP");
     assert!(job_files(&h.dir).is_empty(), "refused requests write nothing");
 }
 

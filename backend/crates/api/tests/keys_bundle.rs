@@ -56,7 +56,7 @@ async fn owner_call(app: &Router, method: &str, uri: &str, token: &str, totp: Op
 async fn enrolled_admin(db: &PgPool) -> String {
     let (token, id) = staff_token(db, Role::StaffAdmin).await;
     let enc = crypto::encrypt(&test_config().data_key, crypto::aad::STAFF_TOTP, &totp::encode_secret(TOTP_SEED));
-    sqlx::query("UPDATE staff SET totp_secret = $2, totp_enabled_at = now() WHERE id = $1")
+    sqlx::query("UPDATE staff SET totp_secret = $2, totp_enabled_at = now(), recovery_confirmed_at = now(), is_owner = true WHERE id = $1")
         .bind(id)
         .bind(enc)
         .execute(db)
@@ -88,9 +88,9 @@ async fn every_request_needs_an_admin_and_a_totp_code(db: PgPool) {
     let (st, _) = owner_call(&app, "POST", "/v1/admin/keys/bundle", &consultant, Some(&code_at_step(0)), None).await;
     assert_eq!(st, StatusCode::FORBIDDEN, "consultant");
     let (st, _) = owner_call(&app, "POST", "/v1/admin/keys/bundle", &admin, None, None).await;
-    assert_eq!(st, StatusCode::UNAUTHORIZED, "no TOTP header");
+    assert_eq!(st, StatusCode::BAD_REQUEST, "no TOTP header");
     let (st, _) = owner_call(&app, "POST", "/v1/admin/keys/bundle", &admin, Some("not-a-code"), None).await;
-    assert_eq!(st, StatusCode::UNAUTHORIZED, "malformed TOTP");
+    assert_eq!(st, StatusCode::BAD_REQUEST, "malformed TOTP");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -117,7 +117,7 @@ async fn bundle_opens_and_a_matching_upload_sets_the_check(db: PgPool) {
     assert!(status["verified_at"].is_string(), "{status}");
 
     let (st, _) = owner_call(&app, "POST", "/v1/admin/keys/verify", &admin, Some(&code_at_step(1)), Some(upload)).await;
-    assert_eq!(st, StatusCode::UNAUTHORIZED, "the same TOTP step cannot be used twice");
+    assert_eq!(st, StatusCode::CONFLICT, "the same TOTP step cannot be used twice");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
