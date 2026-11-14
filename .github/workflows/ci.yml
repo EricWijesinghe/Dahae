@@ -146,7 +146,8 @@ jobs:
       - name: Formatting of the Dart files this pull request changes
         if: github.event_name == 'pull_request'
         env: { BASE: "${{ github.base_ref }}" }
-        run: git diff --name-only --diff-filter=ACMR "origin/$BASE...HEAD" -- 'app/*.dart' | xargs -r dart format --output=none --set-exit-if-changed
+        # gen/ holds gen-l10n output, which is not dart-formatted and is regenerated on every build.
+        run: git diff --name-only --diff-filter=ACMR "origin/$BASE...HEAD" -- 'app/*.dart' | { grep -v '/lib/src/gen/' || true; } | xargs -r dart format --output=none --set-exit-if-changed
 
   app-test:
     needs: changes
