@@ -566,10 +566,8 @@ const CANCEL_REASONS: [&str; 4] = ["schedule", "provider", "price", "other"];
 
 async fn cancel(State(s): State<AppState>, Customer(a): Customer, Path(id): Path<Uuid>, body: Option<Json<CancelBody>>) -> ApiResult<Json<BookingRow>> {
     let c = body.map(|Json(c)| c).unwrap_or_default();
-    if let Some(r) = c.reason.as_deref() {
-        if !CANCEL_REASONS.contains(&r) {
-            return Err(ApiError::BadRequest("invalid cancel reason"));
-        }
+    if c.reason.as_deref().is_some_and(|r| !CANCEL_REASONS.contains(&r)) {
+        return Err(ApiError::BadRequest("invalid cancel reason"));
     }
     cancel_owned(&s, a.id, id, c.accepted_fee, c.reason.as_deref()).await?;
     Ok(Json(load_booking(&s.db, id).await?))

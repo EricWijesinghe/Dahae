@@ -80,8 +80,7 @@ class GroupDraft {
 
   /// PUT body. Config is only sent for the move chooser; other tiles store an empty object.
   Json toBody() => {
-    'title_ko': titleKo.trim(),
-    'title_en': titleEn.trim(),
+    'title': {'ko': titleKo.trim(), 'en': titleEn.trim()},
     'sort_order': order,
     'active': active,
     'icon': icon,
