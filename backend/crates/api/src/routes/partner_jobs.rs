@@ -57,6 +57,7 @@ struct JobCard {
     id: Uuid,
     service_code: String,
     unit_index: Option<i16>,
+    unit_counts: Option<Vec<i16>>,
     district_code: String,
     road_area: Option<String>,
     visit_date: NaiveDate,
@@ -100,7 +101,7 @@ async fn feed(State(s): State<AppState>, Pro(a): Pro, Query(q): Query<FeedQuery>
     };
     // Only the neighbourhood (dong) part of the road address is exposed before commitment.
     let rows = sqlx::query_as(&format!(
-        "SELECT b.id, b.service_code, b.unit_index, b.district_code, split_part(b.address->>'road_address', ' ', 2) AS road_area, b.visit_date, b.start_hour, b.minutes,
+        "SELECT b.id, b.service_code, b.unit_index, b.unit_counts, b.district_code, split_part(b.address->>'road_address', ' ', 2) AS road_area, b.visit_date, b.start_hour, b.minutes,
            (b.address->>'size_pyeong')::int AS size_pyeong, b.answers->>'building' AS building, b.answers, b.list_price AS customer_price, b.estimate, p.fee_bps,
            (SELECT amount FROM quotes q WHERE q.booking_id = b.id AND q.pro_id = p.id AND q.state <> 'withdrawn') AS my_quote,
            (b.pro_id IS NULL AND b.status IN ({consultation}, {confirmed})) AS is_open, b.created_at
@@ -142,7 +143,7 @@ async fn job(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) -> Ap
     }
     let pay = gross(&b).map(|g| payout(Won(g), i64::from(fee_bps)));
     let mut view = json!({
-        "id": b.id, "number": b.number, "service_code": b.service_code, "unit_index": b.unit_index, "district_code": b.district_code,
+        "id": b.id, "number": b.number, "service_code": b.service_code, "unit_index": b.unit_index, "unit_counts": b.unit_counts, "district_code": b.district_code,
         "visit_date": b.visit_date, "start_hour": b.start_hour, "minutes": b.minutes, "status": b.status, "answers": b.answers,
         "estimate": b.estimate, "size_pyeong": b.address.get("size_pyeong"), "kind": b.address.get("kind"),
         "reschedule": b.reschedule, "cancelled": b.status == -1, "is_quote": b.answers.is_some(), "balance_paid": b.balance_paid,
