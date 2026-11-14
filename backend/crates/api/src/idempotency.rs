@@ -3,7 +3,7 @@
 //! Only final answers are stored: a 5xx or an auth/rate refusal releases the key so the client can retry.
 
 use crate::{
-    auth::verify_access,
+    auth::verify_access_live,
     config::Config,
     contract::JSON_BODY_LIMIT,
     error::{ApiError, ApiResult},
@@ -56,14 +56,14 @@ enum Slot {
 
 /// Who owns a key: the user a valid bearer names, so a retry after the app refreshed its access token
 /// (15 min TTL) still replays instead of booking or charging again. Any other header falls back to its
-/// hash; such a request is refused as 401 by the handler, which releases the key.
-fn caller(config: &Config, auth: Option<&HeaderValue>) -> String {
+/// hash; so does a staff token whose session ended (its epoch moved on). Such a request is refused as 401 by
+/// the handler, which releases the key.
+async fn caller(db: &PgPool, config: &Config, auth: Option<&HeaderValue>) -> String {
     let Some(v) = auth else { return "anon".to_owned() };
-    let user = v
-        .to_str()
-        .ok()
-        .and_then(|s| s.strip_prefix("Bearer "))
-        .and_then(|t| verify_access(&config.jwt_keys(), t).ok());
+    let user = match v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ")) {
+        Some(t) => verify_access_live(db, &config.jwt_keys(), t).await.ok(),
+        None => None,
+    };
     user.map_or_else(|| hex(&Sha256::digest(v.as_bytes())), |a| format!("user:{}", a.id))
 }
 
@@ -80,7 +80,7 @@ pub async fn replay(Extension(db): Extension<PgPool>, Extension(config): Extensi
         Ok(b) => b,
         Err(_) => return Ok(StatusCode::PAYLOAD_TOO_LARGE.into_response()),
     };
-    let scope = format!("{}:{}", caller(&config, parts.headers.get(header::AUTHORIZATION)), parts.uri.path());
+    let scope = format!("{}:{}", caller(&db, &config, parts.headers.get(header::AUTHORIZATION)).await, parts.uri.path());
     let body_hash = hex(&Sha256::digest(&bytes));
     match claim(&db, &scope, &key, &body_hash).await? {
         Slot::Done(status, text) => Ok(replayed(status, text)),

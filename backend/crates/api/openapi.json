@@ -259,7 +259,17 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": ["legal_name", "ceo", "registration_no", "mail_order_no", "address", "privacy_officer", "hosting_provider", "support_phone", "support_email"]
+              "enum": [
+                "legal_name",
+                "ceo",
+                "registration_no",
+                "mail_order_no",
+                "address",
+                "privacy_officer",
+                "hosting_provider",
+                "support_phone",
+                "support_email"
+              ]
             }
           }
         ],
@@ -4492,7 +4502,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "Points ledger entries, newest first (cursor-paginated)",
+        "summary": "Points ledger, newest first, one page at a time",
         "parameters": [
           {
             "$ref": "#/components/parameters/Limit"
@@ -4506,7 +4516,10 @@
             "description": "OK",
             "headers": {
               "X-Next-Cursor": {
-                "$ref": "#/components/headers/NextCursor"
+                "description": "Pass back as cursor to get the next page",
+                "schema": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -5789,32 +5802,34 @@
         }
       }
     },
-    "/v1/me/points/ledger": {
+    "/v1/admin/host/jobs": {
       "get": {
-        "operationId": "myPointsLedger",
+        "operationId": "adminListHostJobs",
         "tags": [
-          "customer"
+          "admin"
         ],
-        "summary": "Points ledger, newest first, one page at a time",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Limit"
-          },
-          {
-            "$ref": "#/components/parameters/Cursor"
-          }
-        ],
+        "summary": "Server jobs the owner queued, with live state read from the server status files (admin only)",
         "responses": {
           "200": {
-            "description": "OK",
-            "headers": {
-              "X-Next-Cursor": {
-                "description": "Pass back as cursor to get the next page",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminEnqueueHostJob",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Queue one server job (backup, update, update-skip, channel, restart, schedule); needs owner TOTP and an Idempotency-Key header (admin only, logged)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -5822,79 +5837,334 @@
         }
       }
     },
-    "/v1/admin/host/jobs": {
-      "get": {
-        "operationId": "adminListHostJobs",
-        "tags": ["admin"],
-        "summary": "Server jobs the owner queued, with live state read from the server status files (admin only)",
-        "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
-        }
-      },
-      "post": {
-        "operationId": "adminEnqueueHostJob",
-        "tags": ["admin"],
-        "summary": "Queue one server job (backup, update, update-skip, channel, restart, schedule); needs owner TOTP and an Idempotency-Key header (admin only, logged)",
-        "requestBody": { "$ref": "#/components/requestBodies/Object" },
-        "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
-        }
-      }
-    },
     "/v1/admin/host/jobs/{id}": {
       "get": {
         "operationId": "adminHostJobDetail",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "One queued server job and its live state (admin only)",
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
     "/v1/admin/renewals": {
       "get": {
         "operationId": "adminListRenewals",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Renewal calendar: items with days left, and the keys check date (admin only)",
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       },
       "post": {
         "operationId": "adminCreateRenewal",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Add a renewal item; reminders go out by SMS 30 and 7 days before (admin only, logged)",
-        "requestBody": { "$ref": "#/components/requestBodies/Object" },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
     "/v1/admin/renewals/{id}": {
       "put": {
         "operationId": "adminUpdateRenewal",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Change a renewal item; a new due date starts its reminders again (admin only, logged)",
-        "parameters": [{ "$ref": "#/components/parameters/Id" }],
-        "requestBody": { "$ref": "#/components/requestBodies/Object" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       },
       "delete": {
         "operationId": "adminDeleteRenewal",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Remove a renewal item (admin only, logged)",
-        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/auth/staff/owner-reset": {
+      "post": {
+        "operationId": "ownerResetSecondFactor",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Lost second factor: owner signs in with password plus a server-issued reset code; TOTP and recovery codes are cleared",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/owner/claim": {
+      "post": {
+        "operationId": "claimOwner",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Claim the owner role while no owner exists (claimant's own TOTP)",
+        "parameters": [
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/owner/transfer": {
+      "post": {
+        "operationId": "transferOwner",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Hand the owner role to another active admin (both TOTPs, one transaction)",
+        "parameters": [
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/me/account": {
+      "get": {
+        "operationId": "myStaffAccount",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner-facing account status (masked phone, factor and recovery-code state)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/me/recovery-codes": {
+      "post": {
+        "operationId": "reissueRecoveryCodes",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Replace every recovery code; owner gates stay shut until the new codes are confirmed",
+        "parameters": [
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/me/recovery-codes/confirm": {
+      "post": {
+        "operationId": "confirmRecoveryCodes",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Confirm the recovery codes were saved by typing one back",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/me/alert-phone": {
+      "put": {
+        "operationId": "setOwnerAlertPhone",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Set the SMS number for owner alerts; the replaced number is told when possible",
+        "parameters": [
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/me/password": {
+      "post": {
+        "operationId": "changeOwnerPassword",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Change the owner's password; every session ends",
+        "parameters": [
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/me/sign-out-all": {
+      "post": {
+        "operationId": "ownerSignOutAll",
+        "tags": [
+          "admin"
+        ],
+        "summary": "End every session of the owner, this one included",
+        "parameters": [
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     }

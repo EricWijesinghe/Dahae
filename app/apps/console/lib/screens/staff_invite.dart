@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/owner_totp_dialog.dart';
 import 'staff_code_dialogs.dart';
 
 /// Invites a staff member: name, email, mobile and role, then a one-time code by SMS or copied by hand.
@@ -94,7 +95,10 @@ Future<void> inviteStaff(
   };
   disposeAfterClose([name, email, phone]);
   if (ok == true && context.mounted) {
-    await _send(context, reload, body);
+    // An admin account carries the whole console, so only the owner, with a fresh code, can invite one.
+    final code = role == 'admin' ? await askOwnerTotp(context) : '';
+    if (code == null || !context.mounted) return;
+    await _send(context, reload, body, role == 'admin' ? ownerHeaders(code) : null);
   }
 }
 
@@ -102,9 +106,10 @@ Future<void> _send(
   BuildContext context,
   Future<void> Function() reload,
   Json body,
+  Map<String, String>? headers,
 ) async {
   try {
-    final r = await context.api.post('/admin/staff/invite', body) as Json;
+    final r = await context.api.post('/admin/staff/invite', body, null, headers) as Json;
     if (!context.mounted) return;
     await showSentCode(context, r, context.t.cStaffCodeTitle);
     await reload();

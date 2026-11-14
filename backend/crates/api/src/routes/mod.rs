@@ -23,6 +23,7 @@ pub(crate) mod me;
 mod member;
 mod notify_templates;
 mod ops;
+mod owner;
 pub(crate) mod partner;
 pub(crate) mod partner_jobs;
 pub(crate) mod payments;
@@ -80,6 +81,7 @@ pub fn router(state: AppState) -> Router {
         .merge(auth::routes().layer(DefaultBodyLimit::max(contract::AUTH_BODY_LIMIT)))
         .merge(staff_mfa::routes())
         .merge(staff_sms::public_routes())
+        .merge(owner::public_routes())
         .merge(me::routes())
         .merge(catalog::routes())
         .merge(feed::routes())
@@ -110,6 +112,7 @@ pub fn router(state: AppState) -> Router {
             "/admin",
             admin::routes()
                 .merge(staff_sms::admin_routes())
+                .merge(owner::admin_routes())
                 .merge(admin_content::routes())
                 .merge(notify_templates::routes())
                 .merge(growth::admin_routes())

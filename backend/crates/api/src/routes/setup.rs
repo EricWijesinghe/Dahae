@@ -9,6 +9,7 @@ use crate::{
     backup,
     error::{ApiError, ApiResult},
     integrations::{self, Invalid, Kind, Section},
+    owner,
     providers::{fcm, portone, sms},
     state::AppState,
 };
@@ -160,7 +161,8 @@ async fn create_admin(State(s): State<AppState>, Json(req): Json<NewAdmin>) -> A
     if expected.is_empty() || !matches || setup_code_expired(issued_at, Utc::now().timestamp()) {
         return Err(ApiError::Forbidden);
     }
-    let id: uuid::Uuid = sqlx::query_scalar("INSERT INTO staff (email, name, password_hash, role) VALUES ($1, $2, $3, 'admin') RETURNING id")
+    // The first admin is the owner. Set here explicitly: the migration never picks one.
+    let id: uuid::Uuid = sqlx::query_scalar("INSERT INTO staff (email, name, password_hash, role, is_owner) VALUES ($1, $2, $3, 'admin', TRUE) RETURNING id")
         .bind(&email)
         .bind(name)
         .bind(hash)
@@ -585,7 +587,7 @@ async fn put_section(
     let merged = integrations::merge(sec, &current, incoming);
     // Turning Toss payouts on, off or editing a live Toss setup moves real money: the owner's code is needed.
     if sec == Section::Payout && (is_toss(&current) || is_toss(&merged)) {
-        super::keys::owner_gate(&s, peer, &headers, a.id).await?;
+        owner::verify_owner(&s, a, &headers, Some(peer.ip()), true).await?;
     }
     // Validate against env-only keys so this section stands on its own.
     let mut base = integrations::Integrations::from_config(&s.config);
@@ -617,7 +619,7 @@ async fn clear_section(
     let sec = section(&code)?;
     // Disconnecting a saved Toss payout changes where money goes: same owner code as editing it.
     if sec == Section::Payout && is_toss(&integrations::load_section(&s.db, &s.config.data_key, sec).await?) {
-        super::keys::owner_gate(&s, peer, &headers, a.id).await?;
+        owner::verify_owner(&s, a, &headers, Some(peer.ip()), true).await?;
     }
     integrations::delete_section(&s.db, sec).await?;
     reload(&s).await?;

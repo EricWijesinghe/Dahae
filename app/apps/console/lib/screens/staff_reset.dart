@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/owner_totp_dialog.dart';
 import 'confirm_action.dart';
 import 'staff_code_dialogs.dart';
 
@@ -17,6 +18,10 @@ Future<void> issueStaffPasswordReset(
   final t = context.t;
   final prompt = invite ? t.cStaffInviteResend : t.cStaffReset;
   if (!await confirmAction(context, prompt) || !context.mounted) return;
+  // Resetting the owner's own password needs the owner's code; any other staff member does not.
+  final isOwner = staff['is_owner'] == true;
+  final code = isOwner ? await askOwnerTotp(context) : '';
+  if (code == null || !context.mounted) return;
   final delivery = await pickCodeDelivery(
     context,
     needsPhone: staff['has_phone'] != true,
@@ -24,10 +29,15 @@ Future<void> issueStaffPasswordReset(
   if (delivery == null || !context.mounted) return;
   try {
     final r =
-        await context.api.post('/admin/staff/${staff['id']}/password-reset', {
-              'channel': delivery.channel,
-              'phone': delivery.phone,
-            })
+        await context.api.post(
+              '/admin/staff/${staff['id']}/password-reset',
+              {
+                'channel': delivery.channel,
+                'phone': delivery.phone,
+              },
+              null,
+              isOwner ? ownerHeaders(code) : null,
+            )
             as Json;
     if (!context.mounted) return;
     await showSentCode(context, r, t.cStaffResetTitle);

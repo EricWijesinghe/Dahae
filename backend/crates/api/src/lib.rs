@@ -31,6 +31,7 @@ pub mod noshow;
 pub mod openapi;
 pub mod ops;
 pub mod ops_alerts;
+pub mod owner;
 pub mod payout;
 pub mod payout_sync;
 pub mod points;

@@ -7,6 +7,7 @@ use crate::{
     host_jobs::{self, JobSpec, Kind},
     host_status::{self, HostStatus},
     idempotency,
+    owner,
     sms_outbox::{self, Message},
     state::AppState,
 };
@@ -24,7 +25,6 @@ use sqlx::{FromRow, PgPool};
 use std::{fs::OpenOptions, io::Write, net::SocketAddr, path::Path as FsPath};
 use uuid::Uuid;
 
-use super::keys::owner_gate;
 
 const LIST_LIMIT: i64 = 50;
 /// A job with no status file this long after it was queued never reached the agent.
@@ -64,7 +64,7 @@ async fn enqueue(
     // Checked before the TOTP is spent, so a missing inbox does not burn the owner's code.
     let dir = jobs_dir(&s)?;
     if spec.kind.needs_owner() {
-        owner_gate(&s, peer, &headers, a.id).await?;
+        owner::verify_owner(&s, a, &headers, Some(peer.ip()), true).await?;
     }
     let id = Uuid::now_v7();
     let token = host_jobs::new_progress_token();

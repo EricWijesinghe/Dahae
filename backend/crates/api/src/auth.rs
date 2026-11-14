@@ -73,6 +73,9 @@ struct Claims {
     iat: i64,
     iss: String,
     aud: String,
+    /// Staff session epoch at issue (`staff.session_epoch`). Tokens minted before the field existed read as 0.
+    #[serde(default)]
+    ep: i32,
 }
 
 /// Authenticated caller. Use the narrower extractors in handlers.
@@ -131,6 +134,11 @@ pub fn key_id(secret: &[u8]) -> String {
 }
 
 pub fn issue_access(secret: &[u8], id: Uuid, role: Role) -> Result<String, ApiError> {
+    issue_access_epoch(secret, id, role, 0)
+}
+
+/// Access token for a staff member at `epoch`; `Auth` refuses it once the row's epoch has moved on.
+pub fn issue_access_epoch(secret: &[u8], id: Uuid, role: Role, epoch: i32) -> Result<String, ApiError> {
     let now = Utc::now();
     let claims = Claims {
         sub: id,
@@ -139,6 +147,7 @@ pub fn issue_access(secret: &[u8], id: Uuid, role: Role) -> Result<String, ApiEr
         exp: (now + Duration::minutes(ACCESS_TTL_MIN)).timestamp(),
         iss: JWT_ISS.into(),
         aud: JWT_AUD.into(),
+        ep: epoch,
     };
     let header = Header {
         kid: Some(key_id(secret)),
@@ -150,6 +159,14 @@ pub fn issue_access(secret: &[u8], id: Uuid, role: Role) -> Result<String, ApiEr
 /// Verifies against the key named by the token's `kid`. `keys` is the current secret plus, during
 /// rotation, the previous one; a token that names no listed key, or has no `kid`, is refused.
 pub fn verify_access(keys: &[&[u8]], token: &str) -> Result<Auth, ApiError> {
+    let claims = decode_claims(keys, token)?;
+    Ok(Auth {
+        id: claims.sub,
+        role: claims.role,
+    })
+}
+
+fn decode_claims(keys: &[&[u8]], token: &str) -> Result<Claims, ApiError> {
     let kid = decode_header(token).ok().and_then(|h| h.kid).ok_or(ApiError::Unauthorized)?;
     let key = keys.iter().find(|k| key_id(k) == kid).ok_or(ApiError::Unauthorized)?;
     let mut validation = Validation::new(Algorithm::HS256);
@@ -157,11 +174,22 @@ pub fn verify_access(keys: &[&[u8]], token: &str) -> Result<Auth, ApiError> {
     validation.set_issuer(&[JWT_ISS]);
     validation.set_audience(&[JWT_AUD]);
     validation.set_required_spec_claims(&["exp", "iss", "aud", "sub"]);
-    let data = decode::<Claims>(token, &DecodingKey::from_secret(key), &validation).map_err(|_| ApiError::Unauthorized)?;
-    Ok(Auth {
-        id: data.claims.sub,
-        role: data.claims.role,
-    })
+    decode::<Claims>(token, &DecodingKey::from_secret(key), &validation)
+        .map(|d| d.claims)
+        .map_err(|_| ApiError::Unauthorized)
+}
+
+/// Session epoch carried by an access token (0 for tokens minted before the field existed).
+pub fn token_epoch(keys: &[&[u8]], token: &str) -> Result<i32, ApiError> {
+    Ok(decode_claims(keys, token)?.ep)
+}
+
+/// Current session epoch of a staff row; `None` when no such staff row exists.
+pub async fn staff_epoch(db: &sqlx::PgPool, id: Uuid) -> Result<Option<i32>, sqlx::Error> {
+    sqlx::query_scalar("SELECT session_epoch FROM staff WHERE id = $1")
+        .bind(id)
+        .fetch_optional(db)
+        .await
 }
 
 /// Opaque refresh token; only its SHA-256 is stored.
@@ -253,11 +281,25 @@ fn bearer(parts: &Parts) -> Option<&str> {
     parts.headers.get(axum::http::header::AUTHORIZATION)?.to_str().ok()?.strip_prefix("Bearer ")
 }
 
+/// Verifies a bearer token and, for staff, that its session epoch is still current. Every long-lived
+/// connection (websocket) must use this, not `verify_access`, or a signed-out staff token keeps streaming.
+pub async fn verify_access_live(db: &sqlx::PgPool, keys: &[&[u8]], token: &str) -> Result<Auth, ApiError> {
+    let claims = decode_claims(keys, token)?;
+    // Staff tokens die when the owner ends sessions (epoch bump). A missing staff row keeps the old behaviour.
+    if claims.role.is_staff() && staff_epoch(db, claims.sub).await?.is_some_and(|cur| cur != claims.ep) {
+        return Err(ApiError::Unauthorized);
+    }
+    Ok(Auth {
+        id: claims.sub,
+        role: claims.role,
+    })
+}
+
 impl FromRequestParts<AppState> for Auth {
     type Rejection = ApiError;
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
         let token = bearer(parts).ok_or(ApiError::Unauthorized)?;
-        verify_access(&state.config.jwt_keys(), token)
+        verify_access_live(&state.db, &state.config.jwt_keys(), token).await
     }
 }
 
@@ -336,6 +378,7 @@ mod tests {
             iat: now,
             iss: iss.into(),
             aud: aud.into(),
+            ep: 0,
         }
     }
 

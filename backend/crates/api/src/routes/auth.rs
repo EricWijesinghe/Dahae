@@ -30,7 +30,7 @@ const OTP_MAX_PER_HOUR: i64 = 5;
 const OTP_GLOBAL_PER_HOUR: i64 = 3_000;
 const STAFF_MAX_FAILURES: i32 = 5;
 const MAX_PASSWORD_BYTES: usize = 256;
-const STAFF_DUMMY_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHRzYWx0$0000000000000000000000000000000000000000000";
+pub(super) const STAFF_DUMMY_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHRzYWx0$0000000000000000000000000000000000000000000";
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -141,8 +141,13 @@ pub(super) async fn issue_tokens(s: &AppState, id: Uuid, role: Role, is_new: boo
         .bind(family.unwrap_or_else(Uuid::now_v7))
         .execute(&s.db)
         .await?;
+    let epoch = if role.is_staff() {
+        auth::staff_epoch(&s.db, id).await?.unwrap_or(0)
+    } else {
+        0
+    };
     Ok(Tokens {
-        access_token: auth::issue_access(&s.config.jwt_secret, id, role)?,
+        access_token: auth::issue_access_epoch(&s.config.jwt_secret, id, role, epoch)?,
         refresh_token,
         role,
         subject: id,

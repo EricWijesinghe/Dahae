@@ -6,7 +6,7 @@
 //! After a listener outage the node broadcasts `resync`, because events sent in the gap were missed.
 
 use crate::{
-    auth::Role,
+    auth::{Auth, Role, staff_epoch},
     error::ApiResult,
     lifecycle::drained,
     realtime_heartbeat::{Beat, Heartbeat, PING_EVERY},
@@ -40,6 +40,8 @@ use uuid::Uuid;
 
 const HUB_CAPACITY: usize = 1024;
 const PUBLISH_QUEUE: usize = 1024;
+/// How often a staff socket re-checks its session epoch, so a sign-out everywhere closes it within this time.
+const EPOCH_RECHECK: Duration = Duration::from_secs(60);
 const CHANNEL: &str = "malkkeum_events";
 /// Postgres rejects NOTIFY payloads of 8000 bytes or more; keep a margin.
 const NOTIFY_INLINE_MAX: usize = 7000;
@@ -345,23 +347,45 @@ const SOCKET_LIFETIME: Duration = Duration::from_secs(crate::auth::ACCESS_TTL_MI
 
 pub async fn ws_handler(State(state): State<AppState>, Query(q): Query<WsQuery>, ws: WebSocketUpgrade) -> ApiResult<Response> {
     let auth = authenticate_socket(&state, &q).await?;
+    // shortcut: the epoch is read when the socket opens, not when its ticket was issued (30 s window), upgrade by storing it on the ticket.
+    let epoch = staff_epoch(&state.db, auth.id).await?.unwrap_or(0);
     let rx = state.hub.subscribe();
     let presence = auth.role.is_staff().then(|| state.hub.staff_join());
     let draining = state.hub.drain_signal();
-    Ok(ws.on_upgrade(move |socket| pump(socket, rx, draining, auth.id, auth.role, presence)))
+    let session = LiveSession { auth, epoch, db: state.db.clone() };
+    Ok(ws.on_upgrade(move |socket| pump(socket, rx, draining, session, presence)))
+}
+
+/// The authenticated socket owner and the session epoch its token was issued at.
+struct LiveSession {
+    auth: Auth,
+    epoch: i32,
+    db: PgPool,
+}
+
+impl LiveSession {
+    /// False once a staff session has ended (epoch moved on). Customers have no epoch and stay live.
+    /// A failed lookup counts as ended: the socket fails closed.
+    async fn still_current(&self) -> ApiResult<bool> {
+        if !self.auth.role.is_staff() {
+            return Ok(true);
+        }
+        Ok(staff_epoch(&self.db, self.auth.id).await?.is_none_or(|cur| cur == self.epoch))
+    }
 }
 
 async fn pump(
     socket: WebSocket,
     mut rx: broadcast::Receiver<Frame>,
     mut draining: watch::Receiver<bool>,
-    id: Uuid,
-    role: Role,
+    session: LiveSession,
     _presence: Option<StaffPresence>,
 ) {
+    let (id, role) = (session.auth.id, session.auth.role);
     let (mut sink, mut stream) = socket.split();
     let mut ping = tokio::time::interval(PING_EVERY);
     let mut heartbeat = Heartbeat::new(tokio::time::Instant::now());
+    let mut recheck = tokio::time::interval(EPOCH_RECHECK);
     let expiry = tokio::time::sleep(SOCKET_LIFETIME);
     tokio::pin!(expiry);
     loop {
@@ -397,6 +421,12 @@ async fn pump(
                     break;
                 }
                 if sink.send(Message::Ping(Vec::new().into())).await.is_err() { break; }
+            }
+            _ = recheck.tick() => {
+                if !session.still_current().await.unwrap_or(false) {
+                    let _ = sink.send(Message::Close(Some(CloseFrame { code: close_code::POLICY, reason: "session ended".into() }))).await;
+                    break;
+                }
             }
         }
     }

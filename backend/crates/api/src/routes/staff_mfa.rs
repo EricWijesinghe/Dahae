@@ -2,6 +2,7 @@
 //! Every step after the password runs on a short-lived MFA challenge token, never on an access token.
 
 use super::auth::issue_tokens;
+use crate::owner::{RECOVERY_CODE_COUNT, new_code as recovery_code, normalize_code as normalize};
 use crate::{
     auth::{self, Role},
     crypto,
@@ -17,15 +18,11 @@ use axum::{
     routing::post,
 };
 use chrono::Utc;
-use data_encoding::BASE32_NOPAD;
-use rand::{RngCore, rngs::OsRng};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::net::SocketAddr;
 use uuid::Uuid;
 
-const RECOVERY_CODE_COUNT: usize = 10;
-const RECOVERY_CODE_BYTES: usize = 10;
 const MAX_MFA_FAILURES: i32 = 5;
 const LOCK_MINUTES: i32 = 15;
 
@@ -213,40 +210,4 @@ async fn session_tokens(s: &AppState, id: Uuid, role: &str) -> ApiResult<Value> 
     let role = if role == "admin" { Role::StaffAdmin } else { Role::StaffConsultant };
     let tokens = issue_tokens(s, id, role, false, None).await?;
     serde_json::to_value(tokens).map_err(|e| ApiError::Internal(e.to_string()))
-}
-
-/// Random recovery code shown once, grouped for reading: XXXX-XXXX-XXXX-XXXX.
-fn recovery_code() -> String {
-    let mut bytes = [0u8; RECOVERY_CODE_BYTES];
-    OsRng.fill_bytes(&mut bytes);
-    let raw = BASE32_NOPAD.encode(&bytes);
-    raw.as_bytes()
-        .chunks(4)
-        .map(|c| std::str::from_utf8(c).unwrap_or_default())
-        .collect::<Vec<_>>()
-        .join("-")
-}
-
-/// Input form does not matter: case, spaces and dashes are ignored.
-fn normalize(code: &str) -> String {
-    code.chars().filter(|c| c.is_ascii_alphanumeric()).map(|c| c.to_ascii_uppercase()).collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn recovery_codes_are_grouped_and_normalise_back() {
-        let code = recovery_code();
-        assert_eq!(code.len(), 19, "{code}");
-        assert_eq!(code.matches('-').count(), 3);
-        assert_eq!(normalize(&code.to_lowercase()), normalize(&code));
-        assert!(normalize(&code).chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()));
-    }
-
-    #[test]
-    fn codes_differ() {
-        assert_ne!(recovery_code(), recovery_code());
-    }
 }

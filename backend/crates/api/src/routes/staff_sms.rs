@@ -6,17 +6,20 @@ use crate::{
     auth::{self, Admin, Role, Staff, live_staff_role},
     contract,
     error::{ApiError, ApiResult},
+    owner,
     state::AppState,
 };
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{ConnectInfo, Path, State},
+    http::HeaderMap,
     routing::post,
 };
 use chrono::{Duration, Utc};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{PgConnection, Postgres, Transaction};
+use std::net::SocketAddr;
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
@@ -83,9 +86,19 @@ fn staff_conflict(e: sqlx::Error) -> ApiError {
 
 /// Creates an inactive staff row with no usable password (an empty hash never verifies) and sends its first
 /// code. The row and the code commit together; a failed SMS rolls the whole invite back.
-async fn invite(State(s): State<AppState>, Staff(actor): Staff, Json(n): Json<InviteInput>) -> ApiResult<Json<Value>> {
+async fn invite(
+    State(s): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Staff(actor): Staff,
+    Json(n): Json<InviteInput>,
+) -> ApiResult<Json<Value>> {
     let actor_role = live_staff_role(&s.db, actor.id).await?;
     let role = validate_invite(&n, actor_role)?;
+    // An admin account carries the whole console, so only the owner, with a fresh code, can make one.
+    if role == "admin" {
+        owner::verify_owner(&s, actor, &headers, Some(peer.ip()), true).await?;
+    }
     let phone = auth::normalize_phone(&n.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
     let mut tx = s.db.begin().await?;
     let id: Uuid = sqlx::query_scalar("INSERT INTO staff (email, name, role, phone, password_hash, active) VALUES ($1, $2, $3, $4, '', FALSE) RETURNING id")
@@ -121,7 +134,18 @@ struct ResetInput {
 
 /// Admin sends a reset code to an active staff member, or a fresh invite code to one who has not redeemed
 /// the first (an expired or lost invite). Revokes nothing until the code is redeemed.
-async fn issue_reset(State(s): State<AppState>, Admin(me): Admin, Path(id): Path<Uuid>, Json(req): Json<ResetInput>) -> ApiResult<Json<Value>> {
+async fn issue_reset(
+    State(s): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Admin(me): Admin,
+    Path(id): Path<Uuid>,
+    Json(req): Json<ResetInput>,
+) -> ApiResult<Json<Value>> {
+    // The owner's own password is reset only with the owner's code: a reset code would otherwise be a way in.
+    if owner::is_owner(&s.db, id).await? {
+        owner::verify_owner(&s, me, &headers, Some(peer.ip()), true).await?;
+    }
     let mut tx = s.db.begin().await?;
     let row: Option<(Option<String>, bool)> =
         sqlx::query_as("SELECT phone, password_hash = '' FROM staff WHERE id = $1 AND (active OR password_hash = '') FOR UPDATE")

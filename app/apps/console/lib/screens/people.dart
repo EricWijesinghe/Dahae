@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/owner_totp_dialog.dart';
 import 'finance_tax.dart';
 import 'confirm_action.dart';
 import 'payout_seller_dialog.dart';
@@ -655,7 +656,8 @@ class _StaffState extends State<StaffScreen> {
                             issueStaffPasswordReset(context, s, invite: true),
                         child: Text(t.cStaffInviteResend),
                       )
-                    else
+                    // The owner leaves only by handing the role over, so the owner row has no switch.
+                    else if (s['is_owner'] != true)
                       TextButton(
                         onPressed: () async {
                           // Only deactivation needs a confirm; reactivating is harmless.
