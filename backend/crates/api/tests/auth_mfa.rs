@@ -123,3 +123,86 @@ async fn export_and_delete_need_a_totp_step_up_within_five_minutes(db: PgPool) {
     assert_eq!(st, StatusCode::FORBIDDEN, "a six-minute-old step-up is stale: {b}");
     assert_eq!(b["error"]["code"], json!("stepup_required"));
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn consultant_cannot_search_customers(db: PgPool) {
+    let app = app(db.clone());
+    customer(&app, &db, "010-8200-0033").await;
+    let id = insert_staff(&db, "search@test.local", "consultant").await;
+    let token = auth::issue_access(SECRET, id, Role::StaffConsultant).expect("token");
+
+    let (st, b) = call(&app, "GET", "/v1/admin/customers?q=8200", Some(token.as_str()), None).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "customer search is admin-only: {b}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn unenrolled_staff_cannot_refresh_a_session(db: PgPool) {
+    let id = insert_staff(&db, "old@test.local", "admin").await;
+    let refresh = "signed-in-before-the-enrolment-rule";
+    sqlx::query(
+        "INSERT INTO refresh_tokens (token_hash, subject, role, expires_at, family_id) VALUES ($1, $2, 'staff_admin', now() + interval '1 day', gen_random_uuid())",
+    )
+    .bind(auth::sha256_hex(refresh.as_bytes()))
+    .bind(id)
+    .execute(&db)
+    .await
+    .expect("refresh row");
+
+    let (st, b) = call(&app(db), "POST", "/v1/auth/refresh", None, Some(json!({ "refresh_token": refresh }))).await;
+    assert_eq!(st, StatusCode::UNAUTHORIZED, "no session without a second factor: {b}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn payouts_and_bank_reveal_need_a_fresh_step_up(db: PgPool) {
+    insert_staff(&db, "pay@test.local", "admin").await;
+    let app = app(db.clone());
+    let (secret, token) = enrol(&app, "pay@test.local").await;
+    let reveal = format!("/v1/admin/settlements/payouts/{}/account", Uuid::now_v7());
+    let run = json!({ "date": "2000-01-01" });
+
+    let (st, b) = call(&app, "POST", "/v1/admin/settlements/run-payouts", Some(token.as_str()), Some(run.clone())).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "{b}");
+    assert_eq!(b["error"]["code"], json!("stepup_required"));
+    let (st, b) = call(&app, "GET", &reveal, Some(token.as_str()), None).await;
+    assert_eq!(b["error"]["code"], json!("stepup_required"), "bank details: {st} {b}");
+
+    let (st, b) = call(
+        &app,
+        "POST",
+        "/v1/auth/staff/mfa/step-up",
+        Some(token.as_str()),
+        Some(json!({ "code": code_ahead(&secret, 1) })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let (st, b) = call(&app, "POST", "/v1/admin/settlements/run-payouts", Some(token.as_str()), Some(run)).await;
+    assert_ne!(b["error"]["code"], json!("stepup_required"), "{st} {b}");
+    let (_, b) = call(&app, "GET", &reveal, Some(token.as_str()), None).await;
+    assert_ne!(b["error"]["code"], json!("stepup_required"), "{b}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn demoted_admin_with_a_stale_token_is_refused_after_step_up(db: PgPool) {
+    insert_staff(&db, "demoted@test.local", "admin").await;
+    let app = app(db.clone());
+    let (secret, token) = enrol(&app, "demoted@test.local").await;
+    let c = customer(&app, &db, "010-8200-0034").await;
+    let (st, b) = call(
+        &app,
+        "POST",
+        "/v1/auth/staff/mfa/step-up",
+        Some(token.as_str()),
+        Some(json!({ "code": code_ahead(&secret, 1) })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+
+    sqlx::query("UPDATE staff SET role = 'consultant' WHERE email = 'demoted@test.local'")
+        .execute(&db)
+        .await
+        .expect("demote");
+    let export = format!("/v1/admin/privacy/customers/{}/export", c.user);
+    let (st, b) = call(&app, "GET", &export, Some(token.as_str()), None).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "{b}");
+    assert_eq!(b["error"]["code"], json!("forbidden"), "the stored role decides, not the token: {b}");
+}

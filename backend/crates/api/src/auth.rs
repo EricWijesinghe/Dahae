@@ -300,6 +300,15 @@ pub async fn live_staff_role(db: &sqlx::PgPool, id: Uuid) -> Result<Role, ApiErr
     }
 }
 
+/// Money and privacy actions check the admin role stored now, not the token claim.
+pub async fn live_admin(s: &AppState, id: Uuid) -> Result<(), ApiError> {
+    if live_staff_role(&s.db, id).await? == Role::StaffAdmin {
+        Ok(())
+    } else {
+        Err(ApiError::Forbidden)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

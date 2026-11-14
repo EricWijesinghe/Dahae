@@ -380,7 +380,7 @@ struct Search {
     q: Option<String>,
 }
 
-async fn customers(State(s): State<AppState>, Staff(st): Staff, Query(q): Query<Search>) -> ApiResult<Json<Value>> {
+async fn customers(State(s): State<AppState>, Admin(st): Admin, Query(q): Query<Search>) -> ApiResult<Json<Value>> {
     let like = q.q.map(|x| format!("%{}%", x.replace(['%', '_'], "")));
     audit(&s.db, "staff", Some(st.id), "customer.pii_list", "users", json!({ "searched": like.is_some() })).await?;
     let v: Value = sqlx::query_scalar(

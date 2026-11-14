@@ -4,7 +4,7 @@
 
 use super::{audit, staff_mfa::require_recent_stepup};
 use crate::{
-    auth::{Admin, Role, live_staff_role},
+    auth::{Admin, live_admin},
     contract::{json_row_cursor, page_limit, paged, ts_id_cursor},
     crypto,
     error::{ApiError, ApiResult},
@@ -198,15 +198,6 @@ pub async fn run_payouts(AxState(s): AxState<AppState>, Admin(a): Admin, Json(r)
     )
     .await?;
     Ok(Json(rows(&s.db, None, Some(&ids), (None, None), BY_IDS_LIMIT).await?))
-}
-
-/// Money actions check the role stored now: a demoted or deactivated owner's token lives on for its TTL.
-async fn live_admin(s: &AppState, id: Uuid) -> ApiResult<()> {
-    if live_staff_role(&s.db, id).await? == Role::StaffAdmin {
-        Ok(())
-    } else {
-        Err(ApiError::Forbidden)
-    }
 }
 
 /// Bank details for a manual transfer. Owner only; every reveal is audit-logged and never cached.

@@ -26,7 +26,7 @@ from the release branches; no tags existed for them.
 - Public `GET /v1/public/offers`: welcome offer, sign-up coupons and referral amount for guests, cacheable for 5 minutes, no user data.
 
 ### Security
-- Every staff role must enrol TOTP before sign-in; customer phone lookup and export are admin-only; customer export, deletion and payouts need a TOTP step-up within five minutes (`POST /v1/auth/staff/mfa/step-up`, answers `403 stepup_required` until the console prompt ships). `STAFF_MFA_REQUIRED=0` is refused outside `DEV_MODE`.
+- Every staff role must enrol TOTP before sign-in; customer phone lookup, search and export are admin-only; customer export, deletion, bank-detail reveals and payouts need a TOTP step-up within five minutes (`POST /v1/auth/staff/mfa/step-up`; the console asks for the code and retries). Staff without a second factor get no session refresh. `STAFF_MFA_REQUIRED=0` is refused outside `DEV_MODE`.
 
 ### Changed
 - Staff invites and password resets now use a one-time 6-digit code sent by SMS (or copied by the admin), valid 24 hours, single use, locked after five wrong tries; consultants can invite consultants only.
