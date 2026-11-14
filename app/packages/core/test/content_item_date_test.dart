@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('createdAt reads the posting date from a notice row', () {
-    final item = ContentItem({
+    final item = const ContentItem({
       'id': 'n1',
       'kind': 'notice',
       'created_at': '2026-11-14T03:00:00Z',
@@ -13,7 +13,7 @@ void main() {
   });
 
   test('createdAt is null when an older server sends no date', () {
-    final item = ContentItem({'id': 'n1', 'kind': 'notice'});
+    final item = const ContentItem({'id': 'n1', 'kind': 'notice'});
     expect(item.createdAt, isNull);
   });
 }

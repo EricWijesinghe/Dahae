@@ -56,8 +56,9 @@ class ServiceGroup {
     final title = j['title'];
     if (title is! Map) throw FormatException('group $code: title missing');
     final services = j['services'];
-    if (services is! List)
+    if (services is! List) {
       throw FormatException('group $code: services missing');
+    }
     return ServiceGroup(
       code: code,
       title: {for (final e in title.entries) '${e.key}': '${e.value}'},
@@ -82,8 +83,9 @@ class ServiceGroup {
   static int _sortOrder(Json j, String code) {
     final v = j['sort_order'];
     if (v == null) return 0;
-    if (v is! num)
+    if (v is! num) {
       throw FormatException('group $code: sort_order not a number');
+    }
     return v.toInt();
   }
 

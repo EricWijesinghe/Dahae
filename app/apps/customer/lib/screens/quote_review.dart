@@ -14,7 +14,7 @@ int _n(Json e, String k) => (e[k] as num? ?? 0).toInt();
 
 /// District, road address and unit on one line (C-09).
 String _fullAddress(T t, Address address) => [
-  districtByCode(address.districtCode)?.name(t.lang),
+  districtByCode(address.districtCode)?.name(t.localeName),
   address.roadAddress,
   address.detail,
 ].whereType<String>().where((s) => s.isNotEmpty).join(' ');

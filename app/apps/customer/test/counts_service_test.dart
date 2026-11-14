@@ -2,7 +2,6 @@ import 'package:core/core.dart';
 import 'package:customer/screens/flow_widgets.dart';
 import 'package:customer/screens/service.dart';
 import 'package:customer/screens/service_counts.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:test_support/test_support.dart';
 import 'package:ui/ui.dart';
@@ -141,8 +140,10 @@ void main() {
       ServiceScreen(
         service: ac,
         initialUnit: 1,
-        initialCounts: Booking.fromJson({'id': 'b', 'unit_index': 1})
-            .countsOf(4),
+        initialCounts: Booking.fromJson({
+          'id': 'b',
+          'unit_index': 1,
+        }).countsOf(4),
       ),
     );
     await settle(tester);

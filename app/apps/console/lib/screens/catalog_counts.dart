@@ -110,8 +110,9 @@ class CountsDraft {
   String? problem(T t) {
     if (rows.isEmpty) return t.cntNeedOption;
     if (rows.any((r) => r.label.text.trim().isEmpty)) return t.cntNeedName;
-    if (rows.any((r) => _int(r.price) <= 0 || _int(r.minutes) <= 0))
+    if (rows.any((r) => _int(r.price) <= 0 || _int(r.minutes) <= 0)) {
       return t.cntNeedPrice;
+    }
     final cap = maxEach.text.trim().isEmpty ? null : maxEachValue;
     if (maxEach.text.trim().isNotEmpty &&
         (cap == null || cap < 1 || cap > countsMaxEachCap)) {

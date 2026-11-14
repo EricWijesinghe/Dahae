@@ -1,3 +1,5 @@
+part of 'home.dart';
+
 /// The group tiles in server order, four to a row (CR-2).
 class _GroupGrid extends StatelessWidget {
   const _GroupGrid({required this.groups, required this.services});

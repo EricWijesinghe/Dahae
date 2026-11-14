@@ -2,7 +2,6 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
-import '../state.dart';
 import 'flow_widgets.dart';
 
 /// Option cards for a counts service (design p08): two per row, icon, name, duration, price.

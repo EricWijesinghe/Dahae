@@ -262,11 +262,6 @@ abstract final class Icon3DRegistry {
     'ui_chevron_down': const Icon3DSpec(Icons.expand_more_rounded),
     'brand_wordmark': const Icon3DSpec(Icons.home_rounded, hue: _deep),
     'brand_confirm_check': const Icon3DSpec(Icons.check_rounded),
-    // Derived (not in the design PDF): drawn in the same colour language as the
-    // design art; the group tiles are composites of member art.
-    'svc_window': const Icon3DSpec(Icons.window_rounded),
-    'svc_whole_home': const Icon3DSpec(Icons.house_rounded),
-    'svc_disinfection': const Icon3DSpec(Icons.sanitizer_rounded),
     // Home group tiles (CR-2): the group art is the member art of its own composite.
     'svc_living': const Icon3DSpec(
       Icons.cleaning_services_rounded,

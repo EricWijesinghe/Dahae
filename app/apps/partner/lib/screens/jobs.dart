@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:core/auth_pay.dart';
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide homeTypeLabel;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
@@ -35,10 +35,17 @@ class _JobsTabState extends State<JobsTab> {
   bool _closed = false;
   int _seen = -1;
 
-  Future<List<Json>> _load() async => (await context.api.get(
-    '/partner/jobs',
-    query: {'kind': _kind, 'sort': _sort, 'include_closed': '$_closed'},
-  ) as List).cast<Json>();
+  Future<List<Json>> _load() async =>
+      (await context.api.get(
+                '/partner/jobs',
+                query: {
+                  'kind': _kind,
+                  'sort': _sort,
+                  'include_closed': '$_closed',
+                },
+              )
+              as List)
+          .cast<Json>();
 
   @override
   void didChangeDependencies() {
@@ -253,8 +260,8 @@ class _JobCard extends StatelessWidget {
       if (job['road_area'] != null && (job['road_area'] as String).isNotEmpty)
         job['road_area'] as String,
       if (job['size_pyeong'] != null) t.pyeong('${job['size_pyeong']}'),
-      if (homeTypeLabel(t, job['answers'] as Json?) case final home?) home,
-      if (jobCountsLabel(t, job) case final counts?) counts,
+      ?homeTypeLabel(t, job['answers'] as Json?),
+      ?jobCountsLabel(t, job),
     ].join(' · ');
     return Opacity(
       opacity: open ? 1 : 0.5,

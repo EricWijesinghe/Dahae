@@ -87,11 +87,12 @@ FakeApi _homeApi({bool tipFails = false, bool Function()? bookingsUp}) {
     visitDate: DateTime.now().add(const Duration(days: 2)),
   );
   final fake = FakeApi();
-  if (tipFails)
+  if (tipFails) {
     fake.onGet(
       '/content',
       (call) => call.query['kind'] == 'tip' ? down : _content(call),
     );
+  }
   fake.onGet(
     '/bookings',
     (_) => (bookingsUp?.call() ?? true) ? [booking] : down,

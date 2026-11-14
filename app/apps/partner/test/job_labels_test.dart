@@ -1,4 +1,3 @@
-import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partner/job_labels.dart';
 import 'package:test_support/test_support.dart';

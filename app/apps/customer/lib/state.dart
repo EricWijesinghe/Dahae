@@ -138,8 +138,9 @@ class AppState extends ChangeNotifier {
   Future<void> restoreServices() async {
     if (services.isNotEmpty) return;
     final cached = await cache.read('services');
-    if (cached is! List || services.isNotEmpty)
+    if (cached is! List || services.isNotEmpty) {
       return; // the network won the race
+    }
     try {
       services = cached.map((e) => Service.fromJson(e as Json)).toList();
     } on Object {
@@ -153,7 +154,7 @@ class AppState extends ChangeNotifier {
   Future<void> loadServiceGroups() async {
     try {
       final raw = await api.get('/service-groups') as Json;
-      groups = serviceGroupsFrom(raw);
+      groups = parseServiceGroups(raw);
     } on ApiException {
       groups = const [];
     }

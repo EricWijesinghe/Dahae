@@ -333,9 +333,6 @@ class QuoteAnswers {
   bool? elevator;
   bool floor3OrHigher = false;
 
-  /// 'one_two_room' | 'apartment' | 'villa_house' from the home-type chooser; null when not asked.
-  String? homeType;
-
   /// Aircon unit `label_key` -> count added to the move clean; the server prices them from the catalog.
   Map<String, int> acAddons = {};
 

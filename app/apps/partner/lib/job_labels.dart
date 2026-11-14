@@ -39,7 +39,7 @@ List<num>? _jobCounts(Json job, List<String> keys) {
   final addons = answers is Map ? answers['ac_addons'] : null;
   if (addons is! List || addons.isEmpty) return null;
   final byUnit = <String, num>{
-    for (final a in addons.whereType<Map>())
+    for (final a in addons.whereType<Map<String, dynamic>>())
       if (a['unit'] is String) a['unit'] as String: (a['count'] as num?) ?? 0,
   };
   return [for (final k in keys) byUnit[k] ?? 0];

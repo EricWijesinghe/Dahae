@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:customer/screens/flow_widgets.dart';
 import 'package:customer/screens/move_chooser.dart';
 import 'package:customer/screens/quote_flow.dart';
 import 'package:customer/state.dart';
@@ -137,7 +138,7 @@ void main() {
   testWidgets(
     'whole-home asks 원룸·투룸 then starts the quote at 집 구조 with 1/6 and no type page',
     (tester) async {
-      await _pump(tester, (_) => MoveChooserScreen(service: _wholeHome));
+      await _pump(tester, (_) => const MoveChooserScreen(service: _wholeHome));
 
       expect(
         find.text(koT.hgMoveQuestion),
@@ -202,8 +203,10 @@ void main() {
     (tester) async {
       final fake = await _pump(
         tester,
-        (app) =>
-            QuoteFlowScreen(service: _wholeHome, home: MoveHome.oneTwoRoom),
+        (app) => const QuoteFlowScreen(
+          service: _wholeHome,
+          home: MoveHome.oneTwoRoom,
+        ),
       );
       await _tap(tester, find.text(koT.dfLayoutOneHalf));
       await _tap(tester, find.text(koT.dfNone).first); // duplex: no
