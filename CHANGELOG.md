@@ -31,6 +31,9 @@ from the release branches; no tags existed for them.
 - Customer app: guests see how a booking works on the Bookings tab and the FAQ and terms on the Chat tab (chat still asks for sign-in). The welcome offer and the referral amount show before sign-in, and a quote in progress is kept on the device across restarts.
 - Public `GET /v1/public/offers`: welcome offer, sign-up coupons and referral amount for guests, cacheable for 5 minutes, no user data.
 - Customer booking cancel sheet (quote and fixed-price bookings): shows the server's fee tier, fee, refund and payment method, a link to the cancellation and refund policy, an optional reason, and a confirm button that states the refund amount. Booking detail shows the full address with district; the calendar header shows the full year and an empty day says 이 날은 예약이 없어요.
+- Console home tiles (상품 묶음): the four home groups (titles in Korean and English, order, picture, shown or hidden, member services, and the move-chooser questions) are edited in the catalogue under a new tab, stored in `service_groups` (migrations 0224 and 0225) and served at `GET /v1/service-groups`.
+- Console catalogue: counted-pricing services (수량 선택) are edited as options with a display name, minutes and price, add, remove and reorder, a per-option maximum, a two-or-more discount, and a live price preview. Each option keeps a fixed id, so renaming it leaves its add-on art and add-on link in place.
+- Console sidebar: each entry shows its own icon (the icons had shifted by one row).
 
 ### Changed
 - Catalogue: counts pricing for aircon, sofa, mattress, window and disinfection (several units per booking, `counts` and `unit_counts` in the API, multi-item discount); whole_home quote; prices are placeholders the owner edits in the console; old mattress bookings and subscriptions move to counts (migrations 0210-0213)

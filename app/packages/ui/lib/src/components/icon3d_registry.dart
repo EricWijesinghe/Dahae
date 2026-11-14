@@ -222,6 +222,7 @@ abstract final class Icon3DRegistry {
       Icons.event_repeat_rounded,
       alias: 'c_bookings',
     ),
+<<<<<<< HEAD
     // Icons cut from the client's design PDF (screenshots). Line icons are
     // tintable white masks; colour art is full colour.
     'circle_box': const Icon3DSpec(Icons.inventory_2_outlined),
@@ -276,6 +277,10 @@ abstract final class Icon3DRegistry {
     'group_resident_clean': const Icon3DSpec(Icons.cleaning_services_rounded),
     'group_appliance_clean': const Icon3DSpec(Icons.ac_unit_rounded),
     'group_disinfect_clean': const Icon3DSpec(Icons.sanitizer_rounded),
+    'c_rules': const Icon3DSpec(Icons.rule_rounded),
+    'c_notify': const Icon3DSpec(Icons.notifications_active_rounded),
+=======
+>>>>>>> console/catalog-groups
   };
 
   static Icon3DSpec of(String id) => specs[id] ?? unknown;
