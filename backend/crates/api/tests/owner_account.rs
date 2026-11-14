@@ -173,9 +173,17 @@ async fn owner_request_needs_a_totp_each_time(db: PgPool) {
     let owner = enrolled(&db, &app, "owner1@test.local", true).await;
     let body = Some(json!({ "phone": "010-1234-5678" }));
     let (st, b) = owner_call(&app, PHONE_CALL.0, PHONE_CALL.1, &owner.token, None, body.clone()).await;
-    assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::BAD_REQUEST, Some("totp_required")), "missing TOTP: {b}");
+    assert_eq!(
+        (st, b["error"]["code"].as_str()),
+        (StatusCode::BAD_REQUEST, Some("totp_required")),
+        "missing TOTP: {b}"
+    );
     let (st, b) = owner_call(&app, PHONE_CALL.0, PHONE_CALL.1, &owner.token, Some("000000"), body.clone()).await;
-    assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::BAD_REQUEST, Some("totp_invalid")), "wrong TOTP: {b}");
+    assert_eq!(
+        (st, b["error"]["code"].as_str()),
+        (StatusCode::BAD_REQUEST, Some("totp_invalid")),
+        "wrong TOTP: {b}"
+    );
     let code = fresh(&db, &owner).await;
     let (st, b) = owner_call(&app, PHONE_CALL.0, PHONE_CALL.1, &owner.token, Some(code.as_str()), body).await;
     assert_eq!(st, StatusCode::OK, "{b}");
@@ -560,7 +568,9 @@ async fn reset_code_is_refused_for_a_non_owner(db: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn setup_marks_the_first_admin_as_owner(db: PgPool) {
-    api::routes::setup::ensure_setup_code(&db, Some("OWNERSET2026"), None).await.expect("setup code");
+    api::routes::setup::ensure_setup_code(&db, Some("OWNERSET2026"), None)
+        .await
+        .expect("setup code");
     let app = common::app(db.clone());
     let (st, b) = call(
         &app,

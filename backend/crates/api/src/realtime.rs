@@ -352,7 +352,11 @@ pub async fn ws_handler(State(state): State<AppState>, Query(q): Query<WsQuery>,
     let rx = state.hub.subscribe();
     let presence = auth.role.is_staff().then(|| state.hub.staff_join());
     let draining = state.hub.drain_signal();
-    let session = LiveSession { auth, epoch, db: state.db.clone() };
+    let session = LiveSession {
+        auth,
+        epoch,
+        db: state.db.clone(),
+    };
     Ok(ws.on_upgrade(move |socket| pump(socket, rx, draining, session, presence)))
 }
 
@@ -800,20 +804,33 @@ mod tests {
 
     #[sqlx::test(migrations = "../../migrations")]
     async fn staff_socket_stops_being_current_once_its_sessions_end(db: PgPool) {
-        let id: Uuid = sqlx::query_scalar("INSERT INTO staff (email, name, password_hash, role) VALUES ('socket@test.local', 'Socket', 'x', 'admin') RETURNING id")
-            .fetch_one(&db)
-            .await
-            .expect("staff");
-        let session = LiveSession { auth: Auth { id, role: Role::StaffAdmin }, epoch: 0, db: db.clone() };
+        let id: Uuid =
+            sqlx::query_scalar("INSERT INTO staff (email, name, password_hash, role) VALUES ('socket@test.local', 'Socket', 'x', 'admin') RETURNING id")
+                .fetch_one(&db)
+                .await
+                .expect("staff");
+        let session = LiveSession {
+            auth: Auth { id, role: Role::StaffAdmin },
+            epoch: 0,
+            db: db.clone(),
+        };
         assert!(session.still_current().await.expect("check"));
-        sqlx::query("UPDATE staff SET session_epoch = session_epoch + 1 WHERE id = $1").bind(id).execute(&db).await.expect("bump");
+        sqlx::query("UPDATE staff SET session_epoch = session_epoch + 1 WHERE id = $1")
+            .bind(id)
+            .execute(&db)
+            .await
+            .expect("bump");
         assert!(!session.still_current().await.expect("check"), "sign-out everywhere must close the socket");
     }
 
     #[sqlx::test(migrations = "../../migrations")]
     async fn customer_socket_is_never_closed_by_the_epoch(db: PgPool) {
         let id = Uuid::now_v7();
-        let session = LiveSession { auth: Auth { id, role: Role::Customer }, epoch: 0, db };
+        let session = LiveSession {
+            auth: Auth { id, role: Role::Customer },
+            epoch: 0,
+            db,
+        };
         assert!(session.still_current().await.expect("check"));
     }
 }

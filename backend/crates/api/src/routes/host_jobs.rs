@@ -6,8 +6,7 @@ use crate::{
     error::{ApiError, ApiResult},
     host_jobs::{self, JobSpec, Kind},
     host_status::{self, HostStatus},
-    idempotency,
-    owner,
+    idempotency, owner,
     sms_outbox::{self, Message},
     state::AppState,
 };
@@ -24,7 +23,6 @@ use serde_json::{Value, json};
 use sqlx::{FromRow, PgPool};
 use std::{fs::OpenOptions, io::Write, net::SocketAddr, path::Path as FsPath};
 use uuid::Uuid;
-
 
 const LIST_LIMIT: i64 = 50;
 /// A job with no status file this long after it was queued never reached the agent.
