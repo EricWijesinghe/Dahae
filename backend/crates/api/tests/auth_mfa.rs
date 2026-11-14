@@ -45,7 +45,14 @@ async fn enrol(app: &axum::Router, email: &str) -> (Vec<u8>, String) {
     let (st, e) = call(app, "POST", "/v1/auth/staff/mfa/enrol", None, Some(json!({ "mfa_token": mfa }))).await;
     assert_eq!(st, StatusCode::OK, "{e}");
     let secret = totp::decode_secret(e["secret"].as_str().expect("secret")).expect("base32");
-    let (st, c) = call(app, "POST", "/v1/auth/staff/mfa/enrol/confirm", None, Some(json!({ "mfa_token": mfa, "code": code_ahead(&secret, 0) }))).await;
+    let (st, c) = call(
+        app,
+        "POST",
+        "/v1/auth/staff/mfa/enrol/confirm",
+        None,
+        Some(json!({ "mfa_token": mfa, "code": code_ahead(&secret, 0) })),
+    )
+    .await;
     assert_eq!(st, StatusCode::OK, "{c}");
     (secret, c["access_token"].as_str().expect("access token").to_string())
 }
@@ -72,7 +79,14 @@ async fn consultant_cannot_look_up_or_export_customers(db: PgPool) {
 
     let (st, _) = call(&app, "GET", "/v1/admin/privacy/customers?phone=010-8200-0031", Some(token.as_str()), None).await;
     assert_eq!(st, StatusCode::FORBIDDEN, "phone lookup is admin-only");
-    let (st, _) = call(&app, "GET", &format!("/v1/admin/privacy/customers/{}/export", c.user), Some(token.as_str()), None).await;
+    let (st, _) = call(
+        &app,
+        "GET",
+        &format!("/v1/admin/privacy/customers/{}/export", c.user),
+        Some(token.as_str()),
+        None,
+    )
+    .await;
     assert_eq!(st, StatusCode::FORBIDDEN, "export is admin-only");
 }
 

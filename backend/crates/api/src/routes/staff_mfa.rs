@@ -173,14 +173,12 @@ pub async fn require_recent_stepup(s: &AppState, id: Uuid) -> ApiResult<()> {
     if !s.config.staff_mfa_required {
         return Ok(());
     }
-    let fresh: bool = sqlx::query_scalar(
-        "SELECT COALESCE(stepup_at > now() - make_interval(mins => $2), FALSE) FROM staff WHERE id = $1 AND active",
-    )
-    .bind(id)
-    .bind(STEP_UP_MINUTES)
-    .fetch_optional(&s.db)
-    .await?
-    .unwrap_or(false);
+    let fresh: bool = sqlx::query_scalar("SELECT COALESCE(stepup_at > now() - make_interval(mins => $2), FALSE) FROM staff WHERE id = $1 AND active")
+        .bind(id)
+        .bind(STEP_UP_MINUTES)
+        .fetch_optional(&s.db)
+        .await?
+        .unwrap_or(false);
     if fresh { Ok(()) } else { Err(ApiError::StepUpRequired) }
 }
 
