@@ -630,18 +630,23 @@ async fn making_an_admin_needs_the_owner_code(db: PgPool) {
     assert_eq!(st, StatusCode::OK, "consultants need no owner code: {b}");
 }
 
+/// The console sends a channel and, for a staff member with no phone on file, the phone to text.
+fn reset_body() -> Value {
+    json!({ "channel": "copy", "phone": "01099990000" })
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn owner_password_reset_is_refused_to_others_and_needs_the_owner_code(db: PgPool) {
     let app = common::app(db.clone());
     let owner = enrolled(&db, &app, "reset-owner@test.local", true).await;
     let other = enrolled(&db, &app, "reset-other@test.local", false).await;
     let uri = format!("/v1/admin/staff/{}/password-reset", owner.id);
-    let (st, b) = call(&app, "POST", &uri, Some(other.token.as_str()), None).await;
+    let (st, b) = call(&app, "POST", &uri, Some(other.token.as_str()), Some(reset_body())).await;
     assert_eq!(st, StatusCode::FORBIDDEN, "{b}");
-    let (st, b) = owner_call(&app, "POST", &uri, &owner.token, None, None).await;
+    let (st, b) = owner_call(&app, "POST", &uri, &owner.token, None, Some(reset_body())).await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "no owner code: {b}");
     let code = fresh(&db, &owner).await;
-    let (st, b) = owner_call(&app, "POST", &uri, &owner.token, Some(code.as_str()), None).await;
+    let (st, b) = owner_call(&app, "POST", &uri, &owner.token, Some(code.as_str()), Some(reset_body())).await;
     assert_eq!(st, StatusCode::OK, "{b}");
 }
 

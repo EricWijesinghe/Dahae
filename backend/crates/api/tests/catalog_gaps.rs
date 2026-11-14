@@ -45,7 +45,7 @@ async fn public_codes(app: &Router) -> Vec<String> {
 async fn enrolled_admin(db: &PgPool) -> String {
     let (token, id) = staff_token(db, Role::StaffAdmin).await;
     let enc = crypto::encrypt(&test_config().data_key, crypto::aad::STAFF_TOTP, &totp::encode_secret(TOTP_SEED));
-    sqlx::query("UPDATE staff SET totp_secret = $2, totp_enabled_at = now() WHERE id = $1")
+    sqlx::query("UPDATE staff SET totp_secret = $2, totp_enabled_at = now(), recovery_confirmed_at = now(), is_owner = true WHERE id = $1")
         .bind(id)
         .bind(enc)
         .execute(db)
@@ -123,12 +123,12 @@ async fn demo_clear_needs_the_owner_totp(pool: PgPool) {
     let app = app(pool.clone());
     let token = enrolled_admin(&pool).await;
 
-    assert_eq!(clear_with_totp(&app, &token, None).await, StatusCode::UNAUTHORIZED, "no code");
-    assert_eq!(clear_with_totp(&app, &token, Some("000000")).await, StatusCode::UNAUTHORIZED, "wrong code");
+    assert_eq!(clear_with_totp(&app, &token, None).await, StatusCode::BAD_REQUEST, "no code");
+    assert_eq!(clear_with_totp(&app, &token, Some("000000")).await, StatusCode::BAD_REQUEST, "wrong code");
     assert_eq!(clear_with_totp(&app, &token, Some(&code_now())).await, StatusCode::OK, "owner code");
     assert_eq!(
         clear_with_totp(&app, &token, Some(&code_now())).await,
-        StatusCode::UNAUTHORIZED,
+        StatusCode::CONFLICT,
         "code is single-use"
     );
 }
