@@ -255,6 +255,7 @@ async fn consultant_cannot_read_payout_series(pool: PgPool) {
         "/v1/admin/finance/series?grain=week",
         "/v1/admin/finance/partners?period=custom&from=2026-03-01&to=2026-03-31",
         "/v1/admin/finance/services?period=custom&from=2026-03-01&to=2026-03-31",
+        "/v1/admin/settlements",
     ] {
         let (s, _) = call(&app, "GET", uri, Some(&consultant), None).await;
         assert_eq!(s, StatusCode::FORBIDDEN, "{uri}");
@@ -306,6 +307,42 @@ async fn dashboard_revenue_matches_the_finance_summary(pool: PgPool) {
     )
     .await;
     assert_eq!(dash["revenue_30d"], 70_000);
+    assert_eq!(dash["revenue_30d"], s["net_revenue"]);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn dashboard_refund_dated_by_cancel_day_counts_in_the_window(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let user: Uuid = sqlx::query_scalar("INSERT INTO users (phone, name) VALUES ('01070000003', 'refund') RETURNING id")
+        .fetch_one(&pool)
+        .await
+        .expect("user");
+    // Paid 40 days ago (outside the window), cancelled and refunded yesterday (inside it).
+    let paid = (chrono::Utc::now() - chrono::Duration::days(40)).to_rfc3339();
+    let cancelled = (chrono::Utc::now() - chrono::Duration::days(1)).to_rfc3339();
+    let b = insert_booking(&pool, user, "BKD-2", 80_000, 0, -1, &paid).await;
+    insert_payment(&pool, b, 80_000, 80_000, "refunded", "dash-2", &paid).await;
+    sqlx::query("UPDATE bookings SET cancelled_at = $2::timestamptz WHERE id = $1")
+        .bind(b)
+        .bind(&cancelled)
+        .execute(&pool)
+        .await
+        .expect("cancel");
+    let today = (chrono::Utc::now() + chrono::Duration::hours(9)).date_naive();
+    let from = today - chrono::Duration::days(29);
+    let app = common::app(pool.clone());
+    let token = admin_token().await;
+    let (_, dash) = call(&app, "GET", "/v1/admin/dashboard", Some(&token), None).await;
+    let (_, s) = call(
+        &app,
+        "GET",
+        &format!("/v1/admin/finance/summary?period=custom&from={from}&to={today}"),
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(s["net_revenue"], -80_000);
+    assert_eq!(dash["revenue_30d"], -80_000);
     assert_eq!(dash["revenue_30d"], s["net_revenue"]);
 }
 

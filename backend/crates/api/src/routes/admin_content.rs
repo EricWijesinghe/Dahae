@@ -443,7 +443,7 @@ struct SettlementFilter {
     state: Option<String>,
 }
 
-async fn list_settlements(State(s): State<AppState>, _st: Staff, Query(f): Query<SettlementFilter>) -> ApiResult<Json<Value>> {
+async fn list_settlements(State(s): State<AppState>, _a: Admin, Query(f): Query<SettlementFilter>) -> ApiResult<Json<Value>> {
     let v: Value = sqlx::query_scalar(
         "SELECT COALESCE(jsonb_agg(x), '[]') FROM (SELECT st.*, p.name AS pro_name, p.team_name, b.number FROM settlements st JOIN pros p ON p.id = st.pro_id JOIN bookings b ON b.id = st.booking_id
          WHERE $1::text IS NULL OR st.state = $1 ORDER BY st.payout_date NULLS LAST, st.created_at LIMIT $2) x",
