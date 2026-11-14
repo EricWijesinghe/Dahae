@@ -4566,6 +4566,69 @@ class TKo extends T {
   String get pCustomerEstimate => '고객 예상가';
 
   @override
+  String get pHomeOneTwo => '원룸·투룸';
+
+  @override
+  String get pHomeApartment => '아파트';
+
+  @override
+  String get pHomeVillaHouse => '빌라·주택';
+
+  @override
+  String get pCountsTitle => '수량';
+
+  @override
+  String get pUnitWall => '벽걸이';
+
+  @override
+  String get pUnitStand => '스탠드';
+
+  @override
+  String get pUnitTwoInOne => '2in1';
+
+  @override
+  String get pUnitCeiling => '천장형';
+
+  @override
+  String get pUnitSeat12 => '1~2인용';
+
+  @override
+  String get pUnitSeat3 => '3인용';
+
+  @override
+  String get pUnitSeat4Plus => '4인용 이상';
+
+  @override
+  String get pUnitLShape => 'L자';
+
+  @override
+  String get pUnitMattress => '매트리스';
+
+  @override
+  String get pUnitWindowSmall => '작은 창';
+
+  @override
+  String get pUnitWindowLarge => '큰 창';
+
+  @override
+  String get pUnitPest => '해충 방제';
+
+  @override
+  String get pUnitMiteBedbug => '진드기·베드버그';
+
+  @override
+  String get pUnitSanitize => '살균';
+
+  @override
+  String get pUnitSickHouse => '새집 증후군';
+
+  @override
+  String get pLogoutConfirm => '로그아웃할까요?';
+
+  @override
+  String get pLogoutBody => '다시 로그인하면 일감과 일정을 그대로 볼 수 있어요.';
+
+  @override
   String get pNew => 'NEW';
 
   @override

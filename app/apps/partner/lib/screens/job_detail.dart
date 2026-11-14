@@ -156,6 +156,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   title: Text(t.pSpace),
                   subtitle: Text(_answersText(t, answers)),
                 ),
+              if (jobCountsLabel(t, b) case final counts?)
+                ListTile(
+                  leading: const Icon(Icons.format_list_numbered_rounded),
+                  title: Text(t.pCountsTitle),
+                  subtitle: Text(counts),
+                ),
             ],
           ),
         ),
@@ -340,7 +346,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       for (final u in (a['ac_addons'] as List? ?? const []).cast<Json>())
         '${t.unit(u['unit'] as String)} ${t.dfCountUnits('${u['count']}')}',
     ];
-    return '$building · $layout · ${t.bathroomsLabel} ${a['bathrooms']} · ${t.balconiesLabel} ${a['balconies']}${a['duplex'] == true ? ' · ${t.duplexTitle}' : ''}'
+    final home = homeTypeLabel(t, a);
+    return '${home == null ? '' : '$home · '}$building · $layout · ${t.bathroomsLabel} ${a['bathrooms']} · ${t.balconiesLabel} ${a['balconies']}${a['duplex'] == true ? ' · ${t.duplexTitle}' : ''}'
         '${ac.isEmpty ? '' : '\n${t.service('aircon')}: ${ac.join(', ')}'}';
   }
 
