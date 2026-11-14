@@ -457,7 +457,9 @@ mod tests {
     }
 
     #[test]
-    fn whole_home_two_room_apartment_estimate_is_445500() {
+    fn whole_home_two_room_apartment_estimate_is_445500_on_a_weekend_slot() {
+        // Assumption to confirm with the owner: the spec's 445,500 is a weekend slot (10% peak).
+        // Without the peak the same answers give 412,500 (300,000 x 1.25 x 1.1), see the test below.
         // 300,000 base x (1 + 10% deep clean + 15% lived-in luggage + 10% weekend peak) = 405,000; +10% VAT.
         let a = fixed_answers_for(
             "whole_home",
@@ -471,6 +473,22 @@ mod tests {
         );
         let e = QuoteFormula::default().estimate_with_peak(&a, 1_000).unwrap();
         assert_eq!(e.total, Won(445_500));
+    }
+
+    #[test]
+    fn whole_home_two_room_apartment_estimate_without_peak_is_412500() {
+        let a = fixed_answers_for(
+            "whole_home",
+            QuoteAnswers {
+                building: BuildingType::Apartment,
+                layout: Layout::TwoRooms,
+                bathrooms: 1,
+                balconies: 0,
+                ..answers()
+            },
+        );
+        let e = QuoteFormula::default().estimate_with_peak(&a, 0).unwrap();
+        assert_eq!(e.total, Won(412_500));
     }
 
     #[test]
