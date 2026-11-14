@@ -319,6 +319,9 @@ class QuoteAnswers {
   String? cleaningType;
   String luggage = 'empty';
   String? building;
+
+  /// Home picked before the flow: one_two_room | apartment | villa_house (CR-8.2). Null when asked in full.
+  String? homeType;
   String? layout;
   bool? duplex;
   int bathrooms = 1;
@@ -337,6 +340,7 @@ class QuoteAnswers {
     'cleaning_type': cleaningType,
     'luggage': luggage,
     'building': building,
+    'home_type': homeType,
     'layout': layout,
     'duplex': duplex,
     'bathrooms': bathrooms,
