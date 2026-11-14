@@ -99,3 +99,27 @@ async fn legacy_mattress_unit_index_books_one_mattress(pool: PgPool) {
     assert_eq!(st, StatusCode::OK, "{b}");
     assert_eq!((b["unit_counts"].clone(), b["paid_amount"].as_i64()), (json!([1]), Some(59_000)), "{b}");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn counts_services_are_not_offered_as_subscriptions(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5100-0005").await;
+    let (st, b) = call(
+        &app,
+        "POST",
+        "/v1/subscriptions",
+        Some(c.token.as_str()),
+        Some(json!({
+            "service_code": "disinfection",
+            "address_id": c.address,
+            "payment_method_id": c.card,
+            "cadence_weeks": 4,
+            "weekday": 2,
+            "start_hour": 9,
+        })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "{b}");
+    assert_eq!(b["error"]["code"], "subscription_not_supported", "{b}");
+}

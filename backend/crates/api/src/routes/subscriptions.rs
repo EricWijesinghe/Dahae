@@ -23,6 +23,7 @@ use axum::{
 };
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use domain::{
+    catalog::Pricing,
     pricing::{price_booking, price_booking_with},
     schedule::{check_capacity, check_date, check_slot},
     subscription::{Cadence, Policy, active_days, churn_bps, first_visit, monthly_equivalent, prorate, visit_price, weekday_from_index},
@@ -65,7 +66,7 @@ pub fn admin_routes() -> Router<AppState> {
 
 const SUB_COLS: &str = "s.id, s.user_id, s.service_code, s.unit_index, s.address_id, s.payment_method_id, s.preferred_pro_id,
     s.cadence_weeks, s.weekday, s.start_hour, s.anchor_date, s.status, s.paused_reason, s.discount_percent,
-    s.consecutive_failures, s.created_at, s.cancelled_at";
+    s.consecutive_failures, s.created_at, s.cancelled_at, s.unit_counts";
 
 #[derive(Serialize, sqlx::FromRow)]
 pub struct SubView {
@@ -86,6 +87,8 @@ pub struct SubView {
     pub consecutive_failures: i32,
     pub created_at: DateTime<Utc>,
     pub cancelled_at: Option<DateTime<Utc>>,
+    /// Per-option counts for a migrated counts subscription (mattress); `None` for single-unit ones.
+    pub unit_counts: Option<Vec<i16>>,
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -204,7 +207,8 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(req): Jso
         household: None,
     };
     let prep = prepare(&s.db, a.id, &body).await?;
-    if prep.service.is_quote() {
+    // Quote services are priced by hand, and counts services are not offered as subscriptions.
+    if prep.service.is_quote() || matches!(prep.service.pricing, Pricing::Counts { .. }) {
         return Err(ApiError::BadRequest("subscription_not_supported"));
     }
     price_booking(&prep.service, req.unit_index, None, Utc::now())?;
@@ -633,8 +637,8 @@ pub async fn recurring_metrics(db: &PgPool, from: NaiveDate, to: NaiveDate) -> A
     for r in &rows {
         let service = load_service(db, &r.service_code).await?;
         let counts = super::booking_core::counts_from_row(r.unit_counts.clone());
-        let list = price_booking_with(&service, r.unit_index.map(|u| u as usize), &counts, None, Utc::now())?.list_price;
-        let total = visit_price(list.0, u8::try_from(r.discount_percent).unwrap_or(0))?.total;
+        let base = price_booking_with(&service, r.unit_index.map(|u| u as usize), &counts, None, Utc::now())?.total;
+        let total = visit_price(base.0, u8::try_from(r.discount_percent).unwrap_or(0))?.total;
         let monthly = monthly_equivalent(total, Cadence::from_weeks(i64::from(r.cadence_weeks))?);
         recognized += prorate(monthly, active_days(r.started, r.ended, from, to), period_days);
         if r.status == "active" {
