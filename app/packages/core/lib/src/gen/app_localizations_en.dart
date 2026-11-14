@@ -2636,6 +2636,27 @@ class TEn extends T {
   String get dfScopeEntrance => 'Entrance floor';
 
   @override
+  String get dfScopePest => 'Spraying pest control treatment';
+
+  @override
+  String get dfScopeMite => 'Mite and bedbug treatment';
+
+  @override
+  String get dfScopeSanitize => 'Sterilising and virus disinfection';
+
+  @override
+  String get dfScopeSickHouse => 'New-home syndrome removal treatment';
+
+  @override
+  String get dfScopeWholeHomeGroup => 'Whole-home cleaning';
+
+  @override
+  String get dfScopeWindowGroup => 'Window cleaning';
+
+  @override
+  String get dfScopeDisinfGroup => 'Pest control and disinfection';
+
+  @override
   String get dfBasicService => 'Included';
 
   @override

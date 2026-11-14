@@ -75,6 +75,9 @@ abstract final class Icon3DRegistry {
     'svc_mattress': _svc('mattress'),
     'svc_aircon': _svc('aircon'),
     'svc_sofa': _svc('sofa'),
+    'svc_whole_home': _svc('whole_home'),
+    'svc_window': _svc('window'),
+    'svc_disinfection': _svc('disinfection'),
     'rec_move_combo': const Icon3DSpec(Icons.compare_arrows_rounded),
     'banner_coupon': const Icon3DSpec(
       Icons.confirmation_number_rounded,
@@ -222,7 +225,6 @@ abstract final class Icon3DRegistry {
       Icons.event_repeat_rounded,
       alias: 'c_bookings',
     ),
-<<<<<<< HEAD
     // Icons cut from the client's design PDF (screenshots). Line icons are
     // tintable white masks; colour art is full colour.
     'circle_box': const Icon3DSpec(Icons.inventory_2_outlined),
@@ -274,13 +276,26 @@ abstract final class Icon3DRegistry {
       Icons.ac_unit_rounded,
       alias: 'group_appliance_clean',
     ),
-    'group_resident_clean': const Icon3DSpec(Icons.cleaning_services_rounded),
-    'group_appliance_clean': const Icon3DSpec(Icons.ac_unit_rounded),
-    'group_disinfect_clean': const Icon3DSpec(Icons.sanitizer_rounded),
     'c_rules': const Icon3DSpec(Icons.rule_rounded),
     'c_notify': const Icon3DSpec(Icons.notifications_active_rounded),
-=======
->>>>>>> console/catalog-groups
+    // Group tiles reuse a member's art (no second asset): living -> bathroom,
+    // appliance -> aircon, disinfection -> disinfection, moving -> move.
+    'group_move_clean': const Icon3DSpec(
+      Icons.local_shipping_rounded,
+      alias: 'svc_move',
+    ),
+    'group_resident_clean': const Icon3DSpec(
+      Icons.cleaning_services_rounded,
+      alias: 'svc_bathroom',
+    ),
+    'group_appliance_clean': const Icon3DSpec(
+      Icons.ac_unit_rounded,
+      alias: 'svc_aircon',
+    ),
+    'group_disinfect_clean': const Icon3DSpec(
+      Icons.sanitizer_rounded,
+      alias: 'svc_disinfection',
+    ),
   };
 
   static Icon3DSpec of(String id) => specs[id] ?? unknown;
