@@ -23,4 +23,14 @@ void main() {
   test('empty input stays empty', () {
     expect(formatKoreanPhone(''), '');
   });
+
+  test('Seoul 02 numbers use a 2-digit area code', () {
+    expect(formatKoreanPhone('0212345678'), '02-1234-5678');
+    expect(formatKoreanPhone('021234567'), '02-123-4567');
+  });
+
+  test('+82 numbers are converted to the domestic form', () {
+    expect(formatKoreanPhone('+82 10 1234 5678'), '010-1234-5678');
+    expect(formatKoreanPhone('+82 2 1234 5678'), '02-1234-5678');
+  });
 }

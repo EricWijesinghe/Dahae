@@ -5098,6 +5098,59 @@ class TKo extends T {
   String get prqBy => '처리한 직원';
 
   @override
+  String get qaHomeType => '집 유형';
+
+  @override
+  String get homeType_one_two_room => '원룸·투룸';
+
+  @override
+  String get homeType_apartment => '아파트';
+
+  @override
+  String get homeType_villa_house => '빌라·주택';
+
+  @override
+  String get qaCleaningType => '청소 종류';
+
+  @override
+  String get qaLuggage => '짐 상태';
+
+  @override
+  String get qaLayout => '집 구조';
+
+  @override
+  String get qaFloor => '층수';
+
+  @override
+  String get qaFloorLow => '1~2층';
+
+  @override
+  String get qaFloorHigh => '3층 이상';
+
+  @override
+  String get quoteUnknown => '미입력';
+
+  @override
+  String get qaPeak => '주말·공휴일·저녁 할증';
+
+  @override
+  String get previewRequestCard => '예약 요청 카드';
+
+  @override
+  String previewQuoteCard(String amount) {
+    return '견적 카드 · $amount';
+  }
+
+  @override
+  String get nameNone => '이름 없음';
+
+  @override
+  String get qaTotal => '합계';
+
+  @override
+  String get qaVat => '부가세 10%';
+
+  @override
   String get rnwTitle => '갱신 일정';
 
   @override

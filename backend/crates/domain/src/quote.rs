@@ -445,6 +445,25 @@ mod tests {
     }
 
     #[test]
+    fn home_type_round_trips_and_is_optional_for_old_answers() {
+        let a = QuoteAnswers {
+            home_type: Some(HomeType::VillaHouse),
+            ..answers()
+        };
+        let json = serde_json::to_value(&a).unwrap();
+        assert_eq!(json["home_type"], "villa_house");
+        let back: QuoteAnswers = serde_json::from_value(json).unwrap();
+        assert_eq!(back.home_type, Some(HomeType::VillaHouse));
+        let old: QuoteAnswers = serde_json::from_value(serde_json::json!({
+            "cleaning_type": "standard", "luggage": "empty", "building": "apartment",
+            "layout": "three_rooms", "duplex": false, "bathrooms": 1, "balconies": 0,
+            "elevator": true, "floor_3_or_higher": false
+        }))
+        .unwrap();
+        assert_eq!(old.home_type, None);
+    }
+
+    #[test]
     fn addons_get_the_discount_after_vat() {
         let a = QuoteAnswers {
             ac_addons: vec![addon("wall", 2), addon("two_in_one", 1)],

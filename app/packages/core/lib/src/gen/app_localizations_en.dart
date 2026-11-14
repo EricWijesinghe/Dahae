@@ -5227,6 +5227,59 @@ class TEn extends T {
   String get prqBy => 'Handled by';
 
   @override
+  String get qaHomeType => 'Home type';
+
+  @override
+  String get homeType_one_two_room => 'Studio / two rooms';
+
+  @override
+  String get homeType_apartment => 'Apartment';
+
+  @override
+  String get homeType_villa_house => 'Villa / house';
+
+  @override
+  String get qaCleaningType => 'Cleaning type';
+
+  @override
+  String get qaLuggage => 'Belongings';
+
+  @override
+  String get qaLayout => 'Layout';
+
+  @override
+  String get qaFloor => 'Floor';
+
+  @override
+  String get qaFloorLow => 'Floors 1–2';
+
+  @override
+  String get qaFloorHigh => 'Floor 3 or higher';
+
+  @override
+  String get quoteUnknown => 'Not answered';
+
+  @override
+  String get qaPeak => 'Weekend / holiday / evening surcharge';
+
+  @override
+  String get previewRequestCard => 'Booking request card';
+
+  @override
+  String previewQuoteCard(String amount) {
+    return 'Quote card · $amount';
+  }
+
+  @override
+  String get nameNone => 'No name';
+
+  @override
+  String get qaTotal => 'Total';
+
+  @override
+  String get qaVat => 'VAT 10%';
+
+  @override
   String get rnwTitle => 'Renewal calendar';
 
   @override
