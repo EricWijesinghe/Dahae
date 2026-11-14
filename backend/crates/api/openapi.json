@@ -259,7 +259,17 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": ["legal_name", "ceo", "registration_no", "mail_order_no", "address", "privacy_officer", "hosting_provider", "support_phone", "support_email"]
+              "enum": [
+                "legal_name",
+                "ceo",
+                "registration_no",
+                "mail_order_no",
+                "address",
+                "privacy_officer",
+                "hosting_provider",
+                "support_phone",
+                "support_email"
+              ]
             }
           }
         ],
@@ -1109,11 +1119,25 @@
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/Object"
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingBody"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -5795,76 +5819,132 @@
     "/v1/admin/host/jobs": {
       "get": {
         "operationId": "adminListHostJobs",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Server jobs the owner queued, with live state read from the server status files (admin only)",
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       },
       "post": {
         "operationId": "adminEnqueueHostJob",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Queue one server job (backup, update, update-skip, channel, restart, schedule); needs owner TOTP and an Idempotency-Key header (admin only, logged)",
-        "requestBody": { "$ref": "#/components/requestBodies/Object" },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
     "/v1/admin/host/jobs/{id}": {
       "get": {
         "operationId": "adminHostJobDetail",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "One queued server job and its live state (admin only)",
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
     "/v1/admin/renewals": {
       "get": {
         "operationId": "adminListRenewals",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Renewal calendar: items with days left, and the keys check date (admin only)",
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       },
       "post": {
         "operationId": "adminCreateRenewal",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Add a renewal item; reminders go out by SMS 30 and 7 days before (admin only, logged)",
-        "requestBody": { "$ref": "#/components/requestBodies/Object" },
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
     "/v1/admin/renewals/{id}": {
       "put": {
         "operationId": "adminUpdateRenewal",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Change a renewal item; a new due date starts its reminders again (admin only, logged)",
-        "parameters": [{ "$ref": "#/components/parameters/Id" }],
-        "requestBody": { "$ref": "#/components/requestBodies/Object" },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       },
       "delete": {
         "operationId": "adminDeleteRenewal",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Remove a renewal item (admin only, logged)",
-        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
         "responses": {
-          "200": { "description": "OK" },
-          "default": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     }
@@ -5902,59 +5982,172 @@
             }
           }
         }
-      }
-    },
-    "CountsPricing": {
-      "description": "Counts pricing (catalogue type \"counts\"). A booking sends `counts`: one integer per option, in catalogue order, each at most `max_each` (default 20). Two or more items take `multi_discount_bps` off, rounded to 100 won. Minutes total at least 60. Prices are placeholders until the owner sets them in the console.",
-      "type": "object",
-      "required": [
-        "type",
-        "units"
-      ],
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "counts"
-          ]
-        },
-        "units": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "required": [
-              "label_key",
-              "minutes",
-              "price"
-            ],
-            "properties": {
-              "label_key": {
-                "type": "string"
-              },
-              "minutes": {
-                "type": "integer",
-                "minimum": 1
-              },
-              "price": {
-                "type": "integer",
-                "minimum": 1
+      },
+      "CountsPricing": {
+        "description": "Counts pricing (catalogue type \"counts\"). A booking sends `counts`: one integer per option, in catalogue order, each at most `max_each` (default 20). Two or more items take `multi_discount_bps` off, rounded to 100 won. Minutes total at least 60. Prices are placeholders until the owner sets them in the console.",
+        "type": "object",
+        "required": [
+          "type",
+          "units"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "counts"
+            ]
+          },
+          "units": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "label_key",
+                "minutes",
+                "price"
+              ],
+              "properties": {
+                "label_key": {
+                  "type": "string"
+                },
+                "minutes": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "price": {
+                  "type": "integer",
+                  "minimum": 1
+                }
               }
             }
+          },
+          "max_each": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 20
+          },
+          "multi_discount_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
           }
-        },
-        "max_each": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 1,
-          "maximum": 20
-        },
-        "multi_discount_bps": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 10000
+        }
+      },
+      "BookingBody": {
+        "description": "Booking request. Counts services send `counts` (one integer per option, catalogue order); legacy single-unit services send `unit_index`.",
+        "type": "object",
+        "required": [
+          "service_code",
+          "address_id",
+          "visit_date",
+          "start_hour",
+          "payment_method_id"
+        ],
+        "properties": {
+          "service_code": {
+            "type": "string"
+          },
+          "unit_index": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 255
+          },
+          "counts": {
+            "type": "array",
+            "description": "One count per catalogue option. Each at most max_each (default 20); at least one non-zero.",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            }
+          },
+          "address_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "visit_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "start_hour": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 23
+          },
+          "payment_method_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "coupon_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "visit_notes": {
+            "type": "object"
+          }
+        }
+      },
+      "Booking": {
+        "description": "A booking. `unit_counts` is set for counts services (and migrated mattress rows) and null otherwise; `unit_index` is kept for legacy clients.",
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "service_code",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "service_code": {
+            "type": "string"
+          },
+          "unit_index": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "unit_counts": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "minutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "integer"
+          },
+          "paid_amount": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
         }
       }
     },
