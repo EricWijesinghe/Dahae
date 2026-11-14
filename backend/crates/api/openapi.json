@@ -178,7 +178,9 @@
     "/v1/service-groups": {
       "get": {
         "operationId": "listServiceGroups",
-        "tags": ["public"],
+        "tags": [
+          "public"
+        ],
         "summary": "Home categories in order, with member services, chooser and derived badge (HOT over N). Inactive groups and members, and members hidden from home (studio), are left out",
         "security": [],
         "responses": {
@@ -2545,7 +2547,9 @@
     "/v1/admin/service-groups": {
       "get": {
         "operationId": "adminListServiceGroups",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "All home categories including inactive groups and services",
         "responses": {
           "200": {
@@ -2557,7 +2561,9 @@
     "/v1/admin/service-groups/{code}": {
       "put": {
         "operationId": "adminUpdateServiceGroup",
-        "tags": ["admin"],
+        "tags": [
+          "admin"
+        ],
         "summary": "Update a group's title (ko/en), order, active flag, icon, member services (listed order) and config. Audited.",
         "parameters": [
           {
@@ -6218,6 +6224,42 @@
             "description": "The owner's current authenticator code (one use per request)",
             "schema": {
               "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/public/reviews": {
+      "get": {
+        "operationId": "publicReviews",
+        "tags": [
+          "public"
+        ],
+        "summary": "Public review list (rating, body, name, booking_id), cursor paged",
+        "security": [],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           }
         ],
