@@ -7,6 +7,7 @@ import 'package:ui/ui.dart';
 
 import '../download.dart';
 import '../state.dart';
+import 'stepup.dart';
 
 class PrivacyRequestsScreen extends StatefulWidget {
   const PrivacyRequestsScreen({super.key});
@@ -58,20 +59,20 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
   }
 
   Future<void> _find() => _run(() async {
-    final rows =
-        (await context.api.get(
-                  '/admin/privacy/customers',
-                  query: {'phone': _phone.text.trim()},
-                )
-                as List)
-            .cast<Json>();
+    final rows = (await context.api.get(
+      '/admin/privacy/customers',
+      query: {'phone': _phone.text.trim()},
+    ) as List).cast<Json>();
     if (mounted) setState(() => _found = rows);
   });
 
   Future<void> _export(String id) => _run(() async {
-    final bytes = await context.api.getBytes(
-      '/admin/privacy/customers/$id/export',
-      query: {'format': 'csv'},
+    final bytes = await withStepUp(
+      context,
+      () => context.api.getBytes(
+        '/admin/privacy/customers/$id/export',
+        query: {'format': 'csv'},
+      ),
     );
     final saved = await saveCsv(bytes, 'malkkeum-customer-$id.csv');
     if (mounted) {
@@ -86,10 +87,13 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
     final typed = await _askPhone(customer['phone'] as String);
     if (typed == null) return;
     await _run(() async {
-      await context.api.post(
-        '/admin/privacy/customers/${customer['id']}/delete',
-        {'phone': typed},
-        ApiClient.newIdempotencyKey(),
+      await withStepUp(
+        context,
+        () => context.api.post(
+          '/admin/privacy/customers/${customer['id']}/delete',
+          {'phone': typed},
+          ApiClient.newIdempotencyKey(),
+        ),
       );
       if (mounted) {
         setState(() => _found = null);

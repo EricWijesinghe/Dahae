@@ -72,6 +72,7 @@
     "seller_declined",
     "settlement_state",
     "slot_full",
+    "stepup_required",
     "studio_too_large",
     "team_full",
     "too_many_open_requests",

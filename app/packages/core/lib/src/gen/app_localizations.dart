@@ -10398,6 +10398,36 @@ abstract class T {
   /// **'이 인증번호는 24시간 동안 한 번만 쓸 수 있어요. 직원이 비밀번호를 정하면 모든 기기에서 로그아웃돼요.'**
   String get cStaffResetBody;
 
+  /// No description provided for @cStepUpTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'인증 앱 코드로 한 번 더 확인'**
+  String get cStepUpTitle;
+
+  /// No description provided for @cStepUpBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 작업은 인증 앱의 6자리 코드가 필요해요. 확인하면 5분 동안 이어서 쓸 수 있어요.'**
+  String get cStepUpBody;
+
+  /// No description provided for @cStepUpConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'확인하고 계속'**
+  String get cStepUpConfirm;
+
+  /// No description provided for @cStepUpCancel.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소'**
+  String get cStepUpCancel;
+
+  /// No description provided for @err_stepup_required.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 작업은 인증 앱 코드로 한 번 더 확인해야 해요.'**
+  String get err_stepup_required;
+
   /// No description provided for @subTitle.
   ///
   /// In ko, this message translates to:

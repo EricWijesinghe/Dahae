@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5595,6 +5596,23 @@ class TEn extends T {
   @override
   String get cStaffResetBody =>
       'This code works once, for 24 hours. Once the staff member sets a password, they are signed out everywhere.';
+
+  @override
+  String get cStepUpTitle => 'Confirm with your authenticator';
+
+  @override
+  String get cStepUpBody =>
+      'This action needs a 6-digit code from your authenticator app. Once confirmed, it stays unlocked for 5 minutes.';
+
+  @override
+  String get cStepUpConfirm => 'Confirm and continue';
+
+  @override
+  String get cStepUpCancel => 'Cancel';
+
+  @override
+  String get err_stepup_required =>
+      'This action needs a fresh authenticator code. Confirm it, then try again.';
 
   @override
   String get subTitle => 'Regular cleaning';
