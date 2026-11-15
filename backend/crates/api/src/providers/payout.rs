@@ -265,9 +265,14 @@ pub fn account_fingerprint(bank_code: &str, account: &str, holder: &str) -> Stri
         .collect()
 }
 
-/// Reads Toss's payout id (`id` on the Payout object) of an accepted transfer.
+/// Reads Toss's payout id (`id` on the Payout object) of an accepted transfer. The object may arrive wrapped in
+/// `entityBody.items[0]` or `entityBody` (TOSS-FACTS C1); a missing id is an error, so the caller never resends blind.
 pub fn parse_sent(body: &Value) -> Result<String, ProviderError> {
-    body["id"]
+    let object = match body.get("entityBody") {
+        Some(eb) if body["id"].is_null() => eb["items"].get(0).filter(|v| v.is_object()).unwrap_or(eb),
+        _ => body,
+    };
+    object["id"]
         .as_str()
         .filter(|s| !s.is_empty())
         .map(String::from)
@@ -474,6 +479,9 @@ mod tests {
     fn parses_sent_seller_and_status_responses() {
         assert_eq!(parse_sent(&json!({"id": "tp_1"})).unwrap(), "tp_1");
         assert!(parse_sent(&json!({"payoutId": "tp_1"})).is_err());
+        assert_eq!(parse_sent(&json!({"entityBody": {"items": [{"id": "tp_2"}]}})).unwrap(), "tp_2");
+        assert_eq!(parse_sent(&json!({"entityBody": {"id": "tp_3"}})).unwrap(), "tp_3");
+        assert!(parse_sent(&json!({"entityBody": {"items": []}})).is_err(), "wrapped without an id");
         assert_eq!(
             parse_seller(&json!({"id": "s_1", "status": "KYC_REQUIRED"})).unwrap(),
             ("s_1".into(), "KYC_REQUIRED".into())
