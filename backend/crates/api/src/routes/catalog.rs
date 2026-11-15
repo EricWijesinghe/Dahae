@@ -80,6 +80,16 @@ pub async fn load_peak_config(db: &sqlx::PgPool) -> ApiResult<PeakConfig> {
     Ok(config)
 }
 
+/// Peak rate (bps) of a KST visit slot under the owner's config, the same rate a booking is priced with.
+/// shortcut: uses the current peak config, so a booking made before a config change re-prices its breakdown; store peak_bps on bookings to make it exact.
+pub async fn slot_peak_bps(db: &sqlx::PgPool, visit_date: NaiveDate, start_hour: i16) -> ApiResult<i64> {
+    let start = u32::try_from(start_hour)
+        .ok()
+        .and_then(|h| domain::peak::kst_to_utc(visit_date, h))
+        .ok_or(crate::error::ApiError::BadRequest("invalid_slot"))?;
+    Ok(domain::peak::peak_surcharge(&load_peak_config(db).await?, start).bps)
+}
+
 async fn list_services(State(s): State<AppState>) -> ApiResult<Json<Vec<ServiceDto>>> {
     let rows: Vec<ServiceRow> = sqlx::query_as(&format!("SELECT {SERVICE_COLS} FROM services WHERE active ORDER BY sort_order"))
         .fetch_all(&s.db)
@@ -155,9 +165,8 @@ async fn estimate(State(s): State<AppState>, Json(r): Json<EstimateRequest>) -> 
     let formula = load_formula(&s.db).await?;
     let answers = domain::quote::fixed_answers_for(code, r.answers);
     let lines = addon_lines(&s.db, &answers).await?;
-    let start = r.visit_date.zip(r.start_hour).and_then(|(d, h)| domain::peak::kst_to_utc(d, u32::from(h)));
-    let bps = match start {
-        Some(start) => domain::peak::peak_surcharge(&load_peak_config(&s.db).await?, start).bps,
+    let bps = match r.visit_date.zip(r.start_hour) {
+        Some((date, hour)) => slot_peak_bps(&s.db, date, i16::from(hour)).await?,
         None => 0,
     };
     Ok(Json(formula.estimate_with_addons(&answers, bps, &lines)?))
