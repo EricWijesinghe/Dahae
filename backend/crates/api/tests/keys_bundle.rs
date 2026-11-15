@@ -110,13 +110,15 @@ async fn bundle_opens_and_a_matching_upload_sets_the_check(db: PgPool) {
     assert!(status["verified_at"].is_null(), "no check before the upload test");
 
     let upload = json!({ "bundle": bundle, "passphrase": passphrase });
-    let (st, ok) = owner_call(&app, "POST", "/v1/admin/keys/verify", &admin, Some(&code_at_step(1)), Some(upload.clone())).await;
+    // One code for both calls: computing it twice can straddle a 30 s step boundary and mint a fresh code.
+    let code = code_at_step(1);
+    let (st, ok) = owner_call(&app, "POST", "/v1/admin/keys/verify", &admin, Some(&code), Some(upload.clone())).await;
     assert_eq!(st, StatusCode::OK, "{ok}");
     let (st, status) = call(&app, "GET", "/v1/admin/keys/status", Some(admin.as_str()), None).await;
     assert_eq!(st, StatusCode::OK);
     assert!(status["verified_at"].is_string(), "{status}");
 
-    let (st, _) = owner_call(&app, "POST", "/v1/admin/keys/verify", &admin, Some(&code_at_step(1)), Some(upload)).await;
+    let (st, _) = owner_call(&app, "POST", "/v1/admin/keys/verify", &admin, Some(&code), Some(upload)).await;
     assert_eq!(st, StatusCode::CONFLICT, "the same TOTP step cannot be used twice");
 }
 
