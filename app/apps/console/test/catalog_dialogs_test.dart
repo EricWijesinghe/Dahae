@@ -77,6 +77,7 @@ void main() {
   testWidgets('the stepper stops at the per-option cap', (tester) async {
     final h = await _host(tester, _pricing(maxEach: 1));
     await h.open();
+    await settle(tester);
     final plus = find.byTooltip(t.cntMore).first;
     await tester.tap(plus);
     await settle(tester);
