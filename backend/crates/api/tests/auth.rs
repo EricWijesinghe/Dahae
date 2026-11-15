@@ -38,6 +38,13 @@ async fn signup_without_required_consents_is_refused_and_creates_no_account(db: 
     let users: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users").fetch_one(&db).await.expect("count");
     assert_eq!(users, 0, "a refused signup leaves no account");
 
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn signup_missing_one_required_consent_is_refused(db: PgPool) {
+    let app = common::app(db);
+    let phone = "010-7300-0006";
+    let code = request_code(&app, phone).await;
     let partial = json!([grant("terms", true), grant("privacy", true)]);
     let (st, b) = verify(&app, phone, &code, Some(partial)).await;
     assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::BAD_REQUEST, Some("required_consent")), "{b}");
