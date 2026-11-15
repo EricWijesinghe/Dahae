@@ -5,4 +5,3 @@
 -- rollback window (docs/DEPLOY.md, migrations stay additive). Rolling back after the first start is not safe
 -- for saved cards; see the release note in docs/DEPLOY.md.
 ALTER TABLE payment_methods ADD COLUMN billing_key_digest TEXT;
-CREATE UNIQUE INDEX payment_methods_billing_key_digest_live ON payment_methods (billing_key_digest) WHERE deleted_at IS NULL;

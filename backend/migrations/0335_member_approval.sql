@@ -5,4 +5,4 @@ ALTER TABLE team_members DROP CONSTRAINT IF EXISTS team_members_invite_status_ch
 UPDATE team_members SET invite_status = 'pending_approval' WHERE invite_status = 'invited';
 ALTER TABLE team_members ALTER COLUMN invite_status SET DEFAULT 'pending_approval';
 ALTER TABLE team_members
-    ADD CONSTRAINT team_members_invite_status_check CHECK (invite_status IN ('pending_approval', 'active', 'removed'));
+    ADD CONSTRAINT team_members_invite_status_check CHECK (invite_status IN ('pending_approval', 'active', 'removed')) NOT VALID;
