@@ -5,14 +5,14 @@
 
 mod common;
 
-use api::auth::Role;
+use api::{auth::Role, build_state, config::PortOne, providers::Providers, util::Refund};
 use axum::{
     Json, Router,
     extract::{Path, State},
     http::{HeaderMap, StatusCode, header::AUTHORIZATION},
     routing::{get, post},
 };
-use common::{Customer, PORTONE_SECRET, book, call, customer, prod_app, seed_catalog, staff_token, verified_pro};
+use common::{Customer, PORTONE_SECRET, book, call, customer, prod_app, seed_catalog, staff_token, test_config, verified_pro};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use std::{
@@ -271,6 +271,35 @@ async fn cancel_that_loses_to_a_completion_refunds_nothing(pool: PgPool) {
     assert!(cancels(&w.gateway).is_empty(), "no money moved");
     assert_eq!(payment_row(&pool, id).await.1, 0);
     assert_eq!(status_of(&pool, id).await, 3);
+}
+
+/// App state configured like production, with PortOne calls sent to the gateway at `base`.
+fn prod_state(db: &PgPool, base: &str) -> api::state::AppState {
+    let mut cfg = test_config();
+    cfg.dev_mode = false;
+    cfg.portone = PortOne {
+        api_secret: Some(PORTONE_SECRET.into()),
+        ..PortOne::default()
+    };
+    let mut state = build_state(db.clone(), cfg.clone()).expect("state");
+    state.providers = Arc::new(Providers::new(cfg, db.clone()).expect("providers").with_portone_api(base));
+    state
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn queued_refund_asks_the_provider_only_while_the_balance_is_the_amount(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let dev = common::app(pool.clone());
+    let c = customer(&dev, &pool, "010-7100-0011").await;
+    let (base, gateway) = start_gateway().await;
+    let prod = prod_app(pool.clone(), &base);
+    let (id, _) = book(&prod, &c, 10, None).await;
+    let (paid, _, pid) = payment_row(&pool, id).await;
+    let refund = api::util::refund_durably(&prod_state(&pool, &base), "portone", &pid, paid, None).await;
+    assert_eq!(refund, Refund::Done);
+    let sent = cancels(&gateway);
+    let (_, body) = sent.last().expect("one cancel");
+    assert_eq!(body["currentCancellableAmount"], json!(paid), "a queued refund names the balance it expects");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

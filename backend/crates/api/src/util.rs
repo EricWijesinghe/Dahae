@@ -49,11 +49,13 @@ pub struct QueuedRefund {
     pub provider: String,
     pub tx_id: String,
     pub amount: i64,
+    /// The gateway balance this refund expects; the provider refuses the cancel once it has moved.
+    pub cancellable: i64,
     pub attempts: i32,
     pub checkout_id: Option<Uuid>,
 }
 
-pub const REFUND_COLS: &str = "id, provider, tx_id, amount, attempts, checkout_id";
+pub const REFUND_COLS: &str = "id, provider, tx_id, amount, cancellable, attempts, checkout_id";
 
 /// Compensating refund when a charge succeeded but saving it did not.
 pub async fn refund_or_alert(s: &AppState, provider: &str, tx_id: &str, amount: i64) -> Refund {
@@ -63,8 +65,9 @@ pub async fn refund_or_alert(s: &AppState, provider: &str, tx_id: &str, amount: 
 /// Compensating refund, recorded in `refund_queue` before the provider is called: a failure is retried
 /// with backoff, and one (provider, tx, amount) is refunded at most once however often a settle replays.
 pub async fn refund_durably(s: &AppState, provider: &str, tx_id: &str, amount: i64, checkout: Option<Uuid>) -> Refund {
+    // Queued refunds are full refunds: the balance they expect is the amount itself.
     let queued = sqlx::query_as::<_, QueuedRefund>(&format!(
-        "INSERT INTO refund_queue (provider, tx_id, amount, checkout_id, next_at) VALUES ($1, $2, $3, $4, now() + make_interval(mins => $5))
+        "INSERT INTO refund_queue (provider, tx_id, amount, cancellable, checkout_id, next_at) VALUES ($1, $2, $3, $3, $4, now() + make_interval(mins => $5))
          ON CONFLICT (provider, tx_id, amount) DO NOTHING RETURNING {REFUND_COLS}"
     ))
     .bind(provider)
@@ -99,6 +102,7 @@ pub async fn refund_durably(s: &AppState, provider: &str, tx_id: &str, amount: i
                 provider: provider.into(),
                 tx_id: tx_id.into(),
                 amount,
+                cancellable: amount,
                 attempts: 0,
                 checkout_id: checkout,
             };
@@ -165,7 +169,7 @@ async fn attempt_refund(s: &AppState, r: &QueuedRefund) -> Result<(), ProviderEr
             Err(e) => return Err(e),
         }
     }
-    s.providers.refund(&r.provider, &r.tx_id, r.amount).await
+    s.providers.refund_checked(&r.provider, &r.tx_id, r.amount, r.cancellable).await
 }
 
 static DEV_REFUND_FAILURES: Mutex<BTreeMap<String, u32>> = Mutex::new(BTreeMap::new());
