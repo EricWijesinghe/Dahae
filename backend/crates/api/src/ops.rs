@@ -373,13 +373,13 @@ pub async fn status(s: &AppState) -> ApiResult<Value> {
     }))
 }
 
-/// Flow figures for the status page. A failed read is logged and shown as null, so the page still loads.
-async fn flow_status(db: &PgPool) -> Value {
+/// Flow figures for the dashboard and the status page. A failed read is logged and shown as null, so the page still loads.
+pub async fn flow_status(db: &PgPool) -> Option<FlowMetrics> {
     match flow_metrics(db).await {
-        Ok(flow) => json!(flow),
+        Ok(flow) => Some(flow),
         Err(e) => {
             tracing::warn!(error = %e, "flow metrics unreadable");
-            Value::Null
+            None
         }
     }
 }
@@ -423,9 +423,17 @@ pub async fn failures_within(db: &PgPool, integrations: &[&str], minutes: i64) -
 pub struct FlowMetrics {
     /// Median hours from booking to a pro or team being set. Null until one booking has been assigned.
     pub median_hours_to_assign: Option<f64>,
-    /// Confirmed bookings with nobody assigned that were created more than 24 hours ago.
+    /// Confirmed bookings with nobody assigned that were created more than 24 hours ago and visit today or later.
     pub unassigned_over_24h: i64,
+    /// Today's same-day cancellations against all of today's bookings.
+    pub same_day: SameDay,
     pub no_show_by_service: Vec<ServiceNoShow>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct SameDay {
+    pub cancelled: i64,
+    pub booked: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow)]
@@ -438,9 +446,11 @@ pub struct ServiceNoShow {
 }
 
 pub async fn flow_metrics(db: &PgPool) -> Result<FlowMetrics, sqlx::Error> {
+    let (cancelled, booked) = same_day_cancels(db).await?;
     Ok(FlowMetrics {
         median_hours_to_assign: median_hours_to_assign(db).await?,
         unassigned_over_24h: unassigned_older_than(db, 24).await?,
+        same_day: SameDay { cancelled, booked },
         no_show_by_service: no_show_by_service(db).await?,
     })
 }
@@ -455,11 +465,13 @@ pub async fn median_hours_to_assign(db: &PgPool) -> Result<Option<f64>, sqlx::Er
     .await
 }
 
-/// Confirmed bookings with no pro and no team that were created at least `hours` ago.
+/// Confirmed bookings with no pro and no team that were created at least `hours` ago and visit today (Seoul) or later.
+/// Past visits are left out: an abandoned booking whose day has gone must not keep the owner alert firing.
 pub async fn unassigned_older_than(db: &PgPool, hours: i64) -> Result<i64, sqlx::Error> {
     sqlx::query_scalar(
         "SELECT count(*) FROM bookings
-         WHERE status = 1 AND pro_id IS NULL AND team_name IS NULL AND created_at < now() - make_interval(hours => $1::int)",
+         WHERE status = 1 AND pro_id IS NULL AND team_name IS NULL AND created_at < now() - make_interval(hours => $1::int)
+           AND visit_date >= (now() AT TIME ZONE 'Asia/Seoul')::date",
     )
     .bind(hours as i32)
     .fetch_one(db)
@@ -476,16 +488,18 @@ pub async fn same_day_cancels(db: &PgPool) -> Result<(i64, i64), sqlx::Error> {
     .await
 }
 
-/// No-shows per service: distinct bookings with a no-show case over non-cancelled bookings, last 30 days.
+/// No-shows per service: distinct non-cancelled bookings created in the last 30 days that have a no-show case,
+/// over the same bookings. One anchor (the booking's creation date) on both sides keeps the rate at most 100%.
 pub async fn no_show_by_service(db: &PgPool) -> Result<Vec<ServiceNoShow>, sqlx::Error> {
     sqlx::query_as(
         "SELECT b.service_code, b.bookings, COALESCE(n.no_shows, 0) AS no_shows,
                 COALESCE(n.no_shows, 0) * 10000 / b.bookings AS rate_bps
          FROM (SELECT service_code, count(*) AS bookings FROM bookings
                WHERE status <> -1 AND created_at > now() - interval '30 days' GROUP BY service_code) b
-         LEFT JOIN (SELECT bk.service_code, count(DISTINCT c.booking_id) AS no_shows
+         LEFT JOIN (SELECT bk.service_code, count(DISTINCT bk.id) AS no_shows
                     FROM cases c JOIN bookings bk ON bk.id = c.booking_id
-                    WHERE c.kind = 'no_show' AND c.created_at > now() - interval '30 days' GROUP BY bk.service_code) n
+                    WHERE c.kind = 'no_show' AND bk.status <> -1 AND bk.created_at > now() - interval '30 days'
+                    GROUP BY bk.service_code) n
            USING (service_code)
          ORDER BY b.service_code",
     )

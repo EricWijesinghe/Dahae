@@ -76,11 +76,11 @@ fn fired(findings: &[ops_alerts::Finding], rule: &str) -> bool {
 async fn unassigned_rule_counts_only_old_confirmed_bookings_with_nobody_on_them(pool: PgPool) {
     seed_catalog(&pool).await;
     let u = user(&pool, "01080000001").await;
-    let old = booking(&pool, u, "KPI-1", 1, false).await;
+    let old = booking(&pool, u, "KPI-1", 1, true).await;
     age(&pool, old, "30 hours").await;
-    let fresh = booking(&pool, u, "KPI-2", 1, false).await;
+    let fresh = booking(&pool, u, "KPI-2", 1, true).await;
     age(&pool, fresh, "2 hours").await;
-    let team = booking(&pool, u, "KPI-3", 1, false).await;
+    let team = booking(&pool, u, "KPI-3", 1, true).await;
     age(&pool, team, "30 hours").await;
     sqlx::query("UPDATE bookings SET team_name = 'team' WHERE id = $1")
         .bind(team)
@@ -96,6 +96,21 @@ async fn unassigned_rule_counts_only_old_confirmed_bookings_with_nobody_on_them(
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn unassigned_rule_ignores_bookings_whose_visit_has_passed(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let u = user(&pool, "01080000007").await;
+    let abandoned = booking(&pool, u, "KPI-PAST", 1, false).await;
+    age(&pool, abandoned, "30 hours").await;
+
+    assert_eq!(ops::unassigned_older_than(&pool, 24).await.expect("count"), 0, "a past visit needs no staffing");
+    let findings = ops_alerts::business_findings(&pool, &test_config()).await.expect("findings");
+    assert!(
+        !fired(&findings, "unassigned_stale"),
+        "an abandoned past booking must not keep the alert firing"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn same_day_cancel_rule_fires_over_the_threshold_only(pool: PgPool) {
     seed_catalog(&pool).await;
     let u = user(&pool, "01080000002").await;
@@ -107,6 +122,8 @@ async fn same_day_cancel_rule_fires_over_the_threshold_only(pool: PgPool) {
     }
     // 4 cancelled of 10 today is 40%, over the default 30%.
     assert_eq!(ops::same_day_cancels(&pool).await.expect("counts"), (4, 10));
+    let flow = ops::flow_metrics(&pool).await.expect("flow");
+    assert_eq!((flow.same_day.cancelled, flow.same_day.booked), (4, 10), "the flow card shows the same counts");
     let findings = ops_alerts::business_findings(&pool, &test_config()).await.expect("findings");
     assert!(fired(&findings, "same_day_cancel"));
 }
@@ -142,6 +159,23 @@ async fn no_show_rate_is_per_service_and_counts_each_booking_once(pool: PgPool) 
     assert_eq!(studio.bookings, 3, "cancelled bookings are left out");
     assert_eq!(studio.no_shows, 1, "two cases on one booking count once");
     assert_eq!(studio.rate_bps, 3333, "one of three is 33.33%");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn no_show_rate_ignores_bookings_outside_the_window_and_cancelled_ones(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let u = user(&pool, "01080000008").await;
+    booking(&pool, u, "NSW-1", 1, false).await;
+    let old = booking(&pool, u, "NSW-2", 1, false).await;
+    age(&pool, old, "40 days").await;
+    no_show_case(&pool, old).await;
+    let cancelled = booking(&pool, u, "NSW-3", -1, false).await;
+    no_show_case(&pool, cancelled).await;
+
+    let rows = ops::no_show_by_service(&pool).await.expect("rows");
+    assert!(rows.iter().all(|r| r.rate_bps <= 10_000), "a rate can never pass 100%: {rows:?}");
+    let studio = rows.iter().find(|r| r.service_code == "studio").expect("studio row");
+    assert_eq!((studio.bookings, studio.no_shows, studio.rate_bps), (1, 0, 0), "{studio:?}");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

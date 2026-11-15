@@ -209,7 +209,7 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
         });
     }
     out.extend(payout_findings(db).await?);
-    out.extend(business_findings(db, &s.config).await?);
+    out.extend(business_findings_or_skip(db, &s.config).await);
     out.extend(job_finding());
     let backup = ops::backup_status(db).await?;
     let age = ops::backup_age_hours(backup.as_ref(), Utc::now());
@@ -232,8 +232,17 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
     Ok(out)
 }
 
+/// Business rules fail soft: a failed KPI query is logged and skipped, so the infrastructure alerts still run.
+async fn business_findings_or_skip(db: &PgPool, cfg: &Config) -> Vec<Finding> {
+    business_findings(db, cfg).await.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "business alert rules skipped");
+        Vec::new()
+    })
+}
+
 /// Business rules, owner-toggleable: confirmed bookings left without a pro, a bad same-day cancel rate, and the VAT deadline.
 /// shortcut: VAT only; withholding (원천세) dates depend on the business's filing cycle, the owner confirms those.
+/// shortcut: VAT dates are the corporate quarterly months for everyone; individual taxpayers file 1·7월 only, the owner's tax adviser confirms, then make the months a setting.
 pub async fn business_findings(db: &PgPool, cfg: &Config) -> ApiResult<Vec<Finding>> {
     let mut out = Vec::new();
     let hours = settings_registry::get(db, cfg, "unassigned_alert_hours").await?;
@@ -258,7 +267,7 @@ pub async fn business_findings(db: &PgPool, cfg: &Config) -> ApiResult<Vec<Findi
         out.push(Finding {
             rule: "tax_deadline",
             title: "부가가치세 신고 기한이 다가와요",
-            body: "부가가치세는 1·4·7·10월 25일까지 신고해요. 세무 담당자와 신고 일정과 자료를 미리 확인하세요.",
+            body: "부가가치세 신고 기한이 다가와요. 날짜는 사업자 유형에 따라 달라요. 법인은 1·4·7·10월 25일, 개인 일반과세자는 보통 1·7월 25일이에요. 세무 담당자와 확인하세요.",
         });
     }
     Ok(out)
