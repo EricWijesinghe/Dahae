@@ -128,7 +128,10 @@ async fn required_consents_gate_the_service_and_marketing_is_withdrawable(pool: 
         .fetch_one(&pool)
         .await
         .expect("count");
-    assert_eq!(rows, 5, "every choice is kept as evidence (3 required + grant + withdrawal)");
+    assert_eq!(
+        rows, 8,
+        "every choice is kept as evidence (3 at signup, 3 re-recorded, marketing grant + withdrawal)"
+    );
 }
 
 #[sqlx::test(migrations = "../../migrations")]
