@@ -4,7 +4,7 @@
 
 use super::audit;
 use crate::{
-    auth::{Admin, Pro, Staff},
+    auth::{Admin, Pro},
     error::{ApiError, ApiResult},
     state::AppState,
     util::today_kst,
@@ -35,48 +35,48 @@ use uuid::Uuid;
 const EVENTS_SQL: &str = r#"
 WITH ev AS (
   SELECT (b.created_at AT TIME ZONE 'Asia/Seoul')::date AS d, NULL::uuid AS pro, b.service_code AS svc, 'booking' AS kind, 1::bigint AS v
-    FROM bookings b WHERE (b.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    FROM bookings b WHERE b.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (b.created_at AT TIME ZONE 'Asia/Seoul')::date, NULL::uuid, b.service_code, 'cancelled', 1::bigint
-    FROM bookings b WHERE b.status = -1 AND (b.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    FROM bookings b WHERE b.status = -1 AND b.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (b.created_at AT TIME ZONE 'Asia/Seoul')::date, NULL::uuid, b.service_code, 'booking_value', COALESCE(b.final_price, b.list_price, 0)
-    FROM bookings b WHERE b.status <> -1 AND (b.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    FROM bookings b WHERE b.status <> -1 AND b.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (b.created_at AT TIME ZONE 'Asia/Seoul')::date, NULL::uuid, b.service_code, 'discount', b.discount
-    FROM bookings b WHERE b.status <> -1 AND (b.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    FROM bookings b WHERE b.status <> -1 AND b.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (p.created_at AT TIME ZONE 'Asia/Seoul')::date, NULL::uuid, b.service_code, 'gross', p.amount
     FROM payments p JOIN bookings b ON b.id = p.booking_id
-    WHERE p.status IN ('paid','partially_refunded','refunded') AND (p.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    WHERE p.status IN ('paid','partially_refunded','refunded') AND p.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND p.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (COALESCE(b.cancelled_at, p.created_at) AT TIME ZONE 'Asia/Seoul')::date, NULL::uuid, b.service_code, 'refund', p.refunded_amount
     FROM payments p JOIN bookings b ON b.id = p.booking_id
-    WHERE p.refunded_amount > 0 AND (COALESCE(b.cancelled_at, p.created_at) AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    WHERE p.refunded_amount > 0 AND COALESCE(b.cancelled_at, p.created_at) >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND COALESCE(b.cancelled_at, p.created_at) < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (st.created_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'job', 1::bigint
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state <> 'held' AND (st.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    WHERE st.state <> 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (st.created_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'settled_gross', st.gross
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state <> 'held' AND (st.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    WHERE st.state <> 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (st.created_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'fee', st.fee
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state <> 'held' AND (st.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    WHERE st.state <> 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (st.paid_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'paid', st.net
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state = 'paid' AND (st.paid_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    WHERE st.state = 'paid' AND st.paid_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.paid_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (st.created_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'pending', st.net
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state IN ('pending','waiting_balance') AND (st.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    WHERE st.state IN ('pending','waiting_balance') AND st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
   UNION ALL
   SELECT (st.created_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'held', st.net
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state = 'held' AND (st.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+    WHERE st.state = 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
 )
 "#;
 
@@ -246,7 +246,7 @@ struct MethodRow {
 async fn payment_methods(db: &PgPool, from: NaiveDate, to: NaiveDate) -> ApiResult<Vec<MethodRow>> {
     Ok(sqlx::query_as(
         "SELECT method, count(*)::bigint AS count, COALESCE(SUM(amount), 0)::bigint AS amount FROM checkouts
-         WHERE status = 'paid' AND (created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+         WHERE status = 'paid' AND created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
          GROUP BY method ORDER BY amount DESC",
     )
     .bind(from)
@@ -267,7 +267,15 @@ struct Summary {
     vat_basis: &'static str,
 }
 
-async fn summary(State(s): State<AppState>, _st: Staff, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Summary>> {
+/// Net revenue (gross minus refunds) over the last 30 KST days including today. The console dashboard tile uses
+/// this so it agrees with the finance summary.
+pub(super) async fn net_revenue_30d(db: &PgPool) -> ApiResult<i64> {
+    let to = today_kst();
+    let from = to - chrono::Duration::days(29);
+    Ok(Metrics::from(total_of(&aggregate(db, from, to, "year").await?)).net_revenue)
+}
+
+async fn summary(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Summary>> {
     let (from, to) = resolve(&q)?;
     let rows = aggregate(&s.db, from, to, "year").await?;
     Ok(Json(Summary {
@@ -307,7 +315,7 @@ struct SeriesQuery {
     days: Option<u32>,
 }
 
-async fn series(State(s): State<AppState>, _st: Staff, Query(q): Query<SeriesQuery>) -> ApiResult<Json<Vec<Point>>> {
+async fn series(State(s): State<AppState>, _a: Admin, Query(q): Query<SeriesQuery>) -> ApiResult<Json<Vec<Point>>> {
     let grain = match q.grain.as_deref() {
         Some(g) => Grain::parse(g).ok_or(ApiError::BadRequest("invalid_grain"))?,
         None => Grain::Day,
@@ -341,7 +349,7 @@ struct ProName {
     team_name: String,
 }
 
-async fn partners(State(s): State<AppState>, _st: Staff, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<PartnerRow>>> {
+async fn partners(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<PartnerRow>>> {
     let (from, to) = resolve(&q)?;
     let rows = aggregate(&s.db, from, to, "year").await?;
     let by_pro = fold_by(&rows, |r| r.pro);
@@ -379,7 +387,7 @@ struct ServiceRow {
     m: Metrics,
 }
 
-async fn services(State(s): State<AppState>, _st: Staff, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<ServiceRow>>> {
+async fn services(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<ServiceRow>>> {
     let (from, to) = resolve(&q)?;
     let rows = aggregate(&s.db, from, to, "year").await?;
     let by_svc = fold_by(&rows, |r| r.svc.clone());
@@ -535,7 +543,7 @@ async fn export_ledger(State(s): State<AppState>, Admin(a): Admin, Query(q): Que
         "SELECT (p.created_at AT TIME ZONE 'Asia/Seoul')::date AS day, p.id AS payment_id, b.number, b.service_code, p.kind,
            p.provider, p.provider_tx_id, p.amount, p.refunded_amount, p.status
          FROM payments p JOIN bookings b ON b.id = p.booking_id
-         WHERE (p.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2 ORDER BY p.created_at, p.id",
+         WHERE p.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND p.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul') ORDER BY p.created_at, p.id",
     )
     .bind(from)
     .bind(to)
@@ -636,7 +644,7 @@ async fn export_settlements(State(s): State<AppState>, Admin(a): Admin, Query(q)
            st.payout_date, st.state, (st.paid_at AT TIME ZONE 'Asia/Seoul')::date AS paid_day,
            (st.created_at AT TIME ZONE 'Asia/Seoul')::date AS created_day
          FROM settlements st JOIN bookings b ON b.id = st.booking_id JOIN pros p ON p.id = st.pro_id
-         WHERE (st.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2 ORDER BY st.created_at, st.id",
+         WHERE st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul') ORDER BY st.created_at, st.id",
     )
     .bind(from)
     .bind(to)
@@ -705,7 +713,7 @@ async fn export_withholding(State(s): State<AppState>, Admin(a): Admin, Query(q)
         "SELECT (p.paid_at AT TIME ZONE 'Asia/Seoul')::date, pr.name, pr.team_name, p.amount, p.tax_type
          FROM payouts p JOIN pros pr ON pr.id = p.pro_id
          WHERE p.state = 'paid' AND p.tax_type IN ('freelancer', 'unset')
-           AND (p.paid_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+           AND p.paid_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND p.paid_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
          ORDER BY p.paid_at, p.id",
     )
     .bind(from)
@@ -732,24 +740,14 @@ struct VatQuery {
     quarter: u32,
 }
 
-/// Quarterly VAT summary (owner only). Sales are paid checkouts by method; fee and refunds follow the
-/// settlement and payment dates already used by the other exports. ACCOUNTANT: confirm these bases.
+/// Quarterly VAT summary (owner only). The method split is paid checkouts by checkout day, so its total can differ
+/// from summary gross (payment day, refunds). Fee and refunds come from the same event aggregate as the summary,
+/// so held settlements are excluded; the VAT estimate is computed on the fee only.
+/// ACCOUNTANT: confirm these bases.
 async fn export_vat(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<VatQuery>) -> ApiResult<Response> {
     let (from, to) = tax::quarter_range(q.year, q.quarter)?;
     let methods = payment_methods(&s.db, from, to).await?;
-    let platform_fee: i64 =
-        sqlx::query_scalar("SELECT COALESCE(SUM(fee), 0)::bigint FROM settlements WHERE (created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2")
-            .bind(from)
-            .bind(to)
-            .fetch_one(&s.db)
-            .await?;
-    let refunds: i64 = sqlx::query_scalar(
-        "SELECT COALESCE(SUM(refunded_amount), 0)::bigint FROM payments WHERE (created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2",
-    )
-    .bind(from)
-    .bind(to)
-    .fetch_one(&s.db)
-    .await?;
+    let totals = total_of(&aggregate(&s.db, from, to, "year").await?);
     let input = VatInput {
         methods: methods
             .into_iter()
@@ -759,8 +757,8 @@ async fn export_vat(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<
                 amount: m.amount,
             })
             .collect(),
-        platform_fee: Won(platform_fee),
-        refunds: Won(refunds),
+        platform_fee: Won(totals.fee),
+        refunds: Won(totals.refunds),
     };
     audit(&s.db, "staff", Some(a.id), "finance.export", "vat", json!({ "from": from, "to": to })).await?;
     csv_response(&export_name("vat", from, to), finance::csv_document(&tax::vat_document(&input)))

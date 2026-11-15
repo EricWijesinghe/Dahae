@@ -59,7 +59,7 @@ pub struct VatInput {
     pub methods: Vec<VatMethod>,
     /// Platform fee (settlements.fee) in the period; the existing finance VAT basis.
     pub platform_fee: Won,
-    /// Refunds recorded on payments created in the period. ACCOUNTANT: refunds by payment date, not refund date.
+    /// Refunds in the period on the finance summary basis (cancel date, else payment date). ACCOUNTANT: confirm this basis.
     pub refunds: Won,
 }
 
@@ -78,7 +78,11 @@ pub fn vat_document(input: &VatInput) -> Vec<Vec<Cell>> {
     doc.push(vec![text("합계"), Cell::Number(count), Cell::Number(amount)]);
     doc.push(vec![text("환불액"), Cell::Number(0), Cell::Number(input.refunds.0)]);
     doc.push(vec![text("플랫폼수수료(과세표준 추정)"), Cell::Number(0), Cell::Number(input.platform_fee.0)]);
-    doc.push(vec![text("부가세 추정(수수료의 10%)"), Cell::Number(0), Cell::Number(finance::vat_estimate(input.platform_fee).0)]);
+    doc.push(vec![
+        text("부가세 추정(수수료의 10%)"),
+        Cell::Number(0),
+        Cell::Number(finance::vat_estimate(input.platform_fee).0),
+    ]);
     doc
 }
 
@@ -107,7 +111,18 @@ pub struct InvoiceRow {
 /// Column layout of the owner's 홈택스 upload sheet. UNVERIFIED: the 홈택스 일괄작성 양식 was not available to
 /// check when this was written. Map these columns to the downloaded template with the accountant before uploading.
 pub const TAX_INVOICE_HEADERS: [&str; 12] = [
-    "작성일자", "사업자등록번호", "상호", "대표자", "업태", "종목", "주소", "이메일", "품목", "공급가액", "세액", "합계",
+    "작성일자",
+    "사업자등록번호",
+    "상호",
+    "대표자",
+    "업태",
+    "종목",
+    "주소",
+    "이메일",
+    "품목",
+    "공급가액",
+    "세액",
+    "합계",
 ];
 
 /// Rows for the owner's 홈택스 upload, in request order. Supplier columns are filled on 홈택스 from the owner's login.
@@ -140,7 +155,12 @@ pub fn tax_invoice_document(rows: &[InvoiceRow]) -> Vec<Vec<Cell>> {
 pub fn payout_withholding(tax_type: &str, gross: Won) -> Withholding {
     match tax_type {
         "freelancer" | "unset" => business_withholding(gross),
-        _ => Withholding { gross, income_tax: Won::ZERO, local_tax: Won::ZERO, net: gross },
+        _ => Withholding {
+            gross,
+            income_tax: Won::ZERO,
+            local_tax: Won::ZERO,
+            net: gross,
+        },
     }
 }
 
@@ -200,7 +220,10 @@ mod tests {
 
     #[test]
     fn quarter_ranges_cover_the_year_without_gaps() {
-        assert_eq!(quarter_range(2026, 1).unwrap(), (NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(), NaiveDate::from_ymd_opt(2026, 3, 31).unwrap()));
+        assert_eq!(
+            quarter_range(2026, 1).unwrap(),
+            (NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(), NaiveDate::from_ymd_opt(2026, 3, 31).unwrap())
+        );
         assert_eq!(quarter_range(2026, 4).unwrap().1, NaiveDate::from_ymd_opt(2026, 12, 31).unwrap());
         assert!(quarter_range(2026, 0).is_err());
         assert!(quarter_range(2026, 5).is_err());
@@ -259,8 +282,16 @@ mod tests {
     fn vat_document_matches_golden() {
         let input = VatInput {
             methods: vec![
-                VatMethod { method: "card".into(), count: 3, amount: 330_000 },
-                VatMethod { method: "transfer".into(), count: 1, amount: 110_000 },
+                VatMethod {
+                    method: "card".into(),
+                    count: 3,
+                    amount: 330_000,
+                },
+                VatMethod {
+                    method: "transfer".into(),
+                    count: 1,
+                    amount: 110_000,
+                },
             ],
             platform_fee: Won(88_000),
             refunds: Won(22_000),
