@@ -337,10 +337,11 @@ async fn end_commitments(tx: &mut Transaction<'_, Postgres>, user: Uuid) -> ApiR
     .bind(user)
     .execute(&mut **tx)
     .await?;
-    let offered = sqlx::query_as("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'offered' RETURNING visit_date, start_hour")
-        .bind(user)
-        .fetch_all(&mut **tx)
-        .await?;
+    let offered: Vec<(chrono::NaiveDate, i16)> =
+        sqlx::query_as("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'offered' RETURNING visit_date, start_hour")
+            .bind(user)
+            .fetch_all(&mut **tx)
+            .await?;
     sqlx::query("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'waiting'")
         .bind(user)
         .execute(&mut **tx)
