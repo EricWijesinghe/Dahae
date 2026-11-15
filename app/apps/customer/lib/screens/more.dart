@@ -658,6 +658,9 @@ class ContentListBody extends StatelessWidget {
             separatorBuilder: (_, _) => const Divider(),
             itemBuilder: (_, i) => ListTile(
               title: Text(items[i].title(context.lang)),
+              subtitle: kind == 'notice' && noticeDateLabel(items[i]).isNotEmpty
+                  ? Text(noticeDateLabel(items[i]))
+                  : null,
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
