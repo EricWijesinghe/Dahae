@@ -9,7 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
-- Payment methods are offered to customers only when an admin has switched them on and their PortOne channel key is configured (a wallet without a key no longer appears in `GET /v1/payments/methods` or starts a checkout, and a checkout is never created with a missing key). The admin payment-method list cannot be saved empty.
+- Payment methods are offered to customers only when an admin has switched them on and their PortOne channel key is configured (a wallet without a key no longer appears in `GET /v1/payments/methods` or starts a checkout, and a checkout is never created with a missing key). The admin payment-method list cannot be saved empty (`payment_methods_empty`). A blank channel key counts as missing. The admin list reports `configured` per method, and the console marks a switched-on method that has no channel key.
 - Audit and consent records are append-only (migration 0320): the database refuses edits and deletes. Refunds, payout reveals and finance exports write their audit row in the same transaction as the action.
 - Account deletion: a finished booking (completed or cancelled) loses its street address, answers, visit notes and household profile, keeping the district, size, dwelling type, amounts, dates and status for the 5-year record; open bookings are cleared by the hourly purge once they are completed or cancelled.
 - Team members invited by a partner wait for the platform owner's approval before they see customer addresses or get jobs (new `pending_approval` state, `POST /v1/admin/team-members/{id}/approve`, approvals audited). Existing active members are unchanged. Owner setting: none; the approval is a console action.
