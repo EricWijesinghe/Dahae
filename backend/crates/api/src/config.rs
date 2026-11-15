@@ -53,6 +53,8 @@ pub struct Config {
     pub max_threads_per_day: u32,
     /// Checkout reconciler period (seconds).
     pub reconcile_interval_secs: u64,
+    /// Minimum seconds between attempts at the daily PortOne payment diff (a failed day retries after this).
+    pub payment_diff_interval_secs: u64,
     /// Anthropic API root for the AI support agent (tests point it at a fake server).
     pub anthropic_base_url: String,
     /// SHA-256 of the Android app signing certificate(s) (Play App Signing key). Empty: no assetlinks.json.
@@ -370,6 +372,7 @@ impl Config {
             review_report_threshold: number("REVIEW_REPORT_THRESHOLD", 3, 1)?,
             max_threads_per_day: number("MAX_CHAT_THREADS_PER_DAY", 10, 1)?,
             reconcile_interval_secs: number("RECONCILE_INTERVAL_SECS", 60, 10)?,
+            payment_diff_interval_secs: number("PAYMENT_DIFF_INTERVAL_SECS", 3600, 300)?,
             anthropic_base_url: opt("ANTHROPIC_BASE_URL").unwrap_or_else(|| "https://api.anthropic.com".into()),
             android_cert_sha256: cert_fingerprints("ANDROID_CERT_SHA256", list("ANDROID_CERT_SHA256"))?,
             apple_team_id,

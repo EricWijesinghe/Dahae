@@ -4,6 +4,7 @@
 //! settlement itself is idempotent (`fulfil` re-locks the checkout row).
 
 use crate::{
+    error::ApiResult,
     lifecycle::next_tick,
     metrics::job_pass,
     routes::{cash_receipts, checkout_recon},
@@ -31,7 +32,7 @@ pub fn spawn(state: AppState) -> JoinHandle<()> {
                 job_pass("reconciler", true);
                 continue;
             }
-            let ok = match checkout_recon::reconcile_pass(&state).await {
+            let ok = match recon_pass(&state).await {
                 Ok(0) => true,
                 Ok(checked) => {
                     tracing::info!(checked, "checkout reconcile pass");
@@ -46,6 +47,14 @@ pub fn spawn(state: AppState) -> JoinHandle<()> {
             job_pass("reconciler", ok && receipts_ok);
         }
     })
+}
+
+/// Open checkouts, then provider-paid checkouts left unfinished for a day, then the daily payment diff.
+async fn recon_pass(state: &AppState) -> ApiResult<usize> {
+    let open = checkout_recon::reconcile_pass(state).await?;
+    let stale = checkout_recon::reconcile_stale(state).await?;
+    let diffed = checkout_recon::payment_diff_pass(state).await?;
+    Ok(open + stale + diffed)
 }
 
 /// Retries cash-receipt cancels that a refund could not record. Errors are logged; the pass fails.

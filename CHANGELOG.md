@@ -9,6 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
+- Daily PortOne payment pull (`PAYMENT_DIFF_INTERVAL_SECS`, default 3600): diffs the previous KST day's PortOne payments against checkouts and payments, logs each mismatch, and raises the owner's `payment_mismatch` alert (on by default, toggleable). Checkouts paid at PortOne but unfinished after 24 h now raise `payment_stuck` and get a fulfil retry.
 - Audit and consent records are append-only (migration 0320): the database refuses edits and deletes. Refunds, payout reveals and finance exports write their audit row in the same transaction as the action.
 - Account deletion: a finished booking (completed or cancelled) loses its street address, answers, visit notes and household profile, keeping the district, size, dwelling type, amounts, dates and status for the 5-year record; open bookings are cleared by the hourly purge once they are completed or cancelled.
 - Team members invited by a partner wait for the platform owner's approval before they see customer addresses or get jobs (new `pending_approval` state, `POST /v1/admin/team-members/{id}/approve`, approvals audited). Existing active members are unchanged. Owner setting: none; the approval is a console action.
