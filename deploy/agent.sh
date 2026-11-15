@@ -433,10 +433,23 @@ next_update() { # 다음 자동 업데이트 시각을 JSON 값으로 (예약이
   printf '"%s"' "$(date -d "$d $time" -Iseconds)"
 }
 
-host_refresh() { # 호스트 정보 파일(host.json): 확인 시각, 채널, 버전, 필요한 관리 명령 판, 다음 자동 업데이트
-  write_file "$HOST_DIR/host.json" "$(printf '{"checked":"%s","channel":"%s","version":"%s","min_cli":%s,"next_update":%s}' \
+f2b_count() { # f2b_count 항목이름 : fail2ban status 출력(표준 입력)에서 "항목이름: 숫자" 줄의 숫자를 읽어요 (없으면 0)
+  awk -F: -v k="$1" 'index($0, k) { n = $2; gsub(/[^0-9]/, "", n); print n + 0; f = 1; exit } END { if (!f) print 0 }'
+}
+
+ssh_counts() { # ssh_counts : sshd 감옥의 실패 로그인 누계와 지금 차단 중인 주소 수 (fail2ban 이 없으면 null)
+  local st
+  st=$(fail2ban-client status sshd 2>/dev/null) || { echo "null null"; return; }
+  printf '%s\n' "$st" | f2b_count 'Total failed' | tr '\n' ' '
+  printf '%s\n' "$st" | f2b_count 'Currently banned'
+}
+
+host_refresh() { # 호스트 정보 파일(host.json): 확인 시각, 채널, 버전, 필요한 관리 명령 판, 다음 자동 업데이트, SSH 실패 로그인 수
+  local failed banned
+  read -r failed banned <<< "$(ssh_counts)"
+  write_file "$HOST_DIR/host.json" "$(printf '{"checked":"%s","channel":"%s","version":"%s","min_cli":%s,"next_update":%s,"ssh_failed":%s,"ssh_banned":%s}' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(word_or_unknown "$(env_val CHANNEL)")" "$(word_or_unknown "$(env_val VERSION)")" \
-    "$MIN_CLI_REV" "$(next_update)")"
+    "$MIN_CLI_REV" "$(next_update)" "$failed" "$banned")"
 }
 
 dispatch() { # 종류에 맞는 명령 하나만 실행해요. 종료 코드를 그대로 돌려줘요

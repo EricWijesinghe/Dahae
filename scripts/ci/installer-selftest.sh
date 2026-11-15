@@ -446,6 +446,25 @@ t  "install_agent runs in main"          grep -qE '^  install_agent( |$)' "$ROOT
 t  "cron table written by the CLI"       grep -qF '"$BIN/dahae" write-cron' "$ROOT/deploy/install.sh"
 t  "publish fills RELEASE_RAW"           grep -qF 'RELEASE_RAW=$RAW/$ref' "$ROOT/deploy/publish-delivery.sh"
 
+# ---- host hardening (SEC-9): firewall, fail2ban, unattended upgrades, key-only SSH ----
+HB="$SB/hardening"; mkdir -p "$HB"
+fw() { ( MALKKEUM_FIREWALL="$1"; firewall_wanted ); }
+t  "sshd -T reports password login"        password_login_on "$(printf 'port 22\npasswordauthentication yes\n')"
+nt "sshd -T with password login off"       password_login_on "$(printf 'passwordauthentication no\n')"
+t  "firewall on when MALKKEUM_FIREWALL=on" fw on
+nt "firewall stays off when MALKKEUM_FIREWALL=off" fw off
+t  "fail2ban jail enables sshd"            write_f2b_jail "$HB/jail.local"
+t  "fail2ban jail text"                    grep -qx '\[sshd\]' "$HB/jail.local"
+t  "unattended upgrades on"                write_auto_upgrades "$HB/auto"
+t  "unattended upgrades text"              grep -qx 'APT::Periodic::Unattended-Upgrade "1";' "$HB/auto"
+t  "key-only drop-in"                      write_keyonly_dropin "$HB/keyonly.conf"
+t  "key-only drop-in text"                 grep -qx 'PasswordAuthentication no' "$HB/keyonly.conf"
+: > "$HB/empty-keys"; printf 'ssh-ed25519 AAAA test\n' > "$HB/keys"
+nt "empty authorized_keys is not a key"   has_key "$HB/empty-keys"
+t  "authorized_keys with a key"            has_key "$HB/no-such" "$HB/keys"
+t  "install installs ufw fail2ban unattended-upgrades" grep -qF 'ufw fail2ban unattended-upgrades' "$ROOT/deploy/install.sh"
+t  "install runs harden_host in main"      grep -qE '^  harden_host( |$)' "$ROOT/deploy/install.sh"
+
 bash "$ROOT/scripts/ci/agent-selftest.sh" >/dev/null || { FAIL=$((FAIL + 1)); echo "FAIL: agent self-test (run scripts/ci/agent-selftest.sh)"; }
 
 echo "installer self-test: $PASS passed, $FAIL failed"

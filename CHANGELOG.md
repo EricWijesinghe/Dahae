@@ -9,6 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
+- Server installer hardening: `ufw` turns on only after a confirmation (22, 80, 443 open), fail2ban bans SSH brute-force attempts for 1 hour, unattended security upgrades are on, and SSH password login can be turned off when a key is present. Owner decisions: firewall on or off (default off without a terminal answer), SSH password login off (default kept on until confirmed).
 - Consultation chat: customer and partner messages now push staff devices, at most once per thread per minute.
 
 ### Added

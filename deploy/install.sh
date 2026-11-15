@@ -166,6 +166,56 @@ install_cosign() { # 서명 확인 도구를 $DIR/bin/cosign 에 둬요. 지문(
 }
 
 # ---- 서버 점검 ----
+# ---- 호스트 보안 (SEC-9): 자동 보안 업데이트, 침입 차단, 방화벽, SSH 키 로그인 ----
+password_login_on() { printf '%s\n' "$1" | grep -qi '^passwordauthentication yes$'; } # $1: sshd -T 출력
+has_key() { local f; for f in "$@"; do [ -s "$f" ] && return 0; done; return 1; } # 키 파일 하나라도 내용이 있으면 통과
+write_auto_upgrades() { printf 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' > "$1"; }
+write_f2b_jail() { # 비밀번호 무차별 대입을 막아요: 5분 안에 5번 틀리면 1시간 차단
+  printf '[sshd]\nenabled = true\nmaxretry = 5\nfindtime = 10m\nbantime = 1h\n' > "$1"
+}
+write_keyonly_dropin() { # 00 으로 시작해야 클라우드 기본 설정보다 먼저 읽혀요 (sshd 는 먼저 나온 값을 써요)
+  printf '# 다해: 비밀번호 로그인을 끄고 SSH 키로만 접속해요 (install.sh 가 만들었어요)\nPasswordAuthentication no\n' > "$1"
+}
+firewall_wanted() { # 방화벽을 켤지 물어요. MALKKEUM_FIREWALL=on|off 로 묻지 않고 정할 수 있어요
+  local a
+  case "${MALKKEUM_FIREWALL:-}" in on) return 0 ;; off) return 1 ;; esac
+  a=$(ask "방화벽(ufw)을 켜고 22(SSH)·80·443 포트만 열까요? (y/N)" n)
+  case "$a" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
+}
+ufw_allow_web() { ufw allow 22/tcp >/dev/null && ufw allow 80/tcp >/dev/null && ufw allow 443/tcp >/dev/null; }
+firewall_setup() { # 이미 켜져 있으면 규칙만 맞추고, 꺼져 있으면 확인을 받은 뒤에만 켜요 (SSH 규칙을 먼저 넣어요)
+  command -v ufw >/dev/null || { warn "ufw 가 없어 방화벽을 설정하지 못했어요"; return 0; }
+  if ufw status | grep -q active; then
+    ufw_allow_web || warn "방화벽 규칙을 넣지 못했어요"
+  elif firewall_wanted; then
+    ufw_allow_web && ufw default deny incoming >/dev/null && ufw default allow outgoing >/dev/null \
+      && ufw --force enable >/dev/null || die "방화벽을 켜지 못했어요. 'sudo ufw status' 를 확인하세요."
+    ok "방화벽을 켰어요 (22·80·443 만 열려 있어요)"
+  else
+    warn "방화벽을 켜지 않았어요. 클라우드 콘솔 방화벽에서 22·80·443 만 열어 두세요 (나중에 'sudo ufw enable' 로 켤 수 있어요)"
+  fi
+}
+ssh_keyonly_check() { # 비밀번호 로그인이 켜져 있으면 알려요. SSH 키가 있을 때만, 확인을 받고 끌어요 (키 없이 끄면 접속을 잃어요)
+  command -v sshd >/dev/null || return 0
+  password_login_on "$(sshd -T 2>/dev/null)" || { ok "SSH 는 키로만 접속할 수 있어요"; return 0; }
+  warn "SSH 비밀번호 로그인이 켜져 있어요. 무차별 대입 공격을 받기 쉬워요."
+  has_key /root/.ssh/authorized_keys "/home/${SUDO_USER:-none}/.ssh/authorized_keys" \
+    || { warn "SSH 공개 키가 아직 없어요. 키를 등록한 뒤 다시 실행하면 비밀번호 로그인을 끌 수 있어요."; return 0; }
+  [ "$(ask "SSH 비밀번호 로그인을 끌까요? 끄면 SSH 키로만 접속해요. (y/N)" n)" = y ] || { warn "비밀번호 로그인을 그대로 두었어요"; return 0; }
+  write_keyonly_dropin /etc/ssh/sshd_config.d/00-dahae-keyonly.conf
+  if sshd -t 2>/dev/null; then
+    { systemctl reload ssh || systemctl reload sshd; } >/dev/null 2>&1 && ok "SSH 비밀번호 로그인을 껐어요" && return 0
+  fi
+  rm -f /etc/ssh/sshd_config.d/00-dahae-keyonly.conf; warn "SSH 설정을 바꾸지 못해 되돌렸어요"
+}
+harden_host() { # 자동 보안 업데이트 · fail2ban(SSH 감옥) · 방화벽 · SSH 키 로그인 점검
+  write_auto_upgrades /etc/apt/apt.conf.d/20auto-upgrades
+  write_f2b_jail /etc/fail2ban/jail.d/dahae-sshd.local
+  systemctl enable fail2ban >/dev/null 2>&1; systemctl restart fail2ban >/dev/null 2>&1 || warn "fail2ban 을 켜지 못했어요"
+  firewall_setup
+  ssh_keyonly_check
+}
+
 preflight() {
   local arch mem swap need p free busy
   arch=$(uname -m)
@@ -1301,7 +1351,7 @@ main() {
 
   say "필수 프로그램 설치 (새 서버면 자동 업데이트가 끝날 때까지 최대 10분 기다려요)"
   apt_retry update -qq || die "패키지 목록을 받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요."
-  apt_retry install -y -qq ca-certificates curl openssl gzip cron dnsutils logrotate iproute2 >/dev/null \
+  apt_retry install -y -qq ca-certificates curl openssl gzip cron dnsutils logrotate iproute2 ufw fail2ban unattended-upgrades >/dev/null \
     || die "필수 프로그램을 설치하지 못했어요. 잠시 뒤 다시 실행하세요."
   if ! command -v docker >/dev/null; then
     curl -fsSL https://get.docker.com | sh >/dev/null || die "Docker 를 설치하지 못했어요. 잠시 뒤 다시 실행하세요."
@@ -1349,9 +1399,7 @@ EOF
   write_schedules
   install_agent   # 새 설치와 업데이트 모두: 작업 실행기는 dahae update 가 쓰는 작업 폴더를 쓰므로 compose 를 띄우기 전에 둬요
 
-  if command -v ufw >/dev/null && ufw status | grep -q active; then
-    ufw allow 22/tcp >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443 >/dev/null
-  fi
+  harden_host
 
   if [ "$IMAGE_SOURCE" = local ]; then
     :

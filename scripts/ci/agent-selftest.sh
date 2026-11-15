@@ -231,6 +231,11 @@ t  "host.json has min_cli"        grep -q '"min_cli":2' "$DAHAE_HOST_DIR/host.js
 t  "host.json next update set"    grep -q '"next_update":"20' "$DAHAE_HOST_DIR/host.json"
 echo off > "$DAHAE_DIR/update-schedule"; host_refresh
 t  "host.json next update null when off" grep -q '"next_update":null' "$DAHAE_HOST_DIR/host.json"
+# ---- fail2ban counts for host.json (failed ssh logins, current bans) ----
+t  "f2b total failed"                 eq "$(printf '   |- Total failed:\t12\n   |- Currently banned:\t1\n' | f2b_count 'Total failed')" 12
+t  "f2b currently banned"             eq "$(printf '   |- Total failed:\t12\n   |- Currently banned:\t1\n' | f2b_count 'Currently banned')" 1
+t  "f2b missing line is 0"            eq "$(printf 'nothing\n' | f2b_count 'Total failed')" 0
+t  "host.json has ssh counts"         grep -q '"ssh_failed":' "$DAHAE_HOST_DIR/host.json"
 rm -f "$DAHAE_DIR/update-schedule"
 
 # ---- version floor: the highest recorded version; no record means update-tag is refused; a stable release beats its own beta ----

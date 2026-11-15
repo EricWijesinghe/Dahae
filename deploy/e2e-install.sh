@@ -30,7 +30,7 @@ else
   ENVS=("MALKKEUM_IMAGES=$REG" "MALKKEUM_SKIP_SIGNATURE=1") # locally built images carry no release signature
 fi
 ENVS+=("MALKKEUM_DOMAIN=$DOMAIN" "MALKKEUM_EMAIL=ci@example.com" "MALKKEUM_VERSION=$TAG" "MALKKEUM_TLS=internal"
-  "MALKKEUM_HEALTH_WAIT=240" "MALKKEUM_AGENT_FILE=$(pwd)/deploy/agent.sh")
+  "MALKKEUM_HEALTH_WAIT=240" "MALKKEUM_AGENT_FILE=$(pwd)/deploy/agent.sh" "MALKKEUM_FIREWALL=on")
 mkdir -p "$LOG"
 
 step() { printf '\n== %s  (%s)\n' "$*" "$(date +%T)"; }
@@ -162,6 +162,10 @@ expect "log rotation installed" $SUDO test -f /etc/logrotate.d/dahae
 expect "API uses the non-superuser DB role" app_role_ok
 for s in db api web; do expect "$s container hardened (read-only, no capabilities)" hardened "$s"; done
 expect "cron reports a failed unattended update" $SUDO grep -q 'dahae auto-update .*|| .*dahae alert update' /etc/cron.d/malkkeum
+expect "ufw active" sh -c "$SUDO ufw status | grep -q 'Status: active'"
+expect "ufw allows 22, 80 and 443" sh -c "$SUDO ufw status | grep -qE '^22/tcp +ALLOW' && $SUDO ufw status | grep -qE '^80/tcp +ALLOW' && $SUDO ufw status | grep -qE '^443/tcp +ALLOW'"
+expect "fail2ban running with the sshd jail" $SUDO fail2ban-client status sshd
+expect "unattended security upgrades on" $SUDO grep -q 'Unattended-Upgrade "1"' /etc/apt/apt.conf.d/20auto-upgrades
 expect "agent path unit is active" $SUDO systemctl is-active --quiet dahae-agent.path
 expect "agent timer is active" $SUDO systemctl is-active --quiet dahae-agent.timer
 expect "job status folder is root-owned" sh -c "[ \"\$($SUDO stat -c %u /opt/malkkeum/jobs/status)\" = 0 ]"

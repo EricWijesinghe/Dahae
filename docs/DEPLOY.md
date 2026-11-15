@@ -99,8 +99,12 @@ process holds port 80 or 443.
 ### Outside the server (owner checklist, mirrored in guide 01)
 
 1. Domain and an A record for the bare domain pointing at the server IP.
-2. Ports 22/80/443 open in the cloud firewall (the installer only touches `ufw`, and only
-   when it is already active).
+2. Ports 22/80/443 open in the cloud firewall. The installer also installs `ufw`, fail2ban and
+   unattended security upgrades. It asks before turning `ufw` on (only 22, 80, 443 allowed;
+   `MALKKEUM_FIREWALL=on|off` skips the question). fail2ban bans an address for 1 hour after 5
+   failed SSH logins in 10 minutes. If a public key is already in `authorized_keys`, the installer
+   offers to turn off SSH password login. Docker-published ports bypass `ufw`, so keep the cloud
+   firewall rules too.
 3. PortOne + PG merchant contracts; keys go into the console wizard.
 4. Solapi account, sender-number registration, Kakao channel and approved AlimTalk templates (guide 06).
 5. Kakao / Naver / Google / Apple developer apps for sign-in; Apple Developer and Google Play accounts (guide 03).
@@ -302,6 +306,7 @@ Not in the docs (do not assume): the webhook signature scheme (none documented, 
 The server cannot report its own outage, so watch it from outside.
 
 - **Heartbeat (required):** create a check at healthchecks.io (or any compatible service) with period 5 min, grace 15 min, then on the server run `sudo dahae heartbeat <ping URL>` (https only; `sudo dahae heartbeat off` disables it). The command stores the URL, restarts the API so the console checklist item clears, and sends one test ping. Unattended installs can pass `MALKKEUM_HEARTBEAT_URL=` instead. Cron runs `/usr/local/bin/malkkeum-heartbeat` every 5 minutes. It pings only when `https://DOMAIN/health` returns `"ok":true`, so a dead API stops the pings and the service alerts you by email/SMS.
+- **SSH and host alerts (not in the heartbeat):** the host status file `/opt/malkkeum/host/host.json` carries `ssh_failed` (failed SSH logins counted by fail2ban) and `ssh_banned` (addresses banned right now). `null` means fail2ban is not running. The heartbeat does not send these numbers, so check them with `sudo cat /opt/malkkeum/host/host.json` or `sudo fail2ban-client status sshd` when the monitor or an owner report says something is wrong. Unbanning: `sudo fail2ban-client set sshd unbanip <address>`.
 - **Missing config:** without a heartbeat URL, `sudo dahae status` prints a warning and the heartbeat log says so. Nothing is alerted until the URL is set.
 - **HTTP checks (optional, free tiers):** UptimeRobot or BetterStack, HTTPS `GET https://DOMAIN/health`, expect keyword `"ok":true`, interval 5 min. Use this to catch a crashed proxy as well.
 - Logs: `/opt/malkkeum/backups/heartbeat.log` (rotated weekly, 8 kept). Server metrics and request ids are covered by the ops screens, not here.
