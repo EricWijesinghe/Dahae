@@ -38,6 +38,10 @@ void main() {
         jobCountsLabel(koT, {
           'service_code': 'window',
           'unit_counts': [1, 2],
+          'count_units': [
+            {'label_key': 'window_small'},
+            {'label_key': 'window_large'},
+          ],
         }),
         '작은 창 1 · 큰 창 2',
       );
@@ -45,9 +49,42 @@ void main() {
         jobCountsLabel(koT, {
           'service_code': 'disinfection',
           'unit_counts': [0, 1, 0, 1],
+          'count_units': [
+            {'label_key': 'pest'},
+            {'label_key': 'mite_bedbug'},
+            {'label_key': 'sanitize'},
+            {'label_key': 'sick_house'},
+          ],
         }),
         '진드기·베드버그 1 · 새집 증후군 1',
       );
+    });
+
+    test('labels an option the owner added with the owner label', () {
+      final job = {
+        'service_code': 'aircon',
+        'unit_counts': [1, 0, 0, 0, 2],
+        'count_units': [
+          {'label_key': 'wall', 'label': null},
+          {'label_key': 'stand', 'label': null},
+          {'label_key': 'two_in_one', 'label': null},
+          {'label_key': 'ceiling', 'label': null},
+          {'label_key': 'opt_1', 'label': '특수 에어컨'},
+        ],
+      };
+      expect(jobCountsLabel(koT, job), '벽걸이 1 · 특수 에어컨 2');
+    });
+
+    test('follows the catalogue order the owner set', () {
+      final job = {
+        'service_code': 'mattress',
+        'unit_counts': [3, 1],
+        'count_units': [
+          {'label_key': 'opt_2', 'label': '침대 매트리스'},
+          {'label_key': 'mattress', 'label': null},
+        ],
+      };
+      expect(jobCountsLabel(koT, job), '침대 매트리스 3 · 매트리스 1');
     });
 
     test('returns null when the job has no counts or the service has none', () {
@@ -79,6 +116,9 @@ void main() {
       final job = {
         'service_code': 'mattress',
         'unit_counts': [2, 5],
+        'count_units': [
+          {'label_key': 'mattress', 'label': null},
+        ],
       };
       expect(jobCountsLabel(koT, job), '매트리스 2');
     });
