@@ -34,6 +34,9 @@ from the release branches; no tags existed for them.
 ### Security
 - Every staff role must enrol TOTP before sign-in; customer phone lookup, search and export are admin-only; customer export, deletion, bank-detail reveals and payouts need a TOTP step-up within five minutes (`POST /v1/auth/staff/mfa/step-up`; the console asks for the code and retries). Staff without a second factor get no session refresh. `STAFF_MFA_REQUIRED=0` is refused outside `DEV_MODE`.
 
+### Fixed
+- Subscription visits: a visit moved to another arrival window tells the customer (`subscription.visit_moved`); a day with no free window tells the customer and staff (`subscription.visit_unplaced`, `subscription.capacity_full`). Notices are sent once, when the visit is planned.
+
 ### Changed
 - Finance has one revenue and fee definition: the VAT export and the console dashboard revenue tile now read the same aggregate as the finance summary, so held settlements are left out of VAT and refunds use the summary's cancel-date basis. Partner, service and payout-bearing finance series (summary, series, partners, services) are admin-only; consultants get 403. Dashboard revenue is the last 30 KST days including today.
 - Completing a job requires the arrival check-in first; the owner can complete without one by giving a reason (audited as `check_in.override`), and team members check in and out on their own jobs (`/v1/member/jobs/{id}/check-in`, `check-out`). Check-out is allowed only on an assigned job on its visit day; the customer's app gets a live update on both. The no-show scan skips jobs with a member check-in. The partner app shows the check-in and check-out card on the team member's job, and asks the owner for a short reason (up to 200 characters) when completion is refused for a missing arrival.
