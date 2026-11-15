@@ -69,6 +69,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     key: ValueKey(c['code']),
                     card: c,
                     webhookUrl: data['webhook_url'] as String?,
+                    tossWebhookUrl: data['toss_webhook_url'] as String?,
                     onChanged: _reload,
                   ),
                 ],
@@ -166,10 +167,12 @@ class IntegrationCard extends StatefulWidget {
     required this.card,
     required this.onChanged,
     this.webhookUrl,
+    this.tossWebhookUrl,
   });
   final Json card;
   final VoidCallback onChanged;
   final String? webhookUrl;
+  final String? tossWebhookUrl;
 
   @override
   State<IntegrationCard> createState() => _IntegrationCardState();
@@ -355,6 +358,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
             _Steps(guide: _guide),
             if (_code == 'portone' && widget.webhookUrl != null)
               _CopyRow(label: t.cSetupWebhook, value: widget.webhookUrl!),
+            if (_code == 'payout' && widget.tossWebhookUrl != null)
+              _CopyRow(label: t.cSetupWebhook, value: widget.tossWebhookUrl!),
             const SizedBox(height: Space.md),
             for (final f in _fields) _field(context, f),
             const SizedBox(height: Space.md),
