@@ -236,6 +236,18 @@ t  "f2b total failed"                 eq "$(printf '   |- Total failed:\t12\n   
 t  "f2b currently banned"             eq "$(printf '   |- Total failed:\t12\n   |- Currently banned:\t1\n' | f2b_count 'Currently banned')" 1
 t  "f2b missing line is 0"            eq "$(printf 'nothing\n' | f2b_count 'Total failed')" 0
 t  "host.json has ssh counts"         grep -q '"ssh_failed":' "$DAHAE_HOST_DIR/host.json"
+# ssh ban alert: sent when the ban count rises, not on repeats or decreases
+F2B_OUT="$SB/f2b-status.txt"
+printf '   |- Total failed:\t3\n   |- Currently banned:\t2\n' > "$F2B_OUT"
+printf '#!/usr/bin/env bash\ncat "%s"\n' "$F2B_OUT" > "$SB/bin/fail2ban-client"; chmod +x "$SB/bin/fail2ban-client"
+rm -f "$DAHAE_HOST_DIR/ssh-banned.last"; : > "$SB/argv.log"; host_refresh
+t  "first ssh ban count alerts"          argv_has "alert ssh 2 YES=1"
+: > "$SB/argv.log"; host_refresh
+nt "same ssh ban count does not alert"   grep -q "alert ssh" "$SB/argv.log"
+printf '   |- Total failed:\t9\n   |- Currently banned:\t4\n' > "$F2B_OUT"; : > "$SB/argv.log"; host_refresh
+t  "rising ssh ban count alerts again"   argv_has "alert ssh 4 YES=1"
+printf '   |- Total failed:\t9\n   |- Currently banned:\t1\n' > "$F2B_OUT"; : > "$SB/argv.log"; host_refresh
+nt "falling ssh ban count does not alert" grep -q "alert ssh" "$SB/argv.log"
 rm -f "$DAHAE_DIR/update-schedule"
 
 # ---- version floor: the highest recorded version; no record means update-tag is refused; a stable release beats its own beta ----

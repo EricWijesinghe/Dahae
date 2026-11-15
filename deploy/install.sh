@@ -176,6 +176,7 @@ write_f2b_jail() { # 비밀번호 무차별 대입을 막아요: 5분 안에 5�
 write_keyonly_dropin() { # 00 으로 시작해야 클라우드 기본 설정보다 먼저 읽혀요 (sshd 는 먼저 나온 값을 써요)
   printf '# 다해: 비밀번호 로그인을 끄고 SSH 키로만 접속해요 (install.sh 가 만들었어요)\nPasswordAuthentication no\n' > "$1"
 }
+KEYONLY_CONF=/etc/ssh/sshd_config.d/00-dahae-keyonly.conf
 firewall_wanted() { # 방화벽을 켤지 물어요. MALKKEUM_FIREWALL=on|off 로 묻지 않고 정할 수 있어요
   local a
   case "${MALKKEUM_FIREWALL:-}" in on) return 0 ;; off) return 1 ;; esac
@@ -185,7 +186,7 @@ firewall_wanted() { # 방화벽을 켤지 물어요. MALKKEUM_FIREWALL=on|off �
 ufw_allow_web() { ufw allow 22/tcp >/dev/null && ufw allow 80/tcp >/dev/null && ufw allow 443/tcp >/dev/null; }
 firewall_setup() { # 이미 켜져 있으면 규칙만 맞추고, 꺼져 있으면 확인을 받은 뒤에만 켜요 (SSH 규칙을 먼저 넣어요)
   command -v ufw >/dev/null || { warn "ufw 가 없어 방화벽을 설정하지 못했어요"; return 0; }
-  if ufw status | grep -q active; then
+  if ufw status | grep -q '^Status: active'; then
     ufw_allow_web || warn "방화벽 규칙을 넣지 못했어요"
   elif firewall_wanted; then
     ufw_allow_web && ufw default deny incoming >/dev/null && ufw default allow outgoing >/dev/null \
@@ -195,18 +196,31 @@ firewall_setup() { # 이미 켜져 있으면 규칙만 맞추고, 꺼져 있으�
     warn "방화벽을 켜지 않았어요. 클라우드 콘솔 방화벽에서 22·80·443 만 열어 두세요 (나중에 'sudo ufw enable' 로 켤 수 있어요)"
   fi
 }
-ssh_keyonly_check() { # 비밀번호 로그인이 켜져 있으면 알려요. SSH 키가 있을 때만, 확인을 받고 끌어요 (키 없이 끄면 접속을 잃어요)
+operator_account() { # 이 설치를 맡은 계정: sudo 로 실행했으면 그 계정, 아니면 root
+  if [ -n "${SUDO_USER:-}" ]; then printf '%s' "$SUDO_USER"; else printf root; fi
+}
+login_key_file() { # login_key_file 계정 : 그 계정의 SSH 공개 키 파일 경로 (계정 이름이 이상하면 실패해요)
+  local u="$1" h
+  printf '%s' "$u" | grep -Eq '^[a-z_][a-z0-9_-]{0,31}$' || return 1
+  [ "$u" = root ] && { printf '%s' /root/.ssh/authorized_keys; return 0; }
+  h=$(getent passwd "$u" | cut -d: -f6) || return 1
+  printf '%s/.ssh/authorized_keys' "$h"
+}
+ssh_keyonly_check() { # 비밀번호 로그인이 켜져 있으면 알려요. 이 계정에 SSH 키가 있을 때만, 확인을 받고 끌어요 (키 없이 끄면 접속을 잃어요)
+  local cfg acct keyf
   command -v sshd >/dev/null || return 0
-  password_login_on "$(sshd -T 2>/dev/null)" || { ok "SSH 는 키로만 접속할 수 있어요"; return 0; }
+  cfg=$(sshd -T 2>/dev/null) || { warn "SSH 설정을 읽지 못해 비밀번호 로그인 여부를 확인하지 못했어요"; return 0; }
+  password_login_on "$cfg" || { ok "SSH 는 키로만 접속할 수 있어요"; return 0; }
   warn "SSH 비밀번호 로그인이 켜져 있어요. 무차별 대입 공격을 받기 쉬워요."
-  has_key /root/.ssh/authorized_keys "/home/${SUDO_USER:-none}/.ssh/authorized_keys" \
-    || { warn "SSH 공개 키가 아직 없어요. 키를 등록한 뒤 다시 실행하면 비밀번호 로그인을 끌 수 있어요."; return 0; }
-  [ "$(ask "SSH 비밀번호 로그인을 끌까요? 끄면 SSH 키로만 접속해요. (y/N)" n)" = y ] || { warn "비밀번호 로그인을 그대로 두었어요"; return 0; }
-  write_keyonly_dropin /etc/ssh/sshd_config.d/00-dahae-keyonly.conf
+  acct=$(operator_account)
+  keyf=$(login_key_file "$acct") || { warn "계정 '$acct' 의 홈 폴더를 찾지 못해 SSH 키를 확인하지 못했어요"; return 0; }
+  has_key "$keyf" || { warn "계정 '$acct' 에 SSH 공개 키가 아직 없어요. 키를 등록한 뒤 다시 실행하면 비밀번호 로그인을 끌 수 있어요."; return 0; }
+  [ "$(ask "SSH 비밀번호 로그인을 끌까요? 끄면 '$acct' 계정은 SSH 키로만 접속해요. (y/N)" n)" = y ] || { warn "비밀번호 로그인을 그대로 두었어요"; return 0; }
+  write_keyonly_dropin "$KEYONLY_CONF"
   if sshd -t 2>/dev/null; then
     { systemctl reload ssh || systemctl reload sshd; } >/dev/null 2>&1 && ok "SSH 비밀번호 로그인을 껐어요" && return 0
   fi
-  rm -f /etc/ssh/sshd_config.d/00-dahae-keyonly.conf; warn "SSH 설정을 바꾸지 못해 되돌렸어요"
+  rm -f "$KEYONLY_CONF"; warn "SSH 설정을 바꾸지 못해 되돌렸어요"
 }
 harden_host() { # 자동 보안 업데이트 · fail2ban(SSH 감옥) · 방화벽 · SSH 키 로그인 점검
   write_auto_upgrades /etc/apt/apt.conf.d/20auto-upgrades
@@ -430,7 +444,7 @@ USAGE='사용법: dahae <명령>
   uninstall --purge [--confirm 도메인]  데이터와 백업까지 삭제 (도메인을 입력해 확인. --yes 로는 넘어가지 않아요)
   keys-backup                 비밀 키 사본을 비밀번호로 잠가 만들기 (서버 밖에 보관: 외부 백업을 풀 때 필요)
   keys-restore 파일 [--yes]   새 서버에 예전 비밀 키 넣기 (restore-offsite 전에)
-  alert update|backup         자동 작업 실패를 외부 가동 확인 주소로 알리기 (예약 작업용)'
+  alert update|backup|ssh     자동 작업 실패·SSH 차단 증가를 외부 가동 확인 주소로 알리기 (예약 작업·서버 점검용)'
 
 dc() { docker compose --env-file .env "$@"; }
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
@@ -847,14 +861,15 @@ cmd_keys_restore() { # dahae keys-restore 파일 [--yes] : 잠근 사본의 DATA
   ok "예전 비밀 키를 넣었어요. 이제 콘솔에서 외부 백업을 연결하고 'dahae restore-offsite' 로 되돌리세요."
 }
 
-cmd_alert() { # dahae alert update|backup : 예약 작업(cron)이 실패하면 외부 가동 확인 주소로 실패 신호와 로그 끝부분을 보내요
-  local what="${1:-}" url
-  case "$what" in update|backup) ;; *) die "사용법: dahae alert update|backup" ;; esac
+cmd_alert() { # dahae alert update|backup|ssh [차단 주소 수] : 예약 작업 실패나 SSH 차단 증가를 외부 가동 확인 주소로 알려요
+  local what="${1:-}" n="${2:-}" url payload
+  case "$what" in update|backup) ;; ssh) printf '%s' "$n" | grep -Eq '^[0-9]{1,6}$' || die "사용법: dahae alert ssh <차단 주소 수>" ;; *) die "사용법: dahae alert update|backup|ssh" ;; esac
   url=$(env_get HEARTBEAT_URL)
-  [ -n "$url" ] || { warn "외부 가동 확인 주소가 없어 실패를 알리지 못했어요 ('dahae heartbeat <주소>' 로 켜세요)"; return 1; }
-  tail -n 30 "backups/$what.log" 2>/dev/null | curl -fsS --max-time 15 -o /dev/null --data-binary @- "$(fail_url "$url")" \
-    || { warn "실패 알림을 보내지 못했어요"; return 1; }
-  ok "자동 $what 실패를 알렸어요"
+  [ -n "$url" ] || { warn "외부 가동 확인 주소가 없어 알리지 못했어요 ('dahae heartbeat <주소>' 로 켜세요)"; return 1; }
+  if [ "$what" = ssh ]; then payload="SSH 로그인 실패가 늘어 $n 개 주소를 차단했어요 (fail2ban). 'sudo fail2ban-client status sshd' 로 확인하세요."
+  else payload=$(tail -n 30 "backups/$what.log" 2>/dev/null); fi
+  printf '%s' "$payload" | curl -fsS --max-time 15 -o /dev/null --data-binary @- "$(fail_url "$url")"     || { warn "알림을 보내지 못했어요"; return 1; }
+  ok "$what 알림을 보냈어요"
 }
 
 cmd_restore() { # dahae restore 파일 [--yes]
