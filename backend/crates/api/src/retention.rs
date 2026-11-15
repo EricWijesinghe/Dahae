@@ -89,8 +89,8 @@ pub async fn purge(db: &PgPool, cfg: &Config) -> Result<Report, Box<dyn std::err
     .execute(db)
     .await?
     .rows_affected();
-    // A deleted customer's booking that was still open at deletion loses its address once the visit is over.
-    let closed_bookings = crate::privacy::pseudonymise_closed_bookings(db).await?;
+    // A deleted customer's booking that was still open at deletion loses its personal fields once it is completed or cancelled.
+    let closed_bookings = crate::privacy::pseudonymise_closed_bookings(db, None).await?;
     Ok(Report {
         closed_bookings,
         otp_codes,

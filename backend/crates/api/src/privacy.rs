@@ -221,7 +221,7 @@ async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
 /// checkouts, tips, cash receipts, tax invoice requests and payouts (전자상거래법 5년, 부가가치세법), review ratings,
 /// the consent log (proof of consent), chat text with the sender unlinked (분쟁 처리), and a referral's phone only
 /// as a keyed digest (`crypto::phone_digest`) so the one-reward-per-phone rule still holds. A finished booking
-/// also loses its street address and answers (`pseudonymise_closed_bookings`). Safe to run twice.
+/// also loses its street address, answers, visit notes and household (`pseudonymise_closed_bookings`). Safe to run twice.
 pub async fn delete_account(s: &AppState, user: Uuid) -> ApiResult<()> {
     delete_billing_keys(s, user).await?;
     let mut tx = s.db.begin().await?;
@@ -235,7 +235,7 @@ pub async fn delete_account(s: &AppState, user: Uuid) -> ApiResult<()> {
     remove_sign_in_and_devices(&mut tx, user).await?;
     let offered = end_commitments(&mut tx, user).await?;
     clear_customer_content(&mut tx, user).await?;
-    pseudonymise_closed_bookings(&mut *tx).await?;
+    pseudonymise_closed_bookings(&mut *tx, Some(user)).await?;
     tx.commit().await?;
     // Network and disk work after commit: no row lock is held across it.
     crate::providers::social::unlink(&s.providers, "customer", user, links).await;
@@ -390,18 +390,27 @@ async fn clear_customer_content(tx: &mut Transaction<'_, Postgres>, user: Uuid) 
     Ok(())
 }
 
-/// Finished bookings (completed or cancelled) of deleted customers lose the street address and the answers.
-/// Amounts, dates, service code, status and the district stay for the 전자상거래법 record. Open bookings are
-/// skipped: the visit and the quote-job payout rule still read them. Idempotent: a row is matched only while it
-/// still holds an address or answers. Runs at deletion and in the hourly purge (`retention::purge`).
-pub(crate) async fn pseudonymise_closed_bookings<'c>(conn: impl sqlx::PgExecutor<'c>) -> sqlx::Result<u64> {
+/// Finished bookings (completed or cancelled) of deleted customers lose the street address, the answers,
+/// the visit notes (entrance instructions) and the household profile. Amounts, dates, service code, status,
+/// the district and the size stay for the 전자상거래법 record. Answers become `{}` rather than NULL so a
+/// completed quote still reads as a quote to the partner. Open bookings are skipped: the visit and the
+/// quote-job payout rule still read them. Idempotent: a row is matched only while it still holds personal
+/// fields. `user` limits the sweep to one customer (account deletion); `None` sweeps all (`retention::purge`).
+pub(crate) async fn pseudonymise_closed_bookings<'c>(conn: impl sqlx::PgExecutor<'c>, user: Option<Uuid>) -> sqlx::Result<u64> {
     let done = sqlx::query(
-        "UPDATE bookings SET address = jsonb_build_object('district_code', district_code, 'size_pyeong', address -> 'size_pyeong'), answers = NULL
-         WHERE status IN ($1, $2) AND (answers IS NOT NULL OR address ->> 'road_address' IS NOT NULL)
-           AND user_id IN (SELECT id FROM users WHERE deleted_at IS NOT NULL)",
+        "UPDATE bookings SET
+           address = jsonb_build_object('district_code', district_code, 'size_pyeong', address -> 'size_pyeong', 'kind', address -> 'kind'),
+           answers = CASE WHEN answers IS NULL THEN NULL ELSE '{}'::jsonb END,
+           visit_notes = '{}'::jsonb, household = '{}'::jsonb
+         WHERE status IN ($1, $2)
+           AND (answers IS NOT NULL AND answers <> '{}'::jsonb OR address ->> 'road_address' IS NOT NULL
+                OR visit_notes <> '{}'::jsonb OR household <> '{}'::jsonb)
+           AND user_id IN (SELECT id FROM users WHERE deleted_at IS NOT NULL)
+           AND ($3::uuid IS NULL OR user_id = $3)",
     )
     .bind(BookingStatus::Completed.as_i16())
     .bind(BookingStatus::Cancelled.as_i16())
+    .bind(user)
     .execute(conn)
     .await?;
     Ok(done.rows_affected())

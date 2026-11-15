@@ -249,39 +249,50 @@ async fn deletion_anonymises_and_removes_devices_but_keeps_records(pool: PgPool)
     assert_eq!(consents, 3, "consent evidence kept");
 }
 
-/// A deleted customer's finished booking loses its street address and answers, and keeps every amount.
+/// A deleted customer's finished booking loses its street address, answers, visit notes and household,
+/// keeps the district and size, and keeps every amount.
 #[sqlx::test(migrations = "../../migrations")]
 async fn deletion_pseudonymises_finished_bookings_and_keeps_amounts(pool: PgPool) {
     seed_catalog(&pool).await;
     let app = app(pool.clone());
     let c = customer(&app, &pool, "010-8100-0011").await;
     let (done, _) = book(&app, &c, 10, None).await;
-    sqlx::query("UPDATE bookings SET status = 3, answers = '{\"size_pyeong\": 24, \"note\": \"door code 1234\"}'::jsonb WHERE id = $1")
-        .bind(done)
-        .execute(&pool)
-        .await
-        .expect("finish booking");
-    let before: serde_json::Value = sqlx::query_scalar("SELECT to_jsonb(b) - 'address' - 'answers' FROM bookings b WHERE id = $1")
-        .bind(done)
-        .fetch_one(&pool)
-        .await
-        .expect("before");
+    sqlx::query(
+        "UPDATE bookings SET status = 3, address = address || '{\"kind\": \"apartment\"}'::jsonb,
+           answers = '{\"size_pyeong\": 24, \"note\": \"door code 1234\"}'::jsonb,
+           visit_notes = '{\"parking\": \"B2 visitor spot\"}'::jsonb, household = '{\"pets\": [{\"kind\": \"cat\", \"count\": 2}]}'::jsonb
+         WHERE id = $1",
+    )
+    .bind(done)
+    .execute(&pool)
+    .await
+    .expect("finish booking");
+    let before: serde_json::Value =
+        sqlx::query_scalar("SELECT to_jsonb(b) - 'address' - 'answers' - 'visit_notes' - 'household' FROM bookings b WHERE id = $1")
+            .bind(done)
+            .fetch_one(&pool)
+            .await
+            .expect("before");
 
     let (st, body) = call(&app, "DELETE", "/v1/me", Some(c.token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{body}");
 
-    let (address, answers): (serde_json::Value, Option<serde_json::Value>) = sqlx::query_as("SELECT address, answers FROM bookings WHERE id = $1")
-        .bind(done)
-        .fetch_one(&pool)
-        .await
-        .expect("after");
+    let (address, answers, notes, household): (serde_json::Value, Option<serde_json::Value>, serde_json::Value, serde_json::Value) =
+        sqlx::query_as("SELECT address, answers, visit_notes, household FROM bookings WHERE id = $1")
+            .bind(done)
+            .fetch_one(&pool)
+            .await
+            .expect("after");
     assert!(
         address.get("road_address").is_none() && address.get("detail").is_none(),
         "street address removed: {address}"
     );
     assert!(address.get("district_code").is_some(), "district kept: {address}");
-    assert!(answers.is_none(), "answers removed");
-    let after: serde_json::Value = sqlx::query_scalar("SELECT to_jsonb(b) - 'address' - 'answers' FROM bookings b WHERE id = $1")
+    assert_eq!(address["kind"], "apartment", "dwelling kind kept: {address}");
+    assert_eq!(answers, Some(json!({})), "answers emptied, not NULL, so the booking still reads as a quote");
+    assert_eq!(notes, json!({}), "visit notes cleared");
+    assert_eq!(household, json!({}), "household cleared");
+    let after: serde_json::Value = sqlx::query_scalar("SELECT to_jsonb(b) - 'address' - 'answers' - 'visit_notes' - 'household' FROM bookings b WHERE id = $1")
         .bind(done)
         .fetch_one(&pool)
         .await
@@ -290,7 +301,7 @@ async fn deletion_pseudonymises_finished_bookings_and_keeps_amounts(pool: PgPool
 }
 
 /// An upcoming booking still needs its address and answers for the visit, so deletion leaves it alone
-/// and the hourly purge pseudonymises it once it finishes.
+/// and the hourly purge pseudonymises it once it is completed.
 #[sqlx::test(migrations = "../../migrations")]
 async fn open_booking_keeps_its_address_until_finished(pool: PgPool) {
     seed_catalog(&pool).await;
@@ -319,6 +330,97 @@ async fn open_booking_keeps_its_address_until_finished(pool: PgPool) {
         .await
         .expect("purged");
     assert!(road.is_none());
+    let again = retention::purge(&pool, &test_config()).await.expect("second purge");
+    assert_eq!(again.closed_bookings, 0, "a second purge changes nothing");
+}
+
+/// A completed quote stays a quote for its partner after the customer deletes the account: the partner's
+/// job view still reports it as a quote and the quotes list still renders it.
+#[sqlx::test(migrations = "../../migrations")]
+async fn partner_still_sees_a_completed_quote_after_deletion(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = app(pool.clone());
+    let c = customer(&app, &pool, "010-8100-0013").await;
+    let (pro_token, pro_id) = common::verified_pro(&app, &pool, "010-8100-0014").await;
+    let (done, _) = book(&app, &c, 10, None).await;
+    sqlx::query(
+        "UPDATE bookings SET status = 3, pro_id = $2, answers = '{\"building\": \"apartment\"}'::jsonb, final_price = 300000, deposit = 100000
+         WHERE id = $1",
+    )
+    .bind(done)
+    .bind(pro_id)
+    .execute(&pool)
+    .await
+    .expect("complete quote");
+    sqlx::query("INSERT INTO quotes (booking_id, pro_id, amount, state) VALUES ($1, $2, 300000, 'selected')")
+        .bind(done)
+        .bind(pro_id)
+        .execute(&pool)
+        .await
+        .expect("quote");
+
+    let (st, body) = call(&app, "DELETE", "/v1/me", Some(c.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+
+    let (st, job) = call(&app, "GET", &format!("/v1/partner/jobs/{done}"), Some(pro_token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{job}");
+    assert_eq!(job["is_quote"], true, "{job}");
+    let (st, quotes) = call(&app, "GET", "/v1/partner/quotes", Some(pro_token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{quotes}");
+    let row = quotes
+        .as_array()
+        .and_then(|rows| rows.iter().find(|r| r["booking_id"] == json!(done)))
+        .expect("quote listed");
+    assert!(row["answers"].is_object(), "{row}");
+}
+
+/// Deleting a customer sweeps only that customer's finished bookings; another deleted customer's rows
+/// wait for the purge.
+#[sqlx::test(migrations = "../../migrations")]
+async fn account_deletion_pseudonymises_only_that_customers_bookings(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = app(pool.clone());
+    let earlier = customer(&app, &pool, "010-8100-0015").await;
+    let (earlier_done, _) = book(&app, &earlier, 10, None).await;
+    sqlx::query("UPDATE bookings SET status = 3 WHERE id = $1")
+        .bind(earlier_done)
+        .execute(&pool)
+        .await
+        .expect("finish earlier");
+    let (st, body) = call(&app, "DELETE", "/v1/me", Some(earlier.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    sqlx::query("UPDATE bookings SET visit_notes = '{\"parking\": \"P1\"}'::jsonb WHERE id = $1")
+        .bind(earlier_done)
+        .execute(&pool)
+        .await
+        .expect("re-dirty earlier");
+
+    let later = customer(&app, &pool, "010-8100-0016").await;
+    let (later_done, _) = book(&app, &later, 10, None).await;
+    sqlx::query("UPDATE bookings SET status = 3, visit_notes = '{\"parking\": \"P2\"}'::jsonb WHERE id = $1")
+        .bind(later_done)
+        .execute(&pool)
+        .await
+        .expect("finish later");
+    let (st, body) = call(&app, "DELETE", "/v1/me", Some(later.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+
+    let earlier_notes: serde_json::Value = sqlx::query_scalar("SELECT visit_notes FROM bookings WHERE id = $1")
+        .bind(earlier_done)
+        .fetch_one(&pool)
+        .await
+        .expect("earlier notes");
+    assert_eq!(
+        earlier_notes,
+        json!({"parking": "P1"}),
+        "another customer's rows are not swept by this deletion"
+    );
+    let later_notes: serde_json::Value = sqlx::query_scalar("SELECT visit_notes FROM bookings WHERE id = $1")
+        .bind(later_done)
+        .fetch_one(&pool)
+        .await
+        .expect("later notes");
+    assert_eq!(later_notes, json!({}), "the deleted customer's own finished booking is cleared");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
