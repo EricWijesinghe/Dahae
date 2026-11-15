@@ -51,7 +51,7 @@ ROWS = {
   # Address (p09)
   "dfAddressTitle": ["예약할 주소를 선택해 주세요.", "Choose the address to book."],
   "dfEdit": ["수정", "Edit"],
-  "dfStudioToast": ["{service}는 {max}평 이하만 가능해요. {label}({size}평)는 상담으로 안내해 드릴게요.", "{service} is for homes up to {max} pyeong. We'll help with {label} ({size} pyeong) in chat."],
+  "dfStudioToast": ["{service}는 {max}평 이하만 가능해요.", "{service} is for homes up to {max} pyeong."],
   "dfOverPyeong": ["{max}평 이하만 예약할 수 있어요", "Only homes up to {max} pyeong"],
   # Date / time (p10, p17)
   "dfDateTitle": ["날짜/시간을 선택해 주세요.", "Choose a date and time."],
@@ -61,6 +61,8 @@ ROWS = {
   "dfChange": ["변경", "Change"],
   "dfVisitDay": ["방문 일", "Visit date"],
   "dfVisitTime": ["방문 시간", "Visit time"],
+  "dfVisitTimeSheet": ["방문 시간 선택", "Choose visit time"],
+  "dfConsultNote": ["상담으로 안내해 드릴게요.", "We'll help you with this in chat."],
   "dfSelect": ["선택", "Choose"],
   "dfSlotClosed": ["마감", "Full"],
   "dfSelectDone": ["선택 완료", "Done"],

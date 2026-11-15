@@ -257,10 +257,12 @@ class RadioRow extends StatelessWidget {
     required this.onTap,
     this.subtitle,
     this.subtitleTrailing,
+    this.footnote,
   });
   final String title;
   final String? subtitle;
   final Widget? subtitleTrailing;
+  final String? footnote;
   final bool selected;
   final VoidCallback onTap;
 
@@ -308,6 +310,14 @@ class RadioRow extends StatelessWidget {
                           ),
                           style: context.text.bodyMedium?.copyWith(
                             color: c.inkSoft,
+                          ),
+                        ),
+                      if (footnote != null)
+                        Text(
+                          footnote!,
+                          style: context.text.bodySmall?.copyWith(
+                            color: context.primary,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                     ],

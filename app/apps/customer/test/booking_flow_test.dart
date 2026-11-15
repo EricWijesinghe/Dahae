@@ -219,10 +219,15 @@ void main() {
         reason: 'the fitting address is preselected',
       );
       expect(find.text(koT.dfAddressTitle), findsOneWidget);
+      expect(
+        find.text(koT.dfConsultNote),
+        findsOneWidget,
+        reason: 'the 24 pyeong card says so',
+      );
       await _tap(tester, find.text('본가'));
       expect(d.address?.id, 'a-home', reason: 'too big to select');
       expect(
-        find.text(koT.dfStudioToast(koT.service('studio'), '10', '본가', '24')),
+        find.text(koT.dfStudioToast(koT.service('studio'), '10')),
         findsOneWidget,
       );
       expect(
@@ -422,9 +427,8 @@ void main() {
       await _tap(tester, find.text(payLabel));
 
       final body = fake.lastCall('POST', '/bookings')!.json;
-      final tomorrow = DateUtils.dateOnly(
-        DateTime.now(),
-      ).add(const Duration(days: 1));
+      final tomorrow = DateUtils.dateOnly(DateTime.now())
+          .add(const Duration(days: 1));
       expect(body['service_code'], 'studio');
       expect(body['address_id'], 'addr-1');
       expect(body['coupon_id'], 'cp-studio');

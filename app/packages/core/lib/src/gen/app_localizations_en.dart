@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1269,10 +1270,10 @@ class TEn extends T {
   String get unitTitle_disinfection => 'Choose the\ntreatments.';
 
   @override
-  String get unit_window_small => 'Small window (under 1m)';
+  String get unit_window_small => 'Small window';
 
   @override
-  String get unit_window_large => 'Large window (1m and over)';
+  String get unit_window_large => 'Large window';
 
   @override
   String get unit_pest => 'Pest control';
@@ -1839,7 +1840,7 @@ class TEn extends T {
   String get prepTitle => 'Please have these ready';
 
   @override
-  String get prepBody => 'Some tasks may be limited without them';
+  String get prepBody => 'Some tasks may be limited without them.';
 
   @override
   String get prepAsk => 'Can\'t prepare these? Let our team know';
@@ -2721,8 +2722,8 @@ class TEn extends T {
   String get dfEdit => 'Edit';
 
   @override
-  String dfStudioToast(String service, String max, String label, String size) {
-    return '$service is for homes up to $max pyeong. We\'ll help with $label ($size pyeong) in chat.';
+  String dfStudioToast(String service, String max) {
+    return '$service is for homes up to $max pyeong.';
   }
 
   @override
@@ -2750,6 +2751,12 @@ class TEn extends T {
 
   @override
   String get dfVisitTime => 'Visit time';
+
+  @override
+  String get dfVisitTimeSheet => 'Choose visit time';
+
+  @override
+  String get dfConsultNote => 'We\'ll help you with this in chat.';
 
   @override
   String get dfSelect => 'Choose';
@@ -3905,7 +3912,7 @@ class TEn extends T {
   String get hgOldBuildBody => 'Older home · move-out cleaning';
 
   @override
-  String get hgSizeQuestion => 'How big is your home?';
+  String get hgSizeQuestion => 'Q2 How big is your home?';
 
   @override
   String get hgHomeOneTwo => 'Studio · 2-room';

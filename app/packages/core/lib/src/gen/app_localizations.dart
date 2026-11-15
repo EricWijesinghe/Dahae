@@ -2488,13 +2488,13 @@ abstract class T {
   /// No description provided for @unit_window_small.
   ///
   /// In ko, this message translates to:
-  /// **'작은 창 (1m 미만)'**
+  /// **'작은 창'**
   String get unit_window_small;
 
   /// No description provided for @unit_window_large.
   ///
   /// In ko, this message translates to:
-  /// **'큰 창 (1m 이상)'**
+  /// **'큰 창'**
   String get unit_window_large;
 
   /// No description provided for @unit_pest.
@@ -3526,7 +3526,7 @@ abstract class T {
   /// No description provided for @prepBody.
   ///
   /// In ko, this message translates to:
-  /// **'준비하지 않으면 일부 서비스가 제한될 수 있어요'**
+  /// **'준비하지 않으면 일부 서비스가 제한될 수 있어요.'**
   String get prepBody;
 
   /// No description provided for @prepAsk.
@@ -5182,8 +5182,8 @@ abstract class T {
   /// No description provided for @dfStudioToast.
   ///
   /// In ko, this message translates to:
-  /// **'{service}는 {max}평 이하만 가능해요. {label}({size}평)는 상담으로 안내해 드릴게요.'**
-  String dfStudioToast(String service, String max, String label, String size);
+  /// **'{service}는 {max}평 이하만 가능해요.'**
+  String dfStudioToast(String service, String max);
 
   /// No description provided for @dfOverPyeong.
   ///
@@ -5232,6 +5232,18 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'방문 시간'**
   String get dfVisitTime;
+
+  /// No description provided for @dfVisitTimeSheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'방문 시간 선택'**
+  String get dfVisitTimeSheet;
+
+  /// No description provided for @dfConsultNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'상담으로 안내해 드릴게요.'**
+  String get dfConsultNote;
 
   /// No description provided for @dfSelect.
   ///
@@ -7288,7 +7300,7 @@ abstract class T {
   /// No description provided for @hgSizeQuestion.
   ///
   /// In ko, this message translates to:
-  /// **'집 크기는 어떻게 되나요?'**
+  /// **'Q2 집 크기는 어떻게 되나요?'**
   String get hgSizeQuestion;
 
   /// No description provided for @hgHomeOneTwo.
