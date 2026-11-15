@@ -137,3 +137,19 @@ async fn seed_badges_mattress_new_and_aircon_hot_once(pool: PgPool) {
         .expect("badges");
     assert_eq!(left, ["mattress"], "a re-seed never brings back a removed badge");
 }
+
+/// Migration 0232 seeds the design's FAQ rows with the category codes the FAQ chips filter on.
+#[sqlx::test(migrations = "../../migrations")]
+async fn design_faqs_ship_with_chip_categories(pool: PgPool) {
+    let app = common::app(pool);
+    let (st, faqs) = call(&app, "GET", "/v1/content?kind=faq", None, None).await;
+    assert_eq!(st, StatusCode::OK, "{faqs}");
+    let cats: Vec<&str> = faqs
+        .as_array()
+        .expect("list")
+        .iter()
+        .map(|f| f["body"]["category"].as_str().expect("category"))
+        .collect();
+    assert_eq!(cats, ["booking", "booking", "payment", "move"], "{faqs}");
+    assert_eq!(faqs[1]["title"]["ko"], "매니저님이 청소도구를 가져오나요?");
+}
