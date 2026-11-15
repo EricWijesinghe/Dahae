@@ -97,88 +97,90 @@ class _QuotesTabState extends State<QuotesTab> {
               builder: (context, _, reload) => LoadMore<Json>(
                 pager: _pager,
                 builder: (context, all) {
-                final items = all
-                    .where(
-                      (q) =>
-                          (_filter == null || q['state'] == _filter) &&
-                          (!_unseen || q['seen_by_pro'] == false),
-                    )
-                    .toList();
-                // A filter can empty a loaded page; the list stays so the next page still loads on scroll.
-                if (items.isEmpty && !_pager.hasMore) {
-                  return EmptyState(
-                    icon: Icons.request_quote_rounded,
-                    title: t.pNoQuotes,
-                    hue: ServiceHues.moveIn,
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: reload,
-                  child: ListView(
-                    padding: const EdgeInsets.all(Space.gutter),
-                    children: [
-                      for (final q in items)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: Space.sm),
-                          child: AppCard(
-                            onTap: () => _open(q, reload),
-                            child: Row(
-                              children: [
-                                ServiceGlyph(
-                                  q['service_code'] as String,
-                                  size: 44,
-                                ),
-                                const SizedBox(width: Space.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              t.service(
-                                                q['service_code'] as String,
-                                              ),
-                                              style: context.text.titleSmall,
-                                            ),
-                                          ),
-                                          if (q['seen_by_pro'] == false) ...[
-                                            Tag(
-                                              label: t.pNew,
-                                              hue: StatusHues.cancelled,
-                                            ),
-                                            const SizedBox(width: 4),
-                                          ],
-                                          Tag(
-                                            label: quoteStateLabel(
-                                              t,
-                                              q['state'] as String,
-                                            ),
-                                            hue: quoteHue(q['state'] as String),
-                                          ),
-                                        ],
-                                      ),
-                                      Text(
-                                        '${dateLabel(DateTime.parse(q['visit_date'] as String), context.lang)} · ${districtName(context, q['district_code'] as String)}',
-                                        style: context.text.bodySmall,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${t.pMyQuote} ${context.won((q['amount'] as num).toInt())} · ${t.pCustomerEstimate} ${context.won((q['estimate'] as num? ?? 0).toInt())}',
-                                        style: context.text.labelMedium,
-                                      ),
-                                    ],
+                  final items = all
+                      .where(
+                        (q) =>
+                            (_filter == null || q['state'] == _filter) &&
+                            (!_unseen || q['seen_by_pro'] == false),
+                      )
+                      .toList();
+                  // A filter can empty a loaded page; the list stays so the next page still loads on scroll.
+                  if (items.isEmpty && !_pager.hasMore) {
+                    return EmptyState(
+                      icon: Icons.request_quote_rounded,
+                      title: t.pNoQuotes,
+                      hue: ServiceHues.moveIn,
+                    );
+                  }
+                  return RefreshIndicator(
+                    onRefresh: reload,
+                    child: ListView(
+                      padding: const EdgeInsets.all(Space.gutter),
+                      children: [
+                        for (final q in items)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: Space.sm),
+                            child: AppCard(
+                              onTap: () => _open(q, reload),
+                              child: Row(
+                                children: [
+                                  ServiceGlyph(
+                                    q['service_code'] as String,
+                                    size: 44,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: Space.md),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                t.service(
+                                                  q['service_code'] as String,
+                                                ),
+                                                style: context.text.titleSmall,
+                                              ),
+                                            ),
+                                            if (q['seen_by_pro'] == false) ...[
+                                              Tag(
+                                                label: t.pNew,
+                                                hue: StatusHues.cancelled,
+                                              ),
+                                              const SizedBox(width: 4),
+                                            ],
+                                            Tag(
+                                              label: quoteStateLabel(
+                                                t,
+                                                q['state'] as String,
+                                              ),
+                                              hue: quoteHue(
+                                                q['state'] as String,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          '${dateLabel(DateTime.parse(q['visit_date'] as String), context.lang)} · ${districtName(context, q['district_code'] as String)}',
+                                          style: context.text.bodySmall,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${t.pMyQuote} ${context.won((q['amount'] as num).toInt())} · ${t.pCustomerEstimate} ${context.won((q['estimate'] as num? ?? 0).toInt())}',
+                                          style: context.text.labelMedium,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                );
+                      ],
+                    ),
+                  );
                 },
               ),
             ),

@@ -154,7 +154,8 @@ class _CheckResult extends StatelessWidget {
           ios ? t.cAppLinkIosOn : t.cAppLinkIosOff,
           style: context.text.bodyMedium,
         ),
-        if (!android || !ios) Text(t.cAppLinkNone, style: context.text.bodySmall),
+        if (!android || !ios)
+          Text(t.cAppLinkNone, style: context.text.bodySmall),
         Text(t.cAppLinkChecked, style: context.text.bodySmall),
       ],
     );

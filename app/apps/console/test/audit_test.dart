@@ -30,45 +30,78 @@ final _rows = <Json>[
 ];
 
 void main() {
-  test('period chips send Seoul days, inclusive, and "all time" sends no days', () {
-    // 2026-11-13 20:00 UTC is already 2026-11-14 in Seoul.
-    final now = DateTime.utc(2026, 11, 13, 20);
-    expect(auditPeriodQuery(AuditPeriod.today, now), {'from': '2026-11-14', 'to': '2026-11-14'});
-    expect(auditPeriodQuery(AuditPeriod.week, now), {'from': '2026-11-08', 'to': '2026-11-14'});
-    expect(auditPeriodQuery(AuditPeriod.month, now), {'from': '2026-10-16', 'to': '2026-11-14'});
-    expect(auditPeriodQuery(AuditPeriod.all, now), isEmpty);
-  });
+  test(
+    'period chips send Seoul days, inclusive, and "all time" sends no days',
+    () {
+      // 2026-11-13 20:00 UTC is already 2026-11-14 in Seoul.
+      final now = DateTime.utc(2026, 11, 13, 20);
+      expect(auditPeriodQuery(AuditPeriod.today, now), {
+        'from': '2026-11-14',
+        'to': '2026-11-14',
+      });
+      expect(auditPeriodQuery(AuditPeriod.week, now), {
+        'from': '2026-11-08',
+        'to': '2026-11-14',
+      });
+      expect(auditPeriodQuery(AuditPeriod.month, now), {
+        'from': '2026-10-16',
+        'to': '2026-11-14',
+      });
+      expect(auditPeriodQuery(AuditPeriod.all, now), isEmpty);
+    },
+  );
 
   test('timestamps are shown in Seoul time', () {
     expect(auditStamp('2026-11-10T00:05:00Z'), '2026.11.10 09:05');
     expect(auditStamp('not a time'), 'not a time');
   });
 
-  test('an unknown action code reads as other, and the code stays in details', () {
-    expect(auditActionLabel(koT, 'case.refund'), koT.audActCaseRefund);
-    expect(auditActionLabel(koT, 'brand_new.thing'), koT.audOtherAction);
-  });
+  test(
+    'an unknown action code reads as other, and the code stays in details',
+    () {
+      expect(auditActionLabel(koT, 'case.refund'), koT.audActCaseRefund);
+      expect(auditActionLabel(koT, 'brand_new.thing'), koT.audOtherAction);
+    },
+  );
 
-  testWidgets('rows show who, when and a plain action label; a tap shows the recorded text', (tester) async {
-    setViewport(tester, wideSize);
-    final fake = FakeApi()..reply('GET', '/admin/audit', _rows);
-    final env = await TestEnv.create(fake: fake, role: 'staff_admin');
-    await pumpConsoleScreen(tester, env, const AuditScreen());
-    await settle(tester);
+  testWidgets(
+    'rows show who, when and a plain action label; a tap shows the recorded text',
+    (tester) async {
+      setViewport(tester, wideSize);
+      final fake = FakeApi()..reply('GET', '/admin/audit', _rows);
+      final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+      await pumpConsoleScreen(tester, env, const AuditScreen());
+      await settle(tester);
 
-    expect(find.text(koT.audActCaseRefund), findsOneWidget);
-    expect(find.text('김사장 · 2026.11.10 09:05'), findsOneWidget);
-    expect(find.text('${koT.audRoleSystem} · 2026.11.09 21:00'), findsOneWidget, reason: 'a system row is named by its role');
-    expect(find.text(koT.audOtherAction), findsOneWidget, reason: 'payout.sync has no plain label yet');
+      expect(find.text(koT.audActCaseRefund), findsOneWidget);
+      expect(find.text('김사장 · 2026.11.10 09:05'), findsOneWidget);
+      expect(
+        find.text('${koT.audRoleSystem} · 2026.11.09 21:00'),
+        findsOneWidget,
+        reason: 'a system row is named by its role',
+      );
+      expect(
+        find.text(koT.audOtherAction),
+        findsOneWidget,
+        reason: 'payout.sync has no plain label yet',
+      );
 
-    await tester.tap(find.text(koT.audActCaseRefund));
-    await settle(tester);
-    expect(find.byWidgetPredicate((w) => w is SelectableText && w.data == '{"amount":5000}'), findsOneWidget);
-    expect(find.text('${koT.audActionCode}: case.refund'), findsOneWidget);
-    await unmount(tester);
-  });
+      await tester.tap(find.text(koT.audActCaseRefund));
+      await settle(tester);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is SelectableText && w.data == '{"amount":5000}',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('${koT.audActionCode}: case.refund'), findsOneWidget);
+      await unmount(tester);
+    },
+  );
 
-  testWidgets('the first load asks for the last seven Seoul days', (tester) async {
+  testWidgets('the first load asks for the last seven Seoul days', (
+    tester,
+  ) async {
     setViewport(tester, wideSize);
     final fake = FakeApi()..reply('GET', '/admin/audit', <Json>[]);
     final env = await TestEnv.create(fake: fake, role: 'staff_admin');
@@ -78,7 +111,11 @@ void main() {
     final call = fake.lastCall('GET', '/admin/audit')!;
     expect(call.query.containsKey('from'), isTrue);
     expect(call.query['to'], isNotNull);
-    expect(call.query.containsKey('actor_role'), isFalse, reason: 'no role filter until one is picked');
+    expect(
+      call.query.containsKey('actor_role'),
+      isFalse,
+      reason: 'no role filter until one is picked',
+    );
     expect(find.text(koT.audEmpty), findsOneWidget);
     await unmount(tester);
   });

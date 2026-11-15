@@ -362,7 +362,9 @@ class _IntegrationCardState extends State<IntegrationCard> {
                 if (mode != null)
                   Tag(
                     label: mode == 'live' ? t.cSetupModeLive : t.cSetupModeTest,
-                    hue: mode == 'live' ? StatusHues.assigned : StatusHues.consultation,
+                    hue: mode == 'live'
+                        ? StatusHues.assigned
+                        : StatusHues.consultation,
                   ),
               ],
             ),
@@ -502,7 +504,10 @@ class _Steps extends StatelessWidget {
             child: Chip(
               avatar: const Icon(Icons.engineering_rounded, size: 18),
               label: Text(
-                const Tr('개발자 첫 도움 필요', 'Needs a developer the first time').of(context.lang),
+                const Tr(
+                  '개발자 첫 도움 필요',
+                  'Needs a developer the first time',
+                ).of(context.lang),
               ),
             ),
           ),
@@ -578,14 +583,20 @@ class HeartbeatCard extends StatelessWidget {
     return AppCard(
       child: Row(
         children: [
-          Icon(configured ? Icons.favorite_rounded : Icons.heart_broken_rounded, color: color),
+          Icon(
+            configured ? Icons.favorite_rounded : Icons.heart_broken_rounded,
+            color: color,
+          ),
           const SizedBox(width: Space.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(t.oHeartbeat, style: context.text.titleSmall),
-                Text(configured ? t.oHeartbeatOn : t.oHeartbeatOff, style: context.text.bodySmall),
+                Text(
+                  configured ? t.oHeartbeatOn : t.oHeartbeatOff,
+                  style: context.text.bodySmall,
+                ),
               ],
             ),
           ),

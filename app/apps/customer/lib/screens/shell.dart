@@ -64,7 +64,8 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
   void _onSession() {
     if (!mounted) return;
     final s = _session!;
-    if (_memberStarted && (!s.signedIn || s.subject != _memberSubject)) _stopMember();
+    if (_memberStarted && (!s.signedIn || s.subject != _memberSubject))
+      _stopMember();
     if (s.signedIn && !_memberStarted) {
       _startMember();
       // Launch reads consent in main(); a sign-in brings this account's own choice.
@@ -215,47 +216,51 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
     );
 
     if (context.isWide) {
-      return backToHome(Scaffold(
-        body: Row(
-          children: [
-            NavigationRail(
-              selectedIndex: _tab,
-              onDestinationSelected: go,
-              labelType: NavigationRailLabelType.all,
-              backgroundColor: context.colors.surface,
-              destinations: [
-                for (var i = 0; i < labels.length; i++)
-                  NavigationRailDestination(
-                    icon: icon(i),
-                    label: Text(labels[i]),
+      return backToHome(
+        Scaffold(
+          body: Row(
+            children: [
+              NavigationRail(
+                selectedIndex: _tab,
+                onDestinationSelected: go,
+                labelType: NavigationRailLabelType.all,
+                backgroundColor: context.colors.surface,
+                destinations: [
+                  for (var i = 0; i < labels.length; i++)
+                    NavigationRailDestination(
+                      icon: icon(i),
+                      label: Text(labels[i]),
+                    ),
+                ],
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 720),
+                    child: body,
                   ),
-              ],
-            ),
-            const VerticalDivider(width: 1),
-            Expanded(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: body,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ));
+      );
     }
-    return backToHome(Scaffold(
-      body: body,
-      bottomNavigationBar: GlassBar(
-        child: NavigationBar(
-          selectedIndex: _tab,
-          onDestinationSelected: go,
-          destinations: [
-            for (var i = 0; i < labels.length; i++)
-              NavigationDestination(icon: icon(i), label: labels[i]),
-          ],
+    return backToHome(
+      Scaffold(
+        body: body,
+        bottomNavigationBar: GlassBar(
+          child: NavigationBar(
+            selectedIndex: _tab,
+            onDestinationSelected: go,
+            destinations: [
+              for (var i = 0; i < labels.length; i++)
+                NavigationDestination(icon: icon(i), label: labels[i]),
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
 }

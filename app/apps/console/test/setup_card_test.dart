@@ -21,8 +21,18 @@ Json _payoutCard({String? mode, bool configured = true}) => {
   'configured': configured,
   'mode': mode,
   'fields': [
-    _field('mode', 'text', set: configured, preview: configured ? 'manual' : null),
-    _field('secret_key', 'secret', set: configured, preview: configured ? '••••1234' : null),
+    _field(
+      'mode',
+      'text',
+      set: configured,
+      preview: configured ? 'manual' : null,
+    ),
+    _field(
+      'secret_key',
+      'secret',
+      set: configured,
+      preview: configured ? '••••1234' : null,
+    ),
     _field('security_key', 'secret'),
   ],
   'last_test': null,
@@ -36,7 +46,12 @@ Json _portoneCard() => {
   'last_test': null,
 };
 
-Future<void> _pump(WidgetTester tester, Json card, {String? webhookUrl, String? tossWebhookUrl}) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Json card, {
+  String? webhookUrl,
+  String? tossWebhookUrl,
+}) async {
   setViewport(tester, tallPhoneSize);
   final env = await TestEnv.create(fake: FakeApi(), role: 'staff_admin');
   await pumpConsoleScreen(
@@ -44,7 +59,12 @@ Future<void> _pump(WidgetTester tester, Json card, {String? webhookUrl, String? 
     env,
     ListView(
       children: [
-        IntegrationCard(card: card, onChanged: () {}, webhookUrl: webhookUrl, tossWebhookUrl: tossWebhookUrl),
+        IntegrationCard(
+          card: card,
+          onChanged: () {},
+          webhookUrl: webhookUrl,
+          tossWebhookUrl: tossWebhookUrl,
+        ),
       ],
     ),
   );
@@ -52,7 +72,9 @@ Future<void> _pump(WidgetTester tester, Json card, {String? webhookUrl, String? 
 }
 
 void main() {
-  testWidgets('a saved test key shows the 테스트 badge and no live badge', (tester) async {
+  testWidgets('a saved test key shows the 테스트 badge and no live badge', (
+    tester,
+  ) async {
     await _pump(tester, _payoutCard(mode: 'test'));
 
     expect(find.text(koT.cSetupModeTest), findsOneWidget);
@@ -60,7 +82,9 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('a saved live key shows the 실거래 badge and no test badge', (tester) async {
+  testWidgets('a saved live key shows the 실거래 badge and no test badge', (
+    tester,
+  ) async {
     await _pump(tester, _payoutCard(mode: 'live'));
 
     expect(find.text(koT.cSetupModeLive), findsOneWidget);
@@ -76,24 +100,41 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('a saved secret shows only its last four characters', (tester) async {
+  testWidgets('a saved secret shows only its last four characters', (
+    tester,
+  ) async {
     await _pump(tester, _payoutCard(mode: 'test'));
     await tester.tap(find.byType(ExpansionTile));
     await settle(tester);
 
     expect(find.textContaining('••••1234'), findsOneWidget);
-    expect(find.textContaining('test_sk_'), findsNothing, reason: 'the key prefix is not echoed either');
+    expect(
+      find.textContaining('test_sk_'),
+      findsNothing,
+      reason: 'the key prefix is not echoed either',
+    );
     await unmount(tester);
   });
 
-  testWidgets('the PortOne webhook address copies to the clipboard', (tester) async {
+  testWidgets('the PortOne webhook address copies to the clipboard', (
+    tester,
+  ) async {
     const url = 'https://api.example.test/v1/webhooks/portone';
     final copied = <String>[];
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') copied.add((call.arguments as Map)['text'] as String);
-      return null;
-    });
-    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData')
+          copied.add((call.arguments as Map)['text'] as String);
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
 
     await _pump(tester, _portoneCard(), webhookUrl: url);
     expect(find.text(koT.cSetupWebhook), findsOneWidget);
@@ -106,15 +147,22 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('the Toss webhook address shows on the payout card and not on PortOne', (tester) async {
-    const tossUrl = 'https://api.example.test/v1/webhooks/toss';
-    // Unconfigured cards open by default, so the copy rows are on screen.
-    await _pump(tester, _payoutCard(configured: false), tossWebhookUrl: tossUrl);
-    expect(find.text(tossUrl), findsOneWidget);
-    await unmount(tester);
+  testWidgets(
+    'the Toss webhook address shows on the payout card and not on PortOne',
+    (tester) async {
+      const tossUrl = 'https://api.example.test/v1/webhooks/toss';
+      // Unconfigured cards open by default, so the copy rows are on screen.
+      await _pump(
+        tester,
+        _payoutCard(configured: false),
+        tossWebhookUrl: tossUrl,
+      );
+      expect(find.text(tossUrl), findsOneWidget);
+      await unmount(tester);
 
-    await _pump(tester, _portoneCard(), tossWebhookUrl: tossUrl);
-    expect(find.text(tossUrl), findsNothing);
-    await unmount(tester);
-  });
+      await _pump(tester, _portoneCard(), tossWebhookUrl: tossUrl);
+      expect(find.text(tossUrl), findsNothing);
+      await unmount(tester);
+    },
+  );
 }

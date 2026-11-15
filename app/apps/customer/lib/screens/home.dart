@@ -467,9 +467,7 @@ class _GuestReferralGate extends StatelessWidget {
                   Text(t.referralTitle, style: context.text.bodyMedium),
                   if (offers != null)
                     Text(
-                      t.referralOfferLine(
-                        context.won(offers.referralAmount),
-                      ),
+                      t.referralOfferLine(context.won(offers.referralAmount)),
                       style: context.text.bodySmall?.copyWith(
                         color: context.colors.inkSoft,
                       ),
