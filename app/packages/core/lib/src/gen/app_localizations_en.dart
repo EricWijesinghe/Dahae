@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -13,6 +14,10 @@ class TEn extends T {
 
   @override
   String get addressSearchButton => 'Search';
+
+  @override
+  String get addressSearchOffHint =>
+      'Address search is not ready yet. Please type your address.';
 
   @override
   String get addressSearchMinChars => 'Enter at least 2 characters';

@@ -509,25 +509,33 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
               ),
-              // Design p25: the ink "검색" button, there only when the server can search.
-              if (searchOn) ...[
+              // Design p25: the ink "검색" button. Shown once the server status is known; disabled when search is off.
+              if (_searchOn != null) ...[
                 const SizedBox(width: Space.xs),
                 FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: context.colors.ink,
-                    foregroundColor: context.colors.surface,
+                    backgroundColor: searchOn ? context.colors.ink : null,
+                    foregroundColor: searchOn ? context.colors.surface : null,
                     minimumSize: _searchButtonSize,
                     padding: const EdgeInsets.symmetric(horizontal: Space.md),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(Radii.chip),
                     ),
                   ),
-                  onPressed: _searching ? null : _search,
+                  onPressed: searchOn && !_searching ? _search : null,
                   child: Text(t.addressSearchButton),
                 ),
               ],
             ],
           ),
+          if (_searchOn == false)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.xs),
+              child: Text(
+                t.addressSearchOffHint,
+                style: context.text.bodySmall,
+              ),
+            ),
           if (searchOn && _road.text.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: Space.xs),
