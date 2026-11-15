@@ -173,7 +173,9 @@ async fn booking_detail(State(s): State<AppState>, Staff(st): Staff, Path(id): P
     let estimate_breakdown = match answers {
         Some(a) => {
             let lines = super::catalog::addon_lines(&s.db, &a).await?;
-            Some(serde_json::to_value(load_formula(&s.db).await?.estimate_with_addons(&a, 0, &lines)?).unwrap_or(Value::Null))
+            // The booking was priced with its slot's peak surcharge; the breakdown must show the same peak.
+            let peak_bps = super::catalog::slot_peak_bps(&s.db, booking.visit_date, booking.start_hour).await?;
+            Some(serde_json::to_value(load_formula(&s.db).await?.estimate_with_addons(&a, peak_bps, &lines)?).unwrap_or(Value::Null))
         }
         None => None,
     };
