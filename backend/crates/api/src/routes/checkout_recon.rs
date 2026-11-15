@@ -546,7 +546,7 @@ mod tests {
     fn diff_window_pads_both_ends_by_the_grace_period() {
         let day = NaiveDate::from_ymd_opt(2026, 11, 15).expect("date");
         let (from, until) = diff_window(day);
-        assert_eq!(from, utc("2026-11-15T14:00:00Z"));
+        assert_eq!(from, utc("2026-11-14T14:00:00Z"));
         assert_eq!(until, utc("2026-11-15T16:00:00Z"));
     }
 

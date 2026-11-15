@@ -61,6 +61,8 @@ async fn start_gateway() -> String {
 
 fn state_for(pool: PgPool, base: &str) -> AppState {
     let mut cfg = test_config();
+    // The dev fake settles nothing real: the provider lookups must go to the recorded gateway.
+    cfg.dev_mode = false;
     cfg.portone = PortOne {
         api_secret: Some("test-secret".into()),
         store_id: Some("store-test".into()),
@@ -148,7 +150,7 @@ async fn daily_pull_waits_for_the_settle_hour(pool: PgPool) {
     assert!(logged_codes(&pool).await.is_empty());
 
     let found = checkout_recon::payment_diff_at(&state, at(RUN_AT)).await.expect("settled tick");
-    assert_eq!(found, 1, "the same day runs once the settle hour has passed");
+    assert_eq!(found, 4, "the same day runs once the settle hour has passed: four PortOne rows, one local row");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
