@@ -10,6 +10,7 @@ use axum::{Json, Router, extract::State, routing::get};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
+use std::collections::HashMap;
 
 const SETTING: &str = "payment_methods";
 
@@ -44,12 +45,18 @@ pub async fn enabled_codes(db: &PgPool) -> ApiResult<Vec<String>> {
     Ok(stored.map(|j| j.0).unwrap_or_else(|| METHODS.iter().map(|m| m.0.to_string()).collect()))
 }
 
-/// Rejects unknown or switched-off methods before any intent is created.
-pub async fn ensure_enabled(db: &PgPool, code: &str) -> ApiResult<()> {
+/// Methods offered to customers: switched on by an admin and given a PortOne channel key.
+pub async fn offered_codes(db: &PgPool, channel_keys: &HashMap<String, String>) -> ApiResult<Vec<String>> {
+    Ok(enabled_codes(db).await?.into_iter().filter(|c| channel_keys.contains_key(c)).collect())
+}
+
+/// Rejects unknown, switched-off or unconfigured methods before any intent is created.
+pub async fn ensure_enabled(s: &AppState, code: &str) -> ApiResult<()> {
     if !METHODS.iter().any(|m| m.0 == code) {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
-    if !enabled_codes(db).await?.iter().any(|c| c == code) {
+    let integ = s.providers.integ();
+    if !offered_codes(&s.db, &integ.portone.channel_keys).await?.iter().any(|c| c == code) {
         return Err(ApiError::BadRequest("payment_method_disabled"));
     }
     Ok(())
@@ -62,7 +69,8 @@ struct Method {
 }
 
 async fn enabled(State(s): State<AppState>) -> ApiResult<Json<Vec<Method>>> {
-    let on = enabled_codes(&s.db).await?;
+    let integ = s.providers.integ();
+    let on = offered_codes(&s.db, &integ.portone.channel_keys).await?;
     Ok(Json(
         METHODS
             .iter()
@@ -102,6 +110,10 @@ struct Update {
 }
 
 async fn admin_update(State(s): State<AppState>, Admin(a): Admin, Json(u): Json<Update>) -> ApiResult<Json<Vec<AdminMethod>>> {
+    if u.enabled.is_empty() {
+        // Saving nothing would hide every payment method from customers.
+        return Err(ApiError::BadRequest("payment_methods_empty"));
+    }
     if u.enabled.iter().any(|c| !METHODS.iter().any(|m| m.0 == c)) {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }

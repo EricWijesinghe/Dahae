@@ -121,7 +121,7 @@ struct CheckoutIntent {
     order_name: &'static str,
     method: String,
     store_id: Option<String>,
-    channel_key: Option<String>,
+    channel_key: String,
     /// 현금영수증 request is offered only when the server has it switched on.
     cash_receipts: bool,
 }
@@ -193,7 +193,7 @@ pub fn can_settle(status: &str) -> bool {
 
 async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Json<CreateBody>) -> ApiResult<Json<CheckoutIntent>> {
     let CreateBody { req, points } = body;
-    ensure_enabled(&s.db, req.method()).await?;
+    ensure_enabled(&s, req.method()).await?;
     if matches!(req, CheckoutRequest::Booking { .. }) && super::config::maintenance_on(&s.db, &s.config).await? {
         return Err(ApiError::Unavailable("maintenance"));
     }
@@ -247,6 +247,9 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         }
         split.points
     };
+    let method = req.method();
+    // Checked before the row exists: a method without a channel key must not leave a pending checkout behind.
+    let channel_key = channel_key_for(&s, method)?;
     let id = Uuid::now_v7();
     sqlx::query("INSERT INTO checkouts (id, user_id, kind, booking_id, draft, method, amount, points, status, expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$9,'pending',$8)")
         .bind(id)
@@ -260,7 +263,6 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         .bind(points)
         .execute(&s.db)
         .await?;
-    let method = req.method();
     let integ = s.providers.integ();
     let portone = &integ.portone;
     Ok(Json(CheckoutIntent {
@@ -271,9 +273,20 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         order_name: order_name(intent.kind),
         method: method.to_string(),
         store_id: portone.store_id.clone(),
-        channel_key: portone.channel_keys.get(method).cloned(),
+        channel_key,
         cash_receipts: portone.cash_receipts,
     }))
+}
+
+/// The PortOne channel key for a method. `ensure_enabled` only passes methods that have one, so a miss is a config fault.
+fn channel_key_for(s: &AppState, method: &str) -> ApiResult<String> {
+    s.providers
+        .integ()
+        .portone
+        .channel_keys
+        .get(method)
+        .cloned()
+        .ok_or(ApiError::Unavailable("provider_not_configured"))
 }
 
 /// Validates a new booking exactly like pay-now, then freezes it as a draft.
