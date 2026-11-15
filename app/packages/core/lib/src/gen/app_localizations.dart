@@ -62,8 +62,7 @@ import 'app_localizations_ko.dart';
 /// be consistent with the languages listed in the T.supportedLocales
 /// property.
 abstract class T {
-  T(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  T(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -83,18 +82,17 @@ abstract class T {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('ko'),
+    Locale('ko')
   ];
 
   /// No description provided for @addressSearchHint.
@@ -8891,12 +8889,7 @@ abstract class T {
   ///
   /// In ko, this message translates to:
   /// **'{holder} · {bank} · {account}\n{amount}원을 위 계좌로 보낸 뒤 확인을 눌러 주세요.'**
-  String poAccountBody(
-    String holder,
-    String bank,
-    String account,
-    String amount,
-  );
+  String poAccountBody(String holder, String bank, String account, String amount);
 
   /// No description provided for @poConfirmPaid.
   ///
@@ -9515,6 +9508,120 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'소개는 500자 이내로 적어 주세요.'**
   String get err_invalid_bio;
+
+  /// No description provided for @pQualityScore.
+  ///
+  /// In ko, this message translates to:
+  /// **'품질 점수'**
+  String get pQualityScore;
+
+  /// No description provided for @pQualityNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 점수가 없어요. 일감을 진행하면 점수가 만들어져요'**
+  String get pQualityNone;
+
+  /// No description provided for @pQualityReadOnly.
+  ///
+  /// In ko, this message translates to:
+  /// **'점수는 주기적으로 다시 계산돼요. 이 화면에서는 보기만 할 수 있어요'**
+  String get pQualityReadOnly;
+
+  /// No description provided for @pQualityOk.
+  ///
+  /// In ko, this message translates to:
+  /// **'정상'**
+  String get pQualityOk;
+
+  /// No description provided for @pQualityWarning.
+  ///
+  /// In ko, this message translates to:
+  /// **'주의 필요'**
+  String get pQualityWarning;
+
+  /// No description provided for @pQualityPaused.
+  ///
+  /// In ko, this message translates to:
+  /// **'일시 중지 · 새 일감을 받을 수 없어요'**
+  String get pQualityPaused;
+
+  /// No description provided for @pQualityOverridden.
+  ///
+  /// In ko, this message translates to:
+  /// **'운영팀이 중지를 풀었어요'**
+  String get pQualityOverridden;
+
+  /// No description provided for @pQualityComponents.
+  ///
+  /// In ko, this message translates to:
+  /// **'항목별 점수'**
+  String get pQualityComponents;
+
+  /// No description provided for @pQualityRating.
+  ///
+  /// In ko, this message translates to:
+  /// **'고객 별점'**
+  String get pQualityRating;
+
+  /// No description provided for @pQualityCompletion.
+  ///
+  /// In ko, this message translates to:
+  /// **'배정 일감 완료'**
+  String get pQualityCompletion;
+
+  /// No description provided for @pQualityOnTime.
+  ///
+  /// In ko, this message translates to:
+  /// **'정시 도착'**
+  String get pQualityOnTime;
+
+  /// No description provided for @pQualityReliability.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소·노쇼 관리'**
+  String get pQualityReliability;
+
+  /// No description provided for @pQualityComplaints.
+  ///
+  /// In ko, this message translates to:
+  /// **'불만 관리'**
+  String get pQualityComplaints;
+
+  /// No description provided for @pQualityTips.
+  ///
+  /// In ko, this message translates to:
+  /// **'개선 팁'**
+  String get pQualityTips;
+
+  /// No description provided for @pTipImproveRating.
+  ///
+  /// In ko, this message translates to:
+  /// **'고객 별점을 올리려면 마무리 점검을 꼼꼼히 해 보세요'**
+  String get pTipImproveRating;
+
+  /// No description provided for @pTipCompleteAssigned.
+  ///
+  /// In ko, this message translates to:
+  /// **'배정받은 일감은 끝까지 완료해 주세요'**
+  String get pTipCompleteAssigned;
+
+  /// No description provided for @pTipCheckInOnTime.
+  ///
+  /// In ko, this message translates to:
+  /// **'약속 시간에 맞춰 도착 체크인을 해 주세요'**
+  String get pTipCheckInOnTime;
+
+  /// No description provided for @pTipAvoidCancellations.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소와 노쇼를 줄여 주세요'**
+  String get pTipAvoidCancellations;
+
+  /// No description provided for @pTipReduceComplaints.
+  ///
+  /// In ko, this message translates to:
+  /// **'접수된 불만을 줄여 주세요'**
+  String get pTipReduceComplaints;
 
   /// No description provided for @rnwTitle.
   ///
@@ -11980,26 +12087,25 @@ class _TDelegate extends LocalizationsDelegate<T> {
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'ko'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'ko'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_TDelegate old) => false;
 }
 
 T lookupT(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return TEn();
-    case 'ko':
-      return TKo();
+    case 'en': return TEn();
+    case 'ko': return TKo();
   }
 
   throw FlutterError(
     'T.delegate failed to load unsupported locale "$locale". This is likely '
     'an issue with the localizations generation tool. Please file an issue '
     'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
+    'that was used.'
   );
 }
