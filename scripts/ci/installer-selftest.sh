@@ -399,6 +399,7 @@ t  "owner-reset removes the owner record" test ! -e "$SB/host/owner.json"
 t  "owner-reset clears the failure log"   test ! -e "$SB/host/approval.fails"
 
 # version history: a version label is recorded once; a label that is not a version is skipped
+# shellcheck disable=SC2034 # NEW_API is read by the sourced record_version
 record_label() { ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; docker() { echo "$LABEL"; }; NEW_API=img; LABEL="$1"; record_version ) >/dev/null 2>&1; }
 rm -f "$SB/host/version-history"
 record_label 2.1.0; record_label 2.1.0; record_label 2.1.0-beta.1; record_label dev
@@ -413,7 +414,9 @@ t  "web mounts progress read-only"       grep -qF ":/srv/ops-progress:ro]" "$ROO
 t  "Caddy progress route is no-store"    grep -qF 'Cache-Control "no-store"' "$ROOT/deploy/Caddyfile"
 # the agent is installed on a fresh install and on an update: install_agent is called from main, not from a branch
 t  "install_agent runs in main"          grep -qE '^  install_agent( |$)' "$ROOT/deploy/install.sh"
+# shellcheck disable=SC2016 # literal text searched in the installer
 t  "cron table written by the CLI"       grep -qF '"$BIN/dahae" write-cron' "$ROOT/deploy/install.sh"
+# shellcheck disable=SC2016 # literal text searched in the publisher
 t  "publish fills RELEASE_RAW"           grep -qF 'RELEASE_RAW=$RAW/$ref' "$ROOT/deploy/publish-delivery.sh"
 
 bash "$ROOT/scripts/ci/agent-selftest.sh" >/dev/null || { FAIL=$((FAIL + 1)); echo "FAIL: agent self-test (run scripts/ci/agent-selftest.sh)"; }

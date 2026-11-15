@@ -6,7 +6,7 @@ set -euo pipefail
 file=${1:?usage: verify-blob.sh <file> <owner/repo>}
 repo=${2:?usage: verify-blob.sh <file> <owner/repo>}
 [[ $repo =~ ^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$ ]] || { echo "::error::bad repo: $repo" >&2; exit 1; }
-[ -f "$file" ] && [ -f "$file.bundle" ] || { echo "::error::$file or its bundle is missing" >&2; exit 1; }
+if [ ! -f "$file" ] || [ ! -f "$file.bundle" ]; then echo "::error::$file or its bundle is missing" >&2; exit 1; fi
 esc=$(printf '%s' "$repo" | sed 's/\./\\./g')
 re="(?i)^https://github\\.com/${esc}/\\.github/workflows/release\\.yml@refs/tags/v[0-9]"
 cosign verify-blob --bundle "$file.bundle" --certificate-identity-regexp "$re" \
