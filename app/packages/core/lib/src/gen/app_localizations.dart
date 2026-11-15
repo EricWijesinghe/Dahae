@@ -7345,6 +7345,78 @@ abstract class T {
   /// **'주소 별칭'**
   String get hgAddressAlias;
 
+  /// No description provided for @inboxSummaryTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'예약 요약'**
+  String get inboxSummaryTitle;
+
+  /// No description provided for @inboxSummaryService.
+  ///
+  /// In ko, this message translates to:
+  /// **'서비스'**
+  String get inboxSummaryService;
+
+  /// No description provided for @inboxSummaryVisit.
+  ///
+  /// In ko, this message translates to:
+  /// **'방문 일시'**
+  String get inboxSummaryVisit;
+
+  /// No description provided for @inboxSummaryAddress.
+  ///
+  /// In ko, this message translates to:
+  /// **'주소'**
+  String get inboxSummaryAddress;
+
+  /// No description provided for @inboxSummaryAmount.
+  ///
+  /// In ko, this message translates to:
+  /// **'금액'**
+  String get inboxSummaryAmount;
+
+  /// No description provided for @inboxSummaryStatus.
+  ///
+  /// In ko, this message translates to:
+  /// **'상태'**
+  String get inboxSummaryStatus;
+
+  /// No description provided for @inboxSummaryCustomer.
+  ///
+  /// In ko, this message translates to:
+  /// **'고객'**
+  String get inboxSummaryCustomer;
+
+  /// No description provided for @inboxSummaryNoBooking.
+  ///
+  /// In ko, this message translates to:
+  /// **'예약 정보를 불러오지 못했어요'**
+  String get inboxSummaryNoBooking;
+
+  /// No description provided for @quoteSentEntry.
+  ///
+  /// In ko, this message translates to:
+  /// **'견적 발송됨 · {amount} · {time}'**
+  String quoteSentEntry(String amount, String time);
+
+  /// No description provided for @quoteResend.
+  ///
+  /// In ko, this message translates to:
+  /// **'재발송'**
+  String get quoteResend;
+
+  /// No description provided for @quoteRevise.
+  ///
+  /// In ko, this message translates to:
+  /// **'수정'**
+  String get quoteRevise;
+
+  /// No description provided for @quoteSentChip.
+  ///
+  /// In ko, this message translates to:
+  /// **'견적 발송'**
+  String get quoteSentChip;
+
   /// No description provided for @locUseCurrent.
   ///
   /// In ko, this message translates to:

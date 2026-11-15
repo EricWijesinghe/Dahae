@@ -1952,6 +1952,28 @@
  "hgFloorLow": "1~2층",
  "hgFloorHigh": "3층 이상",
  "hgAddressAlias": "주소 별칭",
+ "inboxSummaryTitle": "예약 요약",
+ "inboxSummaryService": "서비스",
+ "inboxSummaryVisit": "방문 일시",
+ "inboxSummaryAddress": "주소",
+ "inboxSummaryAmount": "금액",
+ "inboxSummaryStatus": "상태",
+ "inboxSummaryCustomer": "고객",
+ "inboxSummaryNoBooking": "예약 정보를 불러오지 못했어요",
+ "quoteSentEntry": "견적 발송됨 · {amount} · {time}",
+ "@quoteSentEntry": {
+  "placeholders": {
+   "amount": {
+    "type": "String"
+   },
+   "time": {
+    "type": "String"
+   }
+  }
+ },
+ "quoteResend": "재발송",
+ "quoteRevise": "수정",
+ "quoteSentChip": "견적 발송",
  "locUseCurrent": "현재 위치로 찾기",
  "locConsentTitle": "위치기반서비스 이용약관 동의",
  "locConsentBody": "현재 위치로 주소를 찾으려면 위치기반서비스 이용약관에 동의해 주세요. 위치는 '현재 위치로 찾기'를 누를 때 한 번만 확인하고, 주소를 제안하는 데만 써요. 위치 좌표는 서버에 저장하지 않아요. 동의는 동의 관리에서 언제든지 철회할 수 있어요.",
