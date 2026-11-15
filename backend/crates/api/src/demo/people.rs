@@ -214,7 +214,8 @@ async fn addresses(c: &mut Ctx<'_>, user: Uuid, created: DateTime<Utc>) -> Resul
 /// One card for everyone; some customers also have a Kakao Pay method.
 async fn card(c: &mut Ctx<'_>, user: Uuid, created: DateTime<Utc>) -> Result<(), DemoError> {
     let id = c.id();
-    let (key, digest) = crypto::seal_billing_key(&c.data_key, &format!("demo_bk_{}", c.hex(12)));
+    let token = format!("demo_bk_{}", c.hex(12));
+    let (key, digest) = crypto::seal_billing_key(&c.data_key, &token);
     sqlx::query("INSERT INTO payment_methods (id, user_id, provider, billing_key, billing_key_digest, display_name, created_at) VALUES ($1,$2,'card',$3,$4,'데모 카드 1234',$5)")
         .bind(id)
         .bind(user)
@@ -226,7 +227,8 @@ async fn card(c: &mut Ctx<'_>, user: Uuid, created: DateTime<Utc>) -> Result<(),
     c.reg("payment_methods", id).await?;
     if c.chance(0.4) {
         let extra = c.id();
-        let (key, digest) = crypto::seal_billing_key(&c.data_key, &format!("demo_bk_{}", c.hex(12)));
+        let token = format!("demo_bk_{}", c.hex(12));
+        let (key, digest) = crypto::seal_billing_key(&c.data_key, &token);
         sqlx::query(
             "INSERT INTO payment_methods (id, user_id, provider, billing_key, billing_key_digest, display_name, created_at) VALUES ($1,$2,'kakaopay',$3,$4,'데모 카카오페이',$5)",
         )
