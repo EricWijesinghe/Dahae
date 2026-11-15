@@ -9,7 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
-- Account deletion: a finished booking (completed or cancelled) loses its street address and answers, keeping the district, amounts, dates and status for the 5-year record; open bookings are cleared by the hourly purge once the visit ends.
+- Account deletion: a finished booking (completed or cancelled) loses its street address, answers, visit notes and household profile, keeping the district, size, dwelling type, amounts, dates and status for the 5-year record; open bookings are cleared by the hourly purge once they are completed or cancelled.
 - Consultation chat: customer and partner messages now push staff devices, at most once per thread per minute.
 
 ### Added
