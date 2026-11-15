@@ -9,6 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
+- Owner console v1 distribution: the console ships as an installable web app at `/admin/` (Edge, Chrome, Android, iPhone). Install steps and offline test list in `docs/store/console-pwa.md`. No store listing or desktop shell yet.
 - Consultation chat: customer and partner messages now push staff devices, at most once per thread per minute.
 
 ### Added
