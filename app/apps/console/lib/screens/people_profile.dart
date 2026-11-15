@@ -246,13 +246,15 @@ class _ProfileTabState extends State<_ProfileTab> {
   Future<void> _reveal() async {
     final t = context.t;
     try {
-      final r = (await withStepUp(
-        context,
-        () => context.api.post(
-          '/admin/pros/${widget.proId}/payee-identifier/reveal',
-          {},
-        ),
-      )) as Json;
+      final r =
+          (await withStepUp(
+                context,
+                () => context.api.post(
+                  '/admin/pros/${widget.proId}/payee-identifier/reveal',
+                  {},
+                ),
+              ))
+              as Json;
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -349,7 +351,7 @@ class _ProfileTabState extends State<_ProfileTab> {
             labelText: t.cPfPayee,
             helperText: _payeeMasked == null
                 ? t.cPfPayeeHelp
-                : t.cPfPayeeSaved(_payeeMasked!),
+                : t.cPfPayeeSaved(_payeeMasked),
           ),
         ),
         if (_payeeMasked != null)
