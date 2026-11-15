@@ -315,6 +315,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
   Widget build(BuildContext context) {
     final t = context.t;
     final configured = widget.card['configured'] == true;
+    // Test or live from the saved Toss key prefix (server-side); null when there is none.
+    final mode = widget.card['mode'] as String?;
     final ok = _result?['ok'] == true;
     final status = !configured
         ? Tag(label: t.cSetupNotConnected, hue: StatusHues.consultation)
@@ -352,7 +354,18 @@ class _IntegrationCardState extends State<IntegrationCard> {
           title: Text(_guide.title(t), style: context.text.titleMedium),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Align(alignment: Alignment.centerLeft, child: status),
+            child: Wrap(
+              spacing: Space.xs,
+              runSpacing: Space.xs,
+              children: [
+                status,
+                if (mode != null)
+                  Tag(
+                    label: mode == 'live' ? t.cSetupModeLive : t.cSetupModeTest,
+                    hue: mode == 'live' ? StatusHues.assigned : StatusHues.consultation,
+                  ),
+              ],
+            ),
           ),
           children: [
             _Steps(guide: _guide),
