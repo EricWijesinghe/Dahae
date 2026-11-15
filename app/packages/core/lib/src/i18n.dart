@@ -129,6 +129,10 @@ extension Labels on T {
     'invalid_employment_type' => err_invalid_employment_type,
     'invalid_photo' => err_invalid_photo,
     'invalid_bio' => err_invalid_bio,
+    'quality_paused' => err_quality_paused,
+    'training_required' => err_training_required,
+    'no_partner_available' => err_no_partner_available,
+    'reassign_closed' => err_reassign_closed,
     _ => null,
   };
 

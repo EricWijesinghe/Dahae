@@ -28,6 +28,15 @@ Future<void> _act(
   }
 }
 
+/// Owner-facing word for a partner's quality status; null means no score yet.
+String qualityStatusLabel(T t, String? status) => switch (status) {
+  'ok' => t.cQualityOk,
+  'warning' => t.cQualityWarning,
+  'paused' => t.cQualityPaused,
+  'overridden_by_owner' => t.cQualityOverridden,
+  _ => t.cQualityNone,
+};
+
 class PartnersScreen extends StatelessWidget {
   const PartnersScreen({super.key});
 
@@ -72,7 +81,7 @@ class PartnersScreen extends StatelessWidget {
                         ],
                       ),
                       subtitle: Text(
-                        '${p['phone']} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100}',
+                        '${p['phone']} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100} · ${t.cQualityScore} ${p['quality_score'] ?? '-'} (${qualityStatusLabel(t, p['quality_status'] as String?)})',
                       ),
                       trailing: !admin
                           ? null
@@ -162,12 +171,15 @@ class _SettlementsState extends State<SettlementsScreen> {
     );
     if (date == null || !mounted) return;
     try {
-      final rows = (await withStepUp(
-        context,
-        () => context.api.post('/admin/settlements/run-payouts', {
-          'date': DateFormat('yyyy-MM-dd').format(date),
-        }),
-      ) as List).cast<Json>();
+      final rows =
+          (await withStepUp(
+                    context,
+                    () => context.api.post('/admin/settlements/run-payouts', {
+                      'date': DateFormat('yyyy-MM-dd').format(date),
+                    }),
+                  )
+                  as List)
+              .cast<Json>();
       if (!mounted) return;
       showToast(context, t.poRequestedToast('${rows.length}'));
       // A new tab mounts and loads its own list, so no reload is needed here.
@@ -327,10 +339,12 @@ class _SettlementsState extends State<SettlementsScreen> {
   Future<void> _showAccount(BuildContext context, Object id) async {
     final t = context.t;
     try {
-      final a = (await withStepUp(
-        context,
-        () => context.api.get('/admin/settlements/payouts/$id/account'),
-      )) as Json;
+      final a =
+          (await withStepUp(
+                context,
+                () => context.api.get('/admin/settlements/payouts/$id/account'),
+              ))
+              as Json;
       if (!context.mounted) return;
       await showDialog<void>(
         context: context,
@@ -473,10 +487,13 @@ class _SettlementsState extends State<SettlementsScreen> {
               ? _payoutList(context, admin)
               : AsyncView<List<Json>>(
                   key: _view,
-                  load: () async => (await context.api.get(
-                    '/admin/settlements',
-                    query: {'state': _state},
-                  ) as List).cast<Json>(),
+                  load: () async =>
+                      (await context.api.get(
+                                '/admin/settlements',
+                                query: {'state': _state},
+                              )
+                              as List)
+                          .cast<Json>(),
                   builder: (context, rows, reload) => ListView(
                     padding: const EdgeInsets.symmetric(horizontal: Space.lg),
                     children: [
@@ -574,10 +591,15 @@ class _CustomersState extends State<CustomersScreen> {
         Expanded(
           child: AsyncView<List<Json>>(
             key: _view,
-            load: () async => (await context.api.get(
-              '/admin/customers',
-              query: {'q': _q.text.trim().isEmpty ? null : _q.text.trim()},
-            ) as List).cast<Json>(),
+            load: () async =>
+                (await context.api.get(
+                          '/admin/customers',
+                          query: {
+                            'q': _q.text.trim().isEmpty ? null : _q.text.trim(),
+                          },
+                        )
+                        as List)
+                    .cast<Json>(),
             builder: (context, rows, _) => ListView(
               children: [
                 for (final c in rows)

@@ -104,7 +104,11 @@
     "schedule_overlap",
     "tighten_only",
     "threshold_order",
-    "wrong_password"
+    "wrong_password",
+    "quality_paused",
+    "training_required",
+    "no_partner_available",
+    "reassign_closed"
   ],
   "fallback": [
     "already_confirmed",
