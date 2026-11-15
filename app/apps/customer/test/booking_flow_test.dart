@@ -12,7 +12,15 @@ import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
 
 /// From the home grid, open a service's detail screen.
+/// Home shows category tiles (CR-8.1): open the service's group, then the service itself.
 Future<void> _openFromHome(WidgetTester tester, String code) async {
+  final group = defaultServiceGroups.firstWhere(
+    (g) => g.services.contains(code),
+  );
+  final title = group.titleFor('ko');
+  await pumpUntilFound(tester, find.text(title));
+  await tester.tap(find.text(title));
+  await settle(tester);
   await pumpUntilFound(tester, find.text(koT.service(code)));
   await tester.tap(find.text(koT.service(code)));
   await settle(tester);
@@ -179,8 +187,11 @@ void main() {
       stockCustomerApi(fake, addresses: [addressJson(sizePyeong: 8)]);
       _openSlots(fake);
       final env = await TestEnv.create(fake: fake);
-      await pumpCustomerApp(tester, env);
-      await _openFromHome(tester, 'studio');
+      await pumpCustomerScreen(
+        tester,
+        env,
+        ServiceScreen(service: Service.fromJson(serviceJson('studio'))),
+      );
 
       await _tap(tester, find.text(koT.dfBookNow));
       expect(find.byType(ScheduleScreen), findsOneWidget);
@@ -404,8 +415,15 @@ void main() {
       );
       _openSlots(fake);
       final env = await TestEnv.create(fake: fake);
-      await pumpCustomerApp(tester, env);
-      await _openFromHome(tester, 'studio');
+      final app = await _loaded(env);
+      await tester.pumpWidget(
+        CustomerTestHost(
+          env: env,
+          app: app,
+          home: ServiceScreen(service: Service.fromJson(serviceJson('studio'))),
+        ),
+      );
+      await settle(tester);
 
       await _tap(tester, find.text(koT.dfBookNow));
       await _tap(
@@ -427,8 +445,9 @@ void main() {
       await _tap(tester, find.text(payLabel));
 
       final body = fake.lastCall('POST', '/bookings')!.json;
-      final tomorrow = DateUtils.dateOnly(DateTime.now())
-          .add(const Duration(days: 1));
+      final tomorrow = DateUtils.dateOnly(
+        DateTime.now(),
+      ).add(const Duration(days: 1));
       expect(body['service_code'], 'studio');
       expect(body['address_id'], 'addr-1');
       expect(body['coupon_id'], 'cp-studio');

@@ -17,7 +17,7 @@ void main() {
     );
     await settle(tester);
 
-    expect(find.text(koT.svcNote_studio_limit), findsOneWidget);
+    expect(find.text(koT.dfStudioNote('10')), findsOneWidget);
     await unmount(tester);
   });
 }
