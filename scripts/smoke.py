@@ -15,6 +15,9 @@ import random
 import sys
 import urllib.error
 import urllib.request
+
+# Must match backend/crates/api/src/privacy.rs CONSENT_VERSION.
+CONSENT_VERSION = "2026-11-19"
 from datetime import date, timedelta
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8080"
@@ -53,8 +56,10 @@ def phone():
 def login(audience):
     p = phone()
     code = call("POST", "/v1/auth/otp", {"phone": p})["dev_code"]
-    call("POST", "/v1/auth/verify", {"phone": p, "code": "000000" if code != "000000" else "111111", "audience": audience}, expect=400)
-    return call("POST", "/v1/auth/verify", {"phone": p, "code": code, "audience": audience})["access_token"]
+    # A new customer must grant the required consents at signup (the app's signup screen does the same).
+    consents = [{"kind": k, "granted": True, "version": CONSENT_VERSION} for k in ("terms", "privacy", "overseas_transfer")] if audience == "customer" else []
+    call("POST", "/v1/auth/verify", {"phone": p, "code": "000000" if code != "000000" else "111111", "audience": audience, "consents": consents}, expect=400)
+    return call("POST", "/v1/auth/verify", {"phone": p, "code": code, "audience": audience, "consents": consents})["access_token"]
 
 
 def add_card(token, auth_key, name):

@@ -119,14 +119,7 @@ pub async fn update_consents(db: &PgPool, user: Uuid, update: ConsentUpdate) -> 
     if update.consents.is_empty() || update.consents.len() > CONSENTS.len() {
         return Err(ApiError::BadRequest("invalid_consents"));
     }
-    for c in &update.consents {
-        if !CONSENTS.iter().any(|(k, _)| *k == c.kind) {
-            return Err(ApiError::BadRequest("invalid_consent_kind"));
-        }
-        if c.version != CONSENT_VERSION {
-            return Err(ApiError::BadRequest("stale_consent_version"));
-        }
-    }
+    check_kinds_and_versions(&update.consents)?;
     let mut rows = latest(db, user).await?;
     for c in &update.consents {
         rows.retain(|r| r.kind != c.kind);
@@ -143,17 +136,56 @@ pub async fn update_consents(db: &PgPool, user: Uuid, update: ConsentUpdate) -> 
         return Err(ApiError::BadRequest("required_consent"));
     }
     let mut tx = db.begin().await?;
-    for c in &update.consents {
+    insert_rows(&mut tx, user, &update.consents).await?;
+    tx.commit().await?;
+    consent_state(db, user).await
+}
+
+/// Every change names a known kind and the current policy version, each kind at most once.
+fn check_kinds_and_versions(consents: &[ConsentChange]) -> ApiResult<()> {
+    for (i, c) in consents.iter().enumerate() {
+        if !CONSENTS.iter().any(|(k, _)| *k == c.kind) {
+            return Err(ApiError::BadRequest("invalid_consent_kind"));
+        }
+        if c.version != CONSENT_VERSION {
+            return Err(ApiError::BadRequest("stale_consent_version"));
+        }
+        if consents[..i].iter().any(|p| p.kind == c.kind) {
+            return Err(ApiError::BadRequest("duplicate_consent_kind"));
+        }
+    }
+    Ok(())
+}
+
+/// Signup must grant every required consent for the current policy version. Optional ones may be unticked.
+pub fn check_signup_consents(consents: &[ConsentChange]) -> ApiResult<()> {
+    check_kinds_and_versions(consents)?;
+    let missing = CONSENTS
+        .iter()
+        .any(|(k, required)| *required && !consents.iter().any(|c| c.kind == *k && c.granted));
+    if missing {
+        return Err(ApiError::BadRequest("required_consent"));
+    }
+    Ok(())
+}
+
+/// Records a new customer's consents inside the signup transaction, so a refused signup leaves no account.
+pub async fn record_signup(tx: &mut Transaction<'_, Postgres>, user: Uuid, consents: &[ConsentChange]) -> ApiResult<()> {
+    check_signup_consents(consents)?;
+    insert_rows(tx, user, consents).await
+}
+
+async fn insert_rows(tx: &mut Transaction<'_, Postgres>, user: Uuid, consents: &[ConsentChange]) -> ApiResult<()> {
+    for c in consents {
         sqlx::query("INSERT INTO user_consents (user_id, kind, version, granted) VALUES ($1,$2,$3,$4)")
             .bind(user)
             .bind(&c.kind)
             .bind(&c.version)
             .bind(c.granted)
-            .execute(&mut *tx)
+            .execute(&mut **tx)
             .await?;
     }
-    tx.commit().await?;
-    consent_state(db, user).await
+    Ok(())
 }
 
 pub async fn get_consents(State(s): State<AppState>, crate::auth::Customer(a): crate::auth::Customer) -> ApiResult<Json<ConsentState>> {
@@ -523,4 +555,75 @@ async fn handle_apple_event(s: &AppState, n: &crate::providers::apple::Notificat
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn change(kind: &str, granted: bool) -> ConsentChange {
+        ConsentChange {
+            kind: kind.into(),
+            granted,
+            version: CONSENT_VERSION.into(),
+        }
+    }
+
+    fn required_set() -> Vec<ConsentChange> {
+        vec![change("terms", true), change("privacy", true), change("overseas_transfer", true)]
+    }
+
+    fn refusal(r: ApiResult<()>) -> Option<&'static str> {
+        match r {
+            Err(ApiError::BadRequest(code)) => Some(code),
+            Err(_) => Some("other"),
+            Ok(()) => None,
+        }
+    }
+
+    #[test]
+    fn signup_with_required_consents_passes_without_marketing() {
+        assert_eq!(refusal(check_signup_consents(&required_set())), None);
+    }
+
+    #[test]
+    fn signup_missing_any_required_consent_is_refused() {
+        for kind in ["terms", "privacy", "overseas_transfer"] {
+            let mut set = required_set();
+            set.retain(|c| c.kind != kind);
+            assert_eq!(refusal(check_signup_consents(&set)), Some("required_consent"), "missing {kind}");
+        }
+    }
+
+    #[test]
+    fn signup_with_a_required_consent_declined_is_refused() {
+        let mut set = required_set();
+        set[2].granted = false;
+        assert_eq!(refusal(check_signup_consents(&set)), Some("required_consent"));
+    }
+
+    #[test]
+    fn signup_with_stale_policy_version_is_refused() {
+        let mut set = required_set();
+        set[0].version = "1999-01-01".into();
+        assert_eq!(refusal(check_signup_consents(&set)), Some("stale_consent_version"));
+    }
+
+    #[test]
+    fn signup_with_unknown_or_repeated_kind_is_refused() {
+        let mut unknown = required_set();
+        unknown.push(change("ads_everywhere", true));
+        assert_eq!(refusal(check_signup_consents(&unknown)), Some("invalid_consent_kind"));
+
+        let mut repeated = required_set();
+        repeated.push(change("terms", false));
+        assert_eq!(refusal(check_signup_consents(&repeated)), Some("duplicate_consent_kind"));
+    }
+
+    #[test]
+    fn optional_marketing_granted_is_accepted_with_required() {
+        let mut set = required_set();
+        set.push(change("marketing", true));
+        assert_eq!(refusal(check_signup_consents(&set)), None);
+    }
 }
