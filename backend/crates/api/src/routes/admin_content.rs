@@ -205,7 +205,12 @@ async fn get_peak_pricing(State(s): State<AppState>, _st: Staff) -> ApiResult<Js
 }
 
 /// Owner-only. Validated before it replaces the built-in default; applies to new quotes and bookings.
-async fn put_peak_pricing(State(s): State<AppState>, Admin(a): Admin, Json(p): Json<domain::peak::PeakConfig>) -> ApiResult<Json<Value>> {
+/// `apply_to_fixed` must be sent explicitly: a client that omits it would otherwise flip the owner's scope silently.
+async fn put_peak_pricing(State(s): State<AppState>, Admin(a): Admin, Json(body): Json<Value>) -> ApiResult<Json<Value>> {
+    if body.get("apply_to_fixed").and_then(Value::as_bool).is_none() {
+        return Err(ApiError::BadRequest("apply_to_fixed_required"));
+    }
+    let p: domain::peak::PeakConfig = serde_json::from_value(body).map_err(|_| ApiError::BadRequest("invalid_peak_config"))?;
     p.validate()?;
     sqlx::query("INSERT INTO settings (key, value) VALUES ('peak_pricing', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = now()")
         .bind(sqlx::types::Json(&p))

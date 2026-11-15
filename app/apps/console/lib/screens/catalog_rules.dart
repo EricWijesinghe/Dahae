@@ -52,7 +52,7 @@ class _PeakTabState extends State<PeakTab> {
   ];
   final _ctrls = <String, TextEditingController>{};
   Json _config = const {};
-  bool _applyToFixed = true;
+  bool _applyToFixed = false;
 
   @override
   void dispose() {
@@ -64,7 +64,7 @@ class _PeakTabState extends State<PeakTab> {
 
   void _fill(Json config) {
     _config = config;
-    _applyToFixed = (config['apply_to_fixed'] as bool?) ?? true;
+    _applyToFixed = (config['apply_to_fixed'] as bool?) ?? false;
     for (final k in _percentKeys) {
       _ctrls[k] = TextEditingController(text: _pct(config[k] as num));
     }
