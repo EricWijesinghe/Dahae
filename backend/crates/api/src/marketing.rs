@@ -10,7 +10,7 @@ use crate::{
     lifecycle,
     privacy::{self, CONSENT_VERSION},
     providers::sms::TPL_REMINDER,
-    realtime::{Recipient, notify},
+    realtime::{Recipient, notify_at},
     routes::audit,
     settings_registry,
     sms_outbox::Message,
@@ -48,6 +48,11 @@ fn kst(t: DateTime<Utc>) -> chrono::NaiveDateTime {
 pub fn quiet_hours(t: DateTime<Utc>) -> bool {
     let h = kst(t).hour();
     !(QUIET_END_HOUR..QUIET_START_HOUR).contains(&h)
+}
+
+/// True when a notification of this kind must be held: marketing kinds inside quiet hours.
+pub fn ad_suppressed(kind: &str, now: DateTime<Utc>) -> bool {
+    privacy::is_marketing(kind) && quiet_hours(now)
 }
 
 /// `t` itself outside quiet hours, otherwise the next 08:00 KST.
@@ -244,7 +249,7 @@ async fn advertise(
     .rows_affected();
     if claimed == 1
         && send
-        && let Err(code) = deliver(s, t, channel, copy).await
+        && let Err(code) = deliver(s, t, channel, copy, now).await
     {
         sqlx::query("UPDATE marketing_sends SET status = 'failed', error = $2 WHERE dedupe_key = $1")
             .bind(&key)
@@ -256,13 +261,13 @@ async fn advertise(
 }
 
 /// Sends through the channel's provider. Errors are fixed codes, so no provider detail reaches the log table.
-async fn deliver(s: &AppState, t: &Target, channel: &str, copy: &Copy<'_>) -> Result<(), &'static str> {
+async fn deliver(s: &AppState, t: &Target, channel: &str, copy: &Copy<'_>, now: DateTime<Utc>) -> Result<(), &'static str> {
     match channel {
         "push" => {
             // Advertising push carries the (광고) marker and how to opt out (정보통신망법 제50조).
             let title = format!("(광고) {}", copy.title);
             let body = format!("{}\n광고 수신은 설정 > 알림에서 끌 수 있어요", copy.body);
-            notify(s, Recipient::User(t.id), copy.kind, &title, &body, json!({ "marketing": true }))
+            notify_at(s, Recipient::User(t.id), copy.kind, &title, &body, json!({ "marketing": true }), now)
                 .await
                 .map_err(|_| "push_failed")
         }
@@ -452,6 +457,8 @@ pub async fn send_reminders(s: &AppState) -> ApiResult<usize> {
         "SELECT b.id, b.number, u.phone, u.locale, b.user_id FROM bookings b JOIN users u ON u.id = b.user_id
          WHERE b.status IN (1, 2) AND b.visit_date = (now() AT TIME ZONE 'Asia/Seoul')::date + 1
            AND u.deleted_at IS NULL AND u.phone NOT LIKE 'deleted:%'
+           AND NOT EXISTS (SELECT 1 FROM alert_sends a WHERE a.dedupe_key = 'reminder:' || b.id::text)
+         ORDER BY b.visit_date, b.start_hour
          LIMIT $1",
     )
     .bind(NUDGE_BATCH)
@@ -715,6 +722,13 @@ mod tests {
         assert!(quiet_hours(kst_at(7, 59)));
         assert!(!quiet_hours(kst_at(8, 0)));
         assert!(!quiet_hours(kst_at(12, 0)));
+    }
+
+    #[test]
+    fn marketing_is_suppressed_in_quiet_hours_and_transactional_is_not() {
+        assert!(ad_suppressed("marketing.campaign", kst_at(22, 0)));
+        assert!(!ad_suppressed("marketing.campaign", kst_at(12, 0)));
+        assert!(!ad_suppressed("booking.confirmed", kst_at(22, 0)));
     }
 
     #[test]

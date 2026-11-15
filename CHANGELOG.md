@@ -70,6 +70,9 @@ from the release branches; no tags existed for them.
 ### Fixed
 - Cash receipts: a failed local write after a receipt is cancelled at PortOne is no longer discarded; the receipt is never cancelled at PortOne twice, and it is counted as needing a check in the ops status JSON. A provider refusal of a cancel is retried by the reconciler, up to five times with growing gaps. Cash receipts stay off until the owner enables them after the PortOne sandbox check. Console display of the new count is not built yet.
 
+### Fixed
+- Day-before visit reminders are claimed in SQL (oldest visit first), so a busy day no longer starves later bookings; advertising pushes that reach the notify path are held in the outbox 21:00-08:00 KST and sent at 08:00 (SMS campaigns are already gated by quiet hours at send time) (quiet hours are fixed by 정보통신망법, no owner setting).
+
 ## [1.4.0] - 2026-11-13
 
 ### Added
