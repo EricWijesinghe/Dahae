@@ -126,7 +126,8 @@ pub async fn reassign(s: &AppState, booking: Uuid, coupon: i64) -> ApiResult<Uui
     let moved = sqlx::query(&format!(
         "UPDATE bookings SET pro_id = $2, assignee_id = (SELECT id FROM team_members WHERE pro_id = $2 AND role = 'owner'), accepted_at = now(), updated_at = now()
          WHERE id = $1 AND status = {assigned} AND checked_in_at IS NULL AND pro_id IS NOT DISTINCT FROM $3
-           AND NOT EXISTS (SELECT 1 FROM bookings o WHERE o.pro_id = $2 AND {})",
+           AND NOT EXISTS (SELECT 1 FROM bookings o WHERE o.pro_id = $2 AND {})
+           AND NOT EXISTS (SELECT 1 FROM partner_quality q WHERE q.pro_id = $2 AND q.status = 'paused')",
         clash("bookings")
     ))
     .bind(booking)
