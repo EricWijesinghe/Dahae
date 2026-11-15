@@ -215,6 +215,7 @@ abstract final class Icon3DRegistry {
     'c_staff': const Icon3DSpec(Icons.badge_rounded),
     'c_settings': const Icon3DSpec(Icons.settings_rounded),
     'c_monitor': const Icon3DSpec(Icons.monitor_heart_rounded),
+    'c_owner_account': const Icon3DSpec(Icons.manage_accounts_rounded),
     // shortcut: no rendered art yet (Blender render pipeline), reuses the nearest existing art; render c_audit, c_privacy and c_renewals to replace
     'c_audit': const Icon3DSpec(Icons.history_rounded, alias: 'c_monitor'),
     'c_privacy': const Icon3DSpec(

@@ -5,6 +5,7 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
+import '../booking_labels.dart';
 import '../download.dart';
 import '../state.dart';
 
@@ -186,7 +187,7 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
   Widget _customerCard(Json c) {
     final t = context.t;
     final id = c['id'] as String;
-    final name = (c['name'] as String).isEmpty ? '-' : c['name'] as String;
+    final name = customerNameLabel(t, c['name'] as String?);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Space.sm),

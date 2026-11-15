@@ -3843,6 +3843,44 @@ class TKo extends T {
   String get hgAddressAlias => '주소 별칭';
 
   @override
+  String get inboxSummaryTitle => '예약 요약';
+
+  @override
+  String get inboxSummaryService => '서비스';
+
+  @override
+  String get inboxSummaryVisit => '방문 일시';
+
+  @override
+  String get inboxSummaryAddress => '주소';
+
+  @override
+  String get inboxSummaryAmount => '금액';
+
+  @override
+  String get inboxSummaryStatus => '상태';
+
+  @override
+  String get inboxSummaryCustomer => '고객';
+
+  @override
+  String get inboxSummaryNoBooking => '예약 정보를 불러오지 못했어요';
+
+  @override
+  String quoteSentEntry(String amount, String time) {
+    return '견적 발송됨 · $amount · $time';
+  }
+
+  @override
+  String get quoteResend => '재발송';
+
+  @override
+  String get quoteRevise => '수정';
+
+  @override
+  String get quoteSentChip => '견적 발송';
+
+  @override
   String get locUseCurrent => '현재 위치로 찾기';
 
   @override

@@ -3937,6 +3937,44 @@ class TEn extends T {
   String get hgAddressAlias => 'Address label';
 
   @override
+  String get inboxSummaryTitle => 'Booking summary';
+
+  @override
+  String get inboxSummaryService => 'Service';
+
+  @override
+  String get inboxSummaryVisit => 'Visit';
+
+  @override
+  String get inboxSummaryAddress => 'Address';
+
+  @override
+  String get inboxSummaryAmount => 'Amount';
+
+  @override
+  String get inboxSummaryStatus => 'Status';
+
+  @override
+  String get inboxSummaryCustomer => 'Customer';
+
+  @override
+  String get inboxSummaryNoBooking => 'Could not load the booking';
+
+  @override
+  String quoteSentEntry(String amount, String time) {
+    return 'Quote sent · $amount · $time';
+  }
+
+  @override
+  String get quoteResend => 'Resend';
+
+  @override
+  String get quoteRevise => 'Revise';
+
+  @override
+  String get quoteSentChip => 'Quote sent';
+
+  @override
   String get locUseCurrent => 'Use my current location';
 
   @override

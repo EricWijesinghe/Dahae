@@ -1,6 +1,9 @@
 //! Public catalogue and content: services, slot availability, estimate preview, notices/FAQ/banners.
 
-use crate::{error::ApiResult, state::AppState};
+use crate::{
+    error::{ApiError, ApiResult},
+    state::AppState,
+};
 use axum::{
     Json, Router,
     extract::{Query, State},
@@ -68,6 +71,13 @@ pub async fn load_formula(db: &sqlx::PgPool) -> ApiResult<QuoteFormula> {
         .fetch_optional(db)
         .await?;
     Ok(v.map(|j| j.0).unwrap_or_default())
+}
+
+/// Peak surcharge basis points of a visit slot: the same rule the booking used when it was priced.
+pub async fn slot_peak_bps(db: &sqlx::PgPool, visit_date: NaiveDate, start_hour: i16) -> ApiResult<i64> {
+    let hour = u32::try_from(start_hour).map_err(|_| ApiError::BadRequest("invalid_slot"))?;
+    let start = domain::peak::kst_to_utc(visit_date, hour).ok_or(ApiError::BadRequest("invalid_slot"))?;
+    Ok(domain::peak::peak_surcharge(&load_peak_config(db).await?, start).bps)
 }
 
 /// Owner peak-pricing config (settings key `peak_pricing`); defaults apply until the owner saves one.

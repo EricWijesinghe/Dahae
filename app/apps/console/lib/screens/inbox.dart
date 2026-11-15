@@ -7,6 +7,7 @@ import 'package:ui/ui.dart';
 
 import '../state.dart';
 import 'bookings.dart';
+import 'inbox_booking_card.dart';
 
 class InboxScreen extends StatefulWidget {
   const InboxScreen({super.key});
@@ -176,12 +177,18 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
                           ),
                         ],
                       ),
-                      trailing: th.unreadStaff > 0
-                          ? Badge(label: Text('${th.unreadStaff}'))
-                          : Text(
-                              timeLabel(th.lastMessageAt, context.lang),
-                              style: context.text.labelSmall,
-                            ),
+                      trailing: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            timeLabel(th.lastMessageAt, context.lang),
+                            style: context.text.labelSmall,
+                          ),
+                          if (th.unreadStaff > 0)
+                            Badge(label: Text('${th.unreadStaff}')),
+                        ],
+                      ),
                       onTap: () => _open(th),
                     );
                   },
@@ -342,6 +349,14 @@ class _ThreadViewState extends State<ThreadView> {
     }
   }
 
+  void _openBooking(BuildContext context) {
+    final id = widget.bookingId;
+    if (id == null) return;
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => BookingDetailPage(id: id)));
+  }
+
   @override
   void dispose() {
     _sub?.cancel();
@@ -376,25 +391,31 @@ class _ThreadViewState extends State<ThreadView> {
             ),
           ],
         ),
-        if (widget.bookingId != null)
+        if (widget.bookingId != null) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, 0),
+            child: InboxBookingCard(
+              // A new message (for example a sent quote) refreshes the summary's status.
+              key: ValueKey('${widget.bookingId}-${_msgs.length}'),
+              bookingId: widget.bookingId!,
+            ),
+          ),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton.icon(
               icon: const Icon(Icons.open_in_new_rounded, size: 18),
               label: Text(t.cOpenBooking),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => BookingDetailPage(id: widget.bookingId),
-                ),
-              ),
+              onPressed: () => _openBooking(context),
             ),
           ),
+        ],
         Expanded(
           child: ListView.builder(
             reverse: true,
             padding: const EdgeInsets.all(Space.lg),
             itemCount: reversed.length,
-            itemBuilder: (_, i) => _Message(m: reversed[i]),
+            itemBuilder: (_, i) =>
+                _Message(m: reversed[i], bookingId: widget.bookingId),
           ),
         ),
         const Divider(height: 1),
@@ -437,8 +458,11 @@ class _ThreadViewState extends State<ThreadView> {
 }
 
 class _Message extends StatelessWidget {
-  const _Message({required this.m});
+  const _Message({required this.m, this.bookingId});
   final ChatMessage m;
+
+  /// The booking the thread belongs to; a quote entry's resend and revise actions open its quote desk.
+  final String? bookingId;
 
   @override
   Widget build(BuildContext context) {
@@ -490,10 +514,7 @@ class _Message extends StatelessWidget {
       'card' => Text(
         '${t.requestCard} · ${t.service(m.body['service_code'] as String? ?? '')} · ${t.estimate} ${context.won((m.body['estimate'] as num? ?? 0).toInt())}',
       ),
-      'quote' => Text(
-        '${t.finalPrice} ${context.won((m.body['final_price'] as num).toInt())} · ${t.deposit} ${context.won((m.body['deposit'] as num).toInt())}',
-        style: context.text.titleSmall,
-      ),
+      'quote' => _quoteEntry(context, t, m, bookingId),
       _ => SelectableText(m.body['text'] as String? ?? ''),
     };
     return Align(
@@ -527,6 +548,42 @@ class _Message extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Quote card. Staff see the sent-quote timeline entry with resend and revise actions (K-04).
+/// Both actions open the booking's quote desk, where the price is sent again or changed.
+Widget _quoteEntry(
+  BuildContext context,
+  T t,
+  ChatMessage m,
+  String? bookingId,
+) {
+  final amount = context.won((m.body['final_price'] as num).toInt());
+  final card = Text(
+    '${t.finalPrice} $amount · ${t.deposit} ${context.won((m.body['deposit'] as num).toInt())}',
+    style: context.text.titleSmall,
+  );
+  final id = bookingId;
+  if (m.sender != 'staff' || id == null) return card;
+  void openDesk() => Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => BookingDetailPage(id: id)));
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        t.quoteSentEntry(amount, timeLabel(m.createdAt, context.lang)),
+        style: context.text.labelMedium,
+      ),
+      card,
+      Row(
+        children: [
+          TextButton(onPressed: openDesk, child: Text(t.quoteResend)),
+          TextButton(onPressed: openDesk, child: Text(t.quoteRevise)),
+        ],
+      ),
+    ],
+  );
 }
 
 /// Small "AI" tag on messages the AI support agent wrote.
