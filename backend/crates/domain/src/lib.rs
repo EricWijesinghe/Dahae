@@ -13,6 +13,7 @@ pub mod growth;
 pub mod household;
 pub mod money;
 pub mod partner;
+pub mod payee_identifier;
 pub mod points;
 pub mod peak;
 pub mod pricing;
