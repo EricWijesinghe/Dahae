@@ -2,6 +2,7 @@
 //! the customer's chat with the Anthropic Messages API. Decision, prompt building and the HTTP call
 //! live here; `routes::chat::send` only calls [`schedule`] after a customer or partner message.
 
+pub mod errors;
 use crate::{
     error::{ApiError, ApiResult},
     ratelimit::within_quota,
@@ -207,8 +208,8 @@ fn turn_of(row: &HistoryRow) -> Option<(&'static str, String)> {
     };
     Some(match row.sender.as_str() {
         "staff" if row.body["ai"].as_bool() == Some(true) => ("assistant", text),
-        "staff" => ("user", format!("<staff>{}</staff>", neutralize(&text))),
-        // Customer contact details never leave for the third-party model (PIPA overseas transfer).
+        // Contact details never leave for the third-party model (PIPA overseas transfer), whoever typed them.
+        "staff" => ("user", format!("<staff>{}</staff>", neutralize(&redact_contacts(&text)))),
         _ => ("user", format!("<customer>{}</customer>", neutralize(&redact_contacts(&text)))),
     })
 }
@@ -462,7 +463,7 @@ async fn within_caps(db: &PgPool, thread: Uuid, caps: Caps) -> Result<bool, sqlx
     .bind(thread)
     .fetch_one(db)
     .await?;
-    Ok(under_caps(per_thread, per_member, per_day, caps))
+    Ok(under_caps(per_thread, per_member, per_day, caps) && errors::within_error_caps(db, thread, caps.daily).await?)
 }
 
 async fn record_usage(db: &PgPool, thread: Uuid, model: &str, outcome: &str, u: Usage) -> Result<(), sqlx::Error> {

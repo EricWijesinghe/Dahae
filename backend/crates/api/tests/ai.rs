@@ -4,7 +4,7 @@
 mod common;
 
 use api::{
-    ai::{AiConfig, Caps, DEFAULT_MODEL, Mode, answer},
+    ai::{AiConfig, Caps, DEFAULT_MODEL, Mode, answer, errors::ERROR_THREAD_HOURLY_CAP},
     auth::{self, Role},
     build_state,
     integrations::Integrations,
@@ -394,4 +394,49 @@ async fn reply_stating_an_amount_the_shop_does_not_list_is_replaced(pool: PgPool
         .await
         .expect("usage row");
     assert_eq!(outcome, "handoff");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn staff_pasted_phone_number_is_masked_before_the_provider_sees_it(pool: PgPool) {
+    let w = world(pool.clone(), Mode::AlwaysFirst).await;
+    sqlx::query("INSERT INTO chat_messages (thread_id, sender, kind, body) VALUES ($1, 'staff', 'text', $2)")
+        .bind(w.thread)
+        .bind(json!({ "text": "고객 번호는 010-1234-5678 입니다" }))
+        .execute(&pool)
+        .await
+        .expect("staff message");
+    customer_says(&pool, w.thread, "일정 확인 부탁해요").await;
+    answer(&w.state, w.thread).await.expect("answer");
+    let calls = w.fake.calls.lock().expect("calls").clone();
+    let (_, body) = calls.first().expect("one model call");
+    let sent = body["messages"].to_string();
+    assert!(sent.contains("***") && !sent.contains("1234-5678"), "{sent}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn provider_outage_stops_calling_the_provider_after_the_failed_call_ceiling(pool: PgPool) {
+    let w = world(pool.clone(), Mode::AlwaysFirst).await;
+    *w.fake.fail.lock().expect("fail lock") = true;
+    for i in 0..(ERROR_THREAD_HOURLY_CAP + 3) {
+        customer_says(&pool, w.thread, &format!("문의 {i}")).await;
+        answer(&w.state, w.thread).await.expect("answer");
+    }
+    let calls = w.fake.calls.lock().expect("calls").len();
+    assert_eq!(calls as i64, ERROR_THREAD_HOURLY_CAP, "each failed call is one provider call, then the ceiling holds");
+    let errors: i64 = sqlx::query_scalar("SELECT count(*) FROM ai_usage WHERE thread_id = $1 AND outcome = 'error'")
+        .bind(w.thread)
+        .fetch_one(&pool)
+        .await
+        .expect("error rows");
+    assert_eq!(errors, ERROR_THREAD_HOURLY_CAP);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn reply_quoting_a_spelled_amount_the_shop_does_not_list_is_replaced(pool: PgPool) {
+    let w = world(pool.clone(), Mode::AlwaysFirst).await;
+    *w.fake.text.lock().expect("text lock") = "청소 비용은 6만 3천원입니다.";
+    customer_says(&pool, w.thread, "비용 얼마예요?").await;
+    answer(&w.state, w.thread).await.expect("answer");
+    let replies = ai_replies(&pool, w.thread).await;
+    assert_eq!(replies.last().expect("a reply")["text"], HANDOFF_KO, "{replies:?}");
 }
