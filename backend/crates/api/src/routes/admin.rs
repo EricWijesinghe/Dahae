@@ -37,6 +37,7 @@ pub fn routes() -> Router<AppState> {
         .route("/bookings/{id}/cancel", crate::idempotency::replayable(post(cancel)))
         .route("/bookings/{id}/quotes", get(quotes_for))
         .route("/bookings/{id}/send-quote", post(send_quote))
+        .route("/bookings/{id}/resend-quote", post(resend_quote))
         .route("/threads", get(inbox))
         .route("/threads/{id}/messages", get(chat::messages).post(chat::send))
         .route("/threads/{id}/read", post(chat::mark_read))
@@ -408,6 +409,36 @@ async fn send_quote(State(s): State<AppState>, Staff(st): Staff, Path(id): Path<
         "quote.send",
         &id.to_string(),
         json!({ "final_price": price.0, "quote_id": q.quote_id, "override": q.override_ratio }),
+    )
+    .await?;
+    Ok(Json(msg))
+}
+
+/// Re-sends the booking's last quote card to the customer, byte for byte: the price, deposit and
+/// estimate are not recomputed, so the desk cannot change the amount through this action.
+async fn resend_quote(State(s): State<AppState>, Staff(st): Staff, Path(id): Path<Uuid>) -> ApiResult<Json<MessageRow>> {
+    let b = load_booking(&s.db, id).await?;
+    if b.status()? != BookingStatus::Consultation || b.answers.is_none() {
+        return Err(ApiError::Conflict("not_open_quote"));
+    }
+    let mut tx = s.db.begin().await?;
+    let thread = chat::booking_thread(&mut tx, "customer", b.user_id, id, &b.service_code).await?;
+    let last: Option<Value> =
+        sqlx::query_scalar("SELECT body FROM chat_messages WHERE thread_id = $1 AND kind = 'quote' ORDER BY created_at DESC, id DESC LIMIT 1")
+            .bind(thread)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let body = last.ok_or(ApiError::Conflict("no_quote_sent"))?;
+    let msg = chat::insert_message(&mut tx, thread, "staff", Some(st.id), "quote", body.clone()).await?;
+    tx.commit().await?;
+    chat::broadcast_message(&s, &msg).await?;
+    audit(
+        &s.db,
+        "staff",
+        Some(st.id),
+        "quote.resend",
+        &id.to_string(),
+        json!({ "message_id": msg.id, "final_price": body["final_price"] }),
     )
     .await?;
     Ok(Json(msg))

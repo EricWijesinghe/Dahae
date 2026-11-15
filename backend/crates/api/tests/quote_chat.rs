@@ -568,3 +568,35 @@ async fn a_quote_card_is_stamped_when_written_not_when_its_transaction_began(poo
         .expect("stamps");
     assert!(later, "quote message stamped with clock_timestamp()");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn resend_repeats_the_last_quote_card_unchanged_and_is_audited(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5400-0011").await;
+    let (id, _) = quote_booking(&app, &c, 10).await;
+    let desk = consultant(&pool).await;
+    let (_, first) = send_quote(&app, &desk, &id, json!({ "final_price": 350_000 })).await;
+    let (st, again) = call(&app, "POST", &format!("/v1/admin/bookings/{id}/resend-quote"), Some(&desk), None).await;
+    assert_eq!(st, StatusCode::OK, "resend-quote: {again}");
+    assert_eq!(again["kind"], "quote");
+    assert_eq!(again["body"], first["body"], "the card is repeated, not recomputed");
+    assert_ne!(again["id"], first["id"]);
+    let logged: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE action = 'quote.resend' AND target = $1")
+        .bind(&id)
+        .fetch_one(&pool)
+        .await
+        .expect("audit count");
+    assert_eq!(logged, 1);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn resend_before_any_quote_was_sent_is_a_conflict(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5400-0012").await;
+    let (id, _) = quote_booking(&app, &c, 10).await;
+    let desk = consultant(&pool).await;
+    let (st, body) = call(&app, "POST", &format!("/v1/admin/bookings/{id}/resend-quote"), Some(&desk), None).await;
+    assert_eq!(st, StatusCode::CONFLICT, "resend-quote: {body}");
+}
