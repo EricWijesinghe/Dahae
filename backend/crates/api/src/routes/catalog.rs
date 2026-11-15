@@ -1,9 +1,6 @@
 //! Public catalogue and content: services, slot availability, estimate preview, notices/FAQ/banners.
 
-use crate::{
-    error::ApiResult,
-    state::AppState,
-};
+use crate::{error::ApiResult, state::AppState};
 use axum::{
     Json, Router,
     extract::{Query, State},
