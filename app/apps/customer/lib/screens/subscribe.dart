@@ -55,8 +55,9 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
   }
 
   Future<void> _submit() async {
-    if (!await requireSignIn(context, reason: SignInReason.book) || !mounted)
+    if (!await requireSignIn(context, reason: SignInReason.book) || !mounted) {
       return;
+    }
     final t = context.t;
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
