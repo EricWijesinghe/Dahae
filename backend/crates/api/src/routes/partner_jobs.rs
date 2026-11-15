@@ -225,7 +225,7 @@ async fn assignable(conn: &mut PgConnection, job: Uuid, pro: Uuid, member: Uuid)
     let assigned = BookingStatus::TeamAssigned.as_i16();
     Ok(sqlx::query_scalar(&format!(
         "SELECT EXISTS (SELECT 1 FROM bookings b JOIN team_members m ON m.pro_id = b.pro_id
-           WHERE b.id = $1 AND b.pro_id = $2 AND b.status = {assigned} AND m.id = $3 AND m.invite_status <> 'removed')"
+           WHERE b.id = $1 AND b.pro_id = $2 AND b.status = {assigned} AND m.id = $3 AND m.invite_status = 'active')"
     ))
     .bind(job)
     .bind(pro)
@@ -431,7 +431,7 @@ async fn assign(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>, Js
     let clash_sql = clash("bookings");
     let r = sqlx::query(&format!(
         "UPDATE bookings SET assignee_id = $3, updated_at = now() WHERE id = $1 AND pro_id = $2 AND status = {assigned}
-           AND EXISTS (SELECT 1 FROM team_members m WHERE m.id = $3 AND m.pro_id = $2 AND m.invite_status <> 'removed')
+           AND EXISTS (SELECT 1 FROM team_members m WHERE m.id = $3 AND m.pro_id = $2 AND m.invite_status = 'active')
            AND NOT EXISTS (SELECT 1 FROM bookings o WHERE o.assignee_id = $3 AND {clash_sql})"
     ))
     .bind(id)

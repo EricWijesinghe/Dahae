@@ -293,6 +293,7 @@ async fn member_cannot_override_a_missed_check_in(pool: PgPool) {
     register_photo(&pool, team).await;
     let (member, member_id) = team_member(&app, &pool, team, "010-5400-0116").await;
     assign_to(&pool, id, member_id).await;
+    register_photo(&pool, member_id).await;
     let report = json!({
         "before_photos": [PHOTO],
         "after_photos": [PHOTO],

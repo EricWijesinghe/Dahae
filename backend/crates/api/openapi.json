@@ -2807,6 +2807,45 @@
         }
       }
     },
+    "/v1/admin/team-members/pending": {
+      "get": {
+        "operationId": "adminListPendingMembers",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Team members waiting for platform approval",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/team-members/{id}/approve": {
+      "post": {
+        "operationId": "adminApproveMember",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Approve a team member's invite (audited)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/pros/{id}/status": {
       "post": {
         "operationId": "adminSetProStatus",

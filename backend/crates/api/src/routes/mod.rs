@@ -21,6 +21,7 @@ mod host_jobs;
 mod keys;
 pub(crate) mod me;
 mod member;
+mod member_approval;
 mod notify_templates;
 mod ops;
 mod owner;
@@ -114,6 +115,7 @@ pub fn router(state: AppState) -> Router {
                 .merge(staff_sms::admin_routes())
                 .merge(owner::admin_routes())
                 .merge(admin_content::routes())
+                .merge(member_approval::admin_routes())
                 .merge(notify_templates::routes())
                 .merge(growth::admin_routes())
                 .merge(crate::points::admin_routes())
