@@ -8,7 +8,11 @@ void main() {
 
     granted['terms'] = true;
     granted['privacy'] = true;
-    expect(signupRequiredAgreed(granted), isFalse, reason: 'overseas transfer is still missing');
+    expect(
+      signupRequiredAgreed(granted),
+      isFalse,
+      reason: 'overseas transfer is still missing',
+    );
 
     granted['overseas_transfer'] = true;
     expect(signupRequiredAgreed(granted), isTrue);
@@ -23,13 +27,28 @@ void main() {
     expect(signupRequiredAgreed(granted), isTrue);
   });
 
-  test('payload names every kind with its answer and the policy version shown', () {
-    final granted = emptySignupConsents()..['terms'] = true;
-    final payload = signupConsentPayload(granted);
+  test(
+    'payload names every kind with its answer and the policy version shown',
+    () {
+      final granted = emptySignupConsents()..['terms'] = true;
+      final payload = signupConsentPayload(granted);
 
-    expect(payload.map((c) => c['kind']), ['terms', 'privacy', 'overseas_transfer', 'marketing']);
-    expect(payload.first, {'kind': 'terms', 'granted': true, 'version': signupConsentVersion});
-    expect(payload.skip(1).every((c) => c['granted'] == false), isTrue);
-    expect(payload.every((c) => c['version'] == signupConsentVersion), isTrue);
-  });
+      expect(payload.map((c) => c['kind']), [
+        'terms',
+        'privacy',
+        'overseas_transfer',
+        'marketing',
+      ]);
+      expect(payload.first, {
+        'kind': 'terms',
+        'granted': true,
+        'version': signupConsentVersion,
+      });
+      expect(payload.skip(1).every((c) => c['granted'] == false), isTrue);
+      expect(
+        payload.every((c) => c['version'] == signupConsentVersion),
+        isTrue,
+      );
+    },
+  );
 }

@@ -78,9 +78,10 @@ class Session extends ChangeNotifier {
   /// Returns the dev code when the server runs in DEV_MODE (local testing only).
   /// [locale] is the app language, so the code SMS arrives in it.
   Future<String?> requestOtp(String phone, {String? locale}) async {
-    final r =
-        await api.post('/auth/otp', {'phone': phone, 'locale': ?locale})
-            as Map<String, dynamic>;
+    final r = await api.post('/auth/otp', {
+      'phone': phone,
+      'locale': ?locale,
+    }) as Map<String, dynamic>;
     return r['dev_code'] as String?;
   }
 
@@ -92,27 +93,23 @@ class Session extends ChangeNotifier {
     required String audience,
     List<Map<String, dynamic>> consents = const [],
   }) async {
-    final r =
-        await api.post('/auth/verify', {
-              'phone': phone,
-              'code': code,
-              'audience': audience,
-              'attribution': Attribution.get(),
-              'consents': consents,
-            })
-            as Map<String, dynamic>;
+    final r = await api.post('/auth/verify', {
+      'phone': phone,
+      'code': code,
+      'audience': audience,
+      'attribution': Attribution.get(),
+      'consents': consents,
+    }) as Map<String, dynamic>;
     await save(r);
     return r['is_new'] as bool? ?? false;
   }
 
   /// Password step. Returns the second factor the server wants (null once signed in).
   Future<StaffMfaChallenge?> staffLogin(String email, String password) async {
-    final r =
-        await api.post('/auth/staff/login', {
-              'email': email,
-              'password': password,
-            })
-            as Map<String, dynamic>;
+    final r = await api.post('/auth/staff/login', {
+      'email': email,
+      'password': password,
+    }) as Map<String, dynamic>;
     if (r['mfa_required'] == true || r['mfa_enrol_required'] == true) {
       return StaffMfaChallenge(
         enrol: r['mfa_enrol_required'] == true,
@@ -131,11 +128,10 @@ class Session extends ChangeNotifier {
   }) async {
     await save(
       await api.post('/auth/staff/mfa/verify', {
-            'mfa_token': token,
-            'code': ?code,
-            'recovery_code': ?recoveryCode,
-          })
-          as Map<String, dynamic>,
+        'mfa_token': token,
+        'code': ?code,
+        'recovery_code': ?recoveryCode,
+      }) as Map<String, dynamic>,
     );
   }
 
@@ -149,12 +145,10 @@ class Session extends ChangeNotifier {
   Future<Map<String, dynamic>> staffMfaEnrolConfirm(
     String token,
     String code,
-  ) async =>
-      await api.post('/auth/staff/mfa/enrol/confirm', {
-            'mfa_token': token,
-            'code': code,
-          })
-          as Map<String, dynamic>;
+  ) async => await api.post('/auth/staff/mfa/enrol/confirm', {
+    'mfa_token': token,
+    'code': code,
+  }) as Map<String, dynamic>;
 
   /// Runs before local sign-out, while the access token still works (push token removal).
   Future<void> Function()? beforeLogout;

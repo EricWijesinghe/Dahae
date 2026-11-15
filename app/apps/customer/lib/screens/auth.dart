@@ -225,6 +225,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
 
   String get _digits => _ctrl.text.replaceAll(RegExp(r'\D'), '');
   bool get _valid => RegExp(r'^01[016789]\d{7,8}$').hasMatch(_digits);
+
   /// The code is sent only once a valid number and every required consent are given.
   bool get _canSend => _valid && signupRequiredAgreed(_granted);
 
@@ -349,10 +350,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                   granted: _granted,
                   onChanged: (kind, v) => setState(() => _granted[kind] = v),
                 ),
-                Text(
-                  context.t.sgConsentHint,
-                  style: context.text.bodySmall,
-                ),
+                Text(context.t.sgConsentHint, style: context.text.bodySmall),
                 const SizedBox(height: Space.xl),
                 SocialSignInRow(
                   providers: defaultSocialSignIns(
