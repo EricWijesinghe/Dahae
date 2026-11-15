@@ -258,7 +258,7 @@ printf 'dump' > backups/db-t1.sql.gz
 seal_local backups/db-t1.sql.gz >/dev/null 2>&1 || true
 t  "seal failure keeps plaintext"     test -f backups/db-t1.sql.gz
 nt "seal failure leaves no .enc"      test -e backups/db-t1.sql.gz.enc
-api_backup() { printf 'MKB1' > "${3#/}"; } # the container's seal step, on this sandbox
+api_backup() { [ -f "${2#/}" ] && printf 'MKB1' > "${3#/}"; } # the container's seal step, on this sandbox: needs its input
 printf 'dump' > backups/db-t2.sql.gz
 t  "seal success"                     seal_local backups/db-t2.sql.gz
 nt "seal success removes plaintext"   test -e backups/db-t2.sql.gz
@@ -266,6 +266,8 @@ t  "seal success keeps .enc"          test -s backups/db-t2.sql.gz.enc
 printf 'old' > backups/db-t3.sql.gz
 seal_leftover_plaintext >/dev/null 2>&1
 t  "leftover plaintext gets sealed"   test -s backups/db-t3.sql.gz.enc
+t  "sealing an already sealed dump"   seal_local backups/db-t3.sql.gz
+t  "...keeps its sealed copy"         test -s backups/db-t3.sql.gz.enc
 t  "backup path in backups/"          backup_path_ok backups/db-t2.sql.gz.enc
 nt "backup path outside backups/"     backup_path_ok /etc/passwd
 nt "backup path bare name"            backup_path_ok db-t2.sql.gz.enc

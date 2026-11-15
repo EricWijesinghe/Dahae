@@ -480,6 +480,8 @@ open_backup() { # open_backup 파일 : .enc 면 ${파일%.enc} 로 풀고, 평�
 # 평문 덤프를 MKB1 로 봉인하고 평문을 지워요. 외부 백업은 평문으로 올린 뒤에 봉인해요.
 seal_local() { # seal_local 파일 : 봉인된 .enc 를 확인한 뒤에만 평문을 지워요. 실패하면 평문은 남기고 경고해요 (롤백 사본이 사라지지 않게)
   local f="$1"
+  # Already sealed (the plaintext went with an earlier seal): keep that copy, never delete it below.
+  if [ ! -e "$f" ] && [ -s "$f.enc" ]; then return 0; fi
   if api_backup backup-seal "/$f" "/$f.enc" >> backups/backup.log 2>&1 && [ -s "$f.enc" ]; then rm -f -- "$f"; return 0; fi
   rm -f -- "$f.enc"; BACKUP_WARN=1; warn "백업 봉인에 실패했어요. 평문 사본은 그대로 남겨 두었어요: $f"; return 1
 }
@@ -678,9 +680,9 @@ cmd_backup() { # BACKUP_WARN=1 이면 DB 는 백업됐지만 사진 파일이나
     || warn "외부 백업 실패 또는 미설정 — 콘솔 [설정 > 외부 백업]을 확인하세요"
   # 서버 디스크에 남는 로컬 사본은 봉인해요: 평문 덤프(고객 정보)가 그대로 남지 않아요.
   # 예전 설치가 남긴 평문 사본도 이때 함께 봉인해요 (업그레이드 뒤 첫 백업).
-  seal_leftover_plaintext
   seal_local "$db" || true
   if [ -f "$up" ]; then seal_local "$up" || true; fi
+  seal_leftover_plaintext
   [ "$prune" = noprune ] || find backups \( -name 'db-*.sql.gz' -o -name 'db-*.sql.gz.enc' -o -name 'uploads-*.tar.gz' -o -name 'uploads-*.tar.gz.enc' \) -mtime +"$BACKUP_KEEP_DAYS" -delete
   if [ -f "$db.enc" ]; then ok "백업 완료: $DIR/$db.enc"; return 0; fi
   BACKUP_WARN=1; warn "로컬 백업을 봉인하지 못했어요. 업데이트·복원·되돌리기를 멈춰요. 'dahae logs' 로 확인하세요."
