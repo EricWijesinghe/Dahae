@@ -4,6 +4,7 @@ import 'package:ui/ui.dart';
 
 import '../state.dart';
 import 'flow_widgets.dart';
+import 'reviews.dart';
 
 const _reviewCardHeight = 132.0;
 const _reviewPhotoHeight = 96.0;
@@ -49,6 +50,17 @@ class _ReviewCarouselState extends State<ReviewCarousel> {
           FlowSection(
             title: t.dfReviewsTitle,
             children: [
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ReviewsAllScreen(),
+                    ),
+                  ),
+                  child: Text(t.reviewsSeeAll),
+                ),
+              ),
               SizedBox(
                 height:
                     _reviewCardHeight + (withPhotos ? _reviewPhotoHeight : 0),
@@ -100,14 +112,9 @@ class _ReviewCarouselState extends State<ReviewCarousel> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        '${'★' * ((r['rating'] as num?)?.toInt() ?? 5)} · ${r['name'] ?? ''}',
-                                        style: context.text.labelMedium
-                                            ?.copyWith(
-                                              color: context.colors.inkMuted,
-                                            ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                      _ReviewHeader(
+                                        api: context.api,
+                                        row: r,
                                       ),
                                       const SizedBox(height: Space.xs),
                                       Expanded(
@@ -135,6 +142,59 @@ class _ReviewCarouselState extends State<ReviewCarousel> {
       );
     },
   );
+}
+
+/// Stars, masked name and the overflow menu (report) of one carousel card.
+class _ReviewHeader extends StatelessWidget {
+  const _ReviewHeader({required this.api, required this.row});
+
+  final ApiClient api;
+  final Json row;
+
+  Future<void> _report(BuildContext context) async {
+    final sent = await showReviewReport(
+      context,
+      api: api,
+      bookingId: row['booking_id'] as String,
+    );
+    if (sent && context.mounted) showToast(context, context.t.reportThanks);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.t;
+    final c = context.colors;
+    return Row(
+      children: [
+        RatingStars(
+          rating: (row['rating'] as num?)?.toDouble() ?? 5,
+          size: 12,
+        ),
+        const SizedBox(width: Space.xs),
+        Expanded(
+          child: Text(
+            row['name'] as String? ?? '',
+            style: context.text.labelMedium?.copyWith(color: c.inkMuted),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (row['booking_id'] is String)
+          PopupMenuButton<String>(
+            tooltip: t.reviewMenu,
+            padding: EdgeInsets.zero,
+            icon: Icon(Icons.more_vert_rounded, size: 18, color: c.inkMuted),
+            onSelected: (_) => _report(context),
+            itemBuilder: (_) => [
+              PopupMenuItem<String>(
+                value: 'report',
+                child: Text(t.reportAction),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
 }
 
 /// One half of a review's BEFORE | AFTER split (design p14). A photo that fails to load
