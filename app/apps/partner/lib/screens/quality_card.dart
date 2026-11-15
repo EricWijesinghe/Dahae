@@ -100,7 +100,7 @@ class _ComponentsCard extends StatelessWidget {
               style: context.text.bodySmall,
             ),
             const SizedBox(height: Space.xs),
-            LinearProgressIndicator(value: (value as num).toDouble()),
+            LinearProgressIndicator(value: value.toDouble()),
           ],
         ],
       ),
