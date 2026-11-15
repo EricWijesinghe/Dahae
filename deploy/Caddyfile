@@ -134,16 +134,18 @@
 		file_server
 	}
 
-	# API down or restarting (502/503 from the proxy): pages get a static maintenance page instead of a bare
-	# error. API paths keep their own status, so the apps still get a JSON error they can read. /health stays a
-	# plain error so health probes see the API as down, not a 200 page.
+	# API down or restarting (502/503 from the proxy, or 500 when a page's httpInclude fragment cannot reach it):
+	# pages get a static maintenance page, sent as 503, instead of a bare error. API paths keep their own status,
+	# so the apps still get a JSON error they can read. /health stays a plain error so probes see the API as down.
 	handle_errors {
-		@page_down expression {http.error.status} in [502, 503] && !{http.request.uri.path}.startsWith("/v1/") && !{http.request.uri.path}.startsWith("/health")
+		@page_down expression {http.error.status_code} in [500, 502, 503] && !{http.request.uri.path}.startsWith("/v1/") && !{http.request.uri.path}.startsWith("/health")
 		handle @page_down {
 			root * /srv/website
 			rewrite * /maintenance.html
 			header Cache-Control "no-store"
-			file_server
+			file_server {
+				status 503
+			}
 		}
 	}
 }
