@@ -24,6 +24,7 @@ done
 # Behaviour, not only parsing: requests carrying the secrets must reach the access log redacted, and /ready must be
 # 404 from outside. TLS_MODE=internal because CI has no public DNS; the parse loop above covers the public case.
 ticket=SECRETTICKET123 token=SECRETTOKEN456 sig=SECRETSIG789 progress=0123456789abcdef0123456789abcdef
+# shellcheck disable=SC2016 # expanded by the shell inside the container
 probe='mkdir -p /var/log/caddy
 caddy run --config /etc/caddy/Caddyfile --adapter caddyfile >/tmp/caddy.log 2>&1 &
 st() { wget -S -O /dev/null --no-check-certificate "https://shop.example.com$1" 2>&1 | sed -n "s/^ *HTTP\/[0-9.]* \([0-9]*\).*/\1/p" | head -1; }

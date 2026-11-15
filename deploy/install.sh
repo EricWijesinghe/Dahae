@@ -189,8 +189,8 @@ firewall_setup() { # 이미 켜져 있으면 규칙만 맞추고, 꺼져 있으�
   if ufw status | grep -q '^Status: active'; then
     ufw_allow_web || warn "방화벽 규칙을 넣지 못했어요"
   elif firewall_wanted; then
-    ufw_allow_web && ufw default deny incoming >/dev/null && ufw default allow outgoing >/dev/null \
-      && ufw --force enable >/dev/null || die "방화벽을 켜지 못했어요. 'sudo ufw status' 를 확인하세요."
+    if ! { ufw_allow_web && ufw default deny incoming >/dev/null && ufw default allow outgoing >/dev/null \
+      && ufw --force enable >/dev/null; }; then die "방화벽을 켜지 못했어요. 'sudo ufw status' 를 확인하세요."; fi
     ok "방화벽을 켰어요 (22·80·443 만 열려 있어요)"
   else
     warn "방화벽을 켜지 않았어요. 클라우드 콘솔 방화벽에서 22·80·443 만 열어 두세요 (나중에 'sudo ufw enable' 로 켤 수 있어요)"

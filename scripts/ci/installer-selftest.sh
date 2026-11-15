@@ -504,7 +504,7 @@ ssh_run "$PW_ON" "$HB/none" y;         nt "no key for the account: password logi
 ssh_run "$PW_ON" "$HB/keys" n;         nt "answer n keeps password login" dropin_written
 SUDO_USER=alice ssh_run "$PW_ON" "$HB/keys" y; t "prompt names the operator account" grep -qF "'alice'" "$FWLOG"
 eq "$(SUDO_USER=alice operator_account)" alice
-eq "$(SUDO_USER= operator_account)" root
+eq "$(SUDO_USER='' operator_account)" root
 eq "$(login_key_file root)" /root/.ssh/authorized_keys
 nt "odd account name refused for key lookup" login_key_file 'a;rm'
 
