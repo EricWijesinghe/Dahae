@@ -31,7 +31,12 @@ async fn location_terms_consent_is_recorded_on_its_own_and_withdrawable(pool: Pg
     let app = app(pool.clone());
     let c = customer(&app, &pool, "010-8100-0009").await;
     let location = |granted: bool| json!({ "consents": [{ "kind": "location", "granted": granted, "version": CONSENT_VERSION }] });
-    let granted = |s: &serde_json::Value| s["items"].as_array().and_then(|i| i.iter().find(|i| i["kind"] == "location")).map(|i| i["granted"].clone());
+    let granted = |s: &serde_json::Value| {
+        s["items"]
+            .as_array()
+            .and_then(|i| i.iter().find(|i| i["kind"] == "location"))
+            .map(|i| i["granted"].clone())
+    };
 
     let (_, s) = call(&app, "GET", "/v1/me/consents", Some(c.token.as_str()), None).await;
     assert_eq!(granted(&s), Some(json!(false)), "never agreed: {s}");
@@ -45,7 +50,11 @@ async fn location_terms_consent_is_recorded_on_its_own_and_withdrawable(pool: Pg
     let (st, s) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(location(false))).await;
     assert_eq!(st, StatusCode::OK, "{s}");
     assert_eq!(granted(&s), Some(json!(false)));
-    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM user_consents WHERE user_id = $1 AND kind = 'location'").bind(c.user).fetch_one(&pool).await.expect("count");
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM user_consents WHERE user_id = $1 AND kind = 'location'")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
     assert_eq!(rows, 2, "grant and withdrawal are both kept as evidence");
 }
 
@@ -59,15 +68,36 @@ async fn required_consents_gate_the_service_and_marketing_is_withdrawable(pool: 
     assert_eq!(s["reconsent_required"], true, "new account has no consents yet");
     assert_eq!(s["items"].as_array().map(Vec::len), Some(5));
 
-    let (st, body) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(json!({ "consents": [{ "kind": "marketing", "granted": true, "version": CONSENT_VERSION }] }))).await;
+    let (st, body) = call(
+        &app,
+        "PUT",
+        "/v1/me/consents",
+        Some(c.token.as_str()),
+        Some(json!({ "consents": [{ "kind": "marketing", "granted": true, "version": CONSENT_VERSION }] })),
+    )
+    .await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "required consents missing: {body}");
     assert_eq!(body["error"]["code"], "required_consent");
 
-    let (st, body) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(json!({ "consents": [{ "kind": "terms", "granted": true, "version": "2020-01-01" }] }))).await;
+    let (st, body) = call(
+        &app,
+        "PUT",
+        "/v1/me/consents",
+        Some(c.token.as_str()),
+        Some(json!({ "consents": [{ "kind": "terms", "granted": true, "version": "2020-01-01" }] })),
+    )
+    .await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "stale policy version: {body}");
     assert_eq!(body["error"]["code"], "stale_consent_version");
 
-    let (st, body) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(json!({ "consents": all_required_consents() }))).await;
+    let (st, body) = call(
+        &app,
+        "PUT",
+        "/v1/me/consents",
+        Some(c.token.as_str()),
+        Some(json!({ "consents": all_required_consents() })),
+    )
+    .await;
     assert_eq!(st, StatusCode::OK, "{body}");
     assert_eq!(body["reconsent_required"], false);
 
@@ -93,7 +123,11 @@ async fn required_consents_gate_the_service_and_marketing_is_withdrawable(pool: 
     assert_eq!(st, StatusCode::OK);
     assert!(!privacy::marketing_allowed(&pool, c.user).await.expect("query"), "withdrawal stops marketing");
 
-    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM user_consents WHERE user_id = $1").bind(c.user).fetch_one(&pool).await.expect("count");
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM user_consents WHERE user_id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
     assert_eq!(rows, 5, "every choice is kept as evidence (3 required + grant + withdrawal)");
 }
 
@@ -103,21 +137,43 @@ async fn marketing_message_is_dropped_without_consent_and_transactional_still_se
     let c = customer(&app, &pool, "010-8100-0002").await;
     let state = build_state(pool.clone(), test_config()).expect("state");
 
-    api::realtime::notify(&state, Recipient::User(c.user), "marketing.autumn", "t", "b", json!({})).await.expect("notify");
-    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM notifications WHERE owner_id = $1").bind(c.user).fetch_one(&pool).await.expect("count");
+    api::realtime::notify(&state, Recipient::User(c.user), "marketing.autumn", "t", "b", json!({}))
+        .await
+        .expect("notify");
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM notifications WHERE owner_id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
     assert_eq!(n, 0, "no marketing without consent");
 
-    privacy::update_consents(&pool, c.user, serde_json::from_value(json!({ "consents": all_required_consents() })).expect("body"))
-        .await
-        .expect("required");
-    privacy::update_consents(&pool, c.user, serde_json::from_value(json!({ "consents": [{ "kind": "marketing", "granted": true, "version": CONSENT_VERSION }] })).expect("body"))
-        .await
-        .expect("grant");
+    privacy::update_consents(
+        &pool,
+        c.user,
+        serde_json::from_value(json!({ "consents": all_required_consents() })).expect("body"),
+    )
+    .await
+    .expect("required");
+    privacy::update_consents(
+        &pool,
+        c.user,
+        serde_json::from_value(json!({ "consents": [{ "kind": "marketing", "granted": true, "version": CONSENT_VERSION }] })).expect("body"),
+    )
+    .await
+    .expect("grant");
     // 2026-11-11 12:00 KST: outside quiet hours, so the advertising notice is stored at a fixed instant.
     let noon = Utc.with_ymd_and_hms(2026, 11, 11, 3, 0, 0).single().expect("valid instant");
-    api::realtime::notify_at(&state, Recipient::User(c.user), "marketing.autumn", "t", "b", json!({}), noon).await.expect("notify");
-    api::realtime::notify(&state, Recipient::User(c.user), "booking.status", "t", "b", json!({})).await.expect("notify");
-    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM notifications WHERE owner_id = $1").bind(c.user).fetch_one(&pool).await.expect("count");
+    api::realtime::notify_at(&state, Recipient::User(c.user), "marketing.autumn", "t", "b", json!({}), noon)
+        .await
+        .expect("notify");
+    api::realtime::notify(&state, Recipient::User(c.user), "booking.status", "t", "b", json!({}))
+        .await
+        .expect("notify");
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM notifications WHERE owner_id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
     assert_eq!(n, 2, "consented marketing and a transactional message are both stored");
 }
 
@@ -139,9 +195,13 @@ async fn deletion_anonymises_and_removes_devices_but_keeps_records(pool: PgPool)
     let app = app(pool.clone());
     let c = customer(&app, &pool, "010-8100-0004").await;
     let (booking, _) = book(&app, &c, 10, None).await;
-    privacy::update_consents(&pool, c.user, serde_json::from_value(json!({ "consents": all_required_consents() })).expect("body"))
-        .await
-        .expect("consent");
+    privacy::update_consents(
+        &pool,
+        c.user,
+        serde_json::from_value(json!({ "consents": all_required_consents() })).expect("body"),
+    )
+    .await
+    .expect("consent");
     sqlx::query("INSERT INTO push_tokens (token, owner_role, owner_id, platform) VALUES ('tok-del-1', 'customer', $1, 'android')")
         .bind(c.user)
         .execute(&pool)
@@ -151,29 +211,59 @@ async fn deletion_anonymises_and_removes_devices_but_keeps_records(pool: PgPool)
     let (st, body) = call(&app, "DELETE", "/v1/me", Some(c.token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{body}");
 
-    let (phone, name): (String, String) = sqlx::query_as("SELECT phone, name FROM users WHERE id = $1").bind(c.user).fetch_one(&pool).await.expect("user");
+    let (phone, name): (String, String) = sqlx::query_as("SELECT phone, name FROM users WHERE id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("user");
     assert!(phone.starts_with("deleted:") && name.is_empty());
-    let addresses: i64 = sqlx::query_scalar("SELECT count(*) FROM addresses WHERE user_id = $1").bind(c.user).fetch_one(&pool).await.expect("addr");
+    let addresses: i64 = sqlx::query_scalar("SELECT count(*) FROM addresses WHERE user_id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("addr");
     assert_eq!(addresses, 0, "addresses removed");
-    let key: String = sqlx::query_scalar("SELECT billing_key FROM payment_methods WHERE id = $1").bind(c.card).fetch_one(&pool).await.expect("card");
+    let key: String = sqlx::query_scalar("SELECT billing_key FROM payment_methods WHERE id = $1")
+        .bind(c.card)
+        .fetch_one(&pool)
+        .await
+        .expect("card");
     assert!(key.is_empty(), "saved card key cleared");
-    let tokens: i64 = sqlx::query_scalar("SELECT count(*) FROM push_tokens WHERE owner_id = $1").bind(c.user).fetch_one(&pool).await.expect("push");
+    let tokens: i64 = sqlx::query_scalar("SELECT count(*) FROM push_tokens WHERE owner_id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("push");
     assert_eq!(tokens, 0, "push tokens removed");
-    let kept: i64 = sqlx::query_scalar("SELECT count(*) FROM bookings WHERE id = $1").bind(booking).fetch_one(&pool).await.expect("booking");
+    let kept: i64 = sqlx::query_scalar("SELECT count(*) FROM bookings WHERE id = $1")
+        .bind(booking)
+        .fetch_one(&pool)
+        .await
+        .expect("booking");
     assert_eq!(kept, 1, "bookings kept for the 5-year record rule");
-    let consents: i64 = sqlx::query_scalar("SELECT count(*) FROM user_consents WHERE user_id = $1").bind(c.user).fetch_one(&pool).await.expect("consent");
+    let consents: i64 = sqlx::query_scalar("SELECT count(*) FROM user_consents WHERE user_id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("consent");
     assert_eq!(consents, 3, "consent evidence kept");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn retention_purge_removes_expired_rows_and_unreferenced_uploads(pool: PgPool) {
     let cfg = test_config();
-    let user: Uuid = sqlx::query_scalar("INSERT INTO users (phone) VALUES ('01081000005') RETURNING id").fetch_one(&pool).await.expect("user");
+    let user: Uuid = sqlx::query_scalar("INSERT INTO users (phone) VALUES ('01081000005') RETURNING id")
+        .fetch_one(&pool)
+        .await
+        .expect("user");
     sqlx::query("INSERT INTO otp_codes (phone, code_hash, expires_at, created_at) VALUES ('01081000005', 'h', now(), now() - interval '2 days')")
         .execute(&pool)
         .await
         .expect("old otp");
-    sqlx::query("INSERT INTO otp_codes (phone, code_hash, expires_at) VALUES ('01081000005', 'h', now())").execute(&pool).await.expect("new otp");
+    sqlx::query("INSERT INTO otp_codes (phone, code_hash, expires_at) VALUES ('01081000005', 'h', now())")
+        .execute(&pool)
+        .await
+        .expect("new otp");
     sqlx::query("INSERT INTO refresh_tokens (token_hash, subject, role, family_id, expires_at) VALUES ('rt-expired', $1, 'customer', gen_random_uuid(), now() - interval '1 day')")
         .bind(user)
         .execute(&pool)
@@ -192,7 +282,12 @@ async fn retention_purge_removes_expired_rows_and_unreferenced_uploads(pool: PgP
             .await
             .expect("upload");
     }
-    sqlx::query("UPDATE users SET name = $2 WHERE id = $1").bind(user).bind(format!("/files/{kept}")).execute(&pool).await.expect("ref");
+    sqlx::query("UPDATE users SET name = $2 WHERE id = $1")
+        .bind(user)
+        .bind(format!("/files/{kept}"))
+        .execute(&pool)
+        .await
+        .expect("ref");
 
     let report = retention::purge(&pool, &cfg).await.expect("purge");
     assert_eq!(report.otp_codes, 1, "only the 2-day-old code");
@@ -220,7 +315,11 @@ async fn staff_reads_of_customer_contacts_are_audit_logged(pool: PgPool) {
     assert_eq!(st, StatusCode::OK);
     let (st, _) = call(&app, "GET", "/v1/admin/customers", Some(token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK);
-    let logged: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE actor_id = $1 AND action LIKE 'customer.pii_%'").bind(staff).fetch_one(&pool).await.expect("audit");
+    let logged: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE actor_id = $1 AND action LIKE 'customer.pii_%'")
+        .bind(staff)
+        .fetch_one(&pool)
+        .await
+        .expect("audit");
     assert_eq!(logged, 2, "both contact views recorded");
 }
 
@@ -242,10 +341,17 @@ async fn partner_export_omits_account_number_and_delete_clears_notifications(poo
     let (st, doc) = call(&app, "GET", "/v1/partner/export", Some(token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{doc}");
     assert_eq!(doc["payout_account"]["account_last4"], "1234");
-    assert!(!doc.to_string().contains("SECRET-CIPHER-TEXT"), "encrypted account number never leaves the server");
+    assert!(
+        !doc.to_string().contains("SECRET-CIPHER-TEXT"),
+        "encrypted account number never leaves the server"
+    );
 
     let (st, body) = call(&app, "DELETE", "/v1/partner/me", Some(token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{body}");
-    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM notifications WHERE owner_id = $1").bind(pro).fetch_one(&pool).await.expect("count");
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM notifications WHERE owner_id = $1")
+        .bind(pro)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
     assert_eq!(left, 0, "partner notifications removed");
 }
