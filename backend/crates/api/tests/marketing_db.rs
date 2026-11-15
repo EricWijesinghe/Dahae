@@ -302,6 +302,7 @@ async fn desktop_platforms_are_stored_and_unknown_ones_rejected_by_the_db(pool: 
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn day_before_reminders_reach_every_due_visit_across_passes(pool: PgPool) {
+    seed_catalog(&pool).await;
     let app = app(pool.clone());
     let c = customer(&app, &pool, "010-5400-0009").await;
     let (first, _) = book(&app, &c, 1, None).await;
