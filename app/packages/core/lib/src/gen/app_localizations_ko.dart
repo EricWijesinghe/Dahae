@@ -5318,6 +5318,9 @@ class TKo extends T {
   String get ruleQualityOnTimeGraceMin => '정시 도착 허용 시간 (분)';
 
   @override
+  String get ruleTrainingGateEnabled => '파트너 교육 완료 전 일감 수락 막기';
+
+  @override
   String get ruleBackupStaleHours => '백업이 이 시간 넘게 없으면 빨간불 (시간)';
 
   @override

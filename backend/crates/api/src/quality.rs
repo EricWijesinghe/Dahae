@@ -64,15 +64,23 @@ pub async fn thresholds(db: &PgPool) -> ApiResult<QualityThresholds> {
     })
 }
 
-/// Job-offer gate for accepting a job: auto-pause first, then every required published training module.
-pub async fn check_offer_gate(db: &PgPool, pro: Uuid) -> ApiResult<()> {
+/// Job-offer gate for accepting a job: auto-pause first, then, only when the owner has turned on
+/// `training_gate_enabled`, every required published training module.
+pub async fn check_offer_gate(s: &AppState, pro: Uuid) -> ApiResult<()> {
     let status: Option<String> = sqlx::query_scalar("SELECT status FROM partner_quality WHERE pro_id = $1")
         .bind(pro)
-        .fetch_optional(db)
+        .fetch_optional(&s.db)
         .await?;
     if status.and_then(|s| parse_status(&s)).is_some_and(|s| !quality::can_receive_offers(s)) {
         return Err(ApiError::Conflict("quality_paused"));
     }
+    if !settings_registry::get_flag(&s.db, &s.config, "training_gate_enabled").await? {
+        return Ok(());
+    }
+    training_gate(&s.db, pro).await
+}
+
+async fn training_gate(db: &PgPool, pro: Uuid) -> ApiResult<()> {
     let required_done: Vec<bool> = sqlx::query_scalar(
         "SELECT tp.completed_at IS NOT NULL FROM training_modules m
          LEFT JOIN training_progress tp ON tp.module_id = m.id AND tp.pro_id = $1

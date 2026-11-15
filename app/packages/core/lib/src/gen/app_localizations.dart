@@ -10146,6 +10146,12 @@ abstract class T {
   /// **'정시 도착 허용 시간 (분)'**
   String get ruleQualityOnTimeGraceMin;
 
+  /// No description provided for @ruleTrainingGateEnabled.
+  ///
+  /// In ko, this message translates to:
+  /// **'파트너 교육 완료 전 일감 수락 막기'**
+  String get ruleTrainingGateEnabled;
+
   /// No description provided for @ruleBackupStaleHours.
   ///
   /// In ko, this message translates to:

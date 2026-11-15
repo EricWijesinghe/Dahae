@@ -124,6 +124,8 @@ pub const SPECS: &[Spec] = &[
     tightened(int("points_adjust_max", "points", 1, 1_000_000, 100_000), Tighten::Down),
     int("quality_window_days", "quality", 7, 365, 90),
     int("quality_on_time_grace_min", "quality", 0, 60, 15),
+    // Off until the owner has a way to publish training and partners can finish it; then offers wait on it.
+    boolean("training_gate_enabled", "quality", false),
     tightened(int("backup_stale_hours", "ops", 1, 168, 36), Tighten::Down),
     tightened(int("backup_late_hours", "ops", 1, 168, 26), Tighten::Down),
     tightened(int("disk_low_pct", "ops", 1, 50, 10), Tighten::Up),

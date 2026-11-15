@@ -236,7 +236,7 @@ async fn assignable(conn: &mut PgConnection, job: Uuid, pro: Uuid, member: Uuid)
 
 async fn accept(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
     require_phone(&s, a.id).await?;
-    crate::quality::check_offer_gate(&s.db, a.id).await?;
+    crate::quality::check_offer_gate(&s, a.id).await?;
     if !visible_to(&s, id, a.id).await? {
         return Err(ApiError::NotFound);
     }

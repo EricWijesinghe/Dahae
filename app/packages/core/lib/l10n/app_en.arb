@@ -1674,6 +1674,7 @@
  "ruleNudgeRebookDays": "Rebooking reminder (days after visit)",
  "ruleQualityWindowDays": "Quality score window (days)",
  "ruleQualityOnTimeGraceMin": "On-time grace period (minutes)",
+ "ruleTrainingGateEnabled": "Block job acceptance until partner training is complete",
  "ruleBackupStaleHours": "Backup overdue after (hours)",
  "ruleBackupLateHours": "Backup late after (hours)",
  "ruleDiskLowPct": "Disk free space red below (%)",

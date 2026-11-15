@@ -36,6 +36,7 @@ S = {
   "ruleNudgeRebookDays": ["재예약 안내 발송 (방문 후 일수)", "Rebooking reminder (days after visit)"],
   "ruleQualityWindowDays": ["품질 점수 집계 기간 (일)", "Quality score window (days)"],
   "ruleQualityOnTimeGraceMin": ["정시 도착 허용 시간 (분)", "On-time grace period (minutes)"],
+  "ruleTrainingGateEnabled": ["파트너 교육 완료 전 일감 수락 막기", "Block job acceptance until partner training is complete"],
   "ruleBackupStaleHours": ["백업이 이 시간 넘게 없으면 빨간불 (시간)", "Backup overdue after (hours)"],
   "ruleBackupLateHours": ["백업이 이 시간 넘게 없으면 노란불 (시간)", "Backup late after (hours)"],
   "ruleDiskLowPct": ["디스크 여유가 이 비율 아래면 빨간불 (%)", "Disk free space red below (%)"],

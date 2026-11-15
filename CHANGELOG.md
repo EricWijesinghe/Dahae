@@ -15,6 +15,7 @@ from the release branches; no tags existed for them.
 - Consultation chat: customer and partner messages now push staff devices, at most once per thread per minute.
 - Saved-card billing keys are stored encrypted at rest; existing cards are sealed at the next server start, and one card per key is enforced on a keyed digest.
 - Payments: a cancellation made in the PortOne console now updates the booking's refunded amount from PortOne, and opens a staff payment-dispute case on the booking (once per provider transaction). Queued refunds ask PortOne to cancel only while the balance is still the amount.
+- Partner job acceptance no longer waits on required training modules by default. Owner setting `training_gate_enabled` (운영 규칙, 파트너 품질, default off) turns the gate on; with it on, a published required module without completed progress blocks accept. Safe default: off, because partners have no way to publish or complete training yet.
 
 ### Added
 - Cleaner verification: a pro can be approved as active only when the console checklist is complete (ID, tax type, experience, emergency contact), recorded with the audit row; the console person screen has an employee profile (photo, bio, employment type, encrypted emergency contact, hire date). The emergency contact is encrypted at rest and every view is logged. Not yet included: the partner app does not show the verification status or checklist.
