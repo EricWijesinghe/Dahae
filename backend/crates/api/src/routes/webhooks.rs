@@ -79,7 +79,6 @@ struct Event {
 #[serde(rename_all = "camelCase")]
 struct EventData {
     payment_id: Option<String>,
-    transaction_id: Option<String>,
 }
 
 async fn portone(State(s): State<AppState>, headers: HeaderMap, body: Bytes) -> ApiResult<Json<Value>> {
@@ -121,7 +120,7 @@ async fn dispatch(s: &AppState, event: &Event) -> ApiResult<()> {
         return Ok(());
     };
     if is_cancel_event(&event.kind) {
-        sync_cancellation(s, payment_id, &event.kind, event.data.transaction_id.as_deref()).await
+        sync_cancellation(s, payment_id, &event.kind).await
     } else if is_payment_event(&event.kind) {
         handle_payment(s, payment_id).await
     } else {
@@ -154,17 +153,28 @@ fn plan_cancellation(amount: i64, recorded: i64, provider_cancelled: i64) -> Api
 }
 
 /// Records a cancellation at the amount PortOne reports, so a replay sets the same values again. A cancel the app
-/// already recorded changes nothing. Any other cancel opens a dispute and a staff case, once per provider transaction.
-async fn sync_cancellation(s: &AppState, payment_id: &str, kind: &str, transaction_id: Option<&str>) -> ApiResult<()> {
+/// already recorded changes nothing. Any other cancel opens a dispute and a staff case once per cumulative
+/// cancelled amount: PortOne's transaction id can be the original payment's on every cancel, so it is not used.
+async fn sync_cancellation(s: &AppState, payment_id: &str, kind: &str) -> ApiResult<()> {
     let mut tx = s.db.begin().await?;
+    // Booking, then payment: the order apply_cancel and the refund paths lock in, so the two cannot deadlock.
+    let booking: Option<Uuid> = sqlx::query_scalar(
+        "SELECT b.id FROM bookings b JOIN payments p ON p.booking_id = b.id WHERE p.provider = 'portone' AND p.provider_tx_id = $1 FOR UPDATE OF b",
+    )
+    .bind(payment_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some(booking) = booking else {
+        tracing::info!(payment_id, "portone cancellation for a payment with no booking");
+        return Ok(());
+    };
     // Locked until commit: a refund the app is making right now is recorded before this reads the amount.
-    let row: Option<(Uuid, Uuid, i64, i64)> =
-        sqlx::query_as("SELECT id, booking_id, amount, refunded_amount FROM payments WHERE provider = 'portone' AND provider_tx_id = $1 FOR UPDATE")
+    let row: Option<(Uuid, i64, i64)> =
+        sqlx::query_as("SELECT id, amount, refunded_amount FROM payments WHERE provider = 'portone' AND provider_tx_id = $1 FOR UPDATE")
             .bind(payment_id)
             .fetch_optional(&mut *tx)
             .await?;
-    let Some((payment, booking, amount, recorded)) = row else {
-        tracing::info!(payment_id, "portone cancellation for a payment with no booking");
+    let Some((payment, amount, recorded)) = row else {
         return Ok(());
     };
     let cancelled = match s.providers.payment(payment_id, amount).await {
@@ -178,26 +188,50 @@ async fn sync_cancellation(s: &AppState, payment_id: &str, kind: &str, transacti
     let CancelPlan::External { status } = plan_cancellation(amount, recorded, cancelled)? else {
         return Ok(());
     };
+    record_external_cancel(
+        &mut tx,
+        Recorded {
+            payment,
+            booking,
+            kind,
+            cancelled,
+            status,
+        },
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// One cancellation made outside the app, as it is written to the payment, its dispute and its staff case.
+struct Recorded<'a> {
+    payment: Uuid,
+    booking: Uuid,
+    kind: &'a str,
+    cancelled: i64,
+    status: &'static str,
+}
+
+async fn record_external_cancel(tx: &mut sqlx::PgConnection, c: Recorded<'_>) -> ApiResult<()> {
     sqlx::query("UPDATE payments SET refunded_amount = $2, status = $3 WHERE id = $1")
-        .bind(payment)
-        .bind(cancelled)
-        .bind(status)
+        .bind(c.payment)
+        .bind(c.cancelled)
+        .bind(c.status)
         .execute(&mut *tx)
         .await?;
-    // Without a transaction id the cancelled amount still names this change, so a replay is recognised.
-    let key = transaction_id.map_or_else(|| format!("{payment_id}:{cancelled}"), str::to_string);
+    let key = format!("{}:{}", c.payment, c.cancelled);
     let opened: Option<Uuid> =
         sqlx::query_scalar("INSERT INTO disputes (payment_id, provider_tx_id, kind) VALUES ($1, $2, $3) ON CONFLICT (provider_tx_id) DO NOTHING RETURNING id")
-            .bind(payment)
+            .bind(c.payment)
             .bind(&key)
-            .bind(kind)
+            .bind(c.kind)
             .fetch_optional(&mut *tx)
             .await?;
     if opened.is_some() {
         cases::insert(
             &mut *tx,
             NewCase {
-                booking: Some(booking),
+                booking: Some(c.booking),
                 kind: "payment_dispute",
                 source: "provider",
                 reporter: "system",
@@ -208,7 +242,6 @@ async fn sync_cancellation(s: &AppState, payment_id: &str, kind: &str, transacti
         )
         .await?;
     }
-    tx.commit().await?;
     Ok(())
 }
 

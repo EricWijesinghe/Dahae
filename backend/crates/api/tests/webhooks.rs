@@ -288,6 +288,37 @@ async fn portone_cancel_from_the_console_is_recorded_and_flagged_once(pool: PgPo
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn portone_full_cancel_from_the_console_refunds_the_payment_and_flags_it_once(pool: PgPool) {
+    let (booking, payment) = paid_booking(&pool, CANCEL_PAYMENT, 0).await;
+    let app = prod_app(pool.clone(), &portone_stand_in(TOTAL).await);
+    let body = cancel_event("Transaction.Cancelled", CANCEL_PAYMENT, "tx_console_full");
+    let headers = signed_headers(KEY, "msg_full_1", &body);
+    assert_eq!(post(&app, "/v1/webhooks/portone", &headers, body.clone()).await, StatusCode::OK);
+    assert_eq!(payment_state(&pool, payment).await, (TOTAL, "refunded".into()), "full refund follows PortOne");
+    assert_eq!(flags(&pool, booking).await, (1, 1), "one dispute and one staff case");
+    let replay = signed_headers(KEY, "msg_full_2", &body);
+    assert_eq!(post(&app, "/v1/webhooks/portone", &replay, body).await, StatusCode::OK);
+    assert_eq!(payment_state(&pool, payment).await, (TOTAL, "refunded".into()), "the replay changes nothing");
+    assert_eq!(flags(&pool, booking).await, (1, 1), "the replay opens nothing new");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn each_console_partial_cancel_opens_its_own_dispute(pool: PgPool) {
+    let (booking, payment) = paid_booking(&pool, CANCEL_PAYMENT, 0).await;
+    let first = prod_app(pool.clone(), &portone_stand_in(30_000).await);
+    // PortOne may send the original transaction id on every cancel, so the second event repeats it.
+    let body = cancel_event("Transaction.PartialCancelled", CANCEL_PAYMENT, "tx_original");
+    let headers = signed_headers(KEY, "msg_second_1", &body);
+    assert_eq!(post(&first, "/v1/webhooks/portone", &headers, body.clone()).await, StatusCode::OK);
+    assert_eq!(flags(&pool, booking).await, (1, 1));
+    let second = prod_app(pool.clone(), &portone_stand_in(40_000).await);
+    let headers = signed_headers(KEY, "msg_second_2", &body);
+    assert_eq!(post(&second, "/v1/webhooks/portone", &headers, body).await, StatusCode::OK);
+    assert_eq!(payment_state(&pool, payment).await, (40_000, "partially_refunded".into()));
+    assert_eq!(flags(&pool, booking).await, (2, 2), "the second console refund opens its own dispute and case");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn cancel_we_made_is_recorded_without_a_flag(pool: PgPool) {
     let (booking, payment) = paid_booking(&pool, CANCEL_PAYMENT, 30_000).await;
     let app = prod_app(pool.clone(), &portone_stand_in(30_000).await);
