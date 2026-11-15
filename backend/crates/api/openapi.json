@@ -1514,6 +1514,23 @@
         }
       }
     },
+    "/v1/partner/quality": {
+      "get": {
+        "operationId": "partnerGetQuality",
+        "tags": [
+          "pro"
+        ],
+        "summary": "Own quality score, status and tips",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/partner/me": {
       "get": {
         "operationId": "partnerGetMe",
@@ -2831,6 +2848,28 @@
           "admin"
         ],
         "summary": "Approve a team member's invite (audited)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/pros/{id}/quality": {
+      "get": {
+        "operationId": "adminGetProQuality",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Quality score, status and tips of a pro",
         "parameters": [
           {
             "$ref": "#/components/parameters/Id"
