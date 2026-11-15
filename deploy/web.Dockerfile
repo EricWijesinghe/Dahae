@@ -32,10 +32,19 @@ RUN python3 -I tool/gen_arb.py \
  && cd apps/console && flutter build web --release --wasm --no-web-resources-cdn --base-href /admin/ \
  && cd ../customer && flutter build web --release --wasm --no-web-resources-cdn --base-href /app/
 
+FROM caddy:2.11.9-builder@sha256:345264d8c6b50f44f4a4d507d4e6b6bcae40eef2f210d70f76e717fd8cc31baf AS caddy
+# The stock 2.11.9 binary ships golang.org/x/net and klauspost/compress with fixed HIGH advisories
+# (GO-2026-6860, GO-2026-6865). Same Caddy version, rebuilt against the patched modules.
+# shortcut: pinned by hand, drop the replaces once a Caddy release ships these versions.
+RUN xcaddy build v2.11.9 --output /usr/bin/caddy \
+      --replace golang.org/x/net=golang.org/x/net@v0.62.0 \
+      --replace github.com/klauspost/compress=github.com/klauspost/compress@v1.20.4
+
 # Runs as root inside the container, but deploy/docker-compose.yml drops every capability except
 # NET_BIND_SERVICE and makes the filesystem read-only. A non-root USER here would lock existing servers
 # out of their root-owned certificate volume on the next `dahae update`.
 FROM caddy:2.11.9@sha256:4e2425f6009577e7c651010f16679c28f7d12df3e7b1914f941a7a3370746b3c
+COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
 # Security fixes released since the base digest (the release scan blocks on fixable HIGH/CRITICAL).
 RUN apk upgrade --no-cache
 ARG APP_VERSION=dev
