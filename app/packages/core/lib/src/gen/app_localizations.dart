@@ -2764,7 +2764,7 @@ abstract class T {
   /// No description provided for @err_studio_too_large.
   ///
   /// In ko, this message translates to:
-  /// **'원룸 청소는 10평 이하 집만 가능해요'**
+  /// **'원룸 청소는 10평 이하만 가능해요.'**
   String get err_studio_too_large;
 
   /// No description provided for @err_date_out_of_range.
@@ -3046,7 +3046,7 @@ abstract class T {
   /// No description provided for @svcDesc_studio.
   ///
   /// In ko, this message translates to:
-  /// **'방 1개, 화장실 1개인 10평 이하 원룸을 2시간 동안 꼼꼼히 청소해요.'**
+  /// **'방 1개, 화장실 1개인 10평 이하 원룸을 2시간 동안 꼼꼼하게 청소해요.'**
   String get svcDesc_studio;
 
   /// No description provided for @svcDesc_kitchen.
@@ -3412,7 +3412,7 @@ abstract class T {
   /// No description provided for @addressDetail.
   ///
   /// In ko, this message translates to:
-  /// **'상세 주소'**
+  /// **'상세주소'**
   String get addressDetail;
 
   /// No description provided for @addressSize.
@@ -3526,7 +3526,7 @@ abstract class T {
   /// No description provided for @prepBody.
   ///
   /// In ko, this message translates to:
-  /// **'준비되지 않으면 일부 작업이 제한될 수 있어요'**
+  /// **'준비하지 않으면 일부 서비스가 제한될 수 있어요'**
   String get prepBody;
 
   /// No description provided for @prepAsk.
@@ -7288,7 +7288,7 @@ abstract class T {
   /// No description provided for @hgSizeQuestion.
   ///
   /// In ko, this message translates to:
-  /// **'집 크기를 골라 주세요'**
+  /// **'집 크기는 어떻게 되나요?'**
   String get hgSizeQuestion;
 
   /// No description provided for @hgHomeOneTwo.
@@ -7752,6 +7752,48 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'줄바꿈이나 조절 문자는 넣을 수 없어요.'**
   String get ntErrChars;
+
+  /// No description provided for @unit_mattress.
+  ///
+  /// In ko, this message translates to:
+  /// **'매트리스'**
+  String get unit_mattress;
+
+  /// No description provided for @unitShort_mattress.
+  ///
+  /// In ko, this message translates to:
+  /// **'매트리스'**
+  String get unitShort_mattress;
+
+  /// No description provided for @svc_whole_home.
+  ///
+  /// In ko, this message translates to:
+  /// **'집 전체 청소'**
+  String get svc_whole_home;
+
+  /// No description provided for @svcShort_whole_home.
+  ///
+  /// In ko, this message translates to:
+  /// **'집 전체'**
+  String get svcShort_whole_home;
+
+  /// No description provided for @svcShort_window.
+  ///
+  /// In ko, this message translates to:
+  /// **'창문'**
+  String get svcShort_window;
+
+  /// No description provided for @svcShort_disinfection.
+  ///
+  /// In ko, this message translates to:
+  /// **'방역·소독'**
+  String get svcShort_disinfection;
+
+  /// No description provided for @svcNote_studio_limit.
+  ///
+  /// In ko, this message translates to:
+  /// **'※ 10평을 넘는 집은 원룸 청소를 예약할 수 없어요. 상담으로 맞는 서비스를 안내해 드려요.'**
+  String get svcNote_studio_limit;
 
   /// No description provided for @cOps.
   ///
