@@ -142,10 +142,29 @@ process holds port 80 or 443.
   as the offsite copy (`*.sql.gz.enc`, opened again by `dahae restore`), so no plaintext dump stays on
   the server. Plaintext dumps left by older installs are sealed on the next backup. The one exception:
   if sealing fails, the plaintext copy is kept (never deleted before its `.enc` exists), `dahae backup`
-  exits with an error, and update, rollback and restore refuse to run until a backup completes. The optional offsite copy (setup wizard, S3-compatible) is sealed the same way. There is no WAL archiving, so the recovery point objective is **24 hours**
-  (up to one day of bookings can be lost). Recovery time on a fresh VPS is about **1 hour**: run the
+  exits with an error, and update, rollback and restore refuse to run until a backup completes. The optional offsite copy (setup wizard, S3-compatible) is sealed the same way. Without WAL archiving the recovery point objective is **24 hours**
+  (up to one day of bookings can be lost). With WAL archiving on (engineer setup below) it drops to
+  **about 5 minutes**. Recovery time on a fresh VPS is about **1 hour**: run the
   installer, put the old `.env` back, `sudo dahae restore-offsite <name>`. Without offsite backups a
   lost disk is a total loss: configure them before launch.
+- **WAL archiving (engineer path, optional).** Point-in-time recovery to S3-compatible storage with
+  pgBackRest, sealed with its own cipher. The owner sees no terminal step: restore is a setup-wizard
+  step (in progress). Setup, on the server, in the install folder:
+  1. Copy `deploy/wal` to `/opt/malkkeum/wal`. Put these in `.env` (never commit them):
+     `WAL_S3_BUCKET`, `WAL_S3_ENDPOINT`, `WAL_S3_KEY`, `WAL_S3_SECRET`, `WAL_CIPHER_PASS` (a long random
+     string; without it the archive cannot be read, so keep a copy off the server like `DATA_KEY`).
+  2. `bash wal/wal-setup.sh`: builds the pgBackRest database image, turns `WAL_ARCHIVE_MODE` on,
+     creates the stanza, checks archiving and takes the first full base backup.
+  3. Schedule `bash wal/base-backup.sh` weekly (full base backup plus a check). The daily `pg_dump`
+     stays as it is.
+  - `pg_stat_statements` is loaded on every database. Existing installs run once:
+    `docker compose exec -T db psql -U app -d cleaning -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements"`.
+  - If archiving fails, WAL piles up on the database disk: check `pgbackrest --stanza=malkkeum check`
+    after every change and keep the disk alert on.
+  - Restore (engineer): `bash scripts/ci/backup-drill.sh` with `WAL_DRILL=1` and `PGBACKREST_*` set
+    restores the newest backup, replays the archive and compares row counts with a seeded database.
+    For a real recovery, run `pgbackrest --stanza=malkkeum --type=time "--target=<ISO time>" restore`
+    into an empty data volume with the same image, then start the stack.
 - **`DATA_KEY` and `.env` are not in any backup.** `/opt/malkkeum/.env` holds `DATA_KEY` (it encrypts
   integration keys, payout accounts and the offsite backups), `JWT_SECRET` and the database passwords.
   Offsite backups cannot be decrypted without the same `DATA_KEY`. Right after install, copy `.env` to

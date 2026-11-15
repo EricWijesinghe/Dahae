@@ -9,6 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
+- Database point-in-time recovery (engineer path, optional): pgBackRest WAL archiving to S3-compatible storage with its own cipher (`deploy/wal`, `WAL_ARCHIVE_MODE` off by default), weekly full base backup script, `pg_stat_statements` loaded on every database, restore leg in `scripts/ci/backup-drill.sh` (`WAL_DRILL=1`). Recovery point objective is about 5 minutes once archiving is on, 24 hours before. Owner setting: none yet; the restore step belongs to the setup wizard.
 - Audit and consent records are append-only (migration 0320): the database refuses edits and deletes. Refunds, payout reveals and finance exports write their audit row in the same transaction as the action.
 - Account deletion: a finished booking (completed or cancelled) loses its street address, answers, visit notes and household profile, keeping the district, size, dwelling type, amounts, dates and status for the 5-year record; open bookings are cleared by the hourly purge once they are completed or cancelled.
 - Team members invited by a partner wait for the platform owner's approval before they see customer addresses or get jobs (new `pending_approval` state, `POST /v1/admin/team-members/{id}/approve`, approvals audited). Existing active members are unchanged. Owner setting: none; the approval is a console action.
