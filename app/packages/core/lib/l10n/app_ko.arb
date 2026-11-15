@@ -1973,6 +1973,7 @@
  },
  "quoteResend": "재발송",
  "quoteRevise": "수정",
+ "quoteResent": "견적을 다시 보냈어요",
  "quoteSentChip": "견적 발송",
  "locUseCurrent": "현재 위치로 찾기",
  "locConsentTitle": "위치기반서비스 이용약관 동의",

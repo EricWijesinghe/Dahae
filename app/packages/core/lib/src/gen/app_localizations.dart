@@ -7411,6 +7411,12 @@ abstract class T {
   /// **'수정'**
   String get quoteRevise;
 
+  /// No description provided for @quoteResent.
+  ///
+  /// In ko, this message translates to:
+  /// **'견적을 다시 보냈어요'**
+  String get quoteResent;
+
   /// No description provided for @quoteSentChip.
   ///
   /// In ko, this message translates to:

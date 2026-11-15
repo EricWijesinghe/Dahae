@@ -578,11 +578,43 @@ Widget _quoteEntry(
       card,
       Row(
         children: [
-          TextButton(onPressed: openDesk, child: Text(t.quoteResend)),
+          _ResendQuoteButton(bookingId: id, label: t.quoteResend),
           TextButton(onPressed: openDesk, child: Text(t.quoteRevise)),
         ],
       ),
     ],
+  );
+}
+
+/// Re-sends the last quote card unchanged (POST resend-quote); the thread refreshes on the live event.
+class _ResendQuoteButton extends StatefulWidget {
+  const _ResendQuoteButton({required this.bookingId, required this.label});
+  final String bookingId;
+  final String label;
+
+  @override
+  State<_ResendQuoteButton> createState() => _ResendQuoteButtonState();
+}
+
+class _ResendQuoteButtonState extends State<_ResendQuoteButton> {
+  bool _busy = false;
+
+  Future<void> _resend() async {
+    setState(() => _busy = true);
+    try {
+      await context.api.post('/admin/bookings/${widget.bookingId}/resend-quote', {});
+      if (mounted) showToast(context, context.t.quoteResent);
+    } catch (e) {
+      if (mounted) showToast(context, context.t.error(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: _busy ? null : _resend,
+    child: Text(widget.label),
   );
 }
 
