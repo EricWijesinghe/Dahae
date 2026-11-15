@@ -10,7 +10,13 @@ const APPROVAL_VERSION: i64 = 335;
 #[sqlx::test(migrations = false)]
 async fn invites_waiting_before_the_approval_migration_move_to_pending_approval(db: PgPool) {
     let mut before = Migrator::new(Path::new("../../migrations")).await.expect("migrator");
-    before.migrations = before.migrations.iter().filter(|m| m.version < APPROVAL_VERSION).cloned().collect::<Vec<_>>().into();
+    before.migrations = before
+        .migrations
+        .iter()
+        .filter(|m| m.version < APPROVAL_VERSION)
+        .cloned()
+        .collect::<Vec<_>>()
+        .into();
     before.run(&db).await.expect("schema before the approval migration");
 
     let pro: Uuid = sqlx::query_scalar("INSERT INTO pros (phone) VALUES ('01099990001') RETURNING id")
@@ -25,7 +31,10 @@ async fn invites_waiting_before_the_approval_migration_move_to_pending_approval(
     .await
     .expect("invited member");
 
-    sqlx::migrate!("../../migrations").run(&db).await.expect("approval migration runs on existing invites");
+    sqlx::migrate!("../../migrations")
+        .run(&db)
+        .await
+        .expect("approval migration runs on existing invites");
 
     let status: String = sqlx::query_scalar("SELECT invite_status FROM team_members WHERE id = $1")
         .bind(invited)

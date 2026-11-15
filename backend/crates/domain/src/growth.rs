@@ -30,7 +30,11 @@ pub struct WelcomeOffer {
 
 impl Default for WelcomeOffer {
     fn default() -> Self {
-        Self { enabled: false, kind: DiscountKind::Amount, value: 5_000 }
+        Self {
+            enabled: false,
+            kind: DiscountKind::Amount,
+            value: 5_000,
+        }
     }
 }
 
@@ -40,7 +44,11 @@ impl WelcomeOffer {
             DiscountKind::Amount => (1, MAX_AMOUNT),
             DiscountKind::Percent => (1, MAX_PERCENT),
         };
-        if (min..=max).contains(&self.value) { Ok(()) } else { Err(DomainError::OutOfRange("welcome_value")) }
+        if (min..=max).contains(&self.value) {
+            Ok(())
+        } else {
+            Err(DomainError::OutOfRange("welcome_value"))
+        }
     }
 
     /// Discount for a list price, never more than the price itself.
@@ -86,7 +94,11 @@ impl Default for ReferralOffer {
 
 impl ReferralOffer {
     pub fn validate(&self) -> Result<(), DomainError> {
-        if (1..=MAX_AMOUNT).contains(&self.amount) { Ok(()) } else { Err(DomainError::OutOfRange("referral_amount")) }
+        if (1..=MAX_AMOUNT).contains(&self.amount) {
+            Ok(())
+        } else {
+            Err(DomainError::OutOfRange("referral_amount"))
+        }
     }
 }
 
@@ -156,7 +168,11 @@ pub fn mask_name(name: &str) -> String {
         [only] => format!("{only}*"),
         [first, .., last] => {
             let middle = "*".repeat(chars.len() - 2);
-            if chars.len() == 2 { format!("{first}*") } else { format!("{first}{middle}{last}") }
+            if chars.len() == 2 {
+                format!("{first}*")
+            } else {
+                format!("{first}{middle}{last}")
+            }
         }
     }
 }
@@ -166,13 +182,23 @@ pub fn mask_name(name: &str) -> String {
 pub fn redact_contacts(text: &str) -> String {
     let words: Vec<String> = text
         .split(' ')
-        .map(|w| if w.contains('@') && w.contains('.') { "***".to_string() } else { w.to_string() })
+        .map(|w| {
+            if w.contains('@') && w.contains('.') {
+                "***".to_string()
+            } else {
+                w.to_string()
+            }
+        })
         .collect();
     let joined = words.join(" ");
     let mut out = String::with_capacity(joined.len());
     let mut run = String::new();
     let flush = |run: &mut String, out: &mut String| {
-        if run.chars().filter(char::is_ascii_digit).count() >= 4 { out.push_str("***") } else { out.push_str(run) }
+        if run.chars().filter(char::is_ascii_digit).count() >= 4 {
+            out.push_str("***")
+        } else {
+            out.push_str(run)
+        }
         run.clear();
     };
     for c in joined.chars() {
@@ -192,7 +218,10 @@ const CLAIM_TERMS: [&str; 8] = ["환불", "할인", "쿠폰", "보상", "refund"
 
 /// Korean digit words 일..구 (1..9), the value a single word stands for.
 fn korean_digit(c: char) -> Option<u64> {
-    ['일', '이', '삼', '사', '오', '육', '칠', '팔', '구'].iter().position(|&k| k == c).map(|i| i as u64 + 1)
+    ['일', '이', '삼', '사', '오', '육', '칠', '팔', '구']
+        .iter()
+        .position(|&k| k == c)
+        .map(|i| i as u64 + 1)
 }
 
 /// Small units 십, 백, 천 and big units 만, 억 that spell amounts such as `3천` or `6만 3천`.
@@ -260,7 +289,12 @@ fn run_before(chars: &[char], end: usize) -> String {
 /// Digits from `start` on, leading spaces skipped (`₩60,000`, `KRW 60000`). Spelled words stop it,
 /// since a particle such as `이` often follows the figure (`₩60,000이에요`).
 fn run_after(chars: &[char], start: usize) -> String {
-    chars.iter().skip(start).skip_while(|&&c| c == ' ').take_while(|&&c| c.is_ascii_digit() || c == ',').collect()
+    chars
+        .iter()
+        .skip(start)
+        .skip_while(|&&c| c == ' ')
+        .take_while(|&&c| c.is_ascii_digit() || c == ',')
+        .collect()
 }
 
 /// True when `word` (lowercase ASCII) starts at `i` as a whole word, so `won` does not match `wonder`.
@@ -302,8 +336,7 @@ pub fn ungrounded_claim(reply: &str, facts: &str) -> bool {
     let known = known_amounts(facts);
     let facts_lower = facts.to_lowercase();
     let reply_lower = reply.to_lowercase();
-    won_amounts(reply).iter().any(|amount| !known.contains(amount))
-        || CLAIM_TERMS.iter().any(|term| reply_lower.contains(term) && !facts_lower.contains(term))
+    won_amounts(reply).iter().any(|amount| !known.contains(amount)) || CLAIM_TERMS.iter().any(|term| reply_lower.contains(term) && !facts_lower.contains(term))
 }
 
 #[cfg(test)]
@@ -311,12 +344,21 @@ mod tests {
     use super::*;
 
     fn price(list: i64) -> PriceBreakdown {
-        PriceBreakdown { list_price: Won(list), discount: Won::ZERO, total: Won(list), minutes: 60 }
+        PriceBreakdown {
+            list_price: Won(list),
+            discount: Won::ZERO,
+            total: Won(list),
+            minutes: 60,
+        }
     }
 
     #[test]
     fn welcome_is_first_booking_only_and_never_stacks_on_coupons() {
-        let on = WelcomeOffer { enabled: true, kind: DiscountKind::Amount, value: 5_000 };
+        let on = WelcomeOffer {
+            enabled: true,
+            kind: DiscountKind::Amount,
+            value: 5_000,
+        };
         assert!(welcome_applies(&on, 0, false));
         assert!(!welcome_applies(&on, 1, false), "second booking");
         assert!(!welcome_applies(&on, 0, true), "coupon wins, no stacking");
@@ -325,9 +367,17 @@ mod tests {
 
     #[test]
     fn welcome_discount_is_capped_and_rounded_server_side() {
-        let amount = WelcomeOffer { enabled: true, kind: DiscountKind::Amount, value: 10_000 };
+        let amount = WelcomeOffer {
+            enabled: true,
+            kind: DiscountKind::Amount,
+            value: 10_000,
+        };
         assert_eq!(amount.discount_for(Won(7_000)), Won(7_000), "never below zero");
-        let pct = WelcomeOffer { enabled: true, kind: DiscountKind::Percent, value: 10 };
+        let pct = WelcomeOffer {
+            enabled: true,
+            kind: DiscountKind::Percent,
+            value: 10,
+        };
         assert_eq!(pct.discount_for(Won(52_000)), Won(5_200).round100());
         assert_eq!(WelcomeOffer { enabled: false, ..pct }.discount_for(Won(52_000)), Won::ZERO);
         let p = apply_welcome(price(52_000), &amount);
@@ -336,10 +386,41 @@ mod tests {
 
     #[test]
     fn welcome_config_bounds() {
-        assert!(WelcomeOffer { enabled: true, kind: DiscountKind::Percent, value: 51 }.validate().is_err());
-        assert!(WelcomeOffer { enabled: true, kind: DiscountKind::Percent, value: 50 }.validate().is_ok());
-        assert!(WelcomeOffer { enabled: true, kind: DiscountKind::Amount, value: 0 }.validate().is_err());
-        assert!(ReferralOffer { enabled: true, amount: 100_001 }.validate().is_err());
+        assert!(
+            WelcomeOffer {
+                enabled: true,
+                kind: DiscountKind::Percent,
+                value: 51
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            WelcomeOffer {
+                enabled: true,
+                kind: DiscountKind::Percent,
+                value: 50
+            }
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            WelcomeOffer {
+                enabled: true,
+                kind: DiscountKind::Amount,
+                value: 0
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            ReferralOffer {
+                enabled: true,
+                amount: 100_001
+            }
+            .validate()
+            .is_err()
+        );
     }
 
     #[test]

@@ -287,7 +287,10 @@ pub struct Attempt {
 }
 
 fn failed() -> Attempt {
-    Attempt { failed: true, ..Attempt::default() }
+    Attempt {
+        failed: true,
+        ..Attempt::default()
+    }
 }
 
 /// Only a complete `end_turn` with text is shown. Refusals and truncation hand off; bad JSON is a failed call.
@@ -306,7 +309,11 @@ pub fn parse_response(bytes: &[u8]) -> Attempt {
     let text = (resp.stop_reason.as_deref() == Some("end_turn"))
         .then(|| joined.trim().to_string())
         .filter(|t| !t.is_empty());
-    Attempt { text, usage: resp.usage, failed: false }
+    Attempt {
+        text,
+        usage: resp.usage,
+        failed: false,
+    }
 }
 
 /// Outcome recorded in `ai_usage`. A failed call is `error`: it spends no cap and opens no case.
@@ -571,17 +578,16 @@ pub async fn answer(s: &AppState, thread: Uuid) -> ApiResult<()> {
 /// Month-to-date usage for the owner's inbox line (KST month).
 pub async fn monthly_usage(db: &PgPool) -> Result<Value, sqlx::Error> {
     // `errors_last_hour` drives the console's outage banner; failed calls are counted, never billed to caps.
-    let (calls, answered, errors, errors_last_hour, input, output, cache_read, cache_write): (i64, i64, i64, i64, i64, i64, i64, i64) =
-        sqlx::query_as(
-            "SELECT count(*), count(*) FILTER (WHERE outcome = 'answered'),
+    let (calls, answered, errors, errors_last_hour, input, output, cache_read, cache_write): (i64, i64, i64, i64, i64, i64, i64, i64) = sqlx::query_as(
+        "SELECT count(*), count(*) FILTER (WHERE outcome = 'answered'),
                 count(*) FILTER (WHERE outcome = 'error'),
                 count(*) FILTER (WHERE outcome = 'error' AND created_at > now() - interval '1 hour'),
                 COALESCE(sum(input_tokens), 0)::bigint, COALESCE(sum(output_tokens), 0)::bigint,
                 COALESCE(sum(cache_read_tokens), 0)::bigint, COALESCE(sum(cache_write_tokens), 0)::bigint
          FROM ai_usage WHERE created_at >= date_trunc('month', now() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul'",
-        )
-        .fetch_one(db)
-        .await?;
+    )
+    .fetch_one(db)
+    .await?;
     Ok(json!({
         "calls": calls,
         "answered": answered,

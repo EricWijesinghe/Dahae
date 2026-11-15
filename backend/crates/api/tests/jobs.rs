@@ -444,7 +444,14 @@ async fn completion_by_the_owner_and_by_a_team_member_write_the_same_state(pool:
     assert_eq!(st, StatusCode::OK, "{team}");
     let member_id: Uuid = team["id"].as_str().expect("member id").parse().expect("uuid");
     let platform = admin(&pool).await;
-    let (st, b) = call(&app, "POST", &format!("/v1/admin/team-members/{member_id}/approve"), Some(platform.as_str()), None).await;
+    let (st, b) = call(
+        &app,
+        "POST",
+        &format!("/v1/admin/team-members/{member_id}/approve"),
+        Some(platform.as_str()),
+        None,
+    )
+    .await;
     assert_eq!(st, StatusCode::OK, "{b}");
     let (st, b) = call(
         &app,

@@ -88,7 +88,12 @@ async fn world(db: PgPool, mode: Mode) -> World {
     cfg.anthropic_base_url = fake_anthropic(fake.clone()).await;
     let state = build_state(db.clone(), cfg.clone()).expect("state");
     let mut integ = Integrations::from_config(&cfg);
-    integ.ai = Some(AiConfig { api_key: "sk-ant-test-key".into(), model: DEFAULT_MODEL.into(), mode, caps: Caps::default() });
+    integ.ai = Some(AiConfig {
+        api_key: "sk-ant-test-key".into(),
+        model: DEFAULT_MODEL.into(),
+        mode,
+        caps: Caps::default(),
+    });
     state.providers.set_integrations(integ);
     let app = routes::router(state.clone());
     let (customer, _) = login(&app, "010-5100-0001", "customer").await;
@@ -96,7 +101,13 @@ async fn world(db: PgPool, mode: Mode) -> World {
     assert_eq!(st, StatusCode::OK, "{opened}");
     let thread = opened["id"].as_str().expect("thread id").parse().expect("uuid");
     set_hours(&db, false).await;
-    World { app, state, fake, thread, customer }
+    World {
+        app,
+        state,
+        fake,
+        thread,
+        customer,
+    }
 }
 
 async fn set_hours(db: &PgPool, open_all_day: bool) {
@@ -130,12 +141,11 @@ async fn ai_replies(db: &PgPool, thread: Uuid) -> Vec<Value> {
 }
 
 async fn admin_token(db: &PgPool) -> String {
-    let id: Uuid = sqlx::query_scalar(
-        "INSERT INTO staff (email, name, password_hash, role) VALUES ('ai-admin@test.local', 'Owner', 'unused', 'admin') RETURNING id",
-    )
-    .fetch_one(db)
-    .await
-    .expect("admin row");
+    let id: Uuid =
+        sqlx::query_scalar("INSERT INTO staff (email, name, password_hash, role) VALUES ('ai-admin@test.local', 'Owner', 'unused', 'admin') RETURNING id")
+            .fetch_one(db)
+            .await
+            .expect("admin row");
     auth::issue_access(SECRET, id, Role::StaffAdmin).expect("admin token")
 }
 
@@ -176,7 +186,10 @@ async fn quick_customer_messages_get_one_ai_reply_through_the_debounce(pool: PgP
     assert_eq!(headers["anthropic-beta"], "server-side-fallback-2026-07-01");
     assert_eq!(body["fallbacks"], "default");
     assert_eq!(body["model"], DEFAULT_MODEL);
-    assert!(body["system"][1]["text"].as_str().expect("shop block").contains("studio"), "catalogue in the cached block");
+    assert!(
+        body["system"][1]["text"].as_str().expect("shop block").contains("studio"),
+        "catalogue in the cached block"
+    );
     assert_eq!(body["system"][1]["cache_control"]["type"], "ephemeral");
     let last = body["messages"].as_array().expect("turns").last().expect("a turn");
     assert_eq!(last["role"], "user");
@@ -329,8 +342,16 @@ async fn customers_cannot_pause_the_ai(pool: PgPool) {
 /// Swaps in an AI config with a different thread-hourly cap, keeping the rest of the test wiring.
 fn set_thread_cap(w: &World, thread_hourly: u32) {
     let mut integ = Integrations::from_config(&common::test_config());
-    let caps = Caps { thread_hourly, ..Caps::default() };
-    integ.ai = Some(AiConfig { api_key: "sk-ant-test-key".into(), model: DEFAULT_MODEL.into(), mode: Mode::AlwaysFirst, caps });
+    let caps = Caps {
+        thread_hourly,
+        ..Caps::default()
+    };
+    integ.ai = Some(AiConfig {
+        api_key: "sk-ant-test-key".into(),
+        model: DEFAULT_MODEL.into(),
+        mode: Mode::AlwaysFirst,
+        caps,
+    });
     w.state.providers.set_integrations(integ);
 }
 
@@ -350,7 +371,14 @@ async fn provider_failure_is_an_error_outcome_that_spends_no_cap_and_opens_no_ca
     let w = world(pool.clone(), Mode::AlwaysFirst).await;
     let c = customer(&w.app, &pool, "010-5100-0009").await;
     let (booking, _) = book(&w.app, &c, 10, None).await;
-    let (st, opened) = call(&w.app, "POST", "/v1/chat/threads", Some(c.token.as_str()), Some(json!({ "topic": "job", "booking_id": booking }))).await;
+    let (st, opened) = call(
+        &w.app,
+        "POST",
+        "/v1/chat/threads",
+        Some(c.token.as_str()),
+        Some(json!({ "topic": "job", "booking_id": booking })),
+    )
+    .await;
     assert_eq!(st, StatusCode::OK, "{opened}");
     let job_thread: Uuid = opened["id"].as_str().expect("thread id").parse().expect("uuid");
 
@@ -423,7 +451,10 @@ async fn provider_outage_stops_calling_the_provider_after_the_failed_call_ceilin
         answer(&w.state, w.thread).await.expect("answer");
     }
     let calls = w.fake.calls.lock().expect("calls").len();
-    assert_eq!(calls as i64, ERROR_THREAD_HOURLY_CAP, "each failed call is one provider call, then the ceiling holds");
+    assert_eq!(
+        calls as i64, ERROR_THREAD_HOURLY_CAP,
+        "each failed call is one provider call, then the ceiling holds"
+    );
     let errors: i64 = sqlx::query_scalar("SELECT count(*) FROM ai_usage WHERE thread_id = $1 AND outcome = 'error'")
         .bind(w.thread)
         .fetch_one(&pool)
