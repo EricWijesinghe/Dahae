@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1238,10 +1239,10 @@ class TKo extends T {
   String get unitTitle_disinfection => '방역 종류를\n골라 주세요.';
 
   @override
-  String get unit_window_small => '작은 창';
+  String get unit_window_small => '작은 창 (1m 미만)';
 
   @override
-  String get unit_window_large => '큰 창';
+  String get unit_window_large => '큰 창 (1m 이상)';
 
   @override
   String get unit_pest => '해충 방역';
@@ -1280,10 +1281,10 @@ class TKo extends T {
   String get unitShort_l_shape => 'L자';
 
   @override
-  String get unitShort_small => '작은 창';
+  String get unitShort_small => '작은 창 (1m 미만)';
 
   @override
-  String get unitShort_large => '큰 창';
+  String get unitShort_large => '큰 창 (1m 이상)';
 
   @override
   String get unitShort_pest => '해충 방역';
@@ -5474,6 +5475,20 @@ class TKo extends T {
 
   @override
   String get qaVat => '부가세 10%';
+
+  @override
+  String get quoteSizeTitle => '선택한 구조와 저장된 평수가 달라요';
+
+  @override
+  String quoteSizeBody(String size, String layout) {
+    return '이 주소는 $size이라 $layout 구조와 맞지 않을 수 있어요.';
+  }
+
+  @override
+  String get quoteSizeChangeLayout => '구조 바꾸기';
+
+  @override
+  String get quoteSizeChangeSize => '평수 고치기';
 
   @override
   String get rnwTitle => '갱신 일정';

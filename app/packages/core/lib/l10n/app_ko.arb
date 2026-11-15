@@ -515,8 +515,8 @@
  "svcDesc_disinfection": "필요한 방역과 소독을 골라 주세요",
  "unitTitle_window": "창문 크기와 개수를\n골라 주세요.",
  "unitTitle_disinfection": "방역 종류를\n골라 주세요.",
- "unit_window_small": "작은 창",
- "unit_window_large": "큰 창",
+ "unit_window_small": "작은 창 (1m 미만)",
+ "unit_window_large": "큰 창 (1m 이상)",
  "unit_pest": "해충 방역",
  "unit_mite_bedbug": "진드기·빈대 퇴치",
  "unit_sanitize": "살균·바이러스 소독",
@@ -529,8 +529,8 @@
  "unitShort_seat_3": "3인용",
  "unitShort_seat_4_plus": "4인용 이상",
  "unitShort_l_shape": "L자",
- "unitShort_small": "작은 창",
- "unitShort_large": "큰 창",
+ "unitShort_small": "작은 창 (1m 미만)",
+ "unitShort_large": "큰 창 (1m 이상)",
  "unitShort_pest": "해충 방역",
  "unitShort_mite_bedbug": "진드기·빈대",
  "unitShort_sanitize": "살균·소독",
@@ -2724,6 +2724,20 @@
  "nameNone": "이름 없음",
  "qaTotal": "합계",
  "qaVat": "부가세 10%",
+ "quoteSizeTitle": "선택한 구조와 저장된 평수가 달라요",
+ "quoteSizeBody": "이 주소는 {size}이라 {layout} 구조와 맞지 않을 수 있어요.",
+ "@quoteSizeBody": {
+  "placeholders": {
+   "size": {
+    "type": "String"
+   },
+   "layout": {
+    "type": "String"
+   }
+  }
+ },
+ "quoteSizeChangeLayout": "구조 바꾸기",
+ "quoteSizeChangeSize": "평수 고치기",
  "rnwTitle": "갱신 일정",
  "rnwIntro": "도메인, 호스팅, 앱 스토어와 문자 계정의 갱신 날짜를 적어 두세요. 기한 30일 전과 7일 전에 휴대폰으로 문자를 보내 드려요.",
  "rnwAdd": "갱신 항목 추가",

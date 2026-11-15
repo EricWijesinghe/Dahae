@@ -51,6 +51,7 @@ Widget _quoteScreen(AppState app, {bool maintenance = false}) {
 Future<FakeApi> _pumpMoveOut(
   WidgetTester tester, {
   bool maintenance = false,
+  int sizePyeong = 30,
 }) async {
   setViewport(tester, phoneSize);
   final fake = FakeApi()
@@ -74,7 +75,7 @@ Future<FakeApi> _pumpMoveOut(
       ],
     })
     ..reply('GET', '/slots', [slotJson(8), slotJson(13)]);
-  stockCustomerApi(fake, addresses: [addressJson(sizePyeong: 30)]);
+  stockCustomerApi(fake, addresses: [addressJson(sizePyeong: sizePyeong)]);
   final env = await TestEnv.create(fake: fake);
   final app = AppState(env.api, FakeRealtime(env.api));
   await app.loadAll();
@@ -280,6 +281,36 @@ void main() {
   );
 
   testWidgets(
+    'quote address: 거실+방 2개 on an 8평 address shows the size note, and 구조 바꾸기 goes back to the layout page',
+    (tester) async {
+      await _pumpMoveOut(tester, sizePyeong: 8);
+      await _tap(tester, find.text(koT.type_standard));
+      await _tap(tester, find.text(koT.luggage_partly_unpacked));
+      await _tap(tester, _next());
+
+      await _tap(tester, find.text(koT.building_apartment));
+      await _tap(tester, find.text(koT.dfLayoutTwo));
+      await _tap(tester, find.text(koT.dfNone).last);
+      await _tap(tester, _next());
+
+      await _tap(tester, find.bySemanticsLabel(koT.dfCountN('2')).first);
+      await _tap(tester, find.text(koT.dfNone).last);
+      await _tap(tester, find.text(koT.hgFloorHigh));
+      await _tap(tester, _next());
+
+      expect(find.text(_chip(4)), findsOneWidget);
+      expect(find.text(koT.quoteSizeTitle), findsOneWidget);
+      expect(
+        find.text(koT.quoteSizeBody(koT.pyeong('8'), koT.dfLayoutTwo)),
+        findsOneWidget,
+      );
+      await _tap(tester, find.text(koT.quoteSizeChangeLayout));
+      expect(find.text(_chip(2)), findsOneWidget);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
     'move-out quote: six steps, AC add-on, review, then the request status opens',
     (tester) async {
       final fake = await _pumpMoveOut(tester);
@@ -331,6 +362,11 @@ void main() {
       // 4/6: the address (preselected) as a radio list.
       expect(find.text(_chip(4)), findsOneWidget);
       expect(find.text(koT.dfAddressTitle), findsOneWidget);
+      expect(
+        find.text(koT.quoteSizeTitle),
+        findsNothing,
+        reason: '30평 fits 거실+방 2개',
+      );
       await _tap(tester, _next());
 
       // 5/6: date, AM/PM arrival cards, AC add-on with catalog prices.

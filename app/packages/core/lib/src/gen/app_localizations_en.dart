@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1269,10 +1270,10 @@ class TEn extends T {
   String get unitTitle_disinfection => 'Choose the\ntreatments.';
 
   @override
-  String get unit_window_small => 'Small window';
+  String get unit_window_small => 'Small window (under 1 m)';
 
   @override
-  String get unit_window_large => 'Large window';
+  String get unit_window_large => 'Large window (1 m or more)';
 
   @override
   String get unit_pest => 'Pest control';
@@ -1311,10 +1312,10 @@ class TEn extends T {
   String get unitShort_l_shape => 'L-shape';
 
   @override
-  String get unitShort_small => 'Small window';
+  String get unitShort_small => 'Small window (under 1 m)';
 
   @override
-  String get unitShort_large => 'Large window';
+  String get unitShort_large => 'Large window (1 m or more)';
 
   @override
   String get unitShort_pest => 'Pest control';
@@ -5612,6 +5613,20 @@ class TEn extends T {
 
   @override
   String get qaVat => 'VAT 10%';
+
+  @override
+  String get quoteSizeTitle => 'The layout and the saved size don\'t match';
+
+  @override
+  String quoteSizeBody(String size, String layout) {
+    return 'This address is $size, which may not suit the $layout layout.';
+  }
+
+  @override
+  String get quoteSizeChangeLayout => 'Change layout';
+
+  @override
+  String get quoteSizeChangeSize => 'Change size';
 
   @override
   String get rnwTitle => 'Renewal calendar';

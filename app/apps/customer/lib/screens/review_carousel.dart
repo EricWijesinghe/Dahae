@@ -112,10 +112,7 @@ class _ReviewCarouselState extends State<ReviewCarousel> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      _ReviewHeader(
-                                        api: context.api,
-                                        row: r,
-                                      ),
+                                      _ReviewHeader(api: context.api, row: r),
                                       const SizedBox(height: Space.xs),
                                       Expanded(
                                         child: Text(
@@ -166,10 +163,7 @@ class _ReviewHeader extends StatelessWidget {
     final c = context.colors;
     return Row(
       children: [
-        RatingStars(
-          rating: (row['rating'] as num?)?.toDouble() ?? 5,
-          size: 12,
-        ),
+        RatingStars(rating: (row['rating'] as num?)?.toDouble() ?? 5, size: 12),
         const SizedBox(width: Space.xs),
         Expanded(
           child: Text(
