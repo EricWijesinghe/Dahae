@@ -245,7 +245,7 @@ S = {
   # chat
   "chatTitle": ["상담", "Chat"],
   "chatTeam": ["상담팀", "Support team"],
-  "chatHours": ["평일 09:00–18:00", "Weekdays 09:00–18:00"],
+  "chatHours": ["평일 09:00~18:00", "Weekdays 09:00~18:00"],
   "chatEmpty": ["궁금한 점이 있으면 언제든 물어보세요", "Questions? Ask us anytime"],
   "chatNew": ["새 상담", "New chat"],
   "chatTopicTitle": ["무엇이 궁금하세요?", "What's it about?"],
@@ -278,7 +278,7 @@ S = {
   "moreScope": ["서비스 범위", "What's included"],
   "morePayments": ["결제수단 관리", "Payment methods"],
   "moreCoupons": ["쿠폰", "Coupons"],
-  "morePoints": ["청소 포인트", "Points"],
+  "morePoints": ["포인트", "Points"],
   "moreAccount": ["계정정보", "Account"],
   "moreAddresses": ["주소 관리", "Addresses"],
   "moreNotices": ["공지사항", "Notices"],

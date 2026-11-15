@@ -2122,7 +2122,7 @@ class TEn extends T {
   String get chatTeam => 'Support team';
 
   @override
-  String get chatHours => 'Weekdays 09:00–18:00';
+  String get chatHours => 'Weekdays 09:00~18:00';
 
   @override
   String get chatEmpty => 'Questions? Ask us anytime';

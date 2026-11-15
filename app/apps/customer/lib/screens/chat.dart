@@ -243,7 +243,11 @@ class _ChatListTabState extends State<ChatListTab> {
                     child: Column(
                       children: [
                         _ThreadTile(thread: th, onReturn: reload),
-                        const Divider(height: 1),
+                        const Divider(
+                          height: 1,
+                          indent: Space.md,
+                          endIndent: Space.md,
+                        ),
                       ],
                     ),
                   ),
@@ -292,10 +296,7 @@ class _HoursBar extends StatelessWidget {
             child: Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(
-                    text: '${t.chatHoursTitle} · $hours',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+                  TextSpan(text: '${t.chatHoursTitle} · $hours'),
                   TextSpan(text: ' · ${t.chatReplyFast}'),
                 ],
               ),
