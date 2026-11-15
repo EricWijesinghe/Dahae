@@ -217,13 +217,23 @@ fn is_amount_char(c: char) -> bool {
     c.is_ascii_digit() || c == ',' || korean_digit(c).is_some() || small_unit(c).is_some() || big_unit(c).is_some()
 }
 
+/// A Korean digit word counts only when a unit follows it (`구천`, `삼만`) or it ends the amount, so
+/// the particle or noun before a number (`이 3천`, `2일 3만`) is not read as a digit.
+fn word_is_digit(chars: &[char], i: usize) -> bool {
+    match chars[i + 1..].iter().find(|&&c| c != ' ') {
+        None => true,
+        Some(&next) => small_unit(next).is_some() || big_unit(next).is_some(),
+    }
+}
+
 /// Value of a spelled or digit amount: `9,900` -> 9900, `3천` -> 3000, `6만 3천` -> 63000. None on overflow.
 fn spelled_value(run: &str) -> Option<u64> {
+    let chars: Vec<char> = run.chars().collect();
     let (mut total, mut section, mut num) = (0u64, 0u64, 0u64);
-    for c in run.chars() {
+    for (i, &c) in chars.iter().enumerate() {
         if let Some(d) = c.to_digit(10) {
             num = num.checked_mul(10)?.checked_add(u64::from(d))?;
-        } else if let Some(d) = korean_digit(c) {
+        } else if let Some(d) = korean_digit(c).filter(|_| word_is_digit(&chars, i)) {
             num = d;
         } else if let Some(unit) = small_unit(c) {
             section = section.checked_add(num.max(1).checked_mul(unit)?)?;
@@ -247,9 +257,10 @@ fn run_before(chars: &[char], end: usize) -> String {
     chars[start..end].iter().collect()
 }
 
-/// Amount text from `start` on, leading spaces skipped, no inner spaces (`₩60,000`, `KRW 60000`).
+/// Digits from `start` on, leading spaces skipped (`₩60,000`, `KRW 60000`). Spelled words stop it,
+/// since a particle such as `이` often follows the figure (`₩60,000이에요`).
 fn run_after(chars: &[char], start: usize) -> String {
-    chars.iter().skip(start).skip_while(|&&c| c == ' ').take_while(|&&c| is_amount_char(c)).collect()
+    chars.iter().skip(start).skip_while(|&&c| c == ' ').take_while(|&&c| c.is_ascii_digit() || c == ',').collect()
 }
 
 /// True when `word` (lowercase ASCII) starts at `i` as a whole word, so `won` does not match `wonder`.
@@ -419,6 +430,7 @@ mod tests {
         assert!(!ungrounded_claim("0원이에요", facts), "zero is not an amount");
         assert!(!ungrounded_claim("3 wonderful days", facts), "won must be a whole word");
         assert!(!ungrounded_claim("3천원이에요", r#"{"fee":"3천원"}"#), "spelled amounts in facts count too");
+        assert!(!ungrounded_claim("이 6만원이면 돼요", facts), "a particle before the amount is not a digit");
     }
 
     #[test]
