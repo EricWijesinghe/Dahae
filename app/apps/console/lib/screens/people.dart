@@ -12,6 +12,7 @@ import 'stepup.dart';
 import 'people_profile.dart';
 import 'points_ledger.dart';
 import 'staff_invite.dart';
+import 'member_approvals.dart';
 
 Future<void> _act(
   BuildContext context,
@@ -44,7 +45,7 @@ class PartnersScreen extends StatelessWidget {
       'suspended' => StatusHues.cancelled,
       _ => StatusHues.consultation,
     };
-    return AsyncView<List<Json>>(
+    final list = AsyncView<List<Json>>(
       load: () async =>
           (await context.api.get('/admin/pros') as List).cast<Json>(),
       builder: (context, rows, reload) => rows.isEmpty
@@ -122,6 +123,12 @@ class PartnersScreen extends StatelessWidget {
                   ),
               ],
             ),
+    );
+    return Column(
+      children: [
+        if (admin) const MemberApprovals(),
+        Expanded(child: list),
+      ],
     );
   }
 }
