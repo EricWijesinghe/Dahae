@@ -40,7 +40,21 @@ fn old_welcome_title() -> serde_json::Value {
 
 // i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)
 pub(crate) fn welcome_title() -> serde_json::Value {
-    json!({ "ko": "첫 청소 15,000원 웰컴쿠폰", "en": "₩15,000 welcome coupon for your first clean" })
+    json!({ "ko": "첫 청소 웰컴 쿠폰팩 즉시 지급", "en": "Welcome coupon pack for your first clean, issued now" })
+}
+
+/// The welcome banner's body: the sun theme, the coupons link and the art card (design p01).
+/// shortcut: the card value is fixed text, not the live welcome coupon amount; upgrade when the home reads it.
+pub(crate) fn welcome_body() -> serde_json::Value {
+    json!({
+        "theme": "sun",
+        "link": "coupons",
+        "text": { "ko": "신규 고객 웰컴 쿠폰", "en": "Welcome coupon for new customers" },
+        "card": {
+            "label": { "ko": "웰컴 혜택", "en": "Welcome gift" },
+            "value": { "ko": "15,000 원", "en": "₩15,000" },
+        },
+    })
 }
 
 pub async fn run(db: &PgPool, config: &Config) -> Result<(), Box<dyn std::error::Error>> {
@@ -100,7 +114,7 @@ pub async fn run(db: &PgPool, config: &Config) -> Result<(), Box<dyn std::error:
         let welcome = welcome_title();
         sqlx::query("INSERT INTO content_items (kind, title, body, sort_order) VALUES ('banner', $1, $2, 0)")
             .bind(&welcome)
-            .bind(json!({"theme":"sun","link":"coupons"}))
+            .bind(welcome_body())
             .execute(db)
             .await?;
         let faq = json!({ "ko": "취소는 언제까지 무료인가요?", "en": "Until when can I cancel for free?" });
@@ -112,9 +126,10 @@ pub async fn run(db: &PgPool, config: &Config) -> Result<(), Box<dyn std::error:
             .await?;
     }
     // Upgrade: only a banner still carrying the exact old seeded title; an edited one is the owner's.
-    sqlx::query("UPDATE content_items SET title = $1 WHERE kind = 'banner' AND title = $2")
+    sqlx::query("UPDATE content_items SET title = $1, body = body || $3 WHERE kind = 'banner' AND title = $2")
         .bind(welcome_title())
         .bind(old_welcome_title())
+        .bind(welcome_body())
         .execute(db)
         .await?;
     Ok(())
