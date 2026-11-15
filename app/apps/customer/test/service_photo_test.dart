@@ -10,7 +10,7 @@ import 'support/customer_routes.dart';
 Service _cleaning({String? imageUrl}) => Service.fromJson({
   'code': 'studio',
   'pricing': {'type': 'fixed', 'minutes': 120, 'price': 45000},
-  'content': {if (imageUrl != null) 'image_url': imageUrl},
+  'content': {'image_url': ?imageUrl},
 });
 
 Future<void> _pump(WidgetTester tester, Service s) async {

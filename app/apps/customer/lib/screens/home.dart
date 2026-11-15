@@ -8,6 +8,7 @@ import '../guest.dart';
 import '../public_offers.dart';
 import '../state.dart';
 import '../web_ready.dart';
+import 'addresses.dart';
 import 'bookings.dart' show BookingCard;
 import 'content_rail.dart';
 import 'feed.dart';
@@ -244,7 +245,6 @@ class _HomeTabState extends State<HomeTab> {
   /// Design order: grid, recommended, banner, news. What the design does not show comes last.
   Widget _allView(List<ContentItem> picks) {
     final app = context.app;
-    final t = context.t;
     final c = context.colors;
     final next = _next;
     final last = _lastDone;
@@ -489,9 +489,9 @@ class _UpcomingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.t;
-    final days = DateUtils.dateOnly(booking.visitDate)
-        .difference(DateUtils.dateOnly(DateTime.now()))
-        .inDays;
+    final days = DateUtils.dateOnly(
+      booking.visitDate,
+    ).difference(DateUtils.dateOnly(DateTime.now())).inDays;
     return AppCard(
       level: Level.flat,
       border: context.colors.line,

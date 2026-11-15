@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:customer/screens/content_rail.dart';
-import 'package:customer/screens/home.dart';
 import 'package:customer/screens/more.dart';
 import 'package:customer/screens/request_status.dart';
 import 'package:customer/screens/service.dart';
