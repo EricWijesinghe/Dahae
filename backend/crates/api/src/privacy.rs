@@ -2,6 +2,7 @@
 //! deletion cascade. Consent rows are append-only evidence; the newest row per kind is the current state.
 
 use crate::{
+    crypto,
     error::{ApiError, ApiResult},
     providers::portone,
     state::AppState,
@@ -205,8 +206,9 @@ async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
         tracing::warn!(%user, count = keys.len(), "billing keys cannot be deleted: gateway not configured");
         return Ok(());
     }
-    for key in &keys {
-        portone::delete_billing_key(&s.providers, key)
+    for stored in &keys {
+        let key = crypto::open_billing_key(&s.config.data_key, stored).ok_or(ApiError::Unavailable("billing_key_delete_failed"))?;
+        portone::delete_billing_key(&s.providers, &key)
             .await
             .map_err(|_| ApiError::Unavailable("billing_key_delete_failed"))?;
     }
@@ -308,7 +310,7 @@ pub async fn delete_account(s: &AppState, user: Uuid) -> ApiResult<()> {
         .bind(user)
         .execute(&mut *tx)
         .await?;
-    sqlx::query("UPDATE payment_methods SET deleted_at = COALESCE(deleted_at, now()), billing_key = '', display_name = '' WHERE user_id = $1")
+    sqlx::query("UPDATE payment_methods SET deleted_at = COALESCE(deleted_at, now()), billing_key = '', billing_key_digest = NULL, display_name = '' WHERE user_id = $1")
         .bind(user)
         .execute(&mut *tx)
         .await?;

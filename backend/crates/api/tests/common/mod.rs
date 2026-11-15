@@ -235,10 +235,13 @@ pub async fn customer(app: &Router, db: &PgPool, phone: &str) -> Customer {
     )
     .await;
     assert_eq!(st, StatusCode::OK, "address: {addr}");
+    let (sealed, digest) = api::crypto::seal_billing_key(&test_config().data_key, &format!("bk_test_{user}"));
     let card: Uuid = sqlx::query_scalar(
-        "INSERT INTO payment_methods (user_id, provider, billing_key, display_name) VALUES ($1, 'pg', 'bk_test_' || $1::text, 'test card') RETURNING id",
+        "INSERT INTO payment_methods (user_id, provider, billing_key, billing_key_digest, display_name) VALUES ($1, 'pg', $2, $3, 'test card') RETURNING id",
     )
     .bind(user)
+    .bind(sealed)
+    .bind(digest)
     .fetch_one(db)
     .await
     .expect("payment method");
