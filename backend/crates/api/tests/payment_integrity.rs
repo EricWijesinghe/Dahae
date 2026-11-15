@@ -142,6 +142,40 @@ async fn one_portone_payment_cannot_be_recorded_twice(pool: PgPool) {
     assert_eq!(err.as_database_error().and_then(|e| e.code()).as_deref(), Some("23505"), "{err}");
 }
 
+/// PortOne reports a partial cancel for a checkout we already settled: the webhook only re-confirms the
+/// payment, so the refund already booked on our side is neither doubled nor reset.
+#[sqlx::test(migrations = "../../migrations")]
+async fn partial_cancel_webhook_leaves_the_refunded_amount_alone(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-7100-0005").await;
+    let (a, booking) = paid_checkout(&app, &pool, &c).await;
+    sqlx::query("UPDATE payments SET refunded_amount = 1000, status = 'partially_refunded' WHERE booking_id = $1")
+        .bind(booking)
+        .execute(&pool)
+        .await
+        .expect("book a partial refund");
+
+    let body = json!({
+        "type": "Transaction.PartialCancelled",
+        "timestamp": "2026-11-16T00:00:00Z",
+        "data": { "storeId": "store-test", "paymentId": a.to_string(), "transactionId": "tx-partial-1" }
+    });
+    let (st, first) = call(&app, "POST", "/v1/webhooks/portone", None, Some(body.clone())).await;
+    assert_eq!(st, StatusCode::OK, "{first}");
+    let (st, again) = call(&app, "POST", "/v1/webhooks/portone", None, Some(body)).await;
+    assert_eq!(st, StatusCode::OK, "{again}");
+
+    let (status, refunded): (String, i64) = sqlx::query_as("SELECT status, refunded_amount FROM payments WHERE booking_id = $1")
+        .bind(booking)
+        .fetch_one(&pool)
+        .await
+        .expect("payment");
+    assert_eq!((status.as_str(), refunded), ("partially_refunded", 1000), "a repeated partial-cancel event moves no money");
+    assert_eq!(checkout_status(&pool, a).await, "paid");
+    assert_eq!(refunds(&pool).await, 0, "no compensating refund was queued");
+}
+
 /// A late payment whose slot is gone: the compensating refund path (`apply` -> FulfilLate).
 async fn late_payment_on_full_slot(pool: &PgPool, app: &Router, c: &Customer) -> Uuid {
     let ck = new_checkout(app, c, 10).await;
