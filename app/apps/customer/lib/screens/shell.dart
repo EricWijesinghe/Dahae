@@ -214,36 +214,6 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
       child: child,
     );
 
-    if (context.isWide) {
-      return backToHome(Scaffold(
-        body: Row(
-          children: [
-            NavigationRail(
-              selectedIndex: _tab,
-              onDestinationSelected: go,
-              labelType: NavigationRailLabelType.all,
-              backgroundColor: context.colors.surface,
-              destinations: [
-                for (var i = 0; i < labels.length; i++)
-                  NavigationRailDestination(
-                    icon: icon(i),
-                    label: Text(labels[i]),
-                  ),
-              ],
-            ),
-            const VerticalDivider(width: 1),
-            Expanded(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: body,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ));
-    }
     return backToHome(Scaffold(
       body: body,
       bottomNavigationBar: GlassBar(
