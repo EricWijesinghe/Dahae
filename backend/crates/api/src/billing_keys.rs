@@ -6,6 +6,8 @@ use uuid::Uuid;
 
 /// Seals every live plaintext billing key and fills its digest. Rows already in the v1 format are skipped,
 /// so a rerun changes nothing. Returns the number of rows sealed.
+/// shortcut: runs once at startup only, so a plaintext row written by an old process after that is refused
+/// until the next restart; upgrade to lazy sealing on the charge and delete paths if overlap ever happens.
 pub async fn seal_stored(db: &PgPool, data_key: &[u8; 32]) -> Result<u64, sqlx::Error> {
     let rows: Vec<(Uuid, String)> =
         sqlx::query_as("SELECT id, billing_key FROM payment_methods WHERE deleted_at IS NULL AND billing_key <> '' AND left(billing_key, 3) <> 'v1:'")

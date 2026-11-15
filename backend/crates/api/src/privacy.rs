@@ -195,7 +195,7 @@ pub async fn export(State(s): State<AppState>, crate::auth::Customer(a): crate::
 /// Deletes the customer's gateway keys (saved cards) before personal data is removed. Fails closed:
 /// if the gateway refuses, nothing is anonymised and the customer can retry.
 async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
-    let keys: Vec<String> = sqlx::query_scalar("SELECT billing_key FROM payment_methods WHERE user_id = $1 AND billing_key <> ''")
+    let keys: Vec<(Uuid, String)> = sqlx::query_as("SELECT id, billing_key FROM payment_methods WHERE user_id = $1 AND billing_key <> ''")
         .bind(user)
         .fetch_all(&s.db)
         .await?;
@@ -206,8 +206,11 @@ async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
         tracing::warn!(%user, count = keys.len(), "billing keys cannot be deleted: gateway not configured");
         return Ok(());
     }
-    for stored in &keys {
-        let key = crypto::open_billing_key(&s.config.data_key, stored).ok_or(ApiError::Unavailable("billing_key_delete_failed"))?;
+    for (id, stored) in &keys {
+        let Some(key) = crypto::open_billing_key(&s.config.data_key, stored) else {
+            tracing::error!(%user, payment_method = %id, "saved-card billing key cannot be opened: account deletion blocked");
+            return Err(ApiError::Unavailable("billing_key_delete_failed"));
+        };
         portone::delete_billing_key(&s.providers, &key)
             .await
             .map_err(|_| ApiError::Unavailable("billing_key_delete_failed"))?;

@@ -126,6 +126,12 @@ process holds port 80 or 443.
   binary against the already-migrated schema. So a release may add tables, columns and indexes, but
   must not drop, rename or tighten anything the previous release still reads or writes. Remove the
   old shape one release later, once no rollback target uses it.
+- **Saved cards are a one-way step (migration 0326).** On first start the server seals every saved-card
+  billing key (`billing_keys::seal_stored`). The previous binary reads plaintext keys, so after that start
+  a rollback breaks saved-card charges and account-deletion key cleanup. Roll forward, or restore the
+  pre-update backup. Run one server instance during this update: stop the old container before the new
+  one starts, so no old process writes a plaintext key after the seal. The old `payment_methods_billing_key_live`
+  index is dropped in the contract migration of the next release.
 - **Backups, RPO and RTO.** Every server takes a `pg_dump` daily at 03:30 KST and before every
   update, kept 14 days on the server's own disk. The disk copy is sealed in the same AES-256-GCM format
   as the offsite copy (`*.sql.gz.enc`, opened again by `dahae restore`), so no plaintext dump stays on
