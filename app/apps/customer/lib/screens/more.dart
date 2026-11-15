@@ -14,7 +14,6 @@ import 'chat.dart' show tabRootTitle;
 import 'payments.dart';
 import 'privacy.dart';
 import 'service_scope.dart';
-import 'theme_sheet.dart';
 import 'wallet.dart';
 import 'subscriptions.dart';
 
