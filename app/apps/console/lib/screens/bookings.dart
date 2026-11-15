@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
 
+import '../booking_labels.dart';
 import '../state.dart';
 import 'inbox.dart';
+
+/// Detail payload: the booking JSON, its quotes and the counts line (null when none).
+typedef _PanelData = (Json, List<Json>, String?);
 
 /// List + detail. Desktop shows both side by side; phones push the detail.
 class BookingsScreen extends StatefulWidget {
@@ -250,10 +254,10 @@ class BookingDetailPage extends StatelessWidget {
     body: id != null
         ? BookingPanel(id: id!)
         : AsyncView<List<Json>>(
-            load: () async => (await context.api.get(
-              '/admin/bookings',
-              query: {'q': query},
-            ) as List).cast<Json>(),
+            load: () async =>
+                (await context.api.get('/admin/bookings', query: {'q': query})
+                        as List)
+                    .cast<Json>(),
             builder: (context, rows, _) => rows.isEmpty
                 ? EmptyState(
                     icon: Icons.search_off_rounded,
@@ -273,20 +277,25 @@ class BookingPanel extends StatefulWidget {
 }
 
 class _BookingPanelState extends State<BookingPanel> with LiveReload {
-  final _view = GlobalKey<AsyncViewState<(Json, List<Json>)>>();
+  final _view = GlobalKey<AsyncViewState<_PanelData>>();
 
   @override
   void onLive() => _view.currentState?.reload();
 
-  Future<(Json, List<Json>)> _load() async {
+  Future<_PanelData> _load() async {
     final api = context.api;
+    final t = context.t;
     final d = await api.get('/admin/bookings/${widget.id}') as Json;
+    final booking = Booking.fromJson(d['booking'] as Json);
     final isQuote = (d['booking'] as Json)['answers'] != null;
     final quotes = isQuote
         ? (await api.get('/admin/bookings/${widget.id}/quotes') as List)
               .cast<Json>()
         : <Json>[];
-    return (d, quotes);
+    final services = booking.unitCounts.isEmpty
+        ? const <Json>[]
+        : (await api.get('/admin/services') as List).cast<Json>();
+    return (d, quotes, bookingCountsLine(t, booking, services));
   }
 
   Future<void> _act(Future<void> Function() fn) async {
@@ -302,13 +311,13 @@ class _BookingPanelState extends State<BookingPanel> with LiveReload {
   }
 
   @override
-  Widget build(BuildContext context) => AsyncView<(Json, List<Json>)>(
+  Widget build(BuildContext context) => AsyncView<_PanelData>(
     key: _view,
     load: _load,
-    builder: (context, data, _) => _body(data.$1, data.$2),
+    builder: (context, data, _) => _body(data.$1, data.$2, data.$3),
   );
 
-  Widget _body(Json d, List<Json> quotes) {
+  Widget _body(Json d, List<Json> quotes, String? countsLine) {
     final t = context.t;
     final b = Booking.fromJson(d['booking'] as Json);
     final customer = d['customer'] as Json;
@@ -333,6 +342,8 @@ class _BookingPanelState extends State<BookingPanel> with LiveReload {
                     '${dateLabel(b.visitDate, context.lang)} ${hourLabel(b.startHour, context.lang)}',
                     style: context.text.bodySmall,
                   ),
+                  if (countsLine != null)
+                    Text(countsLine, style: context.text.bodySmall),
                 ],
               ),
             ),
@@ -347,7 +358,7 @@ class _BookingPanelState extends State<BookingPanel> with LiveReload {
             _InfoCard(
               title: t.cCustomer,
               lines: [
-                '${customer['name']}',
+                customerNameLabel(t, customer['name'] as String?),
                 formatKoreanPhone('${customer['phone']}'),
                 if (customer['email'] != null) '${customer['email']}',
               ],
@@ -385,6 +396,7 @@ class _BookingPanelState extends State<BookingPanel> with LiveReload {
             booking: b,
             estimate: estimate,
             quotes: quotes,
+            countsLine: countsLine,
             onSent: () => _view.currentState?.reload(),
           ),
         ],
@@ -591,11 +603,13 @@ class _QuoteDesk extends StatefulWidget {
     required this.estimate,
     required this.quotes,
     required this.onSent,
+    this.countsLine,
   });
   final Booking booking;
   final Json? estimate;
   final List<Json> quotes;
   final VoidCallback onSent;
+  final String? countsLine;
   @override
   State<_QuoteDesk> createState() => _QuoteDeskState();
 }
@@ -611,15 +625,13 @@ class _QuoteDeskState extends State<_QuoteDesk> {
   Future<void> _send({bool override = false}) async {
     setState(() => _busy = true);
     try {
-      await context.api.post(
-        '/admin/bookings/${widget.booking.id}/send-quote',
-        {
-          'final_price': int.parse(_price.text),
-          'quote_id': _quoteId,
-          'note': _note.text.isEmpty ? null : _note.text,
-          if (override) 'override': true,
-        },
-      );
+      await context.api
+          .post('/admin/bookings/${widget.booking.id}/send-quote', {
+            'final_price': int.parse(_price.text),
+            'quote_id': _quoteId,
+            'note': _note.text.isEmpty ? null : _note.text,
+            if (override) 'override': true,
+          });
       if (!mounted) return;
       showToast(context, context.t.cQuoteSent);
       widget.onSent();
@@ -698,6 +710,8 @@ class _QuoteDeskState extends State<_QuoteDesk> {
             '${t.quoteVisit} ${dateLabel(widget.booking.visitDate, context.lang)} ${widget.booking.startHour < 12 ? t.morning : t.afternoon} · ${t.service(widget.booking.serviceCode)}',
             style: context.text.bodySmall,
           ),
+          if (widget.countsLine != null)
+            Text(widget.countsLine!, style: context.text.bodySmall),
           const SizedBox(height: Space.sm),
           Text(t.cAnswers, style: context.text.labelSmall),
           Wrap(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ui/ui.dart';
 
+import '../booking_labels.dart';
 import '../state.dart';
 import 'finance_tax.dart';
 import 'confirm_action.dart';
@@ -570,15 +571,9 @@ class _CustomersState extends State<CustomersScreen> {
                 for (final c in rows)
                   ListTile(
                     leading: CircleAvatar(
-                      child: Text(
-                        (c['name'] as String).isEmpty
-                            ? '?'
-                            : (c['name'] as String).characters.first,
-                      ),
+                      child: Text(customerInitial(c['name'] as String?)),
                     ),
-                    title: Text(
-                      (c['name'] as String).isEmpty ? '-' : c['name'] as String,
-                    ),
+                    title: Text(customerNameLabel(t, c['name'] as String?)),
                     subtitle: Text(
                       '${formatKoreanPhone('${c['phone']}')} · ${t.cJoined} ${dateLabel(DateTime.parse(c['created_at'] as String), context.lang)}',
                     ),
