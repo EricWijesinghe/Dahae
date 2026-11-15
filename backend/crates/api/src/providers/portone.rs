@@ -49,6 +49,10 @@ async fn read_json(resp: reqwest::Response) -> Result<Value, ProviderError> {
     if status == StatusCode::NOT_FOUND {
         return Err(ProviderError::NotFound);
     }
+    // UnauthorizedError: the API secret is wrong or missing (PG secrets are rejected here too). A config error.
+    if status == StatusCode::UNAUTHORIZED {
+        return Err(ProviderError::NotConfigured("portone"));
+    }
     if !status.is_success() {
         return Err(ProviderError::Upstream(format!("status {status}")));
     }
@@ -175,8 +179,8 @@ pub async fn verify_billing_key(p: &Providers, key: &str, customer: &str, issue:
 }
 
 /// Binds a key to the customer and ticket it was issued for. Missing fields fail closed.
-/// shortcut: `customer.id` and `issueId` on GET /billing-keys/{key} are not on the reference pages we could
-/// reach (only `status` and `billingKey` are confirmed). Verify both in a PortOne test store before enabling billing.
+/// Source: PortOne openapi IssuedBillingKeyInfo (`customer.id`, `issueId`).
+/// shortcut: the browser SDK's `customer.customerId` must equal `customer.id`. Confirm once in a test store.
 pub fn bound(info: &Value, customer: &str, issue: &str) -> Result<(), ProviderError> {
     issued(info)?;
     if info["customer"]["id"].as_str() == Some(customer) && info["issueId"].as_str() == Some(issue) {
@@ -198,29 +202,46 @@ pub async fn billing_key_at(http: &reqwest::Client, base: &str, secret: &str, ke
     read_json(resp).await
 }
 
-/// `DELETE /billing-keys/{key}`: stops the saved card at the gateway. A key already gone (404) counts as deleted.
-/// Source: https://developers.portone.io/api/rest-v2/payment.billingKey (verify the delete path against the live docs).
+/// `DELETE /billing-keys/{key}`: stops the saved card at the gateway.
 pub async fn delete_billing_key(p: &Providers, key: &str) -> Result<(), ProviderError> {
     check_id(key)?;
-    let resp = p
-        .http()
-        .delete(format!("{}/billing-keys/{key}", p.portone_api()))
-        .header(AUTHORIZATION, auth(p)?)
+    delete_at(p.http(), p.portone_api(), &auth(p)?, key).await
+}
+
+/// `delete_billing_key` against an explicit base and auth header. 409 BillingKeyAlreadyDeletedError is done (Ok);
+/// any other 409 (e.g. PaymentScheduleAlreadyExistsError, key still live) is an error so account deletion fails closed.
+/// 404 (BillingKeyNotFoundError / NotIssuedError) is Ok too, but logged: the key was unknown to PortOne.
+/// Source: PortOne openapi, DELETE /billing-keys/{billingKey} responses (DeleteBillingKeyError).
+pub async fn delete_at(http: &reqwest::Client, base: &str, auth_header: &str, key: &str) -> Result<(), ProviderError> {
+    let resp = http
+        .delete(format!("{base}/billing-keys/{key}"))
+        .header(AUTHORIZATION, auth_header)
         .send()
         .await
         .map_err(upstream)?;
     match resp.status() {
-        StatusCode::NOT_FOUND => Ok(()),
+        StatusCode::CONFLICT => {
+            let body: Value = resp.json().await.map_err(upstream)?;
+            match body["type"].as_str() {
+                Some("BillingKeyAlreadyDeletedError") => Ok(()),
+                other => Err(ProviderError::Upstream(format!("billing key not deleted: {}", other.unwrap_or("unknown")))),
+            }
+        }
+        StatusCode::NOT_FOUND => {
+            tracing::warn!("billing key not found at PortOne on delete; treating as deleted");
+            Ok(())
+        }
+        StatusCode::UNAUTHORIZED => Err(ProviderError::NotConfigured("portone")),
         s if s.is_success() => Ok(()),
         s => Err(ProviderError::Upstream(format!("status {s}"))),
     }
 }
 
 /// `POST /payments/{paymentId}/billing-key`: charges a saved billing key once. `payment_id` must be unique per charge.
-/// Returns `payment_id`, the id PortOne's cancel and lookup paths take. A 4xx is `Declined`; a 5xx, transport
-/// error or a 200 without `payment.paidAt` is `Upstream` (outcome unknown: the caller looks the payment up).
-/// Source: https://developers.portone.io/api/rest-v2/payment (PayWithBillingKeyResponse = `{ payment: { pgTxId, paidAt } }`).
-/// shortcut: a decline is read as any 4xx body. Confirm the decline shapes in a PortOne test store before live billing.
+/// Returns `payment_id`, the id PortOne's cancel and lookup paths take. A 4xx is `Declined(type)`; a 5xx, transport
+/// error, 409 AlreadyPaidError or a 200 without `payment.paidAt` is `Upstream` (outcome unknown: the caller looks the payment up).
+/// Source: PortOne openapi, POST /payments/{paymentId}/billing-key (PayWithBillingKeyError), error body `{type, message}`.
+/// shortcut: only the spec's error `type` names are known. Real card-decline codes need one test-store charge before live billing.
 pub async fn charge_billing(p: &Providers, key: &str, payment_id: &str, amount: i64, order: &str, customer: Uuid) -> Result<String, ProviderError> {
     check_id(key)?;
     check_id(payment_id)?;
@@ -231,10 +252,14 @@ pub async fn charge_billing(p: &Providers, key: &str, payment_id: &str, amount: 
         "amount": { "total": amount },
         "currency": "KRW",
     });
-    let resp = p
-        .http()
-        .post(format!("{}/payments/{payment_id}/billing-key", p.portone_api()))
-        .header(AUTHORIZATION, auth(p)?)
+    charge_at(p.http(), p.portone_api(), &auth(p)?, payment_id, body).await
+}
+
+/// `charge_billing` against an explicit base and auth header. `payment_id` and `body` are already validated.
+pub async fn charge_at(http: &reqwest::Client, base: &str, auth_header: &str, payment_id: &str, body: Value) -> Result<String, ProviderError> {
+    let resp = http
+        .post(format!("{base}/payments/{payment_id}/billing-key"))
+        .header(AUTHORIZATION, auth_header)
         .json(&body)
         .send()
         .await
@@ -243,7 +268,14 @@ pub async fn charge_billing(p: &Providers, key: &str, payment_id: &str, amount: 
     if status.is_server_error() {
         return Err(ProviderError::Upstream(format!("status {status}")));
     }
+    if status == StatusCode::UNAUTHORIZED {
+        return Err(ProviderError::NotConfigured("portone"));
+    }
     let v: Value = resp.json().await.unwrap_or(Value::Null);
+    if status == StatusCode::CONFLICT && v["type"].as_str() == Some("AlreadyPaidError") {
+        // The charge already succeeded (an earlier attempt whose reply was lost): look it up, never charge again.
+        return Err(ProviderError::Upstream("charge_already_paid".into()));
+    }
     if !status.is_success() {
         let code = v["type"].as_str().unwrap_or("charge_declined");
         return Err(ProviderError::Declined(code.to_string()));
@@ -339,7 +371,7 @@ mod tests {
         Json, Router,
         extract::Path,
         http::{HeaderMap, StatusCode},
-        routing::get,
+        routing::{delete, get, post},
     };
 
     const NOW: i64 = 1_800_000_000;
@@ -474,7 +506,62 @@ mod tests {
             billing_key_at(&http, &base, "test-secret", "bk_none").await,
             Err(ProviderError::NotFound)
         ));
-        assert!(matches!(billing_key_at(&http, &base, "wrong", "bk_ok").await, Err(ProviderError::Upstream(_))));
+        assert!(matches!(
+            billing_key_at(&http, &base, "wrong", "bk_ok").await,
+            Err(ProviderError::NotConfigured(_))
+        ));
+    }
+
+    /// Fake PortOne for delete and charge: each id picks the documented reply.
+    async fn mock_delete(Path(key): Path<String>) -> (StatusCode, Json<Value>) {
+        match key.as_str() {
+            "gone" => (StatusCode::CONFLICT, Json(json!({"type": "BillingKeyAlreadyDeletedError"}))),
+            "missing" => (StatusCode::NOT_FOUND, Json(json!({"type": "BillingKeyNotFoundError"}))),
+            "scheduled" => (StatusCode::CONFLICT, Json(json!({"type": "PaymentScheduleAlreadyExistsError"}))),
+            "unauth" => (StatusCode::UNAUTHORIZED, Json(json!({"type": "UnauthorizedError"}))),
+            _ => (StatusCode::OK, Json(json!({"deletedAt": "2026-11-15T00:00:00Z"}))),
+        }
+    }
+
+    async fn mock_charge(Path(pid): Path<String>) -> (StatusCode, Json<Value>) {
+        match pid.as_str() {
+            "paid" => (StatusCode::CONFLICT, Json(json!({"type": "AlreadyPaidError"}))),
+            "over" => (StatusCode::CONFLICT, Json(json!({"type": "SumOfPartsExceedsTotalAmountError"}))),
+            _ => (StatusCode::OK, Json(json!({"payment": {"pgTxId": "tx", "paidAt": "2026-11-15T00:00:00Z"}}))),
+        }
+    }
+
+    async fn billing_mock() -> String {
+        let app = Router::new()
+            .route("/billing-keys/{key}", delete(mock_delete))
+            .route("/payments/{pid}/billing-key", post(mock_charge));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind fake");
+        let addr = listener.local_addr().expect("fake addr");
+        tokio::spawn(async move { axum::serve(listener, app).await.expect("fake serves") });
+        format!("http://{addr}")
+    }
+
+    #[tokio::test]
+    async fn delete_treats_already_deleted_and_missing_keys_as_done() {
+        let base = billing_mock().await;
+        let http = reqwest::Client::new();
+        let auth = "PortOne test-secret";
+        assert!(delete_at(&http, &base, auth, "gone").await.is_ok());
+        assert!(delete_at(&http, &base, auth, "missing").await.is_ok());
+        assert!(delete_at(&http, &base, auth, "live").await.is_ok());
+        assert!(matches!(delete_at(&http, &base, auth, "unauth").await, Err(ProviderError::NotConfigured(_))));
+        assert!(matches!(delete_at(&http, &base, auth, "scheduled").await, Err(ProviderError::Upstream(_))));
+    }
+
+    #[tokio::test]
+    async fn charge_maps_already_paid_to_lookup_and_declines_to_codes() {
+        let base = billing_mock().await;
+        let http = reqwest::Client::new();
+        let auth = "PortOne test-secret";
+        let body = json!({"billingKey": "bk", "orderName": "x", "customer": {"id": "u"}, "amount": {"total": 1}, "currency": "KRW"});
+        assert_eq!(charge_at(&http, &base, auth, "fresh", body.clone()).await.expect("paid"), "fresh");
+        assert!(matches!(charge_at(&http, &base, auth, "paid", body.clone()).await, Err(ProviderError::Upstream(m)) if m == "charge_already_paid"));
+        assert!(matches!(charge_at(&http, &base, auth, "over", body).await, Err(ProviderError::Declined(m)) if m == "SumOfPartsExceedsTotalAmountError"));
     }
 
     #[test]
