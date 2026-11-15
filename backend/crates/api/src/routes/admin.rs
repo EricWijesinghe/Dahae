@@ -11,6 +11,7 @@ use crate::{
     auth::{Role, Staff, live_staff_role},
     contract::{cursor_part, decode_cursor, encode_cursor, page_limit, paged},
     error::{ApiError, ApiResult},
+    ops,
     realtime::{Recipient, notify},
     state::AppState,
 };
@@ -55,6 +56,8 @@ struct Dashboard {
     average_rating: Option<f64>,
     referrals_invited: i64,
     referrals_rewarded: i64,
+    /// Booking flow: time to assign, unassigned backlog and no-show rate per service (last 30 days).
+    flow: ops::FlowMetrics,
 }
 
 async fn dashboard(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Dashboard>> {
@@ -85,6 +88,7 @@ async fn dashboard(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Dash
         average_rating: growth.average_rating,
         referrals_invited: growth.invited,
         referrals_rewarded: growth.rewarded,
+        flow: ops::flow_metrics(&s.db).await?,
     }))
 }
 

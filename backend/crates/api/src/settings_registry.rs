@@ -130,6 +130,10 @@ pub const SPECS: &[Spec] = &[
     tightened(int("backup_late_hours", "ops", 1, 168, 26), Tighten::Down),
     tightened(int("disk_low_pct", "ops", 1, 50, 10), Tighten::Up),
     tightened(int("disk_warn_pct", "ops", 1, 80, 20), Tighten::Up),
+    // Business alerts (ops_alerts): unassigned confirmed bookings, same-day cancel rate, VAT deadline reminder.
+    int("unassigned_alert_hours", "ops", 1, 168, 24),
+    int("same_day_cancel_alert_pct", "ops", 5, 100, 30),
+    int("tax_deadline_remind_days", "ops", 1, 14, 7),
     boolean("maintenance_on", "ops", false),
     text("maintenance_message", "ops", 200, ""),
 ];
