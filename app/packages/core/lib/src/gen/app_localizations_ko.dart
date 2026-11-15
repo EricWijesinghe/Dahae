@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4970,6 +4971,31 @@ class TKo extends T {
 
   @override
   String get cPfNoDate => '입력 안 함';
+
+  @override
+  String get cPfPayee => '주민등록번호 또는 사업자등록번호';
+
+  @override
+  String get cPfPayeeHelp =>
+      '지급명세서 작성에만 쓰며 암호화하여 보관해요. 파트너 동의를 받은 뒤 입력하세요. 열람할 때마다 기록이 남아요.';
+
+  @override
+  String cPfPayeeSaved(String masked) {
+    return '등록됨: $masked';
+  }
+
+  @override
+  String get cPfPayeeReveal => '원본 보기 (본인 인증 필요)';
+
+  @override
+  String get cPfPayeeRevealTitle => '식별번호';
+
+  @override
+  String get cPfPayeeRevealBody => '열람 기록이 남았어요. 화면을 닫은 뒤에는 다시 볼 수 없어요.';
+
+  @override
+  String get err_invalid_payee_identifier =>
+      '주민등록번호(13자리) 또는 사업자등록번호(10자리)를 확인해 주세요.';
 
   @override
   String get cPfSaveProfile => '프로필 저장';

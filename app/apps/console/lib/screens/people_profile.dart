@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import 'stepup.dart';
 
 /// Opens the verification checklist and employee profile of one pro. Approving a pro as active needs
 /// every checklist item ticked; the server enforces the same rule.
@@ -198,12 +199,17 @@ class _ProfileTabState extends State<_ProfileTab> {
   late String? _photo = _p['photo_url'] as String?;
   late String? _employment = _p['employment_type'] as String?;
   late DateTime? _hired = DateTime.tryParse(_p['hired_on'] as String? ?? '');
+  // Blank means "keep the stored identifier"; the server never clears it from this form.
+  final _payee = TextEditingController();
+  late final String? _payeeMasked =
+      ((_p['payee_identifier'] as Map?)?['masked']) as String?;
   bool _saving = false;
 
   @override
   void dispose() {
     _bio.dispose();
     _contact.dispose();
+    _payee.dispose();
     super.dispose();
   }
 
@@ -236,6 +242,44 @@ class _ProfileTabState extends State<_ProfileTab> {
     if (picked != null && mounted) setState(() => _hired = picked);
   }
 
+  /// Shows the full identifier after a step-up. The server audit-logs every reveal.
+  Future<void> _reveal() async {
+    final t = context.t;
+    try {
+      final r = (await withStepUp(
+        context,
+        () => context.api.post(
+          '/admin/pros/${widget.proId}/payee-identifier/reveal',
+          {},
+        ),
+      )) as Json;
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(t.cPfPayeeRevealTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SelectableText('${r['identifier']}'),
+              const SizedBox(height: Space.sm),
+              Text(t.cPfPayeeRevealBody, style: ctx.text.bodySmall),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(t.cDone),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) showToast(context, t.error(e));
+    }
+  }
+
   Future<void> _save() async {
     final t = context.t;
     setState(() => _saving = true);
@@ -245,6 +289,7 @@ class _ProfileTabState extends State<_ProfileTab> {
         'bio': _bio.text,
         'employment_type': _employment,
         'emergency_contact': _contact.text,
+        'payee_identifier': _payee.text,
         'hired_on': _hired == null
             ? null
             : DateFormat('yyyy-MM-dd').format(_hired!),
@@ -296,6 +341,23 @@ class _ProfileTabState extends State<_ProfileTab> {
             helperText: t.cPfEmergencyHelp,
           ),
         ),
+        const SizedBox(height: Space.sm),
+        TextField(
+          controller: _payee,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: t.cPfPayee,
+            helperText: _payeeMasked == null
+                ? t.cPfPayeeHelp
+                : t.cPfPayeeSaved(_payeeMasked!),
+          ),
+        ),
+        if (_payeeMasked != null)
+          TextButton.icon(
+            onPressed: _saving ? null : _reveal,
+            icon: const Icon(Icons.visibility_outlined),
+            label: Text(t.cPfPayeeReveal),
+          ),
         ListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(t.cPfHiredOn),

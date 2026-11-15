@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5103,6 +5104,32 @@ class TEn extends T {
 
   @override
   String get cPfNoDate => 'Not set';
+
+  @override
+  String get cPfPayee => 'Resident or business registration number';
+
+  @override
+  String get cPfPayeeHelp =>
+      'Used only for the 지급명세서 (payment statement). Stored encrypted. Enter it only after the partner consents. Every view is logged.';
+
+  @override
+  String cPfPayeeSaved(String masked) {
+    return 'On file: $masked';
+  }
+
+  @override
+  String get cPfPayeeReveal => 'Show full number (needs verification)';
+
+  @override
+  String get cPfPayeeRevealTitle => 'Identifier';
+
+  @override
+  String get cPfPayeeRevealBody =>
+      'This view is logged. It cannot be shown again after you close this.';
+
+  @override
+  String get err_invalid_payee_identifier =>
+      'Check the resident number (13 digits) or business number (10 digits).';
 
   @override
   String get cPfSaveProfile => 'Save profile';
