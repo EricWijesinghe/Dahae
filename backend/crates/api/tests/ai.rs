@@ -399,7 +399,8 @@ async fn reply_stating_an_amount_the_shop_does_not_list_is_replaced(pool: PgPool
 #[sqlx::test(migrations = "../../migrations")]
 async fn staff_pasted_phone_number_is_masked_before_the_provider_sees_it(pool: PgPool) {
     let w = world(pool.clone(), Mode::AlwaysFirst).await;
-    sqlx::query("INSERT INTO chat_messages (thread_id, sender, kind, body) VALUES ($1, 'staff', 'text', $2)")
+    // Older than the 10-minute window, so the staff line is history and does not hold the AI back.
+    sqlx::query("INSERT INTO chat_messages (thread_id, sender, kind, body, created_at) VALUES ($1, 'staff', 'text', $2, now() - interval '20 minutes')")
         .bind(w.thread)
         .bind(json!({ "text": "고객 번호는 010-1234-5678 입니다" }))
         .execute(&pool)
