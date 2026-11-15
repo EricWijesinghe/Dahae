@@ -19,6 +19,9 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
+/// Profile columns read by `get_profile`: photo, bio, employment type, sealed emergency contact, hire date.
+type ProfileRow = (Option<String>, String, Option<String>, Option<String>, Option<NaiveDate>);
+
 /// Items the owner ticks before verifying a pro. Adding one here makes it required everywhere.
 pub const CHECKLIST_ITEMS: [&str; 4] = ["identity", "tax_type", "experience", "emergency_contact"];
 const BIO_MAX_CHARS: usize = 500;
@@ -133,11 +136,10 @@ pub async fn get_profile(State(s): State<AppState>, Admin(a): Admin, Path(id): P
         .fetch_optional(&s.db)
         .await?;
     let (checklist, decided_at) = verification.map_or((json!({}), None), |(c, at)| (c, Some(at)));
-    let row: Option<(Option<String>, String, Option<String>, Option<String>, Option<NaiveDate>)> =
-        sqlx::query_as("SELECT photo_url, bio, employment_type, emergency_contact_enc, hired_on FROM pro_profiles WHERE pro_id = $1")
-            .bind(id)
-            .fetch_optional(&s.db)
-            .await?;
+    let row: Option<ProfileRow> = sqlx::query_as("SELECT photo_url, bio, employment_type, emergency_contact_enc, hired_on FROM pro_profiles WHERE pro_id = $1")
+        .bind(id)
+        .fetch_optional(&s.db)
+        .await?;
     let profile = match row {
         Some((photo_url, bio, employment_type, enc, hired_on)) => {
             let emergency_contact = reveal_contact(&s, a.id, id, enc).await?;
