@@ -119,11 +119,11 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
     final home = widget.home;
     if (home == null) return;
     a.homeType = home.code;
-    // 원룸·투룸 is sent as an officetel-type building (CR-8.2 keeps the exact home on homeType).
+    // 원룸·투룸 sends building "other" (CR-3); the exact home travels on homeType (CR-8.2).
     a.building = switch (home) {
       MoveHome.apartment => 'apartment',
       MoveHome.villaHouse => 'villa',
-      MoveHome.oneTwoRoom => 'officetel',
+      MoveHome.oneTwoRoom => 'other',
     };
     if (a.layout != null && !_layoutOptions.contains(a.layout)) a.layout = null;
   }

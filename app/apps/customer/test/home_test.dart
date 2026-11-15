@@ -110,6 +110,7 @@ void _stockBadges(FakeApi fake) => fake.reply('GET', '/services', [
       'content': {
         if (code == 'mattress') 'badge': 'new',
         if (code == 'aircon') 'badge': 'hot',
+        if (code == 'disinfection') 'badge': 'new',
       },
     },
 ]);
@@ -123,7 +124,11 @@ const _tileOrder = [
   'mattress',
   'aircon',
   'sofa',
+  'disinfection',
 ];
+
+/// The four built-in home groups (CR-2) in tile order.
+final _groupTitles = [for (final g in defaultServiceGroups) g.titleFor('ko')];
 
 /// Home shows the greeting on one line.
 String _oneLine(String greeting) => greeting.replaceAll('\n', ' ');
@@ -133,7 +138,7 @@ double _top(WidgetTester tester, String text) =>
 
 void main() {
   testWidgets(
-    'home shows the logo, the greeting and 8 plain tiles in catalogue order with N and HOT',
+    'home shows the logo, the greeting and 4 group tiles in server order with N and HOT',
     (tester) async {
       setViewport(tester, phoneSize);
       final handle = tester.ensureSemantics();
@@ -150,31 +155,20 @@ void main() {
       ); // let the stagger finish; faded-out tiles drop out of semantics
 
       expect(find.byType(DahaeLogo), findsOneWidget);
-      final spots = [
-        for (final code in _tileOrder)
-          tester.getCenter(find.text(koT.service(code))),
-      ];
+      // CR-2: four group tiles in one row, in server order (the built-in groups here).
+      final spots = [for (final title in _groupTitles) tester.getCenter(find.text(title))];
       for (var i = 1; i < spots.length; i++) {
-        final sameRow = i % 4 != 0;
-        expect(
-          sameRow
-              ? spots[i].dx > spots[i - 1].dx
-              : spots[i].dy > spots[i - 1].dy,
-          isTrue,
-          reason: '${_tileOrder[i]} follows ${_tileOrder[i - 1]}',
-        );
+        expect(spots[i].dx > spots[i - 1].dx, isTrue, reason: '${_groupTitles[i]} follows ${_groupTitles[i - 1]}');
+        expect(spots[i].dy, closeTo(spots[i - 1].dy, 1), reason: 'one row');
       }
-      // Move-in and move-out are their own tiles again, and no tile carries a price or a short name.
+      // No tile carries a price or a short name; N and HOT badges show on their groups.
       expect(find.byType(Tag), findsNothing);
       expect(find.textContaining(koT.fromPrice('')), findsNothing);
       expect(find.text(koT.serviceShort('studio')), findsNothing);
       expect(find.text(koT.dhBadgeNew), findsOneWidget);
       expect(find.text(koT.dhBadgeHot), findsOneWidget);
-      expect(
-        find.bySemanticsLabel('${koT.service('mattress')}, ${koT.dhBadgeNew}'),
-        findsOneWidget,
-      );
-      expect(find.bySemanticsLabel(koT.service('studio')), findsOneWidget);
+      expect(find.bySemanticsLabel('${_groupTitles[3]}, ${koT.dhBadgeNew}'), findsOneWidget);
+      expect(find.bySemanticsLabel('${_groupTitles[2]}, ${koT.dhBadgeHot}'), findsOneWidget);
       await unmount(tester);
       handle.dispose();
     },

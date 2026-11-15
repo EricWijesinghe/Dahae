@@ -86,12 +86,13 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('wide layout: the side rail uses the same 3D icons', (tester) async {
+  testWidgets('wide layout: the bottom bar stays at the bottom and uses the 3D icons (CR-2)', (tester) async {
     setViewport(tester, const Size(1200, 800));
     final env = await _env();
     await pumpCustomerApp(tester, env);
-    await pumpUntilFound(tester, find.byType(NavigationRail));
+    await pumpUntilFound(tester, find.byType(NavigationBar));
     await settle(tester);
+    expect(find.byType(NavigationRail), findsNothing);
     for (final id in _ids) {
       expect(find.byWidgetPredicate((w) => w is Icon3D && w.id == id), findsOneWidget, reason: id);
     }
