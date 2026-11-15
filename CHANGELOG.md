@@ -10,7 +10,7 @@ from the release branches; no tags existed for them.
 
 ### Changed
 - Consultation chat: customer and partner messages now push staff devices, at most once per thread per minute.
-- AI assistant: customer phone numbers and e-mail addresses are masked before the message goes to the model; a failed model call is recorded as an `error` outcome that spends no reply cap and opens no complaint case, and usage reports `errors` for an outage banner; a reply that states a won amount, refund or discount not found in the shop data or booking is replaced by the staff handoff line.
+- AI assistant: phone numbers and e-mail addresses from customers and staff are masked before the message goes to the model; a failed model call is recorded as an `error` outcome that spends no reply cap and opens no complaint case, but at most 6 per chat per hour and the shop's daily cap in total, and the console inbox shows an outage notice while calls keep failing; a reply that states a won amount (Arabic or Korean numerals, `₩`, `KRW`, `won`), refund or discount not found in the shop data or booking is replaced by the staff handoff line.
 
 ### Added
 - Owner account (내 계정) for the console: one owner per server, claimed or handed over with both authenticator codes; owner-only actions need a fresh code each time; recovery codes re-issue, SMS alert number, password change, sign out everywhere; server-issued one-time reset (`api owner-reset`) after a lost second factor.
