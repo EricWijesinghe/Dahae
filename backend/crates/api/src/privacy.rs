@@ -8,9 +8,10 @@ use crate::{
 };
 use axum::{Json, extract::State};
 use chrono::{DateTime, Utc};
+use domain::booking::BookingStatus;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 /// Version of the policy texts the customer agrees to (privacy, terms, overseas transfer notice, marketing, location terms).
@@ -219,129 +220,22 @@ async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
 /// waitlist places. Kept for legal retention, linked only to the anonymised row: bookings, payments, paid
 /// checkouts, tips, cash receipts, tax invoice requests and payouts (전자상거래법 5년, 부가가치세법), review ratings,
 /// the consent log (proof of consent), chat text with the sender unlinked (분쟁 처리), and a referral's phone only
-/// as a keyed digest (`crypto::phone_digest`) so the one-reward-per-phone rule still holds. Safe to run twice.
+/// as a keyed digest (`crypto::phone_digest`) so the one-reward-per-phone rule still holds. A finished booking
+/// also loses its street address and answers (`pseudonymise_closed_bookings`). Safe to run twice.
 pub async fn delete_account(s: &AppState, user: Uuid) -> ApiResult<()> {
     delete_billing_keys(s, user).await?;
     let mut tx = s.db.begin().await?;
     let links = crate::providers::social::links(&mut tx, &s.config.data_key, "customer", user).await?;
-    // Login codes are keyed by phone, so they go before the phone is wiped.
-    sqlx::query("DELETE FROM otp_codes WHERE phone = (SELECT phone FROM users WHERE id = $1)")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    let anonymised = sqlx::query(
-        "UPDATE users SET deleted_at = now(), name = '', email = NULL, phone = 'deleted:' || id::text, ci_hash = NULL,
-         identity_verified_at = NULL, referral_code = NULL, acquisition = NULL WHERE id = $1 AND deleted_at IS NULL",
-    )
-    .bind(user)
-    .execute(&mut *tx)
-    .await?;
     // Already anonymised (a replayed Apple notification, or a concurrent deletion that committed first): nothing
     // left to do, so roll back instead of repeating the cascade. Replays must succeed, so this is Ok, not an error.
-    if anonymised.rows_affected() == 0 {
+    if !anonymise_user_row(&mut tx, user).await? {
         return Ok(());
     }
-    let referral_phone: Option<String> =
-        sqlx::query_scalar("SELECT referred_phone FROM referrals WHERE referred_user_id = $1 AND referred_phone NOT LIKE 'hmac:%' FOR UPDATE")
-            .bind(user)
-            .fetch_optional(&mut *tx)
-            .await?;
-    if let Some(phone) = referral_phone {
-        sqlx::query("UPDATE referrals SET referred_phone = $2 WHERE referred_user_id = $1")
-            .bind(user)
-            .bind(crate::crypto::phone_digest(&s.config.data_key, &phone))
-            .execute(&mut *tx)
-            .await?;
-    }
-    // Provider ids and emails; their stored refresh tokens go with them (ON DELETE CASCADE).
-    sqlx::query("DELETE FROM user_identities WHERE role = 'customer' AND subject_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query(
-        "UPDATE subscriptions SET status = 'cancelled', paused_reason = NULL, cancelled_at = now(), updated_at = now()
-         WHERE user_id = $1 AND status <> 'cancelled'",
-    )
-    .bind(user)
-    .execute(&mut *tx)
-    .await?;
-    sqlx::query(
-        "UPDATE subscription_visits SET state = 'cancelled', updated_at = now()
-         WHERE state = 'planned' AND subscription_id IN (SELECT id FROM subscriptions WHERE user_id = $1)",
-    )
-    .bind(user)
-    .execute(&mut *tx)
-    .await?;
-    let offered: Vec<(chrono::NaiveDate, i16)> =
-        sqlx::query_as("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'offered' RETURNING visit_date, start_hour")
-            .bind(user)
-            .fetch_all(&mut *tx)
-            .await?;
-    sqlx::query("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'waiting'")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    // The booking request snapshot holds the address and notes.
-    sqlx::query("UPDATE waitlist_entries SET body = '{}'::jsonb WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    // Unsettled checkouts may still be paid (late deposit), so their draft stays until retention clears it.
-    sqlx::query(
-        "UPDATE checkouts SET draft = NULL, virtual_account = NULL
-         WHERE user_id = $1 AND status IN ('failed','cancelled','refunded') AND (draft IS NOT NULL OR virtual_account IS NOT NULL)",
-    )
-    .bind(user)
-    .execute(&mut *tx)
-    .await?;
-    // Ratings stay for the partner's score; the customer's words and photos go.
-    sqlx::query("UPDATE reviews SET body = '', photos = '[]'::jsonb WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    // A subscription references its address, so that row is emptied instead of deleted.
-    sqlx::query("UPDATE addresses SET label = '', road_address = '', detail = '', deleted_at = COALESCE(deleted_at, now()) WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM addresses a WHERE a.user_id = $1 AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.address_id = a.id)")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("UPDATE payment_methods SET deleted_at = COALESCE(deleted_at, now()), billing_key = '', display_name = '' WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM identity_sessions WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM billing_issues WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM push_tokens WHERE owner_role = 'customer' AND owner_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM notifications WHERE owner_role = 'customer' AND owner_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    // Undelivered notifications go too, or a retry would write a new inbox row after the deletion.
-    sqlx::query("DELETE FROM notification_outbox WHERE owner_role = 'customer' AND owner_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1 AND revoked_at IS NULL")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    // Threads keep their user_id: chat_threads_check requires it for customer threads, and the anonymised user row holds no contact data.
-    sqlx::query("UPDATE chat_messages SET sender_id = NULL WHERE sender = 'customer' AND sender_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
+    pseudonymise_referral_phone(&mut tx, s, user).await?;
+    remove_sign_in_and_devices(&mut tx, user).await?;
+    let offered = end_commitments(&mut tx, user).await?;
+    clear_customer_content(&mut tx, user).await?;
+    pseudonymise_closed_bookings(&mut *tx).await?;
     tx.commit().await?;
     // Network and disk work after commit: no row lock is held across it.
     crate::providers::social::unlink(&s.providers, "customer", user, links).await;
@@ -355,6 +249,161 @@ pub async fn delete_account(s: &AppState, user: Uuid) -> ApiResult<()> {
         .await;
     }
     Ok(())
+}
+
+/// Clears the login codes and the contact data on the user row. Returns false when the row was already anonymised.
+async fn anonymise_user_row(tx: &mut Transaction<'_, Postgres>, user: Uuid) -> ApiResult<bool> {
+    // Login codes are keyed by phone, so they go before the phone is wiped.
+    sqlx::query("DELETE FROM otp_codes WHERE phone = (SELECT phone FROM users WHERE id = $1)")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    let anonymised = sqlx::query(
+        "UPDATE users SET deleted_at = now(), name = '', email = NULL, phone = 'deleted:' || id::text, ci_hash = NULL,
+         identity_verified_at = NULL, referral_code = NULL, acquisition = NULL WHERE id = $1 AND deleted_at IS NULL",
+    )
+    .bind(user)
+    .execute(&mut **tx)
+    .await?;
+    Ok(anonymised.rows_affected() > 0)
+}
+
+/// A referral keeps one-reward-per-phone only as a keyed digest, so the plain phone is replaced by it.
+async fn pseudonymise_referral_phone(tx: &mut Transaction<'_, Postgres>, s: &AppState, user: Uuid) -> ApiResult<()> {
+    let referral_phone: Option<String> =
+        sqlx::query_scalar("SELECT referred_phone FROM referrals WHERE referred_user_id = $1 AND referred_phone NOT LIKE 'hmac:%' FOR UPDATE")
+            .bind(user)
+            .fetch_optional(&mut **tx)
+            .await?;
+    if let Some(phone) = referral_phone {
+        sqlx::query("UPDATE referrals SET referred_phone = $2 WHERE referred_user_id = $1")
+            .bind(user)
+            .bind(crate::crypto::phone_digest(&s.config.data_key, &phone))
+            .execute(&mut **tx)
+            .await?;
+    }
+    Ok(())
+}
+
+/// Sign-in identities, sessions, devices, notifications and refresh tokens. Undelivered notifications go too,
+/// or a retry would write a new inbox row after the deletion.
+async fn remove_sign_in_and_devices(tx: &mut Transaction<'_, Postgres>, user: Uuid) -> ApiResult<()> {
+    // Provider ids and emails; their stored refresh tokens go with them (ON DELETE CASCADE).
+    sqlx::query("DELETE FROM user_identities WHERE role = 'customer' AND subject_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM identity_sessions WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM billing_issues WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM push_tokens WHERE owner_role = 'customer' AND owner_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM notifications WHERE owner_role = 'customer' AND owner_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM notification_outbox WHERE owner_role = 'customer' AND owner_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1 AND revoked_at IS NULL")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+}
+
+/// Ends subscriptions, planned visits and waitlist places. Returns the offered seats, which the caller re-offers
+/// once the transaction has committed.
+async fn end_commitments(tx: &mut Transaction<'_, Postgres>, user: Uuid) -> ApiResult<Vec<(chrono::NaiveDate, i16)>> {
+    sqlx::query(
+        "UPDATE subscriptions SET status = 'cancelled', paused_reason = NULL, cancelled_at = now(), updated_at = now()
+         WHERE user_id = $1 AND status <> 'cancelled'",
+    )
+    .bind(user)
+    .execute(&mut **tx)
+    .await?;
+    sqlx::query(
+        "UPDATE subscription_visits SET state = 'cancelled', updated_at = now()
+         WHERE state = 'planned' AND subscription_id IN (SELECT id FROM subscriptions WHERE user_id = $1)",
+    )
+    .bind(user)
+    .execute(&mut **tx)
+    .await?;
+    let offered = sqlx::query_as("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'offered' RETURNING visit_date, start_hour")
+        .bind(user)
+        .fetch_all(&mut **tx)
+        .await?;
+    sqlx::query("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'waiting'")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    // The booking request snapshot holds the address and notes.
+    sqlx::query("UPDATE waitlist_entries SET body = '{}'::jsonb WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    Ok(offered)
+}
+
+/// Customer-written text, photos, addresses, saved card labels and chat sender links.
+async fn clear_customer_content(tx: &mut Transaction<'_, Postgres>, user: Uuid) -> ApiResult<()> {
+    // Unsettled checkouts may still be paid (late deposit), so their draft stays until retention clears it.
+    sqlx::query(
+        "UPDATE checkouts SET draft = NULL, virtual_account = NULL
+         WHERE user_id = $1 AND status IN ('failed','cancelled','refunded') AND (draft IS NOT NULL OR virtual_account IS NOT NULL)",
+    )
+    .bind(user)
+    .execute(&mut **tx)
+    .await?;
+    // Ratings stay for the partner's score; the customer's words and photos go.
+    sqlx::query("UPDATE reviews SET body = '', photos = '[]'::jsonb WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    // A subscription references its address, so that row is emptied instead of deleted.
+    sqlx::query("UPDATE addresses SET label = '', road_address = '', detail = '', deleted_at = COALESCE(deleted_at, now()) WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM addresses a WHERE a.user_id = $1 AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.address_id = a.id)")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("UPDATE payment_methods SET deleted_at = COALESCE(deleted_at, now()), billing_key = '', display_name = '' WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    // Threads keep their user_id: chat_threads_check requires it for customer threads, and the anonymised user row holds no contact data.
+    sqlx::query("UPDATE chat_messages SET sender_id = NULL WHERE sender = 'customer' AND sender_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+}
+
+/// Finished bookings (completed or cancelled) of deleted customers lose the street address and the answers.
+/// Amounts, dates, service code, status and the district stay for the 전자상거래법 record. Open bookings are
+/// skipped: the visit and the quote-job payout rule still read them. Idempotent: a row is matched only while it
+/// still holds an address or answers. Runs at deletion and in the hourly purge (`retention::purge`).
+pub(crate) async fn pseudonymise_closed_bookings<'c>(conn: impl sqlx::PgExecutor<'c>) -> sqlx::Result<u64> {
+    let done = sqlx::query(
+        "UPDATE bookings SET address = jsonb_build_object('district_code', district_code, 'size_pyeong', address -> 'size_pyeong'), answers = NULL
+         WHERE status IN ($1, $2) AND (answers IS NOT NULL OR address ->> 'road_address' IS NOT NULL)
+           AND user_id IN (SELECT id FROM users WHERE deleted_at IS NOT NULL)",
+    )
+    .bind(BookingStatus::Completed.as_i16())
+    .bind(BookingStatus::Cancelled.as_i16())
+    .execute(conn)
+    .await?;
+    Ok(done.rows_affected())
 }
 
 /// The customer's uploaded photos (review, chat, booking): file first, then its row, so a failed removal

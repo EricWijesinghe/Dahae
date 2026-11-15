@@ -19,6 +19,7 @@ pub struct Report {
     pub entry_codes: u64,
     pub analytics_events: u64,
     pub checkout_snapshots: u64,
+    pub closed_bookings: u64,
 }
 
 pub fn spawn(state: AppState) -> JoinHandle<()> {
@@ -88,7 +89,10 @@ pub async fn purge(db: &PgPool, cfg: &Config) -> Result<Report, Box<dyn std::err
     .execute(db)
     .await?
     .rows_affected();
+    // A deleted customer's booking that was still open at deletion loses its address once the visit is over.
+    let closed_bookings = crate::privacy::pseudonymise_closed_bookings(db).await?;
     Ok(Report {
+        closed_bookings,
         otp_codes,
         refresh_tokens,
         ai_messages,

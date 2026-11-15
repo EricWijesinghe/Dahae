@@ -249,6 +249,78 @@ async fn deletion_anonymises_and_removes_devices_but_keeps_records(pool: PgPool)
     assert_eq!(consents, 3, "consent evidence kept");
 }
 
+/// A deleted customer's finished booking loses its street address and answers, and keeps every amount.
+#[sqlx::test(migrations = "../../migrations")]
+async fn deletion_pseudonymises_finished_bookings_and_keeps_amounts(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = app(pool.clone());
+    let c = customer(&app, &pool, "010-8100-0011").await;
+    let (done, _) = book(&app, &c, 10, None).await;
+    sqlx::query("UPDATE bookings SET status = 3, answers = '{\"size_pyeong\": 24, \"note\": \"door code 1234\"}'::jsonb WHERE id = $1")
+        .bind(done)
+        .execute(&pool)
+        .await
+        .expect("finish booking");
+    let before: serde_json::Value = sqlx::query_scalar("SELECT to_jsonb(b) - 'address' - 'answers' FROM bookings b WHERE id = $1")
+        .bind(done)
+        .fetch_one(&pool)
+        .await
+        .expect("before");
+
+    let (st, body) = call(&app, "DELETE", "/v1/me", Some(c.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+
+    let (address, answers): (serde_json::Value, Option<serde_json::Value>) = sqlx::query_as("SELECT address, answers FROM bookings WHERE id = $1")
+        .bind(done)
+        .fetch_one(&pool)
+        .await
+        .expect("after");
+    assert!(
+        address.get("road_address").is_none() && address.get("detail").is_none(),
+        "street address removed: {address}"
+    );
+    assert!(address.get("district_code").is_some(), "district kept: {address}");
+    assert!(answers.is_none(), "answers removed");
+    let after: serde_json::Value = sqlx::query_scalar("SELECT to_jsonb(b) - 'address' - 'answers' FROM bookings b WHERE id = $1")
+        .bind(done)
+        .fetch_one(&pool)
+        .await
+        .expect("after columns");
+    assert_eq!(after, before, "amounts, dates, service and status unchanged");
+}
+
+/// An upcoming booking still needs its address and answers for the visit, so deletion leaves it alone
+/// and the hourly purge pseudonymises it once it finishes.
+#[sqlx::test(migrations = "../../migrations")]
+async fn open_booking_keeps_its_address_until_finished(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = app(pool.clone());
+    let c = customer(&app, &pool, "010-8100-0012").await;
+    let (open, _) = book(&app, &c, 10, None).await;
+    let (st, body) = call(&app, "DELETE", "/v1/me", Some(c.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    let road: Option<String> = sqlx::query_scalar("SELECT address->>'road_address' FROM bookings WHERE id = $1")
+        .bind(open)
+        .fetch_one(&pool)
+        .await
+        .expect("open");
+    assert!(road.is_some(), "open booking keeps its address for the visit");
+
+    sqlx::query("UPDATE bookings SET status = 3 WHERE id = $1")
+        .bind(open)
+        .execute(&pool)
+        .await
+        .expect("finish");
+    let report = retention::purge(&pool, &test_config()).await.expect("purge");
+    assert_eq!(report.closed_bookings, 1, "the finished booking is pseudonymised by the purge");
+    let road: Option<String> = sqlx::query_scalar("SELECT address->>'road_address' FROM bookings WHERE id = $1")
+        .bind(open)
+        .fetch_one(&pool)
+        .await
+        .expect("purged");
+    assert!(road.is_none());
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn retention_purge_removes_expired_rows_and_unreferenced_uploads(pool: PgPool) {
     let cfg = test_config();
