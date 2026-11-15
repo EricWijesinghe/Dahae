@@ -364,7 +364,7 @@ async fn partner_still_sees_a_completed_quote_after_deletion(pool: PgPool) {
 
     let (st, job) = call(&app, "GET", &format!("/v1/partner/jobs/{done}"), Some(pro_token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{job}");
-    assert_eq!(job["is_quote"], true, "{job}");
+    assert_eq!(job["booking"]["is_quote"], true, "{job}");
     let (st, quotes) = call(&app, "GET", "/v1/partner/quotes", Some(pro_token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{quotes}");
     let row = quotes
