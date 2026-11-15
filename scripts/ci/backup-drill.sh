@@ -30,13 +30,18 @@ COUNTS_SQL="SELECT table_name, (xpath('/row/c/text()',
   query_to_xml(format('SELECT count(*) AS c FROM %I', table_name), false, true, '')))[1]::text
   FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY 1"
 
-# WAL leg (WAL_DRILL=1, needs pgbackrest and the PGBACKREST_* settings of deploy/wal): restore the newest
-# backup, replay the archive to its end, start the copy on a spare port and compare it with SRC_DB.
+# WAL leg (WAL_DRILL=1, needs pgbackrest and the PGBACKREST_* settings of deploy/wal): take a fresh full
+# backup of the live cluster, check that the archive holds it, restore it and replay the archive to its end,
+# then start the copy on a spare port and compare it with SRC_DB.
 # Run it only while SRC_DB is idle: the archive keeps moving, so counts must not change during the drill.
 wal_drill() {
   local pgdata="$WORK/pitr" port="${WAL_DRILL_PORT:-5439}"
   : "${PGBACKREST_STANZA:?set PGBACKREST_STANZA for the WAL leg}"
-  log "wal: restore the newest backup of stanza $PGBACKREST_STANZA"
+  log "wal: full backup of stanza $PGBACKREST_STANZA (the drill's own, so the restore includes the seeded rows)"
+  pgbackrest --stanza="$PGBACKREST_STANZA" --type=full backup >/dev/null     || fail "pgbackrest backup failed"
+  log "wal: check that archiving delivers WAL to the repository"
+  pgbackrest --stanza="$PGBACKREST_STANZA" check >/dev/null     || fail "pgbackrest check failed: WAL is not reaching the archive"
+  log "wal: restore the backup and replay the archive to its end"
   pgbackrest --stanza="$PGBACKREST_STANZA" --pg1-path="$pgdata" restore >/dev/null \
     || fail "pgbackrest restore failed"
   pg_ctl -D "$pgdata" -o "-p $port -k $WORK" -l "$WORK/pitr.log" -w start >/dev/null \

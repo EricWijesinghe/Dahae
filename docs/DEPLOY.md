@@ -153,16 +153,22 @@ process holds port 80 or 443.
   1. Copy `deploy/wal` to `/opt/malkkeum/wal`. Put these in `.env` (never commit them):
      `WAL_S3_BUCKET`, `WAL_S3_ENDPOINT`, `WAL_S3_KEY`, `WAL_S3_SECRET`, `WAL_CIPHER_PASS` (a long random
      string; without it the archive cannot be read, so keep a copy off the server like `DATA_KEY`).
-  2. `bash wal/wal-setup.sh`: builds the pgBackRest database image, turns `WAL_ARCHIVE_MODE` on,
-     creates the stanza, checks archiving and takes the first full base backup.
-  3. Schedule `bash wal/base-backup.sh` weekly (full base backup plus a check). The daily `pg_dump`
-     stays as it is.
+  2. `bash wal/wal-setup.sh`: builds the pgBackRest database image with archiving still off, then turns
+     `WAL_ARCHIVE_MODE` on, creates the stanza, checks archiving and takes the first full base backup. If any
+     step fails, archiving is turned back off. Once it succeeds, `dahae write-cron` adds the weekly base backup
+     (Sunday 02:15, `wal/base-backup.sh`) to the cron table. The daily `pg_dump` stays as it is.
+  - While `WAL_ARCHIVE_MODE=on` every `dahae` command (update, rollback, restore) also loads
+    `wal/docker-compose.wal.yml`, so the database keeps the pgBackRest image. Never start the stock
+    `postgres:17` image with archiving on: it cannot archive and WAL piles up on the disk.
+  - `archive_timeout=300` makes Postgres close a WAL segment at least every 5 minutes, which is what gives the
+    5-minute recovery point on a quiet platform.
   - `pg_stat_statements` is loaded on every database. Existing installs run once:
     `docker compose exec -T db psql -U app -d cleaning -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements"`.
   - If archiving fails, WAL piles up on the database disk: check `pgbackrest --stanza=malkkeum check`
     after every change and keep the disk alert on.
-  - Restore (engineer): `bash scripts/ci/backup-drill.sh` with `WAL_DRILL=1` and `PGBACKREST_*` set
-    restores the newest backup, replays the archive and compares row counts with a seeded database.
+  - Restore drill (engineer): `bash scripts/ci/backup-drill.sh` with `WAL_DRILL=1` and `PGBACKREST_*` set
+    takes a fresh full backup, checks that archiving delivers it, restores it, replays the archive and
+    compares row counts with a seeded database. Run it on the server, while the database is idle.
     For a real recovery, run `pgbackrest --stanza=malkkeum --type=time "--target=<ISO time>" restore`
     into an empty data volume with the same image, then start the stack.
 - **`DATA_KEY` and `.env` are not in any backup.** `/opt/malkkeum/.env` holds `DATA_KEY` (it encrypts

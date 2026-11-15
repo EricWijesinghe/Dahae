@@ -330,7 +330,7 @@ nt "moved tag is refused"  pub v1.0.0
 # ---- scheduled jobs: cron table, update gates, setup code expiry (a copy of the CLI writes into the sandbox, never /etc) ----
 set +e
 cd "$SB"
-sed "s|/etc/cron.d/malkkeum|$SB/cron-out|" "$SB/dahae" > "$SB/dahae-cron"
+sed -e "s|/etc/cron.d/malkkeum|$SB/cron-out|" -e "s|__DIR__|$SB|" "$SB/dahae" > "$SB/dahae-cron"
 cron_cli() { ( DAHAE_SELFTEST=1 . "$SB/dahae-cron"; cd "$SB"; "$@" ) >/dev/null 2>&1; }
 has_updated() { case "$1" in *UPDATED*) return 0 ;; *) return 1 ;; esac; }
 auto_run() { ( DAHAE_SELFTEST=1 . "$SB/dahae-cron"; cd "$SB"; cmd_update() { echo UPDATED; }; docker() { case "$*" in *malkkeum-web*) [ -z "${WEB_FAIL:-}" ] || return 1 ;; esac; printf '%s' "$FAKE_MANIFEST"; }; cmd_auto_update ) 2>&1; }
@@ -347,6 +347,25 @@ nt "bad schedule refused"                cron_cli cmd_update_schedule mon@4:00
 cron_cli cmd_update_schedule off
 nt "off removes the update line"         grep -qF "auto-update" "$SB/cron-out"
 t  "off keeps the backup line"           grep -qF "dahae backup" "$SB/cron-out"
+
+# ---- WAL archiving: compose calls add the pgBackRest override once archiving is on; weekly base backup in cron ----
+WALON="$SB/walon"; WALOFF="$SB/waloff"; NOWAL="$SB/nowal"
+mkdir -p "$WALON/wal" "$WALOFF" "$NOWAL"; : > "$WALON/wal/docker-compose.wal.yml"
+printf 'DOMAIN=myshop.co.kr\nWAL_ARCHIVE_MODE=on\n' > "$WALON/.env"
+printf 'DOMAIN=myshop.co.kr\nWAL_ARCHIVE_MODE=off\n' > "$WALOFF/.env"
+printf 'DOMAIN=myshop.co.kr\nWAL_ARCHIVE_MODE=on\n' > "$NOWAL/.env"
+dc_args() { ( DAHAE_SELFTEST=1 . "$1"; cd "$2"; docker() { echo "$*"; }; dc ps ) 2>/dev/null; } # dc_args 스크립트 폴더 : 실제로 넘어갈 인자
+WAL_ARGS="compose -f docker-compose.yml -f wal/docker-compose.wal.yml --env-file .env ps"
+PLAIN_ARGS="compose -f docker-compose.yml --env-file .env ps"
+t  "install.sh dc adds the wal override when archiving is on" eq "$(dc_args "$ROOT/deploy/install.sh" "$WALON")" "$WAL_ARGS"
+t  "dahae dc adds the wal override when archiving is on" eq "$(dc_args "$SB/dahae-cron" "$WALON")" "$WAL_ARGS"
+t  "archiving off: plain compose call" eq "$(dc_args "$SB/dahae-cron" "$WALOFF")" "$PLAIN_ARGS"
+nt "archiving on without wal/ refuses to start" dc_args "$SB/dahae-cron" "$NOWAL"
+printf 'WAL_ARCHIVE_MODE=on\n' >> "$SB/.env"; mkdir -p "$SB/wal"; : > "$SB/wal/base-backup.sh"
+cron_cli cmd_write_cron
+t  "archiving on: weekly base backup under the lock" grep -qF "15 2 * * 0 root cd $SB && flock -w 3600 /run/dahae.lock bash wal/base-backup.sh" "$SB/cron-out"
+sed -i '/^WAL_ARCHIVE_MODE=/d' "$SB/.env"; cron_cli cmd_write_cron
+nt "archiving off: no base backup line" grep -qF "base-backup.sh" "$SB/cron-out"
 
 # auto-update: a skip mark, a waiting job, and the 24-hour wait for a new stable digest each skip the update
 mkdir -p "$SB/host" "$SB/jobs/inbox"
