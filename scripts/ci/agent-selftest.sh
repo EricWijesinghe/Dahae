@@ -25,7 +25,7 @@ exit 0
 EOF
 printf 'DOMAIN=myshop.co.kr\nCHANNEL=stable\nVERSION=stable\n' > "$DAHAE_DIR/.env"
 chmod +x "$DAHAE_CLI"
-export DAHAE_JOB_UID="$(id -u)" DAHAE_OWNER_UID="$(id -u)"
+DAHAE_JOB_UID=$(id -u); DAHAE_OWNER_UID=$(id -u); export DAHAE_JOB_UID DAHAE_OWNER_UID
 # fake docker: records the working folder and argv of every compose call; `logs` prints the file $SB/logs.txt
 mkdir -p "$SB/bin"
 cat > "$SB/bin/docker" <<EOF
@@ -125,6 +125,7 @@ t  "unknown key: rejected state"   eq "$(state "$id")" rejected
 WRONG=$((DAHAE_JOB_UID + 1))
 JOB_UID=$WRONG
 id=$(uuid7); t  "wrong owner uid refused"          refuse "$id" "id=$id\nkind=backup-now\n"
+# shellcheck disable=SC2034 # read by the sourced deploy/agent.sh
 JOB_UID=$(id -u)
 id=$(uuid7)
 printf 'id=%s\nkind=backup-now\n' "$id" > "$DAHAE_JOBS/inbox/not-a-job.txt"
@@ -335,14 +336,14 @@ idH=$(uuid7); printf 'id=%s\nkind=rollback\ntoken=%s\n' "$idH" "$TOK4" > "$DAHAE
 rm -f "$HOST_DIR/approval.fails"; intake_all
 t  "waiting job held before the lock"      eq "$(state "$idH")" awaiting_approval
 : > "$HOST_DIR/approval.fails"
-for i in 1 2 3 4 5 6 7 8 9 10; do date +%s >> "$HOST_DIR/approval.fails"; done
+for _ in 1 2 3 4 5 6 7 8 9 10; do date +%s >> "$HOST_DIR/approval.fails"; done
 good=$(totp_at "$SECRET" $(( $(date +%s) + 30 )))   # the next 30-second step: not used yet
 before=$(argv_lines)
 ap "$idH" "$good"
 t  "right code refused while locked"       eq "$(argv_lines)" "$before"
 t  "waiting job stays while locked"        test -e "$HOST_DIR/awaiting.job"
 : > "$HOST_DIR/approval.fails"
-for i in 1 2 3 4 5 6 7 8 9 10; do echo $(( $(date +%s) - 7200 )) >> "$HOST_DIR/approval.fails"; done
+for _ in 1 2 3 4 5 6 7 8 9 10; do echo $(( $(date +%s) - 7200 )) >> "$HOST_DIR/approval.fails"; done
 nt "old failures do not lock"              approval_locked
 ap "$idH" "$good"
 t  "right code runs once the lock lifts"   eq "$(state "$idH")" ok
