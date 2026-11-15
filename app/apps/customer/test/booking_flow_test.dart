@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:customer/screens/booking_flow.dart';
-import 'package:customer/screens/move_chooser.dart';
 import 'package:customer/screens/quote_flow.dart';
 import 'package:customer/screens/service.dart';
 import 'package:customer/screens/service_scope.dart';
@@ -466,8 +465,9 @@ void main() {
       await _tap(tester, find.text(payLabel));
 
       final body = fake.lastCall('POST', '/bookings')!.json;
-      final tomorrow = DateUtils.dateOnly(DateTime.now())
-          .add(const Duration(days: 1));
+      final tomorrow = DateUtils.dateOnly(
+        DateTime.now(),
+      ).add(const Duration(days: 1));
       expect(body['service_code'], 'studio');
       expect(body['address_id'], 'addr-1');
       expect(body['coupon_id'], 'cp-studio');
