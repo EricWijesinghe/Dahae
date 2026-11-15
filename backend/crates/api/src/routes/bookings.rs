@@ -738,7 +738,7 @@ async fn reschedule(State(s): State<AppState>, Customer(a): Customer, Path(id): 
     }
     // Checked after the write: a clash rolls the move back when the transaction drops.
     if let Some(pro) = b.pro_id
-        && schedule_clash(&mut *tx, id, "pro_id", pro).await?
+        && schedule_clash(&mut tx, id, "pro_id", pro).await?
     {
         return Err(ApiError::Conflict("schedule_overlap"));
     }

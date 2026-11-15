@@ -257,7 +257,7 @@ async fn accept(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) ->
     .fetch_optional(&mut *tx)
     .await?;
     let Some((user, number)) = won else {
-        let overlaps = claimable(&mut *tx, id).await? && schedule_clash(&mut *tx, id, "pro_id", a.id).await?;
+        let overlaps = claimable(&mut tx, id).await? && schedule_clash(&mut tx, id, "pro_id", a.id).await?;
         return Err(ApiError::Conflict(if overlaps { "schedule_overlap" } else { "already_taken" }));
     };
     // Queued with the claim. After the commit nothing can fail the request: a 5xx here would make the
@@ -440,7 +440,7 @@ async fn assign(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>, Js
     .execute(&mut *tx)
     .await?;
     if r.rows_affected() == 0 {
-        let overlaps = assignable(&mut *tx, id, a.id, x.member_id).await? && schedule_clash(&mut *tx, id, "assignee_id", x.member_id).await?;
+        let overlaps = assignable(&mut tx, id, a.id, x.member_id).await? && schedule_clash(&mut tx, id, "assignee_id", x.member_id).await?;
         if overlaps {
             return Err(ApiError::Conflict("schedule_overlap"));
         }
