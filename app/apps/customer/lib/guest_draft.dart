@@ -39,7 +39,9 @@ void _applyAnswers(QuoteAnswers a, Json j) {
   a.floor3OrHigher = _as<bool>(j['floor_3_or_higher']) ?? false;
   a.acAddons = {
     for (final e in _as<List<dynamic>>(j['ac_addons']) ?? const [])
-      if (e is Json && _as<String>(e['unit']) != null && _as<int>(e['count']) != null)
+      if (e is Json &&
+          _as<String>(e['unit']) != null &&
+          _as<int>(e['count']) != null)
         e['unit'] as String: e['count'] as int,
   };
 }

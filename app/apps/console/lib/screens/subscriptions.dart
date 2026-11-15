@@ -26,10 +26,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   Future<List<Json>> _load() async {
-    final rows = await context.api.get(
-      '/admin/subscriptions',
-      query: {'status': _status},
-    ) as List;
+    final rows =
+        await context.api.get(
+              '/admin/subscriptions',
+              query: {'status': _status},
+            )
+            as List;
     return rows.cast<Json>();
   }
 

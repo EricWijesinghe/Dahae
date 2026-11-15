@@ -58,13 +58,10 @@ class _BookingsTabState extends State<BookingsTab>
   int _seen = -1;
 
   /// 1 = month grid open (the default), 0 = folded to the selected week.
-  late final AnimationController _open = AnimationController(
-    vsync: this,
-    duration: Motion.route,
-    value: 1,
-  )
-    ..addListener(_onFold)
-    ..addStatusListener((_) => _onFold());
+  late final AnimationController _open =
+      AnimationController(vsync: this, duration: Motion.route, value: 1)
+        ..addListener(_onFold)
+        ..addStatusListener((_) => _onFold());
 
   /// What the last build showed: (month grid, week strip, the fold a tap would make).
   (bool, bool, bool) _shown = (true, false, true);
@@ -467,7 +464,9 @@ class _WeekRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (var i = 0; i < DateTime.daysPerWeek; i++)
-          Expanded(child: _cell(DateTime(start.year, start.month, start.day + i))),
+          Expanded(
+            child: _cell(DateTime(start.year, start.month, start.day + i)),
+          ),
       ],
     ),
   );
@@ -781,7 +780,10 @@ class _DayList extends StatelessWidget {
             ),
             const SizedBox(height: Space.xxs),
             for (final b in list)
-              StaggerIn(index: row++, child: BookingCard(booking: b)),
+              StaggerIn(
+                index: row++,
+                child: BookingCard(booking: b),
+              ),
             const SizedBox(height: Space.sm),
           ],
           if (upcoming.isNotEmpty) ...[

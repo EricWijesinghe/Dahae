@@ -249,7 +249,10 @@ class _RenewalFormState extends State<_RenewalForm> {
             children: [
               TextField(
                 controller: _name,
-                decoration: InputDecoration(labelText: t.rnwName, isDense: true),
+                decoration: InputDecoration(
+                  labelText: t.rnwName,
+                  isDense: true,
+                ),
               ),
               const SizedBox(height: Space.md),
               Text(t.rnwKind, style: context.text.titleSmall),

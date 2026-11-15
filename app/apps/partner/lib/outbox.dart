@@ -192,10 +192,9 @@ class CompletionOutbox {
   /// Uploads what is missing, completes the job, then removes the entry. Throws on failure; progress is kept.
   Future<Json> send(ApiClient api, QueuedCompletion c) async {
     await _uploadMissing(api, c);
-    final r = await api.post(
-      '${c.basePath}/jobs/${c.bookingId}/complete',
-      c.payload,
-    ) as Json;
+    final r =
+        await api.post('${c.basePath}/jobs/${c.bookingId}/complete', c.payload)
+            as Json;
     await remove(c);
     return r;
   }

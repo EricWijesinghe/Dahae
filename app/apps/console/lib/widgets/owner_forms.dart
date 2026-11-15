@@ -5,7 +5,12 @@ import 'package:ui/ui.dart';
 
 /// One input in [askFields]. [phone] and [digits] pick the keyboard and the input filter.
 class FieldSpec {
-  const FieldSpec(this.label, {this.obscure = false, this.phone = false, this.digits = false});
+  const FieldSpec(
+    this.label, {
+    this.obscure = false,
+    this.phone = false,
+    this.digits = false,
+  });
   final String label;
   final bool obscure;
   final bool phone;
@@ -22,11 +27,17 @@ Future<List<String>?> askFields(
   required List<FieldSpec> fields,
 }) => showDialog<List<String>>(
   context: context,
-  builder: (_) => _FieldsDialog(title: title, body: body, confirm: confirm, fields: fields),
+  builder: (_) =>
+      _FieldsDialog(title: title, body: body, confirm: confirm, fields: fields),
 );
 
 class _FieldsDialog extends StatefulWidget {
-  const _FieldsDialog({required this.title, required this.body, required this.confirm, required this.fields});
+  const _FieldsDialog({
+    required this.title,
+    required this.body,
+    required this.confirm,
+    required this.fields,
+  });
   final String title;
   final String body;
   final String confirm;
@@ -37,7 +48,9 @@ class _FieldsDialog extends StatefulWidget {
 }
 
 class _FieldsDialogState extends State<_FieldsDialog> {
-  late final List<TextEditingController> _ctl = [for (final _ in widget.fields) TextEditingController()];
+  late final List<TextEditingController> _ctl = [
+    for (final _ in widget.fields) TextEditingController(),
+  ];
 
   @override
   void dispose() {
@@ -72,7 +85,9 @@ class _FieldsDialogState extends State<_FieldsDialog> {
                 controller: _ctl[i],
                 obscureText: widget.fields[i].obscure,
                 autofocus: i == 0,
-                keyboardType: widget.fields[i].phone || widget.fields[i].digits ? TextInputType.number : TextInputType.text,
+                keyboardType: widget.fields[i].phone || widget.fields[i].digits
+                    ? TextInputType.number
+                    : TextInputType.text,
                 inputFormatters: widget.fields[i].phone
                     ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9\-]'))]
                     : widget.fields[i].digits
@@ -101,32 +116,33 @@ class _FieldsDialogState extends State<_FieldsDialog> {
 }
 
 /// Picks the new owner from active admins. Resolves to the chosen staff row, or null.
-Future<Json?> askTransferTarget(BuildContext context, List<Json> admins) => showDialog<Json>(
-  context: context,
-  builder: (ctx) => AlertDialog(
-    title: Text(context.t.oaTransferTarget),
-    content: SizedBox(
-      width: 360,
-      child: ListView(
-        shrinkWrap: true,
-        children: [
-          for (final a in admins)
-            ListTile(
-              title: Text('${a['name']}'),
-              subtitle: Text('${a['email']}'),
-              onTap: () => Navigator.of(ctx).pop(a),
-            ),
+Future<Json?> askTransferTarget(BuildContext context, List<Json> admins) =>
+    showDialog<Json>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.t.oaTransferTarget),
+        content: SizedBox(
+          width: 360,
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (final a in admins)
+                ListTile(
+                  title: Text('${a['name']}'),
+                  subtitle: Text('${a['email']}'),
+                  onTap: () => Navigator.of(ctx).pop(a),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(context.t.oaCancel),
+          ),
         ],
       ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(ctx).pop(),
-        child: Text(context.t.oaCancel),
-      ),
-    ],
-  ),
-);
+    );
 
 /// Shows freshly issued recovery codes once. Resolves true when the owner says they wrote them down.
 /// Asks for one of the codes just shown, typed back: that proves the owner saw the new set.
@@ -178,14 +194,18 @@ Future<bool> showRecoveryCodes(BuildContext context, List<String> codes) async {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SelectableText(codes.join('\n'), style: const TextStyle(fontFamily: 'monospace')),
+          SelectableText(
+            codes.join('\n'),
+            style: const TextStyle(fontFamily: 'monospace'),
+          ),
           const SizedBox(height: Space.sm),
           Text(t.oaRecoveryBody),
         ],
       ),
       actions: [
         TextButton.icon(
-          onPressed: () => Clipboard.setData(ClipboardData(text: codes.join('\n'))),
+          onPressed: () =>
+              Clipboard.setData(ClipboardData(text: codes.join('\n'))),
           icon: const Icon(Icons.copy_rounded, size: 18),
           label: Text(t.cMfaCopy),
         ),

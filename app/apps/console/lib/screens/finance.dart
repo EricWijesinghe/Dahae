@@ -298,11 +298,36 @@ class _KpiGrid extends StatelessWidget {
         Icons.event_busy_rounded,
         ServiceHues.moveIn,
       ),
-      (t.cMrr, context.won(_n(rec, 'mrr')), Icons.autorenew_rounded, ServiceHues.studio),
-      (t.cChurn, '${(_n(rec, 'churn_bps') / 100).toStringAsFixed(1)}%', Icons.trending_down_rounded, ServiceHues.moveIn),
-      (t.cActiveSubs, '${_n(rec, 'active')}', Icons.event_repeat_rounded, ServiceHues.bathroom),
-      (t.cRecognized, context.won(_n(rec, 'recognized')), Icons.stacked_line_chart_rounded, ServiceHues.aircon),
-      (t.fGross, context.won(_n(summary, 'gross')), Icons.receipt_long_rounded, ServiceHues.studio),
+      (
+        t.cMrr,
+        context.won(_n(rec, 'mrr')),
+        Icons.autorenew_rounded,
+        ServiceHues.studio,
+      ),
+      (
+        t.cChurn,
+        '${(_n(rec, 'churn_bps') / 100).toStringAsFixed(1)}%',
+        Icons.trending_down_rounded,
+        ServiceHues.moveIn,
+      ),
+      (
+        t.cActiveSubs,
+        '${_n(rec, 'active')}',
+        Icons.event_repeat_rounded,
+        ServiceHues.bathroom,
+      ),
+      (
+        t.cRecognized,
+        context.won(_n(rec, 'recognized')),
+        Icons.stacked_line_chart_rounded,
+        ServiceHues.aircon,
+      ),
+      (
+        t.fGross,
+        context.won(_n(summary, 'gross')),
+        Icons.receipt_long_rounded,
+        ServiceHues.studio,
+      ),
     ];
     return LayoutBuilder(
       builder: (context, c) {

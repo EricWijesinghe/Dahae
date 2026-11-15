@@ -45,16 +45,18 @@ class SiteActionsCard extends StatelessWidget {
           if (checkedIn)
             Text(
               t.checkedInAt(
-                TimeOfDay.fromDateTime(b.checkedInAt!.toLocal())
-                    .format(context),
+                TimeOfDay.fromDateTime(
+                  b.checkedInAt!.toLocal(),
+                ).format(context),
               ),
               style: context.text.bodySmall,
             ),
           if (b.checkedOutAt != null)
             Text(
               t.checkedOutAt(
-                TimeOfDay.fromDateTime(b.checkedOutAt!.toLocal())
-                    .format(context),
+                TimeOfDay.fromDateTime(
+                  b.checkedOutAt!.toLocal(),
+                ).format(context),
               ),
               style: context.text.bodySmall,
             ),

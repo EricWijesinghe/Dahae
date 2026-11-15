@@ -41,7 +41,11 @@ class GuestBookingsTab extends StatelessWidget {
 }
 
 class _FlowStep extends StatelessWidget {
-  const _FlowStep({required this.index, required this.title, required this.body});
+  const _FlowStep({
+    required this.index,
+    required this.title,
+    required this.body,
+  });
   final int index;
   final String title;
   final String body;
@@ -99,12 +103,12 @@ class GuestChatTab extends StatelessWidget {
         ),
         AsyncView<List<ContentItem>>(
           load: () async =>
-              (await context.api.get('/content', query: {'kind': 'faq'}) as List)
+              (await context.api.get('/content', query: {'kind': 'faq'})
+                      as List)
                   .map((e) => ContentItem(e as Json))
                   .toList(),
-          builder: (context, items, _) => Column(
-            children: [for (final f in items) FaqRow(item: f)],
-          ),
+          builder: (context, items, _) =>
+              Column(children: [for (final f in items) FaqRow(item: f)]),
         ),
         const SizedBox(height: Space.md),
         ListTile(
