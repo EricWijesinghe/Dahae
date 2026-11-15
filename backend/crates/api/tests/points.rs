@@ -8,7 +8,7 @@ use api::{
     points,
 };
 use axum::http::StatusCode;
-use common::{Customer, SECRET, book, call, call_keyed, customer, seed_catalog};
+use common::{Customer, SECRET, app_with_channels, book, call, call_keyed, customer, seed_catalog};
 use domain::Won;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -39,7 +39,7 @@ async fn grant(pool: &PgPool, user: Uuid, amount: i64, key: &str) {
 async fn earn_then_spend_takes_points_before_the_pg(pool: PgPool) {
     seed_catalog(&pool).await;
     enable_points(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-6100-0001").await;
     let (id, _) = book(&app, &c, 10, None).await;
     sqlx::query("UPDATE bookings SET paid_amount = 52000, list_price = 52000 WHERE id = $1").bind(id).execute(&pool).await.expect("paid");
@@ -62,7 +62,7 @@ async fn earn_then_spend_takes_points_before_the_pg(pool: PgPool) {
 async fn refund_returns_spent_points_once(pool: PgPool) {
     seed_catalog(&pool).await;
     enable_points(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-6100-0002").await;
     let (id, _) = book(&app, &c, 10, None).await;
     grant(&pool, c.user, 8_000, "seed:2").await;
@@ -79,7 +79,7 @@ async fn refund_returns_spent_points_once(pool: PgPool) {
 async fn partial_refund_returns_points_in_proportion(pool: PgPool) {
     seed_catalog(&pool).await;
     enable_points(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-6100-0009").await;
     let (id, _) = book(&app, &c, 11, None).await;
     grant(&pool, c.user, 8_000, "seed:9").await;
@@ -95,7 +95,7 @@ async fn partial_refund_returns_points_in_proportion(pool: PgPool) {
 async fn lapsed_lots_expire_once_and_stop_counting(pool: PgPool) {
     seed_catalog(&pool).await;
     enable_points(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-6100-0003").await;
     sqlx::query(
         "INSERT INTO points_ledger (id, user_id, kind, amount, lot_id, expires_at, idempotency_key)
@@ -117,7 +117,7 @@ async fn lapsed_lots_expire_once_and_stop_counting(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn ledger_rows_are_append_only(pool: PgPool) {
     seed_catalog(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-6100-0004").await;
     grant(&pool, c.user, 500, "test:immutable").await;
     let edit = sqlx::query("UPDATE points_ledger SET amount = 999999").execute(&pool).await;
@@ -157,7 +157,7 @@ async fn spend_rows(pool: &PgPool, user: Uuid) -> (i64, i64) {
 async fn checkout_debits_points_once_and_cancel_returns_them(pool: PgPool) {
     seed_catalog(&pool).await;
     enable_points(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-6100-0011").await;
     grant(&pool, c.user, 20_000, "seed:11").await;
     let token = Some(c.token.as_str());
@@ -207,7 +207,7 @@ async fn checkout_debits_points_once_and_cancel_returns_them(pool: PgPool) {
 async fn checkout_refuses_points_over_balance_cap_or_total(pool: PgPool) {
     seed_catalog(&pool).await;
     enable_points(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-6100-0012").await;
     grant(&pool, c.user, 5_000, "seed:12").await;
     let token = Some(c.token.as_str());
@@ -235,7 +235,7 @@ async fn checkout_refuses_points_over_balance_cap_or_total(pool: PgPool) {
 async fn checkout_fails_whole_when_the_balance_is_gone_at_settlement(pool: PgPool) {
     seed_catalog(&pool).await;
     enable_points(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-6100-0013").await;
     grant(&pool, c.user, 6_000, "seed:13").await;
     let token = Some(c.token.as_str());
@@ -264,7 +264,7 @@ async fn cancel_fee_is_kept_from_points_and_cash_alike(pool: PgPool) {
         .execute(&pool)
         .await
         .expect("policy");
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-6100-0014").await;
     grant(&pool, c.user, 10_000, "seed:14").await;
     let token = Some(c.token.as_str());
@@ -305,7 +305,7 @@ async fn staff_token(pool: &PgPool, email: &str, role: &str, as_role: Role) -> (
 async fn admin_adjusts_points_with_a_reason_and_it_is_audited(pool: PgPool) {
     seed_catalog(&pool).await;
     enable_points(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-6100-0015").await;
     let (admin, admin_id) = staff_token(&pool, "points-admin@test.local", "admin", Role::StaffAdmin).await;
     let (consultant, _) = staff_token(&pool, "points-consultant@test.local", "consultant", Role::StaffConsultant).await;
