@@ -214,3 +214,26 @@ async fn failed_payout_needs_a_reason_and_retries_without_a_second_row(pool: PgP
         .expect("count");
     assert_eq!(rows_for_settlement, 1);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn payout_account_is_not_released_when_its_audit_row_fails(pool: PgPool) {
+    seed(&pool).await;
+    let app = app(pool.clone());
+    let token = admin_token(&pool).await;
+    let (_, rows) = request_payouts(&app, &token).await;
+    let id = rows[0]["id"].as_str().expect("id").to_string();
+    sqlx::query("CREATE FUNCTION refuse_reveal_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'audit unavailable'; END $$")
+        .execute(&pool)
+        .await
+        .expect("guard function");
+    sqlx::query(
+        "CREATE TRIGGER refuse_reveal_audit BEFORE INSERT ON audit_log FOR EACH ROW WHEN (NEW.action = 'payout.reveal') EXECUTE FUNCTION refuse_reveal_audit()",
+    )
+    .execute(&pool)
+    .await
+    .expect("guard trigger");
+
+    let (code, body) = call(&app, "GET", &format!("/v1/admin/settlements/payouts/{id}/account"), Some(&token), None).await;
+    assert_ne!(code, StatusCode::OK, "{body}");
+    assert!(body.get("account").is_none(), "no account is released: {body}");
+}

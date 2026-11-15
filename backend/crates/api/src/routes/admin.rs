@@ -2,7 +2,7 @@
 
 use super::{
     audit,
-    bookings::{BOOKING_COLS, BookingRow, MAX_NOTE, apply_cancel, load_booking},
+    bookings::{Actor, BOOKING_COLS, BookingRow, MAX_NOTE, apply_cancel, load_booking},
     catalog::load_formula,
     chat::{self, MessageRow, THREAD_COLS, ThreadRow},
     finance, growth,
@@ -269,7 +269,16 @@ async fn cancel(State(s): State<AppState>, Staff(st): Staff, Path(id): Path<Uuid
     if c.refund_amount.is_some_and(|a| a < 0) {
         return Err(ApiError::BadRequest("invalid_amount"));
     }
-    apply_cancel(&s, &b, c.refund_amount, "staff").await?;
+    apply_cancel(
+        &s,
+        &b,
+        c.refund_amount,
+        Actor {
+            role: "staff",
+            id: Some(st.id),
+        },
+    )
+    .await?;
     audit(
         &s.db,
         "staff",

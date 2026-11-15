@@ -272,7 +272,11 @@ struct Summary {
 pub(super) async fn net_revenue_30d(db: &PgPool) -> ApiResult<i64> {
     let to = today_kst();
     let from = to - chrono::Duration::days(29);
-    Ok(Metrics::from(total_of(&aggregate(&mut db.acquire().await?, from, to, "year").await?)).net_revenue)
+    let rows = {
+        let mut conn = db.acquire().await?;
+        aggregate(&mut conn, from, to, "year").await?
+    };
+    Ok(Metrics::from(total_of(&rows)).net_revenue)
 }
 
 async fn summary(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Summary>> {
@@ -326,7 +330,8 @@ async fn series(State(s): State<AppState>, _a: Admin, Query(q): Query<SeriesQuer
         Grain::Week | Grain::Month => 12,
     };
     let (from, to) = finance::series_range(grain, today_kst(), count);
-    Ok(Json(series_points(&mut s.db.acquire().await?, grain, from, to).await?))
+    let mut conn = s.db.acquire().await?;
+    Ok(Json(series_points(&mut conn, grain, from, to).await?))
 }
 
 #[derive(Serialize)]
@@ -352,7 +357,10 @@ struct ProName {
 
 async fn partners(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<PartnerRow>>> {
     let (from, to) = resolve(&q)?;
-    let rows = aggregate(&mut s.db.acquire().await?, from, to, "year").await?;
+    let rows = {
+        let mut conn = s.db.acquire().await?;
+        aggregate(&mut conn, from, to, "year").await?
+    };
     let by_pro = fold_by(&rows, |r| r.pro);
     let ids: Vec<Uuid> = by_pro.keys().copied().collect();
     let names: Vec<ProName> = sqlx::query_as("SELECT id, name, team_name FROM pros WHERE id = ANY($1)")
@@ -390,7 +398,10 @@ struct ServiceRow {
 
 async fn services(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<ServiceRow>>> {
     let (from, to) = resolve(&q)?;
-    let rows = aggregate(&mut s.db.acquire().await?, from, to, "year").await?;
+    let rows = {
+        let mut conn = s.db.acquire().await?;
+        aggregate(&mut conn, from, to, "year").await?
+    };
     let by_svc = fold_by(&rows, |r| r.svc.clone());
     let mut out: Vec<ServiceRow> = by_svc.into_iter().map(|(service_code, t)| ServiceRow { service_code, m: t.into() }).collect();
     out.sort_by_key(|r| std::cmp::Reverse(r.m.gross));
