@@ -24,6 +24,7 @@ S = {
   "cSetupPartnerApp": ["파트너 앱", "Partner app"],
   "cSetupPayMethods": ["결제 수단", "Payment methods"],
   "cSetupPayMethodsHint": ["고객 앱에 보여줄 결제 수단을 켜고 꺼요. 바로 적용돼요.", "Turn the methods customers see on or off. Applies instantly."],
+  "cPayMethodNoKey": ["결제 채널이 아직 연결되지 않아 고객에게 보이지 않아요. 설정 담당자에게 문의해 주세요.", "This payment channel is not connected yet, so customers can't see it. Ask whoever manages your setup."],
   "cReviewTitle": ["스토어 심사용 데모 계정", "Store review demo account"],
   "cReviewHint": ["앱 심사원은 한국 문자를 받을 수 없어요. 아래 번호와 6자리 코드를 심사 메모에 적어 주세요. 기간이 지나면 자동으로 꺼져요.", "Reviewers can't receive Korean SMS. Put this number and 6-digit code in the review notes. It switches off automatically."],
   "cReviewPhone": ["데모 전화번호", "Demo phone number"],

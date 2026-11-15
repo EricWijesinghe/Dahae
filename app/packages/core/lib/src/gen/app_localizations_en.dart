@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2914,6 +2915,10 @@ class TEn extends T {
       'This payment method isn\'t available right now.';
 
   @override
+  String get err_payment_methods_empty =>
+      'Keep at least one payment method on. With none on, customers can\'t pay.';
+
+  @override
   String get err_invalid_payment_method =>
       'That payment method can\'t be used. Choose another.';
 
@@ -5584,6 +5589,10 @@ class TEn extends T {
   @override
   String get cSetupPayMethodsHint =>
       'Turn the methods customers see on or off. Applies instantly.';
+
+  @override
+  String get cPayMethodNoKey =>
+      'This payment channel is not connected yet, so customers can\'t see it. Ask whoever manages your setup.';
 
   @override
   String get cReviewTitle => 'Store review demo account';

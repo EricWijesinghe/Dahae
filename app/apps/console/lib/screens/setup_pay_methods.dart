@@ -42,10 +42,9 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
         : current.where((c) => c != code).toList();
     setState(() => _busy = true);
     try {
-      final rows =
-          (await context.api.put('/admin/payment-methods', {'enabled': next})
-                  as List)
-              .cast<Json>();
+      final rows = (await context.api.put('/admin/payment-methods', {
+        'enabled': next,
+      }) as List).cast<Json>();
       if (mounted) setState(() => _methods = rows);
     } catch (e) {
       if (mounted) showToast(context, context.t.error(e));
@@ -99,6 +98,9 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
                     height: 32,
                   ),
                   title: Text(t.payMethod(m['code'] as String)),
+                  subtitle: m['enabled'] == true && m['configured'] == false
+                      ? Text(t.cPayMethodNoKey, style: context.text.bodySmall)
+                      : null,
                   value: m['enabled'] == true,
                   onChanged: _busy
                       ? null
