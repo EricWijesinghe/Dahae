@@ -594,7 +594,7 @@ async fn team_assign_refuses_a_member_whose_job_overlaps(pool: PgPool) {
     accept(&app, first, &pro).await;
     accept(&app, second, &pro).await;
     let member: Uuid = sqlx::query_scalar(
-        "INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1, 'Member', '010-5000-0407', 'member', 'active') RETURNING id",
+        "INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1, 'Member', '01050000407', 'member', 'active') RETURNING id",
     )
     .bind(pro_id)
     .fetch_one(&pool)
