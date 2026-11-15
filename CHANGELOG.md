@@ -29,6 +29,7 @@ from the release branches; no tags existed for them.
 - Console catalogue: add a new service (code, name, fixed price or quote), archive one by switching it off, edit peak-hour surcharges and quality thresholds, edit a subscription's cadence, day and start time, and load or remove sample data (removal needs the owner's authenticator code).
 - Customer app: guests see how a booking works on the Bookings tab and the FAQ and terms on the Chat tab (chat still asks for sign-in). The welcome offer and the referral amount show before sign-in, and a quote in progress is kept on the device across restarts.
 - Public `GET /v1/public/offers`: welcome offer, sign-up coupons and referral amount for guests, cacheable for 5 minutes, no user data.
+- Server logs: Caddy writes a redacted JSON access log (14 files of 10 MB), container logs keep 14 files of 10 MB, and an optional Uptime Kuma monitor starts only with `COMPOSE_PROFILES=monitoring`. The edge rate limit on `/v1/auth/*` is not in place (the stock Caddy image has no rate-limit module); see docs/DEPLOY.md.
 
 ### Security
 - Every staff role must enrol TOTP before sign-in; customer phone lookup, search and export are admin-only; customer export, deletion, bank-detail reveals and payouts need a TOTP step-up within five minutes (`POST /v1/auth/staff/mfa/step-up`; the console asks for the code and retries). Staff without a second factor get no session refresh. `STAFF_MFA_REQUIRED=0` is refused outside `DEV_MODE`.
