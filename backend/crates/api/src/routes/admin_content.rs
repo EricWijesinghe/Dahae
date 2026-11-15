@@ -1,6 +1,10 @@
 //! Console: catalogue, pricing settings, coupons, content, pros, settlements, staff, customers.
 
-use super::{audit, uploads};
+use super::{
+    audit,
+    pro_verification::{Checklist, checklist_complete, record_checklist, validate_checklist},
+    uploads,
+};
 use crate::{
     auth::{Admin, Staff, hash_password, normalize_phone},
     contract,
@@ -40,6 +44,10 @@ pub fn routes() -> Router<AppState> {
         .route("/customers", get(customers))
         .route("/pros", get(list_pros))
         .route("/pros/{id}/status", post(set_pro_status))
+        .route(
+            "/pros/{id}/profile",
+            get(super::pro_verification::get_profile).put(super::pro_verification::put_profile),
+        )
         .route("/settlements", get(list_settlements))
         .route("/settlements/payouts", get(super::payouts::list_payouts))
         .route("/settlements/run-payouts", post(super::payouts::run_payouts))
@@ -416,27 +424,44 @@ async fn list_pros(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Valu
 struct ProStatus {
     status: String,
     fee_bps: Option<i32>,
+    checklist: Option<Checklist>,
 }
 
+/// Verifying needs every checklist item ticked. The checklist, the status and the audit row commit together.
 async fn set_pro_status(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<Uuid>, Json(p): Json<ProStatus>) -> ApiResult<Json<Value>> {
     if !matches!(p.status.as_str(), "pending" | "verified" | "suspended") || p.fee_bps.is_some_and(|f| !(0..=5_000).contains(&f)) {
         return Err(ApiError::BadRequest("invalid_status"));
     }
-    sqlx::query("UPDATE pros SET status = $2, fee_bps = COALESCE($3, fee_bps) WHERE id = $1")
+    if let Some(list) = &p.checklist {
+        validate_checklist(list)?;
+    }
+    if p.status == "verified" && !p.checklist.as_ref().is_some_and(checklist_complete) {
+        return Err(ApiError::BadRequest("checklist_incomplete"));
+    }
+    let mut tx = s.db.begin().await?;
+    let updated = sqlx::query("UPDATE pros SET status = $2, fee_bps = COALESCE($3, fee_bps) WHERE id = $1")
         .bind(id)
         .bind(&p.status)
         .bind(p.fee_bps)
-        .execute(&s.db)
+        .execute(&mut *tx)
         .await?;
+    if updated.rows_affected() == 0 {
+        return Err(ApiError::NotFound);
+    }
+    if let Some(list) = &p.checklist {
+        record_checklist(&mut *tx, id, a.id, list).await?;
+    }
+    let checklist = p.checklist.as_ref().map_or(Value::Null, |c| json!(c));
     audit(
-        &s.db,
+        &mut *tx,
         "staff",
         Some(a.id),
         "pro.status",
         &id.to_string(),
-        json!({ "status": p.status, "fee_bps": p.fee_bps }),
+        json!({ "status": p.status, "fee_bps": p.fee_bps, "checklist": checklist }),
     )
     .await?;
+    tx.commit().await?;
     notify(&s, Recipient::Pro(id), "pro.status", "계정 상태", &p.status, json!({ "status": p.status })).await?;
     Ok(Json(json!({ "ok": true })))
 }

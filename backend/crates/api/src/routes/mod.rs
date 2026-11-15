@@ -29,6 +29,7 @@ pub(crate) mod partner_jobs;
 pub(crate) mod payments;
 pub(crate) mod payouts;
 mod privacy_requests;
+mod pro_verification;
 mod renewals;
 pub(crate) mod seller;
 mod settings;

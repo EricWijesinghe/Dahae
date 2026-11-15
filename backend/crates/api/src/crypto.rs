@@ -20,6 +20,7 @@ pub mod aad {
     pub const STAFF_TOTP: &str = "staff.totp_secret";
     pub const SOCIAL_TOKEN: &str = "social_tokens.refresh_token_enc";
     pub const INTEGRATION: &str = "integration_settings.secret";
+    pub const PRO_EMERGENCY_CONTACT: &str = "pro_profiles.emergency_contact_enc";
 }
 
 pub fn encrypt(key: &[u8; 32], aad: &str, plaintext: &str) -> String {
