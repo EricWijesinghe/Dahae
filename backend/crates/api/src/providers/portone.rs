@@ -3,6 +3,9 @@
 
 use super::{IdentityInfo, PaymentInfo, ProviderError, Providers};
 use crate::config::PortOne;
+
+/// The refusal code for a cancel whose balance moved since our books were written. Retrying cannot succeed.
+pub const BALANCE_MOVED: &str = "cancellable_amount_changed";
 use base64::{Engine, engine::general_purpose::STANDARD};
 use hmac::{Hmac, Mac};
 use reqwest::{StatusCode, header::AUTHORIZATION};
@@ -116,7 +119,7 @@ async fn landed_before(p: &Providers, id: &str, expected_left: i64) -> Result<()
         tracing::warn!(payment = id, "cancel already applied at PortOne; recording it");
         Ok(())
     } else {
-        Err(ProviderError::Declined("cancellable_amount_changed".into()))
+        Err(ProviderError::Declined(BALANCE_MOVED.into()))
     }
 }
 

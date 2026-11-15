@@ -84,7 +84,7 @@ async fn reconcile_one(s: &AppState, ck: &CheckoutRow) {
 pub async fn drain_refunds(s: &AppState) -> ApiResult<usize> {
     let due: Vec<QueuedRefund> = sqlx::query_as(&format!(
         "UPDATE refund_queue SET next_at = now() + make_interval(mins => $2) WHERE id IN (
-            SELECT id FROM refund_queue WHERE done_at IS NULL AND next_at <= now()
+            SELECT id FROM refund_queue WHERE done_at IS NULL AND NOT review_required AND next_at <= now()
             ORDER BY next_at LIMIT $1 FOR UPDATE SKIP LOCKED)
          RETURNING {REFUND_COLS}"
     ))

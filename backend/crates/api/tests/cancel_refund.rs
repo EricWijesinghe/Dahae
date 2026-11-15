@@ -433,3 +433,37 @@ async fn waitlist_accept_charges_the_saved_card_through_portone(pool: PgPool) {
     let (paid, _, pid) = payment_row(&pool, booking).await;
     assert_eq!(w.gateway.lock().expect("gateway").payments.get(&pid), Some(&(paid, 0)));
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn refused_queued_refund_goes_to_staff_instead_of_retrying(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let dev = common::app(pool.clone());
+    let c = customer(&dev, &pool, "010-7100-0012").await;
+    let (base, gateway) = start_gateway().await;
+    let prod = prod_app(pool.clone(), &base);
+    let (id, _) = book(&prod, &c, 10, None).await;
+    let (paid, _, pid) = payment_row(&pool, id).await;
+    // A cancel made in the PortOne console moved the balance after the payment was recorded.
+    gateway.lock().expect("gateway").payments.get_mut(&pid).expect("charged").1 = 1_000;
+    let state = prod_state(&pool, &base);
+
+    assert_eq!(api::util::refund_durably(&state, "portone", &pid, paid, None).await, Refund::Pending);
+    let (attempts, review): (i32, bool) = sqlx::query_as("SELECT attempts, review_required FROM refund_queue")
+        .fetch_one(&pool)
+        .await
+        .expect("row");
+    assert_eq!((attempts, review), (1, true), "refused once, then parked for staff");
+    let cases: i64 = sqlx::query_scalar("SELECT count(*) FROM cases WHERE kind = 'payment_dispute' AND source = 'provider'")
+        .fetch_one(&pool)
+        .await
+        .expect("cases");
+    assert_eq!(cases, 1, "a staff case says why the refund stopped");
+
+    sqlx::query("UPDATE refund_queue SET next_at = now()").execute(&pool).await.expect("due");
+    assert_eq!(
+        api::routes::checkout_recon::drain_refunds(&state).await.expect("drain"),
+        0,
+        "the drain leaves it to staff"
+    );
+    assert_eq!(cancels(&gateway).len(), 1, "the provider was asked once");
+}

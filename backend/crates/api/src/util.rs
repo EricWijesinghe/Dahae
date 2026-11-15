@@ -1,8 +1,13 @@
 //! Small helpers shared by route modules.
 
-use crate::{error::ApiResult, providers::ProviderError, state::AppState};
+use crate::{
+    error::ApiResult,
+    providers::{ProviderError, portone::BALANCE_MOVED},
+    routes::cases::{self, NewCase},
+    state::AppState,
+};
 use chrono::{NaiveDate, Utc};
-use serde_json::Value;
+use serde_json::{Value, json};
 use sqlx::PgConnection;
 use std::{collections::BTreeMap, future::Future, sync::Mutex};
 use uuid::Uuid;
@@ -123,20 +128,26 @@ pub async fn retry_refund(s: &AppState, r: &QueuedRefund) -> Refund {
     let result = attempt_refund(s, r).await;
     let attempts = r.attempts + 1;
     let state = if result.is_ok() { Refund::Done } else { Refund::Pending };
+    // A refusal for a moved balance never succeeds on a retry: staff decide, the drain stops.
+    let parked = matches!(&result, Err(ProviderError::Declined(code)) if code == BALANCE_MOVED);
     let error = result.err().map(|e| e.to_string());
     let saved = sqlx::query(
         "UPDATE refund_queue SET attempts = $2, done_at = CASE WHEN $3 THEN now() END, last_error = $4,
-            next_at = now() + make_interval(mins => $5) WHERE id = $1",
+            next_at = now() + make_interval(mins => $5), review_required = review_required OR $6 WHERE id = $1",
     )
     .bind(r.id)
     .bind(attempts)
     .bind(state == Refund::Done)
     .bind(&error)
     .bind(refund_backoff_mins(attempts))
+    .bind(parked)
     .execute(&s.db)
     .await;
     if let Err(e) = saved {
         tracing::error!(error = %e, refund = %r.id, "refund outcome not saved");
+    }
+    if parked {
+        park_for_staff(s, r).await;
     }
     if let Some(error) = error {
         let (provider, tx_id, amount) = (r.provider.as_str(), r.tx_id.as_str(), r.amount);
@@ -155,6 +166,27 @@ pub async fn retry_refund(s: &AppState, r: &QueuedRefund) -> Refund {
         }
     }
     state
+}
+
+/// Opens the staff case and the ops alert for a refund that will not go through on its own.
+async fn park_for_staff(s: &AppState, r: &QueuedRefund) {
+    let opened = cases::insert(
+        &s.db,
+        NewCase {
+            booking: None,
+            kind: "payment_dispute",
+            source: "provider",
+            reporter: "system",
+            reporter_id: None,
+            summary: "A refund was refused by PortOne because the payment balance changed (a cancel made outside the app). Check the payment in the PortOne console and refund the rest by hand.",
+            photos: json!([]),
+        },
+    )
+    .await;
+    if let Err(e) = opened {
+        tracing::error!(error = %e, refund = %r.id, "refund review case not opened");
+    }
+    crate::ops::record(&s.db, "payment_stuck", Err("refund_failed")).await;
 }
 
 async fn attempt_refund(s: &AppState, r: &QueuedRefund) -> Result<(), ProviderError> {
