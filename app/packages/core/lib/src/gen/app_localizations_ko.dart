@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1238,10 +1239,10 @@ class TKo extends T {
   String get unitTitle_disinfection => '방역 종류를\n골라 주세요.';
 
   @override
-  String get unit_window_small => '작은 창 (1m 미만)';
+  String get unit_window_small => '작은 창';
 
   @override
-  String get unit_window_large => '큰 창 (1m 이상)';
+  String get unit_window_large => '큰 창';
 
   @override
   String get unit_pest => '해충 방역';
@@ -1795,7 +1796,7 @@ class TKo extends T {
   String get prepTitle => '방문 전에 준비해 주세요';
 
   @override
-  String get prepBody => '준비하지 않으면 일부 서비스가 제한될 수 있어요';
+  String get prepBody => '준비하지 않으면 일부 서비스가 제한될 수 있어요.';
 
   @override
   String get prepAsk => '준비가 어렵다면 상담으로 미리 알려 주세요';
@@ -2671,8 +2672,8 @@ class TKo extends T {
   String get dfEdit => '수정';
 
   @override
-  String dfStudioToast(String service, String max, String label, String size) {
-    return '$service는 $max평 이하만 가능해요. $label($size평)는 상담으로 안내해 드릴게요.';
+  String dfStudioToast(String service, String max) {
+    return '$service는 $max평 이하만 가능해요.';
   }
 
   @override
@@ -2700,6 +2701,12 @@ class TKo extends T {
 
   @override
   String get dfVisitTime => '방문 시간';
+
+  @override
+  String get dfVisitTimeSheet => '방문 시간 선택';
+
+  @override
+  String get dfConsultNote => '상담으로 안내해 드릴게요.';
 
   @override
   String get dfSelect => '선택';
@@ -3812,7 +3819,7 @@ class TKo extends T {
   String get hgOldBuildBody => '오래된 집 · 이사 청소';
 
   @override
-  String get hgSizeQuestion => '집 크기는 어떻게 되나요?';
+  String get hgSizeQuestion => 'Q2 집 크기는 어떻게 되나요?';
 
   @override
   String get hgHomeOneTwo => '원룸·투룸';

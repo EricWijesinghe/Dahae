@@ -8,7 +8,7 @@ S = {
   "hgNewBuildBody": ["새로 지은 집 · 입주 청소", "Newly built home · move-in cleaning"],
   "hgOldBuild": ["구축", "Existing building"],
   "hgOldBuildBody": ["오래된 집 · 이사 청소", "Older home · move-out cleaning"],
-  "hgSizeQuestion": ["집 크기는 어떻게 되나요?", "How big is your home?"],
+  "hgSizeQuestion": ["Q2 집 크기는 어떻게 되나요?", "Q2 How big is your home?"],
   "hgHomeOneTwo": ["원룸·투룸", "Studio · 2-room"],
   "hgHomeApartment": ["아파트", "Apartment"],
   "hgHomeVilla": ["빌라·주택", "Villa · house"],

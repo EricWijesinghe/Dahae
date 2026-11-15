@@ -156,7 +156,7 @@ S = {
   "scheduleQuoteNote": ["정확한 도착 시간은 상담에서 안내해 드려요", "We'll confirm the exact time in chat"],
   "goToPayment": ["결제하러 가기", "Continue to payment"],
   "prepTitle": ["방문 전에 준비해 주세요", "Please have these ready"],
-  "prepBody": ["준비하지 않으면 일부 서비스가 제한될 수 있어요", "Some tasks may be limited without them"],
+  "prepBody": ["준비하지 않으면 일부 서비스가 제한될 수 있어요.", "Some tasks may be limited without them."],
   "prepAsk": ["준비가 어렵다면 상담으로 미리 알려 주세요", "Can't prepare these? Let our team know"],
   "tool_vacuum": ["청소기", "Vacuum"],
   "tool_trash": ["쓰레기봉투", "Trash bags"],

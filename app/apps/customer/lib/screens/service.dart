@@ -108,11 +108,11 @@ class _ServiceScreenState extends State<ServiceScreen> {
                 : t.unitTitle(s.code),
             body: t.serviceDesc(s.code),
           ),
-          if (s.code == 'studio')
+          if (s.maxPyeong != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
               child: Text(
-                t.svcNote_studio_limit,
+                t.dfStudioNote('${s.maxPyeong}'),
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.inkMuted,
                 ),
@@ -211,15 +211,6 @@ class _ServiceScreenState extends State<ServiceScreen> {
           const SizedBox(height: Space.xs),
           Text(
             t.prepBody,
-            style: context.text.bodySmall?.copyWith(
-              color: context.colors.inkMuted,
-            ),
-          ),
-        ],
-        if (s.maxPyeong != null) ...[
-          const SizedBox(height: Space.sm),
-          Text(
-            t.dfStudioNote('${s.maxPyeong}'),
             style: context.text.bodySmall?.copyWith(
               color: context.colors.inkMuted,
             ),

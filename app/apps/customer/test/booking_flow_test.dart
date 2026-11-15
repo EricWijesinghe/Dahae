@@ -12,7 +12,15 @@ import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
 
 /// From the home grid, open a service's detail screen.
+/// Home shows category tiles (CR-8.1): open the service's group, then the service itself.
 Future<void> _openFromHome(WidgetTester tester, String code) async {
+  final group = defaultServiceGroups.firstWhere(
+    (g) => g.services.contains(code),
+  );
+  final title = group.titleFor('ko');
+  await pumpUntilFound(tester, find.text(title));
+  await tester.tap(find.text(title));
+  await settle(tester);
   await pumpUntilFound(tester, find.text(koT.service(code)));
   await tester.tap(find.text(koT.service(code)));
   await settle(tester);
@@ -179,8 +187,11 @@ void main() {
       stockCustomerApi(fake, addresses: [addressJson(sizePyeong: 8)]);
       _openSlots(fake);
       final env = await TestEnv.create(fake: fake);
-      await pumpCustomerApp(tester, env);
-      await _openFromHome(tester, 'studio');
+      await pumpCustomerScreen(
+        tester,
+        env,
+        ServiceScreen(service: Service.fromJson(serviceJson('studio'))),
+      );
 
       await _tap(tester, find.text(koT.dfBookNow));
       expect(find.byType(ScheduleScreen), findsOneWidget);
@@ -219,10 +230,15 @@ void main() {
         reason: 'the fitting address is preselected',
       );
       expect(find.text(koT.dfAddressTitle), findsOneWidget);
+      expect(
+        find.text(koT.dfConsultNote),
+        findsOneWidget,
+        reason: 'the 24 pyeong card says so',
+      );
       await _tap(tester, find.text('본가'));
       expect(d.address?.id, 'a-home', reason: 'too big to select');
       expect(
-        find.text(koT.dfStudioToast(koT.service('studio'), '10', '본가', '24')),
+        find.text(koT.dfStudioToast(koT.service('studio'), '10')),
         findsOneWidget,
       );
       expect(
@@ -399,8 +415,15 @@ void main() {
       );
       _openSlots(fake);
       final env = await TestEnv.create(fake: fake);
-      await pumpCustomerApp(tester, env);
-      await _openFromHome(tester, 'studio');
+      final app = await _loaded(env);
+      await tester.pumpWidget(
+        CustomerTestHost(
+          env: env,
+          app: app,
+          home: ServiceScreen(service: Service.fromJson(serviceJson('studio'))),
+        ),
+      );
+      await settle(tester);
 
       await _tap(tester, find.text(koT.dfBookNow));
       await _tap(

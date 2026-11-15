@@ -515,8 +515,8 @@
  "svcDesc_disinfection": "필요한 방역과 소독을 골라 주세요",
  "unitTitle_window": "창문 크기와 개수를\n골라 주세요.",
  "unitTitle_disinfection": "방역 종류를\n골라 주세요.",
- "unit_window_small": "작은 창 (1m 미만)",
- "unit_window_large": "큰 창 (1m 이상)",
+ "unit_window_small": "작은 창",
+ "unit_window_large": "큰 창",
  "unit_pest": "해충 방역",
  "unit_mite_bedbug": "진드기·빈대 퇴치",
  "unit_sanitize": "살균·바이러스 소독",
@@ -812,7 +812,7 @@
  "scheduleQuoteNote": "정확한 도착 시간은 상담에서 안내해 드려요",
  "goToPayment": "결제하러 가기",
  "prepTitle": "방문 전에 준비해 주세요",
- "prepBody": "준비하지 않으면 일부 서비스가 제한될 수 있어요",
+ "prepBody": "준비하지 않으면 일부 서비스가 제한될 수 있어요.",
  "prepAsk": "준비가 어렵다면 상담으로 미리 알려 주세요",
  "tool_vacuum": "청소기",
  "tool_trash": "쓰레기봉투",
@@ -1274,19 +1274,13 @@
  "dfMustCheck": "꼭 확인해 주세요",
  "dfAddressTitle": "예약할 주소를 선택해 주세요.",
  "dfEdit": "수정",
- "dfStudioToast": "{service}는 {max}평 이하만 가능해요. {label}({size}평)는 상담으로 안내해 드릴게요.",
+ "dfStudioToast": "{service}는 {max}평 이하만 가능해요.",
  "@dfStudioToast": {
   "placeholders": {
    "service": {
     "type": "String"
    },
    "max": {
-    "type": "String"
-   },
-   "label": {
-    "type": "String"
-   },
-   "size": {
     "type": "String"
    }
   }
@@ -1306,6 +1300,8 @@
  "dfChange": "변경",
  "dfVisitDay": "방문 일",
  "dfVisitTime": "방문 시간",
+ "dfVisitTimeSheet": "방문 시간 선택",
+ "dfConsultNote": "상담으로 안내해 드릴게요.",
  "dfSelect": "선택",
  "dfSlotClosed": "마감",
  "dfSelectDone": "선택 완료",
@@ -1942,7 +1938,7 @@
  "hgNewBuildBody": "새로 지은 집 · 입주 청소",
  "hgOldBuild": "구축",
  "hgOldBuildBody": "오래된 집 · 이사 청소",
- "hgSizeQuestion": "집 크기는 어떻게 되나요?",
+ "hgSizeQuestion": "Q2 집 크기는 어떻게 되나요?",
  "hgHomeOneTwo": "원룸·투룸",
  "hgHomeApartment": "아파트",
  "hgHomeVilla": "빌라·주택",

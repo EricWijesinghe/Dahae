@@ -108,7 +108,12 @@ async fn seed_fixes_only_the_untouched_old_two_coupon_banner(pool: PgPool) {
         .fetch_all(&pool)
         .await
         .expect("titles");
-    assert_eq!(titles[0]["ko"], "첫 청소 15,000원 웰컴쿠폰");
+    assert_eq!(titles[0]["ko"], "첫 청소 웰컴 쿠폰팩 즉시 지급");
+    let card: Value = sqlx::query_scalar("SELECT body->'card' FROM content_items WHERE kind = 'banner' ORDER BY sort_order LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .expect("card");
+    assert_eq!(card["value"]["ko"], "15,000 원", "the welcome card shows the design amount");
     assert_eq!(titles[1], edited, "an owner-edited banner is left alone");
 }
 #[sqlx::test(migrations = "../../migrations")]
