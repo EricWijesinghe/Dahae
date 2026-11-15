@@ -9,6 +9,7 @@ import 'confirm_action.dart';
 import 'payout_seller_dialog.dart';
 import 'staff_reset.dart';
 import 'stepup.dart';
+import 'people_profile.dart';
 import 'points_ledger.dart';
 import 'staff_invite.dart';
 
@@ -77,14 +78,19 @@ class PartnersScreen extends StatelessWidget {
                           : Wrap(
                               spacing: 4,
                               children: [
+                                OutlinedButton(
+                                  onPressed: () => showProProfile(
+                                    context,
+                                    '${p['id']}',
+                                    reload,
+                                  ),
+                                  child: Text(t.cPfTabProfile),
+                                ),
                                 if (p['status'] != 'verified')
                                   FilledButton.tonal(
-                                    onPressed: () => _act(
+                                    onPressed: () => showProProfile(
                                       context,
-                                      () => context.api.post(
-                                        '/admin/pros/${p['id']}/status',
-                                        {'status': 'verified'},
-                                      ),
+                                      '${p['id']}',
                                       reload,
                                     ),
                                     child: Text(t.cVerify),

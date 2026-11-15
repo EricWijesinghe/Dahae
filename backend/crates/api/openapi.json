@@ -2813,7 +2813,52 @@
         "tags": [
           "admin"
         ],
-        "summary": "Verify, suspend or set a partner fee",
+        "summary": "Verify (needs a complete checklist), suspend or set a partner fee",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/pros/{id}/profile": {
+      "get": {
+        "operationId": "adminGetProProfile",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Verification checklist, status and employee profile of a pro (emergency contact decrypted, audited)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "adminPutProProfile",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Save the employee profile of a pro (emergency contact encrypted)",
         "parameters": [
           {
             "$ref": "#/components/parameters/Id"

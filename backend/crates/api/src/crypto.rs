@@ -21,6 +21,7 @@ pub mod aad {
     pub const SOCIAL_TOKEN: &str = "social_tokens.refresh_token_enc";
     pub const INTEGRATION: &str = "integration_settings.secret";
     pub const BILLING_KEY: &str = "payment_methods.billing_key";
+    pub const PRO_EMERGENCY_CONTACT: &str = "pro_profiles.emergency_contact_enc";
 }
 
 pub fn encrypt(key: &[u8; 32], aad: &str, plaintext: &str) -> String {

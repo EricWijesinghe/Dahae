@@ -194,7 +194,7 @@ async fn a_failing_notification_insert_never_fails_the_request_and_is_stored_lat
         "POST",
         &format!("/v1/admin/pros/{pro_id}/status"),
         Some(staff.as_str()),
-        Some(json!({ "status": "verified" })),
+        Some(json!({ "status": "verified", "checklist": { "identity": true, "tax_type": true, "experience": true, "emergency_contact": true } })),
     )
     .await;
     assert_eq!(st, StatusCode::OK, "pro status: {b}");

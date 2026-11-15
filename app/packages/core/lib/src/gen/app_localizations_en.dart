@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5028,6 +5027,104 @@ class TEn extends T {
 
   @override
   String get prqBy => 'Handled by';
+
+  @override
+  String get cPfTitle => 'Staff profile · verification';
+
+  @override
+  String get cPfTabChecklist => 'Verification checklist';
+
+  @override
+  String get cPfTabProfile => 'Profile';
+
+  @override
+  String get cPfChecklistHelp =>
+      'Every item must be ticked before the pro can be approved as active.';
+
+  @override
+  String get cPfItemIdentity => 'ID document checked';
+
+  @override
+  String get cPfItemTaxType => 'Tax type confirmed (business or wage income)';
+
+  @override
+  String get cPfItemExperience => 'Experience checked';
+
+  @override
+  String get cPfItemEmergency => 'Emergency contact confirmed';
+
+  @override
+  String get cPfLegacyNote =>
+      'Approved before checklists existed, so nothing is recorded yet. Check the items and save.';
+
+  @override
+  String get cPfIncomplete => 'Tick every checklist item before approving.';
+
+  @override
+  String get cPfSaveChecklist => 'Save checklist';
+
+  @override
+  String get cPfApprove => 'Approve as active';
+
+  @override
+  String get cPfPhoto => 'Photo';
+
+  @override
+  String get cPfPickPhoto => 'Upload photo';
+
+  @override
+  String get cPfBio => 'Bio';
+
+  @override
+  String get cPfEmployment => 'Employment type';
+
+  @override
+  String get cPfEmpFreelance => 'Freelance';
+
+  @override
+  String get cPfEmpEmployee => 'Employee';
+
+  @override
+  String get cPfEmpContract => 'Contract';
+
+  @override
+  String get cPfEmergency => 'Emergency contact';
+
+  @override
+  String get cPfEmergencyHelp =>
+      'Digits and hyphens only. Stored encrypted; every view is logged.';
+
+  @override
+  String get cPfHiredOn => 'Hire date';
+
+  @override
+  String get cPfNoDate => 'Not set';
+
+  @override
+  String get cPfSaveProfile => 'Save profile';
+
+  @override
+  String get err_checklist_incomplete =>
+      'Tick every checklist item before approving.';
+
+  @override
+  String get err_invalid_checklist =>
+      'Checklist data is out of date. Reload the screen.';
+
+  @override
+  String get err_invalid_emergency_contact =>
+      'Emergency contact: digits and hyphens only, 30 characters at most.';
+
+  @override
+  String get err_invalid_employment_type =>
+      'Pick an employment type from the list.';
+
+  @override
+  String get err_invalid_photo =>
+      'Only photos uploaded here can be used. Upload the photo again.';
+
+  @override
+  String get err_invalid_bio => 'Keep the bio to 500 characters.';
 
   @override
   String get rnwTitle => 'Renewal calendar';
