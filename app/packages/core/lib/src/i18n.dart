@@ -134,6 +134,7 @@ extension Labels on T {
     'move_in' => svc_move_in,
     'window' => svc_window,
     'disinfection' => svc_disinfection,
+    'whole_home' => svc_whole_home,
     _ => code,
   };
 
@@ -146,6 +147,9 @@ extension Labels on T {
     'sofa' => svcShort_sofa,
     'move_out' => svcShort_move_out,
     'move_in' => svcShort_move_in,
+    'window' => svcShort_window,
+    'disinfection' => svcShort_disinfection,
+    'whole_home' => svcShort_whole_home,
     _ => code,
   };
 
@@ -192,8 +196,9 @@ extension Labels on T {
       'seat_3' => unit_seat_3,
       'seat_4_plus' => unit_seat_4_plus,
       'l_shape' => unit_l_shape,
-      'small' => unit_window_small,
-      'large' => unit_window_large,
+      'small' || 'window_small' => unit_window_small,
+      'large' || 'window_large' => unit_window_large,
+      'mattress' => unit_mattress,
       'pest' => unit_pest,
       'mite_bedbug' => unit_mite_bedbug,
       'sanitize' => unit_sanitize,
@@ -214,8 +219,9 @@ extension Labels on T {
       'seat_3' => unitShort_seat_3,
       'seat_4_plus' => unitShort_seat_4_plus,
       'l_shape' => unitShort_l_shape,
-      'small' => unitShort_small,
-      'large' => unitShort_large,
+      'small' || 'window_small' => unitShort_small,
+      'large' || 'window_large' => unitShort_large,
+      'mattress' => unitShort_mattress,
       'pest' => unitShort_pest,
       'mite_bedbug' => unitShort_mite_bedbug,
       'sanitize' => unitShort_sanitize,

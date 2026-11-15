@@ -80,7 +80,6 @@ class AppState extends ChangeNotifier {
   /// Points balance for the More counter. Null until it loads, or when the wallet is unreachable.
   int? points;
   List<Service> services = const [];
-  List<ServiceGroup> groups = const [];
   List<Address> addresses = const [];
   List<Coupon> coupons = const [];
   List<PaymentMethod> methods = const [];
@@ -95,7 +94,6 @@ class AppState extends ChangeNotifier {
   Future<void> loadAll() async {
     // Disk restore never gates the network: a slow or stuck keystore must not hold up sign-in data.
     unawaited(restoreServices());
-    unawaited(loadServiceGroups());
     await Future.wait([
       loadProfile(),
       loadServices(),
@@ -146,17 +144,6 @@ class AppState extends ChangeNotifier {
     } on Object {
       // Stale snapshot from an older schema: ignore it and wait for the network.
       return;
-    }
-    notifyListeners();
-  }
-
-  /// Home tiles from the server. Empty when the server is old or offline: the home keeps the service list.
-  Future<void> loadServiceGroups() async {
-    try {
-      final raw = await api.get('/service-groups') as Json;
-      groups = parseServiceGroups(raw);
-    } on ApiException {
-      groups = const [];
     }
     notifyListeners();
   }

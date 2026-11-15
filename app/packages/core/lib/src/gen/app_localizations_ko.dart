@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1379,7 +1380,7 @@ class TKo extends T {
   String get err_rate_limited => '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.';
 
   @override
-  String get err_studio_too_large => '원룸 청소는 10평 이하 집만 가능해요';
+  String get err_studio_too_large => '원룸 청소는 10평 이하만 가능해요.';
 
   @override
   String get err_date_out_of_range => '내일부터 60일 이내로 골라 주세요';
@@ -1523,7 +1524,7 @@ class TKo extends T {
   String get svcShort_move_in => '입주';
 
   @override
-  String get svcDesc_studio => '방 1개, 화장실 1개인 10평 이하 원룸을 2시간 동안 꼼꼼히 청소해요.';
+  String get svcDesc_studio => '방 1개, 화장실 1개인 10평 이하 원룸을 2시간 동안 꼼꼼하게 청소해요.';
 
   @override
   String get svcDesc_kitchen => '싱크대, 가스레인지, 후드 겉면, 상판을 중심으로 주방을 집중 청소해요.';
@@ -1732,7 +1733,7 @@ class TKo extends T {
   String get addressRoad => '도로명 주소';
 
   @override
-  String get addressDetail => '상세 주소';
+  String get addressDetail => '상세주소';
 
   @override
   String get addressSize => '집 크기 (평)';
@@ -1795,7 +1796,7 @@ class TKo extends T {
   String get prepTitle => '방문 전에 준비해 주세요';
 
   @override
-  String get prepBody => '준비되지 않으면 일부 작업이 제한될 수 있어요';
+  String get prepBody => '준비하지 않으면 일부 서비스가 제한될 수 있어요';
 
   @override
   String get prepAsk => '준비가 어렵다면 상담으로 미리 알려 주세요';
@@ -3812,7 +3813,7 @@ class TKo extends T {
   String get hgOldBuildBody => '오래된 집 · 이사 청소';
 
   @override
-  String get hgSizeQuestion => '집 크기를 골라 주세요';
+  String get hgSizeQuestion => '집 크기는 어떻게 되나요?';
 
   @override
   String get hgHomeOneTwo => '원룸·투룸';
@@ -4064,6 +4065,28 @@ class TKo extends T {
 
   @override
   String get ntErrChars => '줄바꿈이나 조절 문자는 넣을 수 없어요.';
+
+  @override
+  String get unit_mattress => '매트리스';
+
+  @override
+  String get unitShort_mattress => '매트리스';
+
+  @override
+  String get svc_whole_home => '집 전체 청소';
+
+  @override
+  String get svcShort_whole_home => '집 전체';
+
+  @override
+  String get svcShort_window => '창문';
+
+  @override
+  String get svcShort_disinfection => '방역·소독';
+
+  @override
+  String get svcNote_studio_limit =>
+      '※ 10평을 넘는 집은 원룸 청소를 예약할 수 없어요. 상담으로 맞는 서비스를 안내해 드려요.';
 
   @override
   String get cOps => '시스템 상태';

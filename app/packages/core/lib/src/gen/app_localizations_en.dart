@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -1411,7 +1412,7 @@ class TEn extends T {
 
   @override
   String get err_studio_too_large =>
-      'Studio cleaning is for homes up to 10 pyeong';
+      'Studio cleaning is for homes up to 10 pyeong.';
 
   @override
   String get err_date_out_of_range =>
@@ -3905,7 +3906,7 @@ class TEn extends T {
   String get hgOldBuildBody => 'Older home · move-out cleaning';
 
   @override
-  String get hgSizeQuestion => 'Choose your home size';
+  String get hgSizeQuestion => 'How big is your home?';
 
   @override
   String get hgHomeOneTwo => 'Studio · 2-room';
@@ -4167,6 +4168,28 @@ class TEn extends T {
   @override
   String get ntErrChars =>
       'Line breaks and control characters are not allowed.';
+
+  @override
+  String get unit_mattress => 'Mattress';
+
+  @override
+  String get unitShort_mattress => 'Mattress';
+
+  @override
+  String get svc_whole_home => 'Whole-home cleaning';
+
+  @override
+  String get svcShort_whole_home => 'Whole home';
+
+  @override
+  String get svcShort_window => 'Window';
+
+  @override
+  String get svcShort_disinfection => 'Disinfection';
+
+  @override
+  String get svcNote_studio_limit =>
+      'Homes over 10 pyeong can\'t book studio cleaning. We\'ll suggest the right service in chat.';
 
   @override
   String get cOps => 'System status';

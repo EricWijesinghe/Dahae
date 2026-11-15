@@ -15,7 +15,7 @@ void openServiceGroup(
 ) {
   final members = groupMembers(group, services);
   final Widget page = switch (group.chooser) {
-    'move' => const MoveChooserScreen(),
+    'move' => MoveChooserScreen(group: group),
     'direct' when members.isNotEmpty => ServiceScreen(service: members.first),
     _ => ServiceGroupScreen(group: group),
   };

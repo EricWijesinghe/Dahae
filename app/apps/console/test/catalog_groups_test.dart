@@ -26,17 +26,20 @@ Json _group({
 void main() {
   final t = koT;
 
-  test('a move tile with both build-age services and a home type saves its questions', () {
-    final d = GroupDraft.from(_group());
-    expect(d.problem(t), isNull);
-    final body = d.toBody();
-    expect(body['chooser'], 'move');
-    expect(body['services'], ['move_in', 'move_out']);
-    expect(body['config'], {
-      'build_age': {'new': 'move_in', 'old': 'move_out'},
-      'home_types': ['apartment'],
-    });
-  });
+  test(
+    'a move tile with both build-age services and a home type saves its questions',
+    () {
+      final d = GroupDraft.from(_group());
+      expect(d.problem(t), isNull);
+      final body = d.toBody();
+      expect(body['chooser'], 'move');
+      expect(body['services'], ['move_in', 'move_out']);
+      expect(body['config'], {
+        'build_age': {'new': 'move_in', 'old': 'move_out'},
+        'home_types': ['apartment'],
+      });
+    },
+  );
 
   test('a move tile without a home size choice is refused', () {
     final d = GroupDraft.from(

@@ -91,7 +91,10 @@ final guides = <String, Guide>{
     ],
     devHelp: true,
     screenshots: const [
-      Tr('[결제 연동 → 식별코드 화면 캡처 자리]', '[Screenshot slot: Integration → IDs page]'),
+      Tr(
+        '[결제 연동 → 식별코드 화면 캡처 자리]',
+        '[Screenshot slot: Integration → IDs page]',
+      ),
     ],
     fields: const {
       'store_id': FieldGuide(

@@ -27,9 +27,9 @@ class RescheduleGate extends StatelessWidget {
 
   Future<bool> _allowed(BuildContext context) async {
     try {
-      final j = (await context.api.get(
-        '/bookings/$bookingId/cancel-preview',
-      )) as Json;
+      final j =
+          (await context.api.get('/bookings/$bookingId/cancel-preview'))
+              as Json;
       return CancelPreview.fromJson(j).rescheduleAllowed;
     } catch (_) {
       return false;

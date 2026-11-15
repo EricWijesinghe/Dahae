@@ -9,10 +9,13 @@ import 'quote_flow.dart';
 /// Entry for 이사·입주 청소 (CR-3) and whole-home (CR-4). Q1 신축 → move-in, 구축 → move-out (only
 /// without a [service]); Q2 picks the home type, each row marked 예상 견적 (an estimate, never a fixed price).
 class MoveChooserScreen extends StatefulWidget {
-  const MoveChooserScreen({super.key, this.service});
+  const MoveChooserScreen({super.key, this.service, this.group});
 
   /// Whole-home passes its own service and skips Q1.
   final Service? service;
+
+  /// The 이사·입주 group from the server: its home types and build-age services (CR-8.1).
+  final ServiceGroup? group;
 
   @override
   State<MoveChooserScreen> createState() => _MoveChooserScreenState();
@@ -21,13 +24,13 @@ class MoveChooserScreen extends StatefulWidget {
 class _MoveChooserScreenState extends State<MoveChooserScreen> {
   bool? _newBuild;
 
-  Service? _quoteService(AppState app) =>
-      widget.service ??
-      switch (_newBuild) {
-        true => app.service('move_in'),
-        false => app.service('move_out'),
-        null => null,
-      };
+  Service? _quoteService(AppState app) {
+    final isNew = _newBuild;
+    if (widget.service != null || isNew == null) return widget.service;
+    return app.service(buildAgeServiceCode(_config, isNew: isNew));
+  }
+
+  Json get _config => widget.group?.config ?? const {};
 
   void _open(MoveHome home) {
     final svc = _quoteService(context.appRead);
@@ -83,7 +86,7 @@ class _MoveChooserScreenState extends State<MoveChooserScreen> {
               FlowSection(
                 title: askBuild ? t.hgSizeQuestion : null,
                 children: [
-                  for (final h in MoveHome.values)
+                  for (final h in moveHomesFor(_config))
                     ListTile(
                       title: Text(_homeLabel(t, h)),
                       subtitle: Text(t.hgEstimateOnly),

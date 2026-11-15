@@ -104,8 +104,8 @@ class NewsList extends StatelessWidget {
   }
 }
 
-void _open(BuildContext context, ContentItem item) => Navigator.of(context)
-    .push(
+void _open(BuildContext context, ContentItem item) =>
+    Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => ContentDetailScreen(item: item)),
     );
 
@@ -337,8 +337,9 @@ class BannerCarouselState extends State<BannerCarousel> {
     final sub = context.text.bodySmall!;
     double line(TextStyle s) => (s.fontSize ?? 14) * (s.height ?? 1.4);
     // Two headline lines and a sub-line at the user's font size: large text grows the card.
-    final text = MediaQuery.textScalerOf(context)
-        .scale(line(title) * 2 + line(sub));
+    final text = MediaQuery.textScalerOf(
+      context,
+    ).scale(line(title) * 2 + line(sub));
     final height = math.max(_bannerMinHeight, text + Space.lg * 2 + Space.xs);
     final coupons = widget.coupons > 0
         ? t.couponAvailable('${widget.coupons}')

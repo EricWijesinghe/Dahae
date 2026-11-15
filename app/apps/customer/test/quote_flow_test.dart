@@ -284,11 +284,13 @@ void main() {
     (tester) async {
       final fake = await _pumpMoveOut(tester);
 
-      // 1/6: three cleaning circles, the 짐 상태 radio list (5), reviews from /public/proof.
+      // 1/6: three cleaning circles, the 짐 상태 radio list (3, CR-3), reviews from /public/proof.
       expect(find.text(_chip(1)), findsOneWidget);
       expect(find.byType(CircleChoice), findsNWidgets(3));
       expect(find.text(koT.luggage_not_unpacked), findsOneWidget);
-      expect(find.byType(RadioRow), findsNWidgets(5));
+      expect(find.byType(RadioRow), findsNWidgets(3));
+      expect(find.text(koT.luggage_fully_lived_in), findsNothing);
+      expect(find.text(koT.luggage_unknown), findsNothing);
       await _tap(tester, find.text(koT.type_standard));
       await _tap(tester, find.text(koT.luggage_partly_unpacked));
       expect(find.text('정말 깨끗해졌어요'), findsOneWidget);

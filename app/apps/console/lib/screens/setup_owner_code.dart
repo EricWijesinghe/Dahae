@@ -7,11 +7,10 @@ import 'package:ui/ui.dart';
 const ownerTotpHeader = 'X-Owner-Totp';
 
 /// Asks the owner for the 6-digit authenticator code before a Toss payout change. Null when cancelled.
-Future<String?> askOwnerCode(BuildContext context) =>
-    showDialog<String>(
-      context: context,
-      builder: (_) => const _OwnerCodeDialog(),
-    );
+Future<String?> askOwnerCode(BuildContext context) => showDialog<String>(
+  context: context,
+  builder: (_) => const _OwnerCodeDialog(),
+);
 
 class _OwnerCodeDialog extends StatefulWidget {
   const _OwnerCodeDialog();
