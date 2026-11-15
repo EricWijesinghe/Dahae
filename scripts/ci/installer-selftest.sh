@@ -446,6 +446,65 @@ t  "install_agent runs in main"          grep -qE '^  install_agent( |$)' "$ROOT
 t  "cron table written by the CLI"       grep -qF '"$BIN/dahae" write-cron' "$ROOT/deploy/install.sh"
 t  "publish fills RELEASE_RAW"           grep -qF 'RELEASE_RAW=$RAW/$ref' "$ROOT/deploy/publish-delivery.sh"
 
+# ---- host hardening (SEC-9): firewall, fail2ban, unattended upgrades, key-only SSH ----
+HB="$SB/hardening"; mkdir -p "$HB"
+fw() { ( MALKKEUM_FIREWALL="$1"; firewall_wanted ); }
+t  "sshd -T reports password login"        password_login_on "$(printf 'port 22\npasswordauthentication yes\n')"
+nt "sshd -T with password login off"       password_login_on "$(printf 'passwordauthentication no\n')"
+t  "firewall on when MALKKEUM_FIREWALL=on" fw on
+nt "firewall stays off when MALKKEUM_FIREWALL=off" fw off
+t  "fail2ban jail enables sshd"            write_f2b_jail "$HB/jail.local"
+t  "fail2ban jail text"                    grep -qx '\[sshd\]' "$HB/jail.local"
+t  "unattended upgrades on"                write_auto_upgrades "$HB/auto"
+t  "unattended upgrades text"              grep -qx 'APT::Periodic::Unattended-Upgrade "1";' "$HB/auto"
+t  "key-only drop-in"                      write_keyonly_dropin "$HB/keyonly.conf"
+t  "key-only drop-in text"                 grep -qx 'PasswordAuthentication no' "$HB/keyonly.conf"
+: > "$HB/empty-keys"; printf 'ssh-ed25519 AAAA test\n' > "$HB/keys"
+nt "empty authorized_keys is not a key"   has_key "$HB/empty-keys"
+t  "authorized_keys with a key"            has_key "$HB/no-such" "$HB/keys"
+t  "install installs ufw fail2ban unattended-upgrades" grep -qF 'ufw fail2ban unattended-upgrades' "$ROOT/deploy/install.sh"
+t  "install runs harden_host in main"      grep -qE '^  harden_host( |$)' "$ROOT/deploy/install.sh"
+# behavior: firewall_setup and ssh_keyonly_check with stubbed ufw, sshd, ask, systemctl (no real /etc or firewall changes)
+FWLOG="$HB/fw.log"
+fw_run() { # fw_run 방화벽상태 모드 : firewall_setup 을 가짜 ufw 로 돌리고 실행한 명령을 fw.log 에 남겨요
+  : > "$FWLOG"
+  ( UFW_STATUS="$1"; MALKKEUM_FIREWALL="$2"
+    ufw() { if [ "$1" = status ]; then printf '%s\n' "$UFW_STATUS"; else printf '%s\n' "$*" >> "$FWLOG"; fi; }
+    firewall_setup ) >/dev/null 2>&1
+}
+fw_enabled()   { grep -qF -- '--force enable' "$FWLOG"; }
+fw_web_ports() { grep -qF -- 'allow 22/tcp' "$FWLOG" && grep -qF -- 'allow 80/tcp' "$FWLOG" && grep -qF -- 'allow 443/tcp' "$FWLOG"; }
+fw_ssh_first() { awk '/allow 22\/tcp/ { a = NR } /--force enable/ { e = NR } END { exit !(a && e && a < e) }' "$FWLOG"; }
+fw_run 'Status: inactive' on;  t  "inactive ufw is enabled when MALKKEUM_FIREWALL=on" fw_enabled
+fw_run 'Status: inactive' on;  t  "web ports are allowed before ufw is enabled" fw_ssh_first
+fw_run 'Status: inactive' on;  t  "ports 22 80 443 are allowed on enable" fw_web_ports
+fw_run 'Status: active' on;    nt "active ufw is not enabled again" fw_enabled
+fw_run 'Status: active' on;    t  "active ufw gets the web rules" fw_web_ports
+fw_run 'Status: inactive' off; nt "inactive ufw stays off when MALKKEUM_FIREWALL=off" fw_enabled
+ssh_run() { # ssh_run sshd설정 키파일 응답 : ssh_keyonly_check 를 가짜 sshd·ask 로 돌려요 (기록은 fw.log, 출력은 ssh.out)
+  : > "$FWLOG"
+  ( SSHD_CFG="$1"; KEYF="$2"; ASK_ANSWER="$3"
+    sshd() { if [ "$1" = -T ]; then [ -z "${SSHD_FAIL:-}" ] || return 1; printf '%s\n' "$SSHD_CFG"; fi; return 0; }
+    login_key_file() { printf '%s' "$KEYF"; }
+    ask() { printf '%s\n' "$1" >> "$FWLOG"; printf '%s' "$ASK_ANSWER"; }
+    write_keyonly_dropin() { printf 'dropin %s\n' "$1" >> "$FWLOG"; }
+    systemctl() { return 0; }
+    KEYONLY_CONF="$HB/keyonly-test.conf"
+    ssh_keyonly_check ) >"$HB/ssh.out" 2>&1
+}
+dropin_written() { grep -q '^dropin ' "$FWLOG"; }
+PW_ON='passwordauthentication yes'
+ssh_run "$PW_ON" "$HB/keys" y;         t  "key on the operator account and answer y turns password login off" dropin_written
+SSHD_FAIL=1 ssh_run "$PW_ON" "$HB/keys" y; nt "sshd -T failure never turns password login off" dropin_written
+SSHD_FAIL=1 ssh_run "$PW_ON" "$HB/keys" y; t  "sshd -T failure is reported" grep -qF '읽지 못해' "$HB/ssh.out"
+ssh_run "$PW_ON" "$HB/none" y;         nt "no key for the account: password login stays on" dropin_written
+ssh_run "$PW_ON" "$HB/keys" n;         nt "answer n keeps password login" dropin_written
+SUDO_USER=alice ssh_run "$PW_ON" "$HB/keys" y; t "prompt names the operator account" grep -qF "'alice'" "$FWLOG"
+eq "$(SUDO_USER=alice operator_account)" alice
+eq "$(SUDO_USER= operator_account)" root
+eq "$(login_key_file root)" /root/.ssh/authorized_keys
+nt "odd account name refused for key lookup" login_key_file 'a;rm'
+
 bash "$ROOT/scripts/ci/agent-selftest.sh" >/dev/null || { FAIL=$((FAIL + 1)); echo "FAIL: agent self-test (run scripts/ci/agent-selftest.sh)"; }
 
 echo "installer self-test: $PASS passed, $FAIL failed"
