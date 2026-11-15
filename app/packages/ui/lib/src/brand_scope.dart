@@ -11,7 +11,8 @@ class BrandScope extends InheritedWidget {
 
   /// Outside a scope (tests, previews) the built-in brand is used.
   static BrandConfig of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<BrandScope>()?.brand ?? BrandConfig.placeholder;
+      context.dependOnInheritedWidgetOfExactType<BrandScope>()?.brand ??
+      BrandConfig.placeholder;
 
   @override
   bool updateShouldNotify(BrandScope old) => old.brand != brand;

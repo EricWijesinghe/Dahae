@@ -250,10 +250,10 @@ class BookingDetailPage extends StatelessWidget {
     body: id != null
         ? BookingPanel(id: id!)
         : AsyncView<List<Json>>(
-            load: () async => (await context.api.get(
-              '/admin/bookings',
-              query: {'q': query},
-            ) as List).cast<Json>(),
+            load: () async =>
+                (await context.api.get('/admin/bookings', query: {'q': query})
+                        as List)
+                    .cast<Json>(),
             builder: (context, rows, _) => rows.isEmpty
                 ? EmptyState(
                     icon: Icons.search_off_rounded,
@@ -611,15 +611,13 @@ class _QuoteDeskState extends State<_QuoteDesk> {
   Future<void> _send({bool override = false}) async {
     setState(() => _busy = true);
     try {
-      await context.api.post(
-        '/admin/bookings/${widget.booking.id}/send-quote',
-        {
-          'final_price': int.parse(_price.text),
-          'quote_id': _quoteId,
-          'note': _note.text.isEmpty ? null : _note.text,
-          if (override) 'override': true,
-        },
-      );
+      await context.api
+          .post('/admin/bookings/${widget.booking.id}/send-quote', {
+            'final_price': int.parse(_price.text),
+            'quote_id': _quoteId,
+            'note': _note.text.isEmpty ? null : _note.text,
+            if (override) 'override': true,
+          });
       if (!mounted) return;
       showToast(context, context.t.cQuoteSent);
       widget.onSent();

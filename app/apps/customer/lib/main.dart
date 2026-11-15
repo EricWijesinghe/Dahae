@@ -23,7 +23,12 @@ Future<void> _start() async {
   final locale = LocaleController();
   final theme = ThemeController(initial: ThemeMode.system);
   final brand = BrandController(api: api, fallback: BrandConfig.placeholder);
-  await Future.wait([session.restore(), locale.restore(), theme.restore(), brand.restore()]);
+  await Future.wait([
+    session.restore(),
+    locale.restore(),
+    theme.restore(),
+    brand.restore(),
+  ]);
   // One refresh now instead of a 401 on every first screen call.
   api.warmUp().ignore();
   // The business's colours and logo; the saved brand paints until this answers (and stays if offline).
@@ -35,12 +40,25 @@ Future<void> _start() async {
     anonId: await Analytics.loadOrCreateAnonId(),
   );
   final app = AppState(api, Realtime(api), analytics: analytics);
-  runApp(CustomerApp(session: session, app: app, locale: locale, theme: theme, brand: brand));
+  runApp(
+    CustomerApp(
+      session: session,
+      app: app,
+      locale: locale,
+      theme: theme,
+      brand: brand,
+    ),
+  );
   analytics.start();
   // Back from the background: a fresh socket (its resync makes screens refetch). Leaving: send queued events.
-  Foreground(onResume: app.realtime.reconnect, onHide: () => analytics.flush().ignore());
+  Foreground(
+    onResume: app.realtime.reconnect,
+    onHide: () => analytics.flush().ignore(),
+  );
   // Consent is read from the server; app_open is sent only once it is known.
-  unawaited(app.syncAnalyticsConsent().then((_) => analytics.track('app_open')));
+  unawaited(
+    app.syncAnalyticsConsent().then((_) => analytics.track('app_open')),
+  );
   // Push (Firebase, local notifications) after the first frame: keeps cold start fast.
   // A launch tap that arrives before Shell listens is kept by PushService until taken.
   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -88,13 +106,23 @@ class CustomerApp extends StatelessWidget {
               child: UpdateGate(
                 api: session.api,
                 app: 'customer',
-                child: RemoteConfigGate(api: session.api, child: child ?? const SizedBox.shrink()),
+                child: RemoteConfigGate(
+                  api: session.api,
+                  child: child ?? const SizedBox.shrink(),
+                ),
               ),
             ),
           ),
-          onGenerateTitle: (c) => (brand?.brand ?? BrandConfig.placeholder).name,
-          theme: buildTheme(brand?.brand ?? BrandConfig.placeholder, Brightness.light),
-          darkTheme: buildTheme(brand?.brand ?? BrandConfig.placeholder, Brightness.dark),
+          onGenerateTitle: (c) =>
+              (brand?.brand ?? BrandConfig.placeholder).name,
+          theme: buildTheme(
+            brand?.brand ?? BrandConfig.placeholder,
+            Brightness.light,
+          ),
+          darkTheme: buildTheme(
+            brand?.brand ?? BrandConfig.placeholder,
+            Brightness.dark,
+          ),
           themeMode: theme.mode,
           themeAnimationDuration: const Duration(milliseconds: 280),
           themeAnimationCurve: Motion.ease,

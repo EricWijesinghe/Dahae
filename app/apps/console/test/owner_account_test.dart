@@ -18,7 +18,11 @@ Widget _app(Widget child) => MaterialApp(
 );
 
 /// Opens [open] from a button and stores whatever the dialog resolves to in [result].
-Future<void> _openFrom(WidgetTester tester, Future<Object?> Function(BuildContext) open, List<Object?> result) async {
+Future<void> _openFrom(
+  WidgetTester tester,
+  Future<Object?> Function(BuildContext) open,
+  List<Object?> result,
+) async {
   await tester.pumpWidget(
     _app(
       Builder(
@@ -38,14 +42,20 @@ void main() {
     expect(ownerHeaders('123456'), {'X-Owner-Totp': '123456'});
   });
 
-  testWidgets('owner code must be six digits before it is sent', (tester) async {
+  testWidgets('owner code must be six digits before it is sent', (
+    tester,
+  ) async {
     final result = <Object?>[];
     await _openFrom(tester, (c) => askOwnerTotp(c), result);
 
     await tester.enterText(find.byType(TextField), '12345');
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget, reason: 'five digits do not submit');
+    expect(
+      find.byType(AlertDialog),
+      findsOneWidget,
+      reason: 'five digits do not submit',
+    );
     expect(result, isEmpty);
 
     await tester.enterText(find.byType(TextField), '123456');
@@ -62,35 +72,39 @@ void main() {
     expect(result, [null]);
   });
 
-  testWidgets('a form with two fields stays disabled until both are filled and trims values', (tester) async {
-    final result = <Object?>[];
-    await _openFrom(
-      tester,
-      (c) => askFields(
-        c,
-        title: 'T',
-        body: 'B',
-        confirm: 'OK',
-        fields: const [FieldSpec('a'), FieldSpec('b', obscure: true)],
-      ),
-      result,
-    );
+  testWidgets(
+    'a form with two fields stays disabled until both are filled and trims values',
+    (tester) async {
+      final result = <Object?>[];
+      await _openFrom(
+        tester,
+        (c) => askFields(
+          c,
+          title: 'T',
+          body: 'B',
+          confirm: 'OK',
+          fields: const [FieldSpec('a'), FieldSpec('b', obscure: true)],
+        ),
+        result,
+      );
 
-    FilledButton confirm() => tester.widget<FilledButton>(find.byType(FilledButton));
-    expect(confirm().onPressed, isNull);
+      FilledButton confirm() =>
+          tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(confirm().onPressed, isNull);
 
-    await tester.enterText(find.byType(TextField).at(0), '  one  ');
-    await tester.pump();
-    expect(confirm().onPressed, isNull);
+      await tester.enterText(find.byType(TextField).at(0), '  one  ');
+      await tester.pump();
+      expect(confirm().onPressed, isNull);
 
-    await tester.enterText(find.byType(TextField).at(1), 'two');
-    await tester.pump();
-    expect(confirm().onPressed, isNotNull);
+      await tester.enterText(find.byType(TextField).at(1), 'two');
+      await tester.pump();
+      expect(confirm().onPressed, isNotNull);
 
-    await tester.tap(find.byType(FilledButton));
-    await tester.pumpAndSettle();
-    expect(result, [
-      ['one', 'two'],
-    ]);
-  });
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+      expect(result, [
+        ['one', 'two'],
+      ]);
+    },
+  );
 }

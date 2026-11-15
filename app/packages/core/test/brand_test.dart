@@ -86,17 +86,20 @@ void main() {
       apiBase: _apiBase,
     );
 
-    test('a valid dark colour becomes the primary, with derived pressed and brand shades', () {
-      final b = parse({'primary_color': '#0B5D2A', 'name': ' 새 가게 '});
+    test(
+      'a valid dark colour becomes the primary, with derived pressed and brand shades',
+      () {
+        final b = parse({'primary_color': '#0B5D2A', 'name': ' 새 가게 '});
 
-      expect(b.primary, const Color(0xFF0B5D2A));
-      expect(
-        b.primaryDeep.computeLuminance(),
-        lessThan(b.primary.computeLuminance()),
-      );
-      expect(b.name, '새 가게');
-      expect(b.sun, BrandConfig.placeholder.sun);
-    });
+        expect(b.primary, const Color(0xFF0B5D2A));
+        expect(
+          b.primaryDeep.computeLuminance(),
+          lessThan(b.primary.computeLuminance()),
+        );
+        expect(b.name, '새 가게');
+        expect(b.sun, BrandConfig.placeholder.sun);
+      },
+    );
 
     test(
       'a colour too light for white label text keeps the built-in brand',

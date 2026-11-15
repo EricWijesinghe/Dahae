@@ -141,10 +141,10 @@ class _RecentReviewsState extends State<RecentReviews> {
 
   Future<void> _load() async {
     try {
-      final rows = (await context.api.get(
-        '/public/reviews',
-        query: {'limit': '$_shown'},
-      ) as List).cast<Json>();
+      final rows =
+          (await context.api.get('/public/reviews', query: {'limit': '$_shown'})
+                  as List)
+              .cast<Json>();
       if (mounted) setState(() => _rows = rows);
     } on Object {
       // Decoration only: without reviews the section simply stays out of PICK.

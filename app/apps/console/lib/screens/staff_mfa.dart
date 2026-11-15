@@ -105,7 +105,9 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
     final api = context.api;
     await _session.save(_tokens!);
     if (widget.challenge.enrol) {
-      await api.post('/admin/me/recovery-codes/confirm', {'code': _savedCode.text.trim()});
+      await api.post('/admin/me/recovery-codes/confirm', {
+        'code': _savedCode.text.trim(),
+      });
     }
   });
 

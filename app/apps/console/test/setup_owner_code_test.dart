@@ -28,14 +28,20 @@ Future<void> _pump(WidgetTester tester, void Function(String?) onAnswer) async {
 }
 
 void main() {
-  testWidgets('owner code is returned only once six digits are typed', (tester) async {
+  testWidgets('owner code is returned only once six digits are typed', (
+    tester,
+  ) async {
     final answers = <String?>[];
     await _pump(tester, answers.add);
     final confirm = find.widgetWithText(FilledButton, koT.cOwnerCodeConfirm);
 
     await tester.enterText(find.byType(TextField), '12345');
     await settle(tester);
-    expect(tester.widget<FilledButton>(confirm).onPressed, isNull, reason: 'five digits is not a code');
+    expect(
+      tester.widget<FilledButton>(confirm).onPressed,
+      isNull,
+      reason: 'five digits is not a code',
+    );
 
     await tester.enterText(find.byType(TextField), '123456');
     await settle(tester);

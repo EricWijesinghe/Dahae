@@ -58,10 +58,7 @@ Future<void> inviteStaff(
               const SizedBox(height: Space.sm),
               SegmentedButton<String>(
                 segments: [
-                  ButtonSegment(
-                    value: 'sms',
-                    label: Text(t.cStaffChannelSms),
-                  ),
+                  ButtonSegment(value: 'sms', label: Text(t.cStaffChannelSms)),
                   ButtonSegment(
                     value: 'copy',
                     label: Text(t.cStaffChannelCopy),
@@ -98,7 +95,12 @@ Future<void> inviteStaff(
     // An admin account carries the whole console, so only the owner, with a fresh code, can invite one.
     final code = role == 'admin' ? await askOwnerTotp(context) : '';
     if (code == null || !context.mounted) return;
-    await _send(context, reload, body, role == 'admin' ? ownerHeaders(code) : null);
+    await _send(
+      context,
+      reload,
+      body,
+      role == 'admin' ? ownerHeaders(code) : null,
+    );
   }
 }
 
@@ -109,7 +111,9 @@ Future<void> _send(
   Map<String, String>? headers,
 ) async {
   try {
-    final r = await context.api.post('/admin/staff/invite', body, null, headers) as Json;
+    final r =
+        await context.api.post('/admin/staff/invite', body, null, headers)
+            as Json;
     if (!context.mounted) return;
     await showSentCode(context, r, context.t.cStaffCodeTitle);
     await reload();

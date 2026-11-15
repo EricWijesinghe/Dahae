@@ -95,6 +95,7 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
 
   QuoteAnswers get a => d.answers;
   bool get _moveIn => widget.service.code == 'move_in';
+
   /// 이사·입주 flows (move-in and move-out) share the trimmed luggage list (CR-3).
   bool get _moveFlow => _moveIn || widget.service.code == 'move_out';
   bool get _wholeHome => widget.service.code == 'whole_home';
@@ -230,11 +231,12 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
   /// Without it (the early preview) the server adds no peak surcharge.
   Future<Json> _fetchEstimate({bool withSlot = true}) async =>
       await context.api.post('/quote/estimate', {
-        ...a.toJson(),
-        'service_code': widget.service.code,
-        if (withSlot && d.date != null) 'visit_date': isoDate(d.date!),
-        if (withSlot) 'start_hour': ?d.hour,
-      }) as Json;
+            ...a.toJson(),
+            'service_code': widget.service.code,
+            if (withSlot && d.date != null) 'visit_date': isoDate(d.date!),
+            if (withSlot) 'start_hour': ?d.hour,
+          })
+          as Json;
 
   /// Guests answer the questions first; signing in is asked only when they book.
   Future<void> _bookAsGuest() async {

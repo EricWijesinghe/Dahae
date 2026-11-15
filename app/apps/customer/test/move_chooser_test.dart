@@ -18,15 +18,18 @@ ServiceGroup _group(Json config) => ServiceGroup.fromJson({
 });
 
 void main() {
-  test('server config drives the home types and build-age services (CR-8.1)', () {
-    final config = {
-      'build_age': {'new': 'move_out', 'old': 'move_in'},
-      'home_types': ['apartment', 'bogus'],
-    };
-    expect(moveHomesFor(config), [MoveHome.apartment]);
-    expect(buildAgeServiceCode(config, isNew: true), 'move_out');
-    expect(buildAgeServiceCode(config, isNew: false), 'move_in');
-  });
+  test(
+    'server config drives the home types and build-age services (CR-8.1)',
+    () {
+      final config = {
+        'build_age': {'new': 'move_out', 'old': 'move_in'},
+        'home_types': ['apartment', 'bogus'],
+      };
+      expect(moveHomesFor(config), [MoveHome.apartment]);
+      expect(buildAgeServiceCode(config, isNew: true), 'move_out');
+      expect(buildAgeServiceCode(config, isNew: false), 'move_in');
+    },
+  );
 
   test('a group without config keeps the built-in homes and services', () {
     expect(moveHomesFor(const {}), MoveHome.values);

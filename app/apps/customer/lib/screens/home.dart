@@ -558,9 +558,9 @@ class _UpcomingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.t;
-    final days = DateUtils.dateOnly(booking.visitDate)
-        .difference(DateUtils.dateOnly(DateTime.now()))
-        .inDays;
+    final days = DateUtils.dateOnly(
+      booking.visitDate,
+    ).difference(DateUtils.dateOnly(DateTime.now())).inDays;
     return AppCard(
       level: Level.flat,
       border: context.colors.line,
