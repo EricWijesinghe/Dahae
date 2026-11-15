@@ -5645,6 +5645,21 @@ class TKo extends T {
       '이 인증번호는 24시간 동안 한 번만 쓸 수 있어요. 직원이 비밀번호를 정하면 모든 기기에서 로그아웃돼요.';
 
   @override
+  String get cStepUpTitle => '인증 앱 코드로 한 번 더 확인';
+
+  @override
+  String get cStepUpBody => '이 작업은 인증 앱의 6자리 코드가 필요해요. 확인하면 5분 동안 이어서 쓸 수 있어요.';
+
+  @override
+  String get cStepUpConfirm => '확인하고 계속';
+
+  @override
+  String get cStepUpCancel => '취소';
+
+  @override
+  String get err_stepup_required => '이 작업은 인증 앱 코드로 한 번 더 확인해야 해요.';
+
+  @override
   String get subTitle => '정기 청소';
 
   @override

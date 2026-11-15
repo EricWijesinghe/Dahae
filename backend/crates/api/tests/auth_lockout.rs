@@ -42,7 +42,7 @@ async fn wrong_passwords_lock_the_pair_even_for_the_right_password(db: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn a_success_before_the_lock_returns_the_free_budget(db: PgPool) {
     insert_consultant(&db, "reset@test.local").await;
-    let app = common::app(db);
+    let app = common::app_without_staff_mfa(db);
     for _ in 0..PAIR_FREE_FAILURES - 1 {
         staff_login(&app, "reset@test.local", "wrong-password-123").await;
     }
@@ -64,10 +64,24 @@ async fn repeated_otp_guesses_across_codes_lock_the_number(db: PgPool) {
     assert_eq!(st, StatusCode::OK, "{sent}");
     let code = sent["dev_code"].as_str().expect("dev_code").to_string();
     for _ in 0..PAIR_FREE_FAILURES {
-        let (st, _) = call(&app, "POST", "/v1/auth/verify", None, Some(json!({ "phone": phone, "code": "000000", "audience": "customer" }))).await;
+        let (st, _) = call(
+            &app,
+            "POST",
+            "/v1/auth/verify",
+            None,
+            Some(json!({ "phone": phone, "code": "000000", "audience": "customer" })),
+        )
+        .await;
         assert_eq!(st, StatusCode::BAD_REQUEST);
     }
-    let (st, b) = call(&app, "POST", "/v1/auth/verify", None, Some(json!({ "phone": phone, "code": code, "audience": "customer" }))).await;
+    let (st, b) = call(
+        &app,
+        "POST",
+        "/v1/auth/verify",
+        None,
+        Some(json!({ "phone": phone, "code": code, "audience": "customer" })),
+    )
+    .await;
     assert_eq!(st, StatusCode::TOO_MANY_REQUESTS, "{b}");
 }
 
@@ -96,7 +110,7 @@ async fn lockouts_feed_the_owner_suspicious_activity_alert(db: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn signed_in_devices_list_and_revoke_one_family(db: PgPool) {
     insert_consultant(&db, "devices@test.local").await;
-    let app = common::app(db.clone());
+    let app = common::app_without_staff_mfa(db.clone());
     let (_, a) = staff_login(&app, "devices@test.local", PASSWORD).await;
     let (_, b) = staff_login(&app, "devices@test.local", PASSWORD).await;
     let access = a["access_token"].as_str().expect("access").to_string();
@@ -121,7 +135,7 @@ async fn signed_in_devices_list_and_revoke_one_family(db: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn a_device_of_another_account_cannot_be_revoked(db: PgPool) {
-    let app = common::app(db.clone());
+    let app = common::app_without_staff_mfa(db.clone());
     let (customer, _) = login(&app, "010-5400-0002", "customer").await;
     insert_consultant(&db, "other@test.local").await;
     let (_, other) = staff_login(&app, "other@test.local", PASSWORD).await;

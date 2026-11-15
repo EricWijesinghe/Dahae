@@ -350,11 +350,23 @@ async fn ensure_active(s: &AppState, id: Uuid, role: Role) -> ApiResult<()> {
         Role::Customer => sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM users WHERE id = $1 AND deleted_at IS NULL)"),
         Role::Pro => sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM pros WHERE id = $1 AND deleted_at IS NULL)"),
         Role::Member => sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM team_members WHERE id = $1 AND role = 'member' AND invite_status <> 'removed')"),
-        Role::StaffAdmin | Role::StaffConsultant => sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM staff WHERE id = $1 AND active)"),
+        Role::StaffAdmin | Role::StaffConsultant => {
+            // Staff who never enrolled (signed in before the rule) get no session while second factors are required.
+            return staff_usable(s, id).await;
+        }
     }
     .bind(id)
     .fetch_one(&s.db)
     .await?;
+    if ok { Ok(()) } else { Err(ApiError::Unauthorized) }
+}
+
+async fn staff_usable(s: &AppState, id: Uuid) -> ApiResult<()> {
+    let ok: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM staff WHERE id = $1 AND active AND (totp_enabled_at IS NOT NULL OR NOT $2))")
+        .bind(id)
+        .bind(s.config.staff_mfa_required)
+        .fetch_one(&s.db)
+        .await?;
     if ok { Ok(()) } else { Err(ApiError::Unauthorized) }
 }
 
@@ -427,8 +439,8 @@ struct StaffLogin {
     password: String,
 }
 
-/// Password step. Consultants get tokens; a second factor is required before tokens for enrolled staff and
-/// for admins, who must enrol first. Those steps run on a short-lived challenge token (routes/staff_mfa).
+/// Password step. Every staff role must hold an enrolled TOTP factor before any token is issued; a password
+/// alone only reaches enrolment. Those steps run on a short-lived challenge token (routes/staff_mfa).
 async fn staff_login(
     State(s): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -478,7 +490,7 @@ async fn staff_login(
     if enrolled {
         return Ok(Json(json!({ "mfa_required": true, "mfa_token": auth::issue_mfa(&s.config.jwt_secret, id)? })));
     }
-    if role == "admin" && s.config.staff_mfa_required {
+    if s.config.staff_mfa_required {
         return Ok(Json(
             json!({ "mfa_enrol_required": true, "mfa_token": auth::issue_mfa(&s.config.jwt_secret, id)? }),
         ));

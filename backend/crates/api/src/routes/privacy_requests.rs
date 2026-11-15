@@ -1,10 +1,11 @@
-//! Console: customer rights requests (PIPA 열람·삭제). Staff look a customer up by phone, export that
-//! customer's data (JSON or CSV) and see the outcome of each request. Deleting is admin-only and needs the
-//! customer's phone typed back in. Every step is audit-logged and recorded in `privacy_requests`.
+//! Console: customer rights requests (PIPA 열람·삭제). Admins look a customer up by phone, export that
+//! customer's data (JSON or CSV) and see the outcome of each request. Export and deletion need a TOTP step-up
+//! within five minutes, and deleting needs the customer's phone typed back in. Every step is audit-logged
+//! and recorded in `privacy_requests`.
 
-use super::{audit, finance::csv_response};
+use super::{audit, finance::csv_response, staff_mfa::require_recent_stepup};
 use crate::{
-    auth::{Admin, Staff, normalize_phone},
+    auth::{Admin, Staff, live_admin, normalize_phone},
     error::{ApiError, ApiResult},
     privacy,
     state::AppState,
@@ -47,7 +48,8 @@ struct Found {
 }
 
 /// Live customers with this phone number (one at most in practice; deleted accounts keep no phone).
-async fn lookup(State(s): State<AppState>, Staff(st): Staff, Query(q): Query<PhoneQuery>) -> ApiResult<Json<Vec<Found>>> {
+async fn lookup(State(s): State<AppState>, Admin(st): Admin, Query(q): Query<PhoneQuery>) -> ApiResult<Json<Vec<Found>>> {
+    live_admin(&s, st.id).await?;
     let phone = normalize_phone(&q.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
     audit(&s.db, "staff", Some(st.id), "privacy.lookup", "users", json!({})).await?;
     let rows: Vec<Found> = sqlx::query_as(
@@ -109,7 +111,9 @@ fn text(v: impl Into<String>) -> Cell {
     Cell::Text(v.into())
 }
 
-async fn export(State(s): State<AppState>, Staff(st): Staff, Path(id): Path<Uuid>, Query(q): Query<ExportQuery>) -> ApiResult<Response> {
+async fn export(State(s): State<AppState>, Admin(st): Admin, Path(id): Path<Uuid>, Query(q): Query<ExportQuery>) -> ApiResult<Response> {
+    live_admin(&s, st.id).await?;
+    require_recent_stepup(&s, st.id).await?;
     let format = match q.format.as_deref() {
         None | Some("json") => "json",
         Some("csv") => "csv",
@@ -133,6 +137,8 @@ struct DeleteBody {
 }
 
 async fn delete(State(s): State<AppState>, Admin(st): Admin, Path(id): Path<Uuid>, Json(body): Json<DeleteBody>) -> ApiResult<Json<Value>> {
+    live_admin(&s, st.id).await?;
+    require_recent_stepup(&s, st.id).await?;
     let phone = live_phone(&s.db, id).await?;
     let typed = normalize_phone(&body.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
     if typed != phone {

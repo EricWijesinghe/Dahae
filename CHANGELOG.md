@@ -30,6 +30,9 @@ from the release branches; no tags existed for them.
 - Customer app: guests see how a booking works on the Bookings tab and the FAQ and terms on the Chat tab (chat still asks for sign-in). The welcome offer and the referral amount show before sign-in, and a quote in progress is kept on the device across restarts.
 - Public `GET /v1/public/offers`: welcome offer, sign-up coupons and referral amount for guests, cacheable for 5 minutes, no user data.
 
+### Security
+- Every staff role must enrol TOTP before sign-in; customer phone lookup, search and export are admin-only; customer export, deletion, bank-detail reveals and payouts need a TOTP step-up within five minutes (`POST /v1/auth/staff/mfa/step-up`; the console asks for the code and retries). Staff without a second factor get no session refresh. `STAFF_MFA_REQUIRED=0` is refused outside `DEV_MODE`.
+
 ### Changed
 - Finance has one revenue and fee definition: the VAT export and the console dashboard revenue tile now read the same aggregate as the finance summary, so held settlements are left out of VAT and refunds use the summary's cancel-date basis. Partner, service and payout-bearing finance series (summary, series, partners, services) are admin-only; consultants get 403. Dashboard revenue is the last 30 KST days including today.
 - Completing a job requires the arrival check-in first; the owner can complete without one by giving a reason (audited as `check_in.override`), and team members check in and out on their own jobs (`/v1/member/jobs/{id}/check-in`, `check-out`). Check-out is allowed only on an assigned job on its visit day; the customer's app gets a live update on both. The no-show scan skips jobs with a member check-in. The partner app shows the check-in and check-out card on the team member's job, and asks the owner for a short reason (up to 200 characters) when completion is refused for a missing arrival.

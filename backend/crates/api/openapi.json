@@ -4382,6 +4382,23 @@
         }
       }
     },
+    "/v1/auth/staff/mfa/step-up": {
+      "post": {
+        "operationId": "staffMfaStepUp",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Fresh TOTP step-up for customer export and deletion, bank-detail reveals and payouts (valid for five minutes)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/staff/{id}/password-reset": {
       "post": {
         "operationId": "adminIssueStaffPasswordReset",

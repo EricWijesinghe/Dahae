@@ -82,6 +82,14 @@ pub fn app(db: PgPool) -> Router {
     routes::router(state)
 }
 
+/// The API router with staff second factors off, for tests about sessions, lockouts and resets rather than MFA
+/// (MFA itself is covered by auth_mfa and staff_mfa).
+pub fn app_without_staff_mfa(db: PgPool) -> Router {
+    let mut cfg = test_config();
+    cfg.staff_mfa_required = false;
+    routes::router(build_state(db, cfg).expect("http client"))
+}
+
 /// The API router configured like production (`DEV_MODE` off): PortOne calls go to `portone_api` (a mock).
 /// Sign-in still needs the dev router (OTP codes are only echoed in dev mode); tokens work on both.
 pub fn prod_app(db: PgPool, portone_api: &str) -> Router {
@@ -103,7 +111,8 @@ pub const PORTONE_SECRET: &str = "test-portone-secret";
 pub async fn staff_token(db: &PgPool, role: Role) -> (String, Uuid) {
     let id = Uuid::now_v7();
     let db_role = if role == Role::StaffAdmin { "admin" } else { "consultant" };
-    sqlx::query("INSERT INTO staff (id, email, name, password_hash, role) VALUES ($1, $2, 'tester', 'x', $3)")
+    // Stepped up, so sensitive actions (export, deletion, payouts) are open to the test token.
+    sqlx::query("INSERT INTO staff (id, email, name, password_hash, role, stepup_at) VALUES ($1, $2, 'tester', 'x', $3, now())")
         .bind(id)
         .bind(format!("{id}@test.local"))
         .bind(db_role)
