@@ -104,8 +104,9 @@ void main() {
       final fake = FakeApi();
       var failNext = true;
       fake.onGet('/me/points/ledger', (c) {
-        if (c.query['cursor'] == null)
+        if (c.query['cursor'] == null) {
           return ApiReply(200, [_entry('e1')], {'x-next-cursor': '2'});
+        }
         if (failNext) {
           failNext = false;
           return const ApiReply(500, {
