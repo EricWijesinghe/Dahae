@@ -8,9 +8,11 @@ import 'package:ui/ui.dart';
 import '../guest.dart';
 import '../guest_draft.dart';
 import '../state.dart';
+import 'addresses.dart' show showAddressForm;
 import 'auth.dart' show ensureCustomerName;
 import 'booking_flow.dart';
 import 'quote_price_hint.dart';
+import 'quote_size_note.dart';
 import 'quote_review.dart';
 import 'review_carousel.dart';
 import 'request_status.dart';
@@ -30,16 +32,8 @@ const _quoteSlots = [8, 13];
 const _studioHomeLayouts = ['studio', 'one_and_half', 'two_rooms'];
 const _apartmentLayouts = ['two_rooms', 'three_rooms', 'four_plus'];
 
-const _luggage = [
-  'empty',
-  'not_unpacked',
-  'partly_unpacked',
-  'fully_lived_in',
-  'unknown',
-];
-
-/// Move-in offers three luggage states (CR-3); the others stay for old bookings.
-const _moveInLuggage = ['empty', 'not_unpacked', 'partly_unpacked'];
+/// Luggage states offered for new requests (CR-3, CR-8.8); fully_lived_in and unknown stay accepted for old bookings.
+const _luggage = ['empty', 'not_unpacked', 'partly_unpacked'];
 const _buildings = ['apartment', 'officetel', 'villa', 'commercial'];
 const _layouts = [
   'studio',
@@ -314,6 +308,13 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
             _spaceStep(t),
             _page(t, 3, t.dfAddressTitle, [
               QuotePriceHint(estimate: _preview),
+              if (!_guest && _sizeMismatch)
+                QuoteSizeNote(
+                  layout: a.layout!,
+                  sizePyeong: d.address!.sizePyeong,
+                  onChangeLayout: () => _go(1),
+                  onChangeSize: _editSize,
+                ),
               // A guest never types an address before signing in (PIPA).
               if (_guest)
                 _guestBookButton(t)
@@ -353,6 +354,26 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
   }
 
   bool get _guest => !Deps.of(context).session.signedIn;
+
+  /// The chosen layout and the saved address size disagree (C-03).
+  bool get _sizeMismatch {
+    final addr = d.address;
+    return addr != null && layoutSizeMismatch(a.layout, addr.sizePyeong);
+  }
+
+  /// Edits the saved address, then keeps the picked one in step with the saved copy.
+  Future<void> _editSize() async {
+    final addr = d.address;
+    if (addr == null) return;
+    final app = context.appRead;
+    await showAddressForm(context, existing: addr);
+    await app.loadAddresses();
+    if (!mounted) return;
+    setState(() {
+      d.address =
+          app.addresses.where((x) => x.id == addr.id).firstOrNull ?? d.address;
+    });
+  }
 
   Widget _guestBookButton(T t) => Padding(
     padding: const EdgeInsets.all(Space.gutter),
@@ -436,7 +457,6 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
     final types = _moveIn
         ? ['normal_move_in', 'after_interior']
         : ['standard', 'same_day_move', 'some_luggage_left'];
-    final luggage = _moveIn ? _moveInLuggage : _luggage;
     return _page(
       t,
       0,
@@ -465,7 +485,7 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
         FlowSection(
           title: t.luggageTitle,
           children: [
-            for (final l in luggage)
+            for (final l in _luggage)
               RadioRow(
                 title: luggageLabel(
                   t,
