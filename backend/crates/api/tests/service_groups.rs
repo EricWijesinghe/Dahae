@@ -304,18 +304,18 @@ async fn seed_files_a_service_missing_from_an_existing_database_under_its_group(
 }
 
 #[sqlx::test(migrations = false)]
-async fn migration_0214_files_existing_services_under_their_groups(pool: PgPool) {
+async fn migration_0234_files_existing_services_under_their_groups(pool: PgPool) {
     let mut older = sqlx::migrate!("../../migrations");
-    older.migrations = older.migrations.iter().filter(|m| m.version < 214).cloned().collect::<Vec<_>>().into();
-    older.run(&pool).await.expect("migrations before 0214");
+    older.migrations = older.migrations.iter().filter(|m| m.version < 234).cloned().collect::<Vec<_>>().into();
+    older.run(&pool).await.expect("migrations before 0234");
     for code in ["aircon", "bathroom", "kitchen", "mattress", "move_in", "move_out", "sofa", "studio"] {
         sqlx::query("INSERT INTO services (code, pricing, content) VALUES ($1, '{}'::jsonb, '{}'::jsonb)")
             .bind(code)
             .execute(&pool)
             .await
-            .expect("pre-0214 service row");
+            .expect("pre-0234 service row");
     }
-    sqlx::migrate!("../../migrations").run(&pool).await.expect("0214 on existing rows");
+    sqlx::migrate!("../../migrations").run(&pool).await.expect("0234 on existing rows");
 
     let rows: Vec<(String, Option<String>)> = sqlx::query_as("SELECT code, group_code FROM services ORDER BY code")
         .fetch_all(&pool)
@@ -344,18 +344,18 @@ async fn migration_0214_files_existing_services_under_their_groups(pool: PgPool)
 }
 
 #[sqlx::test(migrations = false)]
-async fn migration_0230_groups_counts_services_that_predate_their_groups(pool: PgPool) {
+async fn migration_0236_groups_counts_services_that_predate_their_groups(pool: PgPool) {
     let mut older = sqlx::migrate!("../../migrations");
-    older.migrations = older.migrations.iter().filter(|m| m.version < 230).cloned().collect::<Vec<_>>().into();
-    older.run(&pool).await.expect("migrations before 0230");
+    older.migrations = older.migrations.iter().filter(|m| m.version < 236).cloned().collect::<Vec<_>>().into();
+    older.run(&pool).await.expect("migrations before 0236");
     for code in ["whole_home", "window", "disinfection"] {
         sqlx::query("INSERT INTO services (code, pricing, content) VALUES ($1, '{}'::jsonb, '{}'::jsonb)")
             .bind(code)
             .execute(&pool)
             .await
-            .expect("pre-0230 service row");
+            .expect("pre-0236 service row");
     }
-    sqlx::migrate!("../../migrations").run(&pool).await.expect("0230 on existing rows");
+    sqlx::migrate!("../../migrations").run(&pool).await.expect("0236 on existing rows");
 
     let rows: Vec<(String, Option<String>)> =
         sqlx::query_as("SELECT code, group_code FROM services WHERE code IN ('whole_home', 'window', 'disinfection') ORDER BY code")

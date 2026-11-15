@@ -138,7 +138,7 @@ async fn seed_badges_mattress_new_and_aircon_hot_once(pool: PgPool) {
     assert_eq!(left, ["mattress"], "a re-seed never brings back a removed badge");
 }
 
-/// Migration 0232 seeds the design's FAQ rows with the category codes the FAQ chips filter on.
+/// Migration 0237 seeds the design's FAQ rows with the category codes the FAQ chips filter on.
 #[sqlx::test(migrations = "../../migrations")]
 async fn design_faqs_ship_with_chip_categories(pool: PgPool) {
     let app = common::app(pool);

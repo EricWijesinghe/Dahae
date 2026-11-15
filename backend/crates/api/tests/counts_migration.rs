@@ -1,4 +1,4 @@
-//! Migration 0213 over a seeded database: legacy mattress rows gain `unit_counts` only while the
+//! Migration 0233 over a seeded database: legacy mattress rows gain `unit_counts` only while the
 //! mattress service is counts pricing. Owner-edited unit pricing keeps its legacy `unit_index`.
 
 mod common;
@@ -7,7 +7,7 @@ use common::seed_catalog;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-const MIGRATION: &str = include_str!("../../../migrations/0213_mattress_unit_counts.sql");
+const MIGRATION: &str = include_str!("../../../migrations/0233_mattress_unit_counts.sql");
 
 async fn legacy_mattress_booking(db: &PgPool, phone: &str, unit_index: i16) -> Uuid {
     let user: Uuid = sqlx::query_scalar("INSERT INTO users (phone, name) VALUES ($1, 'legacy') RETURNING id")

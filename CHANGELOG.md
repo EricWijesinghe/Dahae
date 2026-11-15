@@ -37,7 +37,7 @@ from the release branches; no tags existed for them.
 - Console sidebar: each entry shows its own icon (the icons had shifted by one row).
 
 ### Changed
-- Catalogue: counts pricing for aircon, sofa, mattress, window and disinfection (several units per booking, `counts` and `unit_counts` in the API, multi-item discount); whole_home quote; prices are placeholders the owner edits in the console; old mattress bookings and subscriptions move to counts (migrations 0210-0213)
+- Catalogue: counts pricing for aircon, sofa, mattress, window and disinfection (several units per booking, `counts` and `unit_counts` in the API, multi-item discount); whole_home quote; prices are placeholders the owner edits in the console; old mattress bookings and subscriptions move to counts (migrations 0230-0233)
 - Console quote desk shows customer answers in Korean labels (home type, cleaning type, building, layout, floor, add-ons) instead of raw codes, and the estimate breakdown adds the peak surcharge and VAT lines so it adds up to the total; inbox card previews read 견적 카드 · amount and 예약 요청 카드. Staff inbox rows show the customer's name (or 이름 없음) and phone (010-1234-5678).
 - Partner app: review reply button hidden until replies ship; sign-out asks for confirmation; version row reads the installed build (PackageInfo); job detail and job cards show aircon add-on counts for older bookings (e.g. 벽걸이 1 · 스탠드 2).
 - Staff invites and password resets now use a one-time 6-digit code sent by SMS (or copied by the admin), valid 24 hours, single use, locked after five wrong tries; consultants can invite consultants only.
