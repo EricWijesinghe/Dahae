@@ -423,6 +423,7 @@ t  "owner-reset removes the owner record" test ! -e "$SB/host/owner.json"
 t  "owner-reset clears the failure log"   test ! -e "$SB/host/approval.fails"
 
 # version history: a version label is recorded once; a label that is not a version is skipped
+# shellcheck disable=SC2034 # NEW_API is read by the sourced record_version
 record_label() { ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; docker() { echo "$LABEL"; }; NEW_API=img; LABEL="$1"; record_version ) >/dev/null 2>&1; }
 rm -f "$SB/host/version-history"
 record_label 2.1.0; record_label 2.1.0; record_label 2.1.0-beta.1; record_label dev
@@ -443,7 +444,9 @@ t  "uptime-kuma is opt-in and loopback-only" grep -qF 'profiles: [monitoring]' "
 t  "embedded compose has the access log volume" grep -qF "caddylogs:/var/log/caddy" "$SB/compose/docker-compose.yml"
 # the agent is installed on a fresh install and on an update: install_agent is called from main, not from a branch
 t  "install_agent runs in main"          grep -qE '^  install_agent( |$)' "$ROOT/deploy/install.sh"
+# shellcheck disable=SC2016 # literal text searched in the installer
 t  "cron table written by the CLI"       grep -qF '"$BIN/dahae" write-cron' "$ROOT/deploy/install.sh"
+# shellcheck disable=SC2016 # literal text searched in the publisher
 t  "publish fills RELEASE_RAW"           grep -qF 'RELEASE_RAW=$RAW/$ref' "$ROOT/deploy/publish-delivery.sh"
 
 # ---- host hardening (SEC-9): firewall, fail2ban, unattended upgrades, key-only SSH ----

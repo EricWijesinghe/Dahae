@@ -1,0 +1,3 @@
+# CI runs shellcheck without -x, so files sourced at run time are not followed (SC1091). The self-tests
+# define test doubles inside subshells that only the sourced scripts call (SC2317).
+disable=SC1091,SC2317

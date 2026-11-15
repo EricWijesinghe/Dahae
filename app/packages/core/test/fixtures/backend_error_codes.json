@@ -100,8 +100,6 @@
     "unsupported_bank",
     "unsupported_image",
     "upload_quota",
-    "checkout_refund_pending",
-    "payment_not_for_checkout",
     "read_only_setting",
     "schedule_overlap",
     "tighten_only",

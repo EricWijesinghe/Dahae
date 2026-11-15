@@ -1184,12 +1184,12 @@ EOF
 
 load_answers() { # load_answers 파일 : MALKKEUM_ANSWERS 파일의 DOMAIN=·EMAIL= 줄로 질문에 미리 답해요 (source 하지 않아요). 이미 정한 환경 변수는 그대로 둬요
   local f="$1" k v m
-  [ -f "$f" ] && [ ! -L "$f" ] || die "MALKKEUM_ANSWERS 파일을 읽을 수 없어요: $f"
+  if [ ! -f "$f" ] || [ -L "$f" ]; then die "MALKKEUM_ANSWERS 파일을 읽을 수 없어요: $f"; fi
   while IFS='=' read -r k v || [ -n "$k" ]; do
     case "$k" in DOMAIN|EMAIL) ;; *) continue ;; esac
     case "$v" in *[[:space:]]*|*\\*|*=*) die "MALKKEUM_ANSWERS 의 $k 값에 쓸 수 없는 문자가 있어요" ;; esac
     m="MALKKEUM_$k"; [ -n "${!m:-}" ] || printf -v "$m" '%s' "$v"
-    export "$m"
+    export "${m?}"
   done < "$f"
 }
 
@@ -1263,7 +1263,7 @@ install_agent() { # 작업 실행기와 systemd 단위를 설치하고 켜요. �
   chmod 0700 "$DIR/jobs/work" "$DIR/jobs/work/done" "$DIR/host"
   chown 10001:10001 "$DIR/jobs/inbox"; chmod 0700 "$DIR/jobs/inbox"   # API 컨테이너(사용자 10001)만 작업을 넣어요
   fetch_agent
-  write_units
+  write_units /etc/systemd/system
   systemctl daemon-reload || die "systemd 를 다시 읽지 못했어요."
   systemctl enable --now dahae-agent.path dahae-agent.timer >/dev/null 2>&1 \
     || die "서버 작업 실행기를 켜지 못했어요. 'systemctl status dahae-agent.path' 를 확인하세요."
