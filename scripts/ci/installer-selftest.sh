@@ -94,6 +94,7 @@ printf 'DOMAIN=myshop.co.kr\nIMAGE_SOURCE=local\n' > .env
 DAHAE_SELFTEST=1 . "$SB/dahae"
 set +e
 t  "uploads_for"           eq "$(uploads_for backups/db-20261110-033000.sql.gz)" backups/uploads-20261110-033000.tar.gz
+t  "uploads_for sealed"    eq "$(uploads_for backups/db-20261110-033000.sql.gz.enc)" backups/uploads-20261110-033000.tar.gz
 t  "fingerprint ok"        valid_fingerprints "$(printf 'AB:%.0s' $(seq 31))CD"
 t  "two fingerprints"      valid_fingerprints "$(printf 'ab:%.0s' $(seq 31))cd,$(printf 'AB:%.0s' $(seq 31))EF"
 nt "fingerprint short"     valid_fingerprints AB:CD
@@ -249,6 +250,29 @@ for k in 'no-new-privileges:true' 'cap_drop: \[ALL\]' 'read_only: true'; do
   t "hardening has $k" grep -q "^  .*$k" "$ROOT/deploy/docker-compose.yml"
 done
 t  "every service memory-capped" eq "$(grep -c '^    mem_limit:' "$ROOT/deploy/docker-compose.yml")" 3
+
+# ---- local backups: plaintext stays until its sealed copy exists; restore takes only backups/ paths ----
+mkdir -p backups
+api_backup() { return 1; } # the seal step fails
+printf 'dump' > backups/db-t1.sql.gz
+seal_local backups/db-t1.sql.gz >/dev/null 2>&1 || true
+t  "seal failure keeps plaintext"     test -f backups/db-t1.sql.gz
+nt "seal failure leaves no .enc"      test -e backups/db-t1.sql.gz.enc
+api_backup() { printf 'MKB1' > "${3#/}"; } # the container's seal step, on this sandbox
+printf 'dump' > backups/db-t2.sql.gz
+t  "seal success"                     seal_local backups/db-t2.sql.gz
+nt "seal success removes plaintext"   test -e backups/db-t2.sql.gz
+t  "seal success keeps .enc"          test -s backups/db-t2.sql.gz.enc
+printf 'old' > backups/db-t3.sql.gz
+seal_leftover_plaintext >/dev/null 2>&1
+t  "leftover plaintext gets sealed"   test -s backups/db-t3.sql.gz.enc
+t  "backup path in backups/"          backup_path_ok backups/db-t2.sql.gz.enc
+nt "backup path outside backups/"     backup_path_ok /etc/passwd
+nt "backup path bare name"            backup_path_ok db-t2.sql.gz.enc
+nt "backup path traversal"            backup_path_ok backups/../x
+unset -f api_backup
+YES=1 key_escrow_confirm >/dev/null 2>&1
+t  "--yes never attests key copy"     eq "$(env_get KEY_ESCROW_AT)" ""
 
 # ---- secret key copy (dahae keys-backup / keys-restore) ----
 printf 'DB_PASSWORD=%s\nDATA_KEY=%s\nJWT_SECRET=%s\n' "$(printf 'a%.0s' $(seq 48))" "$(printf 'b%.0s' $(seq 64))" "$(printf 'c%.0s' $(seq 64))" > "$SB/keys.env"
