@@ -278,7 +278,7 @@ async fn a_job_pass_runs_on_one_replica_at_a_time_and_a_dead_holder_frees_it(poo
         let runs = &runs;
         async move {
             runs.fetch_add(1, Ordering::SeqCst);
-            tokio::time::sleep(Duration::from_millis(300)).await;
+            tokio::time::sleep(Duration::from_millis(1500)).await;
             Ok::<_, String>(())
         }
     };
