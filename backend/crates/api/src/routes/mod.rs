@@ -40,7 +40,7 @@ mod staff_mfa;
 mod staff_sms;
 pub mod subscription_engine;
 pub(crate) mod subscriptions;
-mod tax_invoices;
+pub mod tax_invoices;
 pub(crate) mod tips;
 pub mod uploads;
 pub(crate) mod waitlist;

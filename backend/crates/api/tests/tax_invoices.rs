@@ -231,10 +231,74 @@ async fn exported_request_is_not_cancelled_and_raises_an_ops_note(pool: PgPool) 
     let request = queued_request(&pool, checkout, payment, true).await;
     full_refund(&pool, booking).await;
     assert_eq!(request_state(&pool, request).await, "requested", "the owner already has this one");
-    let notes: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE action = 'tax_invoice.refund_after_export' AND data->>'payment' = $1")
+    let notes: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE action = 'tax_invoice.refund_needs_cancel' AND data->>'payment' = $1")
         .bind(payment.to_string())
         .fetch_one(&pool)
         .await
         .expect("notes");
     assert_eq!(notes, 1);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn issued_request_stays_issued_and_raises_an_ops_note_on_full_refund(pool: PgPool) {
+    let (booking, payment, checkout) = paid_booking(&pool, "01070000303").await;
+    let request = queued_request(&pool, checkout, payment, false).await;
+    sqlx::query("UPDATE tax_invoice_requests SET state = 'issued', approval_number = 'APR-1', issued_on = now()::date WHERE id = $1")
+        .bind(request)
+        .execute(&pool)
+        .await
+        .expect("issue");
+    full_refund(&pool, booking).await;
+    assert_eq!(
+        request_state(&pool, request).await,
+        "issued",
+        "an issued invoice is only cancelled by the owner on 홈택스"
+    );
+    let notes: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE action = 'tax_invoice.refund_needs_cancel' AND data->>'payment' = $1")
+        .bind(payment.to_string())
+        .fetch_one(&pool)
+        .await
+        .expect("notes");
+    assert_eq!(notes, 1);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn full_refund_before_settlement_link_cancels_the_pending_request(pool: PgPool) {
+    let (booking, _payment, checkout) = paid_booking(&pool, "01070000304").await;
+    sqlx::query("UPDATE checkouts SET provider_payment_id = 'tx-01070000304' WHERE id = $1")
+        .bind(checkout)
+        .execute(&pool)
+        .await
+        .expect("checkout");
+    let request: Uuid = sqlx::query_scalar(
+        "INSERT INTO tax_invoice_requests (checkout_id, business_number, company_name, email, state)
+         VALUES ($1, '2208162517', 'LATE-CO', 'tax@example.test', 'pending') RETURNING id",
+    )
+    .bind(checkout)
+    .fetch_one(&pool)
+    .await
+    .expect("request");
+    full_refund(&pool, booking).await;
+    api::routes::tax_invoices::on_settled(&pool, checkout, "tx-01070000304").await;
+    assert_eq!(request_state(&pool, request).await, "cancelled", "the refund ran before the link");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn settlement_link_does_not_queue_a_payment_already_refunded(pool: PgPool) {
+    let (_booking, payment, checkout) = paid_booking(&pool, "01070000305").await;
+    sqlx::query("UPDATE payments SET status = 'refunded', refunded_amount = amount WHERE id = $1")
+        .bind(payment)
+        .execute(&pool)
+        .await
+        .expect("refund");
+    let request: Uuid = sqlx::query_scalar(
+        "INSERT INTO tax_invoice_requests (checkout_id, business_number, company_name, email, state)
+         VALUES ($1, '2208162517', 'LINK-CO', 'tax@example.test', 'pending') RETURNING id",
+    )
+    .bind(checkout)
+    .fetch_one(&pool)
+    .await
+    .expect("request");
+    api::routes::tax_invoices::on_settled(&pool, checkout, "tx-01070000305").await;
+    assert_eq!(request_state(&pool, request).await, "cancelled", "never queued for the owner");
 }

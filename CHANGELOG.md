@@ -9,7 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
-- Tax-invoice requests are cancelled when their payment is refunded in full: a queued request not yet exported is cancelled in the refund transaction; an already-exported request is kept and raises an audit note for the owner to cancel on 홈택스. Owner setting: none (automatic, no default to change).
+- Tax-invoice requests are cancelled when their payment is refunded in full, in the app or in the PortOne console. An open request not yet exported is cancelled. A request already exported or issued stays in the owner queue and writes an audit row (`tax_invoice.refund_needs_cancel`); the owner must cancel it on 홈택스 (수정세금계산서). The console does not flag these yet. A partial refund leaves the request open. Owner setting: none (automatic, no default to change).
 - Audit and consent records are append-only (migration 0320): the database refuses edits and deletes. Refunds, payout reveals and finance exports write their audit row in the same transaction as the action.
 - Account deletion: a finished booking (completed or cancelled) loses its street address, answers, visit notes and household profile, keeping the district, size, dwelling type, amounts, dates and status for the 5-year record; open bookings are cleared by the hourly purge once they are completed or cancelled.
 - Team members invited by a partner wait for the platform owner's approval before they see customer addresses or get jobs (new `pending_approval` state, `POST /v1/admin/team-members/{id}/approve`, approvals audited). Existing active members are unchanged. Owner setting: none; the approval is a console action.
