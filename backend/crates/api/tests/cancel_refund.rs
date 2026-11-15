@@ -165,6 +165,14 @@ async fn cancel_audits(db: &PgPool, booking: Uuid) -> i64 {
         .expect("audit")
 }
 
+async fn refund_audits(db: &PgPool, booking: Uuid) -> i64 {
+    sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE action = 'payment.refund' AND data->>'booking' = $1")
+        .bind(booking.to_string())
+        .fetch_one(db)
+        .await
+        .expect("audit")
+}
+
 fn cancels(g: &Shared) -> Vec<(String, Value)> {
     g.lock().expect("gateway").cancels.clone()
 }
@@ -204,6 +212,8 @@ async fn concurrent_late_cancels_refund_the_capped_amount_once(pool: PgPool) {
     );
     assert_eq!(payment_row(&pool, id).await.1, paid - fee);
     assert_eq!(cancel_audits(&pool, id).await, 1);
+    // The refund's own audit row commits in the same transaction as the money move: one per refund.
+    assert_eq!(refund_audits(&pool, id).await, 1, "one payment.refund row for the one refund");
     assert_eq!(status_of(&pool, id).await, -1);
 }
 
@@ -403,4 +413,83 @@ async fn waitlist_accept_charges_the_saved_card_through_portone(pool: PgPool) {
     let booking: Uuid = accepted["booking_id"].as_str().expect("booking").parse().expect("uuid");
     let (paid, _, pid) = payment_row(&pool, booking).await;
     assert_eq!(w.gateway.lock().expect("gateway").payments.get(&pid), Some(&(paid, 0)));
+}
+
+/// (actor_role, actor_id) of every payment.refund row written for the booking.
+async fn refund_actors(db: &PgPool, booking: Uuid) -> Vec<(String, Option<Uuid>)> {
+    sqlx::query_as("SELECT actor_role, actor_id FROM audit_log WHERE action = 'payment.refund' AND data->>'booking' = $1 ORDER BY created_at, id")
+        .bind(booking.to_string())
+        .fetch_all(db)
+        .await
+        .expect("refund audit")
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn staff_cancel_refund_names_the_staff_member(pool: PgPool) {
+    let w = world(&pool, "010-7100-0006").await;
+    let (id, _) = book(&w.prod, &w.c, 10, None).await;
+    let (paid, _, _) = payment_row(&pool, id).await;
+    let (admin, admin_id) = staff_token(&pool, Role::StaffAdmin).await;
+
+    let (st, body) = call(
+        &w.prod,
+        "POST",
+        &format!("/v1/admin/bookings/{id}/cancel"),
+        Some(admin.as_str()),
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(refund_actors(&pool, id).await, vec![("staff".to_string(), Some(admin_id))]);
+    assert_eq!(payment_row(&pool, id).await.1, paid);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn staff_case_refund_names_the_staff_member(pool: PgPool) {
+    let w = world(&pool, "010-7100-0007").await;
+    let (id, _) = book(&w.prod, &w.c, 10, None).await;
+    let (paid, _, _) = payment_row(&pool, id).await;
+    let case: Uuid = sqlx::query_scalar(
+        "INSERT INTO cases (booking_id, kind, source, reporter_role, summary, sla_due_at) VALUES ($1, 'no_show', 'no_show', 'system', 'refund', now()) RETURNING id",
+    )
+    .bind(id)
+    .fetch_one(&pool)
+    .await
+    .expect("case");
+    let (admin, admin_id) = staff_token(&pool, Role::StaffAdmin).await;
+
+    let (st, body) = call(
+        &w.prod,
+        "PUT",
+        &format!("/v1/admin/cases/{case}"),
+        Some(admin.as_str()),
+        Some(json!({ "refund_amount": paid })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(refund_actors(&pool, id).await, vec![("staff".to_string(), Some(admin_id))]);
+    assert_eq!(payment_row(&pool, id).await.1, paid);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn failed_refund_audit_rolls_back_the_local_refund(pool: PgPool) {
+    let w = world(&pool, "010-7100-0008").await;
+    let (id, _) = book(&w.prod, &w.c, 10, None).await;
+    let before = status_of(&pool, id).await;
+    sqlx::query("CREATE FUNCTION refuse_refund_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'audit unavailable'; END $$")
+        .execute(&pool)
+        .await
+        .expect("guard function");
+    sqlx::query("CREATE TRIGGER refuse_refund_audit BEFORE INSERT ON audit_log FOR EACH ROW WHEN (NEW.action = 'payment.refund') EXECUTE FUNCTION refuse_refund_audit()")
+        .execute(&pool)
+        .await
+        .expect("guard trigger");
+
+    let (st, _) = call(&w.prod, "POST", &format!("/v1/bookings/{id}/cancel"), Some(w.c.token.as_str()), Some(json!({}))).await;
+    assert_ne!(st, StatusCode::OK, "the cancel fails when its refund cannot be recorded");
+    // The gateway accepted the refund before the local write failed: only our record rolls back.
+    assert_eq!(cancels(&w.gateway).len(), 1, "the provider call happened first");
+    assert_eq!(payment_row(&pool, id).await.1, 0, "the local refund rolled back");
+    assert_eq!(status_of(&pool, id).await, before, "the booking did not change");
+    assert!(refund_actors(&pool, id).await.is_empty());
 }

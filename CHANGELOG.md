@@ -9,6 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
+- Audit and consent records are append-only (migration 0320): the database refuses edits and deletes. Refunds, payout reveals and finance exports write their audit row in the same transaction as the action.
 - Consultation chat: customer and partner messages now push staff devices, at most once per thread per minute.
 
 ### Added

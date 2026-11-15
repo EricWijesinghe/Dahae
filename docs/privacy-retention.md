@@ -63,6 +63,14 @@ Each run logs counts (`retention purge done`). A database error stops the run; t
 
 Every staff read of a customer's contact details writes `audit_log` with `action` `customer.pii_view` (booking detail) or `customer.pii_list` (customer search). Payout account reveals already log `payout.reveal`.
 
+## Audit and consent records
+
+- `audit_log` and `user_consents` are append-only: the database refuses UPDATE, DELETE and TRUNCATE (migration `0320_audit_append_only.sql`). A withdrawal or correction is a new row.
+- Retention: nothing in the app purges these rows today. Access-log rows (`customer.pii_*`) keep at least 1 year under the personal information safety measures standard. The period for money-action rows is pending accountant review; do not treat any figure as final until it is confirmed.
+- Money actions write their audit row in the same transaction as the local money record: refunds (`payment.refund`), payout reveals (`payout.reveal`) and finance exports (`finance.export`). A failed audit write rolls back the local record and releases no payout account or file.
+- A refund is sent to the payment gateway before its audit row is written. If the audit write then fails, the gateway may already have refunded the money while our books still show the payment as paid. The next cancel is refused by the gateway balance check, so it cannot refund twice; reconcile the payment with the gateway.
+- Demo clear (`DELETE` of demo rows) is the one exception: it switches the guards off inside its own transaction and turns them back on before commit.
+
 ## Not yet covered
 
 - Partner (pro) account deletion and export: the partner route deletes but does not run this cascade; export is not built.

@@ -204,13 +204,16 @@ pub async fn run_payouts(AxState(s): AxState<AppState>, Admin(a): Admin, Json(r)
 pub async fn reveal_account(AxState(s): AxState<AppState>, Admin(a): Admin, Path(id): Path<Uuid>) -> ApiResult<Response> {
     live_admin(&s, a.id).await?;
     require_recent_stepup(&s, a.id).await?;
+    // The read and its audit row share one transaction: no row is released unless the reveal is recorded.
+    let mut tx = s.db.begin().await?;
     let (bank, holder, enc, gross, tax_type): (String, String, String, i64, String) =
         sqlx::query_as("SELECT bank, holder, account_enc, amount, tax_type FROM payouts WHERE id = $1")
             .bind(id)
-            .fetch_one(&s.db)
+            .fetch_one(&mut *tx)
             .await?;
     let account = crypto::decrypt(&s.config.data_key, crypto::aad::PAYOUT_ACCOUNT, &enc).ok_or(ApiError::Internal("cannot decrypt payout account".into()))?;
-    audit(&s.db, "staff", Some(a.id), "payout.reveal", &id.to_string(), json!({})).await?;
+    audit(&mut *tx, "staff", Some(a.id), "payout.reveal", &id.to_string(), json!({})).await?;
+    tx.commit().await?;
     // `amount` is what to transfer (net of withholding); `gross` and the taxes are shown for the record.
     let split = domain::tax::payout_withholding(&tax_type, domain::Won(gross));
     let body = Json(json!({

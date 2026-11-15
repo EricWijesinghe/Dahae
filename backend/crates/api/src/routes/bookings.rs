@@ -336,6 +336,13 @@ async fn detail(State(s): State<AppState>, Customer(a): Customer, Path(id): Path
     Ok(Json(view))
 }
 
+/// Who moved the money: the audit role (`staff`, `customer`, ...) and the person's id, when there is one.
+#[derive(Clone, Copy)]
+pub struct Actor<'a> {
+    pub role: &'a str,
+    pub id: Option<Uuid>,
+}
+
 /// Payments refunded in full by `refund_locked`; their cash receipts are cancelled after the commit.
 struct Refunds {
     total: i64,
@@ -363,10 +370,10 @@ async fn lock_status(conn: &mut PgConnection, id: Uuid) -> ApiResult<i16> {
 
 /// Refunds every paid payment on a booking (full or a capped amount) and records it.
 /// Holds the booking lock, so it never overlaps a cancel of the same booking.
-pub async fn refund_all(s: &AppState, booking: Uuid, max_amount: Option<i64>) -> ApiResult<i64> {
+pub async fn refund_all(s: &AppState, booking: Uuid, max_amount: Option<i64>, actor: Actor<'_>) -> ApiResult<i64> {
     let mut tx = s.db.begin().await?;
     lock_status(&mut tx, booking).await?;
-    let refunds = refund_locked(s, &mut tx, booking, max_amount).await?;
+    let refunds = refund_locked(s, &mut tx, booking, max_amount, actor).await?;
     tx.commit().await?;
     refunds.close_receipts(s).await;
     Ok(refunds.total)
@@ -375,7 +382,8 @@ pub async fn refund_all(s: &AppState, booking: Uuid, max_amount: Option<i64>) ->
 /// Refunds inside the caller's transaction, which holds the booking row lock (the provider call waits
 /// inside it; the 10 s HTTP timeout is well under the idle-transaction timeout). Each cancel tells the
 /// provider the balance our books expect, so a duplicate, or a retry after a lost commit, never refunds twice.
-async fn refund_locked(s: &AppState, conn: &mut PgConnection, booking: Uuid, max_amount: Option<i64>) -> ApiResult<Refunds> {
+/// Each refund writes its audit row on the same connection, so the record commits or rolls back with the money.
+async fn refund_locked(s: &AppState, conn: &mut PgConnection, booking: Uuid, max_amount: Option<i64>, actor: Actor<'_>) -> ApiResult<Refunds> {
     let pays: Vec<(Uuid, i64, i64, Option<String>, String)> = sqlx::query_as(
         "SELECT id, amount, refunded_amount, provider_tx_id, provider FROM payments WHERE booking_id = $1 AND status IN ('paid','partially_refunded') AND kind <> 'tip' ORDER BY created_at DESC FOR UPDATE",
     )
@@ -401,6 +409,15 @@ async fn refund_locked(s: &AppState, conn: &mut PgConnection, booking: Uuid, max
             .bind(status)
             .execute(&mut *conn)
             .await?;
+        audit(
+            &mut *conn,
+            actor.role,
+            actor.id,
+            "payment.refund",
+            &pid.to_string(),
+            json!({ "booking": booking, "amount": amt, "status": status }),
+        )
+        .await?;
         if status == "refunded" {
             out.closed.push((pid, tx));
         }
@@ -413,7 +430,7 @@ async fn refund_locked(s: &AppState, conn: &mut PgConnection, booking: Uuid, max
 /// Shared by customer and staff cancellation. One transaction holds the booking row lock from the
 /// status check through the refund to the status change: a second cancel or a completion waits, then
 /// sees the new status. Money moves at most once, and never for a booking that stays active.
-pub async fn apply_cancel(s: &AppState, b: &BookingRow, refund_cap: Option<i64>, actor: &str) -> ApiResult<()> {
+pub async fn apply_cancel(s: &AppState, b: &BookingRow, refund_cap: Option<i64>, actor: Actor<'_>) -> ApiResult<()> {
     let mut tx = s.db.begin().await?;
     if lock_status(&mut tx, b.id).await? != b.status {
         return Err(ApiError::Conflict("booking_changed"));
@@ -425,14 +442,14 @@ pub async fn apply_cancel(s: &AppState, b: &BookingRow, refund_cap: Option<i64>,
     // The intent commits on its own before the provider call, so a refund that lands just before a crash leaves a trace.
     audit(
         &s.db,
-        actor,
-        None,
+        actor.role,
+        actor.id,
         "booking.cancel_intent",
         &b.id.to_string(),
         json!({ "status": b.status, "refund_cap": refund_cap }),
     )
     .await?;
-    let refunds = refund_locked(s, &mut tx, b.id, refund_cap).await?;
+    let refunds = refund_locked(s, &mut tx, b.id, refund_cap, actor).await?;
     sqlx::query(&format!(
         "UPDATE bookings SET status = {}, cancelled_at = now(), updated_at = now() WHERE id = $1",
         BookingStatus::Cancelled.as_i16()
@@ -470,7 +487,7 @@ pub async fn apply_cancel(s: &AppState, b: &BookingRow, refund_cap: Option<i64>,
     if let Some(t) = b.thread_id {
         best_effort(
             "chat",
-            chat::post_system(s, t, "booking_cancelled", json!({ "by": actor, "refunded": refunded })),
+            chat::post_system(s, t, "booking_cancelled", json!({ "by": actor.role, "refunded": refunded })),
         )
         .await;
     }
@@ -582,7 +599,16 @@ pub async fn cancel_owned(s: &AppState, user: Uuid, id: Uuid, accepted_fee: Opti
     // cash share of the refund and the points come back in the same proportion (apply_cancel).
     let spent = crate::points::net_spent(&mut *s.db.acquire().await?, b.id).await?;
     let cap = (quote.fee > 0).then(|| domain::points::cash_share(quote.refund, b.paid_amount, spent));
-    apply_cancel(s, &b, cap, "customer").await?;
+    apply_cancel(
+        s,
+        &b,
+        cap,
+        Actor {
+            role: "customer",
+            id: Some(user),
+        },
+    )
+    .await?;
     audit(
         &s.db,
         "customer",
