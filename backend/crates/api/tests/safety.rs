@@ -232,7 +232,7 @@ async fn team_member(app: &Router, pool: &PgPool, pro: Uuid, phone: &str) -> (St
     let member: Uuid =
         sqlx::query_scalar("INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1, 'Member', $2, 'member', 'active') RETURNING id")
             .bind(pro)
-            .bind(phone)
+            .bind(phone.replace('-', ""))
             .fetch_one(pool)
             .await
             .expect("team member");

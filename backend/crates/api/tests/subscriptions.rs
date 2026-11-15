@@ -299,7 +299,8 @@ async fn visit_with_no_free_window_tells_the_customer_and_staff(pool: PgPool) {
     let planned = visits(&body).iter().filter(|v| v["state"] == "planned").count() as i64;
     assert!(planned >= 3, "{body}");
     assert_eq!(count_notices(&pool, "subscription.visit_unplaced", Some(c.user)).await, planned);
-    assert_eq!(count_notices(&pool, "subscription.capacity_full", None).await, planned, "staff alert per visit");
+    // Staff alerts are live events only (no inbox row), so nothing is stored for them.
+    assert_eq!(count_notices(&pool, "subscription.capacity_full", None).await, 0, "staff alerts have no inbox");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
