@@ -20,6 +20,7 @@ from datetime import date, timedelta
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8080"
 ADMIN = ("admin@local.test", "change-me-now-please")
 DISTRICT = "11680"  # Gangnam-gu
+CHECKLIST = {"identity": True, "tax_type": True, "experience": True, "emergency_contact": True}
 
 
 def call(method, path, body=None, token=None, expect=200):
@@ -128,7 +129,7 @@ def main():
     pro_list = call("GET", "/v1/admin/pros", token=staff)
     for t in pros:
         me = call("GET", "/v1/partner/me", token=t)
-        call("POST", f"/v1/admin/pros/{me['id']}/status", {"status": "verified"}, staff)
+        call("POST", f"/v1/admin/pros/{me['id']}/status", {"status": "verified", "checklist": CHECKLIST}, staff)
         call("PUT", "/v1/partner/prefs", {"services": ["bathroom", "move_in"], "districts": [DISTRICT], "weekdays": [0, 1, 2, 3, 4, 5, 6], "day_parts": ["morning", "afternoon"], "days_off": [], "notify": {}}, t)
         call("PUT", "/v1/partner/payout-account", {"bank": "신한", "account_number": "110-123-456789", "holder": "홍길동"}, t)
     feed = call("GET", "/v1/partner/jobs?kind=direct", token=pros[0])
@@ -277,7 +278,7 @@ def social_flow(staff, visit):
     spro = call("POST", "/v1/auth/social", {"provider": "kakao", "token": f"dev:pro-{random.randint(10**9, 10**10)}", "audience": "partner"})
     pt = spro["access_token"]
     pro_id = call("GET", "/v1/partner/me", token=pt)["id"]
-    call("POST", f"/v1/admin/pros/{pro_id}/status", {"status": "verified"}, staff)
+    call("POST", f"/v1/admin/pros/{pro_id}/status", {"status": "verified", "checklist": CHECKLIST}, staff)
     refused = call("POST", f"/v1/partner/jobs/{done['booking_id']}/accept", token=pt, expect=409)
     assert refused["error"]["code"] == "phone_required", refused
     step("social pro without a phone: accept -> 409 phone_required")

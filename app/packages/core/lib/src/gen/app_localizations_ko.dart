@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4899,6 +4898,96 @@ class TKo extends T {
 
   @override
   String get prqBy => '처리한 직원';
+
+  @override
+  String get cPfTitle => '직원 프로필 · 검증';
+
+  @override
+  String get cPfTabChecklist => '검증 체크리스트';
+
+  @override
+  String get cPfTabProfile => '프로필';
+
+  @override
+  String get cPfChecklistHelp => '모든 항목을 체크해야 활동 중으로 승인할 수 있어요.';
+
+  @override
+  String get cPfItemIdentity => '신분증 확인';
+
+  @override
+  String get cPfItemTaxType => '세금 유형 확인 (사업소득·근로소득)';
+
+  @override
+  String get cPfItemExperience => '경력 확인';
+
+  @override
+  String get cPfItemEmergency => '비상연락처 확인';
+
+  @override
+  String get cPfLegacyNote => '이전에 승인된 직원이라 체크 기록이 없어요. 항목을 확인하고 저장해 주세요.';
+
+  @override
+  String get cPfIncomplete => '체크리스트를 모두 채워야 승인할 수 있어요.';
+
+  @override
+  String get cPfSaveChecklist => '체크리스트 저장';
+
+  @override
+  String get cPfApprove => '활동 중으로 승인';
+
+  @override
+  String get cPfPhoto => '사진';
+
+  @override
+  String get cPfPickPhoto => '사진 올리기';
+
+  @override
+  String get cPfBio => '소개';
+
+  @override
+  String get cPfEmployment => '고용 형태';
+
+  @override
+  String get cPfEmpFreelance => '프리랜서';
+
+  @override
+  String get cPfEmpEmployee => '직원';
+
+  @override
+  String get cPfEmpContract => '위탁';
+
+  @override
+  String get cPfEmergency => '비상연락처';
+
+  @override
+  String get cPfEmergencyHelp => '숫자와 - 만 입력해요. 암호화되어 저장되고, 열람할 때마다 기록이 남아요.';
+
+  @override
+  String get cPfHiredOn => '입사일';
+
+  @override
+  String get cPfNoDate => '입력 안 함';
+
+  @override
+  String get cPfSaveProfile => '프로필 저장';
+
+  @override
+  String get err_checklist_incomplete => '체크리스트 항목을 모두 체크해야 승인할 수 있어요.';
+
+  @override
+  String get err_invalid_checklist => '체크리스트 항목이 올바르지 않아요. 화면을 새로고침해 주세요.';
+
+  @override
+  String get err_invalid_emergency_contact => '비상연락처는 숫자와 - 만 넣어 주세요. (30자 이내)';
+
+  @override
+  String get err_invalid_employment_type => '고용 형태를 목록에서 골라 주세요.';
+
+  @override
+  String get err_invalid_photo => '사진은 직접 올린 파일만 쓸 수 있어요. 다시 올려 주세요.';
+
+  @override
+  String get err_invalid_bio => '소개는 500자 이내로 적어 주세요.';
 
   @override
   String get rnwTitle => '갱신 일정';

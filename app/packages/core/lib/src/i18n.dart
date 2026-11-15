@@ -123,6 +123,12 @@ extension Labels on T {
     'totp_required' => err_totp_required,
     'owner_cannot_deactivate' => err_owner_cannot_deactivate,
     'sms_failed' => err_sms_failed,
+    'checklist_incomplete' => err_checklist_incomplete,
+    'invalid_checklist' => err_invalid_checklist,
+    'invalid_emergency_contact' => err_invalid_emergency_contact,
+    'invalid_employment_type' => err_invalid_employment_type,
+    'invalid_photo' => err_invalid_photo,
+    'invalid_bio' => err_invalid_bio,
     _ => null,
   };
 

@@ -9330,6 +9330,186 @@ abstract class T {
   /// **'처리한 직원'**
   String get prqBy;
 
+  /// No description provided for @cPfTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'직원 프로필 · 검증'**
+  String get cPfTitle;
+
+  /// No description provided for @cPfTabChecklist.
+  ///
+  /// In ko, this message translates to:
+  /// **'검증 체크리스트'**
+  String get cPfTabChecklist;
+
+  /// No description provided for @cPfTabProfile.
+  ///
+  /// In ko, this message translates to:
+  /// **'프로필'**
+  String get cPfTabProfile;
+
+  /// No description provided for @cPfChecklistHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'모든 항목을 체크해야 활동 중으로 승인할 수 있어요.'**
+  String get cPfChecklistHelp;
+
+  /// No description provided for @cPfItemIdentity.
+  ///
+  /// In ko, this message translates to:
+  /// **'신분증 확인'**
+  String get cPfItemIdentity;
+
+  /// No description provided for @cPfItemTaxType.
+  ///
+  /// In ko, this message translates to:
+  /// **'세금 유형 확인 (사업소득·근로소득)'**
+  String get cPfItemTaxType;
+
+  /// No description provided for @cPfItemExperience.
+  ///
+  /// In ko, this message translates to:
+  /// **'경력 확인'**
+  String get cPfItemExperience;
+
+  /// No description provided for @cPfItemEmergency.
+  ///
+  /// In ko, this message translates to:
+  /// **'비상연락처 확인'**
+  String get cPfItemEmergency;
+
+  /// No description provided for @cPfLegacyNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'이전에 승인된 직원이라 체크 기록이 없어요. 항목을 확인하고 저장해 주세요.'**
+  String get cPfLegacyNote;
+
+  /// No description provided for @cPfIncomplete.
+  ///
+  /// In ko, this message translates to:
+  /// **'체크리스트를 모두 채워야 승인할 수 있어요.'**
+  String get cPfIncomplete;
+
+  /// No description provided for @cPfSaveChecklist.
+  ///
+  /// In ko, this message translates to:
+  /// **'체크리스트 저장'**
+  String get cPfSaveChecklist;
+
+  /// No description provided for @cPfApprove.
+  ///
+  /// In ko, this message translates to:
+  /// **'활동 중으로 승인'**
+  String get cPfApprove;
+
+  /// No description provided for @cPfPhoto.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진'**
+  String get cPfPhoto;
+
+  /// No description provided for @cPfPickPhoto.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 올리기'**
+  String get cPfPickPhoto;
+
+  /// No description provided for @cPfBio.
+  ///
+  /// In ko, this message translates to:
+  /// **'소개'**
+  String get cPfBio;
+
+  /// No description provided for @cPfEmployment.
+  ///
+  /// In ko, this message translates to:
+  /// **'고용 형태'**
+  String get cPfEmployment;
+
+  /// No description provided for @cPfEmpFreelance.
+  ///
+  /// In ko, this message translates to:
+  /// **'프리랜서'**
+  String get cPfEmpFreelance;
+
+  /// No description provided for @cPfEmpEmployee.
+  ///
+  /// In ko, this message translates to:
+  /// **'직원'**
+  String get cPfEmpEmployee;
+
+  /// No description provided for @cPfEmpContract.
+  ///
+  /// In ko, this message translates to:
+  /// **'위탁'**
+  String get cPfEmpContract;
+
+  /// No description provided for @cPfEmergency.
+  ///
+  /// In ko, this message translates to:
+  /// **'비상연락처'**
+  String get cPfEmergency;
+
+  /// No description provided for @cPfEmergencyHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'숫자와 - 만 입력해요. 암호화되어 저장되고, 열람할 때마다 기록이 남아요.'**
+  String get cPfEmergencyHelp;
+
+  /// No description provided for @cPfHiredOn.
+  ///
+  /// In ko, this message translates to:
+  /// **'입사일'**
+  String get cPfHiredOn;
+
+  /// No description provided for @cPfNoDate.
+  ///
+  /// In ko, this message translates to:
+  /// **'입력 안 함'**
+  String get cPfNoDate;
+
+  /// No description provided for @cPfSaveProfile.
+  ///
+  /// In ko, this message translates to:
+  /// **'프로필 저장'**
+  String get cPfSaveProfile;
+
+  /// No description provided for @err_checklist_incomplete.
+  ///
+  /// In ko, this message translates to:
+  /// **'체크리스트 항목을 모두 체크해야 승인할 수 있어요.'**
+  String get err_checklist_incomplete;
+
+  /// No description provided for @err_invalid_checklist.
+  ///
+  /// In ko, this message translates to:
+  /// **'체크리스트 항목이 올바르지 않아요. 화면을 새로고침해 주세요.'**
+  String get err_invalid_checklist;
+
+  /// No description provided for @err_invalid_emergency_contact.
+  ///
+  /// In ko, this message translates to:
+  /// **'비상연락처는 숫자와 - 만 넣어 주세요. (30자 이내)'**
+  String get err_invalid_emergency_contact;
+
+  /// No description provided for @err_invalid_employment_type.
+  ///
+  /// In ko, this message translates to:
+  /// **'고용 형태를 목록에서 골라 주세요.'**
+  String get err_invalid_employment_type;
+
+  /// No description provided for @err_invalid_photo.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진은 직접 올린 파일만 쓸 수 있어요. 다시 올려 주세요.'**
+  String get err_invalid_photo;
+
+  /// No description provided for @err_invalid_bio.
+  ///
+  /// In ko, this message translates to:
+  /// **'소개는 500자 이내로 적어 주세요.'**
+  String get err_invalid_bio;
+
   /// No description provided for @rnwTitle.
   ///
   /// In ko, this message translates to:
