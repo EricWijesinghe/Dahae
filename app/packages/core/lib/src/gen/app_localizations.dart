@@ -2488,13 +2488,13 @@ abstract class T {
   /// No description provided for @unit_window_small.
   ///
   /// In ko, this message translates to:
-  /// **'작은 창'**
+  /// **'작은 창 (1m 미만)'**
   String get unit_window_small;
 
   /// No description provided for @unit_window_large.
   ///
   /// In ko, this message translates to:
-  /// **'큰 창'**
+  /// **'큰 창 (1m 이상)'**
   String get unit_window_large;
 
   /// No description provided for @unit_pest.
@@ -2572,13 +2572,13 @@ abstract class T {
   /// No description provided for @unitShort_small.
   ///
   /// In ko, this message translates to:
-  /// **'작은 창'**
+  /// **'작은 창 (1m 미만)'**
   String get unitShort_small;
 
   /// No description provided for @unitShort_large.
   ///
   /// In ko, this message translates to:
-  /// **'큰 창'**
+  /// **'큰 창 (1m 이상)'**
   String get unitShort_large;
 
   /// No description provided for @unitShort_pest.
@@ -10433,6 +10433,30 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'부가세 10%'**
   String get qaVat;
+
+  /// No description provided for @quoteSizeTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'선택한 구조와 저장된 평수가 달라요'**
+  String get quoteSizeTitle;
+
+  /// No description provided for @quoteSizeBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 주소는 {size}이라 {layout} 구조와 맞지 않을 수 있어요.'**
+  String quoteSizeBody(String size, String layout);
+
+  /// No description provided for @quoteSizeChangeLayout.
+  ///
+  /// In ko, this message translates to:
+  /// **'구조 바꾸기'**
+  String get quoteSizeChangeLayout;
+
+  /// No description provided for @quoteSizeChangeSize.
+  ///
+  /// In ko, this message translates to:
+  /// **'평수 고치기'**
+  String get quoteSizeChangeSize;
 
   /// No description provided for @rnwTitle.
   ///
