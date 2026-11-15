@@ -9,6 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
+- Partner app Windows store metadata uses the 다해 name: publisher display name and publisher are placeholders (`Dahae`) until the real Partner Center values are put in `scripts/store/msix.local.psd1`; the README now covers run, test, build and store steps. The app ID `com.malkkeum.partner` is unchanged pending the owner's decision.
 - Consultation chat: customer and partner messages now push staff devices, at most once per thread per minute.
 
 ### Added
