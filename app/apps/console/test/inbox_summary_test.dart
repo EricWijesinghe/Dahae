@@ -7,8 +7,6 @@ import 'package:test_support/test_support.dart';
 
 import 'support/console_host.dart';
 
-const _sentAt = '2026-11-14T06:10:00Z';
-
 Json _quoteMessage() => chatMessageJson(
   id: 'm-quote',
   kind: 'quote',
