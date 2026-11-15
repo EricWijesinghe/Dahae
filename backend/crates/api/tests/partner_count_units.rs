@@ -43,7 +43,12 @@ async fn job_lists_the_owner_catalogue_options_including_added_ones(pool: PgPool
     let c = customer(&app, &pool, "010-5000-0901").await;
     let (id, b) = book_counts(&app, &c, "aircon", json!([1, 0, 0, 0, 1])).await;
     assert_eq!(b["unit_counts"], json!([1, 0, 0, 0, 1]));
-    let (pro, _) = verified_pro(&app, &pool, "010-5000-0902").await;
+    let (pro, pro_id) = verified_pro(&app, &pool, "010-5000-0902").await;
+    sqlx::query("UPDATE partner_prefs SET services = ARRAY['studio', 'aircon'] WHERE pro_id = $1")
+        .bind(pro_id)
+        .execute(&pool)
+        .await
+        .expect("pro serves aircon");
     let (st, acc) = call(&app, "POST", &format!("/v1/partner/jobs/{id}/accept"), Some(pro.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{acc}");
     let (st, job) = call(&app, "GET", &format!("/v1/partner/jobs/{id}"), Some(pro.as_str()), None).await;
