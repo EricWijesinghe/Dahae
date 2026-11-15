@@ -95,6 +95,8 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
 
   QuoteAnswers get a => d.answers;
   bool get _moveIn => widget.service.code == 'move_in';
+  /// 이사·입주 flows (move-in and move-out) share the trimmed luggage list (CR-3).
+  bool get _moveFlow => _moveIn || widget.service.code == 'move_out';
   bool get _wholeHome => widget.service.code == 'whole_home';
 
   /// Whole-home starts at 집 구조 (the cleaning type page is skipped) and is numbered out of 6 (CR-4).
@@ -435,7 +437,7 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
     final types = _moveIn
         ? ['normal_move_in', 'after_interior']
         : ['standard', 'same_day_move', 'some_luggage_left'];
-    final luggage = _moveIn ? _moveInLuggage : _luggage;
+    final luggage = _moveFlow ? _moveInLuggage : _luggage;
     return _page(
       t,
       0,
