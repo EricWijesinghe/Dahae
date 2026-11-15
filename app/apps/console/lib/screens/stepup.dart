@@ -6,21 +6,21 @@ import '../state.dart';
 
 /// Runs a sensitive owner action. When the server answers 403 stepup_required (no fresh TOTP step-up),
 /// asks for an authenticator code, posts it, and runs the action once more. Cancelling rethrows that error.
-Future<T> withStepUp<T>(
+Future<R> withStepUp<R>(
   BuildContext context,
-  Future<T> Function() action,
+  Future<R> Function() action,
 ) async {
   try {
     return await action();
   } on ApiException catch (e) {
     if (e.status != 403 || e.code != 'stepup_required') rethrow;
-    if (!context.mounted) throw e;
+    if (!context.mounted) rethrow;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => const _StepUpDialog(),
     );
-    if (confirmed != true) throw e;
-    if (!context.mounted) throw e;
+    if (confirmed != true) rethrow;
+    if (!context.mounted) rethrow;
     return action();
   }
 }
