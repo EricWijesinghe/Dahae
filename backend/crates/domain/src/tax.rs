@@ -279,6 +279,7 @@ mod tests {
         assert_eq!(w.income_tax.0 + w.local_tax.0 + w.net.0, 123_456);
     }
 
+    /// Characterization, not agreement: pins the current business withholding (ACCOUNTANT: base and rounding unconfirmed).
     #[test]
     fn withholding_rounding_boundaries_golden() {
         // (gross, income tax, local tax, net): income tax floors to won, local tax floors to 10 won.
