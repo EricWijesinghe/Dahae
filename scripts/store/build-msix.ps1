@@ -60,18 +60,20 @@ function Get-Setting([string]$Name, [string]$Default = '') {
   return $Default
 }
 
-$publisher = Get-Setting 'MSIX_PUBLISHER' 'CN=Malkkeum Test'
-$publisherName = Get-Setting 'MSIX_PUBLISHER_DISPLAY_NAME' 'Malkkeum Test'
+$publisher = Get-Setting 'MSIX_PUBLISHER' 'CN=Dahae'
+$publisherName = Get-Setting 'MSIX_PUBLISHER_DISPLAY_NAME' 'Dahae'
 $identity = @{
   customer = Get-Setting 'MSIX_IDENTITY_CUSTOMER' 'com.malkkeum.customer'
   partner  = Get-Setting 'MSIX_IDENTITY_PARTNER' 'com.malkkeum.partner'
 }
 
-# Test certificate: created once, subject = publisher, password kept next to it.
+# Test certificate: created once per publisher (subject = publisher), password kept next to it.
+# The file name carries the publisher so a changed publisher never reuses a certificate with another subject.
 function Get-TestPfx {
   New-Item -ItemType Directory -Force -Path $localDir | Out-Null
-  $pfx = Join-Path $localDir 'test-signing.pfx'
-  $pwFile = Join-Path $localDir 'test-signing.password'
+  $slug = $publisher -replace '[^A-Za-z0-9]', '_'
+  $pfx = Join-Path $localDir "test-signing-$slug.pfx"
+  $pwFile = Join-Path $localDir "test-signing-$slug.password"
   if ((Test-Path $pfx) -and (Test-Path $pwFile)) { return @{ Path = $pfx; Password = (Get-Content $pwFile -Raw).Trim() } }
   $password = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(18))
   $cert = New-SelfSignedCertificate -Type Custom -Subject $publisher -KeyUsage DigitalSignature `
