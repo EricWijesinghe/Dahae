@@ -26,7 +26,8 @@ regexes = [
 description = "Published test vectors and fixture values in tests and job fixtures"
 regexTarget = "line"
 regexes = [
-  '''token=0123456789abcdef0123456789abcdef''',
+  '''(token|progress)=0123456789abcdef0123456789abcdef''',
+  '''"secret_key": "(sk_plain|test_sk_abcdef1234|live_sk_zz9876)"''',
   '''Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==''',
   '''SECRET=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ # the RFC 6238 test key''',
   '''"email": "consult-new@test\.local", "name": "Consult", "role": "consultant", "password": "Dahae-consult-2026"''',
