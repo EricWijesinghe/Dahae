@@ -272,6 +272,9 @@ t  "backup path in backups/"          backup_path_ok backups/db-t2.sql.gz.enc
 nt "backup path outside backups/"     backup_path_ok /etc/passwd
 nt "backup path bare name"            backup_path_ok db-t2.sql.gz.enc
 nt "backup path traversal"            backup_path_ok backups/../x
+t  "full path from 'dahae backup' maps into backups/" eq "$(backup_rel "$DIR/backups/db-t2.sql.gz.enc")" backups/db-t2.sql.gz.enc
+t  "relative path unchanged"          eq "$(backup_rel backups/db-t2.sql.gz.enc)" backups/db-t2.sql.gz.enc
+nt "other absolute path still refused" backup_path_ok "$(backup_rel /etc/passwd)"
 unset -f api_backup
 YES=1 key_escrow_confirm >/dev/null 2>&1
 t  "--yes never attests key copy"     eq "$(env_get KEY_ESCROW_AT)" ""

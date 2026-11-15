@@ -486,6 +486,7 @@ seal_local() { # seal_local 파일 : 봉인된 .enc 를 확인한 뒤에만 평�
   rm -f -- "$f.enc"; BACKUP_WARN=1; warn "백업 봉인에 실패했어요. 평문 사본은 그대로 남겨 두었어요: $f"; return 1
 }
 # 복원·업데이트·되돌리기 전에 쓰는 백업 파일은 backups/ 안의 상대 경로만 받아요 (컨테이너는 그 폴더만 보여요)
+backup_rel() { printf '%s' "${1#"$DIR"/}"; } # 'dahae backup' 이 보여 주는 전체 경로도 backups/... 로 받아요
 backup_path_ok() { case "$1" in backups/*) ;; *) return 1 ;; esac; case "$1" in *..*) return 1 ;; esac; }
 # api 이미지의 백업 명령(backup-upload, -fetch, -list). backups/ 는 root 전용(700)이라 컨테이너 안에서도 root 로
 # 실행해요. 권한(capability)은 모두 빠진 채라 이 폴더와 앱 볼륨에만 닿아요. 임시 파일은 메모리(/tmp) 대신 backups/ 에.
@@ -878,6 +879,7 @@ cmd_restore() { # dahae restore 파일 [--yes]
   local f="" up a
   for a in "$@"; do case "$a" in --yes|-y) YES=1 ;; *) f="$a" ;; esac; done
   [ -n "$f" ] || die "복원할 백업 파일을 지정하세요. 예: dahae restore backups/db-20261110-033000.sql.gz.enc"
+  f=$(backup_rel "$f")
   backup_path_ok "$f" || die "백업 파일은 backups/ 폴더 안의 파일만 쓸 수 있어요 (예: backups/db-20261110-033000.sql.gz.enc): $f"
   [ -f "$f" ] || die "백업 파일을 찾을 수 없어요: $f"
   confirm "현재 데이터를 ${f%.enc} 로 되돌릴까요? 지금 데이터는 먼저 따로 백업해 둬요." yes
