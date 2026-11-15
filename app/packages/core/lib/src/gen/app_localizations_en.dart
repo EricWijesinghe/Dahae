@@ -5832,6 +5832,9 @@ class TEn extends T {
   String get caseSave => 'Save';
 
   @override
+  String get servicePhotoSlot => 'Service photo goes here';
+
+  @override
   String get rulesTab => 'Operating rules';
 
   @override

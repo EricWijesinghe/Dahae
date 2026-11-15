@@ -8,7 +8,6 @@ import '../guest.dart';
 import '../public_offers.dart';
 import '../state.dart';
 import '../web_ready.dart';
-import 'addresses.dart';
 import 'bookings.dart' show BookingCard;
 import 'content_rail.dart';
 import 'feed.dart';
@@ -268,13 +267,6 @@ class _HomeTabState extends State<HomeTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _Intro(
-                  greeting: app.name.isEmpty
-                      ? timeGreeting(t, DateTime.now())
-                      : t.homeGreeting(app.name),
-                  addresses: app.addresses,
-                ),
-                const SizedBox(height: Space.xs),
                 _GroupGrid(groups: _groups, services: app.services),
                 if (!signedIn) const WelcomeOfferLine(),
                 const SizedBox(height: Space.md),
@@ -448,28 +440,6 @@ class _HeaderTitle extends StatelessWidget {
   }
 }
 
-/// One quiet greeting line with the address chip under it (not in the design; kept small).
-class _Intro extends StatelessWidget {
-  const _Intro({required this.greeting, required this.addresses});
-  final String greeting;
-  final List<Address> addresses;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // The greeting strings break after the name; here it is one quiet line.
-      Text(
-        greeting.replaceAll('\n', ' '),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: context.text.bodySmall?.copyWith(color: context.colors.inkSoft),
-      ),
-      _AddressChip(addresses: addresses),
-    ],
-  );
-}
-
 /// Referral needs an account. The amount shows before the tap; hidden while referrals are off.
 /// Signing in rebuilds the home tab (the shell keys its tabs by account), so the real card appears on its own.
 class _GuestReferralGate extends StatelessWidget {
@@ -511,45 +481,6 @@ class _GuestReferralGate extends StatelessWidget {
   );
 }
 
-class _AddressChip extends StatelessWidget {
-  const _AddressChip({required this.addresses});
-  final List<Address> addresses;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final a = addresses.firstOrNull;
-    final label = a == null
-        ? context.t.homeAddAddressCta
-        : '${a.label} · ${districtByCode(a.districtCode)?.name(context.lang) ?? ''}';
-    return InkWell(
-      borderRadius: BorderRadius.circular(Radii.chip),
-      onTap: () => Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const AddressesScreen())),
-      // 48 dp minimum touch target (Android / WCAG).
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ExcludeSemantics(child: Icon3D('ui_pin', size: 18)),
-            const SizedBox(width: Space.xxs),
-            Flexible(
-              child: Text(
-                label,
-                style: context.text.bodySmall?.copyWith(color: c.inkSoft),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Icon(Icons.expand_more_rounded, size: 18, color: c.inkMuted),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// The next visit as one flat card: when it is, then the same row as on the bookings tab.
 class _UpcomingCard extends StatelessWidget {
   const _UpcomingCard({required this.booking});
@@ -558,9 +489,9 @@ class _UpcomingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.t;
-    final days = DateUtils.dateOnly(
-      booking.visitDate,
-    ).difference(DateUtils.dateOnly(DateTime.now())).inDays;
+    final days = DateUtils.dateOnly(booking.visitDate)
+        .difference(DateUtils.dateOnly(DateTime.now()))
+        .inDays;
     return AppCard(
       level: Level.flat,
       border: context.colors.line,
