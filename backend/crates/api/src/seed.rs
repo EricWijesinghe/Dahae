@@ -12,7 +12,7 @@ use sqlx::PgPool;
 /// Default capacity per arrival hour until staff change it (decision #6).
 const DEFAULT_SLOT_CAPACITY: i32 = 6;
 
-/// Catalogue order for a fresh database, by home group (CR-7.3; migration 0211 applies it to older ones).
+/// Catalogue order for a fresh database, by home group (CR-7.3; migration 0231 applies it to older ones).
 /// Only the first insert uses it, so an order the owner set in the console is never overwritten.
 pub const SEED_ORDER: [&str; 11] = [
     "studio",
@@ -109,7 +109,7 @@ pub async fn run(db: &PgPool, config: &Config) -> Result<(), Box<dyn std::error:
             .execute(db)
             .await?;
     }
-    // FAQ rows come from migration 0232 before this runs on a fresh database, so only non-FAQ content counts here.
+    // FAQ rows come from migration 0237 before this runs on a fresh database, so only non-FAQ content counts here.
     let has_content: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM content_items WHERE kind <> 'faq')")
         .fetch_one(db)
         .await?;
