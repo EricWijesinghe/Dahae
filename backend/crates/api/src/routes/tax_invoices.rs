@@ -4,6 +4,7 @@
 
 use super::{
     audit,
+    bookings::Actor,
     checkouts::load_owned,
     finance::{PeriodQuery, csv_response, resolve},
 };
@@ -26,7 +27,7 @@ use domain::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::{FromRow, PgExecutor, PgPool};
+use sqlx::{FromRow, PgConnection, PgExecutor, PgPool};
 use uuid::Uuid;
 
 /// Line item name on the invoice. ACCOUNTANT: confirm the 품목 wording for cleaning services.
@@ -304,6 +305,35 @@ async fn mark_issued(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<
     }
     audit(&s.db, "staff", Some(a.id), "tax_invoice.issued", "tax_invoice", json!({ "id": id })).await?;
     Ok(Json(view(&s.db, id).await?))
+}
+
+/// Runs inside the refund transaction when a payment is refunded in full. A queued request not yet exported is
+/// cancelled. An exported one stays (the owner already has it): an audit row raises it so it is cancelled on 홈택스.
+pub async fn cancel_for_refunded_payment(conn: &mut PgConnection, payment: Uuid, actor: Actor<'_>) -> ApiResult<()> {
+    sqlx::query(
+        "UPDATE tax_invoice_requests SET state = 'cancelled', updated_at = now()
+         WHERE payment_id = $1 AND state = 'requested' AND exported_at IS NULL",
+    )
+    .bind(payment)
+    .execute(&mut *conn)
+    .await?;
+    let exported: Vec<Uuid> =
+        sqlx::query_scalar("SELECT id FROM tax_invoice_requests WHERE payment_id = $1 AND state = 'requested' AND exported_at IS NOT NULL")
+            .bind(payment)
+            .fetch_all(&mut *conn)
+            .await?;
+    if !exported.is_empty() {
+        audit(
+            &mut *conn,
+            actor.role,
+            actor.id,
+            "tax_invoice.refund_after_export",
+            "tax_invoices",
+            json!({ "payment": payment, "requests": exported }),
+        )
+        .await?;
+    }
+    Ok(())
 }
 
 /// Customer routes, merged at the top level like the checkout routes.
