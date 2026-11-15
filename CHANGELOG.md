@@ -13,6 +13,7 @@ from the release branches; no tags existed for them.
 - Account deletion: a finished booking (completed or cancelled) loses its street address, answers, visit notes and household profile, keeping the district, size, dwelling type, amounts, dates and status for the 5-year record; open bookings are cleared by the hourly purge once they are completed or cancelled.
 - Consultation chat: customer and partner messages now push staff devices, at most once per thread per minute.
 - Saved-card billing keys are stored encrypted at rest; existing cards are sealed at the next server start, and one card per key is enforced on a keyed digest.
+- Payments: a cancellation made in the PortOne console now updates the booking's refunded amount from PortOne, and opens a staff payment-dispute case on the booking (once per provider transaction). Queued refunds ask PortOne to cancel only while the balance is still the amount.
 
 ### Added
 - Owner account (내 계정) for the console: one owner per server, claimed or handed over with both authenticator codes; owner-only actions need a fresh code each time; recovery codes re-issue, SMS alert number, password change, sign out everywhere; server-issued one-time reset (`api owner-reset`) after a lost second factor.

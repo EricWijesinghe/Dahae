@@ -700,6 +700,7 @@ mod tests {
         PaymentInfo {
             status: "PAID".into(),
             total,
+            cancelled: 0,
             currency: currency.into(),
             method: Value::Null,
         }

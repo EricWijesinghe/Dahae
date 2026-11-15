@@ -3,6 +3,9 @@
 
 use super::{IdentityInfo, PaymentInfo, ProviderError, Providers};
 use crate::config::PortOne;
+
+/// The refusal code for a cancel whose balance moved since our books were written. Retrying cannot succeed.
+pub const BALANCE_MOVED: &str = "cancellable_amount_changed";
 use base64::{Engine, engine::general_purpose::STANDARD};
 use hmac::{Hmac, Mac};
 use reqwest::{StatusCode, header::AUTHORIZATION};
@@ -73,6 +76,7 @@ pub async fn payment(p: &Providers, id: &str) -> Result<PaymentInfo, ProviderErr
         status: text(&v["status"]),
         // Missing amount reads as -1, which never matches a checkout: the payment gets refunded.
         total: v["amount"]["total"].as_i64().unwrap_or(-1),
+        cancelled: v["amount"]["cancelled"].as_i64().unwrap_or(-1),
         currency: text(&v["currency"]),
         method: v["method"].clone(),
     })
@@ -115,7 +119,7 @@ async fn landed_before(p: &Providers, id: &str, expected_left: i64) -> Result<()
         tracing::warn!(payment = id, "cancel already applied at PortOne; recording it");
         Ok(())
     } else {
-        Err(ProviderError::Declined("cancellable_amount_changed".into()))
+        Err(ProviderError::Declined(BALANCE_MOVED.into()))
     }
 }
 
@@ -290,6 +294,7 @@ pub fn dev_payment(id: &str, total: i64) -> Option<PaymentInfo> {
     Some(PaymentInfo {
         status: status.into(),
         total,
+        cancelled: 0,
         currency: "KRW".into(),
         method,
     })
