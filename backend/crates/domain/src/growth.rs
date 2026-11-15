@@ -190,44 +190,105 @@ pub fn redact_contacts(text: &str) -> String {
 /// Refund, discount and compensation words. A reply may use one only when the facts use it too.
 const CLAIM_TERMS: [&str; 8] = ["환불", "할인", "쿠폰", "보상", "refund", "discount", "coupon", "compensat"];
 
-/// Maximal ASCII digit runs, commas and signs removed, so `60000` and `60,000` compare equal.
-fn digit_runs(text: &str) -> HashSet<String> {
-    text.split(|c: char| !c.is_ascii_digit()).filter(|s| !s.is_empty()).map(|s| s.trim_start_matches('0').to_string()).collect()
+/// Korean digit words 일..구 (1..9), the value a single word stands for.
+fn korean_digit(c: char) -> Option<u64> {
+    ['일', '이', '삼', '사', '오', '육', '칠', '팔', '구'].iter().position(|&k| k == c).map(|i| i as u64 + 1)
 }
 
-/// Won amounts a reply states, as plain digit strings: `9,900원` -> `9900`, `6만원` -> `60000`.
-fn won_amounts(reply: &str) -> Vec<String> {
-    let chars: Vec<char> = reply.chars().collect();
-    let mut amounts = Vec::new();
-    for i in (0..chars.len()).filter(|&i| chars[i] == '원') {
-        let mut end = i;
-        while end > 0 && chars[end - 1] == ' ' {
-            end -= 1;
-        }
-        let man = end > 0 && chars[end - 1] == '만';
-        if man {
-            end -= 1;
-            while end > 0 && chars[end - 1] == ' ' {
-                end -= 1;
-            }
-        }
-        let mut start = end;
-        while start > 0 && (chars[start - 1].is_ascii_digit() || chars[start - 1] == ',') {
-            start -= 1;
-        }
-        let digits: String = chars[start..end].iter().filter(|c| c.is_ascii_digit()).collect();
-        if !digits.is_empty() {
-            let zeros = if man { "0000" } else { "" };
-            amounts.push(format!("{}{zeros}", digits.trim_start_matches('0')));
+/// Small units 십, 백, 천 and big units 만, 억 that spell amounts such as `3천` or `6만 3천`.
+fn small_unit(c: char) -> Option<u64> {
+    match c {
+        '십' => Some(10),
+        '백' => Some(100),
+        '천' => Some(1_000),
+        _ => None,
+    }
+}
+
+fn big_unit(c: char) -> Option<u64> {
+    match c {
+        '만' => Some(10_000),
+        '억' => Some(100_000_000),
+        _ => None,
+    }
+}
+
+fn is_amount_char(c: char) -> bool {
+    c.is_ascii_digit() || c == ',' || korean_digit(c).is_some() || small_unit(c).is_some() || big_unit(c).is_some()
+}
+
+/// Value of a spelled or digit amount: `9,900` -> 9900, `3천` -> 3000, `6만 3천` -> 63000. None on overflow.
+fn spelled_value(run: &str) -> Option<u64> {
+    let (mut total, mut section, mut num) = (0u64, 0u64, 0u64);
+    for c in run.chars() {
+        if let Some(d) = c.to_digit(10) {
+            num = num.checked_mul(10)?.checked_add(u64::from(d))?;
+        } else if let Some(d) = korean_digit(c) {
+            num = d;
+        } else if let Some(unit) = small_unit(c) {
+            section = section.checked_add(num.max(1).checked_mul(unit)?)?;
+            num = 0;
+        } else if let Some(unit) = big_unit(c) {
+            section = section.checked_add(num)?;
+            total = total.checked_add(section.max(1).checked_mul(unit)?)?;
+            section = 0;
+            num = 0;
         }
     }
-    amounts
+    total.checked_add(section)?.checked_add(num)
+}
+
+/// Amount text before `end`, spaces allowed inside (`6만 3천원`), so `2명 9900원` yields ` 9900`.
+fn run_before(chars: &[char], end: usize) -> String {
+    let mut start = end;
+    while start > 0 && (is_amount_char(chars[start - 1]) || chars[start - 1] == ' ') {
+        start -= 1;
+    }
+    chars[start..end].iter().collect()
+}
+
+/// Amount text from `start` on, leading spaces skipped, no inner spaces (`₩60,000`, `KRW 60000`).
+fn run_after(chars: &[char], start: usize) -> String {
+    chars.iter().skip(start).skip_while(|&&c| c == ' ').take_while(|&&c| is_amount_char(c)).collect()
+}
+
+/// True when `word` (lowercase ASCII) starts at `i` as a whole word, so `won` does not match `wonder`.
+fn word_at(lower: &[char], i: usize, word: &str) -> bool {
+    let len = word.chars().count();
+    word.chars().enumerate().all(|(k, w)| lower.get(i + k) == Some(&w)) && !lower.get(i + len).is_some_and(|c| c.is_ascii_alphabetic())
+}
+
+/// Won amounts a reply states, as numbers: `9,900원`, `6만원`, `3천원`, `₩60,000`, `60000 KRW`, `60,000 won`.
+/// Zero is not an amount to check.
+fn won_amounts(text: &str) -> Vec<u64> {
+    let chars: Vec<char> = text.chars().collect();
+    let lower: Vec<char> = chars.iter().map(|c| c.to_ascii_lowercase()).collect();
+    let mut runs = Vec::new();
+    for i in 0..chars.len() {
+        if chars[i] == '원' || word_at(&lower, i, "krw") || word_at(&lower, i, "won") {
+            runs.push(run_before(&chars, i));
+        }
+        if chars[i] == '₩' {
+            runs.push(run_after(&chars, i + 1));
+        }
+        if word_at(&lower, i, "krw") {
+            runs.push(run_after(&chars, i + 3));
+        }
+    }
+    runs.iter().filter_map(|r| spelled_value(r)).filter(|&v| v > 0).collect()
+}
+
+/// Every number the facts state: plain digit runs (`60000`, `60,000`) and won amounts spelled out.
+fn known_amounts(facts: &str) -> HashSet<u64> {
+    let mut known: HashSet<u64> = facts.split(|c: char| !c.is_ascii_digit()).filter_map(|s| s.parse().ok()).collect();
+    known.extend(won_amounts(facts));
+    known
 }
 
 /// True when a model reply states a won amount, or a refund or discount term, that the grounding
 /// facts (shop data and the customer's booking, as JSON text) do not contain. Such replies are not shown.
 pub fn ungrounded_claim(reply: &str, facts: &str) -> bool {
-    let known = digit_runs(facts);
+    let known = known_amounts(facts);
     let facts_lower = facts.to_lowercase();
     let reply_lower = reply.to_lowercase();
     won_amounts(reply).iter().any(|amount| !known.contains(amount))
@@ -340,5 +401,29 @@ mod tests {
         assert!(!ungrounded_claim("환불 정책은 방문 5일 전까지예요", "환불 정책 5일"));
         assert!(!ungrounded_claim("refund rules apply", facts));
         assert!(ungrounded_claim("쿠폰을 드릴게요", facts));
+    }
+
+    #[test]
+    fn spelled_and_symbol_amounts_are_checked_too() {
+        let facts = r#"{"pricing":{"kind":"fixed","price":60000}}"#;
+        assert!(ungrounded_claim("3천원에 해드려요", facts));
+        assert!(ungrounded_claim("6만 3천원이에요", facts));
+        assert!(ungrounded_claim("구천원이면 돼요", facts));
+        assert!(ungrounded_claim("₩63,000 입니다", facts));
+        assert!(ungrounded_claim("KRW 63000 입니다", facts));
+        assert!(!ungrounded_claim("₩60,000이에요", facts));
+        assert!(!ungrounded_claim("60000 KRW입니다", facts));
+        assert!(!ungrounded_claim("60,000 won이에요", facts));
+        assert!(!ungrounded_claim("6만원이에요", facts));
+        assert!(!ungrounded_claim("2명 6만원이에요", facts));
+        assert!(!ungrounded_claim("0원이에요", facts), "zero is not an amount");
+        assert!(!ungrounded_claim("3 wonderful days", facts), "won must be a whole word");
+        assert!(!ungrounded_claim("3천원이에요", r#"{"fee":"3천원"}"#), "spelled amounts in facts count too");
+    }
+
+    #[test]
+    fn refund_terms_pass_when_shop_data_states_them() {
+        let facts = r#"{"policy":"방문 5일 전 환불 가능"}"#;
+        assert!(!ungrounded_claim("환불은 방문 5일 전까지 가능해요", facts));
     }
 }
