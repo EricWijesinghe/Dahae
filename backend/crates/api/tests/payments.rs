@@ -3,19 +3,11 @@
 
 mod common;
 
-use api::{auth::Role, build_state, routes};
+use api::auth::Role;
 use axum::{Router, http::StatusCode};
-use common::{app, call, seed_catalog, staff_token, test_config};
+use common::{app, app_with_channels, call, seed_catalog, staff_token};
 use serde_json::json;
 use sqlx::PgPool;
-use std::collections::HashMap;
-
-/// Router whose PortOne config has channel keys for exactly `channels`.
-fn app_with_channels(db: PgPool, channels: &[&str]) -> Router {
-    let mut cfg = test_config();
-    cfg.portone.channel_keys = channels.iter().map(|c| (c.to_string(), format!("ch-{c}"))).collect::<HashMap<_, _>>();
-    routes::router(build_state(db, cfg).expect("state"))
-}
 
 /// Codes listed by `GET /v1/payments/methods`.
 async fn offered(app: &Router) -> Vec<String> {
