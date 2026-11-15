@@ -3,6 +3,7 @@
 
 use crate::{DomainError, Won, pricing::PriceBreakdown};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 /// Social-proof counts stay hidden below this, so a tiny number never persuades.
 pub const MIN_PROOF_COUNT: i64 = 10;
@@ -186,6 +187,53 @@ pub fn redact_contacts(text: &str) -> String {
     out
 }
 
+/// Refund, discount and compensation words. A reply may use one only when the facts use it too.
+const CLAIM_TERMS: [&str; 8] = ["환불", "할인", "쿠폰", "보상", "refund", "discount", "coupon", "compensat"];
+
+/// Maximal ASCII digit runs, commas and signs removed, so `60000` and `60,000` compare equal.
+fn digit_runs(text: &str) -> HashSet<String> {
+    text.split(|c: char| !c.is_ascii_digit()).filter(|s| !s.is_empty()).map(|s| s.trim_start_matches('0').to_string()).collect()
+}
+
+/// Won amounts a reply states, as plain digit strings: `9,900원` -> `9900`, `6만원` -> `60000`.
+fn won_amounts(reply: &str) -> Vec<String> {
+    let chars: Vec<char> = reply.chars().collect();
+    let mut amounts = Vec::new();
+    for i in (0..chars.len()).filter(|&i| chars[i] == '원') {
+        let mut end = i;
+        while end > 0 && chars[end - 1] == ' ' {
+            end -= 1;
+        }
+        let man = end > 0 && chars[end - 1] == '만';
+        if man {
+            end -= 1;
+            while end > 0 && chars[end - 1] == ' ' {
+                end -= 1;
+            }
+        }
+        let mut start = end;
+        while start > 0 && (chars[start - 1].is_ascii_digit() || chars[start - 1] == ',') {
+            start -= 1;
+        }
+        let digits: String = chars[start..end].iter().filter(|c| c.is_ascii_digit()).collect();
+        if !digits.is_empty() {
+            let zeros = if man { "0000" } else { "" };
+            amounts.push(format!("{}{zeros}", digits.trim_start_matches('0')));
+        }
+    }
+    amounts
+}
+
+/// True when a model reply states a won amount, or a refund or discount term, that the grounding
+/// facts (shop data and the customer's booking, as JSON text) do not contain. Such replies are not shown.
+pub fn ungrounded_claim(reply: &str, facts: &str) -> bool {
+    let known = digit_runs(facts);
+    let facts_lower = facts.to_lowercase();
+    let reply_lower = reply.to_lowercase();
+    won_amounts(reply).iter().any(|amount| !known.contains(amount))
+        || CLAIM_TERMS.iter().any(|term| reply_lower.contains(term) && !facts_lower.contains(term))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -271,5 +319,26 @@ mod tests {
         assert_eq!(redact_contacts("문의 kim@mail.com 으로"), "문의 *** 으로");
         assert_eq!(redact_contacts("3시간 걸렸고 2번 와주셨어요"), "3시간 걸렸고 2번 와주셨어요");
         assert_eq!(redact_contacts("101동 1203호"), "101동 ***호");
+    }
+
+    #[test]
+    fn replies_stating_unlisted_amounts_or_refund_terms_are_ungrounded() {
+        let facts = r#"{"pricing":{"kind":"fixed","price":60000},"final_price":null}"#;
+        assert!(!ungrounded_claim("스튜디오 청소는 60,000원이에요.", facts));
+        assert!(!ungrounded_claim("60000원입니다", facts));
+        assert!(ungrounded_claim("환불 금액은 99,000원입니다.", facts));
+        assert!(ungrounded_claim("6000원 할인 가능해요", facts));
+        assert!(!ungrounded_claim("6만원까지 가능해요", facts), "6만원 is 60000, which is listed");
+        assert!(ungrounded_claim("7만원까지 가능해요", facts));
+        assert!(ungrounded_claim("refund will be issued", facts));
+        assert!(!ungrounded_claim("2시간 걸리고 3명이 가요", facts));
+    }
+
+    #[test]
+    fn terms_pass_only_when_the_facts_name_them() {
+        let facts = r#"{"refund":"5 days before visit"}"#;
+        assert!(!ungrounded_claim("환불 정책은 방문 5일 전까지예요", "환불 정책 5일"));
+        assert!(!ungrounded_claim("refund rules apply", facts));
+        assert!(ungrounded_claim("쿠폰을 드릴게요", facts));
     }
 }

@@ -17,7 +17,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     routing::{get, post},
 };
-use common::{SECRET, call, login, seed_catalog};
+use common::{SECRET, book, call, customer, login, seed_catalog};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use std::{
@@ -28,21 +28,30 @@ use uuid::Uuid;
 
 const HANDOFF_KO: &str = "상담원이 확인 후 답변드릴게요.";
 
-/// Fake Anthropic: records every Messages call and answers with `stop` as the stop reason.
+/// Fake Anthropic: records every Messages call and answers `text` with `stop` as the stop reason,
+/// or a 500 while `fail` is set.
 #[derive(Clone, Default)]
 struct Fake {
     stop: Arc<Mutex<&'static str>>,
+    text: Arc<Mutex<&'static str>>,
+    fail: Arc<Mutex<bool>>,
     calls: Arc<Mutex<Vec<(HeaderMap, Value)>>>,
 }
 
-async fn messages(State(f): State<Fake>, headers: HeaderMap, Json(body): Json<Value>) -> Json<Value> {
+async fn messages(State(f): State<Fake>, headers: HeaderMap, Json(body): Json<Value>) -> (StatusCode, Json<Value>) {
     let stop = *f.stop.lock().expect("stop lock");
+    let text = *f.text.lock().expect("text lock");
+    let fail = *f.fail.lock().expect("fail lock");
     f.calls.lock().expect("calls lock").push((headers, body));
-    Json(json!({
+    if fail {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "type": "error" })));
+    }
+    let reply = json!({
         "stop_reason": stop,
-        "content": [{ "type": "text", "text": "AI reply" }],
+        "content": [{ "type": "text", "text": text }],
         "usage": { "input_tokens": 120, "output_tokens": 8, "cache_read_input_tokens": 100, "cache_creation_input_tokens": 0 }
-    }))
+    });
+    (StatusCode::OK, Json(reply))
 }
 
 async fn models() -> Json<Value> {
@@ -74,6 +83,7 @@ async fn world(db: PgPool, mode: Mode) -> World {
     seed_catalog(&db).await;
     let fake = Fake::default();
     *fake.stop.lock().expect("stop lock") = "end_turn";
+    *fake.text.lock().expect("text lock") = "AI reply";
     let mut cfg = common::test_config();
     cfg.anthropic_base_url = fake_anthropic(fake.clone()).await;
     let state = build_state(db.clone(), cfg.clone()).expect("state");
@@ -314,4 +324,74 @@ async fn customers_cannot_pause_the_ai(pool: PgPool) {
     let uri = format!("/v1/admin/threads/{}/ai", w.thread);
     let (st, _) = call(&w.app, "PUT", &uri, Some(w.customer.as_str()), Some(json!({ "paused": true }))).await;
     assert_eq!(st, StatusCode::FORBIDDEN);
+}
+
+/// Swaps in an AI config with a different thread-hourly cap, keeping the rest of the test wiring.
+fn set_thread_cap(w: &World, thread_hourly: u32) {
+    let mut integ = Integrations::from_config(&common::test_config());
+    let caps = Caps { thread_hourly, ..Caps::default() };
+    integ.ai = Some(AiConfig { api_key: "sk-ant-test-key".into(), model: DEFAULT_MODEL.into(), mode: Mode::AlwaysFirst, caps });
+    w.state.providers.set_integrations(integ);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn customer_phone_number_is_masked_before_the_provider_sees_it(pool: PgPool) {
+    let w = world(pool.clone(), Mode::AlwaysFirst).await;
+    customer_says(&pool, w.thread, "연락처는 010-1234-5678 입니다").await;
+    answer(&w.state, w.thread).await.expect("answer");
+    let calls = w.fake.calls.lock().expect("calls").clone();
+    let (_, body) = calls.first().expect("one model call");
+    let sent = body["messages"].to_string();
+    assert!(sent.contains("***") && !sent.contains("1234-5678"), "{sent}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn provider_failure_is_an_error_outcome_that_spends_no_cap_and_opens_no_case(pool: PgPool) {
+    let w = world(pool.clone(), Mode::AlwaysFirst).await;
+    let c = customer(&w.app, &pool, "010-5100-0009").await;
+    let (booking, _) = book(&w.app, &c, 10, None).await;
+    let (st, opened) = call(&w.app, "POST", "/v1/chat/threads", Some(c.token.as_str()), Some(json!({ "topic": "job", "booking_id": booking }))).await;
+    assert_eq!(st, StatusCode::OK, "{opened}");
+    let job_thread: Uuid = opened["id"].as_str().expect("thread id").parse().expect("uuid");
+
+    *w.fake.fail.lock().expect("fail lock") = true;
+    customer_says(&pool, job_thread, "청소 상태가 안 좋아요").await;
+    answer(&w.state, job_thread).await.expect("answer");
+    let outcome: String = sqlx::query_scalar("SELECT outcome FROM ai_usage WHERE thread_id = $1")
+        .bind(job_thread)
+        .fetch_one(&pool)
+        .await
+        .expect("usage row");
+    assert_eq!(outcome, "error");
+    let cases: i64 = sqlx::query_scalar("SELECT count(*) FROM cases WHERE booking_id = $1 AND source = 'ai'")
+        .bind(booking)
+        .fetch_one(&pool)
+        .await
+        .expect("case count");
+    assert_eq!(cases, 0, "a failed call is not a complaint");
+
+    // With one reply per hour allowed, the failed call above must not use up the thread's allowance.
+    *w.fake.fail.lock().expect("fail lock") = false;
+    set_thread_cap(&w, 1);
+    customer_says(&pool, job_thread, "그럼 다시 확인해 주세요").await;
+    answer(&w.state, job_thread).await.expect("answer");
+    let replies = ai_replies(&pool, job_thread).await;
+    assert_eq!(replies.last().expect("a reply")["text"], "AI reply", "{replies:?}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn reply_stating_an_amount_the_shop_does_not_list_is_replaced(pool: PgPool) {
+    let w = world(pool.clone(), Mode::AlwaysFirst).await;
+    *w.fake.text.lock().expect("text lock") = "환불 금액은 99,000원입니다.";
+    customer_says(&pool, w.thread, "환불 얼마 받을 수 있어요?").await;
+    answer(&w.state, w.thread).await.expect("answer");
+    let replies = ai_replies(&pool, w.thread).await;
+    assert_eq!(replies.len(), 1);
+    assert_eq!(replies[0]["text"], HANDOFF_KO);
+    let outcome: String = sqlx::query_scalar("SELECT outcome FROM ai_usage WHERE thread_id = $1")
+        .bind(w.thread)
+        .fetch_one(&pool)
+        .await
+        .expect("usage row");
+    assert_eq!(outcome, "handoff");
 }
