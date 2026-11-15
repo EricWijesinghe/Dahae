@@ -3978,6 +3978,9 @@ class TEn extends T {
   String get quoteRevise => 'Revise';
 
   @override
+  String get quoteResent => 'Quote sent again';
+
+  @override
   String get quoteSentChip => 'Quote sent';
 
   @override

@@ -3884,6 +3884,9 @@ class TKo extends T {
   String get quoteRevise => '수정';
 
   @override
+  String get quoteResent => '견적을 다시 보냈어요';
+
+  @override
   String get quoteSentChip => '견적 발송';
 
   @override

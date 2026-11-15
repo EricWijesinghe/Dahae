@@ -1221,6 +1221,7 @@
  "quoteSentEntry": "Quote sent · {amount} · {time}",
  "quoteResend": "Resend",
  "quoteRevise": "Revise",
+ "quoteResent": "Quote sent again",
  "quoteSentChip": "Quote sent",
  "locUseCurrent": "Use my current location",
  "locConsentTitle": "Location-based service terms",

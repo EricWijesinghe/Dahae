@@ -12,5 +12,6 @@ S = {
   "quoteSentEntry": ["견적 발송됨 · {amount} · {time}", "Quote sent · {amount} · {time}"],
   "quoteResend": ["재발송", "Resend"],
   "quoteRevise": ["수정", "Revise"],
+  "quoteResent": ["견적을 다시 보냈어요", "Quote sent again"],
   "quoteSentChip": ["견적 발송", "Quote sent"],
 }
