@@ -5,7 +5,10 @@
 use super::checkouts::{CheckoutRow, find_by_id, find_by_payment, settle};
 use crate::{
     error::{ApiError, ApiResult},
-    providers::portone::{self, WebhookError, verify_webhook},
+    providers::{
+        portone::{self, WebhookError, verify_webhook},
+        toss_webhook,
+    },
     state::AppState,
 };
 use axum::{Json, Router, body::Bytes, extract::State, http::HeaderMap, routing::post};
@@ -25,11 +28,30 @@ pub fn routes() -> Router<AppState> {
     Router::new().route("/webhooks/portone", post(portone)).route("/webhooks/toss", post(toss))
 }
 
-/// Toss `payout.changed` / `seller.changed`. No signature scheme is documented, so the body is ignored: the
-/// sync re-reads every open payout from Toss, the same trust path as the background pass. Repeats coalesce.
-async fn toss(State(s): State<AppState>) -> axum::http::StatusCode {
+/// Toss `payout.changed` / `seller.changed`. Signed with the 보안 키 (see `providers::toss_webhook`). A verified
+/// event only kicks the sync, which re-reads every open payout from Toss. Repeats coalesce.
+async fn toss(State(s): State<AppState>, headers: HeaderMap, body: Bytes) -> ApiResult<axum::http::StatusCode> {
+    let key = s.providers.integ().payout.as_ref().and_then(|p| p.security_key.clone());
+    match (key, s.config.dev_mode) {
+        (Some(key), _) => {
+            let verified = toss_webhook::verify(
+                &key,
+                header(&headers, toss_webhook::TRANSMISSION_TIME_HEADER),
+                header(&headers, toss_webhook::SIGNATURE_HEADER),
+                &body,
+            );
+            if !verified {
+                tracing::warn!("toss webhook rejected: bad signature");
+                s.providers.observe("toss_webhook", Err("bad_signature")).await;
+                return Err(ApiError::Unauthorized);
+            }
+            s.providers.observe("toss_webhook", Ok(())).await;
+        }
+        (None, true) => tracing::warn!("unsigned toss webhook accepted: DEV_MODE without a payout security key"),
+        (None, false) => return Err(ApiError::Unavailable("provider_not_configured")),
+    }
     crate::payout_sync::kick(s);
-    axum::http::StatusCode::OK
+    Ok(axum::http::StatusCode::OK)
 }
 
 fn header<'a>(h: &'a HeaderMap, name: &str) -> &'a str {

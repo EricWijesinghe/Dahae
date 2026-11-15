@@ -281,10 +281,10 @@ Toss mode stays off until all of these hold. Anything else keeps payouts on `man
 
 1. Env `TOSS_PAYOUTS_ENABLED=1` on the API host (read at startup and on every setup save).
 2. Console **Setup → Payouts**: save `secret_key` (sandbox `test_sk_...`) and `security_key` (보안 키, 64 hex) with mode `manual`.
-3. Press **Test connection**. The API calls `GET /v2/balances` with the secret key. It records `sandbox_connected` only for a `test_sk_` key that returns 200, with a fingerprint of that key. Changing the key requires testing again.
+3. Press **Test connection**. The API calls `GET /v2/balances` with the secret key. It records `sandbox_connected` for a `test_sk_` key or `live_connected` for a `live_sk_` key, only when it returns 200, with a fingerprint of that key. A test pass never unlocks a live key. Changing the key requires testing again.
 4. Save mode `toss`. Accepted only when steps 1 and 3 hold; otherwise `toss_unverified`.
 5. Register each pro as a seller: `POST /v1/admin/settlements/toss-sellers/{pro_id}` with `business_type` (`individual` or `company`), `name`, or `representative` + `registration_no` (10 digits), `email`, `phone`. The bank account is the pro's verified payout account. Re-run after a bank-account change; a payout for a stale account is refused (`seller_account_changed`).
-6. Webhook: point Toss at `{PUBLIC_BASE_URL}/v1/webhooks/toss` for `payout.changed` and `seller.changed`. The body is ignored; each call triggers a poll of open payouts.
+6. Webhook: point Toss at `{PUBLIC_BASE_URL}/v1/webhooks/toss` for `payout.changed` and `seller.changed`. The request must carry a valid `tosspayments-webhook-signature` (HMAC-SHA256 with the 보안 키); a valid call triggers a poll of open payouts, a bad one gets 401.
 
 Not covered by unit tests, so check in the sandbox:
 - The JWE body is accepted: the first `POST /v2/sellers` returns a decodable response. On `INVALID_ENCRYPTION`, check the `security_key`, the `TossPayments-api-security-mode: ENCRYPTION` header and the `text/plain` content type.
