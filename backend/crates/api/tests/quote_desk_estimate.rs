@@ -45,7 +45,7 @@ async fn breakdown_includes_the_slot_peak_so_it_matches_the_booking_total(pool: 
         "/v1/bookings",
         Some(c.token.as_str()),
         Some(json!({
-            "service_code": "move_out", "address_id": c.address, "visit_date": next_saturday(), "start_hour": 10,
+            "service_code": "move_out", "address_id": c.address, "visit_date": next_saturday(), "start_hour": 8,
             "answers": answers, "visit_notes": {}
         })),
     )
