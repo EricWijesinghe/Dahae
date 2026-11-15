@@ -252,6 +252,7 @@ class Booking {
       (((j['photos'] as Json?)?['after'] as List?) ?? const []).cast<String>();
   bool get reviewed => j['reviewed'] as bool? ?? false;
   DateTime get createdAt => _date(j['created_at'])!;
+  DateTime get updatedAt => _date(j['updated_at']) ?? createdAt;
   DateTime? get checkedInAt => _date(j['checked_in_at']);
   DateTime? get checkedOutAt => _date(j['checked_out_at']);
   bool get entryCodeSet => j['entry_code_set'] as bool? ?? false;

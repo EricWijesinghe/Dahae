@@ -655,6 +655,11 @@ class _QuoteDeskState extends State<_QuoteDesk> {
     }
   }
 
+  /// Puts the sent price back in the price field so staff can change it and send again.
+  void _reviseSent() => setState(() {
+    _price.text = '${widget.booking.finalPrice}';
+  });
+
   /// Shows the typed price against the estimate before an admin overrides the ratio guard.
   Future<bool> _confirmOverride() async {
     final t = context.t;
@@ -704,7 +709,22 @@ class _QuoteDeskState extends State<_QuoteDesk> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(t.cQuoteDesk, style: context.text.titleMedium),
+          Row(
+            children: [
+              Expanded(
+                child: Text(t.cQuoteDesk, style: context.text.titleMedium),
+              ),
+              if (widget.booking.finalPrice != null)
+                Chip(
+                  label: Text(t.quoteSentChip),
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          ),
+          if (widget.booking.finalPrice != null) ...[
+            _SentQuote(booking: widget.booking, onRevise: _reviseSent),
+            const SizedBox(height: Space.sm),
+          ],
           // The server copies these booking rows into the customer's quote card.
           Text(
             '${t.quoteVisit} ${dateLabel(widget.booking.visitDate, context.lang)} ${widget.booking.startHour < 12 ? t.morning : t.afternoon} · ${t.service(widget.booking.serviceCode)}',
@@ -778,6 +798,34 @@ class _QuoteDeskState extends State<_QuoteDesk> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The quote already sent for this booking: amount, sent time, resend and revise (K-04).
+class _SentQuote extends StatelessWidget {
+  const _SentQuote({required this.booking, required this.onRevise});
+  final Booking booking;
+  final VoidCallback onRevise;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.t;
+    final amount = context.won(booking.finalPrice!);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t.quoteSentEntry(amount, timeLabel(booking.updatedAt, context.lang)),
+          style: context.text.labelMedium,
+        ),
+        Row(
+          children: [
+            ResendQuoteButton(bookingId: booking.id, label: t.quoteResend),
+            TextButton(onPressed: onRevise, child: Text(t.quoteRevise)),
+          ],
+        ),
+      ],
     );
   }
 }
