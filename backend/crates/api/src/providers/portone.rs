@@ -73,6 +73,7 @@ pub async fn payment(p: &Providers, id: &str) -> Result<PaymentInfo, ProviderErr
         status: text(&v["status"]),
         // Missing amount reads as -1, which never matches a checkout: the payment gets refunded.
         total: v["amount"]["total"].as_i64().unwrap_or(-1),
+        cancelled: v["amount"]["cancelled"].as_i64().unwrap_or(-1),
         currency: text(&v["currency"]),
         method: v["method"].clone(),
     })
@@ -290,6 +291,7 @@ pub fn dev_payment(id: &str, total: i64) -> Option<PaymentInfo> {
     Some(PaymentInfo {
         status: status.into(),
         total,
+        cancelled: 0,
         currency: "KRW".into(),
         method,
     })

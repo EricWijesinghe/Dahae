@@ -63,6 +63,8 @@ pub const FAKE_DECLINE_KEY: &str = "fake_decline";
 pub struct PaymentInfo {
     pub status: String,
     pub total: i64,
+    /// Amount the provider has taken back so far (-1 when it reports none).
+    pub cancelled: i64,
     pub currency: String,
     /// Provider's method object; for virtual accounts it carries the account details.
     pub method: Value,
