@@ -559,6 +559,7 @@ async fn overview(State(s): State<AppState>, Admin(_): Admin) -> ApiResult<Json<
         "heartbeat_configured": heartbeat_configured(),
         "public_base_url": s.config.public_base_url,
         "webhook_url": format!("{}/v1/webhooks/portone", s.config.public_base_url.trim_end_matches('/')),
+        "toss_webhook_url": format!("{}/v1/webhooks/toss", s.config.public_base_url.trim_end_matches('/')),
     })))
 }
 
@@ -701,22 +702,27 @@ async fn payout_toss_ready(s: &AppState, values: &serde_json::Map<String, Value>
     Ok(integrations::toss_ready(integrations::toss_env_enabled(), last.as_ref(), secret))
 }
 
-/// Sandbox check for Toss payouts: `GET /v2/balances` (read-only) with the saved secret key. Only a `test_sk_`
-/// key can pass. The record keeps a key fingerprint, so changing the key means testing again.
+/// Connection check for Toss payouts: `GET /v2/balances` (read-only) with the saved secret key. A `test_sk_` key
+/// records `sandbox_connected`, a `live_sk_` key records `live_connected`. The record keeps a key fingerprint,
+/// so changing the key means testing again.
 async fn payout_test(s: &AppState) -> ApiResult<Value> {
     let saved = integrations::load_section(&s.db, &s.config.data_key, Section::Payout).await?;
     let secret = saved.get("secret_key").and_then(Value::as_str).unwrap_or_default();
+    let mode_code = integrations::connected_code(secret);
     let (ok, code) = if secret.is_empty() {
         (false, "not_configured")
-    } else if !integrations::is_sandbox_key(secret) {
-        (false, "not_sandbox_key")
+    } else if mode_code.is_none() {
+        (false, "invalid_secret_key")
     } else {
         match s.providers.payout_balance_check(secret).await {
             Ok(st) => check_result(st, &[StatusCode::OK]),
             Err(_) => (false, "unreachable"),
         }
     };
-    let code = if ok { "sandbox_connected" } else { code };
+    let code = match (ok, mode_code) {
+        (true, Some(connected)) => connected,
+        _ => code,
+    };
     Ok(json!({ "ok": ok, "code": code, "key_fp": integrations::key_fingerprint(secret), "at": Utc::now() }))
 }
 
