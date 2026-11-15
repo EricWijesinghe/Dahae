@@ -129,6 +129,13 @@ class _ServiceScopeScreenState extends State<ServiceScopeScreen> {
                       label: Text(_groupLabel(t, g)),
                       selected: g == _group,
                       showCheckmark: false,
+                      selectedColor: context.colors.ink,
+                      labelStyle: context.text.labelLarge?.copyWith(
+                        color: g == _group
+                            ? context.colors.surface
+                            : context.colors.ink,
+                        fontWeight: FontWeight.w700,
+                      ),
                       onSelected: (_) => setState(() {
                         _group = g;
                         _area = _scope[g]!.keys.first;
@@ -188,8 +195,9 @@ class _ServiceScopeScreenState extends State<ServiceScopeScreen> {
                 borderRadius: BorderRadius.circular(Radii.tile),
                 clipBehavior: Clip.antiAlias,
                 child: Theme(
-                  data: Theme.of(context)
-                      .copyWith(dividerColor: Colors.transparent),
+                  data: Theme.of(
+                    context,
+                  ).copyWith(dividerColor: Colors.transparent),
                   child: ExpansionTile(
                     initiallyExpanded: true,
                     title: Text(
