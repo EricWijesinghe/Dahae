@@ -31,10 +31,7 @@ Future<void> issueStaffPasswordReset(
     final r =
         await context.api.post(
               '/admin/staff/${staff['id']}/password-reset',
-              {
-                'channel': delivery.channel,
-                'phone': delivery.phone,
-              },
+              {'channel': delivery.channel, 'phone': delivery.phone},
               null,
               isOwner ? ownerHeaders(code) : null,
             )

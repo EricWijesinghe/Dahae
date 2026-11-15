@@ -83,7 +83,10 @@ class _EventCardState extends State<_EventCard> {
   Future<void> _save(String lang) async {
     final t = context.t;
     try {
-      await context.api.put('/admin/notify-templates/$_kind/$lang', _payload(lang));
+      await context.api.put(
+        '/admin/notify-templates/$_kind/$lang',
+        _payload(lang),
+      );
       if (!mounted) return;
       setState(() => _custom[lang] = true);
       showToast(context, t.cSaved);
@@ -95,10 +98,13 @@ class _EventCardState extends State<_EventCard> {
   Future<void> _preview(String lang) async {
     final t = context.t;
     try {
-      final res = await context.api.post(
-        '/admin/notify-templates/preview',
-        {'kind': _kind, 'locale': lang, ..._payload(lang)},
-      ) as Json;
+      final res =
+          await context.api.post('/admin/notify-templates/preview', {
+                'kind': _kind,
+                'locale': lang,
+                ..._payload(lang),
+              })
+              as Json;
       if (!mounted) return;
       setState(() => _previews[lang] = '${res['title']}\n${res['body']}');
     } catch (e) {

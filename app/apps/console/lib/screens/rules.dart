@@ -138,7 +138,9 @@ class _GroupFormState extends State<_GroupForm> {
           children: [
             for (final item in items)
               _RuleRow(
-                key: ValueKey('${item['key']}|${item['value']}|${item['source']}'),
+                key: ValueKey(
+                  '${item['key']}|${item['value']}|${item['source']}',
+                ),
                 item: item,
                 onChanged: (v) => _changed(item['key'] as String, v),
                 onReset: () => _reset(item['key'] as String),
@@ -257,7 +259,8 @@ class _RuleRowState extends State<_RuleRow> {
     final readOnly = item['read_only'] == true;
     final tighten = item['tighten'];
     final notes = [
-      if (item['type'] == 'int') '${t.rulesRange}: ${item['min']} – ${item['max']}',
+      if (item['type'] == 'int')
+        '${t.rulesRange}: ${item['min']} – ${item['max']}',
       if (item['type'] == 'text') '${t.rulesMaxLength}: ${item['max_length']}',
       if (tighten == 'down') t.rulesTightenDown,
       if (tighten == 'up') t.rulesTightenUp,

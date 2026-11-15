@@ -62,8 +62,10 @@ class _WalletScreenState extends State<WalletScreen> {
         child: FutureBuilder<Json>(
           future: _points,
           builder: (context, snap) {
-            if (snap.hasError) return ListView(children: [Text(t.error(snap.error!))]);
-            if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+            if (snap.hasError)
+              return ListView(children: [Text(t.error(snap.error!))]);
+            if (!snap.hasData)
+              return const Center(child: CircularProgressIndicator());
             return _body(context, snap.data!);
           },
         ),
@@ -79,33 +81,44 @@ class _WalletScreenState extends State<WalletScreen> {
     return LoadMore<Json>(
       pager: _history,
       builder: (context, entries) => ListView(
-      padding: const EdgeInsets.all(Space.gutter),
-      children: [
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(t.walletBalance, style: context.text.bodyMedium?.copyWith(color: context.colors.inkSoft)),
-              const SizedBox(height: Space.xs),
-              Text(t.walletPoints('$balance'), style: context.text.headlineMedium),
-              if (p['enabled'] != true) ...[
-                const SizedBox(height: Space.sm),
-                Text(t.walletOff, style: context.text.bodySmall),
-              ] else if (expiring > 0) ...[
-                const SizedBox(height: Space.sm),
-                Text(t.walletExpiring('$days', '$expiring'), style: context.text.bodySmall),
+        padding: const EdgeInsets.all(Space.gutter),
+        children: [
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t.walletBalance,
+                  style: context.text.bodyMedium?.copyWith(
+                    color: context.colors.inkSoft,
+                  ),
+                ),
+                const SizedBox(height: Space.xs),
+                Text(
+                  t.walletPoints('$balance'),
+                  style: context.text.headlineMedium,
+                ),
+                if (p['enabled'] != true) ...[
+                  const SizedBox(height: Space.sm),
+                  Text(t.walletOff, style: context.text.bodySmall),
+                ] else if (expiring > 0) ...[
+                  const SizedBox(height: Space.sm),
+                  Text(
+                    t.walletExpiring('$days', '$expiring'),
+                    style: context.text.bodySmall,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: Space.lg),
-        Text(t.walletHistory, style: context.text.titleSmall),
-        const SizedBox(height: Space.sm),
-        if (entries.isEmpty)
-          Text(t.walletEmpty, style: context.text.bodyMedium)
-        else
-          for (final e in entries) _entryRow(context, e),
-      ],
+          const SizedBox(height: Space.lg),
+          Text(t.walletHistory, style: context.text.titleSmall),
+          const SizedBox(height: Space.sm),
+          if (entries.isEmpty)
+            Text(t.walletEmpty, style: context.text.bodyMedium)
+          else
+            for (final e in entries) _entryRow(context, e),
+        ],
       ),
     );
   }
@@ -121,12 +134,20 @@ class _WalletScreenState extends State<WalletScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_kindLabel(context, e['kind'] as String), style: context.text.bodyMedium),
+                Text(
+                  _kindLabel(context, e['kind'] as String),
+                  style: context.text.bodyMedium,
+                ),
                 Text(_ymd(e['at']), style: context.text.labelSmall),
               ],
             ),
           ),
-          Text('$sign$amount P', style: context.text.titleSmall?.copyWith(color: amount > 0 ? context.primary : context.colors.inkSoft)),
+          Text(
+            '$sign$amount P',
+            style: context.text.titleSmall?.copyWith(
+              color: amount > 0 ? context.primary : context.colors.inkSoft,
+            ),
+          ),
         ],
       ),
     );
@@ -173,28 +194,39 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
         child: FutureBuilder<List<Json>>(
           future: _rows,
           builder: (context, snap) {
-            if (snap.hasError) return ListView(children: [Text(t.error(snap.error!))]);
-            if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+            if (snap.hasError)
+              return ListView(children: [Text(t.error(snap.error!))]);
+            if (!snap.hasData)
+              return const Center(child: CircularProgressIndicator());
             return LoadMore<Json>(
               pager: _pager,
               builder: (context, rows) => ListView(
-              padding: const EdgeInsets.all(Space.gutter),
-              children: [
-                if (rows.isEmpty) EmptyState(icon: Icons.receipt_long_rounded, title: t.payHistoryEmpty),
-                for (final r in rows)
-                  ListTile(
-                    key: ValueKey('pay-row-${r['id']}'),
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(context.won((r['amount'] as num).toInt()), style: context.text.titleSmall),
-                    subtitle: Text('${t.payMethod(r['method'] as String)} · ${_ymd(r['created_at'])} · ${_status(context, r['status'] as String)}'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => showAppSheet<void>(
-                      context,
-                      title: t.receiptTitle,
-                      builder: (_) => ReceiptView(checkout: r),
+                padding: const EdgeInsets.all(Space.gutter),
+                children: [
+                  if (rows.isEmpty)
+                    EmptyState(
+                      icon: Icons.receipt_long_rounded,
+                      title: t.payHistoryEmpty,
                     ),
-                  ),
-              ],
+                  for (final r in rows)
+                    ListTile(
+                      key: ValueKey('pay-row-${r['id']}'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        context.won((r['amount'] as num).toInt()),
+                        style: context.text.titleSmall,
+                      ),
+                      subtitle: Text(
+                        '${t.payMethod(r['method'] as String)} · ${_ymd(r['created_at'])} · ${_status(context, r['status'] as String)}',
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => showAppSheet<void>(
+                        context,
+                        title: t.receiptTitle,
+                        builder: (_) => ReceiptView(checkout: r),
+                      ),
+                    ),
+                ],
               ),
             );
           },
@@ -238,7 +270,12 @@ class _ReceiptViewState extends State<ReceiptView> {
     final t = context.t;
     final c = widget.checkout;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Space.gutter, 0, Space.gutter, Space.gutter),
+      padding: const EdgeInsets.fromLTRB(
+        Space.gutter,
+        0,
+        Space.gutter,
+        Space.gutter,
+      ),
       child: FutureBuilder<Json>(
         future: _brand,
         builder: (context, snap) {
@@ -252,26 +289,57 @@ class _ReceiptViewState extends State<ReceiptView> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _line(context, t.receiptDate, _ymd(c['created_at'])),
-                    _line(context, t.apPgReceiptMethod, t.payMethod(c['method'] as String)),
-                    _line(context, t.apPgReceiptAmount, context.won((c['amount'] as num).toInt())),
-                    _line(context, t.apPgReceiptApproval, (c['id'] as String).substring(0, 8)),
-                    _line(context, t.receiptLegal, '${brand['legal_name'] ?? brand['name'] ?? ''}'),
-                    _line(context, t.receiptRegNo, '${brand['registration_no'] ?? ''}'),
+                    _line(
+                      context,
+                      t.apPgReceiptMethod,
+                      t.payMethod(c['method'] as String),
+                    ),
+                    _line(
+                      context,
+                      t.apPgReceiptAmount,
+                      context.won((c['amount'] as num).toInt()),
+                    ),
+                    _line(
+                      context,
+                      t.apPgReceiptApproval,
+                      (c['id'] as String).substring(0, 8),
+                    ),
+                    _line(
+                      context,
+                      t.receiptLegal,
+                      '${brand['legal_name'] ?? brand['name'] ?? ''}',
+                    ),
+                    _line(
+                      context,
+                      t.receiptRegNo,
+                      '${brand['registration_no'] ?? ''}',
+                    ),
                     _line(context, t.receiptAddr, '${brand['address'] ?? ''}'),
-                    _line(context, t.receiptPhone, '${brand['support_phone'] ?? ''}'),
+                    _line(
+                      context,
+                      t.receiptPhone,
+                      '${brand['support_phone'] ?? ''}',
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: Space.sm),
-              Text(t.receiptNote, style: context.text.labelSmall, textAlign: TextAlign.center),
+              Text(
+                t.receiptNote,
+                style: context.text.labelSmall,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: Space.md),
               PrimaryButton(
                 key: const ValueKey('receipt-copy'),
                 label: t.receiptCopy,
                 onPressed: snap.hasData
                     ? () async {
-                        await Clipboard.setData(ClipboardData(text: _text(context, brand)));
-                        if (context.mounted) showToast(context, t.receiptCopied);
+                        await Clipboard.setData(
+                          ClipboardData(text: _text(context, brand)),
+                        );
+                        if (context.mounted)
+                          showToast(context, t.receiptCopied);
                       }
                     : null,
               ),
@@ -287,9 +355,20 @@ class _ReceiptViewState extends State<ReceiptView> {
       padding: const EdgeInsets.only(bottom: Space.xs),
       child: Row(
         children: [
-          Text(k, style: context.text.bodySmall?.copyWith(color: context.colors.inkSoft)),
+          Text(
+            k,
+            style: context.text.bodySmall?.copyWith(
+              color: context.colors.inkSoft,
+            ),
+          ),
           const Spacer(),
-          Flexible(child: Text(v, style: context.text.bodySmall, textAlign: TextAlign.end)),
+          Flexible(
+            child: Text(
+              v,
+              style: context.text.bodySmall,
+              textAlign: TextAlign.end,
+            ),
+          ),
         ],
       ),
     );

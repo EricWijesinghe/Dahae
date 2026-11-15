@@ -157,12 +157,23 @@ class _LoadMoreState<T> extends State<LoadMore<T>> {
 
 /// [AsyncView] over a cursor list that loads more rows on scroll; for screens with no state of their own.
 class PagedView<T> extends StatefulWidget {
-  const PagedView({super.key, required this.api, required this.path, required this.parse, required this.builder});
+  const PagedView({
+    super.key,
+    required this.api,
+    required this.path,
+    required this.parse,
+    required this.builder,
+  });
 
   final ApiClient api;
   final String path;
   final T Function(Json row) parse;
-  final Widget Function(BuildContext context, List<T> rows, Future<void> Function() reload) builder;
+  final Widget Function(
+    BuildContext context,
+    List<T> rows,
+    Future<void> Function() reload,
+  )
+  builder;
 
   @override
   State<PagedView<T>> createState() => _PagedViewState<T>();
@@ -174,7 +185,9 @@ class _PagedViewState<T> extends State<PagedView<T>> {
   @override
   Widget build(BuildContext context) => AsyncView<List<T>>(
     load: _pager.first,
-    builder: (context, _, reload) =>
-        LoadMore<T>(pager: _pager, builder: (context, rows) => widget.builder(context, rows, reload)),
+    builder: (context, _, reload) => LoadMore<T>(
+      pager: _pager,
+      builder: (context, rows) => widget.builder(context, rows, reload),
+    ),
   );
 }

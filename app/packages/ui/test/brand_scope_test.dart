@@ -21,7 +21,9 @@ void main() {
     expect(whiteTextReadsOn(const Color(0xFFFFD95A)), isFalse);
   });
 
-  testWidgets('theme colours and the logo wordmark follow the BrandScope', (tester) async {
+  testWidgets('theme colours and the logo wordmark follow the BrandScope', (
+    tester,
+  ) async {
     late ColorScheme scheme;
     await tester.pumpWidget(
       MaterialApp(
