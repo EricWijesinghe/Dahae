@@ -4048,7 +4048,7 @@ abstract class T {
   /// No description provided for @chatHours.
   ///
   /// In ko, this message translates to:
-  /// **'평일 09:00–18:00'**
+  /// **'평일 09:00~18:00'**
   String get chatHours;
 
   /// No description provided for @chatEmpty.
@@ -4240,7 +4240,7 @@ abstract class T {
   /// No description provided for @morePoints.
   ///
   /// In ko, this message translates to:
-  /// **'청소 포인트'**
+  /// **'포인트'**
   String get morePoints;
 
   /// No description provided for @moreAccount.

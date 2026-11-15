@@ -2076,7 +2076,7 @@ class TKo extends T {
   String get chatTeam => '상담팀';
 
   @override
-  String get chatHours => '평일 09:00–18:00';
+  String get chatHours => '평일 09:00~18:00';
 
   @override
   String get chatEmpty => '궁금한 점이 있으면 언제든 물어보세요';
@@ -2178,7 +2178,7 @@ class TKo extends T {
   String get moreCoupons => '쿠폰';
 
   @override
-  String get morePoints => '청소 포인트';
+  String get morePoints => '포인트';
 
   @override
   String get moreAccount => '계정정보';
