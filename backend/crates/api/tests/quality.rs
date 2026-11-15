@@ -93,11 +93,25 @@ async fn job_with_two_candidates(app: &Router, pool: &PgPool) -> (Uuid, Uuid, Uu
     (job, first, second)
 }
 
+/// Gives `pro` one other job on the reassigned job's day, so partners with no jobs that day rank first.
+async fn add_same_day_job(app: &Router, pool: &PgPool, job: Uuid, pro: Uuid) {
+    let c = customer(app, pool, "010-5000-0604").await;
+    let (other, _) = book(app, &c, 10, None).await;
+    sqlx::query("UPDATE bookings SET pro_id = $2, visit_date = (SELECT visit_date FROM bookings WHERE id = $1), start_hour = 15 WHERE id = $3")
+        .bind(job)
+        .bind(pro)
+        .bind(other)
+        .execute(pool)
+        .await
+        .expect("same-day job");
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn paused_partner_is_never_chosen_by_reassign(pool: PgPool) {
     let app = common::app(pool.clone());
     let state = build_state(pool.clone(), test_config()).expect("state");
     let (job, paused, free) = job_with_two_candidates(&app, &pool).await;
+    add_same_day_job(&app, &pool, job, free).await;
     set_quality_status(&pool, paused, "paused").await;
     let next = noshow::reassign(&state, job, 0).await.expect("the free partner takes the job");
     assert_eq!(next, free, "a paused partner must not receive the reassigned job");
@@ -119,6 +133,7 @@ async fn reassign_skips_partner_missing_required_training_once_gate_is_on(pool: 
     let app = common::app(pool.clone());
     let state = build_state(pool.clone(), test_config()).expect("state");
     let (job, first, second) = job_with_two_candidates(&app, &pool).await;
+    add_same_day_job(&app, &pool, job, second).await;
     let module = publish_required_module(&pool).await;
     let (admin, _) = staff_token(&pool, Role::StaffAdmin).await;
     set_training_gate(&app, &admin, true).await;
@@ -129,7 +144,11 @@ async fn reassign_skips_partner_missing_required_training_once_gate_is_on(pool: 
         .await
         .expect("progress");
     let next = noshow::reassign(&state, job, 0).await.expect("the trained partner takes the job");
-    assert_ne!(next, first, "a partner without the required module must not receive the job");
+    assert_eq!(
+        next, second,
+        "a partner without the required module must not receive the job, even with fewer jobs that day"
+    );
+    assert_ne!(next, first);
 }
 
 #[sqlx::test(migrations = "../../migrations")]
