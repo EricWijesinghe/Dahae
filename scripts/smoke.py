@@ -60,7 +60,8 @@ def add_card(token, auth_key, name):
     # Cards need an open billing-issue ticket; /v1/me/payment-methods/setup only opens one when PortOne is configured.
     me = call("GET", "/v1/me", token=token)
     if auth_key == "fake_decline":  # the dev decline key is one live billing key DB-wide: free it so reruns work
-        sql("UPDATE payment_methods SET deleted_at = now() WHERE billing_key = 'fake_decline' AND deleted_at IS NULL")
+        # Stored keys are ciphertext, so match the smoke-only display name instead of the key.
+        sql("UPDATE payment_methods SET deleted_at = now() WHERE display_name = '거절카드' AND deleted_at IS NULL")
     sql(f"INSERT INTO billing_issues (id, user_id, expires_at) VALUES (gen_random_uuid(), '{me['id']}', now() + interval '30 minutes')")
     return call("POST", "/v1/me/payment-methods", {"provider": "card", "auth_key": auth_key, "display_name": name}, token)
 

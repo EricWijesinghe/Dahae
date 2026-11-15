@@ -149,9 +149,11 @@ async fn declined_card_retries_then_pauses_until_a_new_card(pool: PgPool) {
     seed_catalog(&pool).await;
     let (app, state) = app_and_state(pool.clone());
     let c = customer(&app, &pool, "010-7000-0004").await;
-    sqlx::query("UPDATE payment_methods SET billing_key = $2 WHERE id = $1")
+    let (sealed, digest) = api::crypto::seal_billing_key(&test_config().data_key, FAKE_DECLINE_KEY);
+    sqlx::query("UPDATE payment_methods SET billing_key = $2, billing_key_digest = $3 WHERE id = $1")
         .bind(c.card)
-        .bind(FAKE_DECLINE_KEY)
+        .bind(sealed)
+        .bind(digest)
         .execute(&pool)
         .await
         .expect("decline card");
@@ -189,13 +191,16 @@ async fn declined_card_retries_then_pauses_until_a_new_card(pool: PgPool) {
     assert_eq!(subscription_engine::pass(&state).await.expect("pass").booked, 0);
 
     // A new card and a resume: the visit is charged on the next pass.
-    let second: Uuid =
-        sqlx::query_scalar("INSERT INTO payment_methods (user_id, provider, billing_key, display_name) VALUES ($1, 'pg', $2, 'card 2') RETURNING id")
-            .bind(c.user)
-            .bind(format!("bk_test_second_{}", c.user))
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let (sealed, digest) = api::crypto::seal_billing_key(&test_config().data_key, &format!("bk_test_second_{}", c.user));
+    let second: Uuid = sqlx::query_scalar(
+        "INSERT INTO payment_methods (user_id, provider, billing_key, billing_key_digest, display_name) VALUES ($1, 'pg', $2, $3, 'card 2') RETURNING id",
+    )
+    .bind(c.user)
+    .bind(sealed)
+    .bind(digest)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
     let (st, resumed) = call(
         &app,
         "POST",
