@@ -167,13 +167,17 @@ async fn one(
     } else {
         ""
     };
+    let counts = match &svc.pricing {
+        Pricing::Counts { units, .. } => unit.map(|u| (0..units.len()).map(|i| i16::from(i == u)).collect::<Vec<i16>>()),
+        _ => None,
+    };
     let answers_json = answers.as_ref().map(|a| serde_json::to_value(a).expect("quote answers serialise"));
     let address = super::people::address_snapshot(&addr);
     sqlx::query(
         "INSERT INTO bookings (id, number, user_id, service_code, unit_index, address, district_code, visit_date, start_hour, minutes,
             status, answers, estimate, final_price, deposit, list_price, discount, paid_amount, balance_paid, coupon_id, team_name,
-            pro_id, assignee_id, accepted_at, visit_notes, team_memo, cancelled_at, completed_at, created_at, updated_at, household)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)",
+            pro_id, assignee_id, accepted_at, visit_notes, team_memo, cancelled_at, completed_at, created_at, updated_at, household, unit_counts)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32)",
     )
     .bind(id)
     .bind(&number)
@@ -206,6 +210,7 @@ async fn one(
     .bind(created)
     .bind(updated)
     .bind(&household)
+    .bind(counts)
     .execute(&mut *c.tx)
     .await?;
     c.reg("bookings", id).await?;
