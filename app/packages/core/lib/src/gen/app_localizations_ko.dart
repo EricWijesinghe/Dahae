@@ -78,8 +78,7 @@ class TKo extends T {
   String get cAppLinkTitle => '앱 링크';
 
   @override
-  String get cAppLinkHint =>
-      '네이버 로그인 후 앱으로 돌아오게 하는 연결 정보예요. 저장하면 바로 적용돼요. 잘 모르면 개발자에게 맡기세요.';
+  String get cAppLinkHint => '네이버 로그인 후 앱으로 돌아오게 하는 연결 정보예요. 저장하면 바로 적용돼요. 잘 모르면 개발자에게 맡기세요.';
 
   @override
   String get cAppLinkAndroidLabel => '안드로이드 서명 지문 (SHA-256)';
@@ -553,8 +552,7 @@ class TKo extends T {
   String get cgDemoTitle => '데모용 샘플 데이터';
 
   @override
-  String get cgDemoBody =>
-      '시연이나 교육용으로 가짜 고객, 파트너, 예약을 넣어요. 실제 예약이 있으면 넣을 수 없어요.';
+  String get cgDemoBody => '시연이나 교육용으로 가짜 고객, 파트너, 예약을 넣어요. 실제 예약이 있으면 넣을 수 없어요.';
 
   @override
   String get cgDemoLoad => '샘플 데이터 넣기';
@@ -563,8 +561,7 @@ class TKo extends T {
   String get cgDemoClear => '샘플 데이터 지우기';
 
   @override
-  String get cgDemoClearBody =>
-      '샘플 데이터만 지워요. 실제 기록은 그대로 남아요. 인증 앱에 보이는 6자리 코드를 입력하세요.';
+  String get cgDemoClearBody => '샘플 데이터만 지워요. 실제 기록은 그대로 남아요. 인증 앱에 보이는 6자리 코드를 입력하세요.';
 
   @override
   String get cgDemoOwnerCode => '인증 앱 6자리 코드';
@@ -993,8 +990,7 @@ class TKo extends T {
   String get cServerTitle => '서버 주소 입력';
 
   @override
-  String get cServerBody =>
-      '설치할 때 안내받은 https:// 로 시작하는 서버 주소를 입력하세요. 한 번만 입력하면 돼요.';
+  String get cServerBody => '설치할 때 안내받은 https:// 로 시작하는 서버 주소를 입력하세요. 한 번만 입력하면 돼요.';
 
   @override
   String get cServerSave => '저장하고 계속';
@@ -1090,8 +1086,7 @@ class TKo extends T {
   String get err_payment_method_required => '결제수단을 선택해 주세요';
 
   @override
-  String get err_cancellation_window_closed =>
-      '이 시점부터는 앱에서 취소할 수 없어요. 상담팀에 문의해 주세요';
+  String get err_cancellation_window_closed => '이 시점부터는 앱에서 취소할 수 없어요. 상담팀에 문의해 주세요';
 
   @override
   String get err_address_required => '방문할 주소를 등록해 주세요';
@@ -1234,20 +1229,16 @@ class TKo extends T {
   String get svcDesc_move_in => '새 집에 들어가기 전, 전문 청소팀이 장비를 가지고 방문해 실내를 청소해요.';
 
   @override
-  String get svcNotes_bathroom =>
-      '배수구·변기 막힘이 있으면 서비스가 제한될 수 있어요\n특수 약품이 필요한 청소, 천장·환풍기 청소는 제공하지 않아요\n오래된 곰팡이·찌든 때는 완전히 제거되지 않을 수 있어요';
+  String get svcNotes_bathroom => '배수구·변기 막힘이 있으면 서비스가 제한될 수 있어요\n특수 약품이 필요한 청소, 천장·환풍기 청소는 제공하지 않아요\n오래된 곰팡이·찌든 때는 완전히 제거되지 않을 수 있어요';
 
   @override
-  String get svcNotes_mattress =>
-      '싱글부터 킹 사이즈까지 같은 금액이에요\n세척 후 완전 건조까지 4~6시간 걸려요\n스프링 손상, 꺼짐 등 구조적인 문제는 개선되지 않아요';
+  String get svcNotes_mattress => '싱글부터 킹 사이즈까지 같은 금액이에요\n세척 후 완전 건조까지 4~6시간 걸려요\n스프링 손상, 꺼짐 등 구조적인 문제는 개선되지 않아요';
 
   @override
-  String get svcNotes_aircon =>
-      '제조 10년 이상 제품은 분해 세척이 어려울 수 있어요\n실외기 청소는 포함되지 않아요\n세척 전후 정상 작동 여부를 함께 확인해요';
+  String get svcNotes_aircon => '제조 10년 이상 제품은 분해 세척이 어려울 수 있어요\n실외기 청소는 포함되지 않아요\n세척 전후 정상 작동 여부를 함께 확인해요';
 
   @override
-  String get svcNotes_sofa =>
-      '가죽 소파는 클리닝과 보습 코팅으로 진행돼요\n오래된 얼룩·이염은 완전히 제거되지 않을 수 있어요\n완전 건조까지 4~6시간 걸려요';
+  String get svcNotes_sofa => '가죽 소파는 클리닝과 보습 코팅으로 진행돼요\n오래된 얼룩·이염은 완전히 제거되지 않을 수 있어요\n완전 건조까지 4~6시간 걸려요';
 
   @override
   String get unitTitle_bathroom => '화장실 개수';
@@ -2434,8 +2425,7 @@ class TKo extends T {
   String get dfDue => '결제 예정 금액';
 
   @override
-  String get dfPgNotice =>
-      '결제는 전자결제대행사(PG)를 통해 처리돼요. 결제하면 이용약관과 취소·환불 규정에 동의하는 것으로 봐요.';
+  String get dfPgNotice => '결제는 전자결제대행사(PG)를 통해 처리돼요. 결제하면 이용약관과 취소·환불 규정에 동의하는 것으로 봐요.';
 
   @override
   String get dfRefundPolicy => '취소·환불 규정';
@@ -2598,8 +2588,7 @@ class TKo extends T {
   }
 
   @override
-  String get dfReviewNote =>
-      '※ 예약 신청 후 상담 채팅방이 열려요. 상담팀과 견적·일정을 확정한 뒤 예약금을 결제하면 예약이 확정돼요.';
+  String get dfReviewNote => '※ 예약 신청 후 상담 채팅방이 열려요. 상담팀과 견적·일정을 확정한 뒤 예약금을 결제하면 예약이 확정돼요.';
 
   @override
   String get dfHomeInfo => '집 정보';
@@ -2638,8 +2627,7 @@ class TKo extends T {
   String get dfNote2 => '최종 금액은 상담 채팅에서 확정되며, 잔금은 서비스 후 결제해요.';
 
   @override
-  String get dfNote3 =>
-      '방문 당일 연락이 닿지 않아 입실하지 못하면 30분 대기 후 철수해요. 출입 방법을 미리 확인해 주세요.';
+  String get dfNote3 => '방문 당일 연락이 닿지 않아 입실하지 못하면 30분 대기 후 철수해요. 출입 방법을 미리 확인해 주세요.';
 
   @override
   String get dfNoteWarn => '매니저가 직거래를 요구하면 피해가 생길 수 있어요. 바로 고객센터로 알려주세요.';
@@ -2842,8 +2830,7 @@ class TKo extends T {
   String get err_checkout_refunded => '이 결제는 취소되어 환불됐어요.';
 
   @override
-  String get err_checkout_refund_pending =>
-      '결제를 취소하고 환불을 진행하고 있어요. 환불이 끝나면 알려드릴게요.';
+  String get err_checkout_refund_pending => '결제를 취소하고 환불을 진행하고 있어요. 환불이 끝나면 알려드릴게요.';
 
   @override
   String get err_payment_not_for_checkout => '이 결제는 지금 주문과 맞지 않아요. 다시 결제해 주세요.';
@@ -2880,8 +2867,7 @@ class TKo extends T {
   String get err_reschedule_closed => '방문 날짜는 지금 변경할 수 없어요. 상담팀에 문의해 주세요.';
 
   @override
-  String get err_too_many_open_requests =>
-      '진행 중인 요청이 너무 많아요. 하나를 마무리한 뒤 다시 시도해 주세요.';
+  String get err_too_many_open_requests => '진행 중인 요청이 너무 많아요. 하나를 마무리한 뒤 다시 시도해 주세요.';
 
   @override
   String get err_already_reviewed => '이미 후기를 남긴 방문이에요.';
@@ -3360,8 +3346,7 @@ class TKo extends T {
   String get referralSettingsTitle => '친구 추천 보상';
 
   @override
-  String get referralSettingsBody =>
-      '친구가 첫 예약을 완료하고 결제까지 끝나면 지급돼요. 본인 추천, 같은 번호 중복은 막아요.';
+  String get referralSettingsBody => '친구가 첫 예약을 완료하고 결제까지 끝나면 지급돼요. 본인 추천, 같은 번호 중복은 막아요.';
 
   @override
   String get referralRewardAmount => '보상 금액(원)';
@@ -3479,8 +3464,7 @@ class TKo extends T {
   String get locConsentTitle => '위치기반서비스 이용약관 동의';
 
   @override
-  String get locConsentBody =>
-      '현재 위치로 주소를 찾으려면 위치기반서비스 이용약관에 동의해 주세요. 위치는 \'현재 위치로 찾기\'를 누를 때 한 번만 확인하고, 주소를 제안하는 데만 써요. 위치 좌표는 서버에 저장하지 않아요. 동의는 동의 관리에서 언제든지 철회할 수 있어요.';
+  String get locConsentBody => '현재 위치로 주소를 찾으려면 위치기반서비스 이용약관에 동의해 주세요. 위치는 \'현재 위치로 찾기\'를 누를 때 한 번만 확인하고, 주소를 제안하는 데만 써요. 위치 좌표는 서버에 저장하지 않아요. 동의는 동의 관리에서 언제든지 철회할 수 있어요.';
 
   @override
   String get locConsentAgree => '동의하고 계속';
@@ -3637,8 +3621,7 @@ class TKo extends T {
   String get ntNavLabel => '알림 문구';
 
   @override
-  String get ntIntro =>
-      '고객과 청소팀이 앱 알림과 알림함에서 보는 문구를 바꿀 수 있어요. 비워 두면 기본 문구를 써요.';
+  String get ntIntro => '고객과 청소팀이 앱 알림과 알림함에서 보는 문구를 바꿀 수 있어요. 비워 두면 기본 문구를 써요.';
 
   @override
   String get ntLangKo => '한국어';
@@ -3799,31 +3782,25 @@ class TKo extends T {
   String get oIntNever => '아직 사용 기록이 없어요';
 
   @override
-  String get oActDb =>
-      '데이터베이스에 연결하지 못했어요. 서버에서 malkkeum logs 로 원인을 보고, 계속되면 서버를 재시작하세요.';
+  String get oActDb => '데이터베이스에 연결하지 못했어요. 서버에서 malkkeum logs 로 원인을 보고, 계속되면 서버를 재시작하세요.';
 
   @override
   String get oActDisk => '디스크 여유 공간이 10% 아래예요. 오래된 백업 파일을 지우거나 서버 디스크를 늘려 주세요.';
 
   @override
-  String get oActBackup =>
-      '자동 백업이 오래됐어요. 서버에서 malkkeum backup 을 실행하고 backups/backup.log 를 확인하세요.';
+  String get oActBackup => '자동 백업이 오래됐어요. 서버에서 malkkeum backup 을 실행하고 backups/backup.log 를 확인하세요.';
 
   @override
-  String get oActErrors =>
-      '서버 오류가 많아요. malkkeum logs 에서 error 줄을 확인하고, 반복되면 개발사에 전달하세요.';
+  String get oActErrors => '서버 오류가 많아요. malkkeum logs 에서 error 줄을 확인하고, 반복되면 개발사에 전달하세요.';
 
   @override
-  String get oActPayments =>
-      '결제는 됐지만 자동 처리가 안 됐을 수 있어요. PortOne 관리자 화면에서 해당 결제를 확인하고 필요하면 직접 환불하세요.';
+  String get oActPayments => '결제는 됐지만 자동 처리가 안 됐을 수 있어요. PortOne 관리자 화면에서 해당 결제를 확인하고 필요하면 직접 환불하세요.';
 
   @override
-  String get oActWebhook =>
-      '결제 알림의 서명 검사가 실패했어요. 설정 > 결제(PortOne)에서 웹훅 시크릿을 다시 입력하세요.';
+  String get oActWebhook => '결제 알림의 서명 검사가 실패했어요. 설정 > 결제(PortOne)에서 웹훅 시크릿을 다시 입력하세요.';
 
   @override
-  String get oActIntegration =>
-      '연동이 실패하고 있어요. 설정 화면에서 키를 다시 확인하고 [연결 테스트] 를 누르세요.';
+  String get oActIntegration => '연동이 실패하고 있어요. 설정 화면에서 키를 다시 확인하고 [연결 테스트] 를 누르세요.';
 
   @override
   String get oActNotSet => '아직 설정되지 않았어요. 설정 화면에서 키를 입력하세요.';
@@ -3832,8 +3809,7 @@ class TKo extends T {
   String get oAlerts => '알림 설정';
 
   @override
-  String get oAlertsHint =>
-      '문제가 생기면 상담함과 사장님 휴대폰(문자)으로 알려 드려요. 같은 문제는 6시간에 한 번만 보내요.';
+  String get oAlertsHint => '문제가 생기면 상담함과 사장님 휴대폰(문자)으로 알려 드려요. 같은 문제는 6시간에 한 번만 보내요.';
 
   @override
   String get oRuleSms => '문자(SMS) 발송 실패';
@@ -4012,8 +3988,7 @@ class TKo extends T {
   String get oaClaimTitle => '소유자 지정';
 
   @override
-  String get oaClaimBody =>
-      '지금은 소유자가 없어요. 본인이 소유자가 되면 계정 보안과 서버 설정을 관리할 수 있어요.';
+  String get oaClaimBody => '지금은 소유자가 없어요. 본인이 소유자가 되면 계정 보안과 서버 설정을 관리할 수 있어요.';
 
   @override
   String get oaClaim => '내가 소유자 되기';
@@ -4076,8 +4051,7 @@ class TKo extends T {
   String get oaRecoveryCodes => '복구 코드 다시 만들기';
 
   @override
-  String get oaRecoveryBody =>
-      '기존 복구 코드는 모두 쓸 수 없게 돼요. 새 코드를 종이에 적어 안전한 곳에 보관하세요.';
+  String get oaRecoveryBody => '기존 복구 코드는 모두 쓸 수 없게 돼요. 새 코드를 종이에 적어 안전한 곳에 보관하세요.';
 
   @override
   String get oaRecoveryShown => '새 복구 코드';
@@ -4086,8 +4060,7 @@ class TKo extends T {
   String get oaTransfer => '소유자 넘기기';
 
   @override
-  String get oaTransferBody =>
-      '넘겨받을 관리자가 본인 인증 번호도 입력해야 해요. 넘기면 이 계정은 소유자 기능을 잃어요.';
+  String get oaTransferBody => '넘겨받을 관리자가 본인 인증 번호도 입력해야 해요. 넘기면 이 계정은 소유자 기능을 잃어요.';
 
   @override
   String get oaTransferTarget => '넘겨받을 관리자';
@@ -4144,8 +4117,7 @@ class TKo extends T {
   String get err_totp_reused => '이 인증 번호는 이미 썼어요. 30초쯤 뒤 새로 나온 번호를 입력해 주세요';
 
   @override
-  String get err_owner_cannot_deactivate =>
-      '소유자 계정은 끌 수 없어요. 먼저 소유자를 다른 관리자에게 넘겨 주세요';
+  String get err_owner_cannot_deactivate => '소유자 계정은 끌 수 없어요. 먼저 소유자를 다른 관리자에게 넘겨 주세요';
 
   @override
   String get pTabJobs => '일감';
@@ -4235,8 +4207,7 @@ class TKo extends T {
   String get pAcceptConfirm => '이 일감을 수락할까요?';
 
   @override
-  String get pAcceptBody =>
-      '수락하면 일정에 추가되고 고객에게 팀 배정 알림이 가요. 방문 2일 전부터는 취소가 어려워요.';
+  String get pAcceptBody => '수락하면 일정에 추가되고 고객에게 팀 배정 알림이 가요. 방문 2일 전부터는 취소가 어려워요.';
 
   @override
   String get pAccepted => '일감을 수락했어요';
@@ -4601,8 +4572,7 @@ class TKo extends T {
   String get payConfirmingTitle => '결제 확인 중';
 
   @override
-  String get payConfirmingBody =>
-      '결제가 카드사에 접수되어 확인하고 있어요. 다시 결제하지 마세요. 이 화면을 나가도 확인이 끝나면 예약 내역에 표시돼요.';
+  String get payConfirmingBody => '결제가 카드사에 접수되어 확인하고 있어요. 다시 결제하지 마세요. 이 화면을 나가도 확인이 끝나면 예약 내역에 표시돼요.';
 
   @override
   String get apPgPickMethod => '결제 수단을 골라 주세요';
@@ -4674,12 +4644,7 @@ class TKo extends T {
   String get poAccountTitle => '이체 정보';
 
   @override
-  String poAccountBody(
-    String holder,
-    String bank,
-    String account,
-    String amount,
-  ) {
+  String poAccountBody(String holder, String bank, String account, String amount) {
     return '$holder · $bank · $account\n$amount원을 위 계좌로 보낸 뒤 확인을 눌러 주세요.';
   }
 
@@ -4791,8 +4756,7 @@ class TKo extends T {
   String get oClientErrors => '앱 오류 보고';
 
   @override
-  String get oClientErrorsHint =>
-      '웹·Windows·콘솔에서 보고된 최근 오류예요. 개인정보는 자동으로 가려져요.';
+  String get oClientErrorsHint => '웹·Windows·콘솔에서 보고된 최근 오류예요. 개인정보는 자동으로 가려져요.';
 
   @override
   String get oClientErrorsEmpty => '최근 오류가 없어요';
@@ -4804,8 +4768,7 @@ class TKo extends T {
   String get oHeartbeatOn => '연결됨. 서버가 살아 있으면 외부에서 알려줘요.';
 
   @override
-  String get oHeartbeatOff =>
-      '설정 필요: install.sh 에 MALKKEUM_HEARTBEAT_URL 을 넣어주세요.';
+  String get oHeartbeatOff => '설정 필요: install.sh 에 MALKKEUM_HEARTBEAT_URL 을 넣어주세요.';
 
   @override
   String get pvManage => '동의 관리';
@@ -4853,8 +4816,7 @@ class TKo extends T {
   String get prqTitle => '탈퇴·개인정보 요청';
 
   @override
-  String get prqIntro =>
-      '고객이 자료 사본을 받고 싶다거나 탈퇴를 원하면 전화번호로 찾아 처리하세요. 모든 처리는 기록에 남아요. 탈퇴는 되돌릴 수 없어요.';
+  String get prqIntro => '고객이 자료 사본을 받고 싶다거나 탈퇴를 원하면 전화번호로 찾아 처리하세요. 모든 처리는 기록에 남아요. 탈퇴는 되돌릴 수 없어요.';
 
   @override
   String get prqPhone => '고객 전화번호';
@@ -4881,8 +4843,7 @@ class TKo extends T {
   String get prqDeleteAdminOnly => '탈퇴 처리는 관리자만 할 수 있어요.';
 
   @override
-  String get prqDeleteAsk =>
-      '고객 전화번호를 다시 입력하면 탈퇴가 처리돼요. 이름과 연락처 등 개인 정보는 지워지고, 되돌릴 수 없어요. 예약·결제 기록은 법에 따라 남아요.';
+  String get prqDeleteAsk => '고객 전화번호를 다시 입력하면 탈퇴가 처리돼요. 이름과 연락처 등 개인 정보는 지워지고, 되돌릴 수 없어요. 예약·결제 기록은 법에 따라 남아요.';
 
   @override
   String get prqPhoneAgain => '고객 전화번호 다시 입력';
@@ -5033,11 +4994,67 @@ class TKo extends T {
   String get err_invalid_bio => '소개는 500자 이내로 적어 주세요.';
 
   @override
+  String get pQualityScore => '품질 점수';
+
+  @override
+  String get pQualityNone => '아직 점수가 없어요. 일감을 진행하면 점수가 만들어져요';
+
+  @override
+  String get pQualityReadOnly => '점수는 주기적으로 다시 계산돼요. 이 화면에서는 보기만 할 수 있어요';
+
+  @override
+  String get pQualityOk => '정상';
+
+  @override
+  String get pQualityWarning => '주의 필요';
+
+  @override
+  String get pQualityPaused => '일시 중지 · 새 일감을 받을 수 없어요';
+
+  @override
+  String get pQualityOverridden => '운영팀이 중지를 풀었어요';
+
+  @override
+  String get pQualityComponents => '항목별 점수';
+
+  @override
+  String get pQualityRating => '고객 별점';
+
+  @override
+  String get pQualityCompletion => '배정 일감 완료';
+
+  @override
+  String get pQualityOnTime => '정시 도착';
+
+  @override
+  String get pQualityReliability => '취소·노쇼 관리';
+
+  @override
+  String get pQualityComplaints => '불만 관리';
+
+  @override
+  String get pQualityTips => '개선 팁';
+
+  @override
+  String get pTipImproveRating => '고객 별점을 올리려면 마무리 점검을 꼼꼼히 해 보세요';
+
+  @override
+  String get pTipCompleteAssigned => '배정받은 일감은 끝까지 완료해 주세요';
+
+  @override
+  String get pTipCheckInOnTime => '약속 시간에 맞춰 도착 체크인을 해 주세요';
+
+  @override
+  String get pTipAvoidCancellations => '취소와 노쇼를 줄여 주세요';
+
+  @override
+  String get pTipReduceComplaints => '접수된 불만을 줄여 주세요';
+
+  @override
   String get rnwTitle => '갱신 일정';
 
   @override
-  String get rnwIntro =>
-      '도메인, 호스팅, 앱 스토어와 문자 계정의 갱신 날짜를 적어 두세요. 기한 30일 전과 7일 전에 휴대폰으로 문자를 보내 드려요.';
+  String get rnwIntro => '도메인, 호스팅, 앱 스토어와 문자 계정의 갱신 날짜를 적어 두세요. 기한 30일 전과 7일 전에 휴대폰으로 문자를 보내 드려요.';
 
   @override
   String get rnwAdd => '갱신 항목 추가';
@@ -5105,8 +5122,7 @@ class TKo extends T {
   String get rnwOverdue => '기한이 지났어요';
 
   @override
-  String get rnwSmsNote =>
-      '기한 30일 전과 7일 전에 문자가 가요. 날짜를 바꾸면 새 기한 기준으로 다시 알려 드려요.';
+  String get rnwSmsNote => '기한 30일 전과 7일 전에 문자가 가요. 날짜를 바꾸면 새 기한 기준으로 다시 알려 드려요.';
 
   @override
   String get rnwEdit => '수정';
@@ -5133,8 +5149,7 @@ class TKo extends T {
   String get rnwFailed => '저장하지 못했어요. 입력을 확인하고 다시 시도해 주세요.';
 
   @override
-  String get cSetupColorContrast =>
-      '이 색 위의 흰 글자가 잘 안 보여요. 저장해도 앱에는 적용되지 않아요. 조금 더 진한 색을 고르세요.';
+  String get cSetupColorContrast => '이 색 위의 흰 글자가 잘 안 보여요. 저장해도 앱에는 적용되지 않아요. 조금 더 진한 색을 고르세요.';
 
   @override
   String get safetyEmergency => '긴급 연락처';
@@ -5258,8 +5273,7 @@ class TKo extends T {
   String get rulesTab => '운영 규칙';
 
   @override
-  String get rulesIntro =>
-      '여기서 바꾼 값은 바로 적용되거나 서버를 다시 시작할 때 적용돼요. 값을 비워 두면 처음 설정값으로 돌아가요.';
+  String get rulesIntro => '여기서 바꾼 값은 바로 적용되거나 서버를 다시 시작할 때 적용돼요. 값을 비워 두면 처음 설정값으로 돌아가요.';
 
   @override
   String get rulesGroupBusiness => '사업장 한도';
@@ -5388,8 +5402,7 @@ class TKo extends T {
   String get rulesMaxLength => '최대 글자 수';
 
   @override
-  String get rulesDeleteWarning =>
-      '기간을 줄이면 기준보다 오래된 기록이 다음 정리 때 바로 삭제돼요. 삭제한 기록은 되돌릴 수 없어요.';
+  String get rulesDeleteWarning => '기간을 줄이면 기준보다 오래된 기록이 다음 정리 때 바로 삭제돼요. 삭제한 기록은 되돌릴 수 없어요.';
 
   @override
   String get rulesNoshowWarning => '노쇼 판정 대기 시간을 바꾸면 노쇼로 판정되는 기준이 바뀌어요.';
@@ -5398,8 +5411,7 @@ class TKo extends T {
   String get err_tighten_only => '기본값을 넘는 값은 저장할 수 없어요. 기본값 쪽으로만 바꿀 수 있어요.';
 
   @override
-  String get err_threshold_order =>
-      '노란불 기준과 빨간불 기준의 순서가 맞지 않아요. 두 값을 다시 확인해 주세요.';
+  String get err_threshold_order => '노란불 기준과 빨간불 기준의 순서가 맞지 않아요. 두 값을 다시 확인해 주세요.';
 
   @override
   String get err_read_only_setting => '이 값은 여기서 바꿀 수 없어요. 개발자에게 문의해 주세요.';
@@ -5483,8 +5495,7 @@ class TKo extends T {
   String get cReviewTitle => '스토어 심사용 데모 계정';
 
   @override
-  String get cReviewHint =>
-      '앱 심사원은 한국 문자를 받을 수 없어요. 아래 번호와 6자리 코드를 심사 메모에 적어 주세요. 기간이 지나면 자동으로 꺼져요.';
+  String get cReviewHint => '앱 심사원은 한국 문자를 받을 수 없어요. 아래 번호와 6자리 코드를 심사 메모에 적어 주세요. 기간이 지나면 자동으로 꺼져요.';
 
   @override
   String get cReviewPhone => '데모 전화번호';
@@ -5501,8 +5512,7 @@ class TKo extends T {
   String get cReviewEnable => '켜기 (14일)';
 
   @override
-  String get pDeleteAccountBody =>
-      '팀과 개인정보가 삭제되고 되돌릴 수 없어요. 배정된 작업이 있거나 정산이 남아 있으면 먼저 마무리해 주세요.';
+  String get pDeleteAccountBody => '팀과 개인정보가 삭제되고 되돌릴 수 없어요. 배정된 작업이 있거나 정산이 남아 있으면 먼저 마무리해 주세요.';
 
   @override
   String get err_has_active_jobs => '배정된 작업이 있어요. 작업을 마치거나 상담원에게 이관을 요청해 주세요.';
@@ -5632,8 +5642,7 @@ class TKo extends T {
   String get cFirstRunTitle => '환영합니다! 사장님 계정을 만들어 주세요';
 
   @override
-  String get cFirstRunBody =>
-      '설치할 때 화면에 나온 12자리 설치 코드를 입력하세요. 이 계정으로 모든 설정을 관리해요.';
+  String get cFirstRunBody => '설치할 때 화면에 나온 12자리 설치 코드를 입력하세요. 이 계정으로 모든 설정을 관리해요.';
 
   @override
   String get cFirstRunCode => '설치 코드';
@@ -5660,8 +5669,7 @@ class TKo extends T {
   String get cStaffInviteTitle => '직원 초대하기';
 
   @override
-  String get cStaffInviteBody =>
-      '직원 휴대폰으로 인증번호를 보내요. 직원은 이 번호로 24시간 안에 비밀번호를 정하면 돼요.';
+  String get cStaffInviteBody => '직원 휴대폰으로 인증번호를 보내요. 직원은 이 번호로 24시간 안에 비밀번호를 정하면 돼요.';
 
   @override
   String get cStaffPhone => '휴대폰 번호';
@@ -5682,8 +5690,7 @@ class TKo extends T {
   String get cStaffCodeTitle => '인증번호';
 
   @override
-  String get cStaffCodeBody =>
-      '이 번호를 직원에게 전달하세요. 한 번만 쓸 수 있고 24시간 동안 유효해요. 이 화면을 닫으면 다시 볼 수 없어요.';
+  String get cStaffCodeBody => '이 번호를 직원에게 전달하세요. 한 번만 쓸 수 있고 24시간 동안 유효해요. 이 화면을 닫으면 다시 볼 수 없어요.';
 
   @override
   String get cStaffSentSms => '문자를 보냈어요. 직원은 24시간 안에 입력해야 해요.';
@@ -5728,8 +5735,7 @@ class TKo extends T {
   String get cMfaEnrolTitle => '2단계 인증 설정';
 
   @override
-  String get cMfaEnrolBody =>
-      '관리자는 인증 앱 사용이 필요해요. Google Authenticator, 1Password 같은 앱에 아래 키를 추가한 뒤 앱에 표시된 6자리 코드를 입력하세요.';
+  String get cMfaEnrolBody => '관리자는 인증 앱 사용이 필요해요. Google Authenticator, 1Password 같은 앱에 아래 키를 추가한 뒤 앱에 표시된 6자리 코드를 입력하세요.';
 
   @override
   String get cMfaSecret => '설정 키';
@@ -5780,8 +5786,7 @@ class TKo extends T {
   String get cStaffResetTitle => '재설정 인증번호';
 
   @override
-  String get cStaffResetBody =>
-      '이 인증번호는 24시간 동안 한 번만 쓸 수 있어요. 직원이 비밀번호를 정하면 모든 기기에서 로그아웃돼요.';
+  String get cStaffResetBody => '이 인증번호는 24시간 동안 한 번만 쓸 수 있어요. 직원이 비밀번호를 정하면 모든 기기에서 로그아웃돼요.';
 
   @override
   String get cStepUpTitle => '인증 앱 코드로 한 번 더 확인';
@@ -5943,8 +5948,7 @@ class TKo extends T {
   String get tReExportTitle => '다시 내보내기';
 
   @override
-  String get tReExportConfirm =>
-      '이미 내보낸 세금계산서 요청을 같은 파일로 다시 받아요. 파일을 잃어버렸거나 손상됐을 때만 사용하세요.';
+  String get tReExportConfirm => '이미 내보낸 세금계산서 요청을 같은 파일로 다시 받아요. 파일을 잃어버렸거나 손상됐을 때만 사용하세요.';
 
   @override
   String get tTaxLayoutNote => '홈택스 실제 양식과 대조한 뒤 올려주세요. 열 구성은 아직 확인되지 않았어요.';
@@ -6140,8 +6144,7 @@ class TKo extends T {
   String get uUpdateRequiredTitle => '새 버전이 필요해요';
 
   @override
-  String get uUpdateRequiredBody =>
-      '이 버전은 더 이상 쓸 수 없어요. 스토어에서 최신 버전으로 업데이트해 주세요.';
+  String get uUpdateRequiredBody => '이 버전은 더 이상 쓸 수 없어요. 스토어에서 최신 버전으로 업데이트해 주세요.';
 
   @override
   String get uUpdateStore => '스토어에서 업데이트';
@@ -6158,8 +6161,7 @@ class TKo extends T {
   String get uAppVersionTitle => '앱 버전 관리';
 
   @override
-  String get uAppVersionHint =>
-      '최소 버전보다 낮은 앱은 업데이트 화면에서 멈춰요. 최신 버전보다 낮으면 안내 배너가 떠요. 형식: 1.2.0';
+  String get uAppVersionHint => '최소 버전보다 낮은 앱은 업데이트 화면에서 멈춰요. 최신 버전보다 낮으면 안내 배너가 떠요. 형식: 1.2.0';
 
   @override
   String get uMinVersion => '최소 버전';
