@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
-import '../widgets/owner_totp_dialog.dart';
 import 'finance_tax.dart';
 import 'confirm_action.dart';
 import 'payout_seller_dialog.dart';
