@@ -10842,6 +10842,12 @@ abstract class T {
   /// **'저장'**
   String get caseSave;
 
+  /// No description provided for @servicePhotoSlot.
+  ///
+  /// In ko, this message translates to:
+  /// **'서비스 대표 사진 자리'**
+  String get servicePhotoSlot;
+
   /// No description provided for @rulesTab.
   ///
   /// In ko, this message translates to:

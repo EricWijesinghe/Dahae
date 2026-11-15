@@ -175,7 +175,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ServiceHero(service: s, scroll: _scroll),
+          ServiceHero(service: s),
           const SizedBox(height: Space.md),
           AppCard(
             padding: const EdgeInsets.all(Space.md),
@@ -319,34 +319,10 @@ class _Fact extends StatelessWidget {
   );
 }
 
-/// The design's photo slot: the catalog photo when the console set one, else the 3D art.
+/// The design's photo slot (p07): the catalog photo when the console set one, else the grey placeholder.
 class ServiceHero extends StatelessWidget {
-  const ServiceHero({super.key, required this.service, this.scroll});
+  const ServiceHero({super.key, required this.service});
   final Service service;
-
-  /// The page's scroll position: the 3D art trails it for a little depth.
-  final ScrollController? scroll;
-
-  static const _parallax = 0.3;
-
-  Widget _art(BuildContext context) {
-    final art = Hero(
-      tag: 'svc-${service.code}',
-      child: Tilt3D(
-        child: Icon3D('svc_${service.code}', size: 120, idle: Icon3DIdle.float),
-      ),
-    );
-    final scroll = this.scroll;
-    if (scroll == null || reducedMotion(context)) return art;
-    return AnimatedBuilder(
-      animation: scroll,
-      child: art,
-      builder: (_, child) => Transform.translate(
-        offset: Offset(0, (scroll.hasClients ? scroll.offset : 0) * _parallax),
-        child: child,
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -354,7 +330,7 @@ class ServiceHero extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(Radii.card),
       child: AspectRatio(
-        aspectRatio: 16 / 10,
+        aspectRatio: 12 / 7,
         child: ColoredBox(
           color: context.colors.surfaceHigh,
           child: url is String && url.startsWith('https://')
@@ -364,10 +340,32 @@ class ServiceHero extends StatelessWidget {
                   // Hero box is at most ~full width; 1080 covers a 3x phone without decoding the original.
                   cacheWidth: 1080,
                   semanticLabel: context.t.service(service.code),
-                  errorBuilder: (_, _, _) => Center(child: _art(context)),
+                  errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
                 )
-              : Center(child: _art(context)),
+              : const _PhotoPlaceholder(),
         ),
+      ),
+    );
+  }
+}
+
+class _PhotoPlaceholder extends StatelessWidget {
+  const _PhotoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = context.colors.inkMuted;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.image_outlined, size: 36, color: muted),
+          const SizedBox(height: Space.xs),
+          Text(
+            context.t.servicePhotoSlot,
+            style: context.text.bodyMedium?.copyWith(color: muted),
+          ),
+        ],
       ),
     );
   }

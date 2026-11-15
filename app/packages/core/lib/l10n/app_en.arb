@@ -1790,6 +1790,7 @@
  "caseHold": "Hold settlement",
  "caseNoteHint": "Internal note",
  "caseSave": "Save",
+ "servicePhotoSlot": "Service photo goes here",
  "rulesTab": "Operating rules",
  "rulesIntro": "Changes apply right away or after a server restart. Reset a value to go back to its original setting.",
  "rulesGroupBusiness": "Business limits",

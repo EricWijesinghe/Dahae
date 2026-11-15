@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:customer/screens/content_rail.dart';
-import 'package:customer/screens/home.dart';
 import 'package:customer/screens/more.dart';
 import 'package:customer/screens/request_status.dart';
 import 'package:customer/screens/service.dart';
@@ -130,15 +129,12 @@ const _tileOrder = [
 /// The four built-in home groups (CR-2) in tile order.
 final _groupTitles = [for (final g in defaultServiceGroups) g.titleFor('ko')];
 
-/// Home shows the greeting on one line.
-String _oneLine(String greeting) => greeting.replaceAll('\n', ' ');
-
 double _top(WidgetTester tester, String text) =>
     tester.getTopLeft(find.text(text).first).dy;
 
 void main() {
   testWidgets(
-    'home shows the logo, the greeting and 4 group tiles in server order with N and HOT',
+    'home shows the logo and 4 group tiles in server order with N and HOT',
     (tester) async {
       setViewport(tester, phoneSize);
       final handle = tester.ensureSemantics();
@@ -148,7 +144,6 @@ void main() {
       final env = await TestEnv.create(fake: fake);
 
       await pumpCustomerApp(tester, env);
-      await pumpUntilFound(tester, find.text(_oneLine(koT.homeGreeting('지민'))));
       await pumpUntilFound(tester, find.text(koT.service('sofa')));
       await settle(
         tester,
@@ -156,9 +151,15 @@ void main() {
 
       expect(find.byType(DahaeLogo), findsOneWidget);
       // CR-2: four group tiles in one row, in server order (the built-in groups here).
-      final spots = [for (final title in _groupTitles) tester.getCenter(find.text(title))];
+      final spots = [
+        for (final title in _groupTitles) tester.getCenter(find.text(title)),
+      ];
       for (var i = 1; i < spots.length; i++) {
-        expect(spots[i].dx > spots[i - 1].dx, isTrue, reason: '${_groupTitles[i]} follows ${_groupTitles[i - 1]}');
+        expect(
+          spots[i].dx > spots[i - 1].dx,
+          isTrue,
+          reason: '${_groupTitles[i]} follows ${_groupTitles[i - 1]}',
+        );
         expect(spots[i].dy, closeTo(spots[i - 1].dy, 1), reason: 'one row');
       }
       // No tile carries a price or a short name; N and HOT badges show on their groups.
@@ -167,8 +168,14 @@ void main() {
       expect(find.text(koT.serviceShort('studio')), findsNothing);
       expect(find.text(koT.dhBadgeNew), findsOneWidget);
       expect(find.text(koT.dhBadgeHot), findsOneWidget);
-      expect(find.bySemanticsLabel('${_groupTitles[3]}, ${koT.dhBadgeNew}'), findsOneWidget);
-      expect(find.bySemanticsLabel('${_groupTitles[2]}, ${koT.dhBadgeHot}'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('${_groupTitles[3]}, ${koT.dhBadgeNew}'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('${_groupTitles[2]}, ${koT.dhBadgeHot}'),
+        findsOneWidget,
+      );
       await unmount(tester);
       handle.dispose();
     },
@@ -519,23 +526,18 @@ void main() {
     },
   );
 
-  testWidgets(
-    'home falls back to the anonymous greeting when the profile has no name',
-    (tester) async {
-      setViewport(tester, phoneSize);
-      final fake = FakeApi();
-      stockCustomerApi(fake, name: '');
-      final env = await TestEnv.create(fake: fake);
+  testWidgets('home renders the grid when the profile has no name', (
+    tester,
+  ) async {
+    setViewport(tester, phoneSize);
+    final fake = FakeApi();
+    stockCustomerApi(fake, name: '');
+    final env = await TestEnv.create(fake: fake);
 
-      await pumpCustomerApp(tester, env);
-      await pumpUntilFound(
-        tester,
-        find.text(_oneLine(timeGreeting(koT, DateTime.now()))),
-      );
-      await pumpUntilFound(tester, find.text(koT.service('studio')));
-      await unmount(tester);
-    },
-  );
+    await pumpCustomerApp(tester, env);
+    await pumpUntilFound(tester, find.text(koT.service('studio')));
+    await unmount(tester);
+  });
 
   testWidgets(
     'one failing content list does not hold back the bookings, the feed or the banners',

@@ -5691,6 +5691,9 @@ class TKo extends T {
   String get caseSave => '저장';
 
   @override
+  String get servicePhotoSlot => '서비스 대표 사진 자리';
+
+  @override
   String get rulesTab => '운영 규칙';
 
   @override
