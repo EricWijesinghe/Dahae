@@ -72,6 +72,9 @@ class TKo extends T {
   String get aiCapHint => '숫자만 입력해요. 비워두면 기본값을 써요.';
 
   @override
+  String get aiOutageBanner => 'AI 답변 연결에 문제가 있어요. 상담원이 직접 응대해 주세요.';
+
+  @override
   String get cAppLinkTitle => '앱 링크';
 
   @override

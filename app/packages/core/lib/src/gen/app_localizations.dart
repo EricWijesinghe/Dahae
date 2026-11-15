@@ -217,6 +217,12 @@ abstract class T {
   /// **'숫자만 입력해요. 비워두면 기본값을 써요.'**
   String get aiCapHint;
 
+  /// No description provided for @aiOutageBanner.
+  ///
+  /// In ko, this message translates to:
+  /// **'AI 답변 연결에 문제가 있어요. 상담원이 직접 응대해 주세요.'**
+  String get aiOutageBanner;
+
   /// No description provided for @cAppLinkTitle.
   ///
   /// In ko, this message translates to:

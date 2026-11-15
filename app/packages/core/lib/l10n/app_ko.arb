@@ -27,6 +27,7 @@
  "aiCapMemberLabel": "고객 한 명당 하루 답변 한도",
  "aiCapDailyLabel": "하루 전체 답변 한도",
  "aiCapHint": "숫자만 입력해요. 비워두면 기본값을 써요.",
+ "aiOutageBanner": "AI 답변 연결에 문제가 있어요. 상담원이 직접 응대해 주세요.",
  "cAppLinkTitle": "앱 링크",
  "cAppLinkHint": "네이버 로그인 후 앱으로 돌아오게 하는 연결 정보예요. 저장하면 바로 적용돼요. 잘 모르면 개발자에게 맡기세요.",
  "cAppLinkAndroidLabel": "안드로이드 서명 지문 (SHA-256)",

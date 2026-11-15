@@ -73,6 +73,10 @@ class TEn extends T {
   String get aiCapHint => 'Numbers only. Leave empty for the default.';
 
   @override
+  String get aiOutageBanner =>
+      'AI replies are having trouble connecting. Please answer chats directly.';
+
+  @override
   String get cAppLinkTitle => 'App links';
 
   @override
