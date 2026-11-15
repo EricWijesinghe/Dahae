@@ -64,8 +64,9 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
   void _onSession() {
     if (!mounted) return;
     final s = _session!;
-    if (_memberStarted && (!s.signedIn || s.subject != _memberSubject))
+    if (_memberStarted && (!s.signedIn || s.subject != _memberSubject)) {
       _stopMember();
+    }
     if (s.signedIn && !_memberStarted) {
       _startMember();
       // Launch reads consent in main(); a sign-in brings this account's own choice.

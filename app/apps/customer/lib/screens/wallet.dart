@@ -62,10 +62,12 @@ class _WalletScreenState extends State<WalletScreen> {
         child: FutureBuilder<Json>(
           future: _points,
           builder: (context, snap) {
-            if (snap.hasError)
+            if (snap.hasError) {
               return ListView(children: [Text(t.error(snap.error!))]);
-            if (!snap.hasData)
+            }
+            if (!snap.hasData) {
               return const Center(child: CircularProgressIndicator());
+            }
             return _body(context, snap.data!);
           },
         ),
@@ -194,10 +196,12 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
         child: FutureBuilder<List<Json>>(
           future: _rows,
           builder: (context, snap) {
-            if (snap.hasError)
+            if (snap.hasError) {
               return ListView(children: [Text(t.error(snap.error!))]);
-            if (!snap.hasData)
+            }
+            if (!snap.hasData) {
               return const Center(child: CircularProgressIndicator());
+            }
             return LoadMore<Json>(
               pager: _pager,
               builder: (context, rows) => ListView(
@@ -338,8 +342,9 @@ class _ReceiptViewState extends State<ReceiptView> {
                         await Clipboard.setData(
                           ClipboardData(text: _text(context, brand)),
                         );
-                        if (context.mounted)
+                        if (context.mounted) {
                           showToast(context, t.receiptCopied);
+                        }
                       }
                     : null,
               ),

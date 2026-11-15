@@ -232,8 +232,9 @@ Future<void> _reissueCodes(
   Future<void> Function() reload,
 ) async {
   final t = context.t;
-  if (!await confirmAction(context, t.oaRecoveryCodes) || !context.mounted)
+  if (!await confirmAction(context, t.oaRecoveryCodes) || !context.mounted) {
     return;
+  }
   final r = await runOwnerAction(
     context,
     (h) => context.api.post('/admin/me/recovery-codes', null, null, h),
