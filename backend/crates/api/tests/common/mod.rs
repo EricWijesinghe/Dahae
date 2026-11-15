@@ -82,6 +82,14 @@ pub fn app(db: PgPool) -> Router {
     routes::router(state)
 }
 
+/// The API router with staff second factors off, for tests about sessions, lockouts and resets rather than MFA
+/// (MFA itself is covered by auth_mfa and staff_mfa).
+pub fn app_without_staff_mfa(db: PgPool) -> Router {
+    let mut cfg = test_config();
+    cfg.staff_mfa_required = false;
+    routes::router(build_state(db, cfg).expect("http client"))
+}
+
 /// The API router configured like production (`DEV_MODE` off): PortOne calls go to `portone_api` (a mock).
 /// Sign-in still needs the dev router (OTP codes are only echoed in dev mode); tokens work on both.
 pub fn prod_app(db: PgPool, portone_api: &str) -> Router {
