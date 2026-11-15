@@ -110,7 +110,9 @@ pub async fn run(db: &PgPool, config: &Config) -> Result<(), Box<dyn std::error:
             .await?;
     }
     // FAQ rows come from migration 0232 before this runs on a fresh database, so only non-FAQ content counts here.
-    let has_content: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM content_items WHERE kind <> 'faq')").fetch_one(db).await?;
+    let has_content: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM content_items WHERE kind <> 'faq')")
+        .fetch_one(db)
+        .await?;
     if !has_content {
         let welcome = welcome_title();
         sqlx::query("INSERT INTO content_items (kind, title, body, sort_order) VALUES ('banner', $1, $2, 0)")
