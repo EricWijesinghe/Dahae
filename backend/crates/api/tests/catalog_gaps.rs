@@ -21,7 +21,7 @@ const TOTP_SEED: &[u8] = b"12345678901234567890";
 
 fn window_service(active: bool) -> Value {
     json!({
-        "code": "window",
+        "code": "glass_clean",
         "pricing": { "type": "fixed", "price": 50000, "minutes": 120 },
         "needs_preparation": false,
         "max_pyeong": null,
@@ -80,11 +80,11 @@ async fn archived_service_leaves_the_public_list(pool: PgPool) {
 
     let (st, _) = call(&app, "POST", "/v1/admin/services", Some(token.as_str()), Some(window_service(true))).await;
     assert_eq!(st, StatusCode::OK);
-    assert!(public_codes(&app).await.contains(&"window".to_string()), "new active service is listed");
+    assert!(public_codes(&app).await.contains(&"glass_clean".to_string()), "new active service is listed");
 
-    let (st, _) = call(&app, "PUT", "/v1/admin/services/window", Some(token.as_str()), Some(window_service(false))).await;
+    let (st, _) = call(&app, "PUT", "/v1/admin/services/glass_clean", Some(token.as_str()), Some(window_service(false))).await;
     assert_eq!(st, StatusCode::OK);
-    assert!(!public_codes(&app).await.contains(&"window".to_string()), "archived service is hidden");
+    assert!(!public_codes(&app).await.contains(&"glass_clean".to_string()), "archived service is hidden");
 
     let (st, body) = call(&app, "POST", "/v1/admin/services", Some(token.as_str()), Some(window_service(true))).await;
     assert_eq!(st, StatusCode::CONFLICT);

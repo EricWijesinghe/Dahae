@@ -175,7 +175,7 @@ async fn quote_estimate_accepts_a_known_home_type_and_refuses_others(pool: PgPoo
     let mut answers = json!({
         "cleaning_type": "standard", "luggage": "empty", "building": "apartment", "layout": "two_rooms",
         "duplex": false, "bathrooms": 1, "balconies": 1, "elevator": true, "floor_3_or_higher": false,
-        "home_type": "apartment",
+        "home_type": "apartment", "service_code": "move_in",
     });
     let (st, b) = call(&app, "POST", "/v1/quote/estimate", None, Some(answers.clone())).await;
     assert_eq!(st, StatusCode::OK, "{b}");
@@ -253,7 +253,7 @@ async fn inactive_members_and_groups_are_hidden_from_the_home_list_but_kept_for_
         .await
         .expect("deactivate");
     let (_, public) = call(&app, "GET", "/v1/service-groups", None, None).await;
-    assert_eq!(group(&public, "living")["services"], json!(["bathroom"]));
+    assert_eq!(group(&public, "living")["services"], json!(["bathroom", "whole_home", "window"]));
     let (_, admin) = call(&app, "GET", "/v1/admin/service-groups", Some(&token), None).await;
     assert!(group(&admin, "living")["services"].as_array().expect("services").iter().any(|s| s == "kitchen"));
 
