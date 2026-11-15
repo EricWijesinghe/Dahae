@@ -363,10 +363,10 @@ async fn lock_status(conn: &mut PgConnection, id: Uuid) -> ApiResult<i16> {
 
 /// Refunds every paid payment on a booking (full or a capped amount) and records it.
 /// Holds the booking lock, so it never overlaps a cancel of the same booking.
-pub async fn refund_all(s: &AppState, booking: Uuid, max_amount: Option<i64>) -> ApiResult<i64> {
+pub async fn refund_all(s: &AppState, booking: Uuid, max_amount: Option<i64>, actor: &str) -> ApiResult<i64> {
     let mut tx = s.db.begin().await?;
     lock_status(&mut tx, booking).await?;
-    let refunds = refund_locked(s, &mut tx, booking, max_amount).await?;
+    let refunds = refund_locked(s, &mut tx, booking, max_amount, actor).await?;
     tx.commit().await?;
     refunds.close_receipts(s).await;
     Ok(refunds.total)
@@ -375,7 +375,8 @@ pub async fn refund_all(s: &AppState, booking: Uuid, max_amount: Option<i64>) ->
 /// Refunds inside the caller's transaction, which holds the booking row lock (the provider call waits
 /// inside it; the 10 s HTTP timeout is well under the idle-transaction timeout). Each cancel tells the
 /// provider the balance our books expect, so a duplicate, or a retry after a lost commit, never refunds twice.
-async fn refund_locked(s: &AppState, conn: &mut PgConnection, booking: Uuid, max_amount: Option<i64>) -> ApiResult<Refunds> {
+/// Each refund writes its audit row on the same connection, so the record commits or rolls back with the money.
+async fn refund_locked(s: &AppState, conn: &mut PgConnection, booking: Uuid, max_amount: Option<i64>, actor: &str) -> ApiResult<Refunds> {
     let pays: Vec<(Uuid, i64, i64, Option<String>, String)> = sqlx::query_as(
         "SELECT id, amount, refunded_amount, provider_tx_id, provider FROM payments WHERE booking_id = $1 AND status IN ('paid','partially_refunded') AND kind <> 'tip' ORDER BY created_at DESC FOR UPDATE",
     )
@@ -401,6 +402,15 @@ async fn refund_locked(s: &AppState, conn: &mut PgConnection, booking: Uuid, max
             .bind(status)
             .execute(&mut *conn)
             .await?;
+        audit(
+            &mut *conn,
+            actor,
+            None,
+            "payment.refund",
+            &pid.to_string(),
+            json!({ "booking": booking, "amount": amt, "status": status }),
+        )
+        .await?;
         if status == "refunded" {
             out.closed.push((pid, tx));
         }
@@ -432,7 +442,7 @@ pub async fn apply_cancel(s: &AppState, b: &BookingRow, refund_cap: Option<i64>,
         json!({ "status": b.status, "refund_cap": refund_cap }),
     )
     .await?;
-    let refunds = refund_locked(s, &mut tx, b.id, refund_cap).await?;
+    let refunds = refund_locked(s, &mut tx, b.id, refund_cap, actor).await?;
     sqlx::query(&format!(
         "UPDATE bookings SET status = {}, cancelled_at = now(), updated_at = now() WHERE id = $1",
         BookingStatus::Cancelled.as_i16()

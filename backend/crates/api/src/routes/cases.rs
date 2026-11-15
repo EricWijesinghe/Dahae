@@ -344,7 +344,7 @@ async fn update(State(s): State<AppState>, Staff(st): Staff, Path(id): Path<Uuid
         }
         // Gateway cancels have no idempotency id here, so on an error the claim stays pending and a
         // person reconciles it with the gateway. Never retried automatically.
-        let refunded = match refund_all(&s, booking, Some(amount)).await {
+        let refunded = match refund_all(&s, booking, Some(amount), st.role.as_str()).await {
             Ok(total) => total,
             Err(e) => {
                 audit(

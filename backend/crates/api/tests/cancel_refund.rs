@@ -165,6 +165,14 @@ async fn cancel_audits(db: &PgPool, booking: Uuid) -> i64 {
         .expect("audit")
 }
 
+async fn refund_audits(db: &PgPool, booking: Uuid) -> i64 {
+    sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE action = 'payment.refund' AND data->>'booking' = $1")
+        .bind(booking.to_string())
+        .fetch_one(db)
+        .await
+        .expect("audit")
+}
+
 fn cancels(g: &Shared) -> Vec<(String, Value)> {
     g.lock().expect("gateway").cancels.clone()
 }
@@ -204,6 +212,8 @@ async fn concurrent_late_cancels_refund_the_capped_amount_once(pool: PgPool) {
     );
     assert_eq!(payment_row(&pool, id).await.1, paid - fee);
     assert_eq!(cancel_audits(&pool, id).await, 1);
+    // The refund's own audit row commits in the same transaction as the money move: one per refund.
+    assert_eq!(refund_audits(&pool, id).await, 1, "one payment.refund row for the one refund");
     assert_eq!(status_of(&pool, id).await, -1);
 }
 
