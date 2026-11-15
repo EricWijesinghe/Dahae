@@ -3,7 +3,12 @@
 //! replica: each pass claims rows with `FOR UPDATE SKIP LOCKED` and stamps them with a lease, and
 //! settlement itself is idempotent (`fulfil` re-locks the checkout row).
 
-use crate::{lifecycle::next_tick, metrics::job_pass, routes::checkout_recon, state::AppState};
+use crate::{
+    lifecycle::next_tick,
+    metrics::job_pass,
+    routes::{cash_receipts, checkout_recon},
+    state::AppState,
+};
 use std::time::Duration;
 use tokio::task::JoinHandle;
 
@@ -37,9 +42,21 @@ pub fn spawn(state: AppState) -> JoinHandle<()> {
                     false
                 }
             };
-            job_pass("reconciler", ok);
+            let receipts_ok = receipt_cancel_pass(&state).await;
+            job_pass("reconciler", ok && receipts_ok);
         }
     })
+}
+
+/// Retries cash-receipt cancels that a refund could not record. Errors are logged; the pass fails.
+async fn receipt_cancel_pass(state: &AppState) -> bool {
+    match cash_receipts::retry_cancels(state).await {
+        Ok(_) => true,
+        Err(e) => {
+            tracing::warn!(error = %e, "cash receipt cancel retry failed");
+            false
+        }
+    }
 }
 
 #[cfg(test)]

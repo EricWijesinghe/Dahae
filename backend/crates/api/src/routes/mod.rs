@@ -6,7 +6,7 @@ mod auth;
 mod booking_core;
 pub(crate) mod bookings;
 pub mod cases;
-mod cash_receipts;
+pub mod cash_receipts;
 pub(crate) mod catalog;
 pub(crate) mod chat;
 mod checkout_policy;

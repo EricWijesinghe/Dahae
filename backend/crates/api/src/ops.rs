@@ -311,6 +311,13 @@ pub async fn status(s: &AppState) -> ApiResult<Value> {
     let disk = disk_usage(s.config.upload_dir.clone()).await;
 
     let integ = s.providers.integ();
+    let receipts = match crate::routes::cash_receipts::ops_status(&s.db, integ.portone.cash_receipts).await {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!(error = %e, "cash receipt status unavailable");
+            Value::Null
+        }
+    };
     let integrations: Vec<Value> = INTEGRATIONS
         .iter()
         .map(|sec| {
@@ -359,6 +366,7 @@ pub async fn status(s: &AppState) -> ApiResult<Value> {
         "backup": backup.map(|b| json!({ "status": b, "age_hours": backup_age })),
         "checks": checks,
         "integrations": integrations,
+        "cash_receipts": receipts,
         "jobs": jobs,
         "sms_dead_letters": sms_dead,
     }))

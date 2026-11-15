@@ -28,6 +28,10 @@ use serde_json::{Value, json};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
+/// Provider refusals of a cancel are retried this many times, spaced `CANCEL_RETRY_MINUTES * attempt` apart.
+const MAX_CANCEL_ATTEMPTS: i32 = 5;
+const CANCEL_RETRY_MINUTES: i32 = 10;
+
 /// Portone settings when cash receipts are switched on and keyed; otherwise a 503 the console can explain.
 fn live(s: &AppState) -> ApiResult<PortOne> {
     let p = s.providers.integ().portone.clone();
@@ -162,7 +166,9 @@ async fn attempt(s: &AppState, p: &PortOne, job: &Job) -> Result<Issued, String>
     let identity = crypto::decrypt(&s.config.data_key, crypto::aad::RECEIPT_IDENTITY, &job.identity_enc).ok_or("cannot decrypt receipt identity")?;
     let body = pcr::issue_body(p.store_id.clone(), payment_id, channel, job.purpose == "CORPORATE", &identity, job.amount);
     let secret = p.api_secret.as_deref().unwrap_or_default();
-    pcr::issue(s.providers.http(), pcr::api_base(), secret, &body).await.map_err(|e| e.to_string())
+    pcr::issue(s.providers.http(), s.providers.portone_api(), secret, &body)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Called after a checkout settles. Links the pending request to the payment and issues. Never fails the payment.
@@ -189,39 +195,101 @@ pub async fn on_settled(s: &AppState, checkout: Uuid, provider_tx_id: &str) {
     }
 }
 
-/// Called after a full refund. Cancels the issued receipt. A failed cancel is recorded, not raised:
-/// the refund already happened and the owner resolves it from the console.
-pub async fn on_full_refund(s: &AppState, payment: Uuid, provider_tx_id: &str) {
-    let Ok(p) = live(s) else { return };
-    let issued: Option<(Uuid,)> = match sqlx::query_as("SELECT id FROM cash_receipts WHERE payment_id = $1 AND state = 'issued'")
+/// Called after a full refund. Cancels the issued receipt. A provider refusal is stored on the row and
+/// retried later; a failed local write is returned so the caller logs it (see `cancel_receipt`).
+pub async fn on_full_refund(s: &AppState, payment: Uuid, provider_tx_id: &str) -> Result<(), sqlx::Error> {
+    let Ok(p) = live(s) else { return Ok(()) };
+    let issued: Option<(Uuid,)> = sqlx::query_as("SELECT id FROM cash_receipts WHERE payment_id = $1 AND state = 'issued'")
         .bind(payment)
         .fetch_optional(&s.db)
-        .await
-    {
-        Ok(v) => v,
-        Err(e) => {
-            tracing::error!(error = %e, payment = %payment, "cash receipt lookup failed");
-            return;
-        }
-    };
-    let Some((id,)) = issued else { return };
+        .await?;
+    match issued {
+        Some((id,)) => cancel_receipt(s, &p, id, provider_tx_id).await,
+        None => Ok(()),
+    }
+}
+
+/// Stamps `cancel_sent_at` before the provider call, so only one caller sends a cancel per receipt.
+async fn claim_cancel(db: &PgPool, id: Uuid) -> Result<bool, sqlx::Error> {
+    let claimed: Option<Uuid> = sqlx::query_scalar(
+        "UPDATE cash_receipts SET cancel_sent_at = now(), updated_at = now()
+         WHERE id = $1 AND state = 'issued' AND cancel_sent_at IS NULL RETURNING id",
+    )
+    .bind(id)
+    .fetch_optional(db)
+    .await?;
+    Ok(claimed.is_some())
+}
+
+/// One provider cancel. A provider success is never sent again: if its local write fails the row keeps
+/// `cancel_sent_at` and waits for a person to check PortOne (counted as `needs_check`). A provider refusal
+/// clears the claim and schedules a retry, up to `MAX_CANCEL_ATTEMPTS`.
+async fn cancel_receipt(s: &AppState, p: &PortOne, id: Uuid, provider_tx_id: &str) -> Result<(), sqlx::Error> {
+    if !claim_cancel(&s.db, id).await? {
+        return Ok(());
+    }
     let secret = p.api_secret.as_deref().unwrap_or_default();
-    match pcr::cancel(s.providers.http(), pcr::api_base(), secret, provider_tx_id).await {
+    match pcr::cancel(s.providers.http(), s.providers.portone_api(), secret, provider_tx_id).await {
         Ok(()) => {
-            let _ = sqlx::query("UPDATE cash_receipts SET state = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1")
+            sqlx::query("UPDATE cash_receipts SET state = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1")
                 .bind(id)
                 .execute(&s.db)
-                .await;
+                .await?;
         }
         Err(e) => {
             tracing::warn!(receipt = %id, error = %e, "cash receipt cancel failed");
-            let _ = sqlx::query("UPDATE cash_receipts SET failure_reason = $2, updated_at = now() WHERE id = $1")
-                .bind(id)
-                .bind(e.to_string())
-                .execute(&s.db)
-                .await;
+            sqlx::query(
+                "UPDATE cash_receipts SET cancel_sent_at = NULL, cancel_attempts = cancel_attempts + 1,
+                 next_cancel_at = now() + make_interval(mins => $2 * (cancel_attempts + 1)), failure_reason = $3, updated_at = now()
+                 WHERE id = $1",
+            )
+            .bind(id)
+            .bind(CANCEL_RETRY_MINUTES)
+            .bind(e.to_string())
+            .execute(&s.db)
+            .await?;
         }
     }
+    Ok(())
+}
+
+/// Reconciler pass: retries provider-refused cancels of receipts whose payment was refunded in full, once
+/// their backoff has passed. Returns how many it tried; 0 while cash receipts are off.
+pub async fn retry_cancels(s: &AppState) -> Result<usize, sqlx::Error> {
+    let Ok(p) = live(s) else { return Ok(0) };
+    let due: Vec<(Uuid, String)> = sqlx::query_as(
+        "SELECT cr.id, p.provider_tx_id FROM cash_receipts cr JOIN payments p ON p.id = cr.payment_id
+         WHERE cr.state = 'issued' AND cr.cancel_sent_at IS NULL AND cr.cancel_attempts < $1
+           AND (cr.next_cancel_at IS NULL OR cr.next_cancel_at <= now())
+           AND p.status = 'refunded' AND p.provider_tx_id IS NOT NULL
+         ORDER BY cr.updated_at LIMIT 20",
+    )
+    .bind(MAX_CANCEL_ATTEMPTS)
+    .fetch_all(&s.db)
+    .await?;
+    for (id, tx) in &due {
+        cancel_receipt(s, &p, *id, tx).await?;
+    }
+    Ok(due.len())
+}
+
+/// Ops status: whether cash receipts are switched on, the last issue result (state and time only;
+/// provider text stays out of the status page), and how many issued receipts need a person to check.
+pub async fn ops_status(db: &PgPool, enabled: bool) -> Result<Value, sqlx::Error> {
+    let last: Option<(String, DateTime<Utc>)> =
+        sqlx::query_as("SELECT state, updated_at FROM cash_receipts WHERE state IN ('issued', 'failed') ORDER BY updated_at DESC LIMIT 1")
+            .fetch_optional(db)
+            .await?;
+    let needs_check: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM cash_receipts WHERE state = 'issued' AND (cancel_sent_at IS NOT NULL OR cancel_attempts >= $1)")
+            .bind(MAX_CANCEL_ATTEMPTS)
+            .fetch_one(db)
+            .await?;
+    Ok(json!({
+        "enabled": enabled,
+        "last_result": last.map(|(state, at)| json!({ "state": state, "at": at })),
+        "needs_check": needs_check,
+    }))
 }
 
 /// Owner list of receipts created in the period (identity shown as last four digits only).

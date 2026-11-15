@@ -64,6 +64,8 @@ from the release branches; no tags existed for them.
 
 ### Security
 - Live-event sockets open with a 30-second, single-use ticket from `POST /v1/realtime/ticket` instead of the access token in the URL, so the long-lived token no longer reaches proxy and access logs. The old `?token=` form still works for one release. Silent sockets are pinged every 25 s and closed after 60 s without an answer.
+### Fixed
+- Cash receipts: a failed local write after a receipt is cancelled at PortOne is no longer discarded; the receipt is never cancelled at PortOne twice, and it is counted as needing a check in the ops status JSON. A provider refusal of a cancel is retried by the reconciler, up to five times with growing gaps. Cash receipts stay off until the owner enables them after the PortOne sandbox check. Console display of the new count is not built yet.
 
 ## [1.4.0] - 2026-11-13
 
