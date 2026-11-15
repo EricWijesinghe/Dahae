@@ -3685,11 +3685,11 @@ abstract class T {
   /// **'결제수단을 등록해 주세요'**
   String get needMethod;
 
-  /// No description provided for @freeCancelUntil.
+  /// No description provided for @dfCancelNote.
   ///
   /// In ko, this message translates to:
-  /// **'{date}까지 무료 취소'**
-  String freeCancelUntil(String date);
+  /// **'방문 2일 전까지 무료로 취소할 수 있어요. 결제시 이용약관 및 취소 규정에 동의한 것으로 간주합니다.'**
+  String get dfCancelNote;
 
   /// No description provided for @doneTitle.
   ///
@@ -3706,7 +3706,7 @@ abstract class T {
   /// No description provided for @doneBody.
   ///
   /// In ko, this message translates to:
-  /// **'청소팀이 배정되면 바로 알려드릴게요'**
+  /// **'매니저님이 배정되면 알림으로 알려드릴게요.'**
   String get doneBody;
 
   /// No description provided for @doneQuoteTitle.
@@ -5233,12 +5233,6 @@ abstract class T {
   /// **'방문 시간'**
   String get dfVisitTime;
 
-  /// No description provided for @dfVisitTimeSheet.
-  ///
-  /// In ko, this message translates to:
-  /// **'방문 시간 선택'**
-  String get dfVisitTimeSheet;
-
   /// No description provided for @dfConsultNote.
   ///
   /// In ko, this message translates to:
@@ -5406,6 +5400,24 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'이삿짐을 풀지 않은 상태'**
   String get luggage_not_unpacked;
+
+  /// No description provided for @luggage_out_partly_unpacked.
+  ///
+  /// In ko, this message translates to:
+  /// **'이삿짐을 일부 푼 상태'**
+  String get luggage_out_partly_unpacked;
+
+  /// No description provided for @luggage_out_fully_lived_in.
+  ///
+  /// In ko, this message translates to:
+  /// **'짐을 다 풀었거나 생활 중인 상태'**
+  String get luggage_out_fully_lived_in;
+
+  /// No description provided for @luggage_out_unknown.
+  ///
+  /// In ko, this message translates to:
+  /// **'짐 상태를 잘 모르겠어요'**
+  String get luggage_out_unknown;
 
   /// No description provided for @dfReviewsTitle.
   ///
@@ -7300,7 +7312,7 @@ abstract class T {
   /// No description provided for @hgSizeQuestion.
   ///
   /// In ko, this message translates to:
-  /// **'Q2 집 크기는 어떻게 되나요?'**
+  /// **'집 크기는 어떻게 되나요?'**
   String get hgSizeQuestion;
 
   /// No description provided for @hgHomeOneTwo.

@@ -362,7 +362,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     var chosen = d.hour;
     final ok = await showAppSheet<bool>(
       context,
-      title: t.dfVisitTimeSheet,
+      title: t.dfVisitTime,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(
