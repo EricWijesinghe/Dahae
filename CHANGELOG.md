@@ -9,6 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
+- Team members invited by a partner wait for the platform owner's approval before they see customer addresses or get jobs (new `pending_approval` state, `POST /v1/admin/team-members/{id}/approve`, approvals audited). Existing active members are unchanged. Owner setting: none; the approval is a console action.
 - Consultation chat: customer and partner messages now push staff devices, at most once per thread per minute.
 
 ### Added
