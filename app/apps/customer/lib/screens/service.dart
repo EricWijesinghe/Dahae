@@ -108,6 +108,16 @@ class _ServiceScreenState extends State<ServiceScreen> {
                 : t.unitTitle(s.code),
             body: t.serviceDesc(s.code),
           ),
+          if (s.code == 'studio')
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
+              child: Text(
+                t.svcNote_studio_limit,
+                style: context.text.bodySmall?.copyWith(
+                  color: context.colors.inkMuted,
+                ),
+              ),
+            ),
           if (!Deps.of(context).session.signedIn) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
