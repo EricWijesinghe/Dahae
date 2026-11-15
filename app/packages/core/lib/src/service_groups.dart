@@ -106,6 +106,26 @@ class ServiceGroup {
   }
 }
 
+/// Home types the move chooser offers (CR-8.1): the server's list of codes, or all three when it sends none.
+List<MoveHome> moveHomesFor(Json config) {
+  final codes = config['home_types'];
+  if (codes is! List) return MoveHome.values;
+  final homes = [
+    for (final c in codes)
+      if (c is String && MoveHome.fromCode(c) != null) MoveHome.fromCode(c)!,
+  ];
+  return homes.isEmpty ? MoveHome.values : homes;
+}
+
+/// Service an answer to 신축 / 구축 opens (CR-8.1): the server's build_age mapping, else the built-in codes.
+String buildAgeServiceCode(Json config, {required bool isNew}) {
+  final ages = config['build_age'];
+  final key = isNew ? 'new' : 'old';
+  final code = ages is Map ? ages[key] : null;
+  if (code is String && code.isNotEmpty) return code;
+  return isNew ? 'move_in' : 'move_out';
+}
+
 /// Built in for an API that does not send groups yet. Keep in step with the server's default catalogue.
 final defaultServiceGroups = [
   const ServiceGroup(
