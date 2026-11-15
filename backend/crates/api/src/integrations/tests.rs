@@ -276,6 +276,9 @@ fn toss_secret_must_carry_a_known_prefix() {
     assert_eq!(connected_code("live_sk_x"), Some("live_connected"));
     assert_eq!(connected_code("test_sk_x"), Some("sandbox_connected"));
     assert_eq!(connected_code("abc"), None);
+    assert_eq!(toss_key_mode("live_sk_x"), Some("live"));
+    assert_eq!(toss_key_mode("test_sk_x"), Some("test"));
+    assert_eq!(toss_key_mode("abc"), None);
 }
 
 #[test]

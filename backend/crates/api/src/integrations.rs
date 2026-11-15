@@ -85,6 +85,17 @@ pub fn connected_code(secret: &str) -> Option<&'static str> {
     }
 }
 
+/// `test` or `live` from the Toss secret key prefix, for the wizard badge. Never returns the key itself.
+pub fn toss_key_mode(secret: &str) -> Option<&'static str> {
+    if secret.starts_with(TEST_SECRET_PREFIX) {
+        Some("test")
+    } else if secret.starts_with(LIVE_SECRET_PREFIX) {
+        Some("live")
+    } else {
+        None
+    }
+}
+
 /// Toss payouts open only when the env switch is on AND the last connection test recorded success for this key,
 /// in the same mode the key is in (a test pass never unlocks a live key).
 pub fn toss_ready(env_enabled: bool, last_test: Option<&Value>, secret: &str) -> bool {

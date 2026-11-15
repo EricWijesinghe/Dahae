@@ -525,7 +525,13 @@ async fn card(s: &AppState, sec: Section, last_test: Option<Value>) -> ApiResult
     } else {
         "none"
     };
-    Ok(json!({ "code": sec.code(), "source": source, "configured": source != "none", "fields": fields, "last_test": last_test }))
+    // Toss payouts only: the key prefix says whether the saved key moves test or real money. PortOne ids carry no mode.
+    let mode = saved
+        .get("secret_key")
+        .and_then(Value::as_str)
+        .filter(|_| sec == Section::Payout)
+        .and_then(integrations::toss_key_mode);
+    Ok(json!({ "code": sec.code(), "source": source, "configured": source != "none", "mode": mode, "fields": fields, "last_test": last_test }))
 }
 
 /// Set by install.sh from `MALKKEUM_HEARTBEAT_URL`; the wizard shows a checklist item until it is.
