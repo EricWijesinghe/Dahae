@@ -215,7 +215,11 @@ abstract final class Icon3DRegistry {
     'c_staff': const Icon3DSpec(Icons.badge_rounded),
     'c_settings': const Icon3DSpec(Icons.settings_rounded),
     'c_monitor': const Icon3DSpec(Icons.monitor_heart_rounded),
-    'c_owner_account': const Icon3DSpec(Icons.manage_accounts_rounded),
+    // shortcut: no rendered art yet (Blender render pipeline), reuses the settings art; render c_owner_account to replace
+    'c_owner_account': const Icon3DSpec(
+      Icons.manage_accounts_rounded,
+      alias: 'c_settings',
+    ),
     // shortcut: no rendered art yet (Blender render pipeline), reuses the nearest existing art; render c_audit, c_privacy and c_renewals to replace
     'c_audit': const Icon3DSpec(Icons.history_rounded, alias: 'c_monitor'),
     'c_privacy': const Icon3DSpec(
@@ -272,8 +276,12 @@ abstract final class Icon3DRegistry {
       Icons.ac_unit_rounded,
       alias: 'group_appliance_clean',
     ),
-    'c_rules': const Icon3DSpec(Icons.rule_rounded),
-    'c_notify': const Icon3DSpec(Icons.notifications_active_rounded),
+    // shortcut: no rendered art yet (Blender render pipeline), reuses the nearest existing art; render c_rules and c_notify to replace
+    'c_rules': const Icon3DSpec(Icons.rule_rounded, alias: 'c_staff'),
+    'c_notify': const Icon3DSpec(
+      Icons.notifications_active_rounded,
+      alias: 'c_chat',
+    ),
     // Group tiles reuse a member's art (no second asset): living -> bathroom,
     // appliance -> aircon, disinfection -> disinfection, moving -> move.
     'group_move_clean': const Icon3DSpec(
