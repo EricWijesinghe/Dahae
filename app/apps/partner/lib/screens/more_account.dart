@@ -32,13 +32,11 @@ class _PayoutAccountState extends State<PayoutAccountScreen> {
   Future<void> _save() async {
     setState(() => _busy = true);
     try {
-      final v =
-          await context.api.put('/partner/payout-account', {
-                'bank': _bank.text,
-                'account_number': _number.text,
-                'holder': _holder.text,
-              })
-              as Json;
+      final v = await context.api.put('/partner/payout-account', {
+        'bank': _bank.text,
+        'account_number': _number.text,
+        'holder': _holder.text,
+      }) as Json;
       if (!mounted) return;
       setState(() => _current = v);
       _number.clear();
@@ -236,9 +234,9 @@ class _TeamState extends State<TeamScreen> {
                     : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (m['invite_status'] == 'invited')
+                          if (m['invite_status'] == 'pending_approval')
                             Tag(
-                              label: t.pInvited,
+                              label: t.cPro_pending,
                               hue: StatusHues.consultation,
                             ),
                           IconButton(
