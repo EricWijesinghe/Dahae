@@ -13,7 +13,13 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-const PAYMENT_EVENTS: [&str; 3] = ["Transaction.Paid", "Transaction.VirtualAccountIssued", "Transaction.Cancelled"];
+/// Source: PortOne webhook readme-v2 (Transaction.* list). PartialCancelled fires on a partial refund.
+const PAYMENT_EVENTS: [&str; 4] = [
+    "Transaction.Paid",
+    "Transaction.VirtualAccountIssued",
+    "Transaction.Cancelled",
+    "Transaction.PartialCancelled",
+];
 
 pub fn routes() -> Router<AppState> {
     Router::new().route("/webhooks/portone", post(portone)).route("/webhooks/toss", post(toss))
@@ -152,6 +158,7 @@ mod tests {
         assert!(is_payment_event("Transaction.Paid"));
         assert!(is_payment_event("Transaction.VirtualAccountIssued"));
         assert!(is_payment_event("Transaction.Cancelled"));
+        assert!(is_payment_event("Transaction.PartialCancelled"));
         assert!(!is_payment_event("Transaction.Ready"));
         assert!(!is_payment_event("BillingKey.Issued"));
         assert!(!is_payment_event(""));
