@@ -578,7 +578,7 @@ Widget _quoteEntry(
       card,
       Row(
         children: [
-          _ResendQuoteButton(bookingId: id, label: t.quoteResend),
+          ResendQuoteButton(bookingId: id, label: t.quoteResend),
           TextButton(onPressed: openDesk, child: Text(t.quoteRevise)),
         ],
       ),
@@ -587,22 +587,29 @@ Widget _quoteEntry(
 }
 
 /// Re-sends the last quote card unchanged (POST resend-quote); the thread refreshes on the live event.
-class _ResendQuoteButton extends StatefulWidget {
-  const _ResendQuoteButton({required this.bookingId, required this.label});
+class ResendQuoteButton extends StatefulWidget {
+  const ResendQuoteButton({
+    super.key,
+    required this.bookingId,
+    required this.label,
+  });
   final String bookingId;
   final String label;
 
   @override
-  State<_ResendQuoteButton> createState() => _ResendQuoteButtonState();
+  State<ResendQuoteButton> createState() => _ResendQuoteButtonState();
 }
 
-class _ResendQuoteButtonState extends State<_ResendQuoteButton> {
+class _ResendQuoteButtonState extends State<ResendQuoteButton> {
   bool _busy = false;
 
   Future<void> _resend() async {
     setState(() => _busy = true);
     try {
-      await context.api.post('/admin/bookings/${widget.bookingId}/resend-quote', {});
+      await context.api.post(
+        '/admin/bookings/${widget.bookingId}/resend-quote',
+        {},
+      );
       if (mounted) showToast(context, context.t.quoteResent);
     } catch (e) {
       if (mounted) showToast(context, context.t.error(e));
@@ -612,10 +619,8 @@ class _ResendQuoteButtonState extends State<_ResendQuoteButton> {
   }
 
   @override
-  Widget build(BuildContext context) => TextButton(
-    onPressed: _busy ? null : _resend,
-    child: Text(widget.label),
-  );
+  Widget build(BuildContext context) =>
+      TextButton(onPressed: _busy ? null : _resend, child: Text(widget.label));
 }
 
 /// Small "AI" tag on messages the AI support agent wrote.

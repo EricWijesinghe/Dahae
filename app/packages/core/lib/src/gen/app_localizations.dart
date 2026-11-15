@@ -109,6 +109,12 @@ abstract class T {
   /// **'검색'**
   String get addressSearchButton;
 
+  /// No description provided for @addressSearchOffHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'주소 검색은 아직 준비 중이에요. 주소를 직접 입력해 주세요.'**
+  String get addressSearchOffHint;
+
   /// No description provided for @addressSearchMinChars.
   ///
   /// In ko, this message translates to:

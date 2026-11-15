@@ -58,7 +58,7 @@ pub fn routes() -> Router<AppState> {
 pub const BOOKING_COLS: &str =
     "b.id, b.number, b.user_id, b.service_code, b.unit_index, b.unit_counts, b.address, b.district_code, b.visit_date, b.start_hour, b.minutes, b.status,
     b.answers, b.estimate, b.final_price, b.deposit, b.list_price, b.discount, b.paid_amount, b.balance_paid, b.coupon_id, b.team_name, b.pro_id,
-    b.visit_notes, b.household, b.reschedule, b.cancelled_at, b.completed_at, b.created_at, b.checked_in_at, b.checked_out_at,
+    b.visit_notes, b.household, b.reschedule, b.cancelled_at, b.completed_at, b.created_at, b.updated_at, b.checked_in_at, b.checked_out_at,
     (b.access_code_enc IS NOT NULL) AS entry_code_set,
     (SELECT t.id FROM chat_threads t WHERE t.booking_id = b.id AND t.audience = 'customer') AS thread_id,
     (SELECT jsonb_build_object('before', c.before_photos, 'after', c.after_photos) FROM completion_reports c WHERE c.booking_id = b.id) AS photos,
@@ -96,6 +96,7 @@ pub struct BookingRow {
     pub cancelled_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub checked_in_at: Option<DateTime<Utc>>,
     pub checked_out_at: Option<DateTime<Utc>>,
     /// Whether a door code is on file. The code itself is only revealed to the assigned partner.

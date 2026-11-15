@@ -16,6 +16,9 @@ class TKo extends T {
   String get addressSearchButton => '검색';
 
   @override
+  String get addressSearchOffHint => '주소 검색은 아직 준비 중이에요. 주소를 직접 입력해 주세요.';
+
+  @override
   String get addressSearchMinChars => '두 글자 이상 입력해 주세요';
 
   @override
