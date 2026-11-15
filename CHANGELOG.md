@@ -9,6 +9,7 @@ from the release branches; no tags existed for them.
 ## [Unreleased]
 
 ### Changed
+- Public write routes have their own per-IP budgets and body cap: error reports and analytics batches (120 requests a minute, 64 KB body), address search (120 a minute per IP, on top of the per-user cap) and the Toss webhook (120 a minute). Owner setting: none; the limits are fixed in code. A pro no longer sees the detail of a job another pro has already claimed. A cross-owner authorization test covers the bookings, chat, cases and partner job routes.
 - Audit and consent records are append-only (migration 0320): the database refuses edits and deletes. Refunds, payout reveals and finance exports write their audit row in the same transaction as the action.
 - Account deletion: a finished booking (completed or cancelled) loses its street address, answers, visit notes and household profile, keeping the district, size, dwelling type, amounts, dates and status for the 5-year record; open bookings are cleared by the hourly purge once they are completed or cancelled.
 - Team members invited by a partner wait for the platform owner's approval before they see customer addresses or get jobs (new `pending_approval` state, `POST /v1/admin/team-members/{id}/approve`, approvals audited). Existing active members are unchanged. Owner setting: none; the approval is a console action.
