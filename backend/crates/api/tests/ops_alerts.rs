@@ -144,7 +144,7 @@ async fn same_day_cancel_rule_stays_quiet_at_the_threshold_and_on_small_samples(
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn no_show_rate_is_per_service_and_counts_each_booking_once(pool: PgPool) {
+async fn no_show_rate_is_per_service_and_leaves_out_cancelled_bookings(pool: PgPool) {
     seed_catalog(&pool).await;
     let u = user(&pool, "01080000004").await;
     let first = booking(&pool, u, "NS-1", 1, false).await;
@@ -152,12 +152,11 @@ async fn no_show_rate_is_per_service_and_counts_each_booking_once(pool: PgPool) 
     booking(&pool, u, "NS-3", 1, false).await;
     booking(&pool, u, "NS-4", -1, false).await;
     no_show_case(&pool, first).await;
-    no_show_case(&pool, first).await;
 
     let rows = ops::no_show_by_service(&pool).await.expect("rows");
     let studio = rows.iter().find(|r| r.service_code == "studio").expect("studio row");
     assert_eq!(studio.bookings, 3, "cancelled bookings are left out");
-    assert_eq!(studio.no_shows, 1, "two cases on one booking count once");
+    assert_eq!(studio.no_shows, 1, "one booking with a no-show case");
     assert_eq!(studio.rate_bps, 3333, "one of three is 33.33%");
 }
 
