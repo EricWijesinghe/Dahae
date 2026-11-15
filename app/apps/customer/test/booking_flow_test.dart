@@ -1,5 +1,7 @@
 import 'package:core/core.dart';
 import 'package:customer/screens/booking_flow.dart';
+import 'package:customer/screens/move_chooser.dart';
+import 'package:customer/screens/quote_flow.dart';
 import 'package:customer/screens/service.dart';
 import 'package:customer/screens/service_scope.dart';
 import 'package:customer/state.dart';
@@ -390,6 +392,25 @@ void main() {
   });
 
   testWidgets(
+    'studio from home goes to the quote flow, never to instant checkout (CR-3)',
+    (tester) async {
+      setViewport(tester, phoneSize);
+      final fake = FakeApi();
+      stockCustomerApi(fake);
+      final env = await TestEnv.create(fake: fake);
+      await pumpCustomerApp(tester, env);
+      await _openFromHome(tester, 'move_in');
+      await _tap(tester, find.text(koT.hgNewBuild));
+      await _tap(tester, find.text(koT.hgHomeOneTwo));
+
+      expect(find.byType(QuoteFlowScreen), findsOneWidget);
+      expect(find.byType(CheckoutScreen), findsNothing);
+      expect(fake.callsTo('POST', '/bookings'), isEmpty);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
     'checkout pre-applies the best coupon and pays with the saved card in one POST',
     (tester) async {
       setViewport(tester, phoneSize);
@@ -445,9 +466,8 @@ void main() {
       await _tap(tester, find.text(payLabel));
 
       final body = fake.lastCall('POST', '/bookings')!.json;
-      final tomorrow = DateUtils.dateOnly(
-        DateTime.now(),
-      ).add(const Duration(days: 1));
+      final tomorrow = DateUtils.dateOnly(DateTime.now())
+          .add(const Duration(days: 1));
       expect(body['service_code'], 'studio');
       expect(body['address_id'], 'addr-1');
       expect(body['coupon_id'], 'cp-studio');

@@ -1881,9 +1881,8 @@ class TKo extends T {
   String get needMethod => '결제수단을 등록해 주세요';
 
   @override
-  String freeCancelUntil(String date) {
-    return '$date까지 무료 취소';
-  }
+  String get dfCancelNote =>
+      '방문 2일 전까지 무료로 취소할 수 있어요. 결제시 이용약관 및 취소 규정에 동의한 것으로 간주합니다.';
 
   @override
   String get doneTitle => '예약이 완료됐어요';
@@ -1892,7 +1891,7 @@ class TKo extends T {
   String get doneConfirmedTitle => '예약이 확정됐어요';
 
   @override
-  String get doneBody => '청소팀이 배정되면 바로 알려드릴게요';
+  String get doneBody => '매니저님이 배정되면 알림으로 알려드릴게요.';
 
   @override
   String get doneQuoteTitle => '상담 요청이 접수됐어요';
@@ -2703,9 +2702,6 @@ class TKo extends T {
   String get dfVisitTime => '방문 시간';
 
   @override
-  String get dfVisitTimeSheet => '방문 시간 선택';
-
-  @override
   String get dfConsultNote => '상담으로 안내해 드릴게요.';
 
   @override
@@ -2795,6 +2791,15 @@ class TKo extends T {
 
   @override
   String get luggage_not_unpacked => '이삿짐을 풀지 않은 상태';
+
+  @override
+  String get luggage_out_partly_unpacked => '이삿짐을 일부 푼 상태';
+
+  @override
+  String get luggage_out_fully_lived_in => '짐을 다 풀었거나 생활 중인 상태';
+
+  @override
+  String get luggage_out_unknown => '짐 상태를 잘 모르겠어요';
 
   @override
   String get dfReviewsTitle => '생생한 이용 후기를 확인하세요.';
@@ -3819,7 +3824,7 @@ class TKo extends T {
   String get hgOldBuildBody => '오래된 집 · 이사 청소';
 
   @override
-  String get hgSizeQuestion => 'Q2 집 크기는 어떻게 되나요?';
+  String get hgSizeQuestion => '집 크기는 어떻게 되나요?';
 
   @override
   String get hgHomeOneTwo => '원룸·투룸';

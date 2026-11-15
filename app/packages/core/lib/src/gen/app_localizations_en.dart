@@ -1925,9 +1925,8 @@ class TEn extends T {
   String get needMethod => 'Add a payment method first';
 
   @override
-  String freeCancelUntil(String date) {
-    return 'Free cancellation until $date';
-  }
+  String get dfCancelNote =>
+      'Free cancellation up to 2 days before the visit. Paying means you agree to the terms and the cancellation policy.';
 
   @override
   String get doneTitle => 'You\'re booked!';
@@ -1936,7 +1935,8 @@ class TEn extends T {
   String get doneConfirmedTitle => 'Your booking is confirmed';
 
   @override
-  String get doneBody => 'We\'ll let you know as soon as a team is assigned';
+  String get doneBody =>
+      'We\'ll send you a notification once a manager is assigned.';
 
   @override
   String get doneQuoteTitle => 'Request received';
@@ -2753,9 +2753,6 @@ class TEn extends T {
   String get dfVisitTime => 'Visit time';
 
   @override
-  String get dfVisitTimeSheet => 'Choose visit time';
-
-  @override
   String get dfConsultNote => 'We\'ll help you with this in chat.';
 
   @override
@@ -2845,6 +2842,15 @@ class TEn extends T {
 
   @override
   String get luggage_not_unpacked => 'Boxes not unpacked yet';
+
+  @override
+  String get luggage_out_partly_unpacked => 'Boxes partly unpacked';
+
+  @override
+  String get luggage_out_fully_lived_in => 'Fully unpacked or lived in';
+
+  @override
+  String get luggage_out_unknown => 'Not sure about the boxes';
 
   @override
   String get dfReviewsTitle => 'See what customers say.';
@@ -3912,7 +3918,7 @@ class TEn extends T {
   String get hgOldBuildBody => 'Older home · move-out cleaning';
 
   @override
-  String get hgSizeQuestion => 'Q2 How big is your home?';
+  String get hgSizeQuestion => 'How big is your home?';
 
   @override
   String get hgHomeOneTwo => 'Studio · 2-room';

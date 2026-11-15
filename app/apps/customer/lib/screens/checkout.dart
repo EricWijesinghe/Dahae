@@ -197,7 +197,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final points = viaWindow && _usePoints ? maxPoints : 0;
     final due = total - points;
     final coupon = app.coupons.where((c) => c.id == d.couponId).firstOrNull;
-    final freeUntil = freeCancelDeadline(d.date!, DateTime.now());
     return Scaffold(
       backgroundColor: context.colors.surface,
       appBar: AppBar(
@@ -266,9 +265,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           FlowSection(
             children: [
               Theme(
-                data: Theme.of(
-                  context,
-                ).copyWith(dividerColor: Colors.transparent),
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
                   initiallyExpanded: true,
                   tilePadding: EdgeInsets.zero,
@@ -342,7 +340,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ],
               ),
               const SizedBox(height: Space.md),
-              AgreementBox(total: total, freeUntil: freeUntil),
+              AgreementBox(total: total),
             ],
           ),
         ],
@@ -499,9 +497,8 @@ class _IconRow extends StatelessWidget {
 /// Free-cancel line, 결제대행(PG) notice, and links to the terms and the cancel/refund rules,
 /// right above the pay button.
 class AgreementBox extends StatelessWidget {
-  const AgreementBox({super.key, required this.total, this.freeUntil});
+  const AgreementBox({super.key, required this.total});
   final int total;
-  final DateTime? freeUntil;
 
   @override
   Widget build(BuildContext context) {
@@ -518,11 +515,7 @@ class AgreementBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (freeUntil != null)
-            Text(
-              t.freeCancelUntil(dateLabel(freeUntil!, context.lang)),
-              style: small,
-            ),
+          Text(t.dfCancelNote, style: small),
           Text(t.dfPgNotice, style: small),
           Wrap(
             spacing: Space.xs,

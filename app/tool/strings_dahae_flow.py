@@ -61,7 +61,6 @@ ROWS = {
   "dfChange": ["변경", "Change"],
   "dfVisitDay": ["방문 일", "Visit date"],
   "dfVisitTime": ["방문 시간", "Visit time"],
-  "dfVisitTimeSheet": ["방문 시간 선택", "Choose visit time"],
   "dfConsultNote": ["상담으로 안내해 드릴게요.", "We'll help you with this in chat."],
   "dfSelect": ["선택", "Choose"],
   "dfSlotClosed": ["마감", "Full"],
@@ -94,6 +93,10 @@ ROWS = {
   "dfSummaryPaid": ["결제 금액", "Paid"],
   # Move 1/7 - 3/7 (p14-p16)
   "luggage_not_unpacked": ["이삿짐을 풀지 않은 상태", "Boxes not unpacked yet"],
+  # Move-out (퇴거 청소) luggage wording differs from move-in (design p14)
+  "luggage_out_partly_unpacked": ["이삿짐을 일부 푼 상태", "Boxes partly unpacked"],
+  "luggage_out_fully_lived_in": ["짐을 다 풀었거나 생활 중인 상태", "Fully unpacked or lived in"],
+  "luggage_out_unknown": ["짐 상태를 잘 모르겠어요", "Not sure about the boxes"],
   "dfReviewsTitle": ["생생한 이용 후기를 확인하세요.", "See what customers say."],
   "dfBefore": ["BEFORE", "BEFORE"],
   "dfAfter": ["AFTER", "AFTER"],

@@ -30,11 +30,15 @@ String layoutLabel(T t, String? c) => switch (c) {
   _ => t.quoteUnknown,
 };
 
-String luggageLabel(T t, String? c) => switch (c) {
+/// [moveOut] picks the 퇴거 청소 wording (design p14); move-in and other flows keep the shared labels.
+String luggageLabel(T t, String? c, {bool moveOut = false}) => switch (c) {
   'empty' => t.luggage_empty,
   'not_unpacked' => t.luggage_not_unpacked,
+  'partly_unpacked' when moveOut => t.luggage_out_partly_unpacked,
   'partly_unpacked' => t.luggage_partly_unpacked,
+  'fully_lived_in' when moveOut => t.luggage_out_fully_lived_in,
   'fully_lived_in' => t.luggage_fully_lived_in,
+  'unknown' when moveOut => t.luggage_out_unknown,
   'unknown' => t.luggage_unknown,
   _ => t.quoteUnknown,
 };

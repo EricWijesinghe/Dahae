@@ -227,9 +227,17 @@ class QuoteReviewPage extends StatelessWidget {
           FlowSection(
             title: t.dfNotes,
             children: [
-              NoteBox(
-                items: [t.dfNote1, t.dfNote2, t.dfNote3, t.dfNoteWarn],
-                danger: const {3},
+              _EstimateView(
+                estimate: estimate,
+                builder: (context, e) => NoteBox(
+                  items: [
+                    t.dfDepositNote(pctOf(_n(e, 'deposit_bps'))),
+                    t.dfNote2,
+                    t.dfNote3,
+                    t.dfNoteWarn,
+                  ],
+                  danger: const {3},
+                ),
               ),
             ],
           ),

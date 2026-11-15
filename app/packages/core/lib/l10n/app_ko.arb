@@ -853,17 +853,10 @@
   }
  },
  "needMethod": "결제수단을 등록해 주세요",
- "freeCancelUntil": "{date}까지 무료 취소",
- "@freeCancelUntil": {
-  "placeholders": {
-   "date": {
-    "type": "String"
-   }
-  }
- },
+ "dfCancelNote": "방문 2일 전까지 무료로 취소할 수 있어요. 결제시 이용약관 및 취소 규정에 동의한 것으로 간주합니다.",
  "doneTitle": "예약이 완료됐어요",
  "doneConfirmedTitle": "예약이 확정됐어요",
- "doneBody": "청소팀이 배정되면 바로 알려드릴게요",
+ "doneBody": "매니저님이 배정되면 알림으로 알려드릴게요.",
  "doneQuoteTitle": "상담 요청이 접수됐어요",
  "doneQuoteBody": "상담팀이 확인 후 최종 견적을 보내드려요. 견적은 상담 탭에서 확인할 수 있어요.",
  "goHome": "홈으로",
@@ -1300,7 +1293,6 @@
  "dfChange": "변경",
  "dfVisitDay": "방문 일",
  "dfVisitTime": "방문 시간",
- "dfVisitTimeSheet": "방문 시간 선택",
  "dfConsultNote": "상담으로 안내해 드릴게요.",
  "dfSelect": "선택",
  "dfSlotClosed": "마감",
@@ -1350,6 +1342,9 @@
  "dfSummaryAddress": "주소",
  "dfSummaryPaid": "결제 금액",
  "luggage_not_unpacked": "이삿짐을 풀지 않은 상태",
+ "luggage_out_partly_unpacked": "이삿짐을 일부 푼 상태",
+ "luggage_out_fully_lived_in": "짐을 다 풀었거나 생활 중인 상태",
+ "luggage_out_unknown": "짐 상태를 잘 모르겠어요",
  "dfReviewsTitle": "생생한 이용 후기를 확인하세요.",
  "dfBefore": "BEFORE",
  "dfAfter": "AFTER",
@@ -1938,7 +1933,7 @@
  "hgNewBuildBody": "새로 지은 집 · 입주 청소",
  "hgOldBuild": "구축",
  "hgOldBuildBody": "오래된 집 · 이사 청소",
- "hgSizeQuestion": "Q2 집 크기는 어떻게 되나요?",
+ "hgSizeQuestion": "집 크기는 어떻게 되나요?",
  "hgHomeOneTwo": "원룸·투룸",
  "hgHomeApartment": "아파트",
  "hgHomeVilla": "빌라·주택",
