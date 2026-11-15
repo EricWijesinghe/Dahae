@@ -44,6 +44,7 @@ pub fn routes() -> Router<AppState> {
         .route("/customers", get(customers))
         .route("/pros", get(list_pros))
         .route("/pros/{id}/status", post(set_pro_status))
+        .route("/pros/{id}/quality", get(pro_quality))
         .route(
             "/pros/{id}/profile",
             get(super::pro_verification::get_profile).put(super::pro_verification::put_profile),
@@ -410,13 +411,20 @@ async fn list_pros(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Valu
         "SELECT COALESCE(jsonb_agg(x), '[]') FROM (SELECT p.id, p.name, p.team_name, p.phone, p.status, p.fee_bps, p.created_at,
            (SELECT count(*) FROM bookings b WHERE b.pro_id = p.id AND b.status = 3) AS completed,
            (SELECT count(*) FROM bookings b WHERE b.pro_id = p.id AND b.status = -1) AS cancelled,
-           (SELECT round(avg(rating)::numeric, 2) FROM reviews r WHERE r.pro_id = p.id AND NOT r.hidden) AS rating
+           (SELECT round(avg(rating)::numeric, 2) FROM reviews r WHERE r.pro_id = p.id AND NOT r.hidden) AS rating,
+           (SELECT q.score FROM partner_quality q WHERE q.pro_id = p.id) AS quality_score,
+           (SELECT q.status FROM partner_quality q WHERE q.pro_id = p.id) AS quality_status
          FROM pros p ORDER BY p.status, p.created_at DESC LIMIT $1) x",
     )
     .bind(LIST_LIMIT)
     .fetch_one(&s.db)
     .await?;
     Ok(Json(v))
+}
+
+/// Score, status, components and tips for one partner. Read-only for staff.
+async fn pro_quality(State(s): State<AppState>, _st: Staff, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
+    Ok(Json(crate::quality::read(&s.db, id).await?))
 }
 
 #[derive(Deserialize)]

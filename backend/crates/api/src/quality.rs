@@ -3,15 +3,17 @@
 //! partner), and notifies a partner once when they drop into the warning band or pause.
 
 use crate::{
+    auth::Pro,
     error::{ApiError, ApiResult},
     lifecycle::next_tick,
     realtime::{Recipient, notify},
     settings_registry,
     state::AppState,
 };
+use axum::{Json, extract::State};
 use chrono::{DateTime, Duration as ChronoDuration, NaiveDate, Utc};
 use domain::quality::{self, OwnerOverride, QualityInputs, QualityStatus, QualityThresholds};
-use serde_json::json;
+use serde_json::{Value, json};
 use sqlx::PgPool;
 use std::time::Duration;
 use tokio::task::JoinHandle;
@@ -90,6 +92,30 @@ async fn training_gate(db: &PgPool, pro: Uuid) -> ApiResult<()> {
     .fetch_all(db)
     .await?;
     domain::training::check_can_receive_jobs(&required_done).map_err(|_| ApiError::Conflict("training_required"))
+}
+
+/// Score, status, components and tips from the last recompute, so the card shows what auto-pause used.
+/// A partner never scored yet gets nulls and no tips.
+pub async fn read(db: &PgPool, pro: Uuid) -> ApiResult<Value> {
+    let row: Option<(i16, String, sqlx::types::Json<QualityInputs>)> = sqlx::query_as("SELECT score, status, inputs FROM partner_quality WHERE pro_id = $1")
+        .bind(pro)
+        .fetch_optional(db)
+        .await?;
+    let Some((score, status, inputs)) = row else {
+        return Ok(json!({ "score": null, "status": null, "components": null, "tips": [] }));
+    };
+    let components = quality::components(&inputs.0);
+    Ok(json!({
+        "score": score,
+        "status": status,
+        "components": components,
+        "tips": quality::tips(&components),
+    }))
+}
+
+/// The signed-in partner's own quality card (read-only).
+pub async fn partner_read(State(s): State<AppState>, Pro(a): Pro) -> ApiResult<Json<Value>> {
+    Ok(Json(read(&s.db, a.id).await?))
 }
 
 fn parse_status(s: &str) -> Option<QualityStatus> {

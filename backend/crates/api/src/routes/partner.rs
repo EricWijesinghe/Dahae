@@ -32,6 +32,7 @@ pub fn routes() -> Router<AppState> {
         .route("/payout-account", get(get_account).put(put_account))
         .route("/settlements", get(settlements))
         .route("/reviews", get(reviews))
+        .route("/quality", get(crate::quality::partner_read))
         .route("/threads", get(threads))
         .route("/export", get(export))
 }
