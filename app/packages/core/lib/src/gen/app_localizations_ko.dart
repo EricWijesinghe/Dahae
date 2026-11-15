@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -3841,6 +3842,9 @@ class TKo extends T {
 
   @override
   String get oRuleStuck => '결제 자동 처리 실패';
+
+  @override
+  String get oRuleMismatch => 'PortOne 결제 내역 불일치';
 
   @override
   String get oRuleSocial => '소셜 로그인 실패';

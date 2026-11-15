@@ -7297,6 +7297,12 @@ abstract class T {
   /// **'결제 자동 처리 실패'**
   String get oRuleStuck;
 
+  /// No description provided for @oRuleMismatch.
+  ///
+  /// In ko, this message translates to:
+  /// **'PortOne 결제 내역 불일치'**
+  String get oRuleMismatch;
+
   /// No description provided for @oRuleSocial.
   ///
   /// In ko, this message translates to:

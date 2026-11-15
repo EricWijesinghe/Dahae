@@ -32,29 +32,40 @@ pub fn spawn(state: AppState) -> JoinHandle<()> {
                 job_pass("reconciler", true);
                 continue;
             }
-            let ok = match recon_pass(&state).await {
-                Ok(0) => true,
-                Ok(checked) => {
-                    tracing::info!(checked, "checkout reconcile pass");
-                    true
-                }
-                Err(e) => {
-                    tracing::warn!(error = %e, "checkout reconcile pass failed");
-                    false
-                }
-            };
+            let (checked, ok) = recon_pass(&state).await;
+            if checked > 0 {
+                tracing::info!(checked, "checkout reconcile pass");
+            }
+            // The diff has its own outcome: a failed daily pull is logged, it does not fail this job.
+            log_step("payment diff pass", checkout_recon::payment_diff_pass(&state).await);
             let receipts_ok = receipt_cancel_pass(&state).await;
             job_pass("reconciler", ok && receipts_ok);
         }
     })
 }
 
-/// Open checkouts, then provider-paid checkouts left unfinished for a day, then the daily payment diff.
-async fn recon_pass(state: &AppState) -> ApiResult<usize> {
-    let open = checkout_recon::reconcile_pass(state).await?;
-    let stale = checkout_recon::reconcile_stale(state).await?;
-    let diffed = checkout_recon::payment_diff_pass(state).await?;
-    Ok(open + stale + diffed)
+/// Open checkouts, then provider-paid checkouts left unfinished for a day. Each step runs even
+/// when the other failed. Returns the checked count (diff mismatches excluded) and whether both succeeded.
+async fn recon_pass(state: &AppState) -> (usize, bool) {
+    let open = log_step("checkout reconcile pass", checkout_recon::reconcile_pass(state).await);
+    let stale = log_step("stale reconcile pass", checkout_recon::reconcile_stale(state).await);
+    tally(&[open, stale])
+}
+
+/// Logs a failed step and turns its outcome into `Some(count)` or `None`.
+fn log_step(step: &'static str, result: ApiResult<usize>) -> Option<usize> {
+    match result {
+        Ok(n) => Some(n),
+        Err(e) => {
+            tracing::warn!(error = %e, step, "reconcile step failed");
+            None
+        }
+    }
+}
+
+/// Sums the counts of the steps that ran and reports whether every step succeeded.
+fn tally(steps: &[Option<usize>]) -> (usize, bool) {
+    (steps.iter().flatten().sum(), steps.iter().all(Option::is_some))
 }
 
 /// Retries cash-receipt cancels that a refund could not record. Errors are logged; the pass fails.
@@ -70,7 +81,14 @@ async fn receipt_cancel_pass(state: &AppState) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::enabled;
+    use super::{enabled, tally};
+
+    #[test]
+    fn a_failed_step_keeps_the_others_counts_and_fails_the_job() {
+        assert_eq!(tally(&[Some(2), None]), (2, false));
+        assert_eq!(tally(&[Some(1), Some(3)]), (4, true));
+        assert_eq!(tally(&[None, None]), (0, false));
+    }
 
     #[test]
     fn runs_only_with_a_real_portone_account() {
