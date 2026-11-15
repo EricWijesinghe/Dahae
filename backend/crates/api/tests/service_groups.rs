@@ -342,3 +342,32 @@ async fn migration_0214_files_existing_services_under_their_groups(pool: PgPool)
         .expect("studio");
     assert_eq!(hidden.as_deref(), Some("true"));
 }
+
+#[sqlx::test(migrations = false)]
+async fn migration_0230_groups_counts_services_that_predate_their_groups(pool: PgPool) {
+    let mut older = sqlx::migrate!("../../migrations");
+    older.migrations = older.migrations.iter().filter(|m| m.version < 230).cloned().collect::<Vec<_>>().into();
+    older.run(&pool).await.expect("migrations before 0230");
+    for code in ["whole_home", "window", "disinfection"] {
+        sqlx::query("INSERT INTO services (code, pricing, content) VALUES ($1, '{}'::jsonb, '{}'::jsonb)")
+            .bind(code)
+            .execute(&pool)
+            .await
+            .expect("pre-0230 service row");
+    }
+    sqlx::migrate!("../../migrations").run(&pool).await.expect("0230 on existing rows");
+
+    let rows: Vec<(String, Option<String>)> =
+        sqlx::query_as("SELECT code, group_code FROM services WHERE code IN ('whole_home', 'window', 'disinfection') ORDER BY code")
+            .fetch_all(&pool)
+            .await
+            .expect("rows");
+    assert_eq!(
+        rows,
+        vec![
+            ("disinfection".to_owned(), Some("disinfection".to_owned())),
+            ("whole_home".to_owned(), Some("living".to_owned())),
+            ("window".to_owned(), Some("living".to_owned())),
+        ]
+    );
+}

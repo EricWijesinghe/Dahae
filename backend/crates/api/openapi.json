@@ -1853,7 +1853,17 @@
         "summary": "Open jobs matching the partner's districts (capped at 100)",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK. Each job carries `unit_counts` (the customer's count per option, null for non-counts services) and `count_units` (the owner's options in catalogue order, null for non-counts services).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PartnerJobCard"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1872,7 +1882,22 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK. `booking` carries `unit_counts` and `count_units` as in the job feed; `count_units` is null for non-counts services.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "booking"
+                  ],
+                  "properties": {
+                    "booking": {
+                      "$ref": "#/components/schemas/PartnerJobCard"
+                    }
+                  }
+                }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -6340,6 +6365,67 @@
       }
     },
     "schemas": {
+      "CountUnit": {
+        "description": "One counts option of a service, in the owner's catalogue order. `label` is null for the built-in options (the app localises them by `label_key`).",
+        "type": "object",
+        "required": [
+          "label_key",
+          "label"
+        ],
+        "properties": {
+          "label_key": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PartnerJobCard": {
+        "description": "A job as a partner sees it. `unit_counts` and `count_units` are null for services without counts.",
+        "type": "object",
+        "required": [
+          "id",
+          "service_code"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "service_code": {
+            "type": "string"
+          },
+          "unit_index": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "unit_counts": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "count_units": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CountUnit"
+            }
+          }
+        }
+      },
       "Error": {
         "type": "object",
         "required": [

@@ -67,3 +67,27 @@ async fn non_counts_job_has_no_count_units(pool: PgPool) {
     assert_eq!(st, StatusCode::OK, "{job}");
     assert!(job["booking"]["count_units"].is_null(), "{job}");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn feed_rows_carry_counts_and_their_options(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5000-0905").await;
+    let (pro, pro_id) = verified_pro(&app, &pool, "010-5000-0906").await;
+    sqlx::query("UPDATE partner_prefs SET services = ARRAY['aircon', 'studio'] WHERE pro_id = $1")
+        .bind(pro_id)
+        .execute(&pool)
+        .await
+        .expect("take aircon jobs");
+    let (id, _) = book_counts(&app, &c, "aircon", json!([0, 2, 0, 1])).await;
+    let (plain_id, _) = book(&app, &c, 11, None).await;
+    let (st, feed) = call(&app, "GET", "/v1/partner/jobs?kind=direct", Some(pro.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{feed}");
+    let rows = feed.as_array().expect("feed array");
+    let counted = rows.iter().find(|r| r["id"] == json!(id)).expect("counts job in feed");
+    assert_eq!(counted["unit_counts"], json!([0, 2, 0, 1]), "{counted}");
+    assert_eq!(counted["count_units"].as_array().map(Vec::len), Some(4), "{counted}");
+    assert_eq!(counted["count_units"][1], json!({"label_key": "stand", "label": null}), "{counted}");
+    let plain_row = rows.iter().find(|r| r["id"] == json!(plain_id)).expect("plain job in feed");
+    assert!(plain_row["count_units"].is_null(), "{plain_row}");
+}
