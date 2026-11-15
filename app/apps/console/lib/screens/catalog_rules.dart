@@ -52,6 +52,7 @@ class _PeakTabState extends State<PeakTab> {
   ];
   final _ctrls = <String, TextEditingController>{};
   Json _config = const {};
+  bool _applyToFixed = true;
 
   @override
   void dispose() {
@@ -63,6 +64,7 @@ class _PeakTabState extends State<PeakTab> {
 
   void _fill(Json config) {
     _config = config;
+    _applyToFixed = (config['apply_to_fixed'] as bool?) ?? true;
     for (final k in _percentKeys) {
       _ctrls[k] = TextEditingController(text: _pct(config[k] as num));
     }
@@ -94,6 +96,7 @@ class _PeakTabState extends State<PeakTab> {
       if (hour == null) return null;
       next[k] = hour;
     }
+    next['apply_to_fixed'] = _applyToFixed;
     return next;
   }
 
@@ -137,6 +140,16 @@ class _PeakTabState extends State<PeakTab> {
                   percent: _percentKeys.contains(k),
                 ),
               ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(t.cgPeakFixedScope),
+              subtitle: Text(t.cgPeakFixedScopeHint),
+              value: _applyToFixed,
+              onChanged: context.console.isAdmin
+                  ? (v) => setState(() => _applyToFixed = v)
+                  : null,
+            ),
+            const SizedBox(height: Space.md),
             FilledButton(
               onPressed: context.console.isAdmin ? _save : null,
               child: Text(t.save),

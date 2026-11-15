@@ -5,7 +5,7 @@
 //! 4. planned visits whose day has arrived without a charge become `missed`.
 
 use super::{
-    booking_core::{BookingBody, Prepared, after_booking_created, insert_paid, lock_slot, prepare, record_payment},
+    booking_core::{BookingBody, Prepared, after_booking_created, fixed_peak_bps, insert_paid, lock_slot, prepare, record_payment},
     partner_jobs::VISIBLE,
 };
 use crate::{
@@ -302,7 +302,8 @@ async fn charge_visit(s: &AppState, d: &Due) -> ApiResult<Attempt> {
         Ok(p) => p,
         Err(e) => return blocked(e),
     };
-    let list = price_booking(&prep.service, body.unit_index, None, Utc::now())?;
+    let peak = fixed_peak_bps(&s.db, body.visit_date, body.start_hour).await?;
+    let list = price_booking(&prep.service, body.unit_index, None, peak, Utc::now())?;
     let vp = visit_price(list.list_price.0, u8::try_from(sub.discount_percent).unwrap_or(0))?;
     let price = PriceBreakdown {
         list_price: list.list_price,

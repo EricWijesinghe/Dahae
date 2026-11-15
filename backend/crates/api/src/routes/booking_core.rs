@@ -3,7 +3,12 @@
 //! and balance steps. Nothing there decides money; callers own the transaction.
 //! Also the one job completion (`complete_job`) behind the owner's and the team member's handler.
 
-use super::{audit, bookings::BookingRow, catalog::load_service, chat, growth, partner_jobs, uploads};
+use super::{
+    audit,
+    bookings::BookingRow,
+    catalog::{load_peak_config, load_service},
+    chat, growth, partner_jobs, uploads,
+};
 use crate::{
     crypto,
     error::{ApiError, ApiResult},
@@ -127,13 +132,25 @@ pub async fn load_coupon(conn: &mut PgConnection, user: Uuid, id: Uuid, lock: bo
     })
 }
 
+/// Peak surcharge rate for a fixed or subscription visit at `date` and `start_hour` (KST).
+/// Zero when the owner has turned peak off for these visits; quotes apply peak on their own path.
+pub async fn fixed_peak_bps(db: impl sqlx::PgExecutor<'_>, date: NaiveDate, start_hour: u8) -> ApiResult<i64> {
+    let config = load_peak_config(db).await?;
+    if !config.apply_to_fixed {
+        return Ok(0);
+    }
+    let start = domain::peak::kst_to_utc(date, u32::from(start_hour)).ok_or(ApiError::BadRequest("invalid_slot"))?;
+    Ok(domain::peak::peak_surcharge(&config, start).bps)
+}
+
 /// Server-side price for the chosen unit, optional coupon, and the first-booking welcome offer.
 pub async fn price_for(conn: &mut PgConnection, user: Uuid, prep: &Prepared, b: &BookingBody, lock: bool) -> ApiResult<PriceBreakdown> {
     let coupon = match b.coupon_id {
         Some(id) => Some(load_coupon(conn, user, id, lock).await?),
         None => None,
     };
-    let price = price_booking(&prep.service, b.unit_index, coupon.as_ref(), Utc::now())?;
+    let peak = fixed_peak_bps(&mut *conn, b.visit_date, b.start_hour).await?;
+    let price = price_booking(&prep.service, b.unit_index, coupon.as_ref(), peak, Utc::now())?;
     let offer = growth::load_welcome(conn).await?;
     if !offer.enabled || coupon.is_some() {
         return Ok(price);

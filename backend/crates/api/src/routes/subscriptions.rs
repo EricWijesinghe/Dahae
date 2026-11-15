@@ -5,7 +5,7 @@
 
 use super::{
     audit,
-    booking_core::{BookingBody, prepare},
+    booking_core::{BookingBody, fixed_peak_bps, prepare},
     bookings::cancel_owned,
     catalog::load_service,
     subscription_engine::plan_subscription,
@@ -206,7 +206,8 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(req): Jso
     if prep.service.is_quote() {
         return Err(ApiError::BadRequest("subscription_not_supported"));
     }
-    price_booking(&prep.service, req.unit_index, None, Utc::now())?;
+    let peak = fixed_peak_bps(&s.db, body.visit_date, body.start_hour).await?;
+    price_booking(&prep.service, req.unit_index, None, peak, Utc::now())?;
     check_card(&s.db, a.id, req.payment_method_id).await?;
     if let Some(pro) = req.preferred_pro_id {
         let exists: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM pros WHERE id = $1)")

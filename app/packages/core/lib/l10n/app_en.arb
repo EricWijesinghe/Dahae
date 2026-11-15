@@ -1489,6 +1489,8 @@
  "poSellerPhone": "Phone",
  "poSellerSubmit": "Register",
  "poSellerDone": "Seller status: {status}",
+ "cgPeakFixedScope": "Apply surcharge to fixed-price and subscription visits",
+ "cgPeakFixedScopeHint": "When off, fixed-price and subscription visits are booked at the base price. Quotes always show the surcharge",
  "oFlags": "Feature switches",
  "oFlagBooking": "Bookings",
  "oFlagChat": "Chat",

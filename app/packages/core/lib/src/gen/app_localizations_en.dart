@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4870,6 +4871,14 @@ class TEn extends T {
   String poSellerDone(String status) {
     return 'Seller status: $status';
   }
+
+  @override
+  String get cgPeakFixedScope =>
+      'Apply surcharge to fixed-price and subscription visits';
+
+  @override
+  String get cgPeakFixedScopeHint =>
+      'When off, fixed-price and subscription visits are booked at the base price. Quotes always show the surcharge';
 
   @override
   String get oFlags => 'Feature switches';
