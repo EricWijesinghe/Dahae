@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5608,6 +5609,16 @@ class TKo extends T {
 
   @override
   String get cInvalidValue => '입력값을 확인해 주세요';
+
+  @override
+  String get sgConsentHint => '필수 항목에 동의해야 인증번호를 받을 수 있어요.';
+
+  @override
+  String get err_required_consent => '가입하려면 필수 약관에 모두 동의해 주세요';
+
+  @override
+  String get sgOverseasNote =>
+      '서비스 이용에 꼭 필요한 동의라서 철회할 수 없어요. 동의하지 않으면 가입할 수 없어요.';
 
   @override
   String get cStaffInvite => '직원 초대';

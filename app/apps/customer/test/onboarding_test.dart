@@ -6,6 +6,7 @@ import 'package:ui/ui.dart';
 
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
+import 'support/signup_consent.dart';
 
 /// Guests browse freely; the phone sign-in opens from the first protected action (booking).
 Future<void> openSignInFromBooking(WidgetTester tester) async {
@@ -37,6 +38,7 @@ void main() {
       await tester.enterText(find.byType(TextField).last, '01012345678');
       await settle(tester, duration: const Duration(milliseconds: 300));
       expect(tester.widget<TextField>(find.byType(TextField).last).controller!.text, '010-1234-5678');
+      await agreeSignupConsents(tester);
       await tester.tap(find.text(koT.loginSendCode));
       await settle(tester);
       expect(fake.lastCall('POST', '/auth/otp')!.json['phone'], '01012345678');
@@ -83,6 +85,7 @@ void main() {
       await openSignInFromBooking(tester);
       await tester.enterText(find.byType(TextField).last, '01012345678');
       await settle(tester, duration: const Duration(milliseconds: 300));
+      await agreeSignupConsents(tester);
       await tester.tap(find.text(koT.loginSendCode));
       await settle(tester);
 

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import 'signup_consent.dart';
 
 /// First screen: aurora mesh behind floating service orbs that drift with the pointer.
 class IntroScreen extends StatelessWidget {
@@ -220,8 +221,12 @@ class _PhoneScreenState extends State<PhoneScreen> {
   String? _busyProvider;
   String? _error;
 
+  final _granted = emptySignupConsents();
+
   String get _digits => _ctrl.text.replaceAll(RegExp(r'\D'), '');
   bool get _valid => RegExp(r'^01[016789]\d{7,8}$').hasMatch(_digits);
+  /// The code is sent only once a valid number and every required consent are given.
+  bool get _canSend => _valid && signupRequiredAgreed(_granted);
 
   /// Social sign-in: SDK token -> /auth/social. A new account without a verified phone
   /// verifies one first, then asks for a name if it has none.
@@ -277,7 +282,11 @@ class _PhoneScreenState extends State<PhoneScreen> {
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => CodeScreen(phone: _digits, devCode: dev),
+          builder: (_) => CodeScreen(
+            phone: _digits,
+            devCode: dev,
+            consents: signupConsentPayload(_granted),
+          ),
         ),
       );
     } catch (e) {
@@ -333,7 +342,16 @@ class _PhoneScreenState extends State<PhoneScreen> {
                     hintText: context.t.loginPhoneHint,
                   ),
                   onChanged: (_) => setState(() {}),
-                  onSubmitted: (_) => _valid && !_busy ? _send() : null,
+                  onSubmitted: (_) => _canSend && !_busy ? _send() : null,
+                ),
+                const SizedBox(height: Space.lg),
+                SignupConsentChecks(
+                  granted: _granted,
+                  onChanged: (kind, v) => setState(() => _granted[kind] = v),
+                ),
+                Text(
+                  context.t.sgConsentHint,
+                  style: context.text.bodySmall,
                 ),
                 const SizedBox(height: Space.xl),
                 SocialSignInRow(
@@ -350,13 +368,13 @@ class _PhoneScreenState extends State<PhoneScreen> {
           if (_error != null)
             _InlineError(
               message: _error!,
-              onRetry: _valid && !_busy ? _send : null,
+              onRetry: _canSend && !_busy ? _send : null,
             ),
           BottomActionBar(
             child: PrimaryButton(
               label: context.t.loginSendCode,
               busy: _busy,
-              onPressed: _valid ? _send : null,
+              onPressed: _canSend ? _send : null,
             ),
           ),
         ],
@@ -366,8 +384,14 @@ class _PhoneScreenState extends State<PhoneScreen> {
 }
 
 class CodeScreen extends StatefulWidget {
-  const CodeScreen({super.key, required this.phone, this.devCode});
+  const CodeScreen({
+    super.key,
+    required this.phone,
+    required this.consents,
+    this.devCode,
+  });
   final String phone;
+  final List<Map<String, dynamic>> consents;
   final String? devCode;
   @override
   State<CodeScreen> createState() => _CodeScreenState();
@@ -407,6 +431,7 @@ class _CodeScreenState extends State<CodeScreen> {
         widget.phone,
         _ctrl.text,
         audience: 'customer',
+        consents: widget.consents,
       );
       if (!mounted) return;
       final nameless = await completeSignIn(deps);

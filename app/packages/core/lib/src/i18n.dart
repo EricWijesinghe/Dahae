@@ -25,6 +25,7 @@ extension Labels on T {
   String? _codeMessage(String code) => switch (code) {
     'invalid_phone' => err_invalid_phone,
     'otp_invalid' => err_otp_invalid,
+    'required_consent' => err_required_consent,
     'otp_expired' => err_otp_expired,
     'rate_limited' => err_rate_limited,
     'studio_too_large' => err_studio_too_large,
