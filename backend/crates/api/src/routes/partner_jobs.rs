@@ -272,7 +272,7 @@ async fn accept(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) ->
     )
     .await?;
     tx.commit().await?;
-    deliver(&s, notice).await;
+    deliver(&s, notice, chrono::Utc::now()).await;
     s.hub.send(Recipient::Staff, "booking.updated", json!({ "booking_id": id }));
     Ok(Json(json!({ "ok": true, "booking_id": id })))
 }

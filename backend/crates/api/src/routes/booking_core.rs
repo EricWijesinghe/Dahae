@@ -546,7 +546,7 @@ pub async fn complete_job(s: &AppState, b: &BookingRow, pro: Uuid, member: Optio
     if let Some(t) = b.thread_id {
         best_effort("chat", chat::post_system(s, t, "job_completed", json!({}))).await;
     }
-    deliver(s, notice).await;
+    deliver(s, notice, Utc::now()).await;
     Ok(Completed {
         net: p.net.0,
         payout_date: payout_on,
