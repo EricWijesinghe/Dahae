@@ -2080,6 +2080,55 @@
  "oJob_waitlist": "대기 예약",
  "oJob_subscription_engine": "정기 청소",
  "oJob_notify_outbox": "알림 발송함",
+ "oFlowTitle": "예약 흐름 (최근 30일)",
+ "oFlowUnavailable": "흐름 지표를 지금 불러올 수 없어요",
+ "oFlowAssign": "기사님 배정까지 걸린 시간 (중앙값)",
+ "oFlowAssignValue": "{hours}시간",
+ "@oFlowAssignValue": {
+  "placeholders": {
+   "hours": {
+    "type": "String"
+   }
+  }
+ },
+ "oFlowNoAssignYet": "배정된 예약이 아직 없어요",
+ "oFlowUnassigned": "24시간 넘게 기사님이 없는 예약",
+ "oFlowUnassignedValue": "{count}건",
+ "@oFlowUnassignedValue": {
+  "placeholders": {
+   "count": {
+    "type": "String"
+   }
+  }
+ },
+ "oFlowSameDay": "오늘 당일 취소",
+ "oFlowSameDayValue": "{cancelled}건 / 오늘 예약 {booked}건",
+ "@oFlowSameDayValue": {
+  "placeholders": {
+   "cancelled": {
+    "type": "String"
+   },
+   "booked": {
+    "type": "String"
+   }
+  }
+ },
+ "oFlowNoShow": "서비스별 미도착(노쇼) 비율",
+ "oFlowNoShowValue": "{noShows}건 / {bookings}건 ({pct}%)",
+ "@oFlowNoShowValue": {
+  "placeholders": {
+   "noShows": {
+    "type": "String"
+   },
+   "bookings": {
+    "type": "String"
+   },
+   "pct": {
+    "type": "String"
+   }
+  }
+ },
+ "oFlowNoBookings": "예약이 없어요",
  "err_owner_exists": "이미 소유자가 있어요",
  "err_second_factor_required": "2단계 인증과 복구 코드 저장을 먼저 마쳐 주세요",
  "err_owner_transfer_self": "자기 자신에게는 소유자를 넘길 수 없어요",

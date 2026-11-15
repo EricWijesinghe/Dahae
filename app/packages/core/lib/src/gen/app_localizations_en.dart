@@ -3951,6 +3951,16 @@ class TEn extends T {
   String get oRuleAuth => 'Suspicious sign-in activity';
 
   @override
+  String get oRuleUnassigned =>
+      'Confirmed bookings with no pro for a long time';
+
+  @override
+  String get oRuleSameDayCancel => 'High same-day cancellations';
+
+  @override
+  String get oRuleTaxDeadline => 'VAT filing deadline approaching';
+
+  @override
   String get oQuietHours => 'Quiet hours';
 
   @override
@@ -4065,6 +4075,50 @@ class TEn extends T {
 
   @override
   String get oJob_notify_outbox => 'Notification outbox';
+
+  @override
+  String get oFlowTitle => 'Booking flow (last 30 days)';
+
+  @override
+  String get oFlowUnavailable => 'Flow figures are unavailable right now';
+
+  @override
+  String get oFlowAssign => 'Median time to assign a pro';
+
+  @override
+  String oFlowAssignValue(String hours) {
+    return '$hours h';
+  }
+
+  @override
+  String get oFlowNoAssignYet => 'No assigned bookings yet';
+
+  @override
+  String get oFlowUnassigned => 'Bookings with no pro for over 24 h';
+
+  @override
+  String oFlowUnassignedValue(String count) {
+    return '$count';
+  }
+
+  @override
+  String get oFlowSameDay => 'Same-day cancellations today';
+
+  @override
+  String oFlowSameDayValue(String cancelled, String booked) {
+    return '$cancelled of $booked booked today';
+  }
+
+  @override
+  String get oFlowNoShow => 'No-show rate by service';
+
+  @override
+  String oFlowNoShowValue(String noShows, String bookings, String pct) {
+    return '$noShows of $bookings ($pct%)';
+  }
+
+  @override
+  String get oFlowNoBookings => 'No bookings';
 
   @override
   String get err_owner_exists => 'An owner is already set';
@@ -5478,6 +5532,18 @@ class TEn extends T {
 
   @override
   String get ruleDiskWarnPct => 'Disk free space yellow below (%)';
+
+  @override
+  String get ruleUnassignedAlertHours =>
+      'Alert when a booking has no pro for (hours)';
+
+  @override
+  String get ruleSameDayCancelAlertPct =>
+      'Same-day cancel rate alert above (%)';
+
+  @override
+  String get ruleTaxDeadlineRemindDays =>
+      'VAT reminder days before the filing day';
 
   @override
   String get ruleMaintenanceOn => 'Maintenance mode (blocks new bookings)';
