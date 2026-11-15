@@ -219,6 +219,11 @@ async fn prune_staff_tokens(s: &AppState, dead: &[String]) {
     }
 }
 
+/// Staff-only routes, mounted under /admin: per-thread AI pause and the monthly AI usage line.
+pub fn admin_routes() -> Router<AppState> {
+    Router::new().route("/threads/{id}/ai", put(set_ai_paused)).route("/ai/usage", get(ai_usage))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -406,11 +411,6 @@ pub async fn send(State(s): State<AppState>, a: Auth, Path(id): Path<Uuid>, Json
         crate::ai::schedule(&s, id);
     }
     Ok(Json(msg))
-}
-
-/// Staff-only routes, mounted under /admin: per-thread AI pause and the monthly AI usage line.
-pub fn admin_routes() -> Router<AppState> {
-    Router::new().route("/threads/{id}/ai", put(set_ai_paused)).route("/ai/usage", get(ai_usage))
 }
 
 #[derive(Deserialize)]

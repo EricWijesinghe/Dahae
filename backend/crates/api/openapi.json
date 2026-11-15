@@ -4477,6 +4477,26 @@
         }
       }
     },
+    "/v1/admin/finance/export/tax-invoices/re-export": {
+      "post": {
+        "operationId": "reExportTaxInvoices",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Re-send tax-invoice rows already exported (CSV, confirm=true required)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "confirm=true missing"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/finance/tax-invoices/{id}/issued": {
       "post": {
         "operationId": "adminMarkTaxInvoiceIssued",
