@@ -21,3 +21,13 @@ regexes = [
   '''"secret_key": "test_sk_x", "security_key": "0123456789abcdef"\.repeat\(4\)''',
   '''verify\(&KEY, "fedcba9876543210fedcba9876543210\.jpg"''',
 ]
+
+[[allowlists]]
+description = "Published test vectors and fixture values in tests and job fixtures"
+regexTarget = "line"
+regexes = [
+  '''token=0123456789abcdef0123456789abcdef''',
+  '''Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==''',
+  '''SECRET=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ # the RFC 6238 test key''',
+  '''"email": "consult-new@test\.local", "name": "Consult", "role": "consultant", "password": "Dahae-consult-2026"''',
+]

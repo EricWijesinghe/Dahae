@@ -8,7 +8,7 @@ want_tag=${3:-}
 
 fail() { echo "::error::$*" >&2; exit 1; }
 cd "$dir"
-[ -f installer_manifest.json ] && [ -f installer_manifest.json.sig ] || fail "manifest or signature missing"
+if [ ! -f installer_manifest.json ] || [ ! -f installer_manifest.json.sig ]; then fail "manifest or signature missing"; fi
 sig=$(mktemp)
 trap 'rm -f "$sig"' EXIT
 openssl base64 -d -A -in installer_manifest.json.sig -out "$sig" || fail "signature is not base64"
