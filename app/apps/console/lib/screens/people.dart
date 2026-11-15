@@ -28,6 +28,15 @@ Future<void> _act(
   }
 }
 
+/// Owner-facing word for a partner's quality status; null means no score yet.
+String qualityStatusLabel(T t, String? status) => switch (status) {
+  'ok' => t.cQualityOk,
+  'warning' => t.cQualityWarning,
+  'paused' => t.cQualityPaused,
+  'overridden_by_owner' => t.cQualityOverridden,
+  _ => t.cQualityNone,
+};
+
 class PartnersScreen extends StatelessWidget {
   const PartnersScreen({super.key});
 
@@ -72,7 +81,7 @@ class PartnersScreen extends StatelessWidget {
                         ],
                       ),
                       subtitle: Text(
-                        '${p['phone']} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100}',
+                        '${p['phone']} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100} · ${t.cQualityScore} ${p['quality_score'] ?? '-'} (${qualityStatusLabel(t, p['quality_status'] as String?)})',
                       ),
                       trailing: !admin
                           ? null
