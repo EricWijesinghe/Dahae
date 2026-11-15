@@ -5363,6 +5363,10 @@ class TEn extends T {
   String get ruleQualityOnTimeGraceMin => 'On-time grace period (minutes)';
 
   @override
+  String get ruleTrainingGateEnabled =>
+      'Block job acceptance until partner training is complete';
+
+  @override
   String get ruleBackupStaleHours => 'Backup overdue after (hours)';
 
   @override

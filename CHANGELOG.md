@@ -10,6 +10,7 @@ from the release branches; no tags existed for them.
 
 ### Changed
 - Consultation chat: customer and partner messages now push staff devices, at most once per thread per minute.
+- Partner job acceptance no longer waits on required training modules by default. Owner setting `training_gate_enabled` (운영 규칙, 파트너 품질, default off) turns the gate on; with it on, a published required module without completed progress blocks accept. Safe default: off, because partners have no way to publish or complete training yet.
 
 ### Added
 - Owner account (내 계정) for the console: one owner per server, claimed or handed over with both authenticator codes; owner-only actions need a fresh code each time; recovery codes re-issue, SMS alert number, password change, sign out everywhere; server-issued one-time reset (`api owner-reset`) after a lost second factor.
