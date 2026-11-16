@@ -15,11 +15,15 @@ class CustomerTestHost extends StatelessWidget {
     required this.env,
     required this.app,
     required this.home,
+    this.config = const RemoteConfig(),
   });
 
   final TestEnv env;
   final AppState app;
   final Widget home;
+
+  /// Server switches (maintenance). Wraps the whole app so pushed routes see them too.
+  final RemoteConfig config;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -42,6 +46,8 @@ class CustomerTestHost extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
+        builder: (context, child) =>
+            RemoteConfigScope(config: config, child: child!),
         home: home,
       ),
     ),
