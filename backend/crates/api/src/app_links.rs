@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Android App Links and Apple Universal Links for the Naver login callback (`https://DOMAIN/auth/naver/callback`).
 //! The OS fetches these files from the site before it hands that URL to the app. No values = 404, so the link is not verified.
 //! Values saved in the console (settings key `app_links`) replace the env values (`ANDROID_CERT_SHA256`, `APPLE_TEAM_ID`) as a set.

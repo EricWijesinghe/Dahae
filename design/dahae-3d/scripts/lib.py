@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Shared scene, materials, lighting, camera and modelling primitives (runs inside Blender).
 
 Model space: X right, Z up, front faces -Y. Builders use any size; the camera auto-fits.

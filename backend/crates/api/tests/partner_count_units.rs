@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! A partner job carries the owner's counts options (key and label) in catalogue order, including options added in the console.
 
 mod common;

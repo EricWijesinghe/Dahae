@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Booking rules shared by pay-now (bookings.rs) and checkout intents (checkouts.rs):
 //! request validation, server-side pricing, the paid-booking insert, and the deposit
 //! and balance steps. Nothing there decides money; callers own the transaction.

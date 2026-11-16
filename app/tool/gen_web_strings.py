@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Copies service names and descriptions from the app ARB files into the website.
 
 Run after gen_arb.py:  python -I app/tool/gen_web_strings.py

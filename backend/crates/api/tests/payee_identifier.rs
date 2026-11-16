@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Payee identifier (주민등록번호 or 사업자등록번호) for the 지급명세서: stored sealed, shown masked in profile reads,
 //! revealed only on request, and every set or reveal is audit-logged. A profile edit that omits it keeps it.
 

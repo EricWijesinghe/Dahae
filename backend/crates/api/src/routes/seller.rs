@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Public seller details (전자상거래법 제10조) as an HTML fragment. The website pages include it server-side
 //! (`{{httpInclude}}` in deploy/Caddyfile), so the seller block is in the HTML itself: crawlers, no-JS
 //! readers and store reviewers see it. Values come from the `business` setting the owner types in the console.

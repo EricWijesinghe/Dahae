@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! AI support agent over the real router and a migrated Postgres. A fake Anthropic endpoint stands in
 //! for the Messages API, so no test ever calls the real service.
 

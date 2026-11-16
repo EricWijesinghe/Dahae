@@ -1,4 +1,7 @@
-﻿<#
+﻿# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
+<#
 .SYNOPSIS
   Builds the complete Dahae hand-over package into <targets>\release-stage (one folder per audience).
 

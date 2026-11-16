@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Business KPI alerts and flow metrics over a migrated Postgres. Rows are inserted directly so every
 //! count is known in advance: unassigned bookings, the same-day cancel rate, no-shows per service and
 //! the median time to assign. Needs DATABASE_URL (sqlx::test).

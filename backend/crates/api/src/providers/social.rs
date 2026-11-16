@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Social sign-in: verifies a provider token server-side and returns the provider's stable user id.
 //! Dev mode accepts `dev:<id>` for any provider without network.
 

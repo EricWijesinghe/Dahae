@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Renewal calendar (갱신 일정): domain, hosting and account renewal dates. The owner gets texts 30 and 7 days
 // before each date. The keys check row follows the last upload test and cannot be edited here.
 

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console home tiles (상품 묶음): the four groups, their titles, order, icon, members and move-chooser questions.
 # Columns: ko (source), en.
 S = {

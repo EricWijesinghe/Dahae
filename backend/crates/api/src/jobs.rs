@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Shared runner for the periodic jobs. One replica runs a pass at a time, and every pass reports to
 //! the job metrics that `/metrics`, the status page and the `job_stalled` owner alert read.
 

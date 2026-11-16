@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Optional customer tip after a completed job. 100% goes to the partner; the platform keeps nothing.
 
 use crate::{DomainError, Won};

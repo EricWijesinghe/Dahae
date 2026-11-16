@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Personalized home feed: ranked, explained cards. Pure functions; the API gathers the facts
 //! (history, saved homes, consents, aggregate counts) and passes them in with today's date, so the
 //! same facts always produce the same feed. Each card carries a `reason` code the app explains

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Pure settle policy for checkouts: given the checkout and what the provider says, what happens next.
 //! No I/O here; `checkouts` carries the decision out.
 

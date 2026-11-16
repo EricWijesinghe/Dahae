@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Backend HTTP API. `main.rs` calls [`serve`]; integration tests build the router from these modules.
 //! New top-level modules are declared here (not in main.rs).
 

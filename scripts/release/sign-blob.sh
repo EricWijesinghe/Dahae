@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Keyless cosign signature of one published file (SHA256SUMS, the install page): writes <file>.bundle.
 # Runs only in release.yml (GitHub OIDC identity of the tagged workflow). Usage: sign-blob.sh <file>
 set -euo pipefail

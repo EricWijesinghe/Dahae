@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Conversion and retention rules: welcome offer, referral rewards, honest social-proof numbers.
 //! Pure functions; the API decides the facts (booking counts, payment state) and passes them in.
 

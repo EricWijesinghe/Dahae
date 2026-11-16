@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! RFC 6238 TOTP (HMAC-SHA1, 6 digits, 30 s steps) for staff two-factor sign-in.
 
 use crate::entropy;

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Wire contract shared by every route: framework failures use the error envelope, lists page by
 //! opaque cursor, bodies have per-group size limits, and deprecated routes announce their sunset.
 

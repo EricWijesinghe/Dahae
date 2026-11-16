@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 /// Dev-only helpers shared by the customer, partner and console test suites.
 /// Nothing here ships in an app build: every app lists this package under dev_dependencies.
 library;

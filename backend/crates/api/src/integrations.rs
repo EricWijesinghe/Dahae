@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Integration keys the owner enters in the console setup wizard.
 //!
 //! Each wizard card ("section") is stored as one AES-GCM encrypted JSON object in

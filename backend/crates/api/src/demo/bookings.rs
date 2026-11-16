@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Bookings and what hangs off them: payments, checkouts, quotes, completion reports, settlements and
 //! reviews. Money is won with VAT included, as the API stores it. Prices come from the domain crate.
 

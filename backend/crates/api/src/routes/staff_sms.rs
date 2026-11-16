@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Staff invites and password resets by one-time SMS code. A code is 6 digits, works once, lives 24 hours,
 //! and is burned after too many wrong guesses. The admin can copy the code instead of sending it by SMS.
 

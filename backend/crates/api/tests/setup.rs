@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Setup wizard flows: owner account from the one-time code, business profile, integration keys.
 
 mod common;

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner finance: period summary, time series, per-partner and per-service tables, accountant CSV exports,
 //! and the partner's own earnings. Money is integer won. One event query feeds every owner report, so the
 //! numbers on each screen and in each export agree.

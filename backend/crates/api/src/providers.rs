@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Adapters for paid external services. Dev mode uses in-process fakes so the
 //! whole system runs offline; production adapters plug in behind the same API.
 

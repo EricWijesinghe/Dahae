@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Retention purge (PIPA 제21조 파기). Runs hourly. What is purged, and why, is documented in
 //! `docs/privacy-retention.md`. Each run is idempotent; a failed step is logged and the next run retries it.
 

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # One command to regenerate every store image from the current app screens:
 #   1. raw screenshots of both apps at the store sizes (Flutter tests tagged store_screenshots)
 #   2. framed store images, Play feature graphics and a poster (Chromium via Playwright)

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Partner account: profile, preferences (services/areas/schedule), team, payout account, settlements, reviews.
 
 use super::auth::{PhoneBind, conflict_on_unique, consume_otp};

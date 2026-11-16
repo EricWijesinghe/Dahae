@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Training gate on job acceptance. Off by default, so a required module never blocks offers until the owner
 //! turns `training_gate_enabled` on. When on, a published required module without progress blocks, and
 //! completing it lifts the block. Needs DATABASE_URL (sqlx::test).

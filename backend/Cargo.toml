@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 [workspace]
 resolver = "3"
 members = ["crates/domain", "crates/api"]

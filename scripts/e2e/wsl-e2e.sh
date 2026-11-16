@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Inside a throwaway WSL distro (scripts/e2e/wsl-e2e.ps1 creates it), as root: check the distro is clean,
 # then run the real install end to end from an offline image tar (deploy/e2e-install.sh).
 # With an old install.sh as third argument it tests the upgrade instead: old install → data + backup → new install.sh.

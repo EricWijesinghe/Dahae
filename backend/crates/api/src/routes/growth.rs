@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Growth: welcome and referral offers, referral codes and rewards, review moderation, and the
 //! public social-proof numbers. Rewards are coupons; every price is still computed in booking_core.
 

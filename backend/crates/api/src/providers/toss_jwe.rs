@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! JWE body encryption for Toss payouts (지급대행). Per the guide (guides/v2/payouts): the request body
 //! is a compact JWE, `alg` = `dir` (the 64-hex security key is used directly), `enc` = `A256GCM`, with
 //! custom protected headers `iat` (ISO 8601 with offset) and `nonce` (unique value). Responses come back

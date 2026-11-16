@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Blender side: build each icon and render raw PNGs. Run via render_all.py, or directly:
 blender -b --python-exit-code 1 -P scripts/blender_render.py -- --out out [--only "nav_*,coupon"]"""
 import argparse

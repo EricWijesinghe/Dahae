@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 part of 'more.dart';
 
 /// Short day as the design writes it: "11.26" in Korean, the locale's month/day elsewhere.

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! 현금영수증 against a PortOne stand-in that replies with a recorded issue response, and a database
 //! fault on the local write. Needs DATABASE_URL (sqlx::test). The fixture is shaped from the PortOne
 //! SDK typings; it is replaced by a sandbox recording once the sandbox check is done.

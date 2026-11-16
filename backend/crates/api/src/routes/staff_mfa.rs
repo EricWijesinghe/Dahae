@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Staff second factor: TOTP enrolment, sign-in verification, and one-time recovery codes.
 //! Every step after the password runs on a short-lived MFA challenge token, never on an access token.
 

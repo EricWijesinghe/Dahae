@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Prometheus text exposition at `GET /metrics`. Label values are bounded on purpose: routes are
 //! matched route templates (`/v1/bookings/{id}`, never raw paths), unknown methods collapse to
 //! `OTHER`, and unmatched requests share one `unmatched` route. Scrapes need `METRICS_TOKEN` as a

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Optional override for WAL archiving. Adds the pgBackRest image and its S3 settings (read from .env).
 # Engineer path only: copy deploy/wal to /opt/malkkeum/wal, then see docs/DEPLOY.md, "WAL archiving".
 #   docker compose -f docker-compose.yml -f wal/docker-compose.wal.yml --env-file .env up -d --build db

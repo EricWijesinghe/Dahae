@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! What the customer is told to pay comes from the server: the booking price preview (peak, welcome,
 //! coupon), the `expected_total` guard on pay, and the amount on a virtual account, at confirm and
 //! when the account is opened again later. Same DB and fakes as flows.rs.

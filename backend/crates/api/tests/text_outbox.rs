@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Text messages (SMS, AlimTalk) through the notification outbox: the retry schedule, the dead-letter
 //! state and its owner alert, the channel chosen at enqueue, and OTP codes that stay inline.
 

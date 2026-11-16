@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 name: ui
 description: Design system — tokens, theme, components. Brand lives in BrandConfig.
 publish_to: none

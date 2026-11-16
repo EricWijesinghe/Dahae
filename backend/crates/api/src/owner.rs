@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner (소유자) gates. The owner is the one staff admin who changes accounts, staff roles and host settings.
 //! Every owner-only request carries a fresh TOTP in `X-Owner-Totp`; that step is burnt like a sign-in code,
 //! so one code authorises one request. The owner flag is read live, never from the token.

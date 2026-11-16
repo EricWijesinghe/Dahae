@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Self-test for deploy/install.sh and the `dahae` CLI it writes. No root, no Docker, nothing installed:
 # sources both with DAHAE_SELFTEST=1 (main is skipped) and runs the pure functions in a sandbox dir.
 # Usage: bash scripts/ci/installer-selftest.sh

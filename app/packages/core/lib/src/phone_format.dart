@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 /// Shows a Korean phone number in its usual grouping: 010-1234-5678 (mobile, 11 digits),
 /// 02-1234-5678 (Seoul, 2-digit area code) or 031-123-4567 (other landlines, 10 digits).
 /// A +82 prefix is converted to the domestic form. Partial input formats as far as it can,

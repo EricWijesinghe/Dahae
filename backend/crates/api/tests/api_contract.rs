@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Contract checks: the OpenAPI spec must describe every route the server mounts, every route the
 //! Flutter apps call, and the idempotency and paging promises the handlers make.
 

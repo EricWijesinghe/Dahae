@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner-queued host jobs over the real router and a migrated database: owner TOTP and admin role on owner kinds,
 //! one job file per accepted request (double clicks included), refused arguments write nothing, and status
 //! files come back as capped, known states only. Needs DATABASE_URL (sqlx::test).

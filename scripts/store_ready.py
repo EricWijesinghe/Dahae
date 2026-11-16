@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Makes the customer and partner apps store-ready. Idempotent: safe to run again.
 
   python -I scripts/store_ready.py

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:console/widgets/owner_forms.dart';
 import 'package:console/widgets/owner_totp_dialog.dart';
 import 'package:core/core.dart';

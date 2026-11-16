@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Remote config: feature flags, maintenance mode and store version floors in one public document.
 //! Apps read `GET /v1/config` (cached 30 s, here and at the edge); the console writes it.
 //! Maintenance lives in the settings registry (`ops` group), so the owner sets it in the same place as the limits.

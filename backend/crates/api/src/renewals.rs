@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Renewal calendar (갱신 일정). An item is due on a date. The owner gets one SMS 30 days and one SMS 7 days
 //! before it. The yearly keys test is derived from `key_bundle_checks.verified_at`, not stored as a row.
 

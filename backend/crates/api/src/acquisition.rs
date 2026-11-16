@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! First-touch acquisition: UTM and referral params the site and customer app captured. Stored once on customer
 //! signup (`users.acquisition`, never overwritten) and summarised for the console by source, medium and campaign.
 

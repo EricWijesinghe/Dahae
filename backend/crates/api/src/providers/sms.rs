@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Solapi (SMS + KakaoTalk AlimTalk) via REST API v4, HMAC-SHA256 header auth.
 //! Docs: https://docs.solapi.com (Authentication, messages/v4/send).
 

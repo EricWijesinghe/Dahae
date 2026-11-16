@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Catalogue gaps over the real router and a migrated database: a created service is listed only while
 //! active, archiving hides it from the public list, demo load refuses over real bookings, and demo clear
 //! needs the owner's TOTP code. Needs DATABASE_URL (sqlx::test).

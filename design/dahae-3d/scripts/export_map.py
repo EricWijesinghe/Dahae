@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """App icon ids (DAHAE-PLAN section 4) -> render name. Ids that share art are aliases: no second render.
 
 An id not listed here is not exported to the app. Value = render name under out/_raw/<name>__small.png.

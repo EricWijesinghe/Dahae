@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! 세금계산서 requests from business customers. The customer gives business details at checkout; once the checkout
 //! settles the request is queued for the owner. The owner exports the queue for the 홈택스 upload (layout UNVERIFIED,
 //! see domain::tax::TAX_INVOICE_HEADERS), issues on 홈택스, then marks each request issued with its approval number.

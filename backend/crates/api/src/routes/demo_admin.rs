@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Console: sample data for demos and training. Load needs an admin and refuses over real data; clear also
 //! needs the owner's TOTP code, the same gate as the keys bundle.
 

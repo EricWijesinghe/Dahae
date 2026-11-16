@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Staff second factor for every role, and step-up TOTP before customer export, deletion and payouts.
 //! Over the real router and a migrated database. Needs DATABASE_URL (sqlx::test).
 

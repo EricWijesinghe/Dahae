@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Guest sign-in reasons and the guest account hints (customer app).
 # Columns: ko (source), en.
 # {name} placeholders must match across languages (checked by gen_arb.py).

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner tax exports for an outside accountant or payroll service: the 지급명세서 CSV for withheld partners, and
 //! one row per person with paid amounts and withholding. Employees are included with their amounts; the system
 //! does not run payroll itself.

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 /// Design system shared by the customer, partner and console apps.
 ///
 /// Surfaces: [AppCard], [GlassBar], [Depth] (per-theme elevation).

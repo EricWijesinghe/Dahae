@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 use crate::DomainError;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};

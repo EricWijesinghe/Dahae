@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # End-to-end install test. Runs the real deploy/install.sh and the `dahae` command it installs against the two
 # server images built on this machine, then uses the stack the way an owner would.
 #

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Console content over the real router: the `news` kind (migration 0106) from create to the
 //! public, kind-filtered list the customer home reads.
 

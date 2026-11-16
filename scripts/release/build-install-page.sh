@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Builds the cloud-init generator page for one release: copies deploy/install-page/index.html with the SHA-256 of
 # that release's install.sh and its raw URL embedded. The page runs only in the owner's browser; the cloud-init
 # it generates downloads install.sh and refuses to run it unless the hash matches.

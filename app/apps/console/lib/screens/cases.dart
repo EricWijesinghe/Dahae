@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Case queue: claims, incidents and disputes. Staff triage, note, assign, reassign a no-show job,
 // and settle. Refunds and settlement holds are admin-only (the server refuses them otherwise).
 

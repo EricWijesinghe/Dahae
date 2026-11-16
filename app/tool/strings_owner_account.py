@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Owner account (내 계정) and owner-gate copy for the console. Columns: ko (source), en.
 S = {
   "err_owner_exists": ["이미 소유자가 있어요", "An owner is already set"],

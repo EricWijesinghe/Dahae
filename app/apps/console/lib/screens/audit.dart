@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Activity log: who did what and when, newest first. Read-only for the owner; the server refuses
 // anyone who is not the owner. Recorded details are shown as plain text.
 

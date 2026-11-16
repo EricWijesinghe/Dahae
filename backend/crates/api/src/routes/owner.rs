@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner account: claim and transfer of the owner role, recovery codes, alert number, password,
 //! sign out everywhere, and the one-time reset after a lost second factor.
 //! Owner-only routes take a TOTP per request (`owner::OwnerTotp`); the claim and transfer take the TOTP directly.

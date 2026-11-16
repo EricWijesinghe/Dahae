@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Home categories over the real router: the public group list the app reads, the console's audited
 //! edit, and the home type a quote carries (CR-8.1, CR-8.2).
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Sign-in hardening over the real router and a migrated database: refresh rotation with reuse detection,
 //! logout and logout-all, and the OTP resend cooldown and lifetime. Needs DATABASE_URL (sqlx::test).
 

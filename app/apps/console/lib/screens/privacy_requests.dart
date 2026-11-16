@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Customer rights requests: find a customer by phone, give them a copy of their data (CSV), or delete the
 // account (admins only, phone typed again). Every request is listed below with its outcome.
 

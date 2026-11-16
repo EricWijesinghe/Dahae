@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 arb-dir: lib/l10n
 template-arb-file: app_ko.arb
 output-dir: lib/src/gen

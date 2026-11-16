@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Points ledger over the real router and DB: earn, spend, refund-returns-points, expiry and
 //! the append-only guarantee. Same DB and fakes as flows.rs (needs DATABASE_URL, sqlx::test).
 

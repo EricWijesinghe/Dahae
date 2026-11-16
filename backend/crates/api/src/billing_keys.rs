@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Startup job that seals saved-card billing keys written before they were encrypted at rest.
 
 use crate::crypto;

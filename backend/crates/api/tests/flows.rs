@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! End-to-end flows over the real router and a migrated Postgres (sqlx::test creates one database per test).
 //! Needs DATABASE_URL pointing at a superuser on the local Postgres. Providers run as dev fakes.
 

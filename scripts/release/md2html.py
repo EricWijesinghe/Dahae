@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Renders one Markdown file to a standalone HTML page (stdlib only, no network).
 
   python -I scripts/release/md2html.py <in.md> <out.html> "<page title>"

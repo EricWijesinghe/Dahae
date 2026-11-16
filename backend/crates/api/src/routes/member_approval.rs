@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Platform owner approval for team members. A new invite waits as `pending_approval`; until the owner
 //! approves it the member sees no jobs or addresses and cannot be assigned. The team lead cannot approve.
 

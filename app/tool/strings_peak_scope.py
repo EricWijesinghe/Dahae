@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console peak tab: whether the surcharge also applies to fixed-price and subscription visits.
 # Columns: ko (source), en.
 S = {

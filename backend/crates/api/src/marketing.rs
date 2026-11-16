@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Marketing under 정보통신망법 (광고성 정보): campaigns from the console and lifecycle nudges.
 //! Every advertising send passes one gate, in this order: marketing consent (privacy.rs), quiet
 //! hours (21:00-08:00 KST, 제50조), and the weekly frequency cap. SMS ads carry the `(광고)` prefix

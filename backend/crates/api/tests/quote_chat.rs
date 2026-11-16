@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Quote card in chat: staff send-quote posts a structured card copied from the booking row, the
 //! customer pays the server-computed 10% deposit once (bound to the amount on the card they
 //! tapped), and a free-window cancel refunds it.

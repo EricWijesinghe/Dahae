@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Console: catalogue, pricing settings, coupons, content, pros, settlements, staff, customers.
 
 use super::{

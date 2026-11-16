@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Post-processing (Pillow): size exports, app icons, contact sheets, manifest, sanity checks."""
 import json
 import pathlib

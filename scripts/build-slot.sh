@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Runs one heavy command (cargo / flutter build or test) in the single shared build slot (builds queue one at a time), so parallel
 # builds never overload a shared development machine. Waits while free commit
 # charge is under 6 GB. Usage:  scripts/build-slot.sh cargo test -p api

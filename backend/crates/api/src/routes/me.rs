@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Customer account: profile, addresses, coupons, payment methods, devices, notifications.
 
 use super::auth::{PhoneBind, conflict_on_unique, consume_otp};

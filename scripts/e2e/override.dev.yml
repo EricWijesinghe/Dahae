@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Test-only: deploy/e2e-install.sh copies this to /opt/malkkeum/docker-compose.override.yml so scripts/smoke.py can
 # run against the installed stack (dev login codes, fake payments, seeded admin), then puts the normal one back.
 # DEV_MODE is refused with a public PUBLIC_BASE_URL (config.rs), so the API is reached on 127.0.0.1:18080 directly.

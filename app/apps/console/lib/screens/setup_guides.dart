@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Step-by-step guides for each setup-wizard card. Written for the person installing the
 // service, who may not be technical: every step says where to click and what to copy.
 // Korean first (the operators are in Korea); English for everyone else.

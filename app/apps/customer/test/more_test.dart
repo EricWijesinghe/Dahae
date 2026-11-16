@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:core/auth_pay.dart';
 import 'package:core/core.dart';
 import 'package:customer/screens/more.dart';

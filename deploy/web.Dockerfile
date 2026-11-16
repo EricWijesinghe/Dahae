@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Web image: Caddy serving the website (/), the customer web app (/app/), the console (/admin/) and proxying the API.
 # Build context: repository root.
 # Flutter web output is the same for every CPU, so this stage always runs natively on the build machine

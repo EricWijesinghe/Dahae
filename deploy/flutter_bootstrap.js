@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Production bootstrap for both Flutter web builds (copied into apps/*/web/ by deploy/web.Dockerfile only).
 // Keeps the browser on our own origin so the CSP in deploy/Caddyfile needs no Google host.
 {{flutter_js}}

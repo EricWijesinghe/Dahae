@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Multi-stage: build the API once, ship a small runtime image.
 # Base images are pinned by digest (Dependabot bumps them); the Rust version matches backend/rust-toolchain.toml.
 FROM rust:1.99.1-trixie@sha256:8a4e90c7946b74626488b1446f712c0fe0ed1a596cbd3d871684bc9c5433ae07 AS build

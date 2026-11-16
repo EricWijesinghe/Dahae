@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Migration safety gate. Fails when:
 
 - two migrations share a number, or a file name does not match NNNN_snake_case.sql;

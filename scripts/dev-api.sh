@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Starts local Postgres (port 5433) and the API in dev mode. Creates backend/.env on first run.
 # Postgres binaries: PG_BIN (or on PATH); data directory: PGDATA. Both can live in scripts/local.env.
 set -euo pipefail

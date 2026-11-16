@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Weekly full base backup to the WAL bucket, then a check that archiving still works. Engineer CLI, run
 # from the install folder (cron): bash wal/base-backup.sh
 set -euo pipefail

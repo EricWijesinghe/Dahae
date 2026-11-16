@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Release workflow rules that a diff can break silently.
 
   python -I scripts/release/check_workflows.py          (exit 1 on any violation)

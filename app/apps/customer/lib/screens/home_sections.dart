@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 part of 'home.dart';
 
 /// The group tiles in server order, four to a row (CR-2).

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Entry point (system Python + Pillow): render with Blender, then export sizes/app icons/contact sheets/manifest.
 
   python scripts/render_all.py                     # everything

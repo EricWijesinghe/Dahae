@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Postgres 17 with pgBackRest, for WAL archiving and base backups (see docs/DEPLOY.md, "WAL archiving").
 # The stock postgres:17 image stays the default; this image is used only through docker-compose.wal.yml.
 FROM postgres:17

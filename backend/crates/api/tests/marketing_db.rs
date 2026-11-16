@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Marketing dispatcher, weekly frequency cap, quiet-hour deferral, nudges, and the analytics funnel and
 //! cohort SQL, against real Postgres. Needs DATABASE_URL (sqlx::test). Time rules run at fixed instants
 //! through `dispatch_at` / `run_nudges_at`, so the tests do not depend on the wall clock's hour.

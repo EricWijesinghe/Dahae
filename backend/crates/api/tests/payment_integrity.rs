@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Checkout payment binding (one PortOne payment backs exactly one checkout) and durable
 //! compensating refunds (a failed refund is queued and retried, never reported as done).
 //! Same DB and dev fakes as flows.rs (needs DATABASE_URL, sqlx::test).

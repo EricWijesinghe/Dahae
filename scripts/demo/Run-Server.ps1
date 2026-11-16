@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Malkkeum demo server: Postgres + API in dev mode (login codes shown on screen, no SMS) with sample data.
 # Runs in its own window titled "Malkkeum Server". Closing that window stops the server.
 $ErrorActionPreference = 'Stop'

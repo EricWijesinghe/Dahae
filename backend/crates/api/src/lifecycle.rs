@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Process lifecycle: liveness and readiness probes, the shutdown signal, and stopping background jobs.
 //!
 //! Shutdown order on SIGTERM (or Ctrl+C): the hub starts draining, so WebSockets close with 1012

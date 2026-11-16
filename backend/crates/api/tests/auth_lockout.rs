@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Lockout, owner alert and signed-in device rules over the real router and a migrated database.
 //! Needs DATABASE_URL (sqlx::test).
 

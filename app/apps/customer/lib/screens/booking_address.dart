@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:core/core.dart';
 
 /// The visit address with its district, e.g. "서울특별시 영등포구 여의대로 108 · 1203호".

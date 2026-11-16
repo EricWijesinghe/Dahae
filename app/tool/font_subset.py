@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Dahae Sans = Pretendard (Kil Hyung-jin, SIL OFL 1.1) subset for the ui package (all 5 apps bundle it).
 The OFL reserves the name "Pretendard", so the modified fonts are renamed: family "Dahae Sans" / "Dahae Sans Full".
 

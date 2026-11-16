@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Verifies a sign-blob.sh bundle: the signer must be the release workflow of <owner/repo> on a v* tag, issued
 # through GitHub Actions OIDC (the same identity rule as signer_re in deploy/install.sh).
 # Usage: verify-blob.sh <file> <owner/repo>

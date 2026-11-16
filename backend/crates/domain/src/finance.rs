@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner finance rules: reporting periods, chart buckets, VAT estimate and CSV escaping.
 //! Pure: callers pass the anchor date (KST) and get inclusive date ranges back.
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Payee identifier for the 지급명세서: 주민등록번호 (individual) or 사업자등록번호 (business). Pure checks and masking.
 
 use crate::{DomainError, cash_receipt::normalize_business_number};

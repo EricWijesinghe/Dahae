@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # 다해 서버 작업 실행기. root 로 돌고, systemd 가 jobs/inbox 에 작업 파일이 생기면 깨워요 (1분마다도 한 번 봐요).
 # 작업 파일은 API 컨테이너가 써요. 이 파일은 정해진 명령만 실행하고, 파일 내용을 셸로 해석하지 않아요.
 #   사용법: agent.sh run   (dahae-agent.service 가 불러요)

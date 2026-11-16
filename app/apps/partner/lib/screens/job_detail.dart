@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 part of 'jobs.dart';
 
 class JobDetailScreen extends StatefulWidget {

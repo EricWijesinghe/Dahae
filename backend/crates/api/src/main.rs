@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 /// Container probe (the runtime image has no curl). `--health`: liveness, `--ready`: DB and migrations.
 async fn probe(path: &str) -> i32 {
     let port = std::env::var("BIND_ADDR")

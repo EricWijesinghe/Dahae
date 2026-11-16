@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Cases: claims, incidents and disputes. Customers and partners file on their own bookings; staff
 //! triage, assign, note and settle. Refunds and settlement holds are admin-only. Every move is audited.
 

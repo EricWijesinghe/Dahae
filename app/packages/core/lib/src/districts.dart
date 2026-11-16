@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 /// Service area (decision #8): Seoul's 25 districts with official 5-digit codes.
 /// Add rows to open new areas; partners filter jobs by these codes.
 class District {

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! The console's estimate breakdown for a booking carries the same peak surcharge the booking was
 //! priced with, so the desk never shows a lower auto-estimate than the booking total (K-05).
 

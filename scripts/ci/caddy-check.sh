@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # deploy/Caddyfile parses with every environment the installer can write (ACME_EMAIL empty or set,
 # TLS_MODE empty or internal), with the exact Caddy image from deploy/web.Dockerfile. The install e2e only
 # covers the internal-CA case, so a public-HTTPS parse error would otherwise first show up on a real server.

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner-editable settings over the real router and DB: database beats env, every write is audited,
 //! read-only and tighten-only rules hold, a bad entry rejects the whole group, and only staff admins get in.
 //! Needs DATABASE_URL (sqlx::test).

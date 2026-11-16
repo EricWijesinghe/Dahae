@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Writes installer_manifest.json (release tag and the SHA-256 of each published installer file) and
 # installer_manifest.json.sig (ed25519 signature, base64). The public key is baked into the desktop helper,
 # so an installer release never needs a new app build. Usage: make-manifest.sh <tag> <dir> <private-key.pem>

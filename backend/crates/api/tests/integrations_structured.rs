@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Console integration sections over the real router: a Toss payout change needs the owner's TOTP in the request,
 //! while a manual payout save does not. Needs DATABASE_URL (sqlx::test).
 

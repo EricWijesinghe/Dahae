@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner-editable settings. Resolution order per key: the stored row (`settings.key = 'reg.<key>'`), then the
 //! env seed from `Config` (integer keys only), then the compiled default. Writes are validated against the
 //! registry as a whole (all or nothing), the order rules are checked on the resulting values, and each changed

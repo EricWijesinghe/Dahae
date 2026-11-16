@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Malkkeum points ledger: cashback and welcome/referral grants, spend in split payments,
 //! refund-returns-points, expiry and console adjustments. Loyalty only (no cash top-up, see
 //! docs/finance-tax.md). Rules live in domain::points; this module moves rows. Every write is

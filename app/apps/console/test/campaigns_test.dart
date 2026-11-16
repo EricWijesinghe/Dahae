@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:console/screens/analytics_view.dart';
 import 'package:console/screens/campaign_tab.dart';
 import 'package:console/screens/campaigns.dart';

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Household profile saved per address and copied into each booking. Free text is for staff and
 //! partners to read; no field here is used for pricing.
 

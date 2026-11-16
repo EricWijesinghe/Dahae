@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Launch safety: encrypted entry codes, check-in/out, cases, no-show and reassignment, AI handoff
 //! cases. Same DB and fakes as the other flow tests.
 

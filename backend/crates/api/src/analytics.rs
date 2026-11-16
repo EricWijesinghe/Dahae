@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! First-party product analytics. The apps send events only after the user opts in (consent is checked in
 //! the app, not here). Events are anonymous: a random per-install id and an allowlisted name, screen and
 //! platform. No user id, no free text, no contact data. Rows older than 90 days are purged (retention.rs).

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Sample data for demos and training: `api demo load [--force]` fills the app's tables with a coherent
 //! Korean dataset, `api demo clear` removes exactly what load wrote.
 //!

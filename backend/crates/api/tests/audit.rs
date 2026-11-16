@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Staff activity log over the real router and a migrated database: owner only, newest first,
 //! cursor pages with no gaps or repeats, filters that match Seoul calendar days, and bad input refused.
 

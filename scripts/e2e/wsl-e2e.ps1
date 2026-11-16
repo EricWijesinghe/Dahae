@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # One-click install, tested for real in a throwaway WSL distro (never the CI runner distro, never `wsl --shutdown`).
 #   1. Build the images once and save them (no registry), e.g. in the CI distro through the build slot:
 #        docker build --build-arg APP_VERSION=e2e --build-arg CARGO_BUILD_JOBS=4 -t ghcr.io/ericwijesinghe/malkkeum-api:e2e backend

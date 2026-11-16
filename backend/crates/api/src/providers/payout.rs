@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Partner payout transfers. Two adapters behind one interface:
 //! - `manual` (default): nothing is sent. The owner transfers from the bank app and confirms.
 //! - `toss`: Toss Payments 지급대행 (payouts API). Each pro is registered as a seller first; a payout's

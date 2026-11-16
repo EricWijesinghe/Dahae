@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! No-show watch. An assigned partner who has not checked in `NOSHOW_GRACE_MINUTES` after the arrival
 //! window starts opens a no-show case and alerts staff. Staff can move the job to another partner
 //! who matches the partner's prefs (same rule as the feed) and tell everyone.

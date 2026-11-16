@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Checks installer_manifest.json against its ed25519 signature, then the files and SHA256SUMS against it.
 # Fails closed on any mismatch. Usage: verify-manifest.sh <dir> <public-key.pem> [expected-tag]
 set -euo pipefail

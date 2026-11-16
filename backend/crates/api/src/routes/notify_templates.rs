@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Console: owner-edited push and inbox text, per notification event and language (`i18n::EVENTS`).
 
 use super::audit;

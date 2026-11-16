@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Checks the public SEO pages of a running site: sitemap -> every /c/ page renders with valid JSON-LD,
 and every static page (home, legal, partners) has a title, description, canonical and og:image.
 

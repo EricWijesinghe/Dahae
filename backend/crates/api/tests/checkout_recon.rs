@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Daily PortOne payment pull and stale checkout sweep against a recorded provider: each
 //! disagreement with local checkouts is logged once, the pass runs at most once per KST day after
 //! the settle hour, and the stale sweep alerts only on paid checkouts inside its window.

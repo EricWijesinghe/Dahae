@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Liveness for WebSocket sockets: a ping cadence and a silence clock that reaps dead peers.
 
 use std::time::Duration;

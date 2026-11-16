@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Counts services (CR-5 aircon/sofa/mattress steppers, CR-6 disinfection cards, window counts):
 # option names, short labels for summaries ("벽걸이 1 · 스탠드 2"), counts-screen hints. One row per key.
 # Columns: ko (source), en. S below is derived for gen_arb.py.

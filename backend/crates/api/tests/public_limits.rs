@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Public write routes that anonymous clients can reach: a body cap on error reports and analytics batches,
 //! and a per-IP budget on analytics ingest. Over the real router and a migrated database.
 //! Needs DATABASE_URL (sqlx::test).

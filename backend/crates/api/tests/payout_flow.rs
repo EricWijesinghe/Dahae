@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Payout reconciliation and money safety over a migrated Postgres: background sync (status only,
 //! never a second send), owner alerts, batch amount checks, booking cancel vs batches, future-date
 //! refusal, and no-store on account reveal. Needs DATABASE_URL (sqlx::test).

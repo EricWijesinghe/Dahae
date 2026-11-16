@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Builds packages/core/lib/l10n/app_<lang>.arb from the strings_*.py tables.
 
 One table per app area keeps Korean and English side by side, so a missing

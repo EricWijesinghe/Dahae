@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Socket tickets over the real router and a migrated database: issue, single use, expiry, role binding,
 //! and the WebSocket upgrade accepting a ticket (and the deprecated access-token form). Needs DATABASE_URL.
 

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Static checks for the native store builds (customer, partner). No Mac or device needed.
 
   python -I scripts/ci/check-native.py     # exit 1 on any failed check

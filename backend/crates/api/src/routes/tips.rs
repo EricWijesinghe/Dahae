@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Customer tip after a completed job. Charged to the saved payment method like the job payment. The
 //! whole amount is added to the partner's settlement (`domain::tip::split_tip`), so it pays out with it.
 

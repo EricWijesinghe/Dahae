@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Malkkeum one-click demo: server (own window) + owner console + Android emulator with both apps.
 #   "Malkkeum Demo.cmd" -> this script. Every step is checked; it stops with a clear message instead of half-working.
 $ErrorActionPreference = 'Stop'

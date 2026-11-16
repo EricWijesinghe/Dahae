@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Quote address step: note when the chosen layout and the saved address size disagree (C-03).
 # Actions: change the layout (back to the 구조 page) or edit the saved size.
 COLS = ["ko", "en"]

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 #![allow(dead_code)]
 //! Shared helpers for the DB-backed flow tests: the router with dev-mode fakes, a JSON call helper,
 //! and setup steps (sign-in, verified pro, customer with card and address, paid booking).

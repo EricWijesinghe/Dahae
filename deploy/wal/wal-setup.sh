@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Turns on WAL archiving once the S3 settings are in .env. Engineer CLI, run from the install folder.
 # Order matters: the pgBackRest image comes up healthy with archiving still off, then WAL_ARCHIVE_MODE goes on
 # (a restart), then the stanza is created, checked and backed up. If that fails, archiving goes back off, so a

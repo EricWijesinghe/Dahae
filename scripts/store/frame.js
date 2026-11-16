@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Frames the raw store screenshots (written by the Flutter store-shot tests) into store images:
 // brand gradient, headline caption, device frame. Also renders the Play feature graphic (1024x500)
 // and a 1080x1920 poster. Rendered by Chromium through Playwright, so Korean, Japanese, Chinese and

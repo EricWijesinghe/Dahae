@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Background Toss payout sync. Every pass asks the provider about transfers that are still open
 //! (sent, or requested after an ambiguous send). It never sends money. Each row goes through the
 //! same locked path as the owner's "sync" button. Also counts the payouts the owner must hear about.

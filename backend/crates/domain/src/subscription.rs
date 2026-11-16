@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Regular cleaning subscriptions: visit schedule, per-visit price, charge retry policy, MRR and churn.
 //! Pure and deterministic. Money is integer won; dates are KST calendar dates chosen by the caller.
 

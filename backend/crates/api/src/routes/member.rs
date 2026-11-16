@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Team member (partner app login): assigned jobs only, with full address once the owner approved them, and completion.
 //! Members never see payouts; settlement is written to the owner (`pro_id`) like owner completions.
 

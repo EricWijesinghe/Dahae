@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Partner jobs: feed, preview, atomic accept, quotes, schedule, assignment, memo, completion, reschedule replies.
 
 use super::{

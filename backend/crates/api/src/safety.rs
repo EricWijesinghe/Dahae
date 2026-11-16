@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Launch safety: entry/door codes (encrypted at rest, revealed on the visit day only), emergency
 //! contacts, and the case state machine. Codes never go into push, SMS, AI context or logs.
 

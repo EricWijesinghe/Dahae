@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Bank names for PortOne V2 `Bank` codes, as shown on the virtual-account screen. Columns: ko (source), en.
 # Keys are bank + the code in camel case (see bankName in packages/core/lib/src/pay_i18n.dart).
 # Banks that issue deposit accounts only; securities firms and guarantee funds fall back to the raw code.

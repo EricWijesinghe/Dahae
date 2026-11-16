@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Business rules shared by the API server and (through FFI later) the apps.
 //! Everything here is pure and deterministic: callers pass "today" and data in.
 

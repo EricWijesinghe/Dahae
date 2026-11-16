@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Counts services over the real router: a booking takes one count per option, prices it on the
 //! server and returns the counts. Legacy unit_index bookings (mattress) keep working.
 

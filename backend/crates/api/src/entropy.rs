@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Keys, nonces, tokens and OTP draws read the OS directly (getrandom via `SysRng`), as the old `OsRng` did.
 
 use rand::{RngExt, TryRng, rand_core::UnwrapErr, rngs::SysRng};

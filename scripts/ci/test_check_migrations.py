@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Tests for check-migrations.py. Run: python3 -I -m unittest discover -s scripts/ci -p 'test_*.py'"""
 
 import importlib.util

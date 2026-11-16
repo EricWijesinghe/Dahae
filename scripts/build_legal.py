@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Generates the website's legal and partner pages from one shared layout.
 # Run from the repo root:  python -I scripts/build_legal.py website
 # Check only (exit 1 when a page differs from the generator):  python -I scripts/build_legal.py website --check

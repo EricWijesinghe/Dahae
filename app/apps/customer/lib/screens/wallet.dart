@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Points wallet, payment history with receipts, and refund status. Every number comes from the
 // server; the receipt's business details come from the public business profile (GET /brand).
 

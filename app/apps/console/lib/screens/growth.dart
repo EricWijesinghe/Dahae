@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Marketing > growth: sign-up welcome coupons, welcome offer and referral settings, plus review moderation.
 // Settings are saved as a whole; the server validates ranges and writes an audit row.
 

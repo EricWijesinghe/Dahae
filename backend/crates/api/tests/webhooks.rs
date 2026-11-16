@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Provider webhooks over HTTP. PortOne: the Standard Webhooks signature is the gate, and a
 //! replayed event changes nothing. Toss: the body is ignored and each delivery kicks one payout pass.
 //! Events name unknown payments, so no provider API is called; the replay test settles a real checkout.

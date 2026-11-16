@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Client error reports from every app (core `ErrorReporter`): `POST /v1/client-errors` stores a capped,
 //! PII-scrubbed row; the console lists the latest ones. `app` is the surface: customer web, Windows,
 //! Android and iOS, the console, and the partner app per platform.
