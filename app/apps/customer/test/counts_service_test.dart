@@ -148,7 +148,14 @@ void main() {
     );
     await settle(tester);
     expect(_barAmount(119000), findsOneWidget);
-    expect(find.text(koT.duration(120)), findsOneWidget);
+    // The unit cards also say 2시간; the bar caption is the booking's duration.
+    expect(
+      find.descendant(
+        of: find.byType(PriceBar),
+        matching: find.text(koT.duration(120)),
+      ),
+      findsOneWidget,
+    );
     await unmount(tester);
   });
 

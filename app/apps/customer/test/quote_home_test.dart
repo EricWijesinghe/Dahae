@@ -149,7 +149,7 @@ void main() {
 
       expect(find.text(_chip('whole_home', 1, 6)), findsOneWidget);
       expect(
-        find.byType(CircleChoice),
+        find.text(koT.type_lived_in_deep_clean),
         findsNothing,
         reason: 'the cleaning type page is skipped',
       );
@@ -217,9 +217,17 @@ void main() {
       await _tap(tester, _next()); // date and hour, preselected
       expect(find.text(_chip('whole_home', 5, 6)), findsOneWidget);
 
-      await _tap(tester, find.text(koT.dfChange).at(1));
+      // 변경 inside the 기본 정보 section (the review lists 집 정보, 기본 정보 first).
+      final basicSection = find.ancestor(
+        of: find.text(koT.dfBasicInfo),
+        matching: find.byType(FlowSection),
+      );
+      await _tap(
+        tester,
+        find.descendant(of: basicSection, matching: find.text(koT.dfChange)),
+      );
       expect(find.text(_chip('whole_home', 1, 6)), findsOneWidget);
-      expect(find.byType(CircleChoice), findsNothing);
+      expect(find.text(koT.type_lived_in_deep_clean), findsNothing);
       for (var i = 0; i < 4; i++) {
         await _tap(tester, _next());
       }
