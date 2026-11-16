@@ -52,7 +52,14 @@ say()  { printf '\n\033[1;34m▶ %s\033[0m\n' "$*"; }
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m✘ %s\033[0m\n' "$*" >&2; exit 1; }
-dc()   { docker compose --env-file .env "$@"; }
+dc() { # WAL 보관이 켜져 있으면 pgBackRest 이미지 설정(wal/)을 항상 같이 써요: 기본 이미지에는 pgbackrest 가 없어서 아카이브가 실패해요
+  local -a compose_files=(-f docker-compose.yml)
+  if [ "$(env_get WAL_ARCHIVE_MODE)" = on ]; then
+    [ -f wal/docker-compose.wal.yml ] || { echo "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." >&2; return 1; }
+    compose_files+=(-f wal/docker-compose.wal.yml)
+  fi
+  docker compose "${compose_files[@]}" --env-file .env "$@"
+}
 has_tty() { (: </dev/tty) 2>/dev/null; }
 env_get() { { grep -E "^$1=" .env 2>/dev/null || true; } | tail -n1 | cut -d= -f2-; }
 
@@ -334,7 +341,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
     # Sized for a 2 GB VPS (API pool 10 + headroom). Autovacuum is tuned for churn; see docs/DEPLOY.md.
     command: >-
-      postgres -c shared_buffers=256MB -c effective_cache_size=1GB -c work_mem=8MB -c maintenance_work_mem=128MB -c max_connections=50 -c wal_compression=on -c max_wal_size=1GB -c min_wal_size=256MB -c checkpoint_completion_target=0.9 -c random_page_cost=1.1 -c password_encryption=scram-sha-256 -c autovacuum_max_workers=2 -c autovacuum_naptime=30s -c autovacuum_vacuum_scale_factor=0.05 -c autovacuum_analyze_scale_factor=0.02 -c autovacuum_vacuum_cost_limit=1000 -c log_min_duration_statement=500 -c log_lock_waits=on -c log_temp_files=10MB -c log_checkpoints=on
+      postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=top -c archive_mode=${WAL_ARCHIVE_MODE:-off} -c "archive_command=pgbackrest archive-push %p" -c archive_timeout=300 -c shared_buffers=256MB -c effective_cache_size=1GB -c work_mem=8MB -c maintenance_work_mem=128MB -c max_connections=50 -c wal_compression=on -c max_wal_size=1GB -c min_wal_size=256MB -c checkpoint_completion_target=0.9 -c random_page_cost=1.1 -c password_encryption=scram-sha-256 -c autovacuum_max_workers=2 -c autovacuum_naptime=30s -c autovacuum_vacuum_scale_factor=0.05 -c autovacuum_analyze_scale_factor=0.02 -c autovacuum_vacuum_cost_limit=1000 -c log_min_duration_statement=500 -c log_lock_waits=on -c log_temp_files=10MB -c log_checkpoints=on
     shm_size: 256mb
     volumes: [dbdata:/var/lib/postgresql/data]
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U app -d cleaning"], interval: 5s, retries: 20 }
@@ -446,7 +453,14 @@ USAGE='사용법: dahae <명령>
   keys-restore 파일 [--yes]   새 서버에 예전 비밀 키 넣기 (restore-offsite 전에)
   alert update|backup|ssh     자동 작업 실패·SSH 차단 증가를 외부 가동 확인 주소로 알리기 (예약 작업·서버 점검용)'
 
-dc() { docker compose --env-file .env "$@"; }
+dc() { # WAL 보관이 켜져 있으면 pgBackRest 이미지 설정(wal/)을 항상 같이 써요: 기본 이미지에는 pgbackrest 가 없어서 아카이브가 실패해요
+  local -a compose_files=(-f docker-compose.yml)
+  if [ "$(env_get WAL_ARCHIVE_MODE)" = on ]; then
+    [ -f wal/docker-compose.wal.yml ] || { echo "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." >&2; return 1; }
+    compose_files+=(-f wal/docker-compose.wal.yml)
+  fi
+  docker compose "${compose_files[@]}" --env-file .env "$@"
+}
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m✘ %s\033[0m\n' "$*" >&2; exit 1; }
@@ -1029,6 +1043,10 @@ cmd_write_cron() { # 예약 작업표(/etc/cron.d/malkkeum)를 다시 써요: �
       echo "$((10#$mm)) $((10#$hh)) * * $dow root flock -n -E 0 /run/dahae.lock $BIN/dahae auto-update >> $DIR/backups/update.log 2>&1 || $BIN/dahae alert update >> $DIR/backups/update.log 2>&1"
     fi
     echo "*/5 * * * * root $BIN/malkkeum-heartbeat >> $DIR/backups/heartbeat.log 2>&1"
+    # WAL 보관을 켰으면 주 1회 전체 백업 (일요일 02:15). 설정이 없으면 줄을 쓰지 않아요.
+    if [ "$(cd "$DIR" && env_get WAL_ARCHIVE_MODE)" = on ] && [ -f "$DIR/wal/base-backup.sh" ]; then
+      echo "15 2 * * 0 root cd $DIR && flock -w 3600 /run/dahae.lock bash wal/base-backup.sh >> $DIR/backups/wal.log 2>&1 || $BIN/dahae alert backup >> $DIR/backups/wal.log 2>&1"
+    fi
   } > "$tmp"
   chmod 644 "$tmp"
   mv -f "$tmp" /etc/cron.d/malkkeum   # cron 은 점(.)이 든 파일 이름을 무시하므로 임시 파일은 설치 폴더에 둬요
