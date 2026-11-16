@@ -90,7 +90,7 @@ async fn virtual_account_carries_the_charge_after_points_at_confirm_and_when_lis
     let va = &done["virtual_account"];
     assert_eq!(va["amount"].as_i64(), Some(charge), "deposit the charge, not the total: {done}");
     assert_eq!(va["account_number"], "123-456-789012", "{done}");
-    assert_eq!(va["bank"], "KB", "{done}");
+    assert_eq!(va["bank"], "KOOKMIN", "the real PortOne code, so the app shows 국민은행: {done}");
 
     // Opened again later (bookings banner, another device): the same amount.
     let (st, list) = call(&app, "GET", "/v1/checkouts?status=awaiting_deposit", token, None).await;

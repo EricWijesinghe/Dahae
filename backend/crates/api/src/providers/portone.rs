@@ -373,7 +373,7 @@ pub fn dev_payment(id: &str, total: i64) -> Option<PaymentInfo> {
         _ if dev_method(id).is_some() && id != "dev:virtual_account" => ("PAID", json!({ "type": "PaymentMethodEasyPay", "easyPayProvider": &id[4..] })),
         "dev:va" | "dev:virtual_account" => (
             "VIRTUAL_ACCOUNT_ISSUED",
-            json!({ "type": "PaymentMethodVirtualAccount", "bank": "KB", "accountNumber": "123-456-789012" }),
+            json!({ "type": "PaymentMethodVirtualAccount", "bank": "KOOKMIN", "accountNumber": "123-456-789012" }),
         ),
         "dev:failed" => ("FAILED", json!({})),
         _ if Uuid::parse_str(id).is_ok() => ("PAID", json!({ "type": "PaymentMethodCard" })),
