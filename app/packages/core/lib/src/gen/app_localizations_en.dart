@@ -2830,7 +2830,7 @@ class TEn extends T {
 
   @override
   String get dfPgNotice =>
-      'Payments are processed by a licensed payment gateway (PG). By paying you agree to the terms of service and the cancellation & refund policy.';
+      'Payments are processed by a licensed payment gateway (PG).';
 
   @override
   String get dfRefundPolicy => 'Cancellation & refund policy';

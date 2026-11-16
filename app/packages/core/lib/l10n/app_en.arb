@@ -879,7 +879,7 @@
  "dfBaseAmount": "Base price ({duration})",
  "dfCouponDiscount": "Coupon discount",
  "dfDue": "Amount to pay",
- "dfPgNotice": "Payments are processed by a licensed payment gateway (PG). By paying you agree to the terms of service and the cancellation & refund policy.",
+ "dfPgNotice": "Payments are processed by a licensed payment gateway (PG).",
  "dfRefundPolicy": "Cancellation & refund policy",
  "dfSummaryService": "Service",
  "dfSummaryWhen": "Visit",
