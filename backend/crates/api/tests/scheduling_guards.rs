@@ -257,3 +257,53 @@ async fn stale_visit_stamp_is_refused_after_a_cancellation(pool: PgPool) {
         .expect("row");
     assert!(stamped.is_none(), "a cancelled job takes no departure stamp");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn confirming_a_reschedule_is_refused_once_the_booking_is_closed(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5400-0316").await;
+    let (pro, _) = verified_pro(&app, &pool, "010-5400-0317").await;
+    for (n, closed) in [(10, -1_i16), (12, 3)] {
+        let (id, _) = book(&app, &c, n, None).await;
+        accept(&app, id, pro.as_str()).await;
+        let before = slot(&pool, id).await;
+        let body = serde_json::json!({ "visit_date": before.0 + chrono::Duration::days(1), "start_hour": 14 });
+        let (st, b) = call(&app, "POST", &format!("/v1/bookings/{id}/reschedule"), Some(c.token.as_str()), Some(body)).await;
+        assert_eq!(st, StatusCode::OK, "{b}");
+        // Cancelled or completed while the request was still open.
+        sqlx::query("UPDATE bookings SET status = $2 WHERE id = $1")
+            .bind(id)
+            .bind(closed)
+            .execute(&pool)
+            .await
+            .expect("close");
+
+        let (st, b) = call(
+            &app,
+            "POST",
+            &format!("/v1/partner/jobs/{id}/reschedule"),
+            Some(pro.as_str()),
+            Some(serde_json::json!({ "accept": true })),
+        )
+        .await;
+        assert_eq!(
+            (st, b["error"]["code"].as_str()),
+            (StatusCode::CONFLICT, Some("booking_closed")),
+            "status {closed}: {b}"
+        );
+        let after = slot(&pool, id).await;
+        assert_eq!((after.0, after.1), (before.0, before.1), "status {closed}: a closed job is not moved");
+        let told: i64 = sqlx::query_scalar(
+            "SELECT (SELECT count(*) FROM notifications WHERE owner_id = $1 AND kind = $2 AND data->>'booking_id' = $3)
+                  + (SELECT count(*) FROM notification_outbox WHERE owner_id = $1 AND kind = $2 AND data->>'booking_id' = $3)",
+        )
+        .bind(c.user)
+        .bind("booking.reschedule_confirmed")
+        .bind(id.to_string())
+        .fetch_one(&pool)
+        .await
+        .expect("notices");
+        assert_eq!(told, 0, "status {closed}: the customer is not told a closed booking moved");
+    }
+}

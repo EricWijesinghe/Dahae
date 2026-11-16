@@ -540,6 +540,9 @@ async fn reply_reschedule(State(s): State<AppState>, Pro(a): Pro, Path(id): Path
     if b.pro_id != Some(a.id) || b.reschedule.is_none() {
         return Err(ApiError::NotFound);
     }
+    if !(0..=2).contains(&b.status) {
+        return Err(ApiError::Conflict("booking_closed"));
+    }
     if r.accept {
         confirm_reschedule(&s, &b, a.id).await?;
         notify(
@@ -585,7 +588,7 @@ async fn confirm_reschedule(s: &AppState, b: &BookingRow, pro: Uuid) -> ApiResul
     let moved = sqlx::query(
         "UPDATE bookings SET visit_date = COALESCE((reschedule->>'to_date')::date, visit_date),
            start_hour = COALESCE((reschedule->>'to_hour')::smallint, start_hour), reschedule = NULL, updated_at = now()
-         WHERE id = $1 AND pro_id = $2 AND reschedule IS NOT NULL",
+         WHERE id = $1 AND pro_id = $2 AND reschedule IS NOT NULL AND status BETWEEN 0 AND 2",
     )
     .bind(b.id)
     .bind(pro)

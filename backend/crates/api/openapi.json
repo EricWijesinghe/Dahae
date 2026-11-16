@@ -2080,7 +2080,7 @@
         "tags": [
           "pro"
         ],
-        "summary": "Accept or decline a reschedule request",
+        "summary": "Accept or decline a reschedule request (409 booking_closed once the booking is cancelled or completed; schedule_overlap, booking_changed or slot_full when the slot can no longer be taken)",
         "parameters": [
           {
             "$ref": "#/components/parameters/Id"
@@ -2092,6 +2092,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
           },
           "default": {
             "$ref": "#/components/responses/Error"
