@@ -9036,6 +9036,18 @@ abstract class T {
   /// **'판매자 상태: {status}'**
   String poSellerDone(String status);
 
+  /// No description provided for @cgPeakFixedScope.
+  ///
+  /// In ko, this message translates to:
+  /// **'정해진 가격·정기 청소에도 할증 적용'**
+  String get cgPeakFixedScope;
+
+  /// No description provided for @cgPeakFixedScopeHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'끄면 정해진 가격과 정기 청소는 기본 가격으로 예약돼요. 견적은 항상 할증을 보여줘요'**
+  String get cgPeakFixedScopeHint;
+
   /// No description provided for @oFlags.
   ///
   /// In ko, this message translates to:
