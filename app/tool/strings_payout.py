@@ -36,4 +36,14 @@ S = {
   "poSellerPhone": ["연락처", "Phone"],
   "poSellerSubmit": ["등록하기", "Register"],
   "poSellerDone": ["판매자 상태: {status}", "Seller status: {status}"],
+  # A Toss send that ended without a clear answer (Toss timed out or erred).
+  "poCheckToss": ["Toss에서 확인하기", "Check with Toss"],
+  "poCheckPending": ["토스에 아직 이 송금 기록이 없어요. 몇 분 뒤 다시 확인해 주세요.", "Toss has no record of this payout yet. Check again in a few minutes."],
+  "poNotSent": ["송금되지 않았음을 확인", "Confirm it was not sent"],
+  "poNotSentTitle": ["정말 송금되지 않았나요?", "Was this payout really not sent?"],
+  "poNotSentBody": ["토스가 응답하지 않아 이 지급이 실제로 나갔는지 자동으로 확인할 수 없어요.\n\n토스페이먼츠 상점관리자에 로그인해 지급대행 내역에서 {name} 님, {amount} 건을 찾아 주세요.\n\n• 내역이 없거나 '실패' 또는 '취소'로 보이면 송금되지 않은 거예요. 아래에서 확인하면 이 지급이 실패로 바뀌고, 예약 취소와 다시 보내기를 할 수 있어요.\n• '요청됨', '처리 중', '완료'로 보이면 돈이 나갔거나 나가는 중이에요. 확인하지 말고 나중에 'Toss에서 확인하기'를 다시 눌러 주세요.", "Toss did not answer, so we can't tell automatically whether this payout left.\n\nSign in to the Toss Payments merchant dashboard and look in the payouts list for {name}, {amount}.\n\n• If it isn't there, or it shows failed or cancelled, it was not sent. Confirm below: this payout becomes failed, and you can cancel the booking or send it again.\n• If it shows requested, in progress or completed, the money left or is leaving. Don't confirm; tap 'Check with Toss' again later."],
+  "poNotSentWarning": ["잘못 확인하면 같은 정산이 파트너에게 두 번 지급될 수 있어요.", "If this is wrong, the partner may be paid twice."],
+  "poNotSentChecked": ["토스 상점관리자에서 직접 확인했어요", "I checked the Toss dashboard myself"],
+  "poNotSentConfirm": ["송금되지 않음으로 표시", "Mark as not sent"],
+  "poNotSentDone": ["실패로 표시했어요. 이제 다시 시도할 수 있어요.", "Marked as failed. You can retry it now."],
 }

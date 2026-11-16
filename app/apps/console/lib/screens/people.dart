@@ -7,6 +7,7 @@ import '../booking_labels.dart';
 import '../state.dart';
 import 'finance_tax.dart';
 import 'confirm_action.dart';
+import 'payout_not_sent_dialog.dart';
 import 'payout_seller_dialog.dart';
 import 'staff_reset.dart';
 import 'stepup.dart';
@@ -155,6 +156,9 @@ class _SettlementsState extends State<SettlementsScreen> {
   String? _state;
   late bool _payouts = widget.initialPayouts;
   final _payoutsView = GlobalKey<AsyncViewState<List<Json>>>();
+
+  /// Payouts whose last Toss check could not reach Toss: only these offer the owner's not-sent confirmation.
+  final _tossUnreachable = <String>{};
   late final _payoutPager = Pager<Json>(
     context.api,
     '/admin/settlements/payouts',
@@ -223,6 +227,9 @@ class _SettlementsState extends State<SettlementsScreen> {
     final id = p['id'] as String;
     final state = p['state'] as String;
     final manual = p['provider'] == 'manual';
+    // A Toss send that ended without an answer: the money may or may not have left.
+    final ambiguous =
+        !manual && state == 'requested' && p['failure_reason'] != null;
     final team = (p['team_name'] as String? ?? '').isEmpty
         ? ''
         : ' · ${p['team_name']}';
@@ -298,12 +305,28 @@ class _SettlementsState extends State<SettlementsScreen> {
                     onPressed: () => post('sync'),
                     child: Text(t.poSync),
                   ),
+                if (admin && ambiguous)
+                  TextButton(
+                    onPressed: () => _checkToss(context, id, reload),
+                    child: Text(t.poCheckToss),
+                  ),
+                if (admin && ambiguous && _tossUnreachable.contains(id))
+                  TextButton(
+                    onPressed: () async {
+                      if (await confirmPayoutNotSent(context, p) && mounted) {
+                        setState(() => _tossUnreachable.remove(id));
+                        await reload();
+                      }
+                    },
+                    child: Text(t.poNotSent),
+                  ),
                 if (admin && state == 'failed')
                   TextButton(
                     onPressed: () => post('retry'),
                     child: Text(t.poRetry),
                   ),
-                if (admin && state == 'requested')
+                // The server refuses a plain fail on an ambiguous send; the not-sent check replaces it.
+                if (admin && state == 'requested' && !ambiguous)
                   TextButton(
                     onPressed: () => _fail(context, id, reload),
                     child: Text(t.poMarkFailed),
@@ -326,6 +349,46 @@ class _SettlementsState extends State<SettlementsScreen> {
         ),
       ),
     );
+  }
+
+  /// Asks Toss about an ambiguous send now. When Toss cannot be reached, the owner may check the Toss
+  /// dashboard instead.
+  Future<void> _checkToss(
+    BuildContext context,
+    String id,
+    Future<void> Function() reload,
+  ) async {
+    final t = context.t;
+    try {
+      final r =
+          await withStepUp(
+                context,
+                () => context.api.post(
+                  '/admin/settlements/payouts/$id/sync',
+                  {},
+                  ApiClient.newIdempotencyKey(),
+                ),
+              )
+              as Json;
+      if (!mounted) return;
+      setState(() => _tossUnreachable.remove(id));
+      if (context.mounted) {
+        showToast(
+          context,
+          r['state'] == 'requested' ? t.poCheckPending : t.cDone,
+        );
+      }
+      await reload();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'provider_unreachable' ||
+          e.code == 'provider_not_configured') {
+        setState(() => _tossUnreachable.add(id));
+      }
+      if (context.mounted) showToast(context, t.error(e));
+    } catch (e) {
+      if (context.mounted) showToast(context, t.error(e));
+    }
   }
 
   /// Toss needs the partner registered as a seller before it can send money. Re-registering is safe after an account change.

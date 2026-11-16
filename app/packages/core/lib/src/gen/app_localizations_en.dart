@@ -3446,6 +3446,10 @@ class TEn extends T {
       'This payout may already be with the bank, so it can\'t be changed right now. Check its status.';
 
   @override
+  String get err_payout_checked =>
+      'Toss answered, so the status now comes from Toss. Check the list.';
+
+  @override
   String get err_settlement_in_transfer =>
       'This booking\'s payout is already with the bank, so it can\'t be cancelled.';
 
@@ -5502,6 +5506,37 @@ class TEn extends T {
   String poSellerDone(String status) {
     return 'Seller status: $status';
   }
+
+  @override
+  String get poCheckToss => 'Check with Toss';
+
+  @override
+  String get poCheckPending =>
+      'Toss has no record of this payout yet. Check again in a few minutes.';
+
+  @override
+  String get poNotSent => 'Confirm it was not sent';
+
+  @override
+  String get poNotSentTitle => 'Was this payout really not sent?';
+
+  @override
+  String poNotSentBody(String name, String amount) {
+    return 'Toss did not answer, so we can\'t tell automatically whether this payout left.\n\nSign in to the Toss Payments merchant dashboard and look in the payouts list for $name, $amount.\n\n• If it isn\'t there, or it shows failed or cancelled, it was not sent. Confirm below: this payout becomes failed, and you can cancel the booking or send it again.\n• If it shows requested, in progress or completed, the money left or is leaving. Don\'t confirm; tap \'Check with Toss\' again later.';
+  }
+
+  @override
+  String get poNotSentWarning =>
+      'If this is wrong, the partner may be paid twice.';
+
+  @override
+  String get poNotSentChecked => 'I checked the Toss dashboard myself';
+
+  @override
+  String get poNotSentConfirm => 'Mark as not sent';
+
+  @override
+  String get poNotSentDone => 'Marked as failed. You can retry it now.';
 
   @override
   String get cgPeakFixedScope =>

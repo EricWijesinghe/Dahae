@@ -6445,6 +6445,12 @@ abstract class T {
   /// **'이 정산은 이미 송금되었을 수 있어 지금 바꿀 수 없어요. 상태를 확인해 주세요.'**
   String get err_payout_in_transfer;
 
+  /// No description provided for @err_payout_checked.
+  ///
+  /// In ko, this message translates to:
+  /// **'토스에서 답을 받아 상태를 새로 반영했어요. 목록을 확인해 주세요.'**
+  String get err_payout_checked;
+
   /// No description provided for @err_settlement_in_transfer.
   ///
   /// In ko, this message translates to:
@@ -10193,6 +10199,60 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'판매자 상태: {status}'**
   String poSellerDone(String status);
+
+  /// No description provided for @poCheckToss.
+  ///
+  /// In ko, this message translates to:
+  /// **'Toss에서 확인하기'**
+  String get poCheckToss;
+
+  /// No description provided for @poCheckPending.
+  ///
+  /// In ko, this message translates to:
+  /// **'토스에 아직 이 송금 기록이 없어요. 몇 분 뒤 다시 확인해 주세요.'**
+  String get poCheckPending;
+
+  /// No description provided for @poNotSent.
+  ///
+  /// In ko, this message translates to:
+  /// **'송금되지 않았음을 확인'**
+  String get poNotSent;
+
+  /// No description provided for @poNotSentTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'정말 송금되지 않았나요?'**
+  String get poNotSentTitle;
+
+  /// No description provided for @poNotSentBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'토스가 응답하지 않아 이 지급이 실제로 나갔는지 자동으로 확인할 수 없어요.\n\n토스페이먼츠 상점관리자에 로그인해 지급대행 내역에서 {name} 님, {amount} 건을 찾아 주세요.\n\n• 내역이 없거나 \'실패\' 또는 \'취소\'로 보이면 송금되지 않은 거예요. 아래에서 확인하면 이 지급이 실패로 바뀌고, 예약 취소와 다시 보내기를 할 수 있어요.\n• \'요청됨\', \'처리 중\', \'완료\'로 보이면 돈이 나갔거나 나가는 중이에요. 확인하지 말고 나중에 \'Toss에서 확인하기\'를 다시 눌러 주세요.'**
+  String poNotSentBody(String name, String amount);
+
+  /// No description provided for @poNotSentWarning.
+  ///
+  /// In ko, this message translates to:
+  /// **'잘못 확인하면 같은 정산이 파트너에게 두 번 지급될 수 있어요.'**
+  String get poNotSentWarning;
+
+  /// No description provided for @poNotSentChecked.
+  ///
+  /// In ko, this message translates to:
+  /// **'토스 상점관리자에서 직접 확인했어요'**
+  String get poNotSentChecked;
+
+  /// No description provided for @poNotSentConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'송금되지 않음으로 표시'**
+  String get poNotSentConfirm;
+
+  /// No description provided for @poNotSentDone.
+  ///
+  /// In ko, this message translates to:
+  /// **'실패로 표시했어요. 이제 다시 시도할 수 있어요.'**
+  String get poNotSentDone;
 
   /// No description provided for @cgPeakFixedScope.
   ///
