@@ -302,7 +302,7 @@ Lock length is 30 seconds, doubling, capped at 1 hour. Failures are forgotten af
 - Request timeout 30 seconds ([routes/mod.rs](../backend/crates/api/src/routes/mod.rs) `REQUEST_TIMEOUT`).
 - Idempotency: money-moving POSTs take an `Idempotency-Key`, scoped to the caller and path, bound to the body hash, replayed for 24 hours; server errors and refusals release the key ([idempotency.rs](../backend/crates/api/src/idempotency.rs) module comment).
 - Database: per-statement and idle-transaction timeouts ([config.rs `DbSettings`](../backend/crates/api/src/config.rs)).
-- Edge: Caddy removes the `Authorization` and `Cookie` headers and drops every query string (phone numbers, names and addresses from admin lookups included) and masks ops-progress tokens before writing its access log, and keeps 14 files of 10 MB for at most 30 days ([deploy/Caddyfile](../deploy/Caddyfile) `log` block). The stock Caddy image has no rate-limit module, so there is no edge limit on `/v1/auth/*`; a shortcut comment in the same file records this.
+- Edge: Caddy removes the `Authorization` and `Cookie` headers and drops every query string (phone numbers, names and addresses from admin lookups included) and masks ops-progress tokens before writing its access log, and keeps 14 files of 10 MB for at most 3 months ([deploy/Caddyfile](../deploy/Caddyfile) `log` block). The stock Caddy image has no rate-limit module, so there is no edge limit on `/v1/auth/*`; a shortcut comment in the same file records this.
 - Feature switches: a database error lets the request through. Flags are documented as not a security boundary ([routes/config.rs `enforce`](../backend/crates/api/src/routes/config.rs)).
 
 ### 8. Web security headers and CSP

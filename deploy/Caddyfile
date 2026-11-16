@@ -24,7 +24,7 @@
 	import tls-{$TLS_MODE}
 	encode zstd gzip
 
-	# JSON access log in the caddylogs volume: 10 MB per file, 14 files kept, 30 days at most. Every query string is
+	# JSON access log in the caddylogs volume: 10 MB per file, 14 files kept, 3 months at most (the retention rule in docs/privacy-retention.md). Every query string is
 	# dropped before anything is written (admin lookups carry phone numbers, names and addresses, and secrets such as
 	# the websocket ticket or signed links), and the ops-progress path's token too. One regexp covers both.
 	# shortcut: no edge rate limit on /v1/auth/*, the stock caddy image has no rate_limit module; add one (custom
@@ -33,7 +33,7 @@
 		output file /var/log/caddy/access.log {
 			roll_size 10mb
 			roll_keep 14
-			roll_keep_for 720h
+			roll_keep_for 2160h
 		}
 		format filter {
 			wrap json
