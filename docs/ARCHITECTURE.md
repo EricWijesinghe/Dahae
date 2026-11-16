@@ -498,7 +498,6 @@ Being merged. Read from that branch; the files are not on develop yet, so the pa
 - **Move-in and move-out quote.** Layout and cleaning type drive an estimate (`POST /v1/quote/estimate`, `backend/crates/domain/src/quote.rs`). The home type is stored with the quote answers (`HomeType`). The chooser is `move_chooser.dart`; the estimate is shown before the booking step. Pyeong ranges per layout are a stated shortcut (`quote_size_note.dart`), not yet confirmed by the owner.
 - **Owner console.** The catalogue's service groups tab edits the four groups (`catalog_groups.dart`), and the counts dialog edits counts pricing (`catalog_counts.dart`). The booking detail shows the counts line (`booking_labels.dart`).
 - **Partner app.** The job list and job detail show counts from `unit_counts` (`app/apps/partner/lib/job_labels.dart`). Older aircon jobs without `unit_counts` read the old answers (a stated shortcut in that file).
-- **Integration card lock removed.** This branch drops the owner unlock and lock routes for integration keys (`backend/crates/api/src/routes/setup.rs`). Toss payouts still need the owner's code. Sections 1 and 4.4 describe the develop behaviour until this branch is merged.
 - **Peak surcharge on fixed and subscription visits** (CHANGELOG Unreleased, `apply_to_fixed`, default off) is on the develop branch already.
 
 ---

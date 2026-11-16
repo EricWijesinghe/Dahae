@@ -250,7 +250,7 @@ A team member sees only jobs assigned to them.
 | GET | `/v1/member/jobs/{id}` | One assigned job | bearer: member |  |
 | POST | `/v1/member/jobs/{id}/complete` | Mark an assigned job complete | bearer: member |  |
 
-### Staff console (157)
+### Staff console (159)
 
 Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see note).
 
@@ -334,6 +334,8 @@ Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see 
 | PUT | `/v1/admin/setup/{section}` | Store a setup section | bearer: staff |  |
 | DELETE | `/v1/admin/setup/{section}` | Clear a setup section | bearer: staff |  |
 | POST | `/v1/admin/setup/{section}/test` | Test a provider connection for a section | bearer: staff |  |
+| POST | `/v1/admin/setup/{section}/unlock` | Owner unlock of a saved card for 5 minutes (the card relocks after a save or when the window passes) | bearer: staff |  |
+| POST | `/v1/admin/setup/{section}/lock` | Lock a card now (ends an owner unlock early) | bearer: staff |  |
 | GET | `/v1/admin/audit` | Staff activity log, newest first (owner only, cursor-paginated; filters are exact unless noted) | bearer: staff | paged |
 | GET | `/v1/admin/ops/status` | Service health, counters and version | bearer: staff |  |
 | GET | `/v1/admin/ops/alerts` | Alert thresholds and recipients | bearer: staff |  |
