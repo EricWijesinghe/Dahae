@@ -63,7 +63,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
     final nav = Navigator.of(context);
     setState(() => _saving = true);
     try {
-      await context.api.post('/subscriptions', {
+      await context.api.postAction('/subscriptions', {
         'service_code': _service,
         'address_id': _address,
         'payment_method_id': _method,

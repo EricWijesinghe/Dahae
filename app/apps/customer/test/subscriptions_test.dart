@@ -98,6 +98,11 @@ void main() {
       expect(body['cadence_weeks'], 2);
       expect(body['weekday'], 0);
       expect(body['start_hour'], 13);
+      // A retry after a lost reply must replay, not create a second subscription.
+      expect(
+        post.headers.keys.any((k) => k.toLowerCase() == 'idempotency-key'),
+        isTrue,
+      );
       await unmount(tester);
     },
   );
