@@ -30,10 +30,7 @@ use std::net::SocketAddr;
 use uuid::Uuid;
 
 const REASON_MAX: usize = 200;
-/// A send this recent that Toss does not list may still be arriving there, so it is not judged missing yet.
-const NOT_FOUND_GRACE_MINS: i32 = 5;
-/// Failure reasons the console shows as they are.
-const NOT_AT_TOSS: &str = "토스에 송금 기록 없음";
+/// Failure reason the console shows as it is.
 const OWNER_NOT_SENT: &str = "소유자 확인: 송금되지 않음";
 
 /// Settlements due by `date` that no payout covers yet, grouped per verified pro. Runs under an
@@ -620,23 +617,21 @@ async fn ask_provider(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uuid
 }
 
 /// A send that ended ambiguously never got Toss's id back, so it is looked up by our refPayoutId (the payout
-/// id) in Toss's payout list. Found: recorded as sent with its id, and its status returned. Absent: failed,
-/// unless the send is too recent to tell (None, row unchanged).
+/// id) in Toss's payout list. Found: recorded as sent with its id, and its status returned. Absent: None, row
+/// unchanged. Absence is never taken as "not sent": the list's date filter and Toss's refPayoutId rules are
+/// unverified, and a wrong guess pays twice. The owner settles it after checking the Toss dashboard.
 async fn find_ambiguous(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uuid, row: &Row) -> ApiResult<Option<adapter::TransferStatus>> {
     // From the day before creation in KST, so a send near midnight is still in the list.
-    let (since, fresh): (NaiveDate, bool) =
-        sqlx::query_as("SELECT (created_at AT TIME ZONE 'Asia/Seoul')::date - 1, updated_at > now() - make_interval(mins => $2) FROM payouts WHERE id = $1")
-            .bind(id)
-            .bind(NOT_FOUND_GRACE_MINS)
-            .fetch_one(&mut **tx)
-            .await?;
+    let since: NaiveDate = sqlx::query_scalar("SELECT (created_at AT TIME ZONE 'Asia/Seoul')::date - 1 FROM payouts WHERE id = $1")
+        .bind(id)
+        .fetch_one(&mut **tx)
+        .await?;
     let mut found = s.providers.find_transfers(&id.to_string(), since).await?;
     // An id already on the row is an earlier attempt Toss failed (then retried): it says nothing about this send.
     found.retain(|(provider_id, _)| row.provider_transfer_id.as_deref() != Some(provider_id));
     found.sort_by_key(|(_, status)| matches!(status, adapter::TransferStatus::Failed(_)));
     let Some((provider_id, status)) = found.into_iter().next() else {
-        // Toss may still be taking in a request that just timed out: absence counts only after the grace.
-        return Ok((!fresh).then(|| adapter::TransferStatus::Failed(NOT_AT_TOSS.into())));
+        return Ok(None);
     };
     let r = sqlx::query(
         "UPDATE payouts SET state = 'sent', provider_transfer_id = $2, failure_reason = NULL, updated_at = now() WHERE id = $1 AND state = 'requested'",
@@ -652,8 +647,8 @@ async fn find_ambiguous(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uu
 }
 
 /// POST /settlements/payouts/{id}/not-sent. The owner checked the Toss dashboard and states that an ambiguous
-/// send never left. Taken only while Toss itself cannot be asked: when Toss answers, its answer settles the
-/// batch and this is refused. Marks the batch failed, which frees cancels and card changes. The key is kept,
+/// send never left. Taken only when Toss cannot be asked or does not list the send: when Toss knows the
+/// transfer, its answer settles the batch and this is refused. Marks the batch failed, which frees cancels and card changes. The key is kept,
 /// so a resend of a send Toss did take is answered with that transfer, not repeated.
 pub async fn confirm_not_sent(
     AxState(s): AxState<AppState>,
@@ -674,9 +669,8 @@ pub async fn confirm_not_sent(
         return Err(ApiError::Conflict("payout_state"));
     }
     match ask_provider(&s, &mut tx, id, &row).await {
-        Err(ApiError::Unavailable(_)) => {}
-        // Toss answered but has no record yet: too soon to say either way.
-        Ok(State::Requested) => return Err(ApiError::Conflict("payout_in_transfer")),
+        // Toss cannot be reached, or does not list the send: the owner's check of the dashboard decides.
+        Err(ApiError::Unavailable(_)) | Ok(State::Requested) => {}
         Ok(state) => {
             tx.commit().await?;
             audit(&s.db, "staff", Some(a.id), "payout.sync", &id.to_string(), json!({ "state": state.as_str() })).await?;

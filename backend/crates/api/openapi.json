@@ -3258,7 +3258,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Owner states an ambiguous Toss send never left (only while Toss cannot be reached; marks it failed, audited)",
+        "summary": "Owner states an ambiguous Toss send never left (only when Toss cannot be reached or does not list it; marks it failed, key kept, audited)",
         "parameters": [
           {
             "$ref": "#/components/parameters/Id"

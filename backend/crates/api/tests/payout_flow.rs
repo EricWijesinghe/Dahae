@@ -623,24 +623,33 @@ async fn status_check_finds_an_ambiguous_send_at_toss_by_its_ref_id(pool: PgPool
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn status_check_fails_an_ambiguous_send_toss_has_no_record_of(pool: PgPool) {
-    let (id, settlement) = ambiguous_batch(&pool, 1).await;
-    let (_, _, key_before) = payout_row(&pool, &id).await;
+async fn status_check_leaves_a_send_toss_does_not_list_for_the_owner(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 1).await;
+    let before = payout_row(&pool, &id).await;
     let state = toss_state(&pool, &start_toss(json!([])).await);
 
-    assert_eq!(api::payout_sync::sync_pass(&state).await.expect("pass"), 1);
-    let (st, _, key) = payout_row(&pool, &id).await;
-    assert_eq!(st, "failed", "Toss answered and has no such payout: no money left");
-    assert_ne!(key, key_before, "Toss confirmed it, so a retry is a new transfer");
-    assert_eq!(settlement_state(&pool, settlement).await, "pending", "still owed to the partner");
+    // Absence from the list is not proof: the lookup's date filter and Toss's refPayoutId rules are unverified.
+    assert_eq!(api::payout_sync::sync_pass(&state).await.expect("pass"), 0);
+    assert_eq!(payout_row(&pool, &id).await, before, "still ambiguous, same key, for the owner to settle");
+    let failure: Option<String> = sqlx::query_scalar("SELECT failure_reason FROM payouts WHERE id = $1::uuid")
+        .bind(&id)
+        .fetch_one(&pool)
+        .await
+        .expect("failure");
+    assert_eq!(failure.as_deref(), Some("status 502 Bad Gateway"));
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn a_just_failed_send_is_not_judged_missing_yet(pool: PgPool) {
+async fn owner_not_sent_when_toss_lists_nothing_fails_the_batch_and_keeps_the_key(pool: PgPool) {
     let (id, _) = ambiguous_batch(&pool, 0).await;
-    let state = toss_state(&pool, &start_toss(json!([])).await);
-    api::payout_sync::sync_pass(&state).await.expect("pass");
-    assert_eq!(payout_row(&pool, &id).await.0, "requested", "Toss may still be taking the request in");
+    let (_, _, key_before) = payout_row(&pool, &id).await;
+    let app = api::routes::router(toss_state(&pool, &start_toss(json!([])).await));
+    let (token, totp) = owner(&pool).await;
+
+    let (code, body) = not_sent(&app, &id, &token, Some(&totp)).await;
+    assert_eq!((code, body["state"].as_str()), (StatusCode::OK, Some("failed")), "{body}");
+    let (st, _, key) = payout_row(&pool, &id).await;
+    assert_eq!((st.as_str(), key), ("failed", key_before), "the owner's word never rotates the key");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
