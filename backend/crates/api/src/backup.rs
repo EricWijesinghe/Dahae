@@ -27,7 +27,7 @@ use std::{
     io::{self, Read, Write},
     path::{Path, PathBuf},
 };
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 const MAGIC: &[u8; 4] = b"MKB1";
 const CHUNK: usize = 64 * 1024;
@@ -37,6 +37,10 @@ const SUFFIX: &str = ".enc";
 const CONNECTION_TEST_OBJECT: &str = "malkkeum/connection-test.txt";
 const EMPTY_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 const KEY_CONTEXT: &[u8] = b"malkkeum offsite backup v1";
+/// A single S3 PUT stops at 5 GiB; bigger archives (the photo tar) go up as multipart parts.
+const SINGLE_PUT_MAX: u64 = 5 * 1024 * 1024 * 1024;
+const MIN_PART: u64 = 64 * 1024 * 1024;
+const MAX_PARTS: u64 = 10_000;
 
 /// Why a remote call failed. `code()` is what the status page and the wizard show.
 #[derive(Debug, thiserror::Error)]
@@ -51,6 +55,8 @@ pub enum Fail {
     Corrupt,
     #[error("invalid listing from backup target")]
     BadListing,
+    #[error("backup target did not finish the multipart upload")]
+    Incomplete,
 }
 
 impl Fail {
@@ -58,7 +64,7 @@ impl Fail {
         match self {
             Self::Unreachable => "unreachable",
             Self::Rejected(401 | 403) => "invalid_key",
-            Self::Rejected(_) => "provider_error",
+            Self::Rejected(_) | Self::Incomplete => "provider_error",
             Self::Io(_) | Self::Corrupt | Self::BadListing => "backup_failed",
         }
     }
@@ -217,7 +223,7 @@ struct Req<'a> {
     cfg: &'a S3Config,
     method: &'static str,
     name: &'a str,
-    query: &'static str,
+    query: &'a str,
     payload_hash: &'a str,
     body: Option<(reqwest::Body, u64)>,
 }
@@ -291,9 +297,35 @@ async fn hash_file(path: PathBuf) -> Result<(String, u64), Fail> {
     .map_err(|_| Fail::Corrupt)?
 }
 
-/// Uploads a local file as object `name`.
+fn needs_multipart(len: u64) -> bool {
+    len > SINGLE_PUT_MAX
+}
+
+/// Part size for a multipart upload: at least 64 MiB, and small enough that the part count stays under 10 000.
+fn part_size(len: u64) -> u64 {
+    MIN_PART.max(len.div_ceil(MAX_PARTS))
+}
+
+/// Percent-encodes a query value (upload ids can hold characters that need escaping).
+fn encode_query(s: &str) -> String {
+    encode_path(s).replace('/', "%2F")
+}
+
+/// `CompleteMultipartUpload` body listing every part's number and ETag.
+fn complete_xml(parts: &[(u32, String)]) -> String {
+    let list: String = parts
+        .iter()
+        .map(|(n, etag)| format!("<Part><PartNumber>{n}</PartNumber><ETag>{etag}</ETag></Part>"))
+        .collect();
+    format!("<CompleteMultipartUpload>{list}</CompleteMultipartUpload>")
+}
+
+/// Uploads a local file as object `name`. Archives over 5 GiB go up in parts; a failed upload is aborted.
 pub async fn put_file(http: &reqwest::Client, cfg: &S3Config, name: &str, path: &Path) -> Result<(), Fail> {
     let (hash, len) = hash_file(path.to_path_buf()).await?;
+    if needs_multipart(len) {
+        return put_multipart(http, cfg, name, path, len).await;
+    }
     let file = tokio::fs::File::open(path).await?;
     send(
         http,
@@ -304,6 +336,102 @@ pub async fn put_file(http: &reqwest::Client, cfg: &S3Config, name: &str, path: 
             query: "",
             payload_hash: &hash,
             body: Some((reqwest::Body::from(file), len)),
+        },
+    )
+    .await?;
+    Ok(())
+}
+
+/// Multipart upload: start, one PUT per part (each hashed as it is read), then complete. Any failure aborts
+/// the upload so the target does not keep orphan parts.
+async fn put_multipart(http: &reqwest::Client, cfg: &S3Config, name: &str, path: &Path, len: u64) -> Result<(), Fail> {
+    let started = send(
+        http,
+        Req {
+            cfg,
+            method: "POST",
+            name,
+            query: "uploads=",
+            payload_hash: EMPTY_SHA256,
+            body: None,
+        },
+    )
+    .await?;
+    let init = started.text().await.map_err(|_| Fail::Unreachable)?;
+    let id = tag(&init, "UploadId").ok_or(Fail::BadListing)?.to_string();
+    match upload_parts(http, cfg, name, path, len, &id).await {
+        Ok(parts) => finish_multipart(http, cfg, name, &id, &parts).await,
+        Err(e) => {
+            let _ = abort_multipart(http, cfg, name, &id).await;
+            Err(e)
+        }
+    }
+}
+
+async fn upload_parts(http: &reqwest::Client, cfg: &S3Config, name: &str, path: &Path, len: u64, id: &str) -> Result<Vec<(u32, String)>, Fail> {
+    let mut file = tokio::fs::File::open(path).await?;
+    let size = part_size(len);
+    let mut left = len;
+    let mut number: u32 = 1;
+    let mut parts = Vec::new();
+    while left > 0 {
+        let take = left.min(size);
+        let mut buf = vec![0u8; take as usize];
+        file.read_exact(&mut buf).await?;
+        let hash = hex(Sha256::digest(&buf));
+        let query = format!("partNumber={number}&uploadId={}", encode_query(id));
+        let resp = send(
+            http,
+            Req {
+                cfg,
+                method: "PUT",
+                name,
+                query: &query,
+                payload_hash: &hash,
+                body: Some((reqwest::Body::from(buf), take)),
+            },
+        )
+        .await?;
+        let etag = resp.headers().get("etag").and_then(|v| v.to_str().ok()).ok_or(Fail::Incomplete)?;
+        parts.push((number, etag.to_string()));
+        left -= take;
+        number += 1;
+    }
+    Ok(parts)
+}
+
+async fn finish_multipart(http: &reqwest::Client, cfg: &S3Config, name: &str, id: &str, parts: &[(u32, String)]) -> Result<(), Fail> {
+    let body = complete_xml(parts);
+    let hash = hex(Sha256::digest(body.as_bytes()));
+    let query = format!("uploadId={}", encode_query(id));
+    let resp = send(
+        http,
+        Req {
+            cfg,
+            method: "POST",
+            name,
+            query: &query,
+            payload_hash: &hash,
+            body: Some((reqwest::Body::from(body.clone()), body.len() as u64)),
+        },
+    )
+    .await?;
+    // S3 can answer a failed completion with 200 and an <Error> body.
+    let answer = resp.text().await.map_err(|_| Fail::Unreachable)?;
+    if answer.contains("<Error>") { Err(Fail::Incomplete) } else { Ok(()) }
+}
+
+async fn abort_multipart(http: &reqwest::Client, cfg: &S3Config, name: &str, id: &str) -> Result<(), Fail> {
+    let query = format!("uploadId={}", encode_query(id));
+    send(
+        http,
+        Req {
+            cfg,
+            method: "DELETE",
+            name,
+            query: &query,
+            payload_hash: EMPTY_SHA256,
+            body: None,
         },
     )
     .await?;
@@ -462,6 +590,13 @@ async fn open(config: &Config) -> Result<(PgPool, Integrations), String> {
     Ok((db, integ))
 }
 
+const PHOTOS_INTEGRATION: &str = "backup-uploads";
+
+/// Ops record key for an offsite upload: the photo tar and the database dump are recorded apart.
+fn offsite_integration(name: &str) -> &'static str {
+    if name.starts_with("uploads-") { PHOTOS_INTEGRATION } else { "backup" }
+}
+
 /// `api backup-upload <file>`: the cron job's second step. Local status is recorded first, so a
 /// failing offsite target never hides a good local dump.
 async fn upload_cmd(config: &Config, file: &str) -> i32 {
@@ -478,8 +613,10 @@ async fn upload_cmd(config: &Config, file: &str) -> i32 {
         }
     };
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or(file);
+    // The photo tar is recorded under its own key: its failure must not be overwritten by the database upload.
+    let photos = offsite_integration(name) == PHOTOS_INTEGRATION;
     let mut status = json!({ "at": Utc::now(), "file": name, "size_bytes": meta.len(), "offsite": null });
-    if let Err(e) = store_status(&db, &status).await {
+    if !photos && let Err(e) = store_status(&db, &status).await {
         eprintln!("status: {e}");
         return 1;
     }
@@ -490,20 +627,27 @@ async fn upload_cmd(config: &Config, file: &str) -> i32 {
     let http = reqwest::Client::new();
     let outcome = offsite(&http, cfg, &config.data_key, path).await;
     let code = outcome.as_ref().err().map(Fail::code);
-    if let Err(e) = ops::write_outcome(&db, "backup", outcome.as_ref().map(|_| ()).map_err(|e| e.code())).await {
+    if let Err(e) = ops::write_outcome(&db, offsite_integration(name), outcome.as_ref().map(|_| ()).map_err(|e| e.code())).await {
         eprintln!("ops record: {e}");
+    }
+    if photos {
+        return report_upload(name, outcome);
     }
     status["offsite"] = json!({ "ok": code.is_none(), "at": Utc::now(), "error": code });
     if let Err(e) = store_status(&db, &status).await {
         eprintln!("status: {e}");
     }
+    report_upload(name, outcome)
+}
+
+fn report_upload(name: &str, outcome: Result<(), Fail>) -> i32 {
     match outcome {
         Ok(()) => {
             println!("offsite backup uploaded: {name}");
             0
         }
         Err(e) => {
-            eprintln!("offsite backup failed: {e}");
+            eprintln!("offsite backup failed: {name}: {e}");
             1
         }
     }
@@ -787,5 +931,35 @@ mod tests {
         let k = file_key(&[3u8; 32]);
         assert_ne!(k, [3u8; 32]);
         assert_eq!(k, file_key(&[3u8; 32]));
+    }
+
+    const GIB: u64 = 1024 * 1024 * 1024;
+
+    #[test]
+    fn photo_archives_over_five_gib_go_up_as_parts_within_the_part_limits() {
+        assert!(!needs_multipart(4 * GIB));
+        assert!(needs_multipart(5 * GIB + 1), "a single PUT stops at 5 GiB");
+        let len = 40 * GIB + 7;
+        let size = part_size(len);
+        assert!((MIN_PART..=5 * GIB).contains(&size), "part size {size}");
+        assert!(len.div_ceil(size) <= MAX_PARTS, "too many parts");
+        assert!(part_size(10 * 1024 * GIB) <= 5 * GIB, "huge archives still fit the part size cap");
+    }
+
+    #[test]
+    fn multipart_upload_xml_is_read_and_written() {
+        let init = "<InitiateMultipartUploadResult><Bucket>b</Bucket><Key>k</Key><UploadId>VXBs.a_1-2</UploadId></InitiateMultipartUploadResult>";
+        assert_eq!(tag(init, "UploadId"), Some("VXBs.a_1-2"));
+        let done = complete_xml(&[(1, "\"aa\"".into()), (2, "\"bb\"".into())]);
+        assert_eq!(
+            done,
+            "<CompleteMultipartUpload><Part><PartNumber>1</PartNumber><ETag>\"aa\"</ETag></Part><Part><PartNumber>2</PartNumber><ETag>\"bb\"</ETag></Part></CompleteMultipartUpload>"
+        );
+    }
+
+    #[test]
+    fn photo_and_database_offsite_outcomes_are_kept_apart() {
+        assert_eq!(offsite_integration("uploads-20261116-031500.tar.gz"), "backup-uploads");
+        assert_eq!(offsite_integration("db-20261116-031500.sql.gz"), "backup");
     }
 }
