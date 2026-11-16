@@ -22,7 +22,7 @@ use chrono::{DateTime, Duration, Utc};
 use domain::{
     booking::BookingStatus,
     coupon::{COUPON_LIFETIME_DAYS, WelcomePack},
-    growth::{ReferralOffer, WelcomeOffer, check_claim, check_reward, mask_name, paid_in_full, proof_count},
+    growth::{ReferralOffer, WelcomeOffer, check_claim, check_reward, mask_name, owed_amount, paid_in_full, proof_count},
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value, json};
@@ -192,11 +192,12 @@ pub(crate) async fn reward_in_own_tx(db: &PgPool, booking: Uuid) -> ApiResult<()
 /// Pays both sides once a referred friend's booking is paid in full. Call inside the completion
 /// transaction; a no-op until the friend's booking is paid, and never twice (row lock + state).
 pub(crate) async fn reward_on_paid_completion(conn: &mut PgConnection, booking: Uuid) -> ApiResult<()> {
-    let (friend, paid, final_price): (Uuid, i64, Option<i64>) =
-        sqlx::query_as("SELECT user_id, paid_amount, COALESCE(final_price, list_price) FROM bookings WHERE id = $1")
+    let (friend, paid, final_price, list_price, discount): (Uuid, i64, Option<i64>, Option<i64>, i64) =
+        sqlx::query_as("SELECT user_id, paid_amount, final_price, list_price, discount FROM bookings WHERE id = $1")
             .bind(booking)
             .fetch_one(&mut *conn)
             .await?;
+    let owed = owed_amount(final_price, list_price, discount);
     let Some((referrer, state)) = sqlx::query_as::<_, (Uuid, String)>("SELECT referrer_id, state FROM referrals WHERE referred_user_id = $1 FOR UPDATE")
         .bind(friend)
         .fetch_optional(&mut *conn)
@@ -205,7 +206,7 @@ pub(crate) async fn reward_on_paid_completion(conn: &mut PgConnection, booking: 
         return Ok(());
     };
     let offer = load_setting::<ReferralOffer>(&mut *conn, REFERRAL_KEY).await?;
-    if !offer.enabled || check_reward(state == "rewarded", paid_in_full(paid, final_price)).is_err() {
+    if !offer.enabled || check_reward(state == "rewarded", paid_in_full(paid, owed)).is_err() {
         // Not eligible yet (or switched off): nothing is owed, so nothing is paid.
         return Ok(());
     }
