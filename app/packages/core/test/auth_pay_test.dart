@@ -398,8 +398,9 @@ void main() {
           expect(jsonDecode(req.body), body);
           return _json(200, _intent);
         }
-        if (req.url.path == '/v1/bookings/b1')
+        if (req.url.path == '/v1/bookings/b1') {
           return _json(200, {'id': 'b1', 'status': 1});
+        }
         expect(jsonDecode(req.body), {'payment_id': 'dev:paid'});
         return _json(200, {
           'status': 'paid',
@@ -424,8 +425,9 @@ void main() {
 
     testWidgets('virtual account returns the deposit details', (tester) async {
       final api = _client((req) async {
-        if (req.url.path == '/v1/checkouts')
+        if (req.url.path == '/v1/checkouts') {
           return _json(200, {..._intent, 'method': 'virtual_account'});
+        }
         return _json(200, {
           'status': 'awaiting_deposit',
           'virtual_account': {
@@ -577,8 +579,9 @@ void main() {
         final confirmKeys = <String?>[];
         final api = _client((req) async {
           if (req.url.path == '/v1/checkouts') return _json(200, _intent);
-          if (req.url.path == '/v1/bookings/b1')
+          if (req.url.path == '/v1/bookings/b1') {
             return _json(200, {'id': 'b1', 'status': 1});
+          }
           confirmKeys.add(keyOf(req));
           if (confirmKeys.length < 3) throw TimeoutException('no reply');
           return _json(200, {'status': 'paid', 'booking_id': 'b1'});
@@ -601,10 +604,11 @@ void main() {
       (tester) async {
         final api = _client((req) async {
           if (req.url.path == '/v1/checkouts') return _json(200, _intent);
-          if (req.url.path == '/v1/bookings/b1')
+          if (req.url.path == '/v1/bookings/b1') {
             return _json(503, {
               'error': {'code': 'unavailable'},
             });
+          }
           return _json(200, {'status': 'paid', 'booking_id': 'b1'});
         });
         final ctx = await _context(tester);
@@ -627,8 +631,9 @@ void main() {
         var online = false;
         final api = _client((req) async {
           if (req.url.path == '/v1/checkouts') return _json(200, _intent);
-          if (req.url.path == '/v1/bookings/b1')
+          if (req.url.path == '/v1/bookings/b1') {
             return _json(200, {'id': 'b1', 'status': 1});
+          }
           if (!online) throw const SocketExceptionStub();
           return _json(200, {'status': 'paid', 'booking_id': 'b1'});
         });
