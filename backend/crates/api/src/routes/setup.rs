@@ -5,10 +5,10 @@ use super::audit;
 use super::uploads;
 use crate::{
     address,
-    auth::{Admin, hash_password},
+    auth::{Admin, Auth, hash_password},
     backup,
     error::{ApiError, ApiResult},
-    integrations::{self, Invalid, Kind, Section},
+    integrations::{self, Invalid, Kind, LockState, Section},
     owner,
     providers::{fcm, portone, sms},
     state::AppState,
@@ -19,13 +19,13 @@ use axum::{
     http::HeaderMap,
     routing::{get, post, put},
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use rand::{Rng, rngs::OsRng};
 use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use sqlx::PgPool;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
@@ -37,6 +37,8 @@ const SETUP_CODE_KEY: &str = "setup_code";
 /// The installer's setup code works for two hours after it is issued.
 const SETUP_CODE_TTL_SECS: i64 = 2 * 60 * 60;
 const BUSINESS_KEY: &str = "business";
+/// An owner unlock lets one save or clear through, then the card locks again.
+const UNLOCK_TTL_SECS: i64 = 5 * 60;
 const REVIEW_KEY: &str = "review_account";
 /// App Review needs days, not hours; the account switches itself off after this.
 const REVIEW_MAX_DAYS: i64 = 30;
@@ -58,6 +60,8 @@ pub fn admin_routes() -> Router<AppState> {
         .route("/setup/review", put(put_review).delete(clear_review))
         .route("/setup/{section}", put(put_section).delete(clear_section))
         .route("/setup/{section}/test", post(test_section))
+        .route("/setup/{section}/unlock", post(unlock_section))
+        .route("/setup/{section}/lock", post(lock_section))
 }
 
 async fn has_staff(db: &PgPool) -> Result<bool, sqlx::Error> {
@@ -518,6 +522,7 @@ async fn card(s: &AppState, sec: Section, last_test: Option<Value>) -> ApiResult
         })
         .collect();
     let env = base.has(sec);
+    let lock = integrations::lock_state(&s.db, sec).await?;
     let source = if !saved.is_empty() {
         "console"
     } else if env {
@@ -531,7 +536,16 @@ async fn card(s: &AppState, sec: Section, last_test: Option<Value>) -> ApiResult
         .and_then(Value::as_str)
         .filter(|_| sec == Section::Payout)
         .and_then(integrations::toss_key_mode);
-    Ok(json!({ "code": sec.code(), "source": source, "configured": source != "none", "mode": mode, "fields": fields, "last_test": last_test }))
+    Ok(
+        json!({ "code": sec.code(), "source": source, "configured": source != "none", "mode": mode, "fields": fields, "last_test": last_test, "locked": lock == LockState::Locked, "unlock_expires_at": unlock_expires(lock) }),
+    )
+}
+
+fn unlock_expires(lock: LockState) -> Option<String> {
+    match lock {
+        LockState::Unlocked(until, _) => Some(until.to_rfc3339()),
+        LockState::Unsaved | LockState::Locked => None,
+    }
 }
 
 /// Set by install.sh from `MALKKEUM_HEARTBEAT_URL`; the wizard shows a checklist item until it is.
@@ -540,12 +554,18 @@ fn heartbeat_configured() -> bool {
 }
 
 /// Everything the wizard and the status page need in one call.
-async fn overview(State(s): State<AppState>, Admin(_): Admin) -> ApiResult<Json<Value>> {
+async fn overview(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<Value>> {
     let tests: Vec<(String, Option<Value>)> = sqlx::query_as("SELECT section, last_test FROM integration_settings").fetch_all(&s.db).await?;
+    let viewer_is_owner = owner::is_owner(&s.db, a.id).await?;
     let mut cards = Vec::new();
     for sec in Section::ALL {
         let last = tests.iter().find(|(c, _)| c == sec.code()).and_then(|(_, t)| t.clone());
-        cards.push(card(&s, sec, last).await?);
+        let mut c = card(&s, sec, last).await?;
+        // Only the owner sees when an unlock window closes; anyone else would learn when the owner is editing.
+        if !viewer_is_owner && let Some(fields) = c.as_object_mut() {
+            fields.remove("unlock_expires_at");
+        }
+        cards.push(c);
     }
     let counts: (i64, i64, i64, i64) = sqlx::query_as(
         "SELECT (SELECT count(*) FROM staff WHERE active),
@@ -589,11 +609,16 @@ async fn put_section(
     Json(input): Json<Value>,
 ) -> ApiResult<Json<Value>> {
     let sec = section(&code)?;
+    let lock = integrations::lock_state(&s.db, sec).await?;
+    if lock == LockState::Locked {
+        return Err(ApiError::Conflict("card_locked"));
+    }
+    require_unlocker(&s, a, lock).await?;
     let incoming = input.as_object().ok_or(ApiError::BadRequest("invalid_input"))?;
     let current = integrations::load_section(&s.db, &s.config.data_key, sec).await?;
     let merged = integrations::merge(sec, &current, incoming);
-    // Turning Toss payouts on, off or editing a live Toss setup moves real money: the owner's code is needed.
-    if sec == Section::Payout && (is_toss(&current) || is_toss(&merged)) {
+    // Turning Toss payouts on or off moves real money: the owner's code is needed. An unlock already checked it.
+    if sec == Section::Payout && lock == LockState::Unsaved && is_toss(&merged) {
         owner::verify_owner(&s, a, &headers, Some(peer.ip()), true).await?;
     }
     // Validate against env-only keys so this section stands on its own.
@@ -602,7 +627,9 @@ async fn put_section(
         base.payout_toss_ready = payout_toss_ready(&s, &merged).await?;
     }
     integrations::apply(&base, sec, &merged).map_err(|Invalid(code)| ApiError::BadRequest(code))?;
-    integrations::save_section(&s.db, &s.config.data_key, sec, &merged, a.id).await?;
+    if !integrations::save_section(&s.db, &s.config.data_key, sec, &merged, a.id).await? {
+        return Err(ApiError::Conflict("card_locked"));
+    }
     reload(&s).await?;
     audit(
         &s.db,
@@ -616,7 +643,36 @@ async fn put_section(
     Ok(Json(card(&s, sec, None).await?))
 }
 
-async fn clear_section(
+/// While a card is open only the owner who opened it may change it.
+async fn require_unlocker(s: &AppState, a: Auth, lock: LockState) -> ApiResult<()> {
+    let LockState::Unlocked(_, by) = lock else { return Ok(()) };
+    if by != a.id || !owner::is_owner(&s.db, a.id).await? {
+        return Err(ApiError::Forbidden);
+    }
+    Ok(())
+}
+
+async fn clear_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Path<String>) -> ApiResult<Json<Value>> {
+    let sec = section(&code)?;
+    let lock = integrations::lock_state(&s.db, sec).await?;
+    if lock == LockState::Locked {
+        return Err(ApiError::Conflict("card_locked"));
+    }
+    if lock == LockState::Unsaved {
+        return Ok(Json(card(&s, sec, None).await?));
+    }
+    require_unlocker(&s, a, lock).await?;
+    // The row stays, locked and empty: a non-owner admin cannot re-save the card without an unlock.
+    if !integrations::save_section(&s.db, &s.config.data_key, sec, &Map::new(), a.id).await? {
+        return Err(ApiError::Conflict("card_locked"));
+    }
+    reload(&s).await?;
+    audit(&s.db, a.role.as_str(), Some(a.id), "setup.integration_cleared", sec.code(), json!({})).await?;
+    Ok(Json(card(&s, sec, None).await?))
+}
+
+/// Owner unlock of a saved card for `UNLOCK_TTL_SECS`. Every outcome is audited; no secret is in the record.
+async fn unlock_section(
     State(s): State<AppState>,
     Admin(a): Admin,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -624,13 +680,71 @@ async fn clear_section(
     Path(code): Path<String>,
 ) -> ApiResult<Json<Value>> {
     let sec = section(&code)?;
-    // Disconnecting a saved Toss payout changes where money goes: same owner code as editing it.
-    if sec == Section::Payout && is_toss(&integrations::load_section(&s.db, &s.config.data_key, sec).await?) {
-        owner::verify_owner(&s, a, &headers, Some(peer.ip()), true).await?;
+    match try_unlock(&s, a, &headers, peer.ip(), sec).await {
+        Ok(until) => Ok(Json(json!({ "unlocked_until": until.to_rfc3339() }))),
+        Err(e) => {
+            audit(
+                &s.db,
+                a.role.as_str(),
+                Some(a.id),
+                "setup.unlock_failed",
+                sec.code(),
+                json!({ "reason": unlock_failure_reason(&e) }),
+            )
+            .await?;
+            Err(e)
+        }
     }
-    integrations::delete_section(&s.db, sec).await?;
-    reload(&s).await?;
-    audit(&s.db, a.role.as_str(), Some(a.id), "setup.integration_cleared", sec.code(), json!({})).await?;
+}
+
+async fn try_unlock(s: &AppState, a: Auth, headers: &HeaderMap, ip: IpAddr, sec: Section) -> ApiResult<DateTime<Utc>> {
+    let step = owner::check_owner(s, a, headers, Some(ip), true).await?;
+    if integrations::lock_state(&s.db, sec).await? == LockState::Unsaved {
+        return Err(ApiError::Conflict("nothing_saved"));
+    }
+    owner::burn_totp(s, a.id, owner::client_ip(s, Some(ip), headers), step).await?;
+    // The window and its audit record commit together: an open window always has a record.
+    let mut tx = s.db.begin().await?;
+    let until: Option<DateTime<Utc>> = sqlx::query_scalar(
+        "UPDATE integration_settings SET unlocked_until = now() + make_interval(secs => $2), unlocked_by = $3 WHERE section = $1 RETURNING unlocked_until",
+    )
+    .bind(sec.code())
+    .bind(UNLOCK_TTL_SECS as f64)
+    .bind(a.id)
+    .fetch_optional(&mut *tx)
+    .await?
+    .flatten();
+    let until = until.ok_or(ApiError::Conflict("nothing_saved"))?;
+    audit(
+        &mut *tx,
+        a.role.as_str(),
+        Some(a.id),
+        "setup.unlock",
+        sec.code(),
+        json!({ "expires_at": until.to_rfc3339() }),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(until)
+}
+
+fn unlock_failure_reason(e: &ApiError) -> &'static str {
+    match e {
+        ApiError::Forbidden => "not_owner",
+        ApiError::BadRequest(c) | ApiError::Conflict(c) => c,
+        ApiError::RateLimited => "rate_limited",
+        ApiError::Unauthorized => "unauthorized",
+        _ => "error",
+    }
+}
+
+async fn lock_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Path<String>) -> ApiResult<Json<Value>> {
+    let sec = section(&code)?;
+    sqlx::query("UPDATE integration_settings SET unlocked_until = NULL WHERE section = $1")
+        .bind(sec.code())
+        .execute(&s.db)
+        .await?;
+    audit(&s.db, a.role.as_str(), Some(a.id), "setup.lock", sec.code(), json!({})).await?;
     Ok(Json(card(&s, sec, None).await?))
 }
 

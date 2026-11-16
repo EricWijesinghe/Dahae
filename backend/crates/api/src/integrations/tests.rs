@@ -103,7 +103,8 @@ fn merge_keeps_blank_secrets_clears_null_and_drops_unknown() {
 #[test]
 fn preview_masks_secrets_and_shows_key_file_email() {
     assert_eq!(preview(Kind::Secret, &json!("abcdef123456")), json!("••••3456"));
-    assert_eq!(preview(Kind::Secret, &json!("ab")), json!("••••ab"));
+    assert_eq!(preview(Kind::Secret, &json!("ab")), json!("••••"));
+    assert_eq!(preview(Kind::Secret, &json!("abcdefgh")), json!("••••"));
     assert_eq!(preview(Kind::File, &json!({"client_email": "push@p.iam"})), json!("push@p.iam"));
     assert_eq!(preview(Kind::Text, &json!("store-1")), json!("store-1"));
 }

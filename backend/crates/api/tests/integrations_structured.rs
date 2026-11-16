@@ -76,8 +76,10 @@ async fn toss_payout_change_needs_owner_totp_and_manual_does_not(db: PgPool) {
     let (st, body) = call_with_totp(&app, "PUT", "/v1/admin/setup/payout", &token, None, manual).await;
     assert_eq!(st, StatusCode::OK, "manual save needs no owner code: {body}");
 
-    // A valid code passes the gate; the toss values are then checked on their own (bad security key here).
-    let (st, body) = call_with_totp(&app, "PUT", "/v1/admin/setup/payout", &token, Some(&code_now()), toss).await;
+    // The saved manual card is locked: an owner unlock lets the Toss change through the gate, then the values are checked.
+    let (st, body) = call_with_totp(&app, "POST", "/v1/admin/setup/payout/unlock", &token, Some(&code_now()), Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "unlock: {body}");
+    let (st, body) = call_with_totp(&app, "PUT", "/v1/admin/setup/payout", &token, None, toss).await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "gate passed, values refused: {body}");
 }
 
@@ -89,21 +91,36 @@ async fn clearing_a_saved_toss_payout_needs_owner_totp_and_manual_does_not(db: P
     let manual = json!({ "mode": "manual" });
     let (st, body) = call_with_totp(&app, "PUT", "/v1/admin/setup/payout", &token, None, manual).await;
     assert_eq!(st, StatusCode::OK, "manual save: {body}");
+    let (st, body) = call_with_totp(&app, "POST", "/v1/admin/setup/payout/unlock", &token, Some(&code_now()), Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "unlock: {body}");
     let (st, body) = call_with_totp(&app, "DELETE", "/v1/admin/setup/payout", &token, None, Value::Null).await;
-    assert_eq!(st, StatusCode::OK, "clearing a manual payout needs no owner code: {body}");
+    assert_eq!(st, StatusCode::OK, "clearing an unlocked manual payout needs no owner code: {body}");
 
     // Seeded directly: the route itself refuses to write a Toss config without the owner's code.
     let toss = json!({ "mode": "toss", "secret_key": "test_sk_x", "security_key": "x" });
-    integrations::save_section(&db, &test_config().data_key, Section::Payout, toss.as_object().expect("object"), id)
+    sqlx::query("UPDATE integration_settings SET unlocked_until = now() + interval '1 minute', unlocked_by = $1 WHERE section = 'payout'")
+        .bind(id)
+        .execute(&db)
+        .await
+        .expect("open window");
+    let saved = integrations::save_section(&db, &test_config().data_key, Section::Payout, toss.as_object().expect("object"), id)
         .await
         .expect("seed toss payout");
-    let (st, _) = call_with_totp(&app, "DELETE", "/v1/admin/setup/payout", &token, None, Value::Null).await;
-    assert_eq!(st, StatusCode::BAD_REQUEST, "clearing a Toss payout without a code must be refused");
+    assert!(saved, "seeding needs the owner's open window");
+    let (st, body) = call_with_totp(&app, "DELETE", "/v1/admin/setup/payout", &token, None, Value::Null).await;
+    assert_eq!(
+        (st, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("card_locked")),
+        "a locked Toss payout cannot be cleared: {body}"
+    );
     let kept = integrations::load_section(&db, &test_config().data_key, Section::Payout).await.expect("load");
     assert_eq!(kept.get("mode"), Some(&json!("toss")), "a refused clear keeps the saved config");
 
-    let (st, body) = call_with_totp(&app, "DELETE", "/v1/admin/setup/payout", &token, Some(&code_now()), Value::Null).await;
-    assert_eq!(st, StatusCode::OK, "a valid code clears it: {body}");
+    sqlx::query("UPDATE staff SET totp_last_step = NULL").execute(&db).await.expect("reset step");
+    let (st, body) = call_with_totp(&app, "POST", "/v1/admin/setup/payout/unlock", &token, Some(&code_now()), Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "unlock: {body}");
+    let (st, body) = call_with_totp(&app, "DELETE", "/v1/admin/setup/payout", &token, None, Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "an unlocked Toss payout clears: {body}");
     let gone = integrations::load_section(&db, &test_config().data_key, Section::Payout).await.expect("load");
     assert!(gone.is_empty(), "the Toss config is removed");
 }

@@ -12,6 +12,7 @@ use crate::{
     providers::fcm::ServiceAccount,
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
+use chrono::{DateTime, Utc};
 use serde_json::{Map, Value, json};
 use sqlx::PgPool;
 use std::{collections::HashMap, ops::RangeInclusive};
@@ -584,13 +585,20 @@ pub fn merge(section: Section, current: &Map<String, Value>, incoming: &Map<Stri
 }
 
 const MASK: &str = "••••";
+/// Characters a preview shows of a secret, and the length a secret needs before any of them show.
+const PREVIEW_TAIL_LEN: usize = 4;
+const PREVIEW_MIN_LEN: usize = 8;
 
 /// What the wizard shows for a saved value: secrets end in their last 4 characters only.
 pub fn preview(kind: Kind, v: &Value) -> Value {
     match kind {
         Kind::Secret => {
             let s = v.as_str().unwrap_or_default();
-            let tail: String = s.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect();
+            // Short values would show in full, so they get the mask alone.
+            if s.chars().count() <= PREVIEW_MIN_LEN {
+                return json!(MASK);
+            }
+            let tail: String = s.chars().rev().take(PREVIEW_TAIL_LEN).collect::<Vec<_>>().into_iter().rev().collect();
             json!(format!("{MASK}{tail}"))
         }
         Kind::File => {
@@ -627,26 +635,45 @@ fn decode(key: &[u8; 32], enc: &str) -> Option<Map<String, Value>> {
     serde_json::from_str::<Value>(&plain).ok()?.as_object().cloned()
 }
 
-pub async fn save_section(db: &PgPool, key: &[u8; 32], section: Section, values: &Map<String, Value>, by: uuid::Uuid) -> Result<(), sqlx::Error> {
+/// Where a saved card stands: a saved card is locked unless an owner unlock is still inside its window.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LockState {
+    Unsaved,
+    Locked,
+    /// Open until the instant, for the owner with this staff id.
+    Unlocked(DateTime<Utc>, uuid::Uuid),
+}
+
+pub async fn lock_state(db: &PgPool, section: Section) -> Result<LockState, sqlx::Error> {
+    let row: Option<(Option<DateTime<Utc>>, Option<uuid::Uuid>)> =
+        sqlx::query_as("SELECT CASE WHEN unlocked_until > now() THEN unlocked_until END, unlocked_by FROM integration_settings WHERE section = $1")
+            .bind(section.code())
+            .fetch_optional(db)
+            .await?;
+    Ok(match row {
+        None => LockState::Unsaved,
+        Some((Some(until), Some(by))) => LockState::Unlocked(until, by),
+        // An open window with no owner recorded fails closed.
+        Some(_) => LockState::Locked,
+    })
+}
+
+/// Saves the card and locks it again. Returns false unless `by` holds an open unlock of the card: the condition
+/// is in the statement, so two saves racing inside one unlock window cannot both pass. An empty map clears the card.
+pub async fn save_section(db: &PgPool, key: &[u8; 32], section: Section, values: &Map<String, Value>, by: uuid::Uuid) -> Result<bool, sqlx::Error> {
     let enc = crypto::encrypt(key, crypto::aad::INTEGRATION, &Value::Object(values.clone()).to_string());
     sqlx::query(
         "INSERT INTO integration_settings (section, secret, updated_by) VALUES ($1, $2, $3)
-         ON CONFLICT (section) DO UPDATE SET secret = EXCLUDED.secret, updated_by = EXCLUDED.updated_by, updated_at = now(), last_test = NULL",
+         ON CONFLICT (section) DO UPDATE SET secret = EXCLUDED.secret, updated_by = EXCLUDED.updated_by, updated_at = now(), last_test = NULL,
+             unlocked_until = NULL, unlocked_by = NULL
+         WHERE integration_settings.unlocked_until > now() AND integration_settings.unlocked_by = EXCLUDED.updated_by",
     )
     .bind(section.code())
     .bind(enc)
     .bind(by)
     .execute(db)
     .await
-    .map(|_| ())
-}
-
-pub async fn delete_section(db: &PgPool, section: Section) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM integration_settings WHERE section = $1")
-        .bind(section.code())
-        .execute(db)
-        .await
-        .map(|_| ())
+    .map(|r| r.rows_affected() == 1)
 }
 
 /// Env keys overlaid with every saved console section. A section that no longer validates
@@ -662,6 +689,10 @@ pub async fn load(db: &PgPool, config: &Config) -> Result<Integrations, sqlx::Er
             tracing::warn!(section = code, "setup section cannot be decrypted; ignored");
             continue;
         };
+        // A cleared card keeps its row, locked, with no values: it counts as not saved.
+        if values.is_empty() {
+            continue;
+        }
         if section == Section::Payout {
             let secret = values.get("secret_key").and_then(Value::as_str).unwrap_or_default();
             out.payout_toss_ready = toss_ready(toss_env_enabled(), last_test.as_ref(), secret);

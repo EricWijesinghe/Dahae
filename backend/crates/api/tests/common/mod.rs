@@ -147,6 +147,29 @@ pub async fn call_keyed(app: &Router, method: &str, uri: &str, token: Option<&st
     (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
 }
 
+/// One request with an optional `X-Owner-Totp` header, for owner-gated routes.
+pub async fn call_owner(app: &Router, method: &str, uri: &str, token: &str, totp: Option<&str>, body: Value) -> (StatusCode, Value) {
+    let mut req = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header(header::AUTHORIZATION, format!("Bearer {token}"));
+    if let Some(code) = totp {
+        req = req.header("x-owner-totp", code);
+    }
+    let payload = if body.is_null() {
+        Body::empty()
+    } else {
+        req = req.header(header::CONTENT_TYPE, "application/json");
+        Body::from(body.to_string())
+    };
+    let mut request = req.body(payload).expect("valid request");
+    request.extensions_mut().insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40_000))));
+    let resp = app.clone().oneshot(request).await.expect("router is infallible");
+    let status = resp.status();
+    let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.expect("response body");
+    (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
+}
+
 /// Signs in through the OTP flow (dev mode echoes the code). Returns (access token, subject id).
 pub async fn login(app: &Router, phone: &str, audience: &str) -> (String, String) {
     let (st, sent) = call(app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": phone }))).await;
