@@ -261,7 +261,8 @@ def social_flow(staff, visit):
 
     va = call("POST", "/v1/checkouts", {"kind": "booking", "booking": {**body, "start_hour": 13}, "method": "virtual_account"}, sc)
     issued = call("POST", f"/v1/checkouts/{va['id']}/confirm", {"payment_id": "dev:va"}, sc)
-    assert issued["status"] == "awaiting_deposit" and issued["virtual_account"]["accountNumber"], issued
+    assert issued["status"] == "awaiting_deposit" and issued["virtual_account"]["account_number"], issued
+    assert issued["virtual_account"]["bank"] == "KOOKMIN", issued
     pending = call("GET", "/v1/checkouts?status=awaiting_deposit", token=sc)
     assert any(c["id"] == va["id"] for c in pending), pending
     step("virtual account -> awaiting_deposit, listed for the customer")
