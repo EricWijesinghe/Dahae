@@ -43,6 +43,9 @@ Future<void> _open(
   );
   await tester.tap(find.text('open'));
   await pumpUntilFound(tester, find.text(_t.cancelKeep));
+  await settle(
+    tester,
+  ); // the sheet is still sliding up when its first button appears
 }
 
 void main() {
