@@ -79,8 +79,10 @@ void main() {
     await h.open();
     await settle(tester);
     final plus = find.byTooltip(t.cntMore).first;
+    await tester.ensureVisible(plus);
     await tester.tap(plus);
     await settle(tester);
+    await tester.ensureVisible(plus);
     await tester.tap(plus);
     await settle(tester);
     // The second tap is ignored: the basket shows 1, not 2.
