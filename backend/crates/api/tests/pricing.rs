@@ -164,7 +164,7 @@ async fn owner_peak_save_must_state_the_fixed_scope(pool: PgPool) {
     let mut body = serde_json::to_value(PeakConfig::default()).expect("json");
     body.as_object_mut().expect("object").remove("apply_to_fixed");
     let (st, b) = call(&app, "PUT", "/v1/admin/peak-pricing", Some(token.as_str()), Some(body.clone())).await;
-    assert_eq!(st, StatusCode::UNPROCESSABLE_ENTITY, "{b}");
+    assert_eq!(st, StatusCode::BAD_REQUEST, "{b}");
     assert_eq!(b["error"]["code"], "apply_to_fixed_required");
     body["apply_to_fixed"] = json!(true);
     let (st, b) = call(&app, "PUT", "/v1/admin/peak-pricing", Some(token.as_str()), Some(body)).await;
