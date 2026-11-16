@@ -10,7 +10,7 @@ use axum::{
     extract::ConnectInfo,
     http::{Request, StatusCode, header},
 };
-use common::{SECRET, seed_catalog};
+use common::{SECRET, app, call, seed_catalog};
 use serde_json::json;
 use sqlx::PgPool;
 use std::net::SocketAddr;
@@ -310,4 +310,60 @@ async fn settlement_link_does_not_queue_a_payment_already_refunded(pool: PgPool)
     .expect("request");
     api::routes::tax_invoices::on_settled(&pool, checkout, "tx-01070000305").await;
     assert_eq!(request_state(&pool, request).await, "cancelled", "never queued for the owner");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn request_waits_for_a_checkout_that_is_settling(pool: PgPool) {
+    let app = app(pool.clone());
+    let cust = common::customer(&app, &pool, "01070000301").await;
+    let checkout: Uuid = sqlx::query_scalar(
+        "INSERT INTO checkouts (user_id, kind, method, amount, status, expires_at)
+         VALUES ($1, 'booking', 'card', 110000, 'pending', now() + interval '1 day') RETURNING id",
+    )
+    .bind(cust.user)
+    .fetch_one(&pool)
+    .await
+    .expect("checkout");
+
+    // The settle path holds the checkout row and marks it paid; the request must wait and then refuse.
+    let mut settling = pool.begin().await.expect("tx");
+    sqlx::query("SELECT id FROM checkouts WHERE id = $1 FOR UPDATE")
+        .bind(checkout)
+        .execute(&mut *settling)
+        .await
+        .expect("lock");
+    sqlx::query("UPDATE checkouts SET status = 'paid' WHERE id = $1")
+        .bind(checkout)
+        .execute(&mut *settling)
+        .await
+        .expect("paid");
+    let put_app = app.clone();
+    let token = cust.token.clone();
+    let put = tokio::spawn(async move {
+        let body = json!({
+            "business_number": "1234567891",
+            "company_name": "ACME",
+            "representative": "홍길동",
+            "business_type": "서비스",
+            "business_item": "청소",
+            "address": "서울시 강남구",
+            "email": "tax@example.com",
+        });
+        call(&put_app, "PUT", &format!("/v1/checkouts/{checkout}/tax-invoice"), Some(&token), Some(body)).await
+    });
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    settling.commit().await.expect("commit");
+
+    let (code, body) = put.await.expect("join");
+    assert_eq!(
+        (code, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("checkout_not_open")),
+        "{body}"
+    );
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM tax_invoice_requests WHERE checkout_id = $1")
+        .bind(checkout)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(rows, 0, "no request is left pending on a paid checkout");
 }

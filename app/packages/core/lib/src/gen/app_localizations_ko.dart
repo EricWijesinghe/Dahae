@@ -3435,6 +3435,19 @@ class TKo extends T {
   String get err_payout_provider => '이 지급 방식은 지금 쓸 수 없어요.';
 
   @override
+  String get err_payout_in_transfer =>
+      '이 정산은 이미 송금되었을 수 있어 지금 바꿀 수 없어요. 상태를 확인해 주세요.';
+
+  @override
+  String get err_payout_checked => '토스에서 답을 받아 상태를 새로 반영했어요. 목록을 확인해 주세요.';
+
+  @override
+  String get err_settlement_in_transfer => '이 예약의 정산이 송금 중이라 취소할 수 없어요.';
+
+  @override
+  String get err_checkout_not_open => '결제가 이미 진행되었거나 끝나서 지금은 바꿀 수 없어요.';
+
+  @override
   String get err_unsupported_bank => '이 은행은 지급을 지원하지 않아요.';
 
   @override
@@ -4449,6 +4462,9 @@ class TKo extends T {
   String get oRuleTaxDeadline => '부가가치세 신고 기한 임박';
 
   @override
+  String get oRulePayoutUnconfirmed => '토스 정산 송금 결과 확인 안 됨 (30분 이상)';
+
+  @override
   String get oQuietHours => '조용한 시간';
 
   @override
@@ -5451,6 +5467,36 @@ class TKo extends T {
   String poSellerDone(String status) {
     return '판매자 상태: $status';
   }
+
+  @override
+  String get poCheckToss => 'Toss에서 확인하기';
+
+  @override
+  String get poCheckPending =>
+      '토스 기록에서 이 송금을 찾지 못했어요. 몇 분 뒤 다시 확인하거나, 토스 상점관리자를 직접 확인해 주세요.';
+
+  @override
+  String get poNotSent => '송금되지 않았음을 확인';
+
+  @override
+  String get poNotSentTitle => '정말 송금되지 않았나요?';
+
+  @override
+  String poNotSentBody(String name, String amount) {
+    return '토스가 응답하지 않거나 기록에서 찾지 못해, 이 지급이 실제로 나갔는지 자동으로 확인할 수 없어요.\n\n토스페이먼츠 상점관리자에 로그인해 지급대행 내역에서 $name 님, $amount 건을 찾아 주세요.\n\n• 내역이 없거나 \'실패\' 또는 \'취소\'로 보이면 송금되지 않은 거예요. 아래에서 확인하면 이 지급이 실패로 바뀌고, 예약 취소와 다시 보내기를 할 수 있어요.\n• \'요청됨\', \'처리 중\', \'완료\'로 보이면 돈이 나갔거나 나가는 중이에요. 확인하지 말고 나중에 \'Toss에서 확인하기\'를 다시 눌러 주세요.';
+  }
+
+  @override
+  String get poNotSentWarning => '잘못 확인하면 같은 정산이 파트너에게 두 번 지급될 수 있어요.';
+
+  @override
+  String get poNotSentChecked => '토스 상점관리자에서 직접 확인했어요';
+
+  @override
+  String get poNotSentConfirm => '송금되지 않음으로 표시';
+
+  @override
+  String get poNotSentDone => '실패로 표시했어요. 이제 다시 시도할 수 있어요.';
 
   @override
   String get cgPeakFixedScope => '정해진 가격·정기 청소에도 할증 적용';

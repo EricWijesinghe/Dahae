@@ -4,13 +4,13 @@
 
 mod common;
 
-use api::{auth::Role, crypto};
+use api::{auth::Role, crypto, providers::payout as adapter};
 use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
 use chrono::Duration;
-use common::{app, call, seed_catalog, test_config};
+use common::{app, call, prod_app, seed_catalog, test_config};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -161,7 +161,7 @@ async fn background_sync_leaves_an_ambiguous_send_for_a_same_key_resend(pool: Pg
         .await
         .expect("key");
 
-    // Toss looks transfers up by its own id; a send that never returned one cannot be asked about.
+    // Toss has no record yet of a send that just failed: it stays open for a same-key resend.
     let state = api::build_state(pool.clone(), test_config()).expect("state");
     api::payout_sync::sync_pass(&state).await.expect("pass");
     let (st, key): (String, String) = sqlx::query_as("SELECT state, idempotency_key FROM payouts WHERE id = $1::uuid")
@@ -336,4 +336,380 @@ async fn revealed_account_is_never_cached(pool: PgPool) {
     let res = app.clone().oneshot(req).await.expect("router is infallible");
     assert_eq!(res.status(), StatusCode::OK);
     assert_eq!(res.headers().get(header::CACHE_CONTROL).and_then(|v| v.to_str().ok()), Some("no-store"));
+}
+
+async fn booking_of(db: &PgPool, settlement: Uuid) -> Uuid {
+    sqlx::query_scalar("SELECT booking_id FROM settlements WHERE id = $1")
+        .bind(settlement)
+        .fetch_one(db)
+        .await
+        .expect("booking")
+}
+
+async fn set_active(db: &PgPool, booking: Uuid) {
+    sqlx::query("UPDATE bookings SET status = 1 WHERE id = $1")
+        .bind(booking)
+        .execute(db)
+        .await
+        .expect("status");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn failed_toss_transfer_does_not_block_a_cancel(pool: PgPool) {
+    let (settlement, _pro) = seed(&pool).await;
+    let app = app(pool.clone());
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app, &token).await;
+    // Toss declined the transfer: no money moved, so the job can still be cancelled.
+    make_toss(&pool, &id, "failed", None, Some("계좌 오류"), 0).await;
+    let booking = booking_of(&pool, settlement).await;
+    set_active(&pool, booking).await;
+
+    let (code, body) = call(&app, "POST", &format!("/v1/admin/bookings/{booking}/cancel"), Some(&token), Some(json!({}))).await;
+    assert_eq!(code, StatusCode::OK, "{body}");
+    assert_eq!(settlement_state(&pool, settlement).await, "held");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn owner_cannot_mark_an_ambiguous_toss_send_failed(pool: PgPool) {
+    seed(&pool).await;
+    let app = app(pool.clone());
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app, &token).await;
+    // A send that timed out may already exist at Toss: only a sync can settle it, never a manual fail.
+    make_toss(&pool, &id, "requested", None, Some("timeout"), 0).await;
+
+    let (code, body) = call(
+        &app,
+        "POST",
+        &format!("/v1/admin/settlements/payouts/{id}/fail"),
+        Some(&token),
+        Some(json!({ "reason": "직접 확인" })),
+    )
+    .await;
+    assert_eq!(
+        (code, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("payout_in_transfer")),
+        "{body}"
+    );
+    let state: String = sqlx::query_scalar("SELECT state FROM payouts WHERE id = $1::uuid")
+        .bind(&id)
+        .fetch_one(&pool)
+        .await
+        .expect("state");
+    assert_eq!(state, "requested");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn refund_waits_for_a_send_in_flight_and_refuses_without_moving_money(pool: PgPool) {
+    let (settlement, _pro) = seed(&pool).await;
+    let app = app(pool.clone());
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app, &token).await;
+    let booking = booking_of(&pool, settlement).await;
+    set_active(&pool, booking).await;
+    let payment: Uuid = sqlx::query_scalar(
+        "INSERT INTO payments (booking_id, amount, kind, status, provider, provider_tx_id, idempotency_key)
+         VALUES ($1, 100000, 'full', 'paid', 'fake', 'tx-race', 'pay-race') RETURNING id",
+    )
+    .bind(booking)
+    .fetch_one(&pool)
+    .await
+    .expect("payment");
+
+    // A send holds the batch row while it calls Toss; the cancel must wait for it before any refund.
+    let batch = Uuid::parse_str(&id).expect("uuid");
+    let mut sending = pool.begin().await.expect("tx");
+    sqlx::query("SELECT id FROM payouts WHERE id = $1 FOR UPDATE")
+        .bind(batch)
+        .execute(&mut *sending)
+        .await
+        .expect("lock");
+    let cancel_app = app.clone();
+    let cancel_token = token.clone();
+    let cancel = tokio::spawn(async move {
+        call(
+            &cancel_app,
+            "POST",
+            &format!("/v1/admin/bookings/{booking}/cancel"),
+            Some(&cancel_token),
+            Some(json!({})),
+        )
+        .await
+    });
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    sqlx::query("UPDATE payouts SET state = 'sent', attempts = 1, provider_transfer_id = 'tp_race' WHERE id = $1")
+        .bind(batch)
+        .execute(&mut *sending)
+        .await
+        .expect("sent");
+    sending.commit().await.expect("commit");
+
+    let (code, body) = cancel.await.expect("join");
+    assert_eq!(
+        (code, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("settlement_in_transfer")),
+        "{body}"
+    );
+    let (refunded, status): (i64, String) = sqlx::query_as("SELECT refunded_amount, status FROM payments WHERE id = $1")
+        .bind(payment)
+        .fetch_one(&pool)
+        .await
+        .expect("payment");
+    assert_eq!((refunded, status.as_str()), (0, "paid"), "nothing refunded for a job that stays active");
+    let booking_status: i16 = sqlx::query_scalar("SELECT status FROM bookings WHERE id = $1")
+        .bind(booking)
+        .fetch_one(&pool)
+        .await
+        .expect("status");
+    assert_eq!(booking_status, 1);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_open_toss_transfer_blocks_clearing_the_toss_card(pool: PgPool) {
+    seed(&pool).await;
+    let app = app(pool.clone());
+    let id = first_payout_id(&app, &admin_token(&pool).await).await;
+    make_toss(&pool, &id, "sent", Some("tp_open"), None, 0).await;
+    assert!(
+        api::payout_sync::toss_transfers_open(&pool).await.expect("query"),
+        "a sent transfer needs the Toss keys to settle"
+    );
+    make_toss(&pool, &id, "paid", Some("tp_open"), None, 0).await;
+    assert!(
+        !api::payout_sync::toss_transfers_open(&pool).await.expect("query"),
+        "settled transfers do not block"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn owner_can_fail_a_toss_payout_that_was_declined_and_retried(pool: PgPool) {
+    seed(&pool).await;
+    let app = app(pool.clone());
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app, &token).await;
+    // Declined once (no money moved), then retried: attempts is 1 but nothing may exist at Toss.
+    make_toss(&pool, &id, "requested", None, None, 0).await;
+
+    let (code, body) = call(
+        &app,
+        "POST",
+        &format!("/v1/admin/settlements/payouts/{id}/fail"),
+        Some(&token),
+        Some(json!({ "reason": "직접 확인" })),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "{body}");
+    let state: String = sqlx::query_scalar("SELECT state FROM payouts WHERE id = $1::uuid")
+        .bind(&id)
+        .fetch_one(&pool)
+        .await
+        .expect("state");
+    assert_eq!(state, "failed");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_send_refused_for_missing_keys_leaves_the_batch_as_it_was(pool: PgPool) {
+    seed(&pool).await;
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app(pool.clone()), &token).await;
+    sqlx::query("UPDATE payouts SET provider = 'toss', attempts = 0 WHERE id = $1::uuid")
+        .bind(&id)
+        .execute(&pool)
+        .await
+        .expect("toss");
+    let fingerprint = adapter::account_fingerprint(adapter::bank_code("국민은행").expect("bank"), "110-123-456789", "홍길동");
+    sqlx::query("UPDATE pros SET toss_seller_id = 'seller-1', toss_seller_fp = $1")
+        .bind(fingerprint)
+        .execute(&pool)
+        .await
+        .expect("seller");
+
+    // Production router with no Toss keys: refused before any request leaves, so nothing may be recorded as sent.
+    let prod = prod_app(pool.clone(), "http://127.0.0.1:9");
+    let (_, body) = call(
+        &prod,
+        "POST",
+        &format!("/v1/admin/settlements/payouts/{id}/send"),
+        Some(&token),
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(body["error"]["code"].as_str(), Some("provider_not_configured"), "{body}");
+    let row: (String, i32, Option<String>) = sqlx::query_as("SELECT state, attempts, failure_reason FROM payouts WHERE id = $1::uuid")
+        .bind(&id)
+        .fetch_one(&pool)
+        .await
+        .expect("row");
+    assert_eq!(row, ("requested".to_string(), 0, None), "no ambiguous-send mark, so the booking is not blocked");
+}
+
+const SECURITY_HEX: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+const OWNER_SEED: &[u8] = b"payout-owner-seed-0001";
+
+/// Toss mock: `GET /v2/payouts` answers `items` as one complete page.
+async fn start_toss(items: serde_json::Value) -> String {
+    let body = json!({ "entityType": "payout-list", "entityBody": { "hasMore": false, "items": items } });
+    let router = axum::Router::new().route("/v2/payouts", axum::routing::get(move || async move { axum::Json(body) }));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind toss mock");
+    let addr = listener.local_addr().expect("addr");
+    tokio::spawn(async move { axum::serve(listener, router).await.expect("mock serves") });
+    format!("http://{addr}")
+}
+
+/// Production-mode state with Toss payout keys, its Toss calls sent to `toss_base`.
+fn toss_state(pool: &PgPool, toss_base: &str) -> api::state::AppState {
+    let mut cfg = test_config();
+    cfg.dev_mode = false;
+    let state = api::build_state(pool.clone(), cfg.clone()).expect("state");
+    let providers = api::providers::Providers::new(cfg.clone(), pool.clone())
+        .expect("providers")
+        .with_toss_api(toss_base);
+    let mut integ = api::integrations::Integrations::from_config(&cfg);
+    integ.payout = Some(api::integrations::PayoutSettings {
+        mode: api::integrations::PayoutMode::Toss,
+        secret_key: Some("test_sk_payout".into()),
+        security_key: Some(SECURITY_HEX.into()),
+    });
+    providers.set_integrations(integ);
+    api::state::AppState {
+        providers: std::sync::Arc::new(providers),
+        ..state
+    }
+}
+
+/// A requested batch whose Toss send ended ambiguously `days` ago. Returns (payout id, settlement).
+async fn ambiguous_batch(pool: &PgPool, days: i32) -> (String, Uuid) {
+    let (settlement, _pro) = seed(pool).await;
+    let id = first_payout_id(&app(pool.clone()), &admin_token(pool).await).await;
+    make_toss(pool, &id, "requested", None, Some("status 502 Bad Gateway"), days).await;
+    (id, settlement)
+}
+
+async fn payout_row(pool: &PgPool, id: &str) -> (String, Option<String>, String) {
+    sqlx::query_as("SELECT state, provider_transfer_id, idempotency_key FROM payouts WHERE id = $1::uuid")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .expect("row")
+}
+
+/// An owner-admin token (stepped up, TOTP enrolled) and a code for now.
+async fn owner(pool: &PgPool) -> (String, String) {
+    let (token, staff) = common::staff_token(pool, Role::StaffAdmin).await;
+    common::enrol_owner(pool, staff, OWNER_SEED).await;
+    let step = (chrono::Utc::now().timestamp() / api::totp::STEP_SECS) as u64;
+    (token, format!("{:06}", api::totp::code_at(OWNER_SEED, step)))
+}
+
+async fn not_sent(app: &axum::Router, id: &str, token: &str, code: Option<&str>) -> (StatusCode, serde_json::Value) {
+    common::call_owner(app, "POST", &format!("/v1/admin/settlements/payouts/{id}/not-sent"), token, code, json!({})).await
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn status_check_finds_an_ambiguous_send_at_toss_by_its_ref_id(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 0).await;
+    let other = json!({ "id": "FPA_other", "refPayoutId": Uuid::nil().to_string(), "status": "COMPLETED" });
+    let ours = json!({ "id": "FPA_ours", "refPayoutId": id, "status": "IN_PROGRESS" });
+    let state = toss_state(&pool, &start_toss(json!([other, ours])).await);
+
+    api::payout_sync::sync_pass(&state).await.expect("pass");
+    let (st, transfer, _) = payout_row(&pool, &id).await;
+    assert_eq!(
+        (st.as_str(), transfer.as_deref()),
+        ("sent", Some("FPA_ours")),
+        "Toss has it: sent, with its id kept"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn status_check_leaves_a_send_toss_does_not_list_for_the_owner(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 1).await;
+    let before = payout_row(&pool, &id).await;
+    let state = toss_state(&pool, &start_toss(json!([])).await);
+
+    // Absence from the list is not proof: the lookup's date filter and Toss's refPayoutId rules are unverified.
+    assert_eq!(api::payout_sync::sync_pass(&state).await.expect("pass"), 0);
+    assert_eq!(payout_row(&pool, &id).await, before, "still ambiguous, same key, for the owner to settle");
+    let failure: Option<String> = sqlx::query_scalar("SELECT failure_reason FROM payouts WHERE id = $1::uuid")
+        .bind(&id)
+        .fetch_one(&pool)
+        .await
+        .expect("failure");
+    assert_eq!(failure.as_deref(), Some("status 502 Bad Gateway"));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn owner_not_sent_when_toss_lists_nothing_fails_the_batch_and_keeps_the_key(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 0).await;
+    let (_, _, key_before) = payout_row(&pool, &id).await;
+    let app = api::routes::router(toss_state(&pool, &start_toss(json!([])).await));
+    let (token, totp) = owner(&pool).await;
+
+    let (code, body) = not_sent(&app, &id, &token, Some(&totp)).await;
+    assert_eq!((code, body["state"].as_str()), (StatusCode::OK, Some("failed")), "{body}");
+    let (st, _, key) = payout_row(&pool, &id).await;
+    assert_eq!((st.as_str(), key), ("failed", key_before), "the owner's word never rotates the key");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn owner_not_sent_needs_the_owner_and_a_code(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 0).await;
+    let app = api::routes::router(toss_state(&pool, "http://127.0.0.1:9"));
+    let (owner_token, _) = owner(&pool).await;
+    let (code, body) = not_sent(&app, &id, &owner_token, None).await;
+    assert_eq!(
+        (code, body["error"]["code"].as_str()),
+        (StatusCode::BAD_REQUEST, Some("totp_required")),
+        "{body}"
+    );
+
+    let admin = admin_token(&pool).await;
+    let (code, body) = not_sent(&app, &id, &admin, Some("123456")).await;
+    assert_eq!(code, StatusCode::FORBIDDEN, "an admin who is not the owner: {body}");
+    assert_eq!(payout_row(&pool, &id).await.0, "requested");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn owner_not_sent_is_refused_when_toss_shows_the_transfer(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 0).await;
+    let ours = json!({ "id": "FPA_ours", "refPayoutId": id, "status": "IN_PROGRESS" });
+    let app = api::routes::router(toss_state(&pool, &start_toss(json!([ours])).await));
+    let (token, totp) = owner(&pool).await;
+
+    let (code, body) = not_sent(&app, &id, &token, Some(&totp)).await;
+    assert_eq!((code, body["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("payout_checked")), "{body}");
+    assert_eq!(payout_row(&pool, &id).await.0, "sent", "the answer from Toss wins over the owner");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn owner_not_sent_while_toss_is_unreachable_fails_the_batch_and_unblocks_cancel(pool: PgPool) {
+    let (id, settlement) = ambiguous_batch(&pool, 0).await;
+    let (_, _, key_before) = payout_row(&pool, &id).await;
+    let app = api::routes::router(toss_state(&pool, "http://127.0.0.1:9"));
+    let (token, totp) = owner(&pool).await;
+    let booking = booking_of(&pool, settlement).await;
+    set_active(&pool, booking).await;
+    let cancel = format!("/v1/admin/bookings/{booking}/cancel");
+    let (_, body) = call(&app, "POST", &cancel, Some(&token), Some(json!({}))).await;
+    assert_eq!(body["error"]["code"].as_str(), Some("settlement_in_transfer"), "blocked first: {body}");
+
+    let (code, body) = not_sent(&app, &id, &token, Some(&totp)).await;
+    assert_eq!((code, body["state"].as_str()), (StatusCode::OK, Some("failed")), "{body}");
+    let (st, _, key) = payout_row(&pool, &id).await;
+    assert_eq!(st, "failed");
+    assert_eq!(key, key_before, "a resend keeps the key, so a send Toss did take is answered, not repeated");
+    let (actor, detail): (Option<Uuid>, serde_json::Value) =
+        sqlx::query_as("SELECT actor_id, data FROM audit_log WHERE action = 'payout.not_sent' AND target = $1")
+            .bind(&id)
+            .fetch_one(&pool)
+            .await
+            .expect("audit row");
+    assert!(actor.is_some(), "who confirmed it");
+    assert_eq!(detail["send_error"], "status 502 Bad Gateway", "{detail}");
+    let (code, body) = not_sent(&app, &id, &token, Some(&totp)).await;
+    assert_eq!(code, StatusCode::CONFLICT, "only once: {body}");
+
+    let (code, body) = call(&app, "POST", &cancel, Some(&token), Some(json!({}))).await;
+    assert_eq!(code, StatusCode::OK, "{body}");
 }

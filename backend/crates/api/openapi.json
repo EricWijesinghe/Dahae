@@ -3252,6 +3252,40 @@
         }
       }
     },
+    "/v1/admin/settlements/payouts/{id}/not-sent": {
+      "post": {
+        "operationId": "adminPayoutNotSent",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner states an ambiguous Toss send never left (only when Toss cannot be reached or does not list it; marks it failed, key kept, audited)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK, body holds id and state (failed)"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/settlements/payouts/{id}/{action}": {
       "post": {
         "operationId": "adminPayoutAction",
@@ -3288,6 +3322,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -3844,6 +3881,9 @@
           "200": {
             "description": "OK"
           },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
           "default": {
             "$ref": "#/components/responses/Error"
           }
@@ -3858,6 +3898,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -4828,6 +4871,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
           },
           "default": {
             "$ref": "#/components/responses/Error"

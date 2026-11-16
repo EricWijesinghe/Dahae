@@ -111,6 +111,8 @@ pub struct Providers {
     live: Arc<RwLock<Live>>,
     db: PgPool,
     portone_api: String,
+    /// Toss base URL override; None is the real API.
+    toss_api: Option<String>,
 }
 
 fn random_id(prefix: &str) -> String {
@@ -129,12 +131,19 @@ impl Providers {
             live,
             db,
             portone_api: portone::API.into(),
+            toss_api: None,
         })
     }
 
     /// Points the PortOne adapter at another base URL. Integration tests use it for a mock gateway.
     pub fn with_portone_api(mut self, base: &str) -> Self {
         base.trim_end_matches('/').clone_into(&mut self.portone_api);
+        self
+    }
+
+    /// Points the Toss payout calls at another base URL. Integration tests use it for a mock.
+    pub fn with_toss_api(mut self, base: &str) -> Self {
+        self.toss_api = Some(base.trim_end_matches('/').to_string());
         self
     }
 
@@ -354,6 +363,17 @@ impl Providers {
         Ok(payout::parse_status(&self.payout_call(req, Some(&key)).await?))
     }
 
+    /// Toss payouts dated `since` or later whose refPayoutId is `ref_id`, as (Toss id, status). For a send that
+    /// ended ambiguously, so Toss's id never came back. The dev fake keeps no record of such a send.
+    pub async fn find_transfers(&self, ref_id: &str, since: chrono::NaiveDate) -> Result<Vec<(String, TransferStatus)>, ProviderError> {
+        if self.dev() {
+            return Ok(Vec::new());
+        }
+        let (secret, key) = self.payout_keys()?;
+        let req = payout::list_request(&self.http, &secret, &since.to_string())?;
+        payout::find_in_list(&self.payout_call(req, Some(&key)).await?, ref_id)
+    }
+
     /// Harmless read used by the console's sandbox connection test: `GET /v2/balances` with the given key.
     pub async fn payout_balance_check(&self, secret: &str) -> Result<StatusCode, ProviderError> {
         let req = payout::balance_request(&self.http, secret)?;
@@ -370,7 +390,11 @@ impl Providers {
         Ok((secret, key))
     }
 
-    async fn payout_call(&self, req: Request, key: Option<&[u8; 32]>) -> Result<serde_json::Value, ProviderError> {
+    async fn payout_call(&self, mut req: Request, key: Option<&[u8; 32]>) -> Result<serde_json::Value, ProviderError> {
+        if let Some(base) = &self.toss_api {
+            let tail = req.url().as_str().strip_prefix(payout::TOSS_API).unwrap_or_default();
+            *req.url_mut() = reqwest::Url::parse(&format!("{base}{tail}")).map_err(|e| ProviderError::Upstream(e.to_string()))?;
+        }
         let resp = self.http.execute(req).await.map_err(|e| ProviderError::Upstream(e.to_string()))?;
         let status = resp.status();
         let text = resp.text().await.map_err(|e| ProviderError::Upstream(e.to_string()))?;

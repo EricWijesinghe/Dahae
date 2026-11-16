@@ -31,6 +31,9 @@ const DUE_SQL: &str = "SELECT id FROM payouts
   WHERE provider = 'toss' AND (state = 'sent' OR (state = 'requested' AND failure_reason IS NOT NULL))
   ORDER BY updated_at LIMIT $1";
 
+/// A Toss send left with no answer for this long needs the owner: sync never settles one Toss does not list.
+pub const UNCONFIRMED_AFTER_MINS: i32 = 30;
+
 /// (stuck open transfers, Toss transfers failed within the alert window).
 const ALERT_SQL: &str = "SELECT
   count(*) FILTER (WHERE (state = 'sent' OR (state = 'requested' AND failure_reason IS NOT NULL))
@@ -57,6 +60,27 @@ pub async fn sync_pass(s: &AppState) -> ApiResult<usize> {
         }
     }
     Ok(settled)
+}
+
+/// True while a Toss transfer may exist at the provider. Clearing the Toss card or switching to manual
+/// would strand it: sync needs the payout keys to ask Toss about it.
+pub async fn toss_transfers_open(db: &PgPool) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM payouts WHERE provider = 'toss' AND (state = 'sent' OR (state = 'requested' AND failure_reason IS NOT NULL)))",
+    )
+    .fetch_one(db)
+    .await
+}
+
+/// Ambiguous Toss sends (requested after a send error) older than [`UNCONFIRMED_AFTER_MINS`].
+pub async fn unconfirmed_count(db: &PgPool) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT count(*) FROM payouts WHERE provider = 'toss' AND state = 'requested' AND failure_reason IS NOT NULL
+           AND updated_at < now() - make_interval(mins => $1)",
+    )
+    .bind(UNCONFIRMED_AFTER_MINS)
+    .fetch_one(db)
+    .await
 }
 
 /// (stuck open transfers, recent Toss failures) for the owner's alert rules.

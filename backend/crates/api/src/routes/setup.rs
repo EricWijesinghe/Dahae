@@ -526,7 +526,7 @@ async fn card(s: &AppState, sec: Section, last_test: Option<Value>) -> ApiResult
                 "name": f.name,
                 "kind": kind_name(f.kind),
                 "required": f.required,
-                "set": v.is_some(),
+                "set": v.is_some() || integrations::env_provides(&base, sec, f.name),
                 "preview": preview,
             })
         })
@@ -646,6 +646,10 @@ async fn put_section(
         base.payout_toss_ready = payout_toss_ready(&s, &merged).await?;
     }
     integrations::apply(&base, sec, &merged).map_err(|Invalid(code)| ApiError::BadRequest(code))?;
+    // Leaving Toss strands transfers still open at Toss: their sync needs these keys.
+    if sec == Section::Payout && !is_toss(&merged) && crate::payout_sync::toss_transfers_open(&s.db).await? {
+        return Err(ApiError::Conflict("payout_in_transfer"));
+    }
     if let Some(step) = owner_step {
         owner::burn_totp(&s, a.id, owner::client_ip(&s, Some(peer.ip()), &headers), step).await?;
     }
@@ -684,6 +688,9 @@ async fn clear_section(State(s): State<AppState>, Admin(a): Admin, Path(code): P
         return Ok(Json(card(&s, sec, None).await?));
     }
     require_unlocker(&s, a, lock).await?;
+    if sec == Section::Payout && crate::payout_sync::toss_transfers_open(&s.db).await? {
+        return Err(ApiError::Conflict("payout_in_transfer"));
+    }
     // The row stays, locked and empty: a non-owner admin cannot re-save the card without an unlock.
     if !integrations::save_section(&s.db, &s.config.data_key, sec, &Map::new(), a.id).await? {
         return Err(ApiError::Conflict("card_locked"));

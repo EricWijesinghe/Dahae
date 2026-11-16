@@ -398,3 +398,23 @@ fn saved_console_value_beats_env_value() {
     let out = apply(&env, Section::Portone, &obj(saved)).unwrap();
     assert_eq!(out.portone.store_id.as_deref(), Some("store-db"));
 }
+
+#[test]
+fn saving_portone_keeps_env_webhook_secret_and_channel_keys() {
+    let env = apply(
+        &Integrations::default(),
+        Section::Portone,
+        &obj(json!({"store_id": "store-1", "api_secret": FAKE_API_SECRET, "webhook_secret": "whsec_aGVsbG8=", "channel_keys": "{\"card\":\"channel-key-1\"}"})),
+    )
+    .unwrap();
+    // The card form omits the webhook secret and the channel keys it did not set: the env values stay.
+    let out = apply(
+        &env,
+        Section::Portone,
+        &obj(json!({"store_id": "store-1", "api_secret": FAKE_API_SECRET, "channel_keys": "{\"identity\":\"channel-key-3\"}"})),
+    )
+    .unwrap();
+    assert_eq!(out.portone.webhook_secret.as_deref(), Some("whsec_aGVsbG8="));
+    assert_eq!(out.portone.channel_keys.get("card").map(String::as_str), Some("channel-key-1"));
+    assert_eq!(out.portone.channel_keys.get("identity").map(String::as_str), Some("channel-key-3"));
+}

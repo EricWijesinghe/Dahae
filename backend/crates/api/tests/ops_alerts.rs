@@ -277,3 +277,35 @@ async fn otp_volume_alert_fires_at_the_warn_level_only(pool: PgPool) {
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].rule, "otp_volume");
 }
+
+/// A Toss batch whose send ended with no answer `minutes` ago.
+async fn ambiguous_toss_payout(db: &PgPool, phone: &str, minutes: i32) {
+    let pro: Uuid = sqlx::query_scalar("INSERT INTO pros (phone, name, status) VALUES ($1, 'pro', 'verified') RETURNING id")
+        .bind(phone)
+        .fetch_one(db)
+        .await
+        .expect("pro");
+    sqlx::query(
+        "INSERT INTO payouts (pro_id, payout_date, amount, items, provider, state, bank, holder, account_enc, account_last4, failure_reason, updated_at)
+         VALUES ($1, current_date, 80000, 1, 'toss', 'requested', '국민은행', '홍길동', 'x', '6789', 'status 502', now() - make_interval(mins => $2))",
+    )
+    .bind(pro)
+    .bind(minutes)
+    .execute(db)
+    .await
+    .expect("payout");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_unanswered_toss_payout_alerts_the_owner_after_half_an_hour(pool: PgPool) {
+    let state = api::build_state(pool.clone(), test_config()).expect("state");
+    ambiguous_toss_payout(&pool, "01080000901", 10).await;
+    let findings = ops_alerts::evaluate(&state).await.expect("findings");
+    assert!(!fired(&findings, "payout_unconfirmed"), "a fresh one may still settle by itself");
+
+    ambiguous_toss_payout(&pool, "01080000902", 45).await;
+    let findings = ops_alerts::evaluate(&state).await.expect("findings");
+    assert!(fired(&findings, "payout_unconfirmed"), "the owner hears about it");
+    assert!(ops_alerts::RULES.contains(&"payout_unconfirmed"), "listed on the alert card");
+    assert!(ops_alerts::Prefs::default().enabled("payout_unconfirmed"), "on by default");
+}

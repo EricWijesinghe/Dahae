@@ -445,10 +445,9 @@ pub async fn apply_cancel(s: &AppState, b: &BookingRow, refund_cap: Option<i64>,
     if lock_status(&mut tx, b.id).await? != b.status {
         return Err(ApiError::Conflict("booking_changed"));
     }
-    // Refused before any money moves: a settlement already at the provider cannot be pulled back.
-    if payouts::in_transfer(&s.db, b.id).await? {
-        return Err(ApiError::Conflict("settlement_in_transfer"));
-    }
+    // Before any money moves: a settlement already at the provider cannot be pulled back. Its batch row lock
+    // waits out a send in flight, so the refusal lands here and never after a PortOne refund.
+    payouts::detach_booking(&mut tx, b.id).await?;
     // The intent commits on its own before the provider call, so a refund that lands just before a crash leaves a trace.
     audit(
         &s.db,
@@ -486,8 +485,6 @@ pub async fn apply_cancel(s: &AppState, b: &BookingRow, refund_cap: Option<i64>,
         .bind(b.id)
         .execute(&mut *tx)
         .await?;
-    // A cancelled job must never reach the payout batch; staff decide on any compensation.
-    payouts::detach_booking(&mut tx, b.id).await?;
     sqlx::query("UPDATE settlements SET state = 'held' WHERE booking_id = $1 AND state IN ('pending','waiting_balance')")
         .bind(b.id)
         .execute(&mut *tx)
