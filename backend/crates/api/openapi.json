@@ -3443,6 +3443,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "403": {
+            "description": "stepup_required when no authenticator step-up in the last 5 minutes; forbidden unless a live admin"
           }
         }
       }
@@ -3457,6 +3460,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "403": {
+            "description": "stepup_required when no authenticator step-up in the last 5 minutes; forbidden unless a live admin"
           }
         }
       }
@@ -3471,6 +3477,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "403": {
+            "description": "stepup_required when no authenticator step-up in the last 5 minutes; forbidden unless a live admin"
           }
         }
       }
@@ -3794,6 +3803,9 @@
           },
           "default": {
             "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "owner only (is_owner)"
           }
         }
       },
@@ -3806,6 +3818,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "403": {
+            "description": "owner only (is_owner)"
           }
         }
       }
@@ -4502,6 +4517,9 @@
           },
           "default": {
             "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "stepup_required when no authenticator step-up in the last 5 minutes; forbidden unless a live admin"
           }
         }
       }
@@ -4519,6 +4537,9 @@
           },
           "default": {
             "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "stepup_required when no authenticator step-up in the last 5 minutes; forbidden unless a live admin"
           }
         }
       }
@@ -4536,6 +4557,9 @@
           },
           "default": {
             "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "stepup_required when no authenticator step-up in the last 5 minutes; forbidden unless a live admin"
           }
         }
       }
@@ -4782,6 +4806,9 @@
           },
           "default": {
             "$ref": "#/components/responses/Error"
+          },
+          "400": {
+            "description": "sms_required: the account has no authenticator app, so a copy code or an admin-typed phone is refused"
           }
         }
       }
@@ -4838,6 +4865,9 @@
           },
           "default": {
             "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "stepup_required when no authenticator step-up in the last 5 minutes; forbidden unless a live admin"
           }
         }
       }
@@ -4858,6 +4888,9 @@
           },
           "default": {
             "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "stepup_required when no authenticator step-up in the last 5 minutes; forbidden unless a live admin"
           }
         }
       }
