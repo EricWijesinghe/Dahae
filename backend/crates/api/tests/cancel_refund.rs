@@ -283,6 +283,71 @@ async fn cancel_that_loses_to_a_completion_refunds_nothing(pool: PgPool) {
     assert_eq!(status_of(&pool, id).await, 3);
 }
 
+/// One Toss batch in `state` holding this booking's pending settlement. Returns the batch id.
+async fn toss_batch_for(db: &PgPool, booking: Uuid, state: &str) -> Uuid {
+    let pro: Uuid = sqlx::query_scalar("INSERT INTO pros (phone, name, team_name, status) VALUES ('01071000101', 'pro', 'team', 'verified') RETURNING id")
+        .fetch_one(db)
+        .await
+        .expect("pro");
+    let batch: Uuid = sqlx::query_scalar(
+        "INSERT INTO payouts (pro_id, payout_date, amount, items, provider, state, bank, holder, account_enc, account_last4)
+         VALUES ($1, '2026-11-10', 80000, 1, 'toss', $2, 'x', 'x', 'x', '0000') RETURNING id",
+    )
+    .bind(pro)
+    .bind(state)
+    .fetch_one(db)
+    .await
+    .expect("batch");
+    sqlx::query(
+        "INSERT INTO settlements (pro_id, booking_id, gross, fee, net, payout_date, state, payout_id)
+         VALUES ($1, $2, 100000, 20000, 80000, '2026-11-10', 'pending', $3)",
+    )
+    .bind(pro)
+    .bind(booking)
+    .bind(batch)
+    .execute(db)
+    .await
+    .expect("settlement");
+    batch
+}
+
+/// A send that is already at Toss must stop the cancel before PortOne is called. The cancel waits on the batch
+/// lock first; the old order called PortOne, then found the batch sent and rolled back.
+#[sqlx::test(migrations = "../../migrations")]
+async fn cancel_never_refunds_while_a_toss_batch_send_is_in_flight(pool: PgPool) {
+    let w = world(&pool, "010-7100-0004").await;
+    let (id, _) = book(&w.prod, &w.c, 10, None).await;
+    let before = status_of(&pool, id).await;
+    let batch = toss_batch_for(&pool, id, "requested").await;
+
+    // The send holds the batch row while it calls Toss; the cancel must queue behind it.
+    let mut sending = pool.begin().await.expect("tx");
+    sqlx::query("SELECT id FROM payouts WHERE id = $1 FOR UPDATE")
+        .bind(batch)
+        .execute(&mut *sending)
+        .await
+        .expect("lock");
+    let (app, token) = (w.prod.clone(), w.c.token.clone());
+    let pending = tokio::spawn(async move { call(&app, "POST", &format!("/v1/bookings/{id}/cancel"), Some(token.as_str()), Some(json!({}))).await });
+    until_lock_waiter(&pool).await;
+    sqlx::query("UPDATE payouts SET state = 'sent', attempts = 1, provider_transfer_id = 'tp_race' WHERE id = $1")
+        .bind(batch)
+        .execute(&mut *sending)
+        .await
+        .expect("sent");
+    sending.commit().await.expect("commit");
+
+    let (st, body) = pending.await.expect("cancel task");
+    assert_eq!(
+        (st, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("settlement_in_transfer")),
+        "{body}"
+    );
+    assert!(cancels(&w.gateway).is_empty(), "no PortOne refund while the settlement is with Toss");
+    assert_eq!(payment_row(&pool, id).await.1, 0, "nothing refunded");
+    assert_eq!(status_of(&pool, id).await, before, "the job stays as it was");
+}
+
 /// App state configured like production, with PortOne calls sent to the gateway at `base`.
 fn prod_state(db: &PgPool, base: &str) -> api::state::AppState {
     let mut cfg = test_config();
