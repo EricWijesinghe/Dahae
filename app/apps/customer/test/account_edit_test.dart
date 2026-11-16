@@ -42,7 +42,11 @@ void main() {
       await tester.enterText(find.byType(TextField), '민지');
       await tester.tap(find.text(koT.save));
       await settle(tester);
-      expect(find.text('민지'), findsOneWidget);
+      expect(
+        find.text('민지'),
+        findsNWidgets(2),
+        reason: 'the profile header and the name row both show it',
+      );
       expect(fake.lastCall('PATCH', '/me')?.body, {'name': '민지'});
 
       await tester.tap(find.text(koT.edit).last);
