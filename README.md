@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/EricWijesinghe/malkkeum/actions/workflows/ci.yml"><img alt="ci (develop)" src="https://github.com/EricWijesinghe/malkkeum/actions/workflows/ci.yml/badge.svg?branch=develop"></a>
+  <a href="https://github.com/EricWijesinghe/Dahae/actions/workflows/ci.yml"><img alt="ci (develop)" src="https://github.com/EricWijesinghe/Dahae/actions/workflows/ci.yml/badge.svg?branch=develop"></a>
   <a href="LICENSE"><img alt="license: proprietary" src="https://img.shields.io/badge/license-proprietary-lightgrey"></a>
   <img alt="Flutter 3.47.9" src="https://img.shields.io/badge/Flutter-3.47.9-02569B?logo=flutter&logoColor=white">
   <img alt="Rust 1.99.1" src="https://img.shields.io/badge/Rust-1.99.1-DEA584?logo=rust&logoColor=black">
