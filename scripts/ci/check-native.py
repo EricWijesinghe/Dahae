@@ -7,6 +7,7 @@
 Console ships only as web (website image), so it has no native store build to check.
 """
 import base64
+import filecmp
 import hashlib
 import plistlib
 import re
@@ -417,6 +418,27 @@ def check_pay_scheme():
         check("req.appScheme = app" in html, f"website/pay/{page}: requestPayment/requestIssueBillingKey must pass appScheme")
 
 
+def check_legal_notices():
+    """The owner's copyright line stays in every app, website footer and store field (LICENSE, NOTICE)."""
+    owner = "Eric Wijesinghe"
+    asset = APPS.parent / "packages" / "core" / "assets" / "LICENSE-DAHAE.txt"
+    check(filecmp.cmp(REPO / "LICENSE", asset, shallow=False), "core assets/LICENSE-DAHAE.txt must equal the root LICENSE")
+    check(owner in (REPO / "app" / "tool" / "strings_legal.py").read_text(encoding="utf-8"),
+          "strings_legal.py: legalCopyright must name the owner")
+    for app in ["customer", "partner", "console"]:
+        rc = (APPS / app / "windows" / "runner" / "Runner.rc").read_text(encoding="utf-8")
+        check(f'VALUE "LegalCopyright", "Copyright (C) 2026 {owner}. All rights reserved."' in rc,
+              f"{app} Runner.rc: LegalCopyright must name {owner}")
+    for app in ["customer", "console"]:
+        xc = (APPS / app / "macos" / "Runner" / "Configs" / "AppInfo.xcconfig").read_text(encoding="utf-8")
+        check(f"PRODUCT_COPYRIGHT = Copyright © 2026 {owner}. All rights reserved." in xc,
+              f"{app} AppInfo.xcconfig: PRODUCT_COPYRIGHT must name {owner}")
+    for page in sorted((REPO / "website").glob("*.html")):
+        html = page.read_text(encoding="utf-8")
+        if "<footer" in html:
+            check("Powered by Dahae · 소프트웨어 © 2026 " + owner in html, f"website/{page.name}: footer needs the software credit line")
+
+
 def check_android_extras(app, android, root=None):
     if root is None:
         root = ET.parse(android / "app" / "src" / "main" / "AndroidManifest.xml").getroot()
@@ -654,6 +676,7 @@ def main():
         check_store_docs()
         check_camera_and_analytics()
         check_pay_scheme()
+        check_legal_notices()
     except (OSError, ValueError) as e:
         failures_before.append(f"ci: {type(e).__name__}: {e}")
     # Built outputs are checked when given: --aab app-release.aab (or an .apk) for 16 KB alignment,
