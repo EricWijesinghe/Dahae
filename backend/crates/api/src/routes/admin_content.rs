@@ -614,20 +614,20 @@ async fn set_staff_active(State(s): State<AppState>, Admin(a): Admin, Path(id): 
         return Err(ApiError::BadRequest("owner_cannot_deactivate"));
     }
     // An invite that has not been redeemed has no password yet, so it cannot be switched on by hand.
+    let mut tx = s.db.begin().await?;
     let changed = sqlx::query("UPDATE staff SET active = $2 WHERE id = $1 AND (NOT $2 OR password_hash <> '')")
         .bind(id)
         .bind(x.active)
-        .execute(&s.db)
+        .execute(&mut *tx)
         .await?;
     if changed.rows_affected() == 0 {
         return Err(ApiError::Conflict("invite_pending"));
     }
+    // Ends the live session too: the epoch bump kills access tokens and open sockets, not only refresh.
     if !x.active {
-        sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1")
-            .bind(id)
-            .execute(&s.db)
-            .await?;
+        owner::end_sessions_tx(&mut tx, id).await?;
     }
+    tx.commit().await?;
     audit(&s.db, "staff", Some(a.id), "staff.active", &id.to_string(), json!({ "active": x.active })).await?;
     Ok(Json(json!({ "ok": true })))
 }

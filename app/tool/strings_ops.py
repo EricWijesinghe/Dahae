@@ -50,6 +50,7 @@ S = {
   "oRuleBackupPhotos": ["사진 외부 백업 실패", "Offsite photo backup failed"],
   "oRuleBackupOffsite": ["데이터베이스 외부 백업 실패", "Offsite database backup failed"],
   "oRuleDisk": ["디스크 부족", "Disk nearly full"],
+  "oRuleOtp": ["인증 번호 발송이 평소보다 많음(문자 비용)", "Sign-in code sends are unusually high (SMS cost)"],
   "oRuleAuth": ["계정 보안 이상(로그인 잠금 등)", "Suspicious sign-in activity"],
   "oRuleUnassigned": ["기사님 미배정 예약 (오래 방치)", "Confirmed bookings with no pro for a long time"],
   "oRuleSameDayCancel": ["당일 취소가 많음", "High same-day cancellations"],

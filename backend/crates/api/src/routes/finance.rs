@@ -551,6 +551,8 @@ struct LedgerRow {
 }
 
 async fn export_ledger(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Response> {
+    crate::auth::live_admin(&s, a.id).await?;
+    super::staff_mfa::require_recent_stepup(&s, a.id).await?;
     let (from, to) = resolve(&q)?;
     let mut tx = s.db.begin().await?;
     let rows: Vec<LedgerRow> = sqlx::query_as(
@@ -653,6 +655,8 @@ fn settlement_cells(r: SettlementRow) -> Vec<Cell> {
 
 /// Settlements in the KST range, one row each, then a 합계 row summing gross, fee and net of those rows.
 async fn export_settlements(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Response> {
+    crate::auth::live_admin(&s, a.id).await?;
+    super::staff_mfa::require_recent_stepup(&s, a.id).await?;
     let (from, to) = resolve(&q)?;
     let mut tx = s.db.begin().await?;
     let rows: Vec<SettlementRow> = sqlx::query_as(
@@ -702,6 +706,8 @@ fn metric_cells(m: &Metrics) -> Vec<Cell> {
 
 /// Monthly summary for the accountant: one row per month and a total row (sums of the same events).
 async fn export_monthly(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Response> {
+    crate::auth::live_admin(&s, a.id).await?;
+    super::staff_mfa::require_recent_stepup(&s, a.id).await?;
     let (from, to) = resolve(&q)?;
     let mut tx = s.db.begin().await?;
     let points = series_points(&mut tx, Grain::Month, from, to).await?;
@@ -744,6 +750,8 @@ struct VatQuery {
 /// so held settlements are excluded; the VAT estimate is computed on the fee only.
 /// ACCOUNTANT: confirm these bases.
 async fn export_vat(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<VatQuery>) -> ApiResult<Response> {
+    crate::auth::live_admin(&s, a.id).await?;
+    super::staff_mfa::require_recent_stepup(&s, a.id).await?;
     let (from, to) = tax::quarter_range(q.year, q.quarter)?;
     let mut tx = s.db.begin().await?;
     let methods = payment_methods(&mut tx, from, to).await?;

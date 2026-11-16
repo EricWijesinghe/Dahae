@@ -255,3 +255,25 @@ async fn failed_database_offsite_backup_alerts_until_a_later_upload_succeeds(poo
         "a later success clears it"
     );
 }
+
+/// Inserts `n` sign-in codes for made-up numbers sent now.
+async fn seed_otp(db: &PgPool, n: i64) {
+    sqlx::query(
+        "INSERT INTO otp_codes (phone, code_hash, expires_at) SELECT '0107' || lpad(g::text, 7, '0'), 'x', now() + interval '3 minutes' FROM generate_series(1, $1::int) g",
+    )
+    .bind(n as i32)
+    .execute(db)
+    .await
+    .expect("seed codes");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn otp_volume_alert_fires_at_the_warn_level_only(pool: PgPool) {
+    let warn = ops_alerts::OTP_GLOBAL_WARN_PER_HOUR;
+    seed_otp(&pool, warn - 1).await;
+    assert!(ops_alerts::otp_volume(&pool).await.expect("rule").is_empty(), "under the warn level");
+    seed_otp(&pool, 1).await;
+    let found = ops_alerts::otp_volume(&pool).await.expect("rule");
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].rule, "otp_volume");
+}

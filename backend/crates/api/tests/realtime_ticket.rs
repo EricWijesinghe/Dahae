@@ -122,3 +122,19 @@ async fn socket_upgrade_takes_a_ticket_once_and_still_takes_the_old_token(db: Pg
     );
     assert_eq!(open_socket(&app, "").await, StatusCode::UNAUTHORIZED, "no credential");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn deprecated_token_socket_refuses_a_staff_session_that_ended(db: PgPool) {
+    let app = common::app(db.clone());
+    let (token, id) = common::staff_token(&db, Role::StaffAdmin).await;
+    sqlx::query("UPDATE staff SET session_epoch = session_epoch + 1 WHERE id = $1")
+        .bind(id)
+        .execute(&db)
+        .await
+        .expect("end session");
+    assert_eq!(
+        open_socket(&app, &format!("token={token}")).await,
+        StatusCode::UNAUTHORIZED,
+        "ended staff session"
+    );
+}

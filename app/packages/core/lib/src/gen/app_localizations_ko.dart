@@ -3453,6 +3453,10 @@ class TKo extends T {
   String get err_payout_account_unverified => '확인된 정산 계좌가 없어요. 먼저 계좌를 확인해 주세요.';
 
   @override
+  String get err_sms_required =>
+      '인증 앱을 아직 등록하지 않은 직원은 본인 휴대폰으로 가는 문자로만 재설정할 수 있어요.';
+
+  @override
   String get err_invite_pending => '아직 비밀번호를 정하지 않은 초대예요. 직원이 인증번호를 입력하면 켜져요.';
 
   @override
@@ -4428,6 +4432,9 @@ class TKo extends T {
 
   @override
   String get oRuleDisk => '디스크 부족';
+
+  @override
+  String get oRuleOtp => '인증 번호 발송이 평소보다 많음(문자 비용)';
 
   @override
   String get oRuleAuth => '계정 보안 이상(로그인 잠금 등)';

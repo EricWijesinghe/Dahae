@@ -264,6 +264,7 @@ struct ReviewAccount {
 }
 
 async fn put_review(State(s): State<AppState>, Admin(a): Admin, Json(r): Json<ReviewAccount>) -> ApiResult<Json<Value>> {
+    require_owner_review(&s, a.id).await?;
     let phone = crate::auth::normalize_phone(&r.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
     let code = r.code.trim();
     if code.len() != REVIEW_CODE_LEN || !code.bytes().all(|b| b.is_ascii_digit()) {
@@ -294,7 +295,17 @@ async fn put_review(State(s): State<AppState>, Admin(a): Admin, Json(r): Json<Re
     Ok(Json(json!({ "phone": phone, "expires_at": expires_at, "samples": samples })))
 }
 
+/// The fixed-code login is the owner's call: any other admin could otherwise sign in as a customer.
+async fn require_owner_review(s: &AppState, id: Uuid) -> ApiResult<()> {
+    if owner::is_owner(&s.db, id).await? {
+        Ok(())
+    } else {
+        Err(ApiError::Forbidden)
+    }
+}
+
 async fn clear_review(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<Value>> {
+    require_owner_review(&s, a.id).await?;
     sqlx::query("DELETE FROM settings WHERE key = $1").bind(REVIEW_KEY).execute(&s.db).await?;
     audit(&s.db, a.role.as_str(), Some(a.id), "setup.review_account_cleared", REVIEW_KEY, json!({})).await?;
     Ok(Json(json!({ "ok": true })))

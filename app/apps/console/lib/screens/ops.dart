@@ -443,6 +443,7 @@ final _ruleLabels = <String, String Function(T)>{
   'backup_uploads_failing': (T t) => t.oRuleBackupPhotos,
   'disk_low': (T t) => t.oRuleDisk,
   'auth_suspicious': (T t) => t.oRuleAuth,
+  'otp_volume': (T t) => t.oRuleOtp,
   'unassigned_stale': (T t) => t.oRuleUnassigned,
   'same_day_cancel': (T t) => t.oRuleSameDayCancel,
   'tax_deadline': (T t) => t.oRuleTaxDeadline,

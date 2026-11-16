@@ -20,9 +20,12 @@ use uuid::Uuid;
 const EXPORT: &str = "/v1/admin/finance/export/tax-invoices?period=custom&from=2026-03-01&to=2026-03-31";
 const RE_EXPORT: &str = "/v1/admin/finance/export/tax-invoices/re-export?period=custom&from=2026-03-01&to=2026-03-31";
 
+/// The admin that exports in these tests.
+const EXPORTER: Uuid = Uuid::from_u128(0x7a11_0000_0000_0000_0000_0000_0000_0001);
+
 /// Sends one request and returns the status and the raw body (the export is CSV, not JSON).
 async fn send(app: &Router, method: &str, uri: &str) -> (StatusCode, String) {
-    let token = auth::issue_access(SECRET, Uuid::now_v7(), Role::StaffAdmin).expect("token");
+    let token = auth::issue_access(SECRET, EXPORTER, Role::StaffAdmin).expect("token");
     let mut request = Request::builder()
         .method(method)
         .uri(uri)
@@ -39,6 +42,12 @@ async fn send(app: &Router, method: &str, uri: &str) -> (StatusCode, String) {
 /// Two queued (state 'requested') invoices in March, each with a paid payment.
 async fn seed_requests(db: &PgPool) {
     seed_catalog(db).await;
+    // The exporting admin is a live staff row with a fresh step-up (exports check both).
+    sqlx::query("INSERT INTO staff (id, email, name, password_hash, role, stepup_at) VALUES ($1, 'exporter@test.local', 'tester', 'x', 'admin', now()) ON CONFLICT DO NOTHING")
+        .bind(EXPORTER)
+        .execute(db)
+        .await
+        .expect("exporter");
     let user: Uuid = sqlx::query_scalar("INSERT INTO users (phone, name) VALUES ('01070000201', 'tax') RETURNING id")
         .fetch_one(db)
         .await

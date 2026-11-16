@@ -3546,6 +3546,10 @@ class TEn extends T {
       'This partner has no verified payout account yet. Verify the account first.';
 
   @override
+  String get err_sms_required =>
+      'A staff member without an authenticator app can only reset by a text to their own phone.';
+
+  @override
   String get err_invite_pending =>
       'This invitation has no password yet. It turns on when the staff member enters the code.';
 
@@ -4542,6 +4546,9 @@ class TEn extends T {
 
   @override
   String get oRuleDisk => 'Disk nearly full';
+
+  @override
+  String get oRuleOtp => 'Sign-in code sends are unusually high (SMS cost)';
 
   @override
   String get oRuleAuth => 'Suspicious sign-in activity';

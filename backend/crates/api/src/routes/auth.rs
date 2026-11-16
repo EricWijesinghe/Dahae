@@ -3,6 +3,7 @@ use crate::{
     crypto,
     error::{ApiError, ApiResult},
     lockout,
+    ops_alerts::OTP_GLOBAL_CEILING_PER_HOUR,
     privacy::{self, ConsentChange},
     providers::{
         apple,
@@ -28,7 +29,6 @@ const OTP_TTL_SECS: i64 = 180;
 const OTP_RESEND_COOLDOWN_SECS: i64 = 60;
 const OTP_MAX_ATTEMPTS: i32 = 5;
 const OTP_MAX_PER_HOUR: i64 = 5;
-const OTP_GLOBAL_PER_HOUR: i64 = 3_000;
 const STAFF_MAX_FAILURES: i32 = 5;
 const MAX_PASSWORD_BYTES: usize = 256;
 pub(super) const STAFF_DUMMY_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHRzYWx0$0000000000000000000000000000000000000000000";
@@ -76,7 +76,7 @@ async fn request_otp(State(s): State<AppState>, Json(req): Json<OtpRequest>) -> 
         .bind(&phone)
         .fetch_one(&s.db)
         .await?;
-    // Global ceiling too: stops SMS-pumping across many numbers (cost + table growth).
+    // Global hard ceiling only (10x the owner's alert level): one client cannot lock every number out, yet spend stays bounded.
     let global: i64 = sqlx::query_scalar("SELECT count(*) FROM otp_codes WHERE created_at > now() - interval '1 hour'")
         .fetch_one(&s.db)
         .await?;
@@ -86,7 +86,7 @@ async fn request_otp(State(s): State<AppState>, Json(req): Json<OtpRequest>) -> 
             .bind(OTP_RESEND_COOLDOWN_SECS)
             .fetch_one(&s.db)
             .await?;
-    if recent >= OTP_MAX_PER_HOUR || global >= OTP_GLOBAL_PER_HOUR || cooling {
+    if recent >= OTP_MAX_PER_HOUR || global >= OTP_GLOBAL_CEILING_PER_HOUR || cooling {
         return Err(ApiError::RateLimited);
     }
     // Store-review demo number: the owner's fixed code, no SMS (reviewers are abroad).

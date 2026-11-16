@@ -6,6 +6,7 @@ import 'package:ui/ui.dart';
 import '../download.dart';
 import '../state.dart';
 import 'finance_tax.dart';
+import 'stepup.dart';
 
 /// Owner finance: period KPIs, trend charts, payment mix, partner and service tables, accountant CSVs.
 /// Every figure is integer won from the API. Charts only convert to double for drawing.
@@ -120,9 +121,12 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final t = context.t;
     try {
-      final bytes = post
-          ? await context.api.postBytes(path, query: query)
-          : await context.api.getBytes(path, query: query);
+      final bytes = await withStepUp(
+        context,
+        () => post
+            ? context.api.postBytes(path, query: query)
+            : context.api.getBytes(path, query: query),
+      );
       final saved = await saveCsv(bytes, fileName);
       messenger.showSnackBar(
         SnackBar(content: Text(saved ? t.fDownload : t.fDownloadWebOnly)),
