@@ -165,6 +165,20 @@ class MoreTab extends StatelessWidget {
                     onChanged: (m) => m == null ? null : deps.theme.set(m),
                   ),
                 ),
+                ListTile(
+                  leading: const Icon(Icons.article_rounded),
+                  title: Text(t.moreLicenses),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () async {
+                    final info = await PackageInfo.fromPlatform();
+                    if (!context.mounted) return;
+                    showDahaeLicensePage(
+                      context,
+                      applicationName: BrandConfig.placeholder.name,
+                      applicationVersion: info.version,
+                    );
+                  },
+                ),
                 const ListTile(title: _VersionLabel()),
               ],
             ),
