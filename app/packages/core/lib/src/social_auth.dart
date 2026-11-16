@@ -179,7 +179,8 @@ bool isDevApiBase(String baseUrl) {
 /// RFC 1918 addresses: a demo server on the office Wi-Fi (the server refuses dev mode on public hosts).
 bool _isPrivateIpv4(String host) {
   final p = host.split('.').map(int.tryParse).toList();
-  if (p.length != 4 || p.any((n) => n == null || n < 0 || n > 255)) return false;
+  if (p.length != 4 || p.any((n) => n == null || n < 0 || n > 255))
+    return false;
   final a = p[0]!, b = p[1]!;
   return a == 10 || (a == 172 && b >= 16 && b <= 31) || (a == 192 && b == 168);
 }
@@ -246,15 +247,18 @@ Future<SocialAuthResult?> signInWithSocial({
   required Session session,
   required SocialSignIn provider,
   required String audience,
+  List<Map<String, dynamic>>? consents,
 }) async {
   final credential = await provider.obtainCredential(context);
   if (credential == null) return null;
-  final body = await api.post('/auth/social', {
+  final response = await api.post('/auth/social', {
     'provider': provider.provider,
     ...credential,
     'audience': audience,
     'attribution': ?Attribution.get(),
-  }) as Map<String, dynamic>;
+    'consents': ?consents,
+  });
+  final body = response as Map<String, dynamic>;
   await session.save(body);
   return SocialAuthResult.fromJson(body);
 }

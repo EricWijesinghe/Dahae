@@ -242,6 +242,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
         session: deps.session,
         provider: provider,
         audience: 'customer',
+        consents: signupConsentPayload(_granted),
       );
       if (result == null || !mounted) return;
       if (result.needsPhone) {
@@ -358,6 +359,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                   ),
                   busyProvider: _busyProvider,
                   devMode: isDevApiBase(Deps.read(context).session.api.baseUrl),
+                  enabled: signupRequiredAgreed(_granted),
                   onSelected: _socialSignIn,
                 ),
               ],
