@@ -539,7 +539,7 @@ eq "$(SUDO_USER='' operator_account)" root
 eq "$(login_key_file root)" /root/.ssh/authorized_keys
 nt "odd account name refused for key lookup" login_key_file 'a;rm'
 
-# ---- p07: restore resets the schema first; re-run always updates; prune keeps the rollback image; photo offsite failures warn ----
+# ---- p07: restore resets the schema first; re-run updates once the images are set; prune keeps the rollback image; photo offsite failures warn ----
 mkdir -p backups
 printf 'DROP TABLE IF EXISTS staff;\nCREATE TABLE staff (id int);\n' | gzip -c > backups/db-p07.sql.gz
 restore_first_line() { restore_stream backups/db-p07.sql.gz | head -n1; }
@@ -547,8 +547,13 @@ restore_has() { restore_stream backups/db-p07.sql.gz | grep -F "$1" >/dev/null; 
 t  "restore resets the public schema first"  grep -qF 'DROP SCHEMA public CASCADE' <(restore_first_line)
 t  "restore re-creates the app extensions"   restore_has 'CREATE EXTENSION IF NOT EXISTS pgcrypto'
 t  "restore keeps the dump after the reset"  restore_has 'CREATE TABLE staff'
+printf 'DOMAIN=myshop.co.kr\nAPI_IMAGE=repo/malkkeum-api@sha256:aa\n' > .env
 t  "re-run with stopped DB updates"          eq "$(install_mode 0)" update
 t  "first run installs"                      eq "$(install_mode 1)" fresh
+printf 'DOMAIN=myshop.co.kr\nDB_PASSWORD=x\n' > .env # the first run died before prepare set the images
+t  "re-run after a failed first install installs" eq "$(install_mode 0)" fresh
+printf 'DOMAIN=myshop.co.kr\nAPI_IMAGE=\n' > .env
+t  "empty API_IMAGE installs"                eq "$(install_mode 0)" fresh
 printf 'API_IMAGE=old\nWEB_IMAGE=old\n' > .env
 ( docker() { case "$*" in
     "image inspect -f {{.Id}} repo/x:v1") echo sha256:abcdef0123456789abcdef ;;

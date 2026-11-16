@@ -1342,7 +1342,8 @@ final_banner() { # final_banner https정상(1/0)
 }
 
 install_mode() { # install_mode FRESH : 설치된 적이 있으면(0) DB 가 꺼져 있어도 업데이트로 가요 (백업 → 새 버전 → 되돌리기)
-  if [ "$1" = 0 ]; then printf update; else printf fresh; fi
+  # 첫 설치가 이미지 준비(prepare) 전에 멈췄으면 .env 에 API_IMAGE 가 없어요: compose 가 뜰 수 없으니 처음 설치를 다시 해요
+  if [ "$1" = 0 ] && [ -n "$(env_get API_IMAGE)" ]; then printf update; else printf fresh; fi
 }
 main() {
   local k a m
