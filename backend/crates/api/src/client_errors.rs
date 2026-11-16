@@ -64,7 +64,8 @@ pub fn scrub(text: &str) -> String {
     text.split('\n').map(scrub_line).collect::<Vec<_>>().join("\n")
 }
 
-/// One line: consecutive all-digit groups are one number when they add up to 9+ digits ("010 1234 5678").
+/// One line: consecutive digit groups (dashes allowed inside a group) are one number when they add up to 9+
+/// digits ("010 1234 5678", "010-1234 5678").
 fn scrub_line(line: &str) -> String {
     let tokens: Vec<&str> = line.split(' ').collect();
     let mut out: Vec<String> = Vec::with_capacity(tokens.len());
@@ -73,7 +74,7 @@ fn scrub_line(line: &str) -> String {
         let mut end = i;
         let mut digits = 0;
         while end < tokens.len() && is_digit_group(tokens[end]) {
-            digits += tokens[end].len();
+            digits += tokens[end].chars().filter(char::is_ascii_digit).count();
             end += 1;
         }
         if end - i > 1 && digits >= 9 {
@@ -88,7 +89,7 @@ fn scrub_line(line: &str) -> String {
 }
 
 fn is_digit_group(tok: &str) -> bool {
-    !tok.is_empty() && tok.chars().all(|c| c.is_ascii_digit())
+    tok.chars().any(|c| c.is_ascii_digit()) && tok.chars().all(|c| c.is_ascii_digit() || c == '-')
 }
 
 fn scrub_token(tok: &str) -> String {
@@ -216,6 +217,8 @@ mod tests {
     fn scrub_removes_phone_numbers_written_with_spaces() {
         assert_eq!(scrub("연락처 010 1234 5678"), "연락처 [redacted]");
         assert_eq!(scrub("연락처 010 12 34 56 78"), "연락처 [redacted]");
+        assert_eq!(scrub("연락처 010-1234 5678"), "연락처 [redacted]");
+        assert_eq!(scrub("연락처 010 1234-5678"), "연락처 [redacted]");
         assert_eq!(scrub("step 2 of 3"), "step 2 of 3");
     }
 
