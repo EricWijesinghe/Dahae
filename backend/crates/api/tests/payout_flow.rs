@@ -713,3 +713,94 @@ async fn owner_not_sent_while_toss_is_unreachable_fails_the_batch_and_unblocks_c
     let (code, body) = call(&app, "POST", &cancel, Some(&token), Some(json!({}))).await;
     assert_eq!(code, StatusCode::OK, "{body}");
 }
+
+/// Toss mock: `GET /v2/payouts/{id}` answers that payout with `status`.
+async fn start_toss_status(status: &'static str) -> String {
+    let router = axum::Router::new().route(
+        "/v2/payouts/{id}",
+        axum::routing::get(move |axum::extract::Path(id): axum::extract::Path<String>| async move { axum::Json(json!({ "id": id, "status": status })) }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind toss mock");
+    let addr = listener.local_addr().expect("addr");
+    tokio::spawn(async move { axum::serve(listener, router).await.expect("mock serves") });
+    format!("http://{addr}")
+}
+
+/// The pro is a Toss seller whose registered account is the one on the payout.
+async fn toss_seller(pool: &PgPool) {
+    let fingerprint = adapter::account_fingerprint(adapter::bank_code("국민은행").expect("bank"), "110-123-456789", "홍길동");
+    sqlx::query("UPDATE pros SET toss_seller_id = 'seller-1', toss_seller_fp = $1")
+        .bind(fingerprint)
+        .execute(pool)
+        .await
+        .expect("seller");
+}
+
+async fn payout_action(app: &axum::Router, token: &str, id: &str, action: &str) -> String {
+    let (code, body) = call(
+        app,
+        "POST",
+        &format!("/v1/admin/settlements/payouts/{id}/{action}"),
+        Some(token),
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "{action}: {body}");
+    body["state"].as_str().expect("state").to_string()
+}
+
+/// The refPayoutId the dev transfer carried (the dev fake answers `dev_<refPayoutId>`).
+async fn sent_ref(pool: &PgPool, id: &str) -> String {
+    let (_, transfer, _) = payout_row(pool, id).await;
+    transfer.and_then(|t| t.strip_prefix("dev_").map(String::from)).expect("dev transfer id")
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_retry_after_toss_failed_the_transfer_sends_a_new_ref_payout_id(pool: PgPool) {
+    seed(&pool).await;
+    let token = admin_token(&pool).await;
+    let dev = app(pool.clone());
+    let id = first_payout_id(&dev, &token).await;
+    toss_seller(&pool).await;
+    sqlx::query("UPDATE payouts SET provider = 'toss' WHERE id = $1::uuid")
+        .bind(&id)
+        .execute(&pool)
+        .await
+        .expect("toss");
+    assert_eq!(payout_action(&dev, &token, &id, "send").await, "sent");
+    let first = sent_ref(&pool, &id).await;
+
+    // Toss's own answer: the transfer FAILED, no money moved.
+    api::payout_sync::sync_pass(&toss_state(&pool, &start_toss_status("FAILED").await))
+        .await
+        .expect("pass");
+    assert_eq!(payout_row(&pool, &id).await.0, "failed");
+
+    assert_eq!(payout_action(&dev, &token, &id, "retry").await, "requested");
+    assert_eq!(payout_action(&dev, &token, &id, "send").await, "sent");
+    let second = sent_ref(&pool, &id).await;
+    assert_ne!(second, first, "Toss refuses a refPayoutId it has seen, so the retry needs a new one");
+    assert!(
+        second.starts_with(&id) && second.len() <= 50,
+        "still traceable to the batch, within Toss's 50 chars: {second}"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_ambiguous_send_keeps_its_ref_payout_id_through_the_owners_not_sent(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 0).await;
+    toss_seller(&pool).await;
+    let (token, totp) = owner(&pool).await;
+    let toss = api::routes::router(toss_state(&pool, &start_toss(json!([])).await));
+    let (code, body) = not_sent(&toss, &id, &token, Some(&totp)).await;
+    assert_eq!((code, body["state"].as_str()), (StatusCode::OK, Some("failed")), "{body}");
+
+    let dev = app(pool.clone());
+    assert_eq!(payout_action(&dev, &token, &id, "retry").await, "requested");
+    assert_eq!(payout_action(&dev, &token, &id, "send").await, "sent");
+    assert_eq!(
+        sent_ref(&pool, &id).await,
+        id,
+        "no Toss answer: the reference stays, so a send Toss did take is never repeated"
+    );
+}

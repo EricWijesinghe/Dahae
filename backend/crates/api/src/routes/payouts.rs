@@ -103,9 +103,16 @@ struct Row {
     idempotency_key: String,
     provider_transfer_id: Option<String>,
     failure_reason: Option<String>,
+    toss_ref: Option<String>,
 }
 
 impl Row {
+    /// The refPayoutId Toss knows this payout by: the payout id until Toss definitively failed a transfer, then
+    /// `<id>-<sends so far>` (Toss never accepts a refPayoutId twice; at most 47 of its 50 characters).
+    fn toss_ref(&self, id: Uuid) -> String {
+        self.toss_ref.clone().unwrap_or_else(|| id.to_string())
+    }
+
     fn state(&self) -> State {
         State::parse(&self.state).unwrap_or(State::Failed)
     }
@@ -406,7 +413,7 @@ fn transfer_amount(row: &Row) -> i64 {
 
 async fn lock(tx: &mut Transaction<'_, Postgres>, id: Uuid) -> ApiResult<Row> {
     Ok(sqlx::query_as(
-        "SELECT pro_id, payout_date, amount, tax_type, provider, state, bank, holder, account_enc, idempotency_key, provider_transfer_id, failure_reason
+        "SELECT pro_id, payout_date, amount, tax_type, provider, state, bank, holder, account_enc, idempotency_key, provider_transfer_id, failure_reason, toss_ref
          FROM payouts WHERE id = $1 FOR UPDATE",
     )
     .bind(id)
@@ -521,7 +528,7 @@ async fn send(s: &AppState, id: Uuid) -> ApiResult<State> {
         holder: row.holder.clone(),
         memo: payout_memo(&super::setup::brand_name(&s.db).await, row.payout_date),
     };
-    match s.providers.send_transfer(&row.idempotency_key, &id.to_string(), &seller_id, &transfer).await {
+    match s.providers.send_transfer(&row.idempotency_key, &row.toss_ref(id), &seller_id, &transfer).await {
         Ok(transfer_id) => {
             let r = sqlx::query(
                 "UPDATE payouts SET state = 'sent', provider_transfer_id = $2, attempts = attempts + 1, failure_reason = NULL, updated_at = now()
@@ -538,9 +545,10 @@ async fn send(s: &AppState, id: Uuid) -> ApiResult<State> {
             Ok(State::Sent)
         }
         Err(ProviderError::Declined(reason)) => {
-            // Definitely not transferred: a fresh key makes the next retry a new transfer.
+            // Definitely not transferred: a fresh key and reference make the next retry a new transfer.
             sqlx::query(
-                "UPDATE payouts SET state = 'failed', failure_reason = $2, attempts = attempts + 1, idempotency_key = gen_random_uuid()::text, updated_at = now()
+                "UPDATE payouts SET state = 'failed', failure_reason = $2, attempts = attempts + 1, idempotency_key = gen_random_uuid()::text,
+                   toss_ref = id::text || '-' || (attempts + 1), updated_at = now()
                  WHERE id = $1 AND state = 'requested'",
             )
             .bind(id)
@@ -599,9 +607,10 @@ async fn ask_provider(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uuid
             Ok(State::Paid)
         }
         adapter::TransferStatus::Failed(reason) => {
-            // The provider confirms no money moved: rotate the key so the retry is a new transfer.
+            // The provider confirms no money moved: rotate the key and reference so the retry is a new transfer.
             let r = sqlx::query(
-                "UPDATE payouts SET state = 'failed', failure_reason = $2, idempotency_key = gen_random_uuid()::text, updated_at = now()
+                "UPDATE payouts SET state = 'failed', failure_reason = $2, idempotency_key = gen_random_uuid()::text,
+                   toss_ref = id::text || '-' || attempts, updated_at = now()
                  WHERE id = $1 AND state IN ('requested', 'sent')",
             )
             .bind(id)
@@ -616,8 +625,8 @@ async fn ask_provider(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uuid
     }
 }
 
-/// A send that ended ambiguously never got Toss's id back, so it is looked up by our refPayoutId (the payout
-/// id) in Toss's payout list. Found: recorded as sent with its id, and its status returned. Absent: None, row
+/// A send that ended ambiguously never got Toss's id back, so it is looked up by our refPayoutId (`Row::toss_ref`)
+/// in Toss's payout list. Found: recorded as sent with its id, and its status returned. Absent: None, row
 /// unchanged. Absence is never taken as "not sent": the list's date filter and Toss's refPayoutId rules are
 /// unverified, and a wrong guess pays twice. The owner settles it after checking the Toss dashboard.
 async fn find_ambiguous(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uuid, row: &Row) -> ApiResult<Option<adapter::TransferStatus>> {
@@ -626,7 +635,7 @@ async fn find_ambiguous(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uu
         .bind(id)
         .fetch_one(&mut **tx)
         .await?;
-    let mut found = s.providers.find_transfers(&id.to_string(), since).await?;
+    let mut found = s.providers.find_transfers(&row.toss_ref(id), since).await?;
     // An id already on the row is an earlier attempt Toss failed (then retried): it says nothing about this send.
     found.retain(|(provider_id, _)| row.provider_transfer_id.as_deref() != Some(provider_id));
     found.sort_by_key(|(_, status)| matches!(status, adapter::TransferStatus::Failed(_)));
