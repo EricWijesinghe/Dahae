@@ -93,7 +93,6 @@ struct Row {
     tax_type: String,
     provider: String,
     state: String,
-    attempts: i32,
     bank: String,
     holder: String,
     account_enc: String,
@@ -403,7 +402,7 @@ fn transfer_amount(row: &Row) -> i64 {
 
 async fn lock(tx: &mut Transaction<'_, Postgres>, id: Uuid) -> ApiResult<Row> {
     Ok(sqlx::query_as(
-        "SELECT pro_id, payout_date, amount, tax_type, provider, state, attempts, bank, holder, account_enc, idempotency_key, provider_transfer_id, failure_reason
+        "SELECT pro_id, payout_date, amount, tax_type, provider, state, bank, holder, account_enc, idempotency_key, provider_transfer_id, failure_reason
          FROM payouts WHERE id = $1 FOR UPDATE",
     )
     .bind(id)
@@ -472,8 +471,8 @@ async fn step(s: &AppState, id: Uuid, step: Owner) -> ApiResult<State> {
             if row.state() != State::Requested {
                 return Err(ApiError::Conflict("payout_state"));
             }
-            // A Toss send that was attempted may already exist at Toss: only a sync can settle it.
-            if row.provider == "toss" && (row.attempts > 0 || row.failure_reason.is_some() || row.provider_transfer_id.is_some()) {
+            // An ambiguous Toss send may already exist at Toss: only a sync or a re-send settles it. A declined one never moved money.
+            if row.provider == "toss" && row.awaiting_provider() {
                 return Err(ApiError::Conflict("payout_in_transfer"));
             }
             (Action::Reject, State::Failed, Some(reason.as_str()))

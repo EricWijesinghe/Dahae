@@ -481,3 +481,29 @@ async fn an_open_toss_transfer_blocks_clearing_the_toss_card(pool: PgPool) {
         "settled transfers do not block"
     );
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn owner_can_fail_a_toss_payout_that_was_declined_and_retried(pool: PgPool) {
+    seed(&pool).await;
+    let app = app(pool.clone());
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app, &token).await;
+    // Declined once (no money moved), then retried: attempts is 1 but nothing may exist at Toss.
+    make_toss(&pool, &id, "requested", None, None, 0).await;
+
+    let (code, body) = call(
+        &app,
+        "POST",
+        &format!("/v1/admin/settlements/payouts/{id}/fail"),
+        Some(&token),
+        Some(json!({ "reason": "직접 확인" })),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "{body}");
+    let state: String = sqlx::query_scalar("SELECT state FROM payouts WHERE id = $1::uuid")
+        .bind(&id)
+        .fetch_one(&pool)
+        .await
+        .expect("state");
+    assert_eq!(state, "failed");
+}
