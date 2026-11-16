@@ -13,8 +13,10 @@ use crate::{
     auth::Customer,
     crypto,
     error::{ApiError, ApiResult},
+    quality::check_offer_gate,
     realtime::{Recipient, deliver, enqueue, notify},
     safety::take_entry,
+    schedule::{lock_schedule, schedule_clash},
     state::AppState,
     util::{KST_TODAY, best_effort, lock_and_count_slot, own_uploads, sanitize_notes, today_kst},
 };
@@ -382,7 +384,7 @@ pub fn deposit_due(b: &BookingRow) -> ApiResult<i64> {
 
 /// Confirms a quoted booking on deposit: attaches the chosen pro and rejects the other quotes.
 /// `seen` is re-checked under the booking row lock, so a re-quote racing the payment never confirms.
-pub async fn take_deposit(conn: &mut PgConnection, id: Uuid, deposit: i64, seen: &SeenQuote) -> ApiResult<()> {
+pub async fn take_deposit(s: &AppState, conn: &mut PgConnection, id: Uuid, deposit: i64, seen: &SeenQuote) -> ApiResult<()> {
     // Booking row first, then quotes: the same order as send_quote, so the two never deadlock.
     let final_price = check_seen_quote(conn, id, seen).await?.expected_final_price;
     // Read the chosen quote under lock so a concurrent staff change can't attach the wrong pro.
@@ -396,17 +398,28 @@ pub async fn take_deposit(conn: &mut PgConnection, id: Uuid, deposit: i64, seen:
         BookingStatus::Confirmed
     };
     let new_status = new_status.as_i16();
+    let pro = selected.map(|q| q.1);
+    if let Some(pro) = pro {
+        check_offer_gate(s, pro).await?;
+        lock_schedule(conn, pro).await?;
+    }
     // `deposit = $3` and the locked price: a re-quote since the amount was read is booking_changed, never the old price.
     let moved = sqlx::query(&format!("UPDATE bookings SET status = $2, paid_amount = paid_amount + $3, pro_id = $4, accepted_at = CASE WHEN $4 IS NULL THEN NULL ELSE now() END, updated_at = now() WHERE id = $1 AND status = {} AND deposit = $3 AND final_price IS NOT DISTINCT FROM $5", BookingStatus::Consultation.as_i16()))
         .bind(id)
         .bind(new_status)
         .bind(deposit)
-        .bind(selected.map(|q| q.1))
+        .bind(pro)
         .bind(final_price)
         .execute(&mut *conn)
         .await?;
     if moved.rows_affected() == 0 {
         return Err(ApiError::Conflict("booking_changed"));
+    }
+    // A clash rolls the deposit back: the caller's transaction drops with the error before the charge.
+    if let Some(pro) = pro
+        && schedule_clash(conn, id, "pro_id", pro).await?
+    {
+        return Err(ApiError::Conflict("schedule_overlap"));
     }
     sqlx::query("UPDATE quotes SET state = 'rejected', updated_at = now(), seen_by_pro = FALSE WHERE booking_id = $1 AND state = 'waiting'")
         .bind(id)

@@ -414,8 +414,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final t = context.t;
     final from =
         '${dateLabel(DateTime.parse(r['from_date'] as String), context.lang)} ${hourLabel((r['from_hour'] as num).toInt(), context.lang)}';
+    // The job stays in its slot until the pro confirms, so the requested slot is in the request itself.
     final to =
-        '${dateLabel(DateTime.parse(b['visit_date'] as String), context.lang)} ${hourLabel((b['start_hour'] as num).toInt(), context.lang)}';
+        '${dateLabel(DateTime.parse((r['to_date'] ?? b['visit_date']) as String), context.lang)} ${hourLabel(((r['to_hour'] ?? b['start_hour']) as num).toInt(), context.lang)}';
     return Padding(
       padding: const EdgeInsets.only(top: Space.sm),
       child: AppCard(

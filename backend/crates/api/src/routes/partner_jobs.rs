@@ -12,7 +12,7 @@ use crate::{
     realtime::{Recipient, deliver, enqueue, notify},
     schedule::{clash, lock_schedule, schedule_clash},
     state::AppState,
-    util::{KST_TODAY, best_effort, today_kst},
+    util::{KST_TODAY, best_effort, lock_and_count_slot, today_kst},
 };
 use axum::{
     Json, Router,
@@ -541,10 +541,7 @@ async fn reply_reschedule(State(s): State<AppState>, Pro(a): Pro, Path(id): Path
         return Err(ApiError::NotFound);
     }
     if r.accept {
-        sqlx::query("UPDATE bookings SET reschedule = NULL WHERE id = $1")
-            .bind(id)
-            .execute(&s.db)
-            .await?;
+        confirm_reschedule(&s, &b, a.id).await?;
         notify(
             &s,
             Recipient::User(b.user_id),
@@ -555,6 +552,11 @@ async fn reply_reschedule(State(s): State<AppState>, Pro(a): Pro, Path(id): Path
         )
         .await?;
     } else {
+        // The job never left its slot, so declining only closes the request.
+        sqlx::query("UPDATE bookings SET reschedule = NULL WHERE id = $1")
+            .bind(id)
+            .execute(&s.db)
+            .await?;
         let mut conn = s.db.acquire().await?;
         let thread = chat::booking_thread(&mut conn, "partner", a.id, id, &b.service_code).await?;
         let msg = chat::insert_message(&mut conn, thread, "partner", Some(a.id), "system", json!({ "code": "reschedule_declined" })).await?;
@@ -562,4 +564,39 @@ async fn reply_reschedule(State(s): State<AppState>, Pro(a): Pro, Path(id): Path
         chat::broadcast_message(&s, &msg).await?;
     }
     Ok(Json(json!({ "ok": true })))
+}
+
+/// The slot a pending reschedule asks for. Requests made before the slot was held back carry none.
+fn requested_slot(reschedule: &Value) -> Option<(NaiveDate, u8)> {
+    let date = reschedule["to_date"].as_str()?.parse().ok()?;
+    let hour = u8::try_from(reschedule["to_hour"].as_u64()?).ok()?;
+    Some((date, hour))
+}
+
+/// Moves the job to the requested slot once the pro confirms. Capacity and the pro's clash check run under the
+/// pro's schedule lock; a refusal drops the transaction, so the job stays in its slot.
+async fn confirm_reschedule(s: &AppState, b: &BookingRow, pro: Uuid) -> ApiResult<()> {
+    let mut tx = s.db.begin().await?;
+    lock_schedule(&mut tx, pro).await?;
+    if let Some((date, hour)) = b.reschedule.as_ref().and_then(requested_slot) {
+        let (used, cap) = lock_and_count_slot(&mut tx, date, hour, Some(b.id)).await?;
+        domain::schedule::check_capacity(used, cap)?;
+    }
+    let moved = sqlx::query(
+        "UPDATE bookings SET visit_date = COALESCE((reschedule->>'to_date')::date, visit_date),
+           start_hour = COALESCE((reschedule->>'to_hour')::smallint, start_hour), reschedule = NULL, updated_at = now()
+         WHERE id = $1 AND pro_id = $2 AND reschedule IS NOT NULL",
+    )
+    .bind(b.id)
+    .bind(pro)
+    .execute(&mut *tx)
+    .await?;
+    if moved.rows_affected() == 0 {
+        return Err(ApiError::Conflict("booking_changed"));
+    }
+    if schedule_clash(&mut tx, b.id, "pro_id", pro).await? {
+        return Err(ApiError::Conflict("schedule_overlap"));
+    }
+    tx.commit().await?;
+    Ok(())
 }

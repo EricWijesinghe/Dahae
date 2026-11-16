@@ -18,7 +18,7 @@ use crate::{
     ratelimit::within_quota,
     realtime::{Recipient, notify},
     safety,
-    schedule::{lock_schedule, schedule_clash},
+    schedule::slot_clash,
     settings_registry,
     state::AppState,
     util::{best_effort, lock_and_count_slot, refund_or_alert, today_kst},
@@ -677,7 +677,7 @@ async fn pay_deposit(State(s): State<AppState>, Customer(a): Customer, Path(id):
     let deposit = deposit_due(&b)?;
     p.seen.validate()?;
     let mut tx = s.db.begin().await?;
-    take_deposit(&mut tx, id, deposit, &p.seen).await?;
+    take_deposit(&s, &mut tx, id, deposit, &p.seen).await?;
     // Charge last: after this only the commit can fail, and that path refunds.
     let tx_id = charge(&s, &mut tx, a.id, p.payment_method_id, id, Won(deposit), "deposit").await?;
     if let Err(e) = tx.commit().await {
@@ -756,35 +756,38 @@ async fn reschedule(State(s): State<AppState>, Customer(a): Customer, Path(id): 
     }
     check_date(today_kst(), r.visit_date)?;
     check_slot(b.answers.is_some(), r.start_hour)?;
-    // Keep the pro's original slot if an earlier change is still unconfirmed.
-    let pending = b.pro_id.map(|_| {
-        b.reschedule
-            .clone()
-            .unwrap_or_else(|| json!({ "from_date": b.visit_date, "from_hour": b.start_hour, "requested_at": Utc::now() }))
-    });
     let mut tx = s.db.begin().await?;
     // The booking's own current slot does not count against the new one.
     let (used, cap) = lock_and_count_slot(&mut tx, r.visit_date, r.start_hour, Some(id)).await?;
     check_capacity(used, cap)?;
-    if let Some(pro) = b.pro_id {
-        lock_schedule(&mut tx, pro).await?;
-    }
+    // An assigned pro's schedule moves only when the pro confirms (partner reschedule reply, which clash-checks
+    // the slot under the pro's schedule lock). Until then the job stays where the pro has it. A slot that already
+    // clashes is refused now, and the confirmation checks again in case a job lands there meanwhile.
+    let (visit, hour, pending) = match b.pro_id {
+        Some(pro) => {
+            if slot_clash(&mut tx, id, pro, r.visit_date, i16::from(r.start_hour)).await? {
+                return Err(ApiError::Conflict("schedule_overlap"));
+            }
+            (
+                b.visit_date,
+                b.start_hour,
+                Some(
+                    json!({ "from_date": b.visit_date, "from_hour": b.start_hour, "to_date": r.visit_date, "to_hour": r.start_hour, "requested_at": Utc::now() }),
+                ),
+            )
+        }
+        None => (r.visit_date, i16::from(r.start_hour), None),
+    };
     let moved = sqlx::query("UPDATE bookings SET visit_date = $2, start_hour = $3, reschedule = $4, updated_at = now() WHERE id = $1 AND status = $5")
         .bind(id)
-        .bind(r.visit_date)
-        .bind(i16::from(r.start_hour))
+        .bind(visit)
+        .bind(hour)
         .bind(pending)
         .bind(b.status)
         .execute(&mut *tx)
         .await?;
     if moved.rows_affected() == 0 {
         return Err(ApiError::Conflict("booking_changed"));
-    }
-    // Checked after the write: a clash rolls the move back when the transaction drops.
-    if let Some(pro) = b.pro_id
-        && schedule_clash(&mut tx, id, "pro_id", pro).await?
-    {
-        return Err(ApiError::Conflict("schedule_overlap"));
     }
     tx.commit().await?;
     if let Some(pro) = b.pro_id {
