@@ -4,13 +4,14 @@
 //!   `destination` is that seller id. Request bodies are JWE-encrypted (see `toss_jwe`). Status is polled.
 //!
 //! Source: https://docs.tosspayments.com/guides/v2/payouts and https://docs.tosspayments.com/reference/additional
-//! (seller create `POST /v2/sellers`, payout create `POST /v2/payouts`, lookups `GET /v2/payouts/{id}` and
+//! (seller create `POST /v2/sellers`, payout create `POST /v2/payouts`, lookups `GET /v2/payouts`, `GET /v2/payouts/{id}` and
 //! `GET /v2/sellers/{id}`, balance `GET /v2/balances`, cancel `POST /v2/payouts/{id}/cancel`).
 //!
 //! shortcut: not verified against a live sandbox. Unverified in the docs: the `amount` sub-fields on the
 //! request (sent as `{currency, value}`, the shape of the Payout object), the idempotency header name
 //! (`Idempotency-Key`), the content type of an encrypted body (`text/plain`), the seller response's
-//! `status` field, and the webhook signature scheme (none documented, so webhooks only trigger a poll).
+//! `status` field, the webhook signature scheme (none documented, so webhooks only trigger a poll), and that an
+//! EXPRESS payout's `payoutDate` is its request day (the list lookup filters on it).
 //! Upgrade when a sandbox seller registration and payout round-trip succeed (see docs/DEPLOY.md section 7).
 
 use super::{ProviderError, toss_jwe};
@@ -18,7 +19,7 @@ use base64::{Engine, engine::general_purpose::STANDARD};
 use reqwest::{Client, Request, StatusCode, header::AUTHORIZATION};
 use serde_json::{Value, json};
 
-const TOSS_API: &str = "https://api.tosspayments.com";
+pub const TOSS_API: &str = "https://api.tosspayments.com";
 const TOSS_PAYOUTS: &str = "/v2/payouts";
 const TOSS_SELLERS: &str = "/v2/sellers";
 const TOSS_BALANCES: &str = "/v2/balances";
@@ -219,6 +220,32 @@ pub fn send_request(
 /// not our refPayoutId.
 pub fn status_request(http: &Client, secret: &str, provider_id: &str) -> Result<Request, ProviderError> {
     plain_get(http, secret, &format!("{TOSS_PAYOUTS}/{provider_id}"))
+}
+
+/// Toss's documented maximum page size for the payout list.
+const TOSS_LIST_MAX: u32 = 10_000;
+
+/// Builds the payout list lookup for payouts dated `since` (yyyy-MM-dd) or later. A send that ended ambiguously
+/// never got Toss's id back, so it is found in this list by our refPayoutId.
+pub fn list_request(http: &Client, secret: &str, since: &str) -> Result<Request, ProviderError> {
+    plain_get(http, secret, &format!("{TOSS_PAYOUTS}?limit={TOSS_LIST_MAX}&payoutDateGte={since}"))
+}
+
+/// Every payout in a list response whose refPayoutId is `ref_id`, as (Toss id, status). An error when the
+/// list is cut short (`hasMore` not false), so a payout is never judged missing from a partial page.
+pub fn find_in_list(body: &Value, ref_id: &str) -> Result<Vec<(String, TransferStatus)>, ProviderError> {
+    let list = body.get("entityBody").unwrap_or(body);
+    let items = list["items"]
+        .as_array()
+        .ok_or_else(|| ProviderError::Upstream("unreadable payout list".into()))?;
+    if list["hasMore"].as_bool() != Some(false) {
+        return Err(ProviderError::Upstream("payout list incomplete".into()));
+    }
+    items
+        .iter()
+        .filter(|p| p["refPayoutId"].as_str() == Some(ref_id))
+        .map(|p| Ok((parse_sent(p)?, parse_status(p))))
+        .collect()
 }
 
 /// Builds the balance call used by the console's sandbox connection test. Harmless: reads only.
@@ -506,6 +533,23 @@ mod tests {
         assert_eq!(parse_status(&json!({"status": "CANCELED"})), TransferStatus::Failed("canceled".into()));
         assert_eq!(parse_status(&json!({"status": "IN_PROGRESS"})), TransferStatus::Pending);
         assert_eq!(parse_status(&json!({"status": "REQUESTED"})), TransferStatus::Pending);
+    }
+
+    #[test]
+    fn list_lookup_finds_our_ref_id_only_on_a_complete_page() {
+        let req = list_request(&Client::new(), "k", "2026-03-11").unwrap();
+        assert_eq!(req.url().path(), "/v2/payouts");
+        assert_eq!(req.url().query(), Some("limit=10000&payoutDateGte=2026-03-11"));
+        let page = |more: bool| {
+            json!({"entityBody": {"hasMore": more, "items": [
+                {"id": "FPA_1", "refPayoutId": "other", "status": "COMPLETED"},
+                {"id": "FPA_2", "refPayoutId": "ours", "status": "IN_PROGRESS"},
+            ]}})
+        };
+        assert_eq!(find_in_list(&page(false), "ours").unwrap(), vec![("FPA_2".into(), TransferStatus::Pending)]);
+        assert!(find_in_list(&page(false), "missing").unwrap().is_empty());
+        assert!(find_in_list(&page(true), "missing").is_err(), "a partial page proves nothing");
+        assert!(find_in_list(&json!({"items": []}), "ours").is_err(), "no hasMore: not known to be complete");
     }
 
     #[test]

@@ -9,6 +9,7 @@ use crate::{
     crypto,
     error::{ApiError, ApiResult},
     integrations::PayoutMode,
+    owner,
     payout::{Action, State},
     providers::{ProviderError, payout as adapter},
     realtime::{Recipient, notify},
@@ -17,17 +18,23 @@ use crate::{
 };
 use axum::{
     Json,
-    extract::{Path, State as AxState},
-    http::header,
+    extract::{ConnectInfo, Path, State as AxState},
+    http::{HeaderMap, header},
     response::{IntoResponse, Response},
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{PgPool, Postgres, Transaction};
+use std::net::SocketAddr;
 use uuid::Uuid;
 
 const REASON_MAX: usize = 200;
+/// A send this recent that Toss does not list may still be arriving there, so it is not judged missing yet.
+const NOT_FOUND_GRACE_MINS: i32 = 5;
+/// Failure reasons the console shows as they are.
+const NOT_AT_TOSS: &str = "토스에 송금 기록 없음";
+const OWNER_NOT_SENT: &str = "소유자 확인: 송금되지 않음";
 
 /// Settlements due by `date` that no payout covers yet, grouped per verified pro. Runs under an
 /// advisory lock, so two clicks can't create two payouts for the same settlements. A pro who already
@@ -471,7 +478,7 @@ async fn step(s: &AppState, id: Uuid, step: Owner) -> ApiResult<State> {
             if row.state() != State::Requested {
                 return Err(ApiError::Conflict("payout_state"));
             }
-            // An ambiguous Toss send may already exist at Toss: only a sync or a re-send settles it. A declined one never moved money.
+            // An ambiguous Toss send may already exist at Toss: only a sync, a re-send or the owner's not-sent check settles it. A declined one never moved money.
             if row.provider == "toss" && row.awaiting_provider() {
                 return Err(ApiError::Conflict("payout_in_transfer"));
             }
@@ -562,7 +569,7 @@ async fn send(s: &AppState, id: Uuid) -> ApiResult<State> {
 }
 
 /// Asks the provider about a Toss transfer that may already exist and records paid or failed.
-/// Pending leaves the row as it was. Never sends money. Shared by the owner's button and the background pass.
+/// Pending leaves it open. Never sends money. Shared by the owner's button and the background pass.
 pub(crate) async fn sync(s: &AppState, id: Uuid) -> ApiResult<State> {
     let mut tx = s.db.begin().await?;
     let row = lock(&mut tx, id).await?;
@@ -572,17 +579,26 @@ pub(crate) async fn sync(s: &AppState, id: Uuid) -> ApiResult<State> {
     if !row.awaiting_provider() {
         return Err(ApiError::Conflict("payout_state"));
     }
-    // Toss looks payouts up by its own id (returned on create), not by our refPayoutId. A send that
-    // ended ambiguously has no id yet, so there is nothing to ask about.
-    let Some(provider_id) = row.provider_transfer_id.clone() else {
-        return Ok(row.state());
+    let state = ask_provider(s, &mut tx, id, &row).await?;
+    tx.commit().await?;
+    Ok(state)
+}
+
+/// Writes what Toss says about an open transfer into `tx`; the caller commits. Every provider error comes
+/// before any write, so a caller may still use `tx` when Toss cannot be reached.
+async fn ask_provider(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uuid, row: &Row) -> ApiResult<State> {
+    let status = match (row.state(), row.provider_transfer_id.as_deref()) {
+        (State::Sent, Some(provider_id)) => s.providers.transfer_status(provider_id).await?,
+        _ => match find_ambiguous(s, tx, id, row).await? {
+            Some(status) => status,
+            None => return Ok(row.state()),
+        },
     };
-    match s.providers.transfer_status(&provider_id).await? {
-        adapter::TransferStatus::Pending => Ok(row.state()),
+    match status {
+        adapter::TransferStatus::Pending => Ok(State::Sent),
         adapter::TransferStatus::Paid => {
-            check_amount(&mut tx, id, row.amount).await?;
-            write(&mut tx, id, State::Paid, None).await?;
-            tx.commit().await?;
+            check_amount(tx, id, row.amount).await?;
+            write(tx, id, State::Paid, None).await?;
             Ok(State::Paid)
         }
         adapter::TransferStatus::Failed(reason) => {
@@ -593,15 +609,97 @@ pub(crate) async fn sync(s: &AppState, id: Uuid) -> ApiResult<State> {
             )
             .bind(id)
             .bind(truncate(&reason))
-            .execute(&mut *tx)
+            .execute(&mut **tx)
             .await?;
             if r.rows_affected() != 1 {
                 return Err(ApiError::Conflict("payout_state"));
             }
-            tx.commit().await?;
             Ok(State::Failed)
         }
     }
+}
+
+/// A send that ended ambiguously never got Toss's id back, so it is looked up by our refPayoutId (the payout
+/// id) in Toss's payout list. Found: recorded as sent with its id, and its status returned. Absent: failed,
+/// unless the send is too recent to tell (None, row unchanged).
+async fn find_ambiguous(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uuid, row: &Row) -> ApiResult<Option<adapter::TransferStatus>> {
+    // From the day before creation in KST, so a send near midnight is still in the list.
+    let (since, fresh): (NaiveDate, bool) =
+        sqlx::query_as("SELECT (created_at AT TIME ZONE 'Asia/Seoul')::date - 1, updated_at > now() - make_interval(mins => $2) FROM payouts WHERE id = $1")
+            .bind(id)
+            .bind(NOT_FOUND_GRACE_MINS)
+            .fetch_one(&mut **tx)
+            .await?;
+    let mut found = s.providers.find_transfers(&id.to_string(), since).await?;
+    // An id already on the row is an earlier attempt Toss failed (then retried): it says nothing about this send.
+    found.retain(|(provider_id, _)| row.provider_transfer_id.as_deref() != Some(provider_id));
+    found.sort_by_key(|(_, status)| matches!(status, adapter::TransferStatus::Failed(_)));
+    let Some((provider_id, status)) = found.into_iter().next() else {
+        // Toss may still be taking in a request that just timed out: absence counts only after the grace.
+        return Ok((!fresh).then(|| adapter::TransferStatus::Failed(NOT_AT_TOSS.into())));
+    };
+    let r = sqlx::query(
+        "UPDATE payouts SET state = 'sent', provider_transfer_id = $2, failure_reason = NULL, updated_at = now() WHERE id = $1 AND state = 'requested'",
+    )
+    .bind(id)
+    .bind(&provider_id)
+    .execute(&mut **tx)
+    .await?;
+    if r.rows_affected() != 1 {
+        return Err(ApiError::Conflict("payout_state"));
+    }
+    Ok(Some(status))
+}
+
+/// POST /settlements/payouts/{id}/not-sent. The owner checked the Toss dashboard and states that an ambiguous
+/// send never left. Taken only while Toss itself cannot be asked: when Toss answers, its answer settles the
+/// batch and this is refused. Marks the batch failed, which frees cancels and card changes. The key is kept,
+/// so a resend of a send Toss did take is answered with that transfer, not repeated.
+pub async fn confirm_not_sent(
+    AxState(s): AxState<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Admin(a): Admin,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    live_admin(&s, a.id).await?;
+    require_recent_stepup(&s, a.id).await?;
+    let step = owner::check_owner(&s, a, &headers, Some(peer.ip()), true).await?;
+    let mut tx = s.db.begin().await?;
+    let row = lock(&mut tx, id).await?;
+    if row.provider != "toss" {
+        return Err(ApiError::Conflict("payout_provider"));
+    }
+    if !(row.state() == State::Requested && row.awaiting_provider()) {
+        return Err(ApiError::Conflict("payout_state"));
+    }
+    match ask_provider(&s, &mut tx, id, &row).await {
+        Err(ApiError::Unavailable(_)) => {}
+        // Toss answered but has no record yet: too soon to say either way.
+        Ok(State::Requested) => return Err(ApiError::Conflict("payout_in_transfer")),
+        Ok(state) => {
+            tx.commit().await?;
+            audit(&s.db, "staff", Some(a.id), "payout.sync", &id.to_string(), json!({ "state": state.as_str() })).await?;
+            if state == State::Paid {
+                notify_paid(&s, id).await;
+            }
+            return Err(ApiError::Conflict("payout_checked"));
+        }
+        Err(e) => return Err(e),
+    }
+    owner::burn_totp(&s, a.id, owner::client_ip(&s, Some(peer.ip()), &headers), step).await?;
+    write(&mut tx, id, State::Failed, Some(OWNER_NOT_SENT)).await?;
+    audit(
+        &mut *tx,
+        "staff",
+        Some(a.id),
+        "payout.not_sent",
+        &id.to_string(),
+        json!({ "send_error": row.failure_reason, "amount": row.amount, "payout_date": row.payout_date }),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(Json(json!({ "id": id, "state": State::Failed.as_str() })))
 }
 
 /// Takes a cancelled booking's pending settlements out of their batch. A batch nobody has sent is
