@@ -533,6 +533,12 @@ pub async fn answer(s: &AppState, thread: Uuid) -> ApiResult<()> {
     let Some(t) = load_thread(&s.db, thread).await? else {
         return Ok(());
     };
+    // Customer messages go to the model abroad: no answer once the customer has withdrawn overseas transfer.
+    if let Some(user) = t.user_id
+        && !crate::privacy::overseas_allowed(&s.db, user).await?
+    {
+        return Ok(());
+    }
     let hours = business_hours(&s.db).await?;
     let facts = Facts {
         closed: t.closed,

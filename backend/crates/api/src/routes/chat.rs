@@ -133,7 +133,14 @@ pub async fn broadcast_message(s: &AppState, msg: &MessageRow) -> ApiResult<()> 
         notify(s, member, "chat.message", "상담팀", &preview, data).await?;
     } else {
         s.hub.send(member, "chat.message", live);
-        spawn_staff_push(s, msg.thread_id, preview);
+        // The preview is the customer's own text, and FCM carries it abroad: none once overseas transfer is withdrawn.
+        let may_carry_text = match user_id {
+            Some(u) if msg.sender == "customer" => crate::privacy::overseas_allowed(&s.db, u).await?,
+            _ => true,
+        };
+        if may_carry_text {
+            spawn_staff_push(s, msg.thread_id, preview);
+        }
     }
     Ok(())
 }

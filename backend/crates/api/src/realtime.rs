@@ -641,6 +641,17 @@ async fn try_push(state: &AppState, q: &Queued) -> Result<(), &'static str> {
     let Some((role, owner)) = q.to.owner() else {
         return Ok(());
     };
+    // FCM is a transfer abroad: a customer who withdrew overseas transfer gets no push (the inbox still has it).
+    if let Recipient::User(user) = q.to {
+        match crate::privacy::overseas_allowed(&state.db, user).await {
+            Ok(true) => {}
+            Ok(false) => return Ok(()),
+            Err(e) => {
+                tracing::warn!(error = %e, kind = %q.kind, "overseas consent lookup failed");
+                return Err("consent_lookup_failed");
+            }
+        }
+    }
     let tokens: Vec<String> = sqlx::query_scalar("SELECT token FROM push_tokens WHERE owner_role = $1 AND owner_id = $2")
         .bind(role)
         .bind(owner)

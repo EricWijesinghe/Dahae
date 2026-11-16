@@ -455,6 +455,15 @@ async fn register_method(State(s): State<AppState>, Customer(a): Customer, Json(
 }
 
 async fn delete_method(State(s): State<AppState>, Customer(a): Customer, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
+    let stored: Option<String> = sqlx::query_scalar("SELECT billing_key FROM payment_methods WHERE id = $1 AND user_id = $2 AND billing_key <> ''")
+        .bind(id)
+        .bind(a.id)
+        .fetch_optional(&s.db)
+        .await?;
+    // The gateway key is revoked before the local copy is erased: if PortOne refuses, the card stays on file to retry.
+    if let Some(stored) = stored {
+        crate::privacy::revoke_billing_key(&s, id, &stored).await?;
+    }
     sqlx::query("UPDATE payment_methods SET deleted_at = now(), billing_key = '', billing_key_digest = NULL WHERE id = $1 AND user_id = $2")
         .bind(id)
         .bind(a.id)

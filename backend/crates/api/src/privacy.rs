@@ -19,14 +19,18 @@ use uuid::Uuid;
 /// Bump when any of them changes: every stored consent with another version stops counting.
 pub const CONSENT_VERSION: &str = "2026-11-19";
 
-/// Kind and whether the service cannot run without it. Marketing and location are optional and withdrawable.
+/// Kind and whether the service cannot run without it once signed up. Overseas transfer, marketing and location
+/// are withdrawable (the public notice promises it); withdrawing overseas transfer stops push and the AI chat.
 pub const CONSENTS: [(&str, bool); 5] = [
     ("terms", true),
     ("privacy", true),
-    ("overseas_transfer", true),
+    ("overseas_transfer", false),
     ("marketing", false),
     (LOCATION, false),
 ];
+
+/// Kinds a sign-up must grant. Overseas transfer is required to sign up but withdrawable afterwards.
+const SIGNUP_REQUIRED: [&str; 3] = ["terms", "privacy", "overseas_transfer"];
 
 /// 위치기반서비스 이용약관 (위치정보법): asked in the app before the first "use my current location".
 pub const LOCATION: &str = "location";
@@ -61,6 +65,11 @@ fn effective(rows: &[Latest], kind: &str) -> bool {
 /// Whether a marketing message may go to this customer now.
 pub async fn marketing_allowed(db: &PgPool, user: Uuid) -> sqlx::Result<bool> {
     Ok(effective(&latest(db, user).await?, "marketing"))
+}
+
+/// Whether this customer's data may go abroad now (Google FCM push, Anthropic AI chat).
+pub async fn overseas_allowed(db: &PgPool, user: Uuid) -> sqlx::Result<bool> {
+    Ok(effective(&latest(db, user).await?, "overseas_transfer"))
 }
 
 #[derive(Serialize)]
@@ -160,9 +169,7 @@ fn check_kinds_and_versions(consents: &[ConsentChange]) -> ApiResult<()> {
 /// Signup must grant every required consent for the current policy version. Optional ones may be unticked.
 pub fn check_signup_consents(consents: &[ConsentChange]) -> ApiResult<()> {
     check_kinds_and_versions(consents)?;
-    let missing = CONSENTS
-        .iter()
-        .any(|(k, required)| *required && !consents.iter().any(|c| c.kind == *k && c.granted));
+    let missing = SIGNUP_REQUIRED.iter().any(|k| !consents.iter().any(|c| c.kind == *k && c.granted));
     if missing {
         return Err(ApiError::BadRequest("required_consent"));
     }
@@ -200,7 +207,7 @@ pub async fn put_consents(
     Ok(Json(update_consents(&s.db, a.id, u).await?))
 }
 
-/// 열람 요구: everything the service holds about the customer, without credentials or gateway keys.
+/// 열람 요구: everything the service holds about the customer, without credentials, gateway keys or other customers' data.
 /// Shared by the customer's own download and by staff handling a request for that customer.
 pub async fn export_doc(db: &PgPool, user: Uuid) -> ApiResult<Value> {
     let doc: Value = sqlx::query_scalar(
@@ -212,7 +219,17 @@ pub async fn export_doc(db: &PgPool, user: Uuid) -> ApiResult<Value> {
           'payment_methods', (SELECT COALESCE(jsonb_agg(jsonb_build_object('provider', provider, 'display_name', display_name, 'created_at', created_at) ORDER BY created_at), '[]'::jsonb) FROM payment_methods WHERE user_id = $1 AND deleted_at IS NULL),
           'coupons', (SELECT COALESCE(jsonb_agg(jsonb_build_object('name', name, 'amount', amount, 'service_code', service_code, 'issued_at', issued_at, 'expires_at', expires_at, 'used', used_booking_id IS NOT NULL) ORDER BY issued_at), '[]'::jsonb) FROM coupons WHERE user_id = $1),
           'bookings', (SELECT COALESCE(jsonb_agg(jsonb_build_object('number', number, 'service_code', service_code, 'visit_date', visit_date, 'start_hour', start_hour, 'status', status, 'address', address, 'answers', answers, 'final_price', final_price, 'paid_amount', paid_amount, 'created_at', created_at) ORDER BY created_at), '[]'::jsonb) FROM bookings WHERE user_id = $1),
-          'notifications', (SELECT COALESCE(jsonb_agg(jsonb_build_object('kind', kind, 'data', data, 'created_at', created_at) ORDER BY created_at DESC), '[]'::jsonb) FROM (SELECT kind, data, created_at FROM notifications WHERE owner_role = 'customer' AND owner_id = $1 ORDER BY created_at DESC LIMIT 500) n)
+          'notifications', (SELECT COALESCE(jsonb_agg(jsonb_build_object('kind', kind, 'data', data, 'created_at', created_at) ORDER BY created_at DESC), '[]'::jsonb) FROM (SELECT kind, data, created_at FROM notifications WHERE owner_role = 'customer' AND owner_id = $1 ORDER BY created_at DESC LIMIT 500) n),
+          'subscriptions', (SELECT COALESCE(jsonb_agg(jsonb_build_object('service_code', s.service_code, 'unit_index', s.unit_index, 'address', (SELECT a.road_address FROM addresses a WHERE a.id = s.address_id), 'cadence_weeks', s.cadence_weeks, 'weekday', s.weekday, 'start_hour', s.start_hour, 'status', s.status, 'paused_reason', s.paused_reason, 'created_at', s.created_at, 'cancelled_at', s.cancelled_at) ORDER BY s.created_at), '[]'::jsonb) FROM subscriptions s WHERE s.user_id = $1),
+          'waitlist', (SELECT COALESCE(jsonb_agg(jsonb_build_object('service_code', w.service_code, 'visit_date', w.visit_date, 'start_hour', w.start_hour, 'end_hour', w.end_hour, 'status', w.status, 'body', w.body, 'joined_at', w.joined_at) ORDER BY w.joined_at), '[]'::jsonb) FROM waitlist_entries w WHERE w.user_id = $1),
+          'reviews', (SELECT COALESCE(jsonb_agg(jsonb_build_object('booking_id', r.booking_id, 'rating', r.rating, 'body', r.body, 'photos', r.photos, 'created_at', r.created_at) ORDER BY r.created_at), '[]'::jsonb) FROM reviews r WHERE r.user_id = $1),
+          'chat_messages', (SELECT COALESCE(jsonb_agg(jsonb_build_object('thread_id', m.thread_id, 'kind', m.kind, 'body', m.body, 'created_at', m.created_at) ORDER BY m.created_at), '[]'::jsonb) FROM chat_messages m WHERE m.sender = 'customer' AND m.sender_id = $1),
+          'uploads', (SELECT COALESCE(jsonb_agg(jsonb_build_object('bytes', u.bytes, 'created_at', u.created_at) ORDER BY u.created_at), '[]'::jsonb) FROM uploads u WHERE u.owner_role = 'customer' AND u.owner_id = $1),
+          'points', (SELECT COALESCE(jsonb_agg(jsonb_build_object('kind', p.kind, 'amount', p.amount, 'expires_at', p.expires_at, 'booking_id', p.booking_id, 'reason', p.reason, 'created_at', p.created_at) ORDER BY p.created_at), '[]'::jsonb) FROM points_ledger p WHERE p.user_id = $1),
+          'tips', (SELECT COALESCE(jsonb_agg(jsonb_build_object('booking_id', t.booking_id, 'amount', t.amount, 'created_at', t.created_at) ORDER BY t.created_at), '[]'::jsonb) FROM booking_tips t WHERE t.user_id = $1),
+          'cash_receipts', (SELECT COALESCE(jsonb_agg(jsonb_build_object('purpose', c.purpose, 'identity_type', c.identity_type, 'identity_last4', c.identity_last4, 'state', c.state, 'issue_number', c.issue_number, 'receipt_url', c.receipt_url, 'created_at', c.created_at) ORDER BY c.created_at), '[]'::jsonb) FROM cash_receipts c JOIN checkouts k ON k.id = c.checkout_id WHERE k.user_id = $1),
+          'tax_invoice_requests', (SELECT COALESCE(jsonb_agg(jsonb_build_object('business_number', t.business_number, 'company_name', t.company_name, 'representative', t.representative, 'business_type', t.business_type, 'business_item', t.business_item, 'address', t.address, 'email', t.email, 'state', t.state, 'issued_on', t.issued_on, 'created_at', t.created_at) ORDER BY t.created_at), '[]'::jsonb) FROM tax_invoice_requests t JOIN checkouts k ON k.id = t.checkout_id WHERE k.user_id = $1),
+          'referrals', (SELECT COALESCE(jsonb_agg(jsonb_build_object('role', r.role, 'state', r.state, 'created_at', r.created_at, 'rewarded_at', r.rewarded_at) ORDER BY r.created_at), '[]'::jsonb) FROM (SELECT 'referrer' AS role, state, created_at, rewarded_at FROM referrals WHERE referrer_id = $1 UNION ALL SELECT 'referred', state, created_at, rewarded_at FROM referrals WHERE referred_user_id = $1) r)
         )",
     )
     .bind(user)
@@ -225,6 +242,28 @@ pub async fn export(State(s): State<AppState>, crate::auth::Customer(a): crate::
     Ok(Json(export_doc(&s.db, a.id).await?))
 }
 
+/// Revokes one saved card's gateway key (PortOne). Fails closed: an error means the key may still be live, so the
+/// caller must keep its local copy and the customer can retry.
+pub(crate) async fn revoke_billing_key(s: &AppState, method: Uuid, stored: &str) -> ApiResult<()> {
+    // Dev mode saves no gateway keys (the test cards are local rows), so there is nothing to revoke.
+    if s.config.dev_mode {
+        return Ok(());
+    }
+    // Deleting a key needs only the API secret, so a store or channel that is off does not matter. Without a
+    // secret the key stays live at the gateway: refuse, so the card is not erased while still billable.
+    if s.providers.integ().portone.api_secret.is_none() {
+        tracing::warn!(payment_method = %method, "billing key cannot be deleted: PortOne API secret not configured");
+        return Err(ApiError::Unavailable("billing_key_delete_failed"));
+    }
+    let Some(key) = crypto::open_billing_key(&s.config.data_key, stored) else {
+        tracing::error!(payment_method = %method, "saved-card billing key cannot be opened: revoke blocked");
+        return Err(ApiError::Unavailable("billing_key_delete_failed"));
+    };
+    portone::delete_billing_key(&s.providers, &key)
+        .await
+        .map_err(|_| ApiError::Unavailable("billing_key_delete_failed"))
+}
+
 /// Deletes the customer's gateway keys (saved cards) before personal data is removed. Fails closed:
 /// if the gateway refuses, nothing is anonymised and the customer can retry.
 async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
@@ -232,24 +271,8 @@ async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
         .bind(user)
         .fetch_all(&s.db)
         .await?;
-    // Dev mode saves no gateway keys (the test cards are local rows), so there is nothing to revoke.
-    if keys.is_empty() || s.config.dev_mode {
-        return Ok(());
-    }
-    // Deleting a key needs only the API secret, so a store or channel that is off does not matter. Without a
-    // secret the key stays live at the gateway: refuse, so the account is not erased with a card still billable.
-    if s.providers.integ().portone.api_secret.is_none() {
-        tracing::warn!(%user, count = keys.len(), "billing keys cannot be deleted: PortOne API secret not configured");
-        return Err(ApiError::Unavailable("billing_key_delete_failed"));
-    }
     for (id, stored) in &keys {
-        let Some(key) = crypto::open_billing_key(&s.config.data_key, stored) else {
-            tracing::error!(%user, payment_method = %id, "saved-card billing key cannot be opened: account deletion blocked");
-            return Err(ApiError::Unavailable("billing_key_delete_failed"));
-        };
-        portone::delete_billing_key(&s.providers, &key)
-            .await
-            .map_err(|_| ApiError::Unavailable("billing_key_delete_failed"))?;
+        revoke_billing_key(s, *id, stored).await?;
     }
     Ok(())
 }

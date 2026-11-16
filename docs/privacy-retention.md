@@ -5,9 +5,9 @@ Source of truth for what the server keeps, purges and deletes. Code: `backend/cr
 ## Consent (`user_consents`, migration 0016)
 
 - Append-only. Each change is a row `(user, kind, version, granted, created_at)`. The newest row per kind is the current state.
-- Kinds: `terms`, `privacy`, `overseas_transfer` (required); `marketing` (optional, withdrawable).
+- Kinds: `terms`, `privacy`, `overseas_transfer` (required at sign-up); `marketing` (optional). `overseas_transfer` and `marketing` are withdrawable later; withdrawing `overseas_transfer` stops push notifications (Google FCM) and the AI chat (Anthropic) for that customer.
 - A consent counts only when granted for `CONSENT_VERSION` (privacy.rs). Bumping the version forces re-consent of required kinds (`reconsent_required: true`) and stops marketing until re-asked.
-- API: `GET/PUT /v1/me/consents`. A change with a stale version is rejected; required kinds cannot be withdrawn.
+- API: `GET/PUT /v1/me/consents`. A change with a stale version is rejected. `terms` and `privacy` cannot be withdrawn while the customer uses the service; the other kinds can.
 - Marketing sends: `realtime::notify` drops any `marketing.*` kind unless `marketing_allowed`. Transactional kinds are unaffected.
 
 ## Deletion (`DELETE /v1/me`)
@@ -36,7 +36,7 @@ Apple `account-delete` notifications (`POST /v1/auth/apple/notifications`) run t
 
 ## Export (`GET /v1/me/export`)
 
-JSON: profile, consent history, addresses, payment method labels (no keys), coupons, bookings, last 500 notifications. Gateway keys and tokens are never included.
+JSON: profile, consent history, addresses, payment method labels (no keys), coupons, bookings, last 500 notifications, subscriptions, waitlist places (with their request notes), the customer's reviews (text and photo references), chat messages the customer sent, upload records (size and date, not the files), points ledger, tips, cash receipts (last 4 digits only), tax invoice requests, and referrals (role and state, no phone numbers). Gateway keys, tokens and the encrypted cash receipt identity are never included.
 
 ## Staff-handled requests (console)
 

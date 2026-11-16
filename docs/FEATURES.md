@@ -573,7 +573,7 @@ This is Dahae's **customer support helper**. The owner turns it on in the setup 
 
 | Capability | One line | Users | Main file |
 |---|---|---|---|
-| Consent records | Terms, privacy and overseas transfer are required; marketing and location are optional. Records are appended, never deleted; a stale policy version does not count. | Customer | [`privacy.rs`](../backend/crates/api/src/privacy.rs), [`routes/me.rs`](../backend/crates/api/src/routes/me.rs) (`/me/consents`) |
+| Consent records | Terms, privacy and overseas transfer are required at signup; overseas transfer, marketing and location can be withdrawn later (withdrawing overseas transfer stops push and the AI chat). Records are appended, never deleted; a stale policy version does not count. | Customer | [`privacy.rs`](../backend/crates/api/src/privacy.rs), [`routes/me.rs`](../backend/crates/api/src/routes/me.rs) (`/me/consents`) |
 | Location consent | Location terms are asked separately before "use my current location". | Customer | [`privacy.rs`](../backend/crates/api/src/privacy.rs) (`LOCATION`) |
 | Data export | Customer downloads their data as JSON. | Customer | [`privacy.rs`](../backend/crates/api/src/privacy.rs) (`export`), [`routes/me.rs`](../backend/crates/api/src/routes/me.rs) (`/me/export`) |
 | Account deletion | Personal data is anonymised, sessions, devices and uploads are removed; closed booking records stay with address and visit notes removed. | Customer | [`privacy.rs`](../backend/crates/api/src/privacy.rs) (`delete_account`), [`website/delete-account.html`](../website/delete-account.html) |

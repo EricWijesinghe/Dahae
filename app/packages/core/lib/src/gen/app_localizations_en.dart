@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -6794,7 +6795,7 @@ class TEn extends T {
 
   @override
   String get sgOverseasNote =>
-      'This consent is needed to use the service, so it cannot be withdrawn. Without it you cannot sign up.';
+      'This consent is needed to sign up. Without it you cannot sign up. After signing up you can withdraw it in Consent settings, but then push notifications and the AI chat stop.';
 
   @override
   String get cStaffInvite => 'Invite staff';
