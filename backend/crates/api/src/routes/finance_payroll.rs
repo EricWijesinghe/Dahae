@@ -24,6 +24,8 @@ type PaidRow = (String, String, String, Option<String>, i64, String);
 /// 지급명세서 for paid payouts to withheld partners, by KST payment date. The monthly 간이지급명세서 and the
 /// annual 지급명세서 are both this range. Layout UNVERIFIED; see domain::tax::WITHHOLDING_HEADERS.
 pub(super) async fn export_withholding(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Response> {
+    crate::auth::live_admin(&s, a.id).await?;
+    super::staff_mfa::require_recent_stepup(&s, a.id).await?;
     let (from, to) = resolve(&q)?;
     let mut tx = s.db.begin().await?;
     let rows: Vec<(NaiveDate, String, String, i64, String)> = sqlx::query_as(
@@ -61,6 +63,8 @@ pub(super) async fn export_withholding(State(s): State<AppState>, Admin(a): Admi
 
 /// Paid payouts in the KST date range, split per payout, then summed per person by `tax::payroll_document`.
 pub async fn export_payroll(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Response> {
+    crate::auth::live_admin(&s, a.id).await?;
+    super::staff_mfa::require_recent_stepup(&s, a.id).await?;
     let (from, to) = resolve(&q)?;
     let mut tx = s.db.begin().await?;
     let rows: Vec<PaidRow> = sqlx::query_as(

@@ -226,6 +226,8 @@ fn invoice_csv(rows: &[ExportRow], from: NaiveDate, to: NaiveDate) -> ApiResult<
 /// CSV for the 홈택스 upload: queued requests not exported yet, in the range. Marks them exported and writes the
 /// audit row in the same transaction, so a failed write hands out no file and marks nothing.
 async fn export(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Response> {
+    crate::auth::live_admin(&s, a.id).await?;
+    super::staff_mfa::require_recent_stepup(&s, a.id).await?;
     let (from, to) = resolve(&q)?;
     let mut tx = s.db.begin().await?;
     let rows = queued_rows(&mut *tx, from, to, Queue::Unexported).await?;
@@ -261,6 +263,8 @@ struct ReExportQuery {
 /// damaged file. Only repeats rows already exported (a never-exported row is not handed out here). Leaves
 /// exported_at as it is. Needs the explicit confirm flag and writes an audit row.
 async fn re_export(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<ReExportQuery>) -> ApiResult<Response> {
+    crate::auth::live_admin(&s, a.id).await?;
+    super::staff_mfa::require_recent_stepup(&s, a.id).await?;
     if !q.confirm {
         return Err(ApiError::BadRequest("confirm_required"));
     }

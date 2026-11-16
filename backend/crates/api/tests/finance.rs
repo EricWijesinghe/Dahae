@@ -132,15 +132,16 @@ async fn seed_march(db: &PgPool) -> Uuid {
     pro
 }
 
-async fn admin_token() -> String {
-    auth::issue_access(SECRET, Uuid::now_v7(), Role::StaffAdmin).expect("token")
+/// A live admin row with a fresh step-up: the exports check the stored role and the step-up.
+async fn admin_token(db: &PgPool) -> String {
+    common::staff_token(db, Role::StaffAdmin).await.0
 }
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn summary_matches_the_seeded_march_numbers(pool: PgPool) {
     seed_march(&pool).await;
     let app = common::app(pool.clone());
-    let (status, s) = call(&app, "GET", PERIOD, Some(&admin_token().await), None).await;
+    let (status, s) = call(&app, "GET", PERIOD, Some(&admin_token(&pool).await), None).await;
     assert_eq!(status, StatusCode::OK, "{s}");
     assert_eq!(s["bookings"], 3);
     assert_eq!(s["cancelled"], 1);
@@ -168,7 +169,7 @@ async fn summary_matches_the_seeded_march_numbers(pool: PgPool) {
 async fn partner_table_and_service_table_agree_with_the_summary(pool: PgPool) {
     seed_march(&pool).await;
     let app = common::app(pool.clone());
-    let token = admin_token().await;
+    let token = admin_token(&pool).await;
     let (_, partners) = call(
         &app,
         "GET",
@@ -203,7 +204,7 @@ async fn partner_table_and_service_table_agree_with_the_summary(pool: PgPool) {
 async fn series_shapes_and_grain_validation(pool: PgPool) {
     seed_march(&pool).await;
     let app = common::app(pool.clone());
-    let token = admin_token().await;
+    let token = admin_token(&pool).await;
     let (status, days) = call(&app, "GET", "/v1/admin/finance/series?grain=day&days=30", Some(&token), None).await;
     assert_eq!(status, StatusCode::OK, "{days}");
     assert_eq!(days.as_array().map(Vec::len), Some(30));
@@ -219,7 +220,7 @@ async fn series_shapes_and_grain_validation(pool: PgPool) {
 async fn exports_are_bom_csv_with_guarded_cells_and_admin_only(pool: PgPool) {
     seed_march(&pool).await;
     let app = common::app(pool.clone());
-    let token = admin_token().await;
+    let token = admin_token(&pool).await;
     let uri = "/v1/admin/finance/export/monthly?period=custom&from=2026-03-01&to=2026-03-31";
     let req = Request::builder()
         .method("GET")
@@ -272,7 +273,7 @@ async fn held_settlements_stay_out_of_fee_vat_and_summary(pool: PgPool) {
     let held = insert_booking(&pool, user, "BKF-4", 100_000, 0, 3, "2026-03-22T10:00:00+09").await;
     insert_settlement(&pool, pro, held, 100_000, 30_000, "held", "2026-03-25", None, "2026-03-22T12:00:00+09").await;
     let app = common::app(pool.clone());
-    let token = admin_token().await;
+    let token = admin_token(&pool).await;
     let (_, s) = call(&app, "GET", PERIOD, Some(&token), None).await;
     assert_eq!(s["platform_fee"], 60_000, "held fee is not earned yet");
     assert_eq!(s["vat_estimate"], 6_000);
@@ -296,7 +297,7 @@ async fn dashboard_revenue_matches_the_finance_summary(pool: PgPool) {
     let today = (chrono::Utc::now() + chrono::Duration::hours(9)).date_naive();
     let from = today - chrono::Duration::days(29);
     let app = common::app(pool.clone());
-    let token = admin_token().await;
+    let token = admin_token(&pool).await;
     let (_, dash) = call(&app, "GET", "/v1/admin/dashboard", Some(&token), None).await;
     let (_, s) = call(
         &app,
@@ -331,7 +332,7 @@ async fn dashboard_refund_dated_by_cancel_day_counts_in_the_window(pool: PgPool)
     let today = (chrono::Utc::now() + chrono::Duration::hours(9)).date_naive();
     let from = today - chrono::Duration::days(29);
     let app = common::app(pool.clone());
-    let token = admin_token().await;
+    let token = admin_token(&pool).await;
     let (_, dash) = call(&app, "GET", "/v1/admin/dashboard", Some(&token), None).await;
     let (_, s) = call(
         &app,
@@ -403,7 +404,7 @@ async fn settlements_export_uses_kst_month_bounds_and_totals_match_rows(pool: Pg
         let booking = insert_booking(&pool, user, number, gross, 0, 3, created).await;
         insert_settlement(&pool, pro, booking, gross, fee, "pending", "2026-03-25", None, created).await;
     }
-    let token = admin_token().await;
+    let token = admin_token(&pool).await;
     let app = common::app(pool.clone());
     let csv = fetch_csv(&app, "/v1/admin/finance/export/settlements?period=custom&from=2026-03-01&to=2026-03-31", &token).await;
     let lines: Vec<&str> = csv.trim_start_matches('\u{feff}').lines().collect();
