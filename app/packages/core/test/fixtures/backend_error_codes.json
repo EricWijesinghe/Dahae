@@ -91,6 +91,7 @@
     "settlement_state",
     "slot_full",
     "sms_failed",
+    "sms_required",
     "stepup_required",
     "studio_too_large",
     "team_full",

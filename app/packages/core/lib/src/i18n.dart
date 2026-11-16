@@ -33,6 +33,7 @@ extension Labels on T {
     'date_out_of_range' => err_date_out_of_range,
     'slot_full' => err_slot_full,
     'stepup_required' => err_stepup_required,
+    'sms_required' => err_sms_required,
     'coupon_expired' => err_coupon_expired,
     'coupon_used' => err_coupon_used,
     'coupon_wrong_service' => err_coupon_wrong_service,

@@ -48,6 +48,7 @@ S = {
   "oRuleSocial": ["소셜 로그인 실패", "Social sign-in fails"],
   "oRuleBackup": ["자동 백업 누락", "Automatic backup missed"],
   "oRuleDisk": ["디스크 부족", "Disk nearly full"],
+  "oRuleOtp": ["인증 번호 발송이 평소보다 많음(문자 비용)", "Sign-in code sends are unusually high (SMS cost)"],
   "oRuleAuth": ["계정 보안 이상(로그인 잠금 등)", "Suspicious sign-in activity"],
   "oRuleUnassigned": ["기사님 미배정 예약 (오래 방치)", "Confirmed bookings with no pro for a long time"],
   "oRuleSameDayCancel": ["당일 취소가 많음", "High same-day cancellations"],
