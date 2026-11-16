@@ -14,6 +14,7 @@
 | 5 | [체험용 설치](05-demo-install.md) · *Demo install* | 인터넷 없이 이미지 파일로 체험 서버 만들기 | 개발자 | 시연할 때 |
 | 6 | [알림톡 템플릿 등록](06-알림톡-템플릿-등록.md) · *KakaoTalk AlimTalk templates* | 카카오 알림톡 템플릿 7종 등록과 설정 칸 입력 | 설치 담당 | 알림톡을 쓸 때 |
 | 7 | [운영 명령어](07-운영-명령어.md) · *Operations commands* | `dahae` 명령: 상태, 로그, 백업, 복구, 업데이트, 되돌리기 | 설치 담당 | 백업, 업데이트, 문제 확인 |
+| 8 | [내 클라우드 계정에 올리기](08-클라우드-배포.md) · *Deploying on your own cloud account* | 클라우드 서버 만들기, 도메인과 DNS, 설치 명령, 백업 저장소 연결까지 전 과정 | 사장님 또는 설치 담당 | 서버를 직접 빌려 처음 설치할 때 (약 1시간) |
 | - | [결제 연동 설정](payments-setup.md) · *Payment setup (PortOne · Toss Payments)* | 결제와 지급대행 키 발급 순서, 웹훅 점검, 테스트 결제 | 설치 담당 | 결제 카드를 채울 때 |
 | - | [결제 연동 참고](payments-reference.md) · *Payment integration reference* | 결제·지급대행 API 연동 사양과 확인 필요 항목 | 개발자 | 결제 로직을 점검할 때 |
 
@@ -58,6 +59,7 @@ Start with **guide 0** (install in one go), then **guide 2** (setup wizard) and 
 | 5 | [Demo install](05-demo-install.md) (Korean) | Building a demo server from an image file, without GitHub | Developer | Offline demos |
 | 6 | [KakaoTalk AlimTalk templates](06-알림톡-템플릿-등록.md) (Korean) | Registering the seven AlimTalk templates and entering them in the wizard | Installer | When AlimTalk is used |
 | 7 | [Operations commands](07-운영-명령어.md) (Korean) | The `dahae` command: status, logs, backup, restore, update, rollback | Installer | Backups, updates, troubleshooting |
+| 8 | [Deploying on your own cloud account](08-클라우드-배포.md) (Korean) | Creating the cloud server, domain and DNS, the install command, offsite backup | Owner or installer | Once, when you set up your own server (about an hour) |
 | - | [Payment setup (PortOne · Toss Payments)](payments-setup.md) (bilingual) | Key order, webhook check, test payments | Installer | When filling the payment card |
 | - | [Payment integration reference](payments-reference.md) (bilingual) | PortOne V2 and Toss payout API notes, items still to confirm in a sandbox | Developer | When reviewing payment code |
 
