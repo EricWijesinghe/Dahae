@@ -32,7 +32,7 @@ allow = [
 ]
 confidence-threshold = 0.9
 
-# Our own workspace crates (license = "UNLICENSED", publish = false) are not license-checked.
+# Our own workspace crates (license = "LicenseRef-Proprietary", publish = false) are not license-checked.
 [licenses.private]
 ignore = true
 

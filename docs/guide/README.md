@@ -27,6 +27,18 @@
 | 설치 코드를 잃어버렸어요 · Lost the setup code | 서버에서 `sudo dahae setup-code` · run on the server |
 | 결제 키 값이 맞는지 모르겠어요 · Not sure the payment keys are right | [결제 연동 설정](payments-setup.md) 3번 웹훅 점검 · section 3, webhook check |
 
+## 엔지니어링 문서 · Engineering docs
+
+설치와 운영을 넘어서 구조와 근거가 궁금하다면 저장소의 문서를 보세요. 한국어 요약을 먼저 두었어요.
+
+| 문서 | 내용 |
+|---|---|
+| [기능 카탈로그](../FEATURES.md) | 기능별 설명과 코드 위치, 알려진 한계 |
+| [아키텍처](../ARCHITECTURE.md) | 구성 요소, 데이터 흐름, 배포 구조 |
+| [보안과 개인정보](../SECURITY-AND-PRIVACY.md) · [보안 정책](../../SECURITY.md) | 보안 통제, 개인정보 흐름, 취약점 신고 |
+| [운영 가이드](../OPERATIONS.md) · [장애 대응 런북](../RUNBOOK.md) | 설치 뒤 운영과 증상별 복구 |
+| [품질과 검사](../QUALITY.md) · [API 색인](../api/README.md) | 테스트와 CI, 경로 목록 |
+
 ---
 
 <a id="english"></a>
@@ -48,5 +60,10 @@ Start with **guide 0** (install in one go), then **guide 2** (setup wizard) and 
 | 7 | [Operations commands](07-운영-명령어.md) (Korean) | The `dahae` command: status, logs, backup, restore, update, rollback | Installer | Backups, updates, troubleshooting |
 | - | [Payment setup (PortOne · Toss Payments)](payments-setup.md) (bilingual) | Key order, webhook check, test payments | Installer | When filling the payment card |
 | - | [Payment integration reference](payments-reference.md) (bilingual) | PortOne V2 and Toss payout API notes, items still to confirm in a sandbox | Developer | When reviewing payment code |
+
+## Engineering docs (English)
+
+- [Feature catalogue](../FEATURES.md) (Korean and English), [Architecture](../ARCHITECTURE.md), [Security and privacy](../SECURITY-AND-PRIVACY.md), [Security policy](../../SECURITY.md)
+- [Operations guide](../OPERATIONS.md), [Incident runbook](../RUNBOOK.md), [Quality and checks](../QUALITY.md), [API index](../api/README.md)
 
 [한국어로 돌아가기](#다해-안내서--dahae-guides)
