@@ -414,9 +414,12 @@ pub async fn prune(db: &PgPool) -> Result<(), sqlx::Error> {
     crate::realtime::prune_stored(db).await
 }
 
+/// (last success, last failure) of one integration in the health table.
+pub type Outcome = (Option<DateTime<Utc>>, Option<DateTime<Utc>>);
+
 /// Last success and last failure recorded for one integration. Both None when nothing was recorded.
-pub async fn last_outcome(db: &PgPool, integration: &str) -> Result<(Option<DateTime<Utc>>, Option<DateTime<Utc>>), sqlx::Error> {
-    let row: Option<(Option<DateTime<Utc>>, Option<DateTime<Utc>>)> = sqlx::query_as("SELECT last_ok_at, last_fail_at FROM ops_health WHERE integration = $1")
+pub async fn last_outcome(db: &PgPool, integration: &str) -> Result<Outcome, sqlx::Error> {
+    let row: Option<Outcome> = sqlx::query_as("SELECT last_ok_at, last_fail_at FROM ops_health WHERE integration = $1")
         .bind(integration)
         .fetch_optional(db)
         .await?;
