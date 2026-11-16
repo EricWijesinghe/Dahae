@@ -18,6 +18,7 @@ use axum::{
 };
 use domain::booking::BookingStatus;
 use serde_json::{Value, json};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 pub fn partner_routes() -> Router<AppState> {
@@ -54,13 +55,36 @@ fn ensure_on_site_today(b: &super::bookings::BookingRow) -> ApiResult<()> {
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+pub enum Stamp {
+    Arrival,
+    Departure,
+}
+
+/// Stamps the arrival or departure of booking `id`, only while it is still `pro`'s and assigned. The caller's
+/// snapshot can be stale: a reassignment or cancellation may commit between its read and this write.
+pub async fn stamp_visit(db: &PgPool, id: Uuid, pro: Uuid, stamp: Stamp) -> ApiResult<()> {
+    let column = match stamp {
+        Stamp::Arrival => "checked_in_at",
+        Stamp::Departure => "checked_out_at",
+    };
+    let sql = format!("UPDATE bookings SET {column} = COALESCE({column}, now()), updated_at = now() WHERE id = $1 AND pro_id = $2 AND status = $3");
+    let done = sqlx::query(&sql)
+        .bind(id)
+        .bind(pro)
+        .bind(BookingStatus::TeamAssigned.as_i16())
+        .execute(db)
+        .await?;
+    if done.rows_affected() == 0 {
+        return Err(ApiError::Conflict("booking_changed"));
+    }
+    Ok(())
+}
+
 /// Records the arrival. Shared by the owner and the team member; the caller has checked ownership.
 pub async fn check_in_job(s: &AppState, b: &super::bookings::BookingRow) -> ApiResult<Json<Value>> {
     ensure_on_site_today(b)?;
-    sqlx::query("UPDATE bookings SET checked_in_at = COALESCE(checked_in_at, now()), updated_at = now() WHERE id = $1")
-        .bind(b.id)
-        .execute(&s.db)
-        .await?;
+    stamp_visit(&s.db, b.id, b.pro_id.ok_or(ApiError::NotFound)?, Stamp::Arrival).await?;
     best_effort(
         "check-in: customer",
         notify(
@@ -84,10 +108,7 @@ pub async fn check_out_job(s: &AppState, b: &super::bookings::BookingRow) -> Api
     if b.checked_in_at.is_none() {
         return Err(ApiError::Conflict("not_checked_in"));
     }
-    sqlx::query("UPDATE bookings SET checked_out_at = COALESCE(checked_out_at, now()), updated_at = now() WHERE id = $1")
-        .bind(b.id)
-        .execute(&s.db)
-        .await?;
+    stamp_visit(&s.db, b.id, b.pro_id.ok_or(ApiError::NotFound)?, Stamp::Departure).await?;
     s.hub.send(Recipient::Staff, "booking.updated", json!({ "booking_id": b.id }));
     s.hub.send(Recipient::User(b.user_id), "booking.updated", json!({ "booking_id": b.id }));
     Ok(Json(json!({ "ok": true, "booking_id": b.id })))
