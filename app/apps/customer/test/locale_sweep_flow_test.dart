@@ -108,7 +108,7 @@ void main() {
     final code = locale.languageCode;
     for (final scale in const [1.3, 2.0]) {
       testWidgets(
-        '[$code x$scale] studio, AC, scope, move 7 steps, checkout, done and status fit a small phone',
+        '[$code x$scale] studio, AC, scope, move 6 steps, checkout, done and status fit a small phone',
         (tester) async {
           setViewport(tester, _smallPhone);
           tester.platformDispatcher.textScaleFactorTestValue = scale;
@@ -117,7 +117,9 @@ void main() {
           // Prints each framework error in full, so a failing locale names the widget.
           final orig = FlutterError.onError;
           FlutterError.onError = (d) {
-            debugPrint('SWEEP-ERROR ${d.toString().split('\n').take(30).join('\n')}');
+            debugPrint(
+              'SWEEP-ERROR ${d.toString().split('\n').take(30).join('\n')}',
+            );
             orig?.call(d);
           };
           addTearDown(() => FlutterError.onError = orig);
@@ -182,16 +184,16 @@ void main() {
 
           await show(
             QuoteFlowScreen(service: app.service('move_out')!),
-            'move 1/7',
+            'move 1/6',
           );
           Finder next() => find.widgetWithText(PrimaryButton, t.next).last;
-          // "다음" no longer greys out on 2/7 and 3/7, so each step proves it was reached.
+          // "다음" no longer greys out on 2/6 and 3/6, so each step proves it was reached.
           void at(int n) {
-            _noException(tester, 'move $n/7');
+            _noException(tester, 'move $n/6');
             expect(
               find.text('${t.service('move_out')} · $n/$quoteSteps'),
               findsOneWidget,
-              reason: 'move $n/7 reached',
+              reason: 'move $n/6 reached',
             );
           }
 
@@ -225,8 +227,7 @@ void main() {
           await settle(tester, duration: const Duration(milliseconds: 500));
           await _tap(tester, next());
           at(6);
-          await _tap(tester, next());
-          at(7);
+          // 6/6 is the review: its bar says 요청 보내기, not 다음.
           expect(find.text(t.dfSubmitRequest), findsOneWidget);
 
           await show(
