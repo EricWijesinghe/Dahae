@@ -22,6 +22,7 @@ pub mod aad {
     pub const INTEGRATION: &str = "integration_settings.secret";
     pub const BILLING_KEY: &str = "payment_methods.billing_key";
     pub const PRO_EMERGENCY_CONTACT: &str = "pro_profiles.emergency_contact_enc";
+    pub const PRO_PAYEE_IDENTIFIER: &str = "pro_profiles.payee_identifier_enc";
 }
 
 pub fn encrypt(key: &[u8; 32], aad: &str, plaintext: &str) -> String {
@@ -122,6 +123,14 @@ mod tests {
         let mut flipped = enc.clone();
         flipped.push('A');
         assert_eq!(decrypt(&key, aad::PAYOUT_ACCOUNT, &flipped), None, "trailing garbage is rejected");
+    }
+
+    #[test]
+    fn payee_identifier_is_bound_to_its_own_column() {
+        let key = [7u8; 32];
+        let enc = encrypt(&key, aad::PRO_PAYEE_IDENTIFIER, "9001011234568");
+        assert_eq!(decrypt(&key, aad::PRO_PAYEE_IDENTIFIER, &enc).as_deref(), Some("9001011234568"));
+        assert_eq!(decrypt(&key, aad::PRO_EMERGENCY_CONTACT, &enc), None, "must not open as the emergency contact");
     }
 
     #[test]

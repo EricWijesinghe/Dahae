@@ -1,9 +1,9 @@
 //! Cleaner verification checklist and employee profile. Console only: the owner ticks the checklist
 //! before verifying a pro, and keeps the employee details on the profile.
 
-use super::{audit, uploads};
+use super::{audit, staff_mfa::require_recent_stepup, uploads};
 use crate::{
-    auth::Admin,
+    auth::{Admin, live_admin},
     crypto,
     error::{ApiError, ApiResult},
     state::AppState,
@@ -12,15 +12,27 @@ use crate::{
 use axum::{
     Json,
     extract::{Path, State},
+    http::header,
+    response::{IntoResponse, Response},
 };
 use chrono::{DateTime, NaiveDate, Utc};
+use domain::payee_identifier::{self, PayeeIdentifier};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
-/// Profile columns read by `get_profile`: photo, bio, employment type, sealed emergency contact, hire date.
-type ProfileRow = (Option<String>, String, Option<String>, Option<String>, Option<NaiveDate>);
+/// Profile columns read by `get_profile`: photo, bio, employment type, sealed emergency contact, hire date,
+/// payee identifier kind and last four digits (the digits themselves are never read here).
+type ProfileRow = (
+    Option<String>,
+    String,
+    Option<String>,
+    Option<String>,
+    Option<NaiveDate>,
+    Option<String>,
+    Option<String>,
+);
 
 /// Items the owner ticks before verifying a pro. Adding one here makes it required everywhere.
 pub const CHECKLIST_ITEMS: [&str; 4] = ["identity", "tax_type", "experience", "emergency_contact"];
@@ -70,9 +82,10 @@ pub struct ProfileBody {
     employment_type: Option<String>,
     emergency_contact: Option<String>,
     hired_on: Option<NaiveDate>,
+    payee_identifier: Option<String>,
 }
 
-/// Profile fields after validation, ready to store. The emergency contact is still in plain text here.
+/// Profile fields after validation, ready to store. The emergency contact and payee identifier are still plain here.
 #[derive(Debug, PartialEq)]
 pub struct Profile {
     pub photo_url: Option<String>,
@@ -80,6 +93,7 @@ pub struct Profile {
     pub employment_type: Option<String>,
     pub emergency_contact: Option<String>,
     pub hired_on: Option<NaiveDate>,
+    pub payee_identifier: Option<PayeeIdentifier>,
 }
 
 fn valid_contact(contact: &str) -> bool {
@@ -107,13 +121,37 @@ pub fn clean_profile(body: ProfileBody, base: &str) -> ApiResult<Profile> {
     if emergency_contact.as_deref().is_some_and(|c| !valid_contact(c)) {
         return Err(ApiError::BadRequest("invalid_emergency_contact"));
     }
+    let payee_identifier = body
+        .payee_identifier
+        .filter(|p| !p.trim().is_empty())
+        .map(|p| payee_identifier::normalize(&p).map_err(|_| ApiError::BadRequest("invalid_payee_identifier")))
+        .transpose()?;
     Ok(Profile {
         photo_url,
         bio,
         employment_type,
         emergency_contact,
         hired_on: body.hired_on,
+        payee_identifier,
     })
+}
+
+/// Sealed payee identifier plus its clear kind and last four digits. All `None` when the profile does not change it.
+fn sealed_payee(data_key: &[u8; 32], id: Option<&PayeeIdentifier>) -> (Option<String>, Option<&'static str>, Option<String>) {
+    match id {
+        Some(id) => (
+            Some(crypto::encrypt(data_key, crypto::aad::PRO_PAYEE_IDENTIFIER, &id.digits)),
+            Some(id.kind.as_str()),
+            Some(payee_identifier::last4(id).to_string()),
+        ),
+        None => (None, None, None),
+    }
+}
+
+/// What the console may show of the payee identifier: its kind and masked form, never the digits.
+fn payee_view(kind: Option<&str>, last4: Option<&str>) -> Value {
+    let masked = kind.zip(last4).and_then(|(k, l)| payee_identifier::masked(k, l));
+    masked.map_or(Value::Null, |m| json!({ "kind": kind, "masked": m }))
 }
 
 /// Decrypts the emergency contact for the console and records that someone looked at it.
@@ -136,14 +174,18 @@ pub async fn get_profile(State(s): State<AppState>, Admin(a): Admin, Path(id): P
         .fetch_optional(&s.db)
         .await?;
     let (checklist, decided_at) = verification.map_or((json!({}), None), |(c, at)| (c, Some(at)));
-    let row: Option<ProfileRow> = sqlx::query_as("SELECT photo_url, bio, employment_type, emergency_contact_enc, hired_on FROM pro_profiles WHERE pro_id = $1")
-        .bind(id)
-        .fetch_optional(&s.db)
-        .await?;
+    let row: Option<ProfileRow> = sqlx::query_as(
+        "SELECT photo_url, bio, employment_type, emergency_contact_enc, hired_on, payee_identifier_kind, payee_identifier_last4
+         FROM pro_profiles WHERE pro_id = $1",
+    )
+    .bind(id)
+    .fetch_optional(&s.db)
+    .await?;
     let profile = match row {
-        Some((photo_url, bio, employment_type, enc, hired_on)) => {
+        Some((photo_url, bio, employment_type, enc, hired_on, payee_kind, payee_last4)) => {
             let emergency_contact = reveal_contact(&s, a.id, id, enc).await?;
-            json!({ "photo_url": photo_url, "bio": bio, "employment_type": employment_type, "emergency_contact": emergency_contact, "hired_on": hired_on })
+            let payee = payee_view(payee_kind.as_deref(), payee_last4.as_deref());
+            json!({ "photo_url": photo_url, "bio": bio, "employment_type": employment_type, "emergency_contact": emergency_contact, "hired_on": hired_on, "payee_identifier": payee })
         }
         None => Value::Null,
     };
@@ -165,16 +207,27 @@ async fn check_photo(s: &AppState, photo: Option<&str>) -> ApiResult<()> {
 pub async fn put_profile(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<Uuid>, Json(body): Json<ProfileBody>) -> ApiResult<Json<Value>> {
     let p = clean_profile(body, &s.config.public_base_url)?;
     check_photo(&s, p.photo_url.as_deref()).await?;
+    if p.payee_identifier.is_some() {
+        // Writing a 주민등록번호 is owner-only, the same bar as revealing it.
+        live_admin(&s, a.id).await?;
+    }
     let contact_enc = p
         .emergency_contact
         .as_deref()
         .map(|c| crypto::encrypt(&s.config.data_key, crypto::aad::PRO_EMERGENCY_CONTACT, c));
+    let (payee_enc, payee_kind, payee_last4) = sealed_payee(&s.config.data_key, p.payee_identifier.as_ref());
     let mut tx = s.db.begin().await?;
+    // An omitted payee identifier keeps the stored one (COALESCE): a bio edit must never erase it.
     let written = sqlx::query(
-        "INSERT INTO pro_profiles (pro_id, photo_url, bio, employment_type, emergency_contact_enc, hired_on, updated_at)
-         SELECT id, $2, $3, $4, $5, $6, now() FROM pros WHERE id = $1
+        "INSERT INTO pro_profiles (pro_id, photo_url, bio, employment_type, emergency_contact_enc, hired_on,
+           payee_identifier_enc, payee_identifier_kind, payee_identifier_last4, updated_at)
+         SELECT id, $2, $3, $4, $5, $6, $7, $8, $9, now() FROM pros WHERE id = $1
          ON CONFLICT (pro_id) DO UPDATE SET photo_url = EXCLUDED.photo_url, bio = EXCLUDED.bio, employment_type = EXCLUDED.employment_type,
-           emergency_contact_enc = EXCLUDED.emergency_contact_enc, hired_on = EXCLUDED.hired_on, updated_at = now()",
+           emergency_contact_enc = EXCLUDED.emergency_contact_enc, hired_on = EXCLUDED.hired_on,
+           payee_identifier_enc = COALESCE(EXCLUDED.payee_identifier_enc, pro_profiles.payee_identifier_enc),
+           payee_identifier_kind = COALESCE(EXCLUDED.payee_identifier_kind, pro_profiles.payee_identifier_kind),
+           payee_identifier_last4 = COALESCE(EXCLUDED.payee_identifier_last4, pro_profiles.payee_identifier_last4),
+           updated_at = now()",
     )
     .bind(id)
     .bind(p.photo_url)
@@ -182,14 +235,46 @@ pub async fn put_profile(State(s): State<AppState>, Admin(a): Admin, Path(id): P
     .bind(p.employment_type)
     .bind(contact_enc)
     .bind(p.hired_on)
+    .bind(payee_enc)
+    .bind(payee_kind)
+    .bind(payee_last4)
     .execute(&mut *tx)
     .await?;
     if written.rows_affected() == 0 {
         return Err(ApiError::NotFound);
     }
     audit(&mut *tx, "staff", Some(a.id), "pro.profile", &id.to_string(), json!({})).await?;
+    if let Some(kind) = payee_kind {
+        audit(
+            &mut *tx,
+            "staff",
+            Some(a.id),
+            "pro.payee_identifier.set",
+            &id.to_string(),
+            json!({ "kind": kind }),
+        )
+        .await?;
+    }
     tx.commit().await?;
     Ok(Json(json!({ "ok": true })))
+}
+
+/// The full payee identifier, for a manual 지급명세서 entry. Owner only, needs a recent step-up, and the read and
+/// its audit row share one transaction, as for a bank-account reveal.
+pub async fn reveal_payee_identifier(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<Uuid>) -> ApiResult<Response> {
+    live_admin(&s, a.id).await?;
+    require_recent_stepup(&s, a.id).await?;
+    let mut tx = s.db.begin().await?;
+    let row: Option<Option<String>> = sqlx::query_scalar("SELECT payee_identifier_enc FROM pro_profiles WHERE pro_id = $1")
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await?;
+    let enc = row.flatten().ok_or(ApiError::NotFound)?;
+    let digits =
+        crypto::decrypt(&s.config.data_key, crypto::aad::PRO_PAYEE_IDENTIFIER, &enc).ok_or(ApiError::Internal("cannot decrypt payee identifier".into()))?;
+    audit(&mut *tx, "staff", Some(a.id), "pro.payee_identifier.reveal", &id.to_string(), json!({})).await?;
+    tx.commit().await?;
+    Ok(([(header::CACHE_CONTROL, "no-store")], Json(json!({ "identifier": digits }))).into_response())
 }
 
 #[cfg(test)]
@@ -205,6 +290,7 @@ mod tests {
             employment_type: None,
             emergency_contact: None,
             hired_on: None,
+            payee_identifier: None,
         }
     }
 
@@ -268,5 +354,24 @@ mod tests {
         let mut b = body();
         b.bio = Some("가".repeat(BIO_MAX_CHARS + 1));
         assert!(clean_profile(b, BASE).is_err());
+    }
+
+    #[test]
+    fn payee_identifier_is_checked_and_blank_means_unchanged() {
+        let mut b = body();
+        b.payee_identifier = Some("9001011234567".into());
+        assert!(clean_profile(b, BASE).is_err(), "wrong check digit");
+        let mut b = body();
+        b.payee_identifier = Some("   ".into());
+        assert_eq!(clean_profile(b, BASE).expect("ok").payee_identifier, None, "blank keeps the stored value");
+        let mut b = body();
+        b.payee_identifier = Some("900101-1234568".into());
+        let p = clean_profile(b, BASE).expect("ok");
+        assert_eq!(p.payee_identifier.as_ref().map(|id| id.digits.as_str()), Some("9001011234568"));
+        let (enc, kind, last4) = sealed_payee(&[7u8; 32], p.payee_identifier.as_ref());
+        assert_eq!((kind, last4.as_deref()), (Some("rrn"), Some("4568")));
+        assert!(!enc.unwrap_or_default().contains("4568"), "digits are sealed, not stored in clear");
+        assert_eq!(payee_view(kind, last4.as_deref()), json!({ "kind": "rrn", "masked": "*********4568" }));
+        assert_eq!(payee_view(None, None), Value::Null);
     }
 }

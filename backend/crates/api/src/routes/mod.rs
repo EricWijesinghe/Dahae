@@ -16,6 +16,7 @@ pub(crate) mod config;
 mod demo_admin;
 mod feed;
 mod finance;
+mod finance_payroll;
 pub(crate) mod growth;
 mod host_jobs;
 mod keys;

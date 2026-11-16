@@ -90,7 +90,8 @@ pub fn routes() -> Router<AppState> {
         .route("/finance/export/settlements", get(export_settlements))
         .route("/finance/export/monthly", get(export_monthly))
         .route("/finance/export/vat", get(export_vat))
-        .route("/finance/export/withholding", get(export_withholding))
+        .route("/finance/export/withholding", get(super::finance_payroll::export_withholding))
+        .route("/finance/export/payroll", get(super::finance_payroll::export_payroll))
 }
 
 pub fn partner_routes() -> Router<AppState> {
@@ -531,7 +532,7 @@ pub(super) fn csv_response(name: &str, body: String) -> ApiResult<Response> {
     Ok((h, body).into_response())
 }
 
-fn export_name(kind: &str, from: NaiveDate, to: NaiveDate) -> String {
+pub(super) fn export_name(kind: &str, from: NaiveDate, to: NaiveDate) -> String {
     format!("malkkeum-{kind}-{from}_{to}")
 }
 
@@ -729,44 +730,6 @@ async fn export_monthly(State(s): State<AppState>, Admin(a): Admin, Query(q): Qu
     audit(&mut *tx, "staff", Some(a.id), "finance.export", "monthly", json!({ "from": from, "to": to })).await?;
     tx.commit().await?;
     csv_response(&export_name("monthly", from, to), finance::csv_document(&doc))
-}
-
-/// 지급명세서 for paid payouts to withheld partners, by KST payment date. The monthly 간이지급명세서 and the
-/// annual 지급명세서 are both this range. Layout UNVERIFIED; see domain::tax::WITHHOLDING_HEADERS.
-async fn export_withholding(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Response> {
-    let (from, to) = resolve(&q)?;
-    let mut tx = s.db.begin().await?;
-    let rows: Vec<(NaiveDate, String, String, i64, String)> = sqlx::query_as(
-        "SELECT (p.paid_at AT TIME ZONE 'Asia/Seoul')::date, pr.name, pr.team_name, p.amount, p.tax_type
-         FROM payouts p JOIN pros pr ON pr.id = p.pro_id
-         WHERE p.state = 'paid' AND p.tax_type IN ('freelancer', 'unset')
-           AND p.paid_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND p.paid_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
-         ORDER BY p.paid_at, p.id",
-    )
-    .bind(from)
-    .bind(to)
-    .fetch_all(&mut *tx)
-    .await?;
-    let lines: Vec<tax::WithholdingLine> = rows
-        .into_iter()
-        .map(|(day, payee, team, gross, tax_type)| tax::WithholdingLine {
-            day,
-            payee,
-            team,
-            split: tax::payout_withholding(&tax_type, Won(gross)),
-        })
-        .collect();
-    audit(
-        &mut *tx,
-        "staff",
-        Some(a.id),
-        "finance.export",
-        "withholding",
-        json!({ "from": from, "to": to }),
-    )
-    .await?;
-    tx.commit().await?;
-    csv_response(&export_name("withholding", from, to), finance::csv_document(&tax::withholding_document(&lines)))
 }
 
 #[derive(Deserialize)]

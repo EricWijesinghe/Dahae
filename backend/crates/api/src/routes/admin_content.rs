@@ -48,6 +48,7 @@ pub fn routes() -> Router<AppState> {
             "/pros/{id}/profile",
             get(super::pro_verification::get_profile).put(super::pro_verification::put_profile),
         )
+        .route("/pros/{id}/payee-identifier/reveal", post(super::pro_verification::reveal_payee_identifier))
         .route("/settlements", get(list_settlements))
         .route("/settlements/payouts", get(super::payouts::list_payouts))
         .route("/settlements/run-payouts", post(super::payouts::run_payouts))

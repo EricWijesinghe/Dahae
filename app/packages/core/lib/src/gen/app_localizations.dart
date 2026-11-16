@@ -9498,6 +9498,48 @@ abstract class T {
   /// **'입력 안 함'**
   String get cPfNoDate;
 
+  /// No description provided for @cPfPayee.
+  ///
+  /// In ko, this message translates to:
+  /// **'주민등록번호 또는 사업자등록번호'**
+  String get cPfPayee;
+
+  /// No description provided for @cPfPayeeHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'지급명세서 작성에만 쓰며 암호화하여 보관해요. 파트너 동의를 받은 뒤 입력하세요. 열람할 때마다 기록이 남아요.'**
+  String get cPfPayeeHelp;
+
+  /// No description provided for @cPfPayeeSaved.
+  ///
+  /// In ko, this message translates to:
+  /// **'등록됨: {masked}'**
+  String cPfPayeeSaved(String masked);
+
+  /// No description provided for @cPfPayeeReveal.
+  ///
+  /// In ko, this message translates to:
+  /// **'원본 보기 (본인 인증 필요)'**
+  String get cPfPayeeReveal;
+
+  /// No description provided for @cPfPayeeRevealTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'식별번호'**
+  String get cPfPayeeRevealTitle;
+
+  /// No description provided for @cPfPayeeRevealBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'열람 기록이 남았어요. 화면을 닫은 뒤에는 다시 볼 수 없어요.'**
+  String get cPfPayeeRevealBody;
+
+  /// No description provided for @err_invalid_payee_identifier.
+  ///
+  /// In ko, this message translates to:
+  /// **'주민등록번호(13자리) 또는 사업자등록번호(10자리)를 확인해 주세요.'**
+  String get err_invalid_payee_identifier;
+
   /// No description provided for @cPfSaveProfile.
   ///
   /// In ko, this message translates to:
