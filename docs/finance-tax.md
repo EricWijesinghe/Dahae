@@ -70,6 +70,7 @@ Status: **WIP, untested against live services.** Every feature below is off or u
 10. **세금계산서 공급자 정보**: 홈택스 일괄작성 시 공급자 정보를 어디서 채울지 (CSV에는 포함하지 않음).
 11. **신고·제출 기한**: 간이지급명세서 월별 제출 기한, 지급명세서 연간 제출 기한, 부가세 신고 기한.
 12. **과거 지급분**: `untracked` 지급에 원천징수를 소급하지 않는 처리가 맞는지.
+13. **할인된 정찰제 예약의 파트너 정산 기준**: 정찰제 예약의 정산 총액(`settlements.gross`)은 할인 전 정가(`list_price`)다 (`booking_core::complete_job`, 견적 예약은 확정가 `final_price`). 쿠폰·첫 예약 할인(`discount`)은 파트너 몫에서 빼지 않고 플랫폼이 부담한다. 즉 할인 예약에서는 파트너 지급액이 고객 결제액 기준보다 크고, 플랫폼 수수료 수익이 할인만큼 줄어든다(할인이 수수료보다 크면 그 예약은 플랫폼 손실). 이 부담 방식을 유지할지, 할인을 파트너와 나눌지는 소유자가 정할 일이며, 정하기 전에는 코드를 바꾸지 않는다.
 
 #### 포인트(다해 포인트) 법적 성격
 
@@ -117,7 +118,7 @@ Status: **WIP, untested against live services.** Every feature below is off or u
 
 ### 3. Decisions the owner and accountant must confirm
 
-See the Korean checklist above (items 1 to 12). In short: resident registration number collection for withholding statements, the real 홈택스 layouts, the withholding base and rounding, the default for unclassified partners, whether the platform is seller or intermediary for VAT, the VAT refund basis, the cash receipt mandatory-issue rules and partial refunds, the tax invoice VAT split, supplier data on invoices, filing deadlines, and whether historical payouts should stay untracked.
+See the Korean checklist above (items 1 to 13). In short: resident registration number collection for withholding statements, the real 홈택스 layouts, the withholding base and rounding, the default for unclassified partners, whether the platform is seller or intermediary for VAT, the VAT refund basis, the cash receipt mandatory-issue rules and partial refunds, the tax invoice VAT split, supplier data on invoices, filing deadlines, whether historical payouts should stay untracked, and (item 13, an owner decision) who bears booking discounts: a discounted fixed-price booking settles the partner on the list price (`list_price`, before the coupon or welcome discount), so the platform bears the whole discount out of its fee and can lose money on a booking whose discount exceeds the fee. The code stays as it is until the owner decides.
 
 ### 4. Before enabling
 
