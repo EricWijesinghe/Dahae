@@ -23,6 +23,23 @@ async fn slot(pool: &PgPool, id: Uuid) -> (chrono::NaiveDate, i16, Option<serde_
         .expect("slot")
 }
 
+/// A quoted booking (deposit due, 9:00 on day 10) with `pro`'s quote selected by staff.
+async fn selected_quote(app: &Router, pool: &PgPool, c: &common::Customer, pro: Uuid) -> Uuid {
+    let (quote, _) = book(app, c, 10, None).await;
+    sqlx::query("UPDATE bookings SET status = 0, final_price = 100000, deposit = 10000 WHERE id = $1")
+        .bind(quote)
+        .execute(pool)
+        .await
+        .expect("quote");
+    sqlx::query("INSERT INTO quotes (booking_id, pro_id, amount, state) VALUES ($1, $2, 100000, 'selected')")
+        .bind(quote)
+        .bind(pro)
+        .execute(pool)
+        .await
+        .expect("selected quote");
+    quote
+}
+
 /// A booking the pro holds for today (the visit day, for on-site stamps).
 async fn assigned_today(app: &Router, pool: &PgPool, c: &common::Customer, pro: &str) -> Uuid {
     let (id, _) = book(app, c, 10, None).await;
@@ -57,18 +74,7 @@ async fn quote_deposit_refuses_a_pro_who_is_booked_at_that_time(pool: PgPool) {
     let _busy = assigned_at(&app, &pool, &c, pro.as_str(), 10, 9).await;
 
     // The quote booking at the same slot: staff selected this pro's quote, and the deposit is due.
-    let (quote, _) = book(&app, &c, 10, None).await;
-    sqlx::query("UPDATE bookings SET status = 0, final_price = 100000, deposit = 10000 WHERE id = $1")
-        .bind(quote)
-        .execute(&pool)
-        .await
-        .expect("quote");
-    sqlx::query("INSERT INTO quotes (booking_id, pro_id, amount, state) VALUES ($1, $2, 100000, 'selected')")
-        .bind(quote)
-        .bind(pro_id)
-        .execute(&pool)
-        .await
-        .expect("selected quote");
+    let quote = selected_quote(&app, &pool, &c, pro_id).await;
 
     let body = serde_json::json!({ "payment_method_id": c.card });
     let (st, b) = call(&app, "POST", &format!("/v1/bookings/{quote}/deposit"), Some(c.token.as_str()), Some(body)).await;
@@ -79,6 +85,30 @@ async fn quote_deposit_refuses_a_pro_who_is_booked_at_that_time(pool: PgPool) {
         .await
         .expect("row");
     assert_eq!((status, attached), (0, None), "a refused deposit leaves the quote unconfirmed and unassigned");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn quote_deposit_refuses_a_pro_whose_offers_are_paused(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5400-0314").await;
+    let (_, pro_id) = verified_pro(&app, &pool, "010-5400-0315").await;
+    sqlx::query("INSERT INTO partner_quality (pro_id, score, status, lift_pause, inputs, computed_at) VALUES ($1, 20, 'paused', FALSE, '{}'::jsonb, now())")
+        .bind(pro_id)
+        .execute(&pool)
+        .await
+        .expect("paused");
+    let quote = selected_quote(&app, &pool, &c, pro_id).await;
+
+    let body = serde_json::json!({ "payment_method_id": c.card });
+    let (st, b) = call(&app, "POST", &format!("/v1/bookings/{quote}/deposit"), Some(c.token.as_str()), Some(body)).await;
+    assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("quality_paused")), "{b}");
+    let (status, attached): (i16, Option<Uuid>) = sqlx::query_as("SELECT status, pro_id FROM bookings WHERE id = $1")
+        .bind(quote)
+        .fetch_one(&pool)
+        .await
+        .expect("row");
+    assert_eq!((status, attached), (0, None), "a paused pro is never attached by a deposit");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

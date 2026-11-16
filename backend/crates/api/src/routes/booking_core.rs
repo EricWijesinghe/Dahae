@@ -12,6 +12,7 @@ use super::{
 use crate::{
     crypto,
     error::{ApiError, ApiResult},
+    quality::check_offer_gate,
     realtime::{Recipient, deliver, enqueue, notify},
     safety::take_entry,
     schedule::{lock_schedule, schedule_clash},
@@ -318,7 +319,7 @@ pub fn deposit_due(b: &BookingRow) -> ApiResult<i64> {
 
 /// Confirms a quoted booking on deposit: attaches the chosen pro and rejects the other quotes.
 /// `seen` is re-checked under the booking row lock, so a re-quote racing the payment never confirms.
-pub async fn take_deposit(conn: &mut PgConnection, id: Uuid, deposit: i64, seen: &SeenQuote) -> ApiResult<()> {
+pub async fn take_deposit(s: &AppState, conn: &mut PgConnection, id: Uuid, deposit: i64, seen: &SeenQuote) -> ApiResult<()> {
     // Booking row first, then quotes: the same order as send_quote, so the two never deadlock.
     let final_price = check_seen_quote(conn, id, seen).await?.expected_final_price;
     // Read the chosen quote under lock so a concurrent staff change can't attach the wrong pro.
@@ -334,6 +335,7 @@ pub async fn take_deposit(conn: &mut PgConnection, id: Uuid, deposit: i64, seen:
     let new_status = new_status.as_i16();
     let pro = selected.map(|q| q.1);
     if let Some(pro) = pro {
+        check_offer_gate(s, pro).await?;
         lock_schedule(conn, pro).await?;
     }
     // `deposit = $3` and the locked price: a re-quote since the amount was read is booking_changed, never the old price.

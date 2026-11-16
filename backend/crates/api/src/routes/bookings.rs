@@ -660,7 +660,7 @@ async fn pay_deposit(State(s): State<AppState>, Customer(a): Customer, Path(id):
     let deposit = deposit_due(&b)?;
     p.seen.validate()?;
     let mut tx = s.db.begin().await?;
-    take_deposit(&mut tx, id, deposit, &p.seen).await?;
+    take_deposit(&s, &mut tx, id, deposit, &p.seen).await?;
     // Charge last: after this only the commit can fail, and that path refunds.
     let tx_id = charge(&s, &mut tx, a.id, p.payment_method_id, id, Won(deposit), "deposit").await?;
     if let Err(e) = tx.commit().await {

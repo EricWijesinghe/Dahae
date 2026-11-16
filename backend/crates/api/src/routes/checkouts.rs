@@ -606,7 +606,7 @@ async fn fulfil(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResult<U
             (id, "full", Some(number))
         }
         Plan::Deposit { booking, amount } => {
-            take_deposit(&mut tx, booking.id, amount, &seen_on(ck)?).await?;
+            take_deposit(s, &mut tx, booking.id, amount, &seen_on(ck)?).await?;
             (booking.id, "deposit", None)
         }
         Plan::Balance { booking, amount } => {
