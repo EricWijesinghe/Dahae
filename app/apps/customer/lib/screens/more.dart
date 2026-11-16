@@ -157,6 +157,16 @@ class MoreTab extends StatelessWidget {
           () => openTopicChat(context, 'other'),
         ),
       ]),
+      // Version is its own card (design p05); the extra rows sit under it.
+      _Group([
+        FutureBuilder<String?>(
+          future: _buildVersion(),
+          builder: (context, snap) => _LabelValueRow(
+            label: t.moreVersionInfo,
+            value: snap.data == null ? '' : 'v${snap.data}',
+          ),
+        ),
+      ]),
       _Group([
         row(
           'menu_language',
@@ -192,13 +202,6 @@ class MoreTab extends StatelessWidget {
             applicationVersion: version,
           );
         }),
-        FutureBuilder<String?>(
-          future: _buildVersion(),
-          builder: (context, snap) => _LabelValueRow(
-            label: t.moreVersionInfo,
-            value: snap.data == null ? '' : 'v${snap.data}',
-          ),
-        ),
       ]),
     ];
     return Scaffold(
