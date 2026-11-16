@@ -27,6 +27,8 @@ Source of truth for what the server keeps, purges and deletes. Code: `backend/cr
 | Reviews | Text and photos cleared; rating kept for the partner score |
 | Chat messages sent by the customer | `sender_id` unlinked; text kept for disputes |
 | Referral record | Phone replaced by `hmac:<hex>` (HMAC-SHA256, pepper derived from DATA_KEY) so one reward per phone still holds |
+| Finished bookings (completed or cancelled) | Street address, answers, visit notes and household cleared; the district code, size, dwelling type, amounts, dates, service and status kept |
+| Open bookings (upcoming or in progress) | Kept whole until the booking is completed or cancelled; the retention purge then clears the personal fields as above |
 | Bookings, payments, paid checkouts, tips, cash receipts, tax invoice requests, payouts | Kept 5 years (전자상거래법, 부가가치세법), linked to the anonymised row |
 | Consent log | Kept as proof of consent (internal 5-year rule, see lawyer list) |
 
@@ -35,6 +37,14 @@ Apple `account-delete` notifications (`POST /v1/auth/apple/notifications`) run t
 ## Export (`GET /v1/me/export`)
 
 JSON: profile, consent history, addresses, payment method labels (no keys), coupons, bookings, last 500 notifications. Gateway keys and tokens are never included.
+
+## Staff-handled requests (console)
+
+`backend/crates/api/src/routes/privacy_requests.rs`, admin routes under `/v1/admin/privacy/`:
+- `GET customers?phone=`: live customers with that phone (Staff). Audit `privacy.lookup`.
+- `GET customers/{id}/export?format=json|csv`: the same export document as `/v1/me/export`, for one customer (Staff). CSV flattens it to `section,detail` rows. Audit `customer.export`.
+- `POST customers/{id}/delete` with `{"phone": ...}`: the phone must match the stored one; runs `delete_account` (Admin only). Audit `customer.delete`.
+- `GET requests`: the request log (Staff). Each export and deletion writes a `privacy_requests` row (kind, customer id, staff id, `done` or `failed`). It holds no personal details.
 
 ## Retention purge (`retention::spawn`, hourly)
 
@@ -46,6 +56,7 @@ JSON: profile, consent history, addresses, payment method labels (no keys), coup
 | AI-assisted chat messages (threads with an `ai_usage` row) | older than N days | `AI_CHAT_RETENTION_DAYS`, default 180 |
 | Uploads not referenced by bookings, chat, pros or users | older than N days; file removed, then row | `UPLOAD_ORPHAN_DAYS`, default 30 |
 | Deleted customers' unpaid checkout snapshots | older than 30 days | fixed |
+| Bookings of deleted customers that are completed or cancelled and still hold an address, answers, visit notes or household | cleared (see Deletion) | fixed (`privacy::pseudonymise_closed_bookings`) |
 | Pending partner deletions (Apple `account-delete`) | retried until no open job or payout | fixed |
 | `apple_notifications` (seen JWS ids, no user data) | never purged (replay guard) | fixed |
 
@@ -55,8 +66,16 @@ Each run logs counts (`retention purge done`). A database error stops the run; t
 
 Every staff read of a customer's contact details writes `audit_log` with `action` `customer.pii_view` (booking detail) or `customer.pii_list` (customer search). Payout account reveals already log `payout.reveal`.
 
+## Audit and consent records
+
+- `audit_log` and `user_consents` are append-only: the database refuses UPDATE, DELETE and TRUNCATE (migration `0320_audit_append_only.sql`). A withdrawal or correction is a new row.
+- Retention: nothing in the app purges these rows today. Access-log rows (`customer.pii_*`) keep at least 1 year under the personal information safety measures standard. The period for money-action rows is pending accountant review; do not treat any figure as final until it is confirmed.
+- Money actions write their audit row in the same transaction as the local money record: refunds (`payment.refund`), payout reveals (`payout.reveal`) and finance exports (`finance.export`). A failed audit write rolls back the local record and releases no payout account or file.
+- A refund is sent to the payment gateway before its audit row is written. If the audit write then fails, the gateway may already have refunded the money while our books still show the payment as paid. The next cancel is refused by the gateway balance check, so it cannot refund twice; reconcile the payment with the gateway.
+- Demo clear (`DELETE` of demo rows) is the one exception: it switches the guards off inside its own transaction and turns them back on before commit.
+
 ## Not yet covered
 
 - Partner (pro) account deletion and export: the partner route deletes but does not run this cascade; export is not built.
 - Access (connection) logs: nothing in the database stores IP-level access logs; the 3-month rule depends on the hosting proxy's logs.
-- Customers with an open booking can still delete the account.
+- Customers with an open booking can still delete the account. The open booking keeps its personal fields until it is completed or cancelled, then the purge clears them. A booking the partner never closes keeps them until someone closes it.
