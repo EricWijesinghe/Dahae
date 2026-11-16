@@ -97,6 +97,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField).last, '01012345678');
       await settle(tester, duration: const Duration(milliseconds: 300));
+      await agreeSignupConsents(tester);
       expect(
         tester.widget<PrimaryButton>(find.byType(PrimaryButton).last).onPressed,
         isNotNull,
