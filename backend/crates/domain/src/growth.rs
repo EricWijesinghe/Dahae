@@ -177,8 +177,8 @@ pub fn mask_name(name: &str) -> String {
     }
 }
 
-/// Public review text without contact details: runs of 4+ digits (phone numbers, unit numbers)
-/// and anything shaped like an e-mail address become `***`.
+/// Public review text without contact details: runs of 4+ digits (phone numbers, unit numbers, also written
+/// with spaces between digit groups) and anything shaped like an e-mail address become `***`.
 pub fn redact_contacts(text: &str) -> String {
     let words: Vec<String> = text
         .split(' ')
@@ -201,8 +201,11 @@ pub fn redact_contacts(text: &str) -> String {
         }
         run.clear();
     };
-    for c in joined.chars() {
-        if c.is_ascii_digit() || (!run.is_empty() && (c == '-' || c == '.')) {
+    let chars: Vec<char> = joined.chars().collect();
+    for (i, &c) in chars.iter().enumerate() {
+        // A single space between two digits joins the run: "010 12 34 56 78" is one number.
+        let spaced_digits = c == ' ' && run.ends_with(|p: char| p.is_ascii_digit()) && chars.get(i + 1).is_some_and(char::is_ascii_digit);
+        if c.is_ascii_digit() || (!run.is_empty() && (c == '-' || c == '.' || spaced_digits)) {
             run.push(c);
         } else {
             flush(&mut run, &mut out);
@@ -472,6 +475,13 @@ mod tests {
         assert_eq!(redact_contacts("문의 kim@mail.com 으로"), "문의 *** 으로");
         assert_eq!(redact_contacts("3시간 걸렸고 2번 와주셨어요"), "3시간 걸렸고 2번 와주셨어요");
         assert_eq!(redact_contacts("101동 1203호"), "101동 ***호");
+    }
+
+    #[test]
+    fn public_reviews_hide_phone_numbers_written_with_spaces() {
+        assert_eq!(redact_contacts("연락처 010 12 34 56 78"), "연락처 ***");
+        assert_eq!(redact_contacts("010 1234 5678"), "***");
+        assert_eq!(redact_contacts("2 3 번 와주셨어요"), "2 3 번 와주셨어요");
     }
 
     #[test]
