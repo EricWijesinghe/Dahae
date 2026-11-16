@@ -172,6 +172,9 @@ void main() {
         tossWebhookUrl: tossUrl,
       );
       expect(find.text(tossUrl), findsOneWidget);
+      // Toss's address goes into the Toss developer center, not the PortOne console.
+      expect(find.text(koT.cSetupTossWebhook), findsOneWidget);
+      expect(find.text(koT.cSetupWebhook), findsNothing);
       await unmount(tester);
 
       await _pump(tester, _portoneCard(), tossWebhookUrl: tossUrl);

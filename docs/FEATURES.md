@@ -267,7 +267,7 @@ flowchart LR
 | 처음 설정 코드 | 설치 때 12자리 코드를 보여 줘요. 2시간 안에 사장님 계정을 만들 때 써요. 다시 만들 수 있어요. | 사장님 | [`deploy/install.sh`](../deploy/install.sh) (`setup_code`), [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) |
 | 처음 관리자 만들기 | 설치 코드를 넣고 첫 관리자(사장님) 계정을 만들어요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/admin`) |
 | 설정 마법사 | 연동 카드 11개(결제, 문자, 푸시, 카카오, 네이버, 구글, 애플, 도우미, 백업, 지급, 주소)를 콘솔에서 입력해요. 키 파일도 올려요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs), [`integrations.rs`](../backend/crates/api/src/integrations.rs) (`Section::ALL`), [`app/apps/console/lib/screens/setup.dart`](../app/apps/console/lib/screens/setup.dart) |
-| 연결 테스트 | 카드마다 "테스트"를 눌러 연결을 확인해요. 결과는 저장돼요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/{section}/test`) |
+| 연결 테스트 | 카드마다 [연결 확인] (PortOne 은 [API 키 확인]) 을 눌러 연결을 확인해요. 잠긴 카드도 저장된 값으로 확인할 수 있어요. 결과는 저장돼요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/{section}/test`) |
 | 사업자 정보 | 상호, 고객센터 연락처, 운영 시간 등 판매자 정보를 입력해요. 공개 사이트의 판매자 정보 블록에 나와요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/business`), [`routes/seller.rs`](../backend/crates/api/src/routes/seller.rs) |
 | 앱 링크 | 안드로이드 지문과 애플 팀 ID를 넣으면 네이버 로그인 복귀 주소를 앱으로 연결해요. | 사장님 | [`app_links.rs`](../backend/crates/api/src/app_links.rs), [`setup_app_links.dart`](../app/apps/console/lib/screens/setup_app_links.dart) |
 | 결제 수단 설정 | 결제 수단별 채널 키를 넣고 켜요. 실제 게이트웨이에서는 채널 키가 없으면 켤 수 없어요. | 사장님 | [`routes/payments.rs`](../backend/crates/api/src/routes/payments.rs), [`setup_pay_methods.dart`](../app/apps/console/lib/screens/setup_pay_methods.dart) |

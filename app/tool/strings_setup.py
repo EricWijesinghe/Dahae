@@ -62,6 +62,7 @@ S = {
   "cSetupGuide": ["따라 하기", "How to set up"],
   "cSetupOpenSite": ["사이트 열기", "Open site"],
   "cSetupWebhook": ["웹훅 주소 (PortOne 콘솔에 붙여넣기)", "Webhook URL (paste into the PortOne console)"],
+  "cSetupTossWebhook": ["웹훅 주소 (토스페이먼츠 개발자센터에 붙여넣기)", "Webhook URL (paste into the Toss Payments developer center)"],
   "cCopied": ["복사했어요", "Copied"],
   "cCopy": ["복사", "Copy"],
   "cSetupLocked": ["잠긴 카드예요. 소유자가 잠금을 풀어야 바꿀 수 있어요", "This card is locked. The owner must unlock it to change it"],
