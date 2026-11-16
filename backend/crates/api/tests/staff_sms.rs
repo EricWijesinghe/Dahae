@@ -25,6 +25,15 @@ async fn insert(db: &PgPool, email: &str, role: &str, phone: Option<&str>) -> Uu
         .expect("insert")
 }
 
+/// Marks a reset target as past its first sign-in (TOTP enrolled). A copy reset is refused otherwise (issue_reset).
+async fn enrolled(db: &PgPool, id: Uuid) {
+    sqlx::query("UPDATE staff SET totp_enabled_at = now() WHERE id = $1")
+        .bind(id)
+        .execute(db)
+        .await
+        .expect("enrol");
+}
+
 fn admin_token(id: Uuid) -> String {
     auth::issue_access(SECRET, id, Role::StaffAdmin).expect("admin token")
 }
@@ -64,11 +73,12 @@ fn code_of(body: &Value) -> String {
 async fn reset_code_sets_new_password_once_and_signs_out_everywhere(db: PgPool) {
     let target = insert(&db, "consultant-reset@test.local", "consultant", Some(PHONE)).await;
     let admin = insert(&db, "admin-reset@test.local", "admin", None).await;
-    let app = common::app_without_staff_mfa(db);
+    let app = common::app_without_staff_mfa(db.clone());
     let admin_tok = admin_token(admin);
 
     let (_, before) = login(&app, "consultant-reset@test.local", OLD).await;
     let refresh = before["refresh_token"].as_str().unwrap().to_string();
+    enrolled(&db, target).await;
 
     let (st, b) = reset_code(&app, &admin_tok, target).await;
     assert_eq!(st, StatusCode::OK, "{b}");
@@ -169,6 +179,7 @@ async fn consultant_can_invite_a_consultant_but_not_an_admin(db: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn wrong_guesses_burn_the_code(db: PgPool) {
     let target = insert(&db, "consultant-guess@test.local", "consultant", Some(PHONE)).await;
+    enrolled(&db, target).await;
     let admin = insert(&db, "admin-guess@test.local", "admin", None).await;
     let app = common::app(db);
     let (_, b) = reset_code(&app, &admin_token(admin), target).await;
@@ -186,6 +197,7 @@ async fn wrong_guesses_burn_the_code(db: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn expired_code_is_refused(db: PgPool) {
     let target = insert(&db, "consultant-expired@test.local", "consultant", Some(PHONE)).await;
+    enrolled(&db, target).await;
     let admin = insert(&db, "admin-expired@test.local", "admin", None).await;
     let app = common::app(db.clone());
     let (_, b) = reset_code(&app, &admin_token(admin), target).await;
@@ -204,6 +216,7 @@ async fn expired_code_is_refused(db: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn resend_is_cooled_down_and_capped_per_day(db: PgPool) {
     let target = insert(&db, "consultant-resend@test.local", "consultant", Some(PHONE)).await;
+    enrolled(&db, target).await;
     let admin = insert(&db, "admin-resend@test.local", "admin", None).await;
     let app = common::app(db.clone());
     let tok = admin_token(admin);
@@ -229,6 +242,7 @@ async fn resend_is_cooled_down_and_capped_per_day(db: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn reset_needs_a_phone_and_saves_the_one_given(db: PgPool) {
     let target = insert(&db, "consultant-nophone@test.local", "consultant", None).await;
+    enrolled(&db, target).await;
     let admin = insert(&db, "admin-nophone@test.local", "admin", None).await;
     let app = common::app(db);
     let tok = admin_token(admin);

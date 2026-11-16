@@ -147,12 +147,17 @@ async fn issue_reset(
         owner::verify_owner(&s, me, &headers, Some(peer.ip()), true).await?;
     }
     let mut tx = s.db.begin().await?;
-    let row: Option<(Option<String>, bool)> =
-        sqlx::query_as("SELECT phone, password_hash = '' FROM staff WHERE id = $1 AND (active OR password_hash = '') FOR UPDATE")
+    let row: Option<(Option<String>, bool, bool)> =
+        sqlx::query_as("SELECT phone, password_hash = '', totp_enabled_at IS NOT NULL FROM staff WHERE id = $1 AND (active OR password_hash = '') FOR UPDATE")
             .bind(id)
             .fetch_optional(&mut *tx)
             .await?;
-    let (stored, pending) = row.ok_or(ApiError::NotFound)?;
+    let (stored, pending, enrolled) = row.ok_or(ApiError::NotFound)?;
+    // Copy shows the code to the admin. Without a second factor the admin then holds the password and the
+    // account's first enrolment, so a copy reset is only for an invite or an account that already has TOTP.
+    if req.channel == Channel::Copy && !pending && !enrolled {
+        return Err(ApiError::BadRequest("sms_required"));
+    }
     let phone = resolve_phone(&mut tx, id, stored, req.phone.as_deref()).await?;
     let purpose = if pending { "invite" } else { "reset" };
     let shown = issue_and_deliver(&s, &mut tx, id, &phone, purpose, req.channel).await?;
