@@ -5374,7 +5374,7 @@ abstract class T {
   /// No description provided for @dfPgNotice.
   ///
   /// In ko, this message translates to:
-  /// **'결제는 전자결제대행사(PG)를 통해 처리돼요. 결제하면 이용약관과 취소·환불 규정에 동의하는 것으로 봐요.'**
+  /// **'결제는 전자결제대행사(PG)를 통해 처리돼요.'**
   String get dfPgNotice;
 
   /// No description provided for @dfRefundPolicy.

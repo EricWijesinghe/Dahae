@@ -2776,8 +2776,7 @@ class TKo extends T {
   String get dfDue => '결제 예정 금액';
 
   @override
-  String get dfPgNotice =>
-      '결제는 전자결제대행사(PG)를 통해 처리돼요. 결제하면 이용약관과 취소·환불 규정에 동의하는 것으로 봐요.';
+  String get dfPgNotice => '결제는 전자결제대행사(PG)를 통해 처리돼요.';
 
   @override
   String get dfRefundPolicy => '취소·환불 규정';
