@@ -66,6 +66,10 @@ class _SetupScreenState extends State<SetupScreen> {
                 const AppLinksCard(),
                 for (final c in cards) ...[
                   const SizedBox(height: Space.md),
+                  if (c['code'] == 'portone') ...[
+                    Text(t.cPaymentsTitle, style: context.text.titleMedium),
+                    const SizedBox(height: Space.sm),
+                  ],
                   IntegrationCard(
                     key: ValueKey(c['code']),
                     card: c,
