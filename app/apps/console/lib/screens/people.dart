@@ -157,7 +157,8 @@ class _SettlementsState extends State<SettlementsScreen> {
   late bool _payouts = widget.initialPayouts;
   final _payoutsView = GlobalKey<AsyncViewState<List<Json>>>();
 
-  /// Payouts whose last Toss check could not reach Toss: only these offer the owner's not-sent confirmation.
+  /// Payouts whose last Toss check could not reach Toss, or found no record there: only these offer the
+  /// owner's not-sent confirmation.
   final _tossUnreachable = <String>{};
   late final _payoutPager = Pager<Json>(
     context.api,
@@ -351,8 +352,8 @@ class _SettlementsState extends State<SettlementsScreen> {
     );
   }
 
-  /// Asks Toss about an ambiguous send now. When Toss cannot be reached, the owner may check the Toss
-  /// dashboard instead.
+  /// Asks Toss about an ambiguous send now. When Toss cannot be reached or has no record of it, the owner
+  /// may check the Toss dashboard instead.
   Future<void> _checkToss(
     BuildContext context,
     String id,
@@ -371,12 +372,13 @@ class _SettlementsState extends State<SettlementsScreen> {
               )
               as Json;
       if (!mounted) return;
-      setState(() => _tossUnreachable.remove(id));
+      // Still requested: Toss answered but does not list the send, so only the owner can settle it.
+      final unlisted = r['state'] == 'requested';
+      setState(
+        () => unlisted ? _tossUnreachable.add(id) : _tossUnreachable.remove(id),
+      );
       if (context.mounted) {
-        showToast(
-          context,
-          r['state'] == 'requested' ? t.poCheckPending : t.cDone,
-        );
+        showToast(context, unlisted ? t.poCheckPending : t.cDone);
       }
       await reload();
     } on ApiException catch (e) {

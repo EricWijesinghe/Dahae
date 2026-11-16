@@ -11,17 +11,25 @@ const _id = 'po-9';
 const _sync = '/admin/settlements/payouts/$_id/sync';
 const _notSent = '/admin/settlements/payouts/$_id/not-sent';
 
-/// A Toss batch whose send ended without an answer, and a Toss that cannot be reached.
-FakeApi _fake() {
+/// A Toss batch whose send ended without an answer. Toss cannot be reached, or with [listed] false it
+/// answers but has no record of the send.
+FakeApi _fake({bool? listed}) {
   final row = {
     ...payoutJson(_id, 'requested', failure: 'status 502 Bad Gateway'),
     'provider': 'toss',
   };
   return FakeApi()
     ..reply('GET', '/admin/settlements/payouts', [row])
-    ..reply('POST', _sync, {
-      'error': {'code': 'provider_unreachable'},
-    }, status: 503)
+    ..reply(
+      'POST',
+      _sync,
+      listed == null
+          ? {
+              'error': {'code': 'provider_unreachable'},
+            }
+          : {'id': _id, 'state': 'requested'},
+      status: listed == null ? 503 : 200,
+    )
     ..reply('POST', _notSent, {'id': _id, 'state': 'failed'});
 }
 
@@ -103,6 +111,18 @@ void main() {
       expect(sent, isNotNull);
       expect(sent!.headers['x-owner-totp'], '123456');
       expect(find.text(koT.poNotSentDone), findsOneWidget);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'not-sent is offered too when Toss answers but has no record of the send',
+    (tester) async {
+      await _pump(tester, _fake(listed: false));
+      await tester.tap(find.text(koT.poCheckToss));
+      await settle(tester);
+      expect(find.text(koT.poCheckPending), findsOneWidget);
+      expect(find.text(koT.poNotSent), findsOneWidget);
       await unmount(tester);
     },
   );

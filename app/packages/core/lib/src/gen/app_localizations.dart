@@ -10209,7 +10209,7 @@ abstract class T {
   /// No description provided for @poCheckPending.
   ///
   /// In ko, this message translates to:
-  /// **'토스에 아직 이 송금 기록이 없어요. 몇 분 뒤 다시 확인해 주세요.'**
+  /// **'토스 기록에서 이 송금을 찾지 못했어요. 몇 분 뒤 다시 확인하거나, 토스 상점관리자를 직접 확인해 주세요.'**
   String get poCheckPending;
 
   /// No description provided for @poNotSent.
@@ -10227,7 +10227,7 @@ abstract class T {
   /// No description provided for @poNotSentBody.
   ///
   /// In ko, this message translates to:
-  /// **'토스가 응답하지 않아 이 지급이 실제로 나갔는지 자동으로 확인할 수 없어요.\n\n토스페이먼츠 상점관리자에 로그인해 지급대행 내역에서 {name} 님, {amount} 건을 찾아 주세요.\n\n• 내역이 없거나 \'실패\' 또는 \'취소\'로 보이면 송금되지 않은 거예요. 아래에서 확인하면 이 지급이 실패로 바뀌고, 예약 취소와 다시 보내기를 할 수 있어요.\n• \'요청됨\', \'처리 중\', \'완료\'로 보이면 돈이 나갔거나 나가는 중이에요. 확인하지 말고 나중에 \'Toss에서 확인하기\'를 다시 눌러 주세요.'**
+  /// **'토스가 응답하지 않거나 기록에서 찾지 못해, 이 지급이 실제로 나갔는지 자동으로 확인할 수 없어요.\n\n토스페이먼츠 상점관리자에 로그인해 지급대행 내역에서 {name} 님, {amount} 건을 찾아 주세요.\n\n• 내역이 없거나 \'실패\' 또는 \'취소\'로 보이면 송금되지 않은 거예요. 아래에서 확인하면 이 지급이 실패로 바뀌고, 예약 취소와 다시 보내기를 할 수 있어요.\n• \'요청됨\', \'처리 중\', \'완료\'로 보이면 돈이 나갔거나 나가는 중이에요. 확인하지 말고 나중에 \'Toss에서 확인하기\'를 다시 눌러 주세요.'**
   String poNotSentBody(String name, String amount);
 
   /// No description provided for @poNotSentWarning.
