@@ -1,10 +1,7 @@
 //! Move-in / move-out estimate. The formula's numbers are configuration
 //! (editable in admin); the shape of the calculation is fixed here.
 
-use crate::{
-    DomainError, Won,
-    catalog::{Pricing, Service},
-};
+use crate::{DomainError, Won, catalog::Service};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,6 +50,45 @@ pub enum BuildingType {
     Other,
 }
 
+/// Home type the customer chose on the chooser (CR-8.2). Shown as 원룸·투룸 / 아파트 / 빌라·주택.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HomeType {
+    OneTwoRoom,
+    Apartment,
+    VillaHouse,
+}
+
+impl HomeType {
+    /// Building type a chooser quote is filed under, so it never shows as "other" (기타).
+    pub fn building(self) -> BuildingType {
+        match self {
+            Self::OneTwoRoom => BuildingType::Officetel,
+            Self::Apartment => BuildingType::Apartment,
+            Self::VillaHouse => BuildingType::House,
+        }
+    }
+
+    /// (Korean, English) name shown on the quote summary.
+    pub fn label(self) -> (&'static str, &'static str) {
+        match self {
+            Self::OneTwoRoom => ("원룸·투룸", "Studio / two-room"),
+            Self::Apartment => ("아파트", "Apartment"),
+            Self::VillaHouse => ("빌라·주택", "Villa / house"),
+        }
+    }
+}
+
+impl QuoteAnswers {
+    /// A chooser quote takes its building from its home type; otherwise the answers are unchanged.
+    pub fn with_home_building(mut self) -> Self {
+        if let Some(home) = self.home_type {
+            self.building = home.building();
+        }
+        self
+    }
+}
+
 /// One aircon unit type added to a move-in / move-out booking. `unit` is the aircon
 /// service's `label_key` (wall, stand, two_in_one, ceiling); its price comes from the catalog.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -76,6 +112,9 @@ pub struct QuoteAnswers {
     /// Older bookings have no add-ons; absent and empty are the same.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ac_addons: Vec<AcAddon>,
+    /// Set by the home chooser (CR-8.2). Absent on older quotes and on the full question path.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub home_type: Option<HomeType>,
 }
 
 /// All amounts and rates (basis points, 10_000 = 100%) used by the estimate.
@@ -178,10 +217,20 @@ pub fn addon_total(lines: &[(Won, u8)], discount_bps: i64) -> Result<Won, Domain
     Ok(list.times_bps(FULL_BPS - discount_bps).round100())
 }
 
+/// Whole-home cleaning always prices as a lived-in deep clean with fully lived-in luggage,
+/// whatever the app sent. Other services keep the answers as given.
+pub fn fixed_answers_for(service_code: &str, mut a: QuoteAnswers) -> QuoteAnswers {
+    if service_code == "whole_home" {
+        a.cleaning_type = CleaningType::LivedInDeepClean;
+        a.luggage = LuggageState::FullyLivedIn;
+    }
+    a
+}
+
 /// Prices each add-on from the aircon service's unit options. Unknown, repeated or
 /// out-of-range units are rejected so the client cannot pick its own price.
 pub fn resolve_ac_addons(aircon: &Service, addons: &[AcAddon]) -> Result<Vec<(Won, u8)>, DomainError> {
-    let Pricing::Unit { units } = &aircon.pricing else {
+    let Some(units) = aircon.pricing.options() else {
         return Err(DomainError::InvalidUnit);
     };
     let mut seen: Vec<&str> = Vec::with_capacity(addons.len());
@@ -335,6 +384,7 @@ mod tests {
             elevator: true,
             floor_3_or_higher: true,
             ac_addons: vec![],
+            home_type: None,
         }
     }
 
@@ -395,6 +445,25 @@ mod tests {
     }
 
     #[test]
+    fn home_type_round_trips_and_is_optional_for_old_answers() {
+        let a = QuoteAnswers {
+            home_type: Some(HomeType::VillaHouse),
+            ..answers()
+        };
+        let json = serde_json::to_value(&a).unwrap();
+        assert_eq!(json["home_type"], "villa_house");
+        let back: QuoteAnswers = serde_json::from_value(json).unwrap();
+        assert_eq!(back.home_type, Some(HomeType::VillaHouse));
+        let old: QuoteAnswers = serde_json::from_value(serde_json::json!({
+            "cleaning_type": "standard", "luggage": "empty", "building": "apartment",
+            "layout": "three_rooms", "duplex": false, "bathrooms": 1, "balconies": 0,
+            "elevator": true, "floor_3_or_higher": false
+        }))
+        .unwrap();
+        assert_eq!(old.home_type, None);
+    }
+
+    #[test]
     fn addons_get_the_discount_after_vat() {
         let a = QuoteAnswers {
             ac_addons: vec![addon("wall", 2), addon("two_in_one", 1)],
@@ -426,6 +495,62 @@ mod tests {
         assert_eq!(resolve_ac_addons(&s, &[addon("wall", 6)]), Err(DomainError::OutOfRange("ac_addons")));
         let studio = crate::catalog::default_catalog().into_iter().find(|s| s.code == "studio").unwrap();
         assert_eq!(resolve_ac_addons(&studio, &[addon("wall", 1)]), Err(DomainError::InvalidUnit));
+    }
+
+    #[test]
+    fn counts_services_resolve_as_addons_too() {
+        // The catalogue's aircon service is counts pricing; its add-ons still resolve to the unit price.
+        assert_eq!(resolve_ac_addons(&aircon(), &[addon("stand", 2)]), Ok(vec![(Won(119_000), 2)]));
+    }
+
+    #[test]
+    fn whole_home_always_prices_as_lived_in_deep_clean() {
+        let sent = QuoteAnswers {
+            cleaning_type: CleaningType::Standard,
+            luggage: LuggageState::Empty,
+            ..answers()
+        };
+        let fixed = fixed_answers_for("whole_home", sent.clone());
+        assert_eq!(
+            (fixed.cleaning_type, fixed.luggage),
+            (CleaningType::LivedInDeepClean, LuggageState::FullyLivedIn)
+        );
+        assert_eq!(fixed_answers_for("move_in", sent.clone()), sent);
+    }
+
+    #[test]
+    fn whole_home_two_room_apartment_estimate_is_445500_on_a_weekend_slot() {
+        // Assumption to confirm with the owner: the spec's 445,500 is a weekend slot (10% peak).
+        // Without the peak the same answers give 412,500 (300,000 x 1.25 x 1.1), see the test below.
+        // 300,000 base x (1 + 10% deep clean + 15% lived-in luggage + 10% weekend peak) = 405,000; +10% VAT.
+        let a = fixed_answers_for(
+            "whole_home",
+            QuoteAnswers {
+                building: BuildingType::Apartment,
+                layout: Layout::TwoRooms,
+                bathrooms: 1,
+                balconies: 0,
+                ..answers()
+            },
+        );
+        let e = QuoteFormula::default().estimate_with_peak(&a, 1_000).unwrap();
+        assert_eq!(e.total, Won(445_500));
+    }
+
+    #[test]
+    fn whole_home_two_room_apartment_estimate_without_peak_is_412500() {
+        let a = fixed_answers_for(
+            "whole_home",
+            QuoteAnswers {
+                building: BuildingType::Apartment,
+                layout: Layout::TwoRooms,
+                bathrooms: 1,
+                balconies: 0,
+                ..answers()
+            },
+        );
+        let e = QuoteFormula::default().estimate_with_peak(&a, 0).unwrap();
+        assert_eq!(e.total, Won(412_500));
     }
 
     #[test]
@@ -511,5 +636,24 @@ mod tests {
     fn deposit_is_ten_percent() {
         assert_eq!(QuoteFormula::default().deposit(Won(560_000)), Won(56_000));
         assert_eq!(QuoteFormula::default().deposit(Won(580_800)), Won(58_100));
+    }
+
+    #[test]
+    fn each_home_type_has_a_building_and_a_label_never_other() {
+        assert_eq!(HomeType::OneTwoRoom.building(), BuildingType::Officetel);
+        assert_eq!(HomeType::Apartment.building(), BuildingType::Apartment);
+        assert_eq!(HomeType::VillaHouse.building(), BuildingType::House);
+        assert_eq!(HomeType::OneTwoRoom.label(), ("원룸·투룸", "Studio / two-room"));
+        assert_eq!(HomeType::Apartment.label(), ("아파트", "Apartment"));
+        assert_eq!(HomeType::VillaHouse.label(), ("빌라·주택", "Villa / house"));
+    }
+
+    #[test]
+    fn home_type_sets_the_building_and_none_keeps_it() {
+        let mut a = answers();
+        a.building = BuildingType::Other;
+        assert_eq!(a.clone().with_home_building().building, BuildingType::Other);
+        a.home_type = Some(HomeType::VillaHouse);
+        assert_eq!(a.with_home_building().building, BuildingType::House);
     }
 }

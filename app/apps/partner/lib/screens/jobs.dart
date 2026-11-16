@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:core/auth_pay.dart';
-import 'package:core/core.dart';
+import 'package:core/core.dart' hide homeTypeLabel;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
 
+import '../job_labels.dart';
 import '../state.dart';
 import 'chat.dart';
 import 'complete.dart';
@@ -73,7 +74,9 @@ class _JobsTabState extends State<JobsTab> {
             // Capped and scaled so long translations never push the title off a small phone.
             child: Center(
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.45),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.sizeOf(context).width * 0.45,
+                ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
@@ -87,7 +90,9 @@ class _JobsTabState extends State<JobsTab> {
         ],
         bottom: PreferredSize(
           // Grows with the system font so the filter rows never clip.
-          preferredSize: Size.fromHeight(MediaQuery.textScalerOf(context).scale(120).clamp(104, 200)),
+          preferredSize: Size.fromHeight(
+            MediaQuery.textScalerOf(context).scale(120).clamp(104, 200),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
               Space.gutter,
@@ -113,48 +118,59 @@ class _JobsTabState extends State<JobsTab> {
                   children: [
                     Flexible(
                       child: FilterChip(
-                        label: Text(t.pShowClosed, overflow: TextOverflow.ellipsis),
+                        label: Text(
+                          t.pShowClosed,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         selected: _closed,
                         onSelected: (v) => _set(() => _closed = v),
                       ),
                     ),
                     const SizedBox(width: Space.xs),
-                    Flexible(child: PopupMenuButton<String>(
-                      initialValue: _sort,
-                      onSelected: (v) => _set(() => _sort = v),
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'newest',
-                          child: Text(t.pSortNewest),
-                        ),
-                        PopupMenuItem(
-                          value: 'visit',
-                          child: Text(t.pSortVisit),
-                        ),
-                        PopupMenuItem(
-                          value: 'amount',
-                          child: Text(t.pSortAmount),
-                        ),
-                      ],
-                      // 48 dp minimum tap target; the bare label is only ~34 dp tall.
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 48),
-                        child: Padding(
-                          padding: const EdgeInsets.all(Space.xs),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(child: Text(switch (_sort) {
-                                'visit' => t.pSortVisit,
-                                'amount' => t.pSortAmount,
-                                _ => t.pSortNewest,
-                              }, style: context.text.labelMedium, overflow: TextOverflow.ellipsis)),
-                              const Icon(Icons.expand_more_rounded, size: 18),
-                            ],
+                    Flexible(
+                      child: PopupMenuButton<String>(
+                        initialValue: _sort,
+                        onSelected: (v) => _set(() => _sort = v),
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: 'newest',
+                            child: Text(t.pSortNewest),
+                          ),
+                          PopupMenuItem(
+                            value: 'visit',
+                            child: Text(t.pSortVisit),
+                          ),
+                          PopupMenuItem(
+                            value: 'amount',
+                            child: Text(t.pSortAmount),
+                          ),
+                        ],
+                        // 48 dp minimum tap target; the bare label is only ~34 dp tall.
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 48),
+                          child: Padding(
+                            padding: const EdgeInsets.all(Space.xs),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    switch (_sort) {
+                                      'visit' => t.pSortVisit,
+                                      'amount' => t.pSortAmount,
+                                      _ => t.pSortNewest,
+                                    },
+                                    style: context.text.labelMedium,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const Icon(Icons.expand_more_rounded, size: 18),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ],
@@ -244,6 +260,8 @@ class _JobCard extends StatelessWidget {
       if (job['road_area'] != null && (job['road_area'] as String).isNotEmpty)
         job['road_area'] as String,
       if (job['size_pyeong'] != null) t.pyeong('${job['size_pyeong']}'),
+      ?homeTypeLabel(t, job['answers'] as Json?),
+      ?jobCountsLabel(t, job),
     ].join(' · ');
     return Opacity(
       opacity: open ? 1 : 0.5,
@@ -285,29 +303,32 @@ class _JobCard extends StatelessWidget {
               const Divider(height: Space.xl),
               Row(
                 children: [
-                  Expanded(child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isQuote ? t.pCustomerEstimate : t.pPayout,
-                        style: context.text.labelSmall,
-                      ),
-                      Text(
-                        isQuote
-                            ? context.won(
-                                (job['estimate'] as num? ?? 0).toInt(),
-                              )
-                            : context.won(pro.payoutFor(price ?? 0)),
-                        style: context.text.titleLarge,
-                      ),
-                    ],
-                  )),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isQuote ? t.pCustomerEstimate : t.pPayout,
+                          style: context.text.labelSmall,
+                        ),
+                        Text(
+                          isQuote
+                              ? context.won(
+                                  (job['estimate'] as num? ?? 0).toInt(),
+                                )
+                              : context.won(pro.payoutFor(price ?? 0)),
+                          style: context.text.titleLarge,
+                        ),
+                      ],
+                    ),
+                  ),
                   if (job['my_quote'] != null)
                     Flexible(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Tag(
-                          label: '${t.pMyQuote} ${context.won((job['my_quote'] as num).toInt())}',
+                          label:
+                              '${t.pMyQuote} ${context.won((job['my_quote'] as num).toInt())}',
                           hue: StatusHues.confirmed,
                         ),
                       ),

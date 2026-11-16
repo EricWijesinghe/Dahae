@@ -34,6 +34,7 @@ mod privacy_requests;
 mod pro_verification;
 mod renewals;
 pub(crate) mod seller;
+mod service_groups;
 mod settings;
 pub mod setup;
 pub mod site;
@@ -89,6 +90,7 @@ pub fn router(state: AppState) -> Router {
         .merge(owner::public_routes())
         .merge(me::routes())
         .merge(catalog::routes())
+        .merge(service_groups::routes())
         .merge(feed::routes())
         .merge(bookings::routes())
         .merge(cases::customer_routes())
@@ -119,6 +121,7 @@ pub fn router(state: AppState) -> Router {
                 .merge(staff_sms::admin_routes())
                 .merge(owner::admin_routes())
                 .merge(admin_content::routes())
+                .merge(service_groups::admin_routes())
                 .merge(member_approval::admin_routes())
                 .merge(notify_templates::routes())
                 .merge(growth::admin_routes())

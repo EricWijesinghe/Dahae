@@ -1,4 +1,3 @@
-import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:test_support/test_support.dart';
@@ -6,11 +5,12 @@ import 'package:ui/ui.dart';
 
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
+import 'support/home_groups.dart';
 import 'support/signup_consent.dart';
 
 /// Guests browse freely; the phone sign-in opens from the first protected action (booking).
 Future<void> openSignInFromBooking(WidgetTester tester) async {
-  await tester.tap(find.text(koT.service('studio')).first);
+  await openServiceFromHome(tester, 'kitchen');
   await settle(tester);
   await tester.tap(find.text(koT.dfBookNow));
   await settle(tester);

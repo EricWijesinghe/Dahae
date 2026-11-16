@@ -71,10 +71,11 @@ pub fn welcome_applies(offer: &WelcomeOffer, prior_bookings: i64, has_coupon: bo
 
 /// Applies the welcome discount to a server-computed price (the list price stays untouched).
 pub fn apply_welcome(price: PriceBreakdown, offer: &WelcomeOffer) -> PriceBreakdown {
-    let discount = offer.discount_for(price.list_price);
+    let after_multi = price.list_price.saturating_sub(price.multi_discount);
+    let discount = offer.discount_for(after_multi);
     PriceBreakdown {
         discount,
-        total: price.list_price.saturating_sub(discount),
+        total: after_multi.saturating_sub(discount),
         ..price
     }
 }
@@ -346,6 +347,7 @@ mod tests {
     fn price(list: i64) -> PriceBreakdown {
         PriceBreakdown {
             list_price: Won(list),
+            multi_discount: Won::ZERO,
             discount: Won::ZERO,
             total: Won(list),
             minutes: 60,

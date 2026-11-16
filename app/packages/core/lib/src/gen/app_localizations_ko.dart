@@ -15,6 +15,9 @@ class TKo extends T {
   String get addressSearchButton => '검색';
 
   @override
+  String get addressSearchOffHint => '주소 검색은 아직 준비 중이에요. 주소를 직접 입력해 주세요.';
+
+  @override
   String get addressSearchMinChars => '두 글자 이상 입력해 주세요';
 
   @override
@@ -432,6 +435,118 @@ class TKo extends T {
   String get cSetupHostingProvider => '호스팅 서비스 제공자';
 
   @override
+  String cancelRefundCta(String amount) {
+    return '취소하고 $amount 환불받기';
+  }
+
+  @override
+  String get cancelNoRefund => '환불되는 금액이 없어요';
+
+  @override
+  String cancelTierLine(String days, String percent) {
+    return '방문 $days일 전 취소 · 취소 수수료 $percent%';
+  }
+
+  @override
+  String cancelFeeLine(String fee) {
+    return '취소 수수료 $fee';
+  }
+
+  @override
+  String cancelRefundLine(String refund) {
+    return '환불 금액 $refund';
+  }
+
+  @override
+  String get cancelMethodLine => '결제하신 수단으로 돌려드려요';
+
+  @override
+  String get cancelPolicyLink => '취소·환불 기준 보기';
+
+  @override
+  String get cancelPolicyTitle => '취소·환불 기준';
+
+  @override
+  String get cancelReasonTitle => '취소 이유 (선택)';
+
+  @override
+  String get cancelReasonSchedule => '일정이 맞지 않아요';
+
+  @override
+  String get cancelReasonProvider => '다른 곳으로 정했어요';
+
+  @override
+  String get cancelReasonPrice => '가격이 부담돼요';
+
+  @override
+  String get cancelReasonOther => '기타';
+
+  @override
+  String get bookingsEmptyDay => '이 날은 예약이 없어요';
+
+  @override
+  String get cntTitle => '수량 선택 가격';
+
+  @override
+  String get cntHelp =>
+      '고객이 항목마다 수량을 골라요. 두 개 이상 고르면 할인이 적용돼요. 가격은 예시이니 자유롭게 바꿀 수 있어요';
+
+  @override
+  String get cntAddOption => '항목 추가';
+
+  @override
+  String get cntOptionName => '항목 이름';
+
+  @override
+  String get cntMaxEach => '항목당 최대 수량 (비우면 제한 없음)';
+
+  @override
+  String get cntDiscount => '두 개 이상 할인 (%)';
+
+  @override
+  String get cntPreview => '미리보기 (수량을 골라 보세요)';
+
+  @override
+  String cntPreviewTotal(String price, String time) {
+    return '합계 $price · 약 $time';
+  }
+
+  @override
+  String cntPreviewDiscount(String amount) {
+    return '할인 −$amount';
+  }
+
+  @override
+  String get cntMoveUp => '위로 옮기기';
+
+  @override
+  String get cntMoveDown => '아래로 옮기기';
+
+  @override
+  String get cntRemove => '항목 삭제';
+
+  @override
+  String get cntLess => '하나 줄이기';
+
+  @override
+  String get cntMore => '하나 더하기';
+
+  @override
+  String get cntNeedOption => '항목을 하나 이상 넣어 주세요';
+
+  @override
+  String get cntNeedName => '모든 항목에 이름을 적어 주세요';
+
+  @override
+  String get cntNeedPrice => '모든 항목의 가격과 시간을 0보다 크게 적어 주세요';
+
+  @override
+  String get cntMaxEachInvalid => '최대 수량은 1~20 사이로 적어 주세요';
+
+  @override
+  String get cntDiscountInvalid => '할인은 0~50% 사이로 적어 주세요';
+
+  @override
   String get cgTabPeak => '피크 요금';
 
   @override
@@ -582,6 +697,112 @@ class TKo extends T {
 
   @override
   String get cgCodeWrong => '코드가 맞지 않아요. 새 코드를 입력하세요';
+
+  @override
+  String get cgTabGroups => '상품 묶음';
+
+  @override
+  String get cgGroupsHelp => '앱 첫 화면의 큰 메뉴 4개예요. 제목, 순서, 들어가는 상품을 여기서 바꿀 수 있어요';
+
+  @override
+  String get cgGroupTitleKo => '제목 (한국어)';
+
+  @override
+  String get cgGroupTitleEn => '제목 (영어)';
+
+  @override
+  String get cgGroupOrder => '순서 (작은 숫자가 먼저)';
+
+  @override
+  String get cgGroupIcon => '그림';
+
+  @override
+  String get cgGroupChooser => '눌렀을 때';
+
+  @override
+  String get cgChooserMove => '이사 질문 먼저';
+
+  @override
+  String get cgChooserList => '상품 고르기';
+
+  @override
+  String get cgChooserDirect => '상품 바로 열기';
+
+  @override
+  String get cgChooserMoveHelp => '새 집인지 오래된 집인지 묻고, 집 크기를 물어요';
+
+  @override
+  String get cgChooserListHelp => '들어가 있는 상품 목록을 보여줘요';
+
+  @override
+  String get cgChooserDirectHelp => '상품이 하나뿐일 때 바로 그 상품 화면으로 가요';
+
+  @override
+  String get cgGroupMembers => '들어가는 상품 (누른 순서대로 보여요)';
+
+  @override
+  String get cgGroupMembersHelp => '다른 묶음에 있는 상품은 먼저 그 묶음에서 빼야 해요';
+
+  @override
+  String cgMemberOtherGroup(String group) {
+    return '다른 묶음: $group';
+  }
+
+  @override
+  String get cgMoveNewService => '새 집(신축)일 때 상품';
+
+  @override
+  String get cgMoveOldService => '오래된 집(구축)일 때 상품';
+
+  @override
+  String get cgMoveHomeTypes => '집 크기 선택지';
+
+  @override
+  String get cgHomeOneTwo => '원룸·투룸';
+
+  @override
+  String get cgHomeApartment => '아파트';
+
+  @override
+  String get cgHomeVilla => '빌라·주택';
+
+  @override
+  String cgGroupRowInfo(String chooser, String count) {
+    return '$chooser · 상품 $count개';
+  }
+
+  @override
+  String get cgGroupHidden => '숨김';
+
+  @override
+  String get cgGroupShown => '앱에 보임';
+
+  @override
+  String get cgGroupSaved => '묶음을 저장했어요';
+
+  @override
+  String get cgGroupErrTitle => '제목은 1~40자로 적어 주세요';
+
+  @override
+  String get cgGroupErrOrder => '순서는 0~99 사이로 적어 주세요';
+
+  @override
+  String get cgGroupErrMembers => '상품을 하나 이상 골라 주세요';
+
+  @override
+  String get cgGroupErrDirect => '바로 열기는 상품을 하나만 골라 주세요';
+
+  @override
+  String get cgGroupErrMove => '새 집과 오래된 집 상품, 집 크기 선택지를 골라 주세요';
+
+  @override
+  String get cgGroupErrOtherGroup => '상품이 다른 묶음에 들어 있어요. 그 묶음에서 먼저 빼 주세요';
+
+  @override
+  String get cgGroupErrIcon => '그림을 다시 골라 주세요';
+
+  @override
+  String get cgGroupErrUnknown => '저장하지 못했어요. 다시 확인해 주세요';
 
   @override
   String get cTitle => '운영 콘솔';
@@ -1005,6 +1226,105 @@ class TKo extends T {
   String get cServerChange => '서버 주소 변경';
 
   @override
+  String get svc_window => '창문 청소';
+
+  @override
+  String get svc_disinfection => '방역·소독';
+
+  @override
+  String get svcDesc_window => '창문 안팎을 창 크기별 개수대로 청소해요';
+
+  @override
+  String get svcDesc_disinfection => '필요한 방역과 소독을 골라 주세요';
+
+  @override
+  String get unitTitle_window => '창문 크기와 개수를\n골라 주세요.';
+
+  @override
+  String get unitTitle_disinfection => '방역 종류를\n골라 주세요.';
+
+  @override
+  String get unit_window_small => '작은 창 (1m 미만)';
+
+  @override
+  String get unit_window_large => '큰 창 (1m 이상)';
+
+  @override
+  String get unit_pest => '해충 방역';
+
+  @override
+  String get unit_mite_bedbug => '진드기·빈대 퇴치';
+
+  @override
+  String get unit_sanitize => '살균·바이러스 소독';
+
+  @override
+  String get unit_sick_house => '새집증후군 제거';
+
+  @override
+  String get unitShort_wall => '벽걸이';
+
+  @override
+  String get unitShort_stand => '스탠드';
+
+  @override
+  String get unitShort_two_in_one => '2in1';
+
+  @override
+  String get unitShort_ceiling => '천장형';
+
+  @override
+  String get unitShort_seat_1_2 => '1~2인용';
+
+  @override
+  String get unitShort_seat_3 => '3인용';
+
+  @override
+  String get unitShort_seat_4_plus => '4인용 이상';
+
+  @override
+  String get unitShort_l_shape => 'L자';
+
+  @override
+  String get unitShort_small => '작은 창 (1m 미만)';
+
+  @override
+  String get unitShort_large => '큰 창 (1m 이상)';
+
+  @override
+  String get unitShort_pest => '해충 방역';
+
+  @override
+  String get unitShort_mite_bedbug => '진드기·빈대';
+
+  @override
+  String get unitShort_sanitize => '살균·소독';
+
+  @override
+  String get unitShort_sick_house => '새집증후군';
+
+  @override
+  String get unitHint => '필요한 만큼 +, −로 골라 주세요';
+
+  @override
+  String countsDiscount(String percent) {
+    return '$percent% 할인 적용 (2개 이상 선택)';
+  }
+
+  @override
+  String get countMinus => '개수 줄이기';
+
+  @override
+  String get countPlus => '개수 늘리기';
+
+  @override
+  String get countSelect => '선택';
+
+  @override
+  String get svcNotes_disinfection =>
+      '가격은 약 30평 기준이에요\n더 넓은 집은 채팅에서 금액을 조정해 드려요';
+
+  @override
   String get ok => '확인';
 
   @override
@@ -1065,7 +1385,7 @@ class TKo extends T {
   String get err_rate_limited => '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.';
 
   @override
-  String get err_studio_too_large => '원룸 청소는 10평 이하 집만 가능해요';
+  String get err_studio_too_large => '원룸 청소는 10평 이하만 가능해요.';
 
   @override
   String get err_date_out_of_range => '내일부터 60일 이내로 골라 주세요';
@@ -1209,7 +1529,7 @@ class TKo extends T {
   String get svcShort_move_in => '입주';
 
   @override
-  String get svcDesc_studio => '방 1개, 화장실 1개인 10평 이하 원룸을 2시간 동안 꼼꼼히 청소해요.';
+  String get svcDesc_studio => '방 1개, 화장실 1개인 10평 이하 원룸을 2시간 동안 꼼꼼하게 청소해요.';
 
   @override
   String get svcDesc_kitchen => '싱크대, 가스레인지, 후드 겉면, 상판을 중심으로 주방을 집중 청소해요.';
@@ -1418,7 +1738,7 @@ class TKo extends T {
   String get addressRoad => '도로명 주소';
 
   @override
-  String get addressDetail => '상세 주소';
+  String get addressDetail => '상세주소';
 
   @override
   String get addressSize => '집 크기 (평)';
@@ -1481,7 +1801,7 @@ class TKo extends T {
   String get prepTitle => '방문 전에 준비해 주세요';
 
   @override
-  String get prepBody => '준비되지 않으면 일부 작업이 제한될 수 있어요';
+  String get prepBody => '준비하지 않으면 일부 서비스가 제한될 수 있어요.';
 
   @override
   String get prepAsk => '준비가 어렵다면 상담으로 미리 알려 주세요';
@@ -1566,9 +1886,8 @@ class TKo extends T {
   String get needMethod => '결제수단을 등록해 주세요';
 
   @override
-  String freeCancelUntil(String date) {
-    return '$date까지 무료 취소';
-  }
+  String get dfCancelNote =>
+      '방문 2일 전까지 무료로 취소할 수 있어요. 결제시 이용약관 및 취소 규정에 동의한 것으로 간주합니다.';
 
   @override
   String get doneTitle => '예약이 완료됐어요';
@@ -1577,7 +1896,7 @@ class TKo extends T {
   String get doneConfirmedTitle => '예약이 확정됐어요';
 
   @override
-  String get doneBody => '청소팀이 배정되면 바로 알려드릴게요';
+  String get doneBody => '매니저님이 배정되면 알림으로 알려드릴게요.';
 
   @override
   String get doneQuoteTitle => '상담 요청이 접수됐어요';
@@ -1762,7 +2081,7 @@ class TKo extends T {
   String get chatTeam => '상담팀';
 
   @override
-  String get chatHours => '평일 09:00–18:00';
+  String get chatHours => '평일 09:00~18:00';
 
   @override
   String get chatEmpty => '궁금한 점이 있으면 언제든 물어보세요';
@@ -1864,7 +2183,7 @@ class TKo extends T {
   String get moreCoupons => '쿠폰';
 
   @override
-  String get morePoints => '청소 포인트';
+  String get morePoints => '포인트';
 
   @override
   String get moreAccount => '계정정보';
@@ -2271,6 +2590,27 @@ class TKo extends T {
   String get dfScopeEntrance => '현관 바닥 청소';
 
   @override
+  String get dfScopePest => '해충 방역 약제 살포';
+
+  @override
+  String get dfScopeMite => '진드기·빈대 퇴치';
+
+  @override
+  String get dfScopeSanitize => '살균·바이러스 소독';
+
+  @override
+  String get dfScopeSickHouse => '새집증후군 제거 작업';
+
+  @override
+  String get dfScopeWholeHomeGroup => '집 전체 청소';
+
+  @override
+  String get dfScopeWindowGroup => '창문 청소';
+
+  @override
+  String get dfScopeDisinfGroup => '방역·소독';
+
+  @override
   String get dfBasicService => '기본 서비스';
 
   @override
@@ -2336,8 +2676,8 @@ class TKo extends T {
   String get dfEdit => '수정';
 
   @override
-  String dfStudioToast(String service, String max, String label, String size) {
-    return '$service는 $max평 이하만 가능해요. $label($size평)는 상담으로 안내해 드릴게요.';
+  String dfStudioToast(String service, String max) {
+    return '$service는 $max평 이하만 가능해요.';
   }
 
   @override
@@ -2365,6 +2705,9 @@ class TKo extends T {
 
   @override
   String get dfVisitTime => '방문 시간';
+
+  @override
+  String get dfConsultNote => '상담으로 안내해 드릴게요.';
 
   @override
   String get dfSelect => '선택';
@@ -2453,6 +2796,15 @@ class TKo extends T {
 
   @override
   String get luggage_not_unpacked => '이삿짐을 풀지 않은 상태';
+
+  @override
+  String get luggage_out_partly_unpacked => '이삿짐을 일부 푼 상태';
+
+  @override
+  String get luggage_out_fully_lived_in => '짐을 다 풀었거나 생활 중인 상태';
+
+  @override
+  String get luggage_out_unknown => '짐 상태를 잘 모르겠어요';
 
   @override
   String get dfReviewsTitle => '생생한 이용 후기를 확인하세요.';
@@ -3492,6 +3844,92 @@ class TKo extends T {
   }
 
   @override
+  String get hgMoveQuestion => '어떤 집으로 입주하시나요?';
+
+  @override
+  String get hgNewBuild => '신축';
+
+  @override
+  String get hgNewBuildBody => '새로 지은 집 · 입주 청소';
+
+  @override
+  String get hgOldBuild => '구축';
+
+  @override
+  String get hgOldBuildBody => '오래된 집 · 이사 청소';
+
+  @override
+  String get hgSizeQuestion => '집 크기는 어떻게 되나요?';
+
+  @override
+  String get hgHomeOneTwo => '원룸·투룸';
+
+  @override
+  String get hgHomeApartment => '아파트';
+
+  @override
+  String get hgHomeVilla => '빌라·주택';
+
+  @override
+  String get hgEstimateOnly => '예상 견적';
+
+  @override
+  String get hgEstimateNote => '가격은 예상 견적이에요. 상담 후 확정 견적을 드려요.';
+
+  @override
+  String get hgFloorTitle => '몇 층인가요?';
+
+  @override
+  String get hgFloorLow => '1~2층';
+
+  @override
+  String get hgFloorHigh => '3층 이상';
+
+  @override
+  String get hgAddressAlias => '주소 별칭';
+
+  @override
+  String get inboxSummaryTitle => '예약 요약';
+
+  @override
+  String get inboxSummaryService => '서비스';
+
+  @override
+  String get inboxSummaryVisit => '방문 일시';
+
+  @override
+  String get inboxSummaryAddress => '주소';
+
+  @override
+  String get inboxSummaryAmount => '금액';
+
+  @override
+  String get inboxSummaryStatus => '상태';
+
+  @override
+  String get inboxSummaryCustomer => '고객';
+
+  @override
+  String get inboxSummaryNoBooking => '예약 정보를 불러오지 못했어요';
+
+  @override
+  String quoteSentEntry(String amount, String time) {
+    return '견적 발송됨 · $amount · $time';
+  }
+
+  @override
+  String get quoteResend => '재발송';
+
+  @override
+  String get quoteRevise => '수정';
+
+  @override
+  String get quoteResent => '견적을 다시 보냈어요';
+
+  @override
+  String get quoteSentChip => '견적 발송';
+
+  @override
   String get locUseCurrent => '현재 위치로 찾기';
 
   @override
@@ -3714,6 +4152,28 @@ class TKo extends T {
 
   @override
   String get ntErrChars => '줄바꿈이나 조절 문자는 넣을 수 없어요.';
+
+  @override
+  String get unit_mattress => '매트리스';
+
+  @override
+  String get unitShort_mattress => '매트리스';
+
+  @override
+  String get svc_whole_home => '집 전체 청소';
+
+  @override
+  String get svcShort_whole_home => '집 전체';
+
+  @override
+  String get svcShort_window => '창문';
+
+  @override
+  String get svcShort_disinfection => '방역·소독';
+
+  @override
+  String get svcNote_studio_limit =>
+      '※ 10평을 넘는 집은 원룸 청소를 예약할 수 없어요. 상담으로 맞는 서비스를 안내해 드려요.';
 
   @override
   String get cOps => '시스템 상태';
@@ -4292,6 +4752,69 @@ class TKo extends T {
   String get pCustomerEstimate => '고객 예상가';
 
   @override
+  String get pHomeOneTwo => '원룸·투룸';
+
+  @override
+  String get pHomeApartment => '아파트';
+
+  @override
+  String get pHomeVillaHouse => '빌라·주택';
+
+  @override
+  String get pCountsTitle => '수량';
+
+  @override
+  String get pUnitWall => '벽걸이';
+
+  @override
+  String get pUnitStand => '스탠드';
+
+  @override
+  String get pUnitTwoInOne => '2in1';
+
+  @override
+  String get pUnitCeiling => '천장형';
+
+  @override
+  String get pUnitSeat12 => '1~2인용';
+
+  @override
+  String get pUnitSeat3 => '3인용';
+
+  @override
+  String get pUnitSeat4Plus => '4인용 이상';
+
+  @override
+  String get pUnitLShape => 'L자';
+
+  @override
+  String get pUnitMattress => '매트리스';
+
+  @override
+  String get pUnitWindowSmall => '작은 창';
+
+  @override
+  String get pUnitWindowLarge => '큰 창';
+
+  @override
+  String get pUnitPest => '해충 방제';
+
+  @override
+  String get pUnitMiteBedbug => '진드기·베드버그';
+
+  @override
+  String get pUnitSanitize => '살균';
+
+  @override
+  String get pUnitSickHouse => '새집 증후군';
+
+  @override
+  String get pLogoutConfirm => '로그아웃할까요?';
+
+  @override
+  String get pLogoutBody => '다시 로그인하면 일감과 일정을 그대로 볼 수 있어요.';
+
+  @override
   String get pNew => 'NEW';
 
   @override
@@ -4836,6 +5359,21 @@ class TKo extends T {
       '끄면 정해진 가격과 정기 청소는 기본 가격으로 예약돼요. 견적은 항상 할증을 보여줘요';
 
   @override
+  String get popularServices => '인기 서비스';
+
+  @override
+  String get reviewsSeeAll => '후기 전체 보기';
+
+  @override
+  String get reviewsAllTitle => '후기';
+
+  @override
+  String get reviewsEmpty => '아직 후기가 없어요';
+
+  @override
+  String get reviewMenu => '후기 메뉴';
+
+  @override
   String get oFlags => '기능 스위치';
 
   @override
@@ -5200,6 +5738,73 @@ class TKo extends T {
   String get cQualityLastCalc => '자동 계산 결과예요';
 
   @override
+  String get qaHomeType => '집 유형';
+
+  @override
+  String get homeType_one_two_room => '원룸·투룸';
+
+  @override
+  String get homeType_apartment => '아파트';
+
+  @override
+  String get homeType_villa_house => '빌라·주택';
+
+  @override
+  String get qaCleaningType => '청소 종류';
+
+  @override
+  String get qaLuggage => '짐 상태';
+
+  @override
+  String get qaLayout => '집 구조';
+
+  @override
+  String get qaFloor => '층수';
+
+  @override
+  String get qaFloorLow => '1~2층';
+
+  @override
+  String get qaFloorHigh => '3층 이상';
+
+  @override
+  String get quoteUnknown => '미입력';
+
+  @override
+  String get qaPeak => '주말·공휴일·저녁 할증';
+
+  @override
+  String get previewRequestCard => '예약 요청 카드';
+
+  @override
+  String previewQuoteCard(String amount) {
+    return '견적 카드 · $amount';
+  }
+
+  @override
+  String get nameNone => '이름 없음';
+
+  @override
+  String get qaTotal => '합계';
+
+  @override
+  String get qaVat => '부가세 10%';
+
+  @override
+  String get quoteSizeTitle => '선택한 구조와 저장된 평수가 달라요';
+
+  @override
+  String quoteSizeBody(String size, String layout) {
+    return '이 주소는 $size이라 $layout 구조와 맞지 않을 수 있어요.';
+  }
+
+  @override
+  String get quoteSizeChangeLayout => '구조 바꾸기';
+
+  @override
+  String get quoteSizeChangeSize => '평수 고치기';
+
+  @override
   String get rnwTitle => '갱신 일정';
 
   @override
@@ -5420,6 +6025,9 @@ class TKo extends T {
 
   @override
   String get err_schedule_overlap => '이 시간에 이미 다른 일정이 있어요';
+
+  @override
+  String get servicePhotoSlot => '서비스 대표 사진 자리';
 
   @override
   String get rulesTab => '운영 규칙';

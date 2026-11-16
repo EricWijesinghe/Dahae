@@ -18,7 +18,17 @@ class UnitOption {
   );
 }
 
-enum PricingType { fixed, unit, quote }
+/// fixed: one price. unit: pick one option. counts: an amount per option (steppers or cards).
+enum PricingType { fixed, unit, quote, counts }
+
+/// Mirrors the server's counts rules (domain money.rs, pricing): keep both in step.
+const int kMinCountMinutes = 60;
+const int kMaxCount = 20;
+const int _kBasisPoints = 10000;
+
+int _timesBps(int won, int bps) =>
+    (won * bps + _kBasisPoints ~/ 2) ~/ _kBasisPoints;
+int _round100(int won) => (won + 50) ~/ 100 * 100;
 
 class Service {
   const Service({
@@ -29,6 +39,8 @@ class Service {
     this.units = const [],
     this.needsPreparation = false,
     this.maxPyeong,
+    this.maxEach,
+    this.multiDiscountBps = 0,
     this.content = const {},
   });
   final String code;
@@ -38,17 +50,56 @@ class Service {
   final List<UnitOption> units;
   final bool needsPreparation;
   final int? maxPyeong;
+
+  /// Counts only: the most of one option a customer may pick (null = [kMaxCount]).
+  final int? maxEach;
+
+  /// Counts only: discount in basis points once two or more items are picked (0 = none).
+  final int multiDiscountBps;
   final Json content;
 
   bool get isQuote => type == PricingType.quote;
+  bool get isCounts => type == PricingType.counts;
+
+  /// Counts where each option can be picked once: a tap-to-select card, not a stepper.
+  bool get isMultiSelect => isCounts && maxEach == 1;
+
   int? get fromPrice => switch (type) {
     PricingType.fixed => price,
-    PricingType.unit =>
+    PricingType.unit || PricingType.counts =>
       units.isEmpty
           ? null
           : units.map((u) => u.price).reduce((a, b) => a < b ? a : b),
     PricingType.quote => null,
   };
+
+  /// Largest count one option accepts.
+  int get countCap => maxEach ?? kMaxCount;
+
+  /// Sum of `price × count` with the multi-item discount applied (server: count_price).
+  int countsPrice(List<int> counts) {
+    final gross = _countsSum(counts, (u) => u.price);
+    if (_countsItems(counts) < 2 || multiDiscountBps == 0) return gross;
+    return gross - _round100(_timesBps(gross, multiDiscountBps));
+  }
+
+  /// Sum of `minutes × count`, at least [kMinCountMinutes] whenever anything is picked.
+  int countsMinutes(List<int> counts) {
+    final sum = _countsSum(counts, (u) => u.minutes);
+    if (sum == 0) return 0;
+    return sum < kMinCountMinutes ? kMinCountMinutes : sum;
+  }
+
+  int _countsSum(List<int> counts, int Function(UnitOption) field) {
+    var total = 0;
+    for (final (i, u) in units.indexed) {
+      if (i < counts.length) total += field(u) * counts[i];
+    }
+    return total;
+  }
+
+  static int _countsItems(List<int> counts) =>
+      counts.fold(0, (sum, n) => sum + n);
 
   factory Service.fromJson(Json j) {
     final p = j['pricing'] as Json;
@@ -63,6 +114,8 @@ class Service {
           .toList(),
       needsPreparation: j['needs_preparation'] as bool? ?? false,
       maxPyeong: _int(j['max_pyeong']),
+      maxEach: _int(p['max_each']),
+      multiDiscountBps: _int(p['multi_discount_bps']) ?? 0,
       content: (j['content'] as Json?) ?? const {},
     );
   }
@@ -161,6 +214,19 @@ class Booking {
   String get number => j['number'] as String;
   String get serviceCode => j['service_code'] as String;
   int? get unitIndex => _int(j['unit_index']);
+
+  /// Per-option counts of a counts booking, in catalogue order (empty for other bookings).
+  List<int> get unitCounts => ((j['unit_counts'] as List?) ?? const [])
+      .map((n) => (n as num).toInt())
+      .toList();
+
+  /// Counts in catalogue order, [optionCount] long. A legacy single-unit booking (unit_index only)
+  /// counts as one item of that option, the way the server reads it.
+  List<int> countsOf(int optionCount) {
+    if (unitCounts.isNotEmpty || unitIndex == null) return unitCounts;
+    return [for (var i = 0; i < optionCount; i++) i == unitIndex ? 1 : 0];
+  }
+
   int get status => _int(j['status'])!;
   DateTime get visitDate => DateTime.parse(j['visit_date'] as String);
   int get startHour => _int(j['start_hour'])!;
@@ -186,6 +252,7 @@ class Booking {
       (((j['photos'] as Json?)?['after'] as List?) ?? const []).cast<String>();
   bool get reviewed => j['reviewed'] as bool? ?? false;
   DateTime get createdAt => _date(j['created_at'])!;
+  DateTime get updatedAt => _date(j['updated_at']) ?? createdAt;
   DateTime? get checkedInAt => _date(j['checked_in_at']);
   DateTime? get checkedOutAt => _date(j['checked_out_at']);
   bool get entryCodeSet => j['entry_code_set'] as bool? ?? false;
@@ -215,6 +282,10 @@ class ChatThread {
   Json? get lastMessage => j['last_message'] as Json?;
   String? get userId => j['user_id'] as String?;
   String? get proId => j['pro_id'] as String?;
+
+  /// Staff inbox only: the customer's name (may be empty) and phone.
+  String? get customerName => j['customer_name'] as String?;
+  String? get customerPhone => j['customer_phone'] as String?;
   bool get aiPaused => j['ai_paused'] == true;
   factory ChatThread.fromJson(Json j) => ChatThread(j);
 }
@@ -253,6 +324,9 @@ class QuoteAnswers {
   String? cleaningType;
   String luggage = 'empty';
   String? building;
+
+  /// Home picked before the flow: one_two_room | apartment | villa_house (CR-8.2). Null when asked in full.
+  String? homeType;
   String? layout;
   bool? duplex;
   int bathrooms = 1;
@@ -271,12 +345,14 @@ class QuoteAnswers {
     'cleaning_type': cleaningType,
     'luggage': luggage,
     'building': building,
+    'home_type': homeType,
     'layout': layout,
     'duplex': duplex,
     'bathrooms': bathrooms,
     'balconies': balconies,
     'elevator': elevator,
     'floor_3_or_higher': floor3OrHigher,
+    if (homeType != null) 'home_type': homeType,
     'ac_addons': [
       for (final e in acAddons.entries)
         if (e.value > 0) {'unit': e.key, 'count': e.value},
@@ -292,6 +368,9 @@ class ContentItem {
   String? get link => j['link'] as String?;
   String? get imageUrl => j['image_url'] as String?;
   Json get body => (j['body'] as Json?) ?? const {};
+
+  /// Posting date; null only for rows from an older server that does not send it.
+  DateTime? get createdAt => _date(j['created_at']);
 
   /// Content is stored per language; fall back to Korean.
   String title(String lang) => _pick(j['title'], lang);

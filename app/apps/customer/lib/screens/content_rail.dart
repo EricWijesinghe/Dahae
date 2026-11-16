@@ -104,9 +104,10 @@ class NewsList extends StatelessWidget {
   }
 }
 
-void _open(BuildContext context, ContentItem item) => Navigator.of(context).push(
-  MaterialPageRoute<void>(builder: (_) => ContentDetailScreen(item: item)),
-);
+void _open(BuildContext context, ContentItem item) =>
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ContentDetailScreen(item: item)),
+    );
 
 class _NoticeRow extends StatelessWidget {
   const _NoticeRow({required this.item});
@@ -155,6 +156,13 @@ class _NoticeRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (noticeDateLabel(item).isNotEmpty) ...[
+                const SizedBox(width: Space.sm),
+                Text(
+                  noticeDateLabel(item),
+                  style: context.text.labelSmall?.copyWith(color: c.inkMuted),
+                ),
+              ],
             ],
           ),
         ),
@@ -307,7 +315,8 @@ class BannerCarouselState extends State<BannerCarousel> {
 
   void _openBanner(ContentItem? item) => Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) => item == null || (item.link ?? item.body['link']) == 'coupons'
+      builder: (_) =>
+          item == null || (item.link ?? item.body['link']) == 'coupons'
           ? const CouponsScreen()
           : ContentDetailScreen(item: item),
     ),
@@ -328,8 +337,9 @@ class BannerCarouselState extends State<BannerCarousel> {
     final sub = context.text.bodySmall!;
     double line(TextStyle s) => (s.fontSize ?? 14) * (s.height ?? 1.4);
     // Two headline lines and a sub-line at the user's font size: large text grows the card.
-    final text = MediaQuery.textScalerOf(context)
-        .scale(line(title) * 2 + line(sub));
+    final text = MediaQuery.textScalerOf(
+      context,
+    ).scale(line(title) * 2 + line(sub));
     final height = math.max(_bannerMinHeight, text + Space.lg * 2 + Space.xs);
     final coupons = widget.coupons > 0
         ? t.couponAvailable('${widget.coupons}')
@@ -445,10 +455,7 @@ class _BannerCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (label.isNotEmpty)
-              Text(
-                label,
-                style: context.text.labelSmall?.copyWith(color: on),
-              ),
+              Text(label, style: context.text.labelSmall?.copyWith(color: on)),
             Text(
               value,
               style: context.text.titleLarge?.copyWith(

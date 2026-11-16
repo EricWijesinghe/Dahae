@@ -71,7 +71,7 @@ class MoreTab extends StatelessWidget {
       );
     }
 
-    // The design's groups, in its order (p05); rows the design leaves out follow below the version.
+    // The design's groups (p05): payments and subscriptions at the top, version and legal at the bottom.
     final groups = <Widget>[
       _ProfileCard(coupons: coupons, points: app.points, name: app.name),
       _Group([
@@ -87,7 +87,7 @@ class MoreTab extends StatelessWidget {
           member: true,
         ),
         row(
-          'ui_coupon',
+          'menu_coupons',
           t.moreCoupons,
           () => _pushMember(context, const CouponsScreen()),
           trailing: '$coupons',
@@ -96,9 +96,21 @@ class MoreTab extends StatelessWidget {
           member: true,
         ),
         row(
-          'ui_points',
+          'menu_points',
           t.morePoints,
           () => _pushMember(context, const WalletScreen()),
+          member: true,
+        ),
+        row(
+          'pay_virtual',
+          t.payHistoryTitle,
+          () => _pushMember(context, const PaymentHistoryScreen()),
+          member: true,
+        ),
+        row(
+          'menu_subscriptions',
+          t.subTitle,
+          () => _pushMember(context, const SubscriptionsScreen()),
           member: true,
         ),
       ]),
@@ -145,6 +157,7 @@ class MoreTab extends StatelessWidget {
           () => openTopicChat(context, 'other'),
         ),
       ]),
+      // Version is its own card (design p05); the extra rows sit under it.
       _Group([
         FutureBuilder<String?>(
           future: _buildVersion(),
@@ -156,18 +169,6 @@ class MoreTab extends StatelessWidget {
       ]),
       _Group([
         row(
-          'pay_virtual',
-          t.payHistoryTitle,
-          () => _pushMember(context, const PaymentHistoryScreen()),
-          member: true,
-        ),
-        row(
-          'menu_subscriptions',
-          t.subTitle,
-          () => _pushMember(context, const SubscriptionsScreen()),
-          member: true,
-        ),
-        row(
           'menu_language',
           t.moreLanguage,
           () => _push(context, const LanguageScreen()),
@@ -176,7 +177,7 @@ class MoreTab extends StatelessWidget {
         row(
           'menu_theme',
           t.themeTitle,
-          () => deps.theme.cycle(),
+          () => showThemeSheet(context, deps.theme),
           trailing: t.themeLabel(deps.theme.mode),
         ),
         row(
@@ -660,6 +661,9 @@ class ContentListBody extends StatelessWidget {
             separatorBuilder: (_, _) => const Divider(),
             itemBuilder: (_, i) => ListTile(
               title: Text(items[i].title(context.lang)),
+              subtitle: kind == 'notice' && noticeDateLabel(items[i]).isNotEmpty
+                  ? Text(noticeDateLabel(items[i]))
+                  : null,
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -669,6 +673,12 @@ class ContentListBody extends StatelessWidget {
             ),
           ),
   );
+}
+
+/// Posting date as 2026.11.14 on notice rows and detail headers; empty when the server sent none.
+String noticeDateLabel(ContentItem item) {
+  final d = item.createdAt;
+  return d == null ? '' : DateFormat('yyyy.MM.dd').format(d);
 }
 
 class ContentDetailScreen extends StatelessWidget {
@@ -681,6 +691,16 @@ class ContentDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.all(Space.gutter),
       children: [
         Text(item.title(context.lang), style: context.text.headlineSmall),
+        if (noticeDateLabel(item).isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: Space.xs),
+            child: Text(
+              noticeDateLabel(item),
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.inkMuted,
+              ),
+            ),
+          ),
         const SizedBox(height: Space.lg),
         if (item.imageUrl != null) ...[
           ClipRRect(

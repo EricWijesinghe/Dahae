@@ -6,7 +6,7 @@ use axum::{
     extract::{Query, State},
     routing::{get, post},
 };
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, Utc};
 use domain::{
     catalog::{Pricing, Service},
     peak::PeakConfig,
@@ -80,6 +80,16 @@ pub async fn load_peak_config(db: impl sqlx::PgExecutor<'_>) -> ApiResult<PeakCo
     Ok(config)
 }
 
+/// Peak rate (bps) of a KST visit slot under the owner's config, the same rate a booking is priced with.
+/// shortcut: uses the current peak config, so a booking made before a config change re-prices its breakdown; store peak_bps on bookings to make it exact.
+pub async fn slot_peak_bps(db: &sqlx::PgPool, visit_date: NaiveDate, start_hour: i16) -> ApiResult<i64> {
+    let start = u32::try_from(start_hour)
+        .ok()
+        .and_then(|h| domain::peak::kst_to_utc(visit_date, h))
+        .ok_or(crate::error::ApiError::BadRequest("invalid_slot"))?;
+    Ok(domain::peak::peak_surcharge(&load_peak_config(db).await?, start).bps)
+}
+
 async fn list_services(State(s): State<AppState>) -> ApiResult<Json<Vec<ServiceDto>>> {
     let rows: Vec<ServiceRow> = sqlx::query_as(&format!("SELECT {SERVICE_COLS} FROM services WHERE active ORDER BY sort_order"))
         .fetch_all(&s.db)
@@ -144,18 +154,22 @@ struct EstimateRequest {
     answers: QuoteAnswers,
     visit_date: Option<NaiveDate>,
     start_hour: Option<u8>,
+    /// The service quoted, required. whole_home fixes its own cleaning type and luggage whatever is sent.
+    service_code: Option<String>,
 }
 
 /// With a slot the preview carries its peak surcharge, so it equals the estimate the booking stores.
 async fn estimate(State(s): State<AppState>, Json(r): Json<EstimateRequest>) -> ApiResult<Json<Estimate>> {
+    // Without the service the preview could not apply whole_home's fixed answers and would differ from the booking.
+    let code = r.service_code.as_deref().ok_or(crate::error::ApiError::BadRequest("service_code_required"))?;
     let formula = load_formula(&s.db).await?;
-    let lines = addon_lines(&s.db, &r.answers).await?;
-    let start = r.visit_date.zip(r.start_hour).and_then(|(d, h)| domain::peak::kst_to_utc(d, u32::from(h)));
-    let bps = match start {
-        Some(start) => domain::peak::peak_surcharge(&load_peak_config(&s.db).await?, start).bps,
+    let answers = domain::quote::fixed_answers_for(code, r.answers);
+    let lines = addon_lines(&s.db, &answers).await?;
+    let bps = match r.visit_date.zip(r.start_hour) {
+        Some((date, hour)) => slot_peak_bps(&s.db, date, i16::from(hour)).await?,
         None => 0,
     };
-    Ok(Json(formula.estimate_with_addons(&r.answers, bps, &lines)?))
+    Ok(Json(formula.estimate_with_addons(&answers, bps, &lines)?))
 }
 
 /// Catalog prices for the answers' aircon add-ons (empty without any), so every estimate
@@ -182,11 +196,13 @@ struct ContentRow {
     body: Value,
     image_url: Option<String>,
     link: Option<String>,
+    /// Posting date shown on notice rows and the detail header.
+    created_at: DateTime<Utc>,
 }
 
 async fn content(State(s): State<AppState>, Query(q): Query<ContentQuery>) -> ApiResult<Json<Vec<ContentRow>>> {
     let rows = sqlx::query_as(
-        "SELECT id, kind, slug, title, body, image_url, link FROM content_items
+        "SELECT id, kind, slug, title, body, image_url, link, created_at FROM content_items
          WHERE kind = $1 AND active AND (starts_at IS NULL OR starts_at <= now()) AND (ends_at IS NULL OR ends_at > now())
          ORDER BY sort_order, created_at DESC",
     )

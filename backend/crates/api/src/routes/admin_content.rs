@@ -20,7 +20,11 @@ use axum::{
     routing::{get, post, put},
 };
 use chrono::{DateTime, Duration, Utc};
-use domain::{catalog::Pricing, coupon::COUPON_LIFETIME_DAYS, quote::QuoteFormula};
+use domain::{
+    catalog::{MAX_COUNT, MAX_UNIT_MINUTES, MAX_UNIT_PRICE, Pricing, UnitOption},
+    coupon::COUPON_LIFETIME_DAYS,
+    quote::QuoteFormula,
+};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::net::SocketAddr;
@@ -89,11 +93,25 @@ struct ServiceUpdate {
 /// Prices must be positive and every unit complete; content must be a JSON object.
 fn valid_service(pricing: &Pricing, content: &Value) -> bool {
     let valid_prices = match pricing {
-        Pricing::Fixed { price, minutes } => price.0 > 0 && *minutes > 0,
-        Pricing::Unit { units } => !units.is_empty() && units.iter().all(|x| x.price.0 > 0 && x.minutes > 0),
+        Pricing::Fixed { price, minutes } => valid_price_and_minutes(price.0, *minutes),
+        Pricing::Unit { units } => valid_units(units),
+        Pricing::Counts {
+            units,
+            max_each,
+            multi_discount_bps,
+        } => valid_units(units) && max_each.is_none_or(|m| (1..=MAX_COUNT).contains(&m)) && (0..=10_000).contains(multi_discount_bps),
         Pricing::Quote => true,
     };
     valid_prices && content.is_object()
+}
+
+/// Bounded so that counts totals (up to `MAX_COUNT` per option) cannot overflow money or minutes.
+fn valid_price_and_minutes(price: i64, minutes: u32) -> bool {
+    (1..=MAX_UNIT_PRICE).contains(&price) && (1..=MAX_UNIT_MINUTES).contains(&minutes)
+}
+
+fn valid_units(units: &[UnitOption]) -> bool {
+    !units.is_empty() && units.iter().all(|x| valid_price_and_minutes(x.price.0, x.minutes))
 }
 
 /// Lowercase ASCII, starts with a letter, 2 to 40 characters: the code is the key bookings and prices refer to.
@@ -612,4 +630,72 @@ async fn set_staff_active(State(s): State<AppState>, Admin(a): Admin, Path(id): 
     }
     audit(&s.db, "staff", Some(a.id), "staff.active", &id.to_string(), json!({ "active": x.active })).await?;
     Ok(Json(json!({ "ok": true })))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use domain::Won;
+
+    fn unit(price: i64, minutes: u32) -> UnitOption {
+        UnitOption {
+            label_key: "x".into(),
+            minutes,
+            price: Won(price),
+        }
+    }
+
+    fn counts(max_each: Option<u8>, bps: i64, units: Vec<UnitOption>) -> Pricing {
+        Pricing::Counts {
+            units,
+            max_each,
+            multi_discount_bps: bps,
+        }
+    }
+
+    fn obj() -> Value {
+        json!({})
+    }
+
+    #[test]
+    fn valid_counts_are_accepted() {
+        assert!(valid_service(&counts(None, 1_000, vec![unit(79_000, 90)]), &obj()));
+        assert!(valid_service(&counts(Some(1), 0, vec![unit(9_000, 15)]), &obj()));
+        assert!(valid_service(&counts(Some(20), 10_000, vec![unit(9_000, 15)]), &obj()));
+    }
+
+    #[test]
+    fn max_each_outside_one_to_twenty_is_rejected() {
+        assert!(!valid_service(&counts(Some(0), 0, vec![unit(9_000, 15)]), &obj()));
+        assert!(!valid_service(&counts(Some(21), 0, vec![unit(9_000, 15)]), &obj()));
+    }
+
+    #[test]
+    fn multi_discount_outside_zero_to_full_is_rejected() {
+        assert!(!valid_service(&counts(None, 10_001, vec![unit(9_000, 15)]), &obj()));
+        assert!(!valid_service(&counts(None, -1, vec![unit(9_000, 15)]), &obj()));
+    }
+
+    #[test]
+    fn empty_or_incomplete_units_are_rejected() {
+        assert!(!valid_service(&counts(None, 0, vec![]), &obj()));
+        assert!(!valid_service(&counts(None, 0, vec![unit(0, 15)]), &obj()));
+        assert!(!valid_service(&counts(None, 0, vec![unit(9_000, 0)]), &obj()));
+    }
+
+    #[test]
+    fn oversized_price_or_duration_is_rejected() {
+        assert!(!valid_service(&counts(None, 0, vec![unit(MAX_UNIT_PRICE + 1, 15)]), &obj()));
+        assert!(!valid_service(&counts(None, 0, vec![unit(9_000, MAX_UNIT_MINUTES + 1)]), &obj()));
+        assert!(valid_service(&counts(None, 0, vec![unit(MAX_UNIT_PRICE, MAX_UNIT_MINUTES)]), &obj()));
+    }
+
+    #[test]
+    fn fixed_price_bounds_and_content_shape() {
+        let fixed = |price: i64, minutes: u32| Pricing::Fixed { price: Won(price), minutes };
+        assert!(valid_service(&fixed(45_000, 120), &obj()));
+        assert!(!valid_service(&fixed(0, 120), &obj()));
+        assert!(!valid_service(&fixed(MAX_UNIT_PRICE + 1, 120), &obj()));
+        assert!(!valid_service(&fixed(45_000, 120), &json!([])), "content must be an object");
+    }
 }

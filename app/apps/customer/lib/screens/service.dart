@@ -6,15 +6,25 @@ import '../guest.dart';
 import '../public_offers.dart';
 import '../state.dart';
 import 'booking_flow.dart';
+import 'move_chooser.dart';
 import 'quote_flow.dart';
+import 'service_counts.dart';
 import 'service_scope.dart';
 
-/// Service detail (design p07 fixed price, p08 unit choice). Quote services go straight
+/// Service detail (design p07 fixed price, p08 unit or counts choice). Quote services go straight
 /// into the move-in/out steps (p14). Every number comes from the catalog.
 class ServiceScreen extends StatefulWidget {
-  const ServiceScreen({super.key, required this.service, this.initialUnit});
+  const ServiceScreen({
+    super.key,
+    required this.service,
+    this.initialUnit,
+    this.initialCounts,
+  });
   final Service service;
   final int? initialUnit;
+
+  /// Counts of an earlier counts booking, when booking it again.
+  final List<int>? initialCounts;
   @override
   State<ServiceScreen> createState() => _ServiceScreenState();
 }
@@ -23,7 +33,18 @@ class _ServiceScreenState extends State<ServiceScreen> {
   late final BookingDraftBox _draft = BookingDraftBox(widget.service)
     ..draft.unitIndex =
         widget.initialUnit ??
-        (widget.service.type == PricingType.unit ? 0 : null);
+        (widget.service.type == PricingType.unit ? 0 : null)
+    ..draft.counts = _startCounts();
+
+  /// A counts service starts from the earlier booking's counts when they still fit the catalogue;
+  /// a single-option service (mattress) starts at one, as its unit picker did.
+  List<int> _startCounts() {
+    final n = widget.service.units.length;
+    if (!widget.service.isCounts) return const [];
+    final given = widget.initialCounts;
+    if (given != null && given.length == n) return given;
+    return [for (var i = 0; i < n; i++) n == 1 ? 1 : 0];
+  }
 
   /// Drives the hero art's parallax.
   final _scroll = ScrollController();
@@ -63,6 +84,11 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 이사·입주 and whole-home ask the home first (CR-3, CR-4).
+    if (s.code == 'move_in' || s.code == 'move_out') {
+      return const MoveChooserScreen();
+    }
+    if (s.code == 'whole_home') return MoveChooserScreen(service: s);
     if (s.isQuote) return QuoteFlowScreen(service: s);
     final t = context.t;
     final d = _draft.draft;
@@ -77,11 +103,21 @@ class _ServiceScreenState extends State<ServiceScreen> {
         controller: _scroll,
         children: [
           FlowTitle(
-            s.type == PricingType.unit
-                ? t.unitTitle(s.code)
-                : t.service(s.code),
+            s.type == PricingType.fixed
+                ? t.service(s.code)
+                : t.unitTitle(s.code),
             body: t.serviceDesc(s.code),
           ),
+          if (s.maxPyeong != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
+              child: Text(
+                t.dfStudioNote('${s.maxPyeong}'),
+                style: context.text.bodySmall?.copyWith(
+                  color: context.colors.inkMuted,
+                ),
+              ),
+            ),
           if (!Deps.of(context).session.signedIn) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
@@ -99,6 +135,8 @@ class _ServiceScreenState extends State<ServiceScreen> {
           ],
           if (s.type == PricingType.fixed)
             ..._fixed(context, t)
+          else if (s.isCounts)
+            ..._counts(context, t, d)
           else
             ..._units(context, t, d),
           if (notes.isNotEmpty)
@@ -116,14 +154,17 @@ class _ServiceScreenState extends State<ServiceScreen> {
       bottomNavigationBar: PriceBar(
         amount: d.listPrice,
         // Design p07 captions the fixed price; p08 links to the breakdown instead.
-        caption: s.type == PricingType.fixed
-            ? '${t.duration(d.minutes)} · ${t.vatIncluded}'
-            : null,
+        caption: switch (s.type) {
+          PricingType.fixed => '${t.duration(d.minutes)} · ${t.vatIncluded}',
+          PricingType.counts when d.minutes > 0 => t.duration(d.minutes),
+          _ => null,
+        },
         onDetails: s.type == PricingType.fixed
             ? null
             : () => showPriceBreakdown(context, d),
         label: s.type == PricingType.fixed ? t.dfBookNow : t.next,
-        onPressed: _continue,
+        // A counts service needs at least one item before the next step.
+        onPressed: s.isCounts && !d.hasCounts ? null : _continue,
       ),
     );
   }
@@ -134,7 +175,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ServiceHero(service: s, scroll: _scroll),
+          ServiceHero(service: s),
           const SizedBox(height: Space.md),
           AppCard(
             padding: const EdgeInsets.all(Space.md),
@@ -175,15 +216,6 @@ class _ServiceScreenState extends State<ServiceScreen> {
             ),
           ),
         ],
-        if (s.maxPyeong != null) ...[
-          const SizedBox(height: Space.sm),
-          Text(
-            t.dfStudioNote('${s.maxPyeong}'),
-            style: context.text.bodySmall?.copyWith(
-              color: context.colors.inkMuted,
-            ),
-          ),
-        ],
       ],
     ),
   ];
@@ -211,6 +243,57 @@ class _ServiceScreenState extends State<ServiceScreen> {
       ]),
     ),
   ];
+
+  /// Counts services: option cards, then the multi-item discount line once two or more are picked.
+  List<Widget> _counts(BuildContext context, T t, BookingDraft d) {
+    final items = d.counts.fold(0, (sum, n) => sum + n);
+    final discounted = s.multiDiscountBps > 0 && items >= 2;
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(
+          Space.gutter,
+          0,
+          Space.gutter,
+          Space.xs,
+        ),
+        child: Text(
+          t.unitHint,
+          style: context.text.bodySmall?.copyWith(
+            color: context.colors.inkMuted,
+          ),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(
+          Space.gutter,
+          0,
+          Space.gutter,
+          Space.md,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            CountsGrid(
+              service: s,
+              counts: d.counts,
+              onChanged: (c) => setState(() => d.counts = c),
+            ),
+            if (discounted)
+              Padding(
+                padding: const EdgeInsets.only(top: Space.xs),
+                child: Text(
+                  t.countsDiscount('${s.multiDiscountBps ~/ 100}'),
+                  style: context.text.bodyMedium?.copyWith(
+                    color: context.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ];
+  }
 }
 
 class _Fact extends StatelessWidget {
@@ -236,34 +319,10 @@ class _Fact extends StatelessWidget {
   );
 }
 
-/// The design's photo slot: the catalog photo when the console set one, else the 3D art.
+/// The design's photo slot (p07): the catalog photo when the console set one, else the grey placeholder.
 class ServiceHero extends StatelessWidget {
-  const ServiceHero({super.key, required this.service, this.scroll});
+  const ServiceHero({super.key, required this.service});
   final Service service;
-
-  /// The page's scroll position: the 3D art trails it for a little depth.
-  final ScrollController? scroll;
-
-  static const _parallax = 0.3;
-
-  Widget _art(BuildContext context) {
-    final art = Hero(
-      tag: 'svc-${service.code}',
-      child: Tilt3D(
-        child: Icon3D('svc_${service.code}', size: 120, idle: Icon3DIdle.float),
-      ),
-    );
-    final scroll = this.scroll;
-    if (scroll == null || reducedMotion(context)) return art;
-    return AnimatedBuilder(
-      animation: scroll,
-      child: art,
-      builder: (_, child) => Transform.translate(
-        offset: Offset(0, (scroll.hasClients ? scroll.offset : 0) * _parallax),
-        child: child,
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -271,7 +330,7 @@ class ServiceHero extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(Radii.card),
       child: AspectRatio(
-        aspectRatio: 16 / 10,
+        aspectRatio: 12 / 7,
         child: ColoredBox(
           color: context.colors.surfaceHigh,
           child: url is String && url.startsWith('https://')
@@ -281,10 +340,32 @@ class ServiceHero extends StatelessWidget {
                   // Hero box is at most ~full width; 1080 covers a 3x phone without decoding the original.
                   cacheWidth: 1080,
                   semanticLabel: context.t.service(service.code),
-                  errorBuilder: (_, _, _) => Center(child: _art(context)),
+                  errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
                 )
-              : Center(child: _art(context)),
+              : const _PhotoPlaceholder(),
         ),
+      ),
+    );
+  }
+}
+
+class _PhotoPlaceholder extends StatelessWidget {
+  const _PhotoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = context.colors.inkMuted;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.image_outlined, size: 36, color: muted),
+          const SizedBox(height: Space.xs),
+          Text(
+            context.t.servicePhotoSlot,
+            style: context.text.bodyMedium?.copyWith(color: muted),
+          ),
+        ],
       ),
     );
   }

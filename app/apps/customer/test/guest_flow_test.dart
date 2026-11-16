@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
+import 'support/home_groups.dart';
 import 'support/signup_consent.dart';
 
 Json _draftCard() => {
@@ -88,7 +89,7 @@ void main() {
         await pumpCustomerApp(tester, env);
         await settle(tester, duration: const Duration(milliseconds: 500));
 
-        await tester.tap(find.text(koT.service('studio')).first);
+        await openServiceFromHome(tester, 'kitchen');
         await settle(tester);
         expect(find.text(koT.dfBookNow), findsOneWidget);
 
@@ -186,7 +187,7 @@ void main() {
         final env = await TestEnv.create(fake: fake, signedIn: false);
         await pumpCustomerApp(tester, env);
         await settle(tester, duration: const Duration(milliseconds: 500));
-        await tester.tap(find.text(koT.service('studio')).first);
+        await openServiceFromHome(tester, 'kitchen');
         await settle(tester);
         await tester.tap(find.text(koT.dfBookNow));
         await settle(tester);
@@ -224,7 +225,7 @@ void main() {
         final env = await TestEnv.create(fake: fake, signedIn: false);
         await pumpCustomerApp(tester, env);
         await settle(tester, duration: const Duration(milliseconds: 500));
-        await tester.tap(find.text(koT.service('studio')).first);
+        await openServiceFromHome(tester, 'kitchen');
         await settle(tester);
         await tester.tap(find.text(koT.dfBookNow));
         await settle(tester);
@@ -254,7 +255,7 @@ void main() {
       final env = await TestEnv.create(fake: fake, signedIn: false);
       await pumpCustomerApp(tester, env);
       await settle(tester, duration: const Duration(milliseconds: 500));
-      await tester.tap(find.text(koT.service('studio')).first);
+      await openServiceFromHome(tester, 'kitchen');
       await settle(tester);
       await tester.tap(find.text(koT.dfBookNow));
       await settle(tester);
@@ -287,7 +288,7 @@ void main() {
         final env = await TestEnv.create(fake: fake, signedIn: false);
         await pumpCustomerApp(tester, env);
         await settle(tester, duration: const Duration(milliseconds: 500));
-        await tester.tap(find.text(koT.service('studio')).first);
+        await openServiceFromHome(tester, 'kitchen');
         await settle(tester);
         await tester.tap(find.text(koT.dfBookNow));
         await settle(tester);

@@ -84,22 +84,6 @@ bool _roomy(BuildContext context) =>
 String _teamName(BuildContext context, T t) =>
     '${BrandScope.of(context).name} ${t.chatTeam}';
 
-String _buildingLabel(T t, String code) => switch (code) {
-  'apartment' => t.building_apartment,
-  'villa' => t.building_villa,
-  'officetel' => t.building_officetel,
-  'house' => t.building_house,
-  _ => t.building_other,
-};
-
-String _layoutLabel(T t, String code) => switch (code) {
-  'studio' => t.layout_studio,
-  'one_and_half' => t.layout_one_and_half,
-  'two_rooms' => t.layout_two_rooms,
-  'three_rooms' => t.layout_three_rooms,
-  _ => t.layout_four_plus,
-};
-
 /// Tab-root title: large, bold and left-aligned (design p03, p05).
 Widget tabRootTitle(BuildContext context, String title) => Text(
   title,
@@ -259,7 +243,11 @@ class _ChatListTabState extends State<ChatListTab> {
                     child: Column(
                       children: [
                         _ThreadTile(thread: th, onReturn: reload),
-                        const Divider(height: 1),
+                        const Divider(
+                          height: 1,
+                          indent: Space.md,
+                          endIndent: Space.md,
+                        ),
                       ],
                     ),
                   ),
@@ -308,10 +296,7 @@ class _HoursBar extends StatelessWidget {
             child: Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(
-                    text: '${t.chatHoursTitle} · $hours',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+                  TextSpan(text: '${t.chatHoursTitle} · $hours'),
                   TextSpan(text: ' · ${t.chatReplyFast}'),
                 ],
               ),

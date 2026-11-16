@@ -1,6 +1,8 @@
 import 'package:core/auth_pay.dart';
 import 'package:core/core.dart';
 import 'package:customer/screens/booking_flow.dart';
+import 'package:customer/screens/service.dart';
+import 'package:customer/state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:test_support/test_support.dart';
@@ -22,6 +24,7 @@ Future<FakeApi> _openCheckout(
   required Json wallet,
   List<Json>? methods,
   void Function(FakeApi)? routes,
+  RemoteConfig config = const RemoteConfig(),
 }) async {
   setViewport(tester, tallPhoneSize);
   final fake = FakeApi();
@@ -44,9 +47,18 @@ Future<FakeApi> _openCheckout(
     methods: methods ?? const <Json>[],
   );
   final env = await TestEnv.create(fake: fake);
-  await pumpCustomerApp(tester, env);
-  await pumpUntilFound(tester, find.text(koT.service('studio')));
-  await tester.tap(find.text(koT.service('studio')));
+  // Studios are hidden from home (NTD CR-3): the detail screen is the entry point. The app
+  // state is loaded first, as the signed-in app has it (name, methods, coupons).
+  final app = AppState(env.api, FakeRealtime(env.api));
+  await app.loadAll();
+  await tester.pumpWidget(
+    CustomerTestHost(
+      env: env,
+      app: app,
+      config: config,
+      home: ServiceScreen(service: Service.fromJson(serviceJson('studio'))),
+    ),
+  );
   await settle(tester);
   await tester.tap(find.text(koT.dfBookNow));
   await settle(tester);
@@ -163,6 +175,7 @@ void main() {
       tester,
       wallet: _wallet(enabled: false),
       methods: [paymentMethodJson()],
+      config: const RemoteConfig(maintenance: true),
       routes: (f) => f.reply('GET', '/config', {
         'maintenance': {'on': true},
       }),

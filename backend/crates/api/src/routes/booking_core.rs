@@ -21,11 +21,11 @@ use chrono::{DateTime, NaiveDate, Utc};
 use domain::{
     Won,
     booking::BookingStatus,
-    catalog::Service,
+    catalog::{Pricing, Service},
     coupon::Coupon,
     growth::{apply_welcome, welcome_applies},
     partner::{payout, payout_date},
-    pricing::{PriceBreakdown, price_booking},
+    pricing::{PriceBreakdown, price_booking_with},
     quote::QuoteAnswers,
     schedule::{check_capacity, check_date, check_slot},
 };
@@ -39,6 +39,9 @@ use uuid::Uuid;
 pub struct BookingBody {
     pub service_code: String,
     pub unit_index: Option<usize>,
+    /// Counts services: one count per option, in catalogue order. Empty for every other service.
+    #[serde(default)]
+    pub counts: Vec<u8>,
     pub address_id: Uuid,
     pub visit_date: NaiveDate,
     pub start_hour: u8,
@@ -92,7 +95,7 @@ pub async fn prepare(db: &PgPool, user: Uuid, b: &BookingBody) -> ApiResult<Prep
     service.check_address_size(addr.size_pyeong as u16)?;
     check_date(today_kst(), b.visit_date)?;
     check_slot(service.is_quote(), b.start_hour)?;
-    let snapshot = json!({ "kind": addr.kind, "label": addr.label, "road_address": addr.road_address, "detail": addr.detail, "size_pyeong": addr.size_pyeong });
+    let snapshot = json!({ "kind": addr.kind, "label": addr.label, "road_address": addr.road_address, "detail": addr.detail, "district_code": addr.district_code, "size_pyeong": addr.size_pyeong });
     let notes = if b.visit_notes.is_null() {
         json!({})
     } else {
@@ -150,7 +153,7 @@ pub async fn price_for(conn: &mut PgConnection, user: Uuid, prep: &Prepared, b: 
         None => None,
     };
     let peak = fixed_peak_bps(&mut *conn, b.visit_date, b.start_hour).await?;
-    let price = price_booking(&prep.service, b.unit_index, coupon.as_ref(), peak, Utc::now())?;
+    let price = price_booking_with(&prep.service, b.unit_index, &b.counts, coupon.as_ref(), peak, Utc::now())?;
     let offer = growth::load_welcome(conn).await?;
     if !offer.enabled || coupon.is_some() {
         return Ok(price);
@@ -200,9 +203,10 @@ pub async fn insert_paid(
     let number = next_number(&mut *conn).await?;
     let mut notes = prep.notes.clone();
     let access_code = take_entry(&mut notes).map(|code| crypto::encrypt(key, crypto::aad::ACCESS_CODE, &code));
+    let unit_counts = stored_counts(&prep.service, b)?;
     sqlx::query(
-        "INSERT INTO bookings (id, number, user_id, service_code, unit_index, address, district_code, visit_date, start_hour, minutes, status, list_price, discount, paid_amount, coupon_id, visit_notes, access_code_enc, household)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13,$14,$15,$16,$17)",
+        "INSERT INTO bookings (id, number, user_id, service_code, unit_index, address, district_code, visit_date, start_hour, minutes, status, list_price, discount, paid_amount, coupon_id, visit_notes, access_code_enc, household, unit_counts)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12,$13,$14,$15,$16,$17,$18)",
     )
     .bind(id)
     .bind(&number)
@@ -215,12 +219,13 @@ pub async fn insert_paid(
     .bind(i16::from(b.start_hour))
     .bind(price.minutes as i32)
     .bind(price.list_price.0)
-    .bind(price.discount.0)
+    .bind(price.total_discount().0)
     .bind(price.total.0)
     .bind(b.coupon_id)
     .bind(&notes)
     .bind(access_code)
     .bind(&prep.household)
+    .bind(unit_counts)
     .execute(&mut *conn)
     .await?;
     if let Some(cid) = b.coupon_id {
@@ -231,6 +236,21 @@ pub async fn insert_paid(
             .await?;
     }
     Ok(number)
+}
+
+/// The per-option counts to store: only counts services keep them (legacy `unit_index` is read as one item).
+pub fn stored_counts(service: &Service, b: &BookingBody) -> ApiResult<Option<Vec<i16>>> {
+    if !matches!(service.pricing, Pricing::Counts { .. }) {
+        return Ok(None);
+    }
+    let counts = service.counts_for(b.unit_index, &b.counts)?;
+    Ok(Some(counts.into_iter().map(i16::from).collect()))
+}
+
+/// Counts read from a stored row (null means none). A value that does not fit a u8 becomes u8::MAX,
+/// which pricing then rejects, rather than being dropped.
+pub fn counts_from_row(stored: Option<Vec<i16>>) -> Vec<u8> {
+    stored.unwrap_or_default().into_iter().map(|c| u8::try_from(c).unwrap_or(u8::MAX)).collect()
 }
 
 /// Records a successful charge or payment. `idem` must be unique per payment.

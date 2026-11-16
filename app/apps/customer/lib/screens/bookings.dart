@@ -28,17 +28,11 @@ const _headerMaxTextScale = 1.3;
 /// Days of the neighbouring months are shown greyed.
 const _outsideAlpha = 0.4;
 
-/// Languages that write the year before the month, where "26년 11월" reads naturally.
-const _shortYearLangs = {'ko', 'ja', 'zh'};
-
 DateTime _monthOf(DateTime d) => DateTime(d.year, d.month);
 
-String _monthTitle(DateTime month, String lang) {
-  final full = DateFormat.yMMMM(lang).format(month);
-  return _shortYearLangs.contains(lang)
-      ? full.replaceFirst('${month.year}', '${month.year % 100}')
-      : full;
-}
+/// The full year always ("2026년 11월"): a two-digit year reads as a page number.
+String _monthTitle(DateTime month, String lang) =>
+    DateFormat.yMMMM(lang).format(month);
 
 /// Month calendar (a drag handle folds it to one week) over the selected day's bookings.
 class BookingsTab extends StatefulWidget {
@@ -759,7 +753,7 @@ class _DayList extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: Space.lg),
               child: Center(
-                child: Text(t.bookingsEmpty, style: context.text.bodySmall),
+                child: Text(t.bookingsEmptyDay, style: context.text.bodySmall),
               ),
             ),
           for (final MapEntry(key: label, value: list) in groups.entries) ...[

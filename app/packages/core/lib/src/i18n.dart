@@ -4,6 +4,7 @@ import 'package:ui/ui.dart';
 
 import 'api.dart';
 import 'gen/app_localizations.dart';
+import 'models.dart';
 
 extension L10nX on BuildContext {
   T get t => T.of(this);
@@ -148,6 +149,9 @@ extension Labels on T {
     'sofa' => svc_sofa,
     'move_out' => svc_move_out,
     'move_in' => svc_move_in,
+    'window' => svc_window,
+    'disinfection' => svc_disinfection,
+    'whole_home' => svc_whole_home,
     _ => code,
   };
 
@@ -160,6 +164,9 @@ extension Labels on T {
     'sofa' => svcShort_sofa,
     'move_out' => svcShort_move_out,
     'move_in' => svcShort_move_in,
+    'window' => svcShort_window,
+    'disinfection' => svcShort_disinfection,
+    'whole_home' => svcShort_whole_home,
     _ => code,
   };
 
@@ -172,6 +179,8 @@ extension Labels on T {
     'sofa' => svcDesc_sofa,
     'move_out' => svcDesc_move_out,
     'move_in' => svcDesc_move_in,
+    'window' => svcDesc_window,
+    'disinfection' => svcDesc_disinfection,
     _ => '',
   };
 
@@ -180,6 +189,7 @@ extension Labels on T {
     'mattress' => svcNotes_mattress,
     'aircon' => svcNotes_aircon,
     'sofa' => svcNotes_sofa,
+    'disinfection' => svcNotes_disinfection,
     _ => '',
   }.split('\n').where((l) => l.isNotEmpty).toList();
 
@@ -187,6 +197,8 @@ extension Labels on T {
     'bathroom' => unitTitle_bathroom,
     'mattress' => unitTitle_mattress,
     'aircon' => unitTitle_aircon,
+    'window' => unitTitle_window,
+    'disinfection' => unitTitle_disinfection,
     _ => unitTitle_sofa,
   };
 
@@ -201,8 +213,48 @@ extension Labels on T {
       'seat_3' => unit_seat_3,
       'seat_4_plus' => unit_seat_4_plus,
       'l_shape' => unit_l_shape,
+      'small' || 'window_small' => unit_window_small,
+      'large' || 'window_large' => unit_window_large,
+      'mattress' => unit_mattress,
+      'pest' => unit_pest,
+      'mite_bedbug' => unit_mite_bedbug,
+      'sanitize' => unit_sanitize,
+      'sick_house' => unit_sick_house,
       _ => key,
     };
+  }
+
+  /// Short option name for summaries ("벽걸이 1 · 스탠드 2"); falls back to [unit].
+  String unitShort(String key) {
+    if (key.startsWith('count_')) return unit_count(key.substring(6));
+    return switch (key) {
+      'wall' => unitShort_wall,
+      'stand' => unitShort_stand,
+      'two_in_one' => unitShort_two_in_one,
+      'ceiling' => unitShort_ceiling,
+      'seat_1_2' => unitShort_seat_1_2,
+      'seat_3' => unitShort_seat_3,
+      'seat_4_plus' => unitShort_seat_4_plus,
+      'l_shape' => unitShort_l_shape,
+      'small' || 'window_small' => unitShort_small,
+      'large' || 'window_large' => unitShort_large,
+      'mattress' => unitShort_mattress,
+      'pest' => unitShort_pest,
+      'mite_bedbug' => unitShort_mite_bedbug,
+      'sanitize' => unitShort_sanitize,
+      'sick_house' => unitShort_sick_house,
+      _ => unit(key),
+    };
+  }
+
+  /// Picked options with their counts, in catalogue order: "벽걸이 1 · 스탠드 2". Empty when nothing is picked.
+  String unitCounts(Service s, List<int> counts) {
+    final single = s.units.length == 1;
+    return [
+      for (final (i, u) in s.units.indexed)
+        if (i < counts.length && counts[i] > 0)
+          '${single ? service(s.code) : unitShort(u.labelKey)} ${counts[i]}',
+    ].join(' · ');
   }
 
   String status(int s) => switch (s) {

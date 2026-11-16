@@ -7,13 +7,17 @@ import 'package:ui/ui.dart';
 import '../guest.dart';
 import '../public_offers.dart';
 import '../state.dart';
+import '../web_ready.dart';
 import 'addresses.dart';
 import 'bookings.dart' show BookingCard;
 import 'content_rail.dart';
 import 'feed.dart';
 import 'growth.dart';
 import 'notifications.dart';
+import 'pick.dart';
+import 'reviews.dart';
 import 'service.dart';
+import 'service_groups.dart';
 
 part 'home_sections.dart';
 
@@ -71,6 +75,7 @@ class _HomeTabState extends State<HomeTab> {
   List<ContentItem> _banners = const [];
   ContentItem? _notice;
   List<ContentItem> _articles = const [];
+  List<ServiceGroup> _groups = defaultServiceGroups;
   List<Json> _feed = const [];
   bool _loaded = false;
 
@@ -113,7 +118,7 @@ class _HomeTabState extends State<HomeTab> {
         (rows as List).map((e) => ContentItem(e as Json)).toList();
     Future<List<ContentItem>?> content(String kind) =>
         _section(api.get('/content', query: {'kind': kind}), items);
-    final (bookings, feed, banners, notice, news, tips) = await (
+    final (bookings, feed, banners, notice, news, tips, groups) = await (
       _section(
         signedIn ? api.get('/bookings') : Future.value(const <Json>[]),
         (r) => (r as List).map((e) => Booking.fromJson(e as Json)).toList(),
@@ -128,6 +133,7 @@ class _HomeTabState extends State<HomeTab> {
       content('notice'),
       content('news'),
       content('tip'),
+      fetchServiceGroups(api),
     ).wait;
     if (!mounted) return;
     if (feed != null) unawaited(context.appRead.cache.write(_feedKey, feed));
@@ -142,7 +148,10 @@ class _HomeTabState extends State<HomeTab> {
         _articles = _alternate(news ?? const [], tips ?? const []);
       }
       _feed = feed ?? _feed;
+      _groups = groups;
     });
+    // The page shell's splash goes once the home has its first answers (web only; no-op elsewhere).
+    markAppReady();
   }
 
   /// Inline, so the rest of home stays usable; retry runs the whole load again.
@@ -236,7 +245,6 @@ class _HomeTabState extends State<HomeTab> {
   /// Design order: grid, recommended, banner, news. What the design does not show comes last.
   Widget _allView(List<ContentItem> picks) {
     final app = context.app;
-    final t = context.t;
     final c = context.colors;
     final next = _next;
     final last = _lastDone;
@@ -259,14 +267,7 @@ class _HomeTabState extends State<HomeTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _Intro(
-                  greeting: app.name.isEmpty
-                      ? timeGreeting(t, DateTime.now())
-                      : t.homeGreeting(app.name),
-                  addresses: app.addresses,
-                ),
-                const SizedBox(height: Space.xs),
-                _ServiceGrid(services: app.services),
+                _GroupGrid(groups: _groups, services: app.services),
                 if (!signedIn) const WelcomeOfferLine(),
                 const SizedBox(height: Space.md),
                 Divider(height: 1, thickness: 1, color: c.line),
@@ -330,38 +331,57 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  /// PICK: every console recommendation and personal card, nothing else.
-  Widget _pickView(List<ContentItem> picks) => ColoredBox(
-    key: const ValueKey(_HomeView.pick),
-    color: context.colors.surface,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Space.gutter,
-        Space.md,
-        Space.gutter,
-        Space.xxxl,
-      ),
-      child: FeedSection(
-        cards: _feed,
-        picks: picks,
-        loading: !_loaded,
-        empty: Padding(
-          padding: const EdgeInsets.symmetric(vertical: Space.xxxl),
-          // "Nothing here yet" would be a lie when the feed simply did not load.
-          child: _error != null
-              ? _errorCard(_error!)
-              : Center(
+  /// PICK: the recommendations and feed, then popular services and the newest reviews, so the tab
+  /// is not blank while the feed is thin.
+  Widget _pickView(List<ContentItem> picks) {
+    final app = context.app;
+    final t = context.t;
+    final nothing =
+        _loaded && _feed.isEmpty && picks.isEmpty && app.services.isEmpty;
+    return ColoredBox(
+      key: const ValueKey(_HomeView.pick),
+      color: context.colors.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          Space.gutter,
+          Space.md,
+          Space.gutter,
+          Space.xxxl,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            FeedSection(
+              cards: _feed,
+              picks: picks,
+              loading: !_loaded,
+              empty: const SizedBox.shrink(),
+            ),
+            // "Nothing here yet" would be a lie when the feed simply did not load.
+            if (_error case final e?)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: Space.xxxl),
+                child: _errorCard(e),
+              )
+            else if (nothing)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: Space.xxxl),
+                child: Center(
                   child: Text(
-                    context.t.noContent,
+                    t.noContent,
                     style: context.text.bodyMedium?.copyWith(
                       color: context.colors.inkMuted,
                     ),
                   ),
                 ),
+              ),
+            PopularServices(services: app.services),
+            const RecentReviews(),
+          ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Greeting by local time of day; the name replaces it once the account has one.
@@ -420,28 +440,6 @@ class _HeaderTitle extends StatelessWidget {
   }
 }
 
-/// One quiet greeting line with the address chip under it (not in the design; kept small).
-class _Intro extends StatelessWidget {
-  const _Intro({required this.greeting, required this.addresses});
-  final String greeting;
-  final List<Address> addresses;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // The greeting strings break after the name; here it is one quiet line.
-      Text(
-        greeting.replaceAll('\n', ' '),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: context.text.bodySmall?.copyWith(color: context.colors.inkSoft),
-      ),
-      _AddressChip(addresses: addresses),
-    ],
-  );
-}
-
 /// Referral needs an account. The amount shows before the tap; hidden while referrals are off.
 /// Signing in rebuilds the home tab (the shell keys its tabs by account), so the real card appears on its own.
 class _GuestReferralGate extends StatelessWidget {
@@ -481,45 +479,6 @@ class _GuestReferralGate extends StatelessWidget {
       );
     },
   );
-}
-
-class _AddressChip extends StatelessWidget {
-  const _AddressChip({required this.addresses});
-  final List<Address> addresses;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final a = addresses.firstOrNull;
-    final label = a == null
-        ? context.t.homeAddAddressCta
-        : '${a.label} · ${districtByCode(a.districtCode)?.name(context.lang) ?? ''}';
-    return InkWell(
-      borderRadius: BorderRadius.circular(Radii.chip),
-      onTap: () => Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const AddressesScreen())),
-      // 48 dp minimum touch target (Android / WCAG).
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ExcludeSemantics(child: Icon3D('ui_pin', size: 18)),
-            const SizedBox(width: Space.xxs),
-            Flexible(
-              child: Text(
-                label,
-                style: context.text.bodySmall?.copyWith(color: c.inkSoft),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Icon(Icons.expand_more_rounded, size: 18, color: c.inkMuted),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// The next visit as one flat card: when it is, then the same row as on the bookings tab.

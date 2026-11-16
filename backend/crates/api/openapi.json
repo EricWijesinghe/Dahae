@@ -175,6 +175,21 @@
         }
       }
     },
+    "/v1/service-groups": {
+      "get": {
+        "operationId": "listServiceGroups",
+        "tags": [
+          "public"
+        ],
+        "summary": "Home categories in order, with member services, chooser and derived badge (HOT over N). Inactive groups and members, and members hidden from home (studio), are left out",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OK. Cache-Control: public, max-age=60"
+          }
+        }
+      }
+    },
     "/v1/slots": {
       "get": {
         "operationId": "listSlots",
@@ -199,7 +214,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Price estimate for a service and size",
+        "summary": "Price estimate for a service and size. Optional `service_code`: whole_home always prices as a lived-in deep clean with fully lived-in luggage.",
         "security": [],
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
@@ -1112,18 +1127,33 @@
         "tags": [
           "customer"
         ],
-        "summary": "Create a booking (idempotent)",
+        "summary": "Create a booking (idempotent). Counts services take `counts`: one integer per option in catalogue order (see CountsPricing); the booking returns `unit_counts`. Older clients may send `unit_index` instead.",
         "parameters": [
           {
             "$ref": "#/components/parameters/IdempotencyKey"
           }
         ],
         "requestBody": {
-          "$ref": "#/components/requestBodies/Object"
+          "$ref": "#/components/requestBodies/Object",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingBody"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -1840,7 +1870,17 @@
         "summary": "Open jobs matching the partner's districts (capped at 100)",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK. Each job carries `unit_counts` (the customer's count per option, null for non-counts services) and `count_units` (the owner's options in catalogue order, null for non-counts services).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PartnerJobCard"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1859,7 +1899,22 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK. `booking` carries `unit_counts` and `count_units` as in the job feed; `count_units` is null for non-counts services.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "booking"
+                  ],
+                  "properties": {
+                    "booking": {
+                      "$ref": "#/components/schemas/PartnerJobCard"
+                    }
+                  }
+                }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -2357,6 +2412,62 @@
         }
       }
     },
+    "/v1/admin/bookings/{id}/resend-quote": {
+      "post": {
+        "operationId": "adminResendQuote",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Re-send the last quote card to the customer",
+        "description": "No request body. Posts the booking's most recent `quote` chat message again, unchanged (same price, deposit and estimate), and writes a `quote.resend` audit row. Refused with 409 when the booking is no longer open for quotes or no quote was sent yet.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The posted chat message (MessageRow).",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "01930000-0000-7000-8000-000000000001",
+                  "thread_id": "01930000-0000-7000-8000-000000000002",
+                  "sender": "staff",
+                  "kind": "quote",
+                  "body": {
+                    "booking_id": "01930000-0000-7000-8000-000000000003",
+                    "final_price": 350000,
+                    "deposit": 35000,
+                    "balance": 315000,
+                    "note": null,
+                    "service_code": "move_out",
+                    "visit_date": "2026-11-19",
+                    "start_hour": 8,
+                    "estimate": 346500,
+                    "answers": {
+                      "cleaning_type": "standard",
+                      "luggage": "empty",
+                      "building": "apartment",
+                      "layout": "two_rooms",
+                      "duplex": false,
+                      "bathrooms": 1,
+                      "balconies": 1,
+                      "elevator": true,
+                      "floor_3_or_higher": true
+                    }
+                  },
+                  "created_at": "2026-11-12T05:00:00Z"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/threads": {
       "get": {
         "operationId": "adminInbox",
@@ -2513,6 +2624,45 @@
           "admin"
         ],
         "summary": "Update a service's pricing and content",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Code"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/service-groups": {
+      "get": {
+        "operationId": "adminListServiceGroups",
+        "tags": [
+          "admin"
+        ],
+        "summary": "All home categories including inactive groups and services",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/admin/service-groups/{code}": {
+      "put": {
+        "operationId": "adminUpdateServiceGroup",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update a group's title (ko/en), order, active flag, icon, member services (listed order) and config. Audited.",
         "parameters": [
           {
             "$ref": "#/components/parameters/Code"
@@ -6419,6 +6569,42 @@
           }
         }
       }
+    },
+    "/v1/public/reviews": {
+      "get": {
+        "operationId": "publicReviews",
+        "tags": [
+          "public"
+        ],
+        "summary": "Public review list (rating, body, name, booking_id), cursor paged",
+        "security": [],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6431,6 +6617,67 @@
       }
     },
     "schemas": {
+      "CountUnit": {
+        "description": "One counts option of a service, in the owner's catalogue order. `label` is null for the built-in options (the app localises them by `label_key`).",
+        "type": "object",
+        "required": [
+          "label_key",
+          "label"
+        ],
+        "properties": {
+          "label_key": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PartnerJobCard": {
+        "description": "A job as a partner sees it. `unit_counts` and `count_units` are null for services without counts.",
+        "type": "object",
+        "required": [
+          "id",
+          "service_code"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "service_code": {
+            "type": "string"
+          },
+          "unit_index": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "unit_counts": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "count_units": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CountUnit"
+            }
+          }
+        }
+      },
       "Error": {
         "type": "object",
         "required": [
@@ -6452,6 +6699,173 @@
                 "description": "Optional human text. Never contains internals."
               }
             }
+          }
+        }
+      },
+      "CountsPricing": {
+        "description": "Counts pricing (catalogue type \"counts\"). A booking sends `counts`: one integer per option, in catalogue order, each at most `max_each` (default 20). Two or more items take `multi_discount_bps` off, rounded to 100 won. Minutes total at least 60. Prices are placeholders until the owner sets them in the console.",
+        "type": "object",
+        "required": [
+          "type",
+          "units"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "counts"
+            ]
+          },
+          "units": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "label_key",
+                "minutes",
+                "price"
+              ],
+              "properties": {
+                "label_key": {
+                  "type": "string"
+                },
+                "minutes": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "price": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "max_each": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 20
+          },
+          "multi_discount_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        }
+      },
+      "BookingBody": {
+        "description": "Booking request. Counts services send `counts` (one integer per option, catalogue order); legacy single-unit services send `unit_index`.",
+        "type": "object",
+        "required": [
+          "service_code",
+          "address_id",
+          "visit_date",
+          "start_hour",
+          "payment_method_id"
+        ],
+        "properties": {
+          "service_code": {
+            "type": "string"
+          },
+          "unit_index": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 255
+          },
+          "counts": {
+            "type": "array",
+            "description": "One count per catalogue option. Each at most max_each (default 20); at least one non-zero.",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            }
+          },
+          "address_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "visit_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "start_hour": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 23
+          },
+          "payment_method_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "coupon_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "visit_notes": {
+            "type": "object"
+          }
+        }
+      },
+      "Booking": {
+        "description": "A booking. `unit_counts` is set for counts services (and migrated mattress rows) and null otherwise; `unit_index` is kept for legacy clients.",
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "service_code",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "service_code": {
+            "type": "string"
+          },
+          "unit_index": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "unit_counts": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "minutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "integer"
+          },
+          "paid_amount": {
+            "type": [
+              "integer",
+              "null"
+            ]
           }
         }
       }

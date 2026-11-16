@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ui/ui.dart';
 
+import '../booking_labels.dart';
 import '../state.dart';
 import 'finance_tax.dart';
 import 'confirm_action.dart';
@@ -81,7 +82,7 @@ class PartnersScreen extends StatelessWidget {
                         ],
                       ),
                       subtitle: Text(
-                        '${p['phone']} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100} · ${t.cQualityScore} ${p['quality_score'] ?? '-'} (${qualityStatusLabel(t, p['quality_status'] as String?)})',
+                        '${formatKoreanPhone('${p['phone']}')} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100} · ${t.cQualityScore} ${p['quality_score'] ?? '-'} (${qualityStatusLabel(t, p['quality_status'] as String?)})',
                       ),
                       trailing: !admin
                           ? null
@@ -605,17 +606,11 @@ class _CustomersState extends State<CustomersScreen> {
                 for (final c in rows)
                   ListTile(
                     leading: CircleAvatar(
-                      child: Text(
-                        (c['name'] as String).isEmpty
-                            ? '?'
-                            : (c['name'] as String).characters.first,
-                      ),
+                      child: Text(customerInitial(c['name'] as String?)),
                     ),
-                    title: Text(
-                      (c['name'] as String).isEmpty ? '-' : c['name'] as String,
-                    ),
+                    title: Text(customerNameLabel(t, c['name'] as String?)),
                     subtitle: Text(
-                      '${c['phone']} · ${t.cJoined} ${dateLabel(DateTime.parse(c['created_at'] as String), context.lang)}',
+                      '${formatKoreanPhone('${c['phone']}')} · ${t.cJoined} ${dateLabel(DateTime.parse(c['created_at'] as String), context.lang)}',
                     ),
                     trailing: Text(t.cBookingsCount('${c['bookings']}')),
                     // The points ledger is admin-only on the server too.

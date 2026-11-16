@@ -405,7 +405,7 @@ async fn content(c: &mut Ctx<'_>) -> Result<(), DemoError> {
         ),
         (
             json!({"ko": "입주 청소, 이사 전 청소까지 한 번에", "en": "Move-in cleaning, including the pre-move-out clean"}),
-            json!({"text": {"ko": "나가는 집과 들어가는 집을 함께 맡기면 일정을 한 번에 맞춰 드려요.", "en": "Book both homes together and we line up the two visits for you."}}),
+            json!({"text": {"ko": "입주 청소와 이사 전 청소를 예약할 수 있어요", "en": "Book move-in or move-out cleaning in a few taps."}}),
             Some("service/move_in"),
         ),
         (

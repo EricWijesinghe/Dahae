@@ -60,7 +60,7 @@ fn scope_on() -> PeakConfig {
 /// Quote answers for a standard two-room move, with the slot the customer picked.
 fn quote_answers(visit: NaiveDate) -> serde_json::Value {
     json!({
-        "cleaning_type": "standard", "luggage": "empty", "building": "commercial", "layout": "two_rooms",
+        "service_code": "studio", "cleaning_type": "standard", "luggage": "empty", "building": "commercial", "layout": "two_rooms",
         "duplex": false, "bathrooms": 1, "balconies": 0, "elevator": true, "floor_3_or_higher": false,
         "ac_addons": [], "visit_date": visit, "start_hour": VISIT_HOUR
     })

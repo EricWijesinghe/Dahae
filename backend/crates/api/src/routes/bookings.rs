@@ -58,9 +58,9 @@ pub fn routes() -> Router<AppState> {
 }
 
 pub const BOOKING_COLS: &str =
-    "b.id, b.number, b.user_id, b.service_code, b.unit_index, b.address, b.district_code, b.visit_date, b.start_hour, b.minutes, b.status,
+    "b.id, b.number, b.user_id, b.service_code, b.unit_index, b.unit_counts, b.address, b.district_code, b.visit_date, b.start_hour, b.minutes, b.status,
     b.answers, b.estimate, b.final_price, b.deposit, b.list_price, b.discount, b.paid_amount, b.balance_paid, b.coupon_id, b.team_name, b.pro_id,
-    b.visit_notes, b.household, b.reschedule, b.cancelled_at, b.completed_at, b.created_at, b.checked_in_at, b.checked_out_at,
+    b.visit_notes, b.household, b.reschedule, b.cancelled_at, b.completed_at, b.created_at, b.updated_at, b.checked_in_at, b.checked_out_at,
     (b.access_code_enc IS NOT NULL) AS entry_code_set,
     (SELECT t.id FROM chat_threads t WHERE t.booking_id = b.id AND t.audience = 'customer') AS thread_id,
     (SELECT jsonb_build_object('before', c.before_photos, 'after', c.after_photos) FROM completion_reports c WHERE c.booking_id = b.id) AS photos,
@@ -73,6 +73,8 @@ pub struct BookingRow {
     pub user_id: Uuid,
     pub service_code: String,
     pub unit_index: Option<i16>,
+    /// Counts services: one count per option (catalogue order). Null for other services.
+    pub unit_counts: Option<Vec<i16>>,
     pub address: Value,
     pub district_code: String,
     pub visit_date: NaiveDate,
@@ -96,6 +98,7 @@ pub struct BookingRow {
     pub cancelled_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub checked_in_at: Option<DateTime<Utc>>,
     pub checked_out_at: Option<DateTime<Utc>>,
     /// Whether a door code is on file. The code itself is only revealed to the assigned partner.
@@ -200,7 +203,8 @@ pub(crate) async fn create_core(s: &AppState, user: Uuid, req: &CreateBooking) -
 async fn create_quote(s: &AppState, user: Uuid, b: &BookingBody, prep: &Prepared) -> ApiResult<Uuid> {
     // Anything needing its own pool connection is read before the slot lock is taken.
     let formula = load_formula(&s.db).await?;
-    let answers = b.answers.clone().ok_or(ApiError::BadRequest("answers_required"))?;
+    let sent = b.answers.clone().ok_or(ApiError::BadRequest("answers_required"))?.with_home_building();
+    let answers = domain::quote::fixed_answers_for(&prep.service.code, sent);
     let addons = super::catalog::addon_lines(&s.db, &answers).await?;
     let mut tx = s.db.begin().await?;
     // Per-customer lock first: two concurrent requests cannot both pass the open-request count.
@@ -576,17 +580,25 @@ async fn cancel_preview(State(s): State<AppState>, Customer(a): Customer, Path(i
 struct CancelBody {
     /// The fee the customer saw in the preview. Required whenever the fee is above 0.
     accepted_fee: Option<i64>,
+    /// Optional customer reason, one of `CANCEL_REASONS`. Stored in the audit row only.
+    reason: Option<String>,
 }
 
+/// The reason keys the customer apps send. Anything else is refused rather than stored.
+const CANCEL_REASONS: [&str; 4] = ["schedule", "provider", "price", "other"];
+
 async fn cancel(State(s): State<AppState>, Customer(a): Customer, Path(id): Path<Uuid>, body: Option<Json<CancelBody>>) -> ApiResult<Json<BookingRow>> {
-    let accepted = body.and_then(|Json(c)| c.accepted_fee);
-    cancel_owned(&s, a.id, id, accepted).await?;
+    let c = body.map(|Json(c)| c).unwrap_or_default();
+    if c.reason.as_deref().is_some_and(|r| !CANCEL_REASONS.contains(&r)) {
+        return Err(ApiError::BadRequest("invalid cancel reason"));
+    }
+    cancel_owned(&s, a.id, id, c.accepted_fee, c.reason.as_deref()).await?;
     Ok(Json(load_booking(&s.db, id).await?))
 }
 
 /// The customer's cancel with the cancel-fee policy. `accepted_fee` must match the fee shown in the preview.
 /// Shared by the booking route and subscription visit skips.
-pub async fn cancel_owned(s: &AppState, user: Uuid, id: Uuid, accepted_fee: Option<i64>) -> ApiResult<()> {
+pub async fn cancel_owned(s: &AppState, user: Uuid, id: Uuid, accepted_fee: Option<i64>, reason: Option<&str>) -> ApiResult<()> {
     let b = owned(s, user, id).await?;
     let status = b.status()?;
     let (policy, _) = load_cancel_policy(&s.db).await?;
@@ -616,7 +628,7 @@ pub async fn cancel_owned(s: &AppState, user: Uuid, id: Uuid, accepted_fee: Opti
         Some(user),
         "booking.cancel",
         &id.to_string(),
-        json!({ "fee": quote.fee, "refund": quote.refund }),
+        json!({ "fee": quote.fee, "refund": quote.refund, "reason": reason }),
     )
     .await?;
     crate::util::best_effort("waitlist offer on cancel", super::waitlist::offer_for_slot(s, b.visit_date, b.start_hour as u8)).await;

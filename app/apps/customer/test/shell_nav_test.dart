@@ -14,7 +14,9 @@ Icon3D _nav(WidgetTester tester, String id) => tester.widget<Icon3D>(
   find.byWidgetPredicate((w) => w is Icon3D && w.id == id),
 );
 
-List<bool> _active(WidgetTester tester) => [for (final id in _ids) _nav(tester, id).active];
+List<bool> _active(WidgetTester tester) => [
+  for (final id in _ids) _nav(tester, id).active,
+];
 
 Future<TestEnv> _env() async {
   final fake = FakeApi();
@@ -27,7 +29,9 @@ Future<TestEnv> _env() async {
 }
 
 void main() {
-  testWidgets('bottom nav: 4 Dahae tabs with 3D icons, the selected one active', (tester) async {
+  testWidgets('bottom nav: 4 Dahae tabs with 3D icons, the selected one active', (
+    tester,
+  ) async {
     setViewport(tester, phoneSize);
     final env = await _env();
     await pumpCustomerApp(tester, env);
@@ -35,8 +39,19 @@ void main() {
     await settle(tester);
 
     expect(koT.tabBookings, '내 예약');
-    for (final label in [koT.tabHome, koT.tabBookings, koT.tabChat, koT.tabMore]) {
-      expect(find.descendant(of: find.byType(NavigationBar), matching: find.text(label)), findsOneWidget);
+    for (final label in [
+      koT.tabHome,
+      koT.tabBookings,
+      koT.tabChat,
+      koT.tabMore,
+    ]) {
+      expect(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+      );
     }
     expect(_active(tester), [true, false, false, false]);
 
@@ -56,48 +71,68 @@ void main() {
 
     // Unread chats keep their badge on the 3D chat icon.
     expect(
-      find.ancestor(of: find.byWidgetPredicate((w) => w is Icon3D && w.id == 'nav_chat'), matching: find.byType(Badge)),
+      find.ancestor(
+        of: find.byWidgetPredicate((w) => w is Icon3D && w.id == 'nav_chat'),
+        matching: find.byType(Badge),
+      ),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
     await unmount(tester);
   });
 
-  testWidgets('bottom nav under reduced motion switches tabs without any animation', (tester) async {
-    setViewport(tester, phoneSize);
-    tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
-    final env = await _env();
-    await pumpCustomerApp(tester, env);
-    await pumpUntilFound(tester, find.text(koT.tabHome));
-    await settle(tester);
-
-    await tester.tap(find.text(koT.tabChat).last);
-    await tester.pump();
-    expect(_active(tester), [false, false, true, false]);
-    // No pop transform on any tab icon: the active state is the art alone.
-    for (final id in _ids) {
-      expect(
-        find.descendant(of: find.byWidgetPredicate((w) => w is Icon3D && w.id == id), matching: find.byType(Transform)),
-        findsNothing,
-        reason: id,
+  testWidgets(
+    'bottom nav under reduced motion switches tabs without any animation',
+    (tester) async {
+      setViewport(tester, phoneSize);
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
       );
-    }
-    await unmount(tester);
-  });
+      final env = await _env();
+      await pumpCustomerApp(tester, env);
+      await pumpUntilFound(tester, find.text(koT.tabHome));
+      await settle(tester);
 
-  testWidgets('wide layout: the side rail uses the same 3D icons', (tester) async {
-    setViewport(tester, const Size(1200, 800));
-    final env = await _env();
-    await pumpCustomerApp(tester, env);
-    await pumpUntilFound(tester, find.byType(NavigationRail));
-    await settle(tester);
-    for (final id in _ids) {
-      expect(find.byWidgetPredicate((w) => w is Icon3D && w.id == id), findsOneWidget, reason: id);
-    }
-    expect(_active(tester).first, isTrue);
-    await unmount(tester);
-  });
+      await tester.tap(find.text(koT.tabChat).last);
+      await tester.pump();
+      expect(_active(tester), [false, false, true, false]);
+      // No pop transform on any tab icon: the active state is the art alone.
+      for (final id in _ids) {
+        expect(
+          find.descendant(
+            of: find.byWidgetPredicate((w) => w is Icon3D && w.id == id),
+            matching: find.byType(Transform),
+          ),
+          findsNothing,
+          reason: id,
+        );
+      }
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'wide layout: the bottom bar stays at the bottom and uses the 3D icons (CR-2)',
+    (tester) async {
+      setViewport(tester, const Size(1200, 800));
+      final env = await _env();
+      await pumpCustomerApp(tester, env);
+      await pumpUntilFound(tester, find.byType(NavigationBar));
+      await settle(tester);
+      expect(find.byType(NavigationRail), findsNothing);
+      for (final id in _ids) {
+        expect(
+          find.byWidgetPredicate((w) => w is Icon3D && w.id == id),
+          findsOneWidget,
+          reason: id,
+        );
+      }
+      expect(_active(tester).first, isTrue);
+      await unmount(tester);
+    },
+  );
 
   test('slotRangeLabel: period-hour in ko (design), 24h elsewhere', () {
     expect(slotRangeLabel(9, 'ko'), '오전 9시~10시');

@@ -236,16 +236,17 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text(koT.logout), findsOneWidget);
-      expect(find.text('01012345678'), findsOneWidget);
+      expect(find.text('010-1234-5678'), findsOneWidget);
       expect(find.text('jimin@example.com'), findsOneWidget);
       // Values sit at the row's end like the design, not right after a short label.
       final screenRight = tester.getSize(find.byType(AccountScreen)).width;
       final email = tester.getRect(find.text('jimin@example.com'));
       final kakao = tester.getRect(find.text(koT.accountLoginPhone));
+      // The email row keeps its 편집 link after the value, so the value ends short of the edge.
       expect(
-        screenRight - email.right,
-        lessThan(40),
-        reason: 'email at the end: $email',
+        email.right,
+        greaterThan(screenRight * 0.6),
+        reason: 'email value in the value column: $email',
       );
       expect(
         screenRight - kakao.right,

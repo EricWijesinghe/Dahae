@@ -109,6 +109,12 @@ abstract class T {
   /// **'검색'**
   String get addressSearchButton;
 
+  /// No description provided for @addressSearchOffHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'주소 검색은 아직 준비 중이에요. 주소를 직접 입력해 주세요.'**
+  String get addressSearchOffHint;
+
   /// No description provided for @addressSearchMinChars.
   ///
   /// In ko, this message translates to:
@@ -925,6 +931,204 @@ abstract class T {
   /// **'호스팅 서비스 제공자'**
   String get cSetupHostingProvider;
 
+  /// No description provided for @cancelRefundCta.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소하고 {amount} 환불받기'**
+  String cancelRefundCta(String amount);
+
+  /// No description provided for @cancelNoRefund.
+  ///
+  /// In ko, this message translates to:
+  /// **'환불되는 금액이 없어요'**
+  String get cancelNoRefund;
+
+  /// No description provided for @cancelTierLine.
+  ///
+  /// In ko, this message translates to:
+  /// **'방문 {days}일 전 취소 · 취소 수수료 {percent}%'**
+  String cancelTierLine(String days, String percent);
+
+  /// No description provided for @cancelFeeLine.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소 수수료 {fee}'**
+  String cancelFeeLine(String fee);
+
+  /// No description provided for @cancelRefundLine.
+  ///
+  /// In ko, this message translates to:
+  /// **'환불 금액 {refund}'**
+  String cancelRefundLine(String refund);
+
+  /// No description provided for @cancelMethodLine.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제하신 수단으로 돌려드려요'**
+  String get cancelMethodLine;
+
+  /// No description provided for @cancelPolicyLink.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소·환불 기준 보기'**
+  String get cancelPolicyLink;
+
+  /// No description provided for @cancelPolicyTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소·환불 기준'**
+  String get cancelPolicyTitle;
+
+  /// No description provided for @cancelReasonTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소 이유 (선택)'**
+  String get cancelReasonTitle;
+
+  /// No description provided for @cancelReasonSchedule.
+  ///
+  /// In ko, this message translates to:
+  /// **'일정이 맞지 않아요'**
+  String get cancelReasonSchedule;
+
+  /// No description provided for @cancelReasonProvider.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 곳으로 정했어요'**
+  String get cancelReasonProvider;
+
+  /// No description provided for @cancelReasonPrice.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격이 부담돼요'**
+  String get cancelReasonPrice;
+
+  /// No description provided for @cancelReasonOther.
+  ///
+  /// In ko, this message translates to:
+  /// **'기타'**
+  String get cancelReasonOther;
+
+  /// No description provided for @bookingsEmptyDay.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 날은 예약이 없어요'**
+  String get bookingsEmptyDay;
+
+  /// No description provided for @cntTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'수량 선택 가격'**
+  String get cntTitle;
+
+  /// No description provided for @cntHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'고객이 항목마다 수량을 골라요. 두 개 이상 고르면 할인이 적용돼요. 가격은 예시이니 자유롭게 바꿀 수 있어요'**
+  String get cntHelp;
+
+  /// No description provided for @cntAddOption.
+  ///
+  /// In ko, this message translates to:
+  /// **'항목 추가'**
+  String get cntAddOption;
+
+  /// No description provided for @cntOptionName.
+  ///
+  /// In ko, this message translates to:
+  /// **'항목 이름'**
+  String get cntOptionName;
+
+  /// No description provided for @cntMaxEach.
+  ///
+  /// In ko, this message translates to:
+  /// **'항목당 최대 수량 (비우면 제한 없음)'**
+  String get cntMaxEach;
+
+  /// No description provided for @cntDiscount.
+  ///
+  /// In ko, this message translates to:
+  /// **'두 개 이상 할인 (%)'**
+  String get cntDiscount;
+
+  /// No description provided for @cntPreview.
+  ///
+  /// In ko, this message translates to:
+  /// **'미리보기 (수량을 골라 보세요)'**
+  String get cntPreview;
+
+  /// No description provided for @cntPreviewTotal.
+  ///
+  /// In ko, this message translates to:
+  /// **'합계 {price} · 약 {time}'**
+  String cntPreviewTotal(String price, String time);
+
+  /// No description provided for @cntPreviewDiscount.
+  ///
+  /// In ko, this message translates to:
+  /// **'할인 −{amount}'**
+  String cntPreviewDiscount(String amount);
+
+  /// No description provided for @cntMoveUp.
+  ///
+  /// In ko, this message translates to:
+  /// **'위로 옮기기'**
+  String get cntMoveUp;
+
+  /// No description provided for @cntMoveDown.
+  ///
+  /// In ko, this message translates to:
+  /// **'아래로 옮기기'**
+  String get cntMoveDown;
+
+  /// No description provided for @cntRemove.
+  ///
+  /// In ko, this message translates to:
+  /// **'항목 삭제'**
+  String get cntRemove;
+
+  /// No description provided for @cntLess.
+  ///
+  /// In ko, this message translates to:
+  /// **'하나 줄이기'**
+  String get cntLess;
+
+  /// No description provided for @cntMore.
+  ///
+  /// In ko, this message translates to:
+  /// **'하나 더하기'**
+  String get cntMore;
+
+  /// No description provided for @cntNeedOption.
+  ///
+  /// In ko, this message translates to:
+  /// **'항목을 하나 이상 넣어 주세요'**
+  String get cntNeedOption;
+
+  /// No description provided for @cntNeedName.
+  ///
+  /// In ko, this message translates to:
+  /// **'모든 항목에 이름을 적어 주세요'**
+  String get cntNeedName;
+
+  /// No description provided for @cntNeedPrice.
+  ///
+  /// In ko, this message translates to:
+  /// **'모든 항목의 가격과 시간을 0보다 크게 적어 주세요'**
+  String get cntNeedPrice;
+
+  /// No description provided for @cntMaxEachInvalid.
+  ///
+  /// In ko, this message translates to:
+  /// **'최대 수량은 1~20 사이로 적어 주세요'**
+  String get cntMaxEachInvalid;
+
+  /// No description provided for @cntDiscountInvalid.
+  ///
+  /// In ko, this message translates to:
+  /// **'할인은 0~50% 사이로 적어 주세요'**
+  String get cntDiscountInvalid;
+
   /// No description provided for @cgTabPeak.
   ///
   /// In ko, this message translates to:
@@ -1224,6 +1428,210 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'코드가 맞지 않아요. 새 코드를 입력하세요'**
   String get cgCodeWrong;
+
+  /// No description provided for @cgTabGroups.
+  ///
+  /// In ko, this message translates to:
+  /// **'상품 묶음'**
+  String get cgTabGroups;
+
+  /// No description provided for @cgGroupsHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'앱 첫 화면의 큰 메뉴 4개예요. 제목, 순서, 들어가는 상품을 여기서 바꿀 수 있어요'**
+  String get cgGroupsHelp;
+
+  /// No description provided for @cgGroupTitleKo.
+  ///
+  /// In ko, this message translates to:
+  /// **'제목 (한국어)'**
+  String get cgGroupTitleKo;
+
+  /// No description provided for @cgGroupTitleEn.
+  ///
+  /// In ko, this message translates to:
+  /// **'제목 (영어)'**
+  String get cgGroupTitleEn;
+
+  /// No description provided for @cgGroupOrder.
+  ///
+  /// In ko, this message translates to:
+  /// **'순서 (작은 숫자가 먼저)'**
+  String get cgGroupOrder;
+
+  /// No description provided for @cgGroupIcon.
+  ///
+  /// In ko, this message translates to:
+  /// **'그림'**
+  String get cgGroupIcon;
+
+  /// No description provided for @cgGroupChooser.
+  ///
+  /// In ko, this message translates to:
+  /// **'눌렀을 때'**
+  String get cgGroupChooser;
+
+  /// No description provided for @cgChooserMove.
+  ///
+  /// In ko, this message translates to:
+  /// **'이사 질문 먼저'**
+  String get cgChooserMove;
+
+  /// No description provided for @cgChooserList.
+  ///
+  /// In ko, this message translates to:
+  /// **'상품 고르기'**
+  String get cgChooserList;
+
+  /// No description provided for @cgChooserDirect.
+  ///
+  /// In ko, this message translates to:
+  /// **'상품 바로 열기'**
+  String get cgChooserDirect;
+
+  /// No description provided for @cgChooserMoveHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 집인지 오래된 집인지 묻고, 집 크기를 물어요'**
+  String get cgChooserMoveHelp;
+
+  /// No description provided for @cgChooserListHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'들어가 있는 상품 목록을 보여줘요'**
+  String get cgChooserListHelp;
+
+  /// No description provided for @cgChooserDirectHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'상품이 하나뿐일 때 바로 그 상품 화면으로 가요'**
+  String get cgChooserDirectHelp;
+
+  /// No description provided for @cgGroupMembers.
+  ///
+  /// In ko, this message translates to:
+  /// **'들어가는 상품 (누른 순서대로 보여요)'**
+  String get cgGroupMembers;
+
+  /// No description provided for @cgGroupMembersHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 묶음에 있는 상품은 먼저 그 묶음에서 빼야 해요'**
+  String get cgGroupMembersHelp;
+
+  /// No description provided for @cgMemberOtherGroup.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 묶음: {group}'**
+  String cgMemberOtherGroup(String group);
+
+  /// No description provided for @cgMoveNewService.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 집(신축)일 때 상품'**
+  String get cgMoveNewService;
+
+  /// No description provided for @cgMoveOldService.
+  ///
+  /// In ko, this message translates to:
+  /// **'오래된 집(구축)일 때 상품'**
+  String get cgMoveOldService;
+
+  /// No description provided for @cgMoveHomeTypes.
+  ///
+  /// In ko, this message translates to:
+  /// **'집 크기 선택지'**
+  String get cgMoveHomeTypes;
+
+  /// No description provided for @cgHomeOneTwo.
+  ///
+  /// In ko, this message translates to:
+  /// **'원룸·투룸'**
+  String get cgHomeOneTwo;
+
+  /// No description provided for @cgHomeApartment.
+  ///
+  /// In ko, this message translates to:
+  /// **'아파트'**
+  String get cgHomeApartment;
+
+  /// No description provided for @cgHomeVilla.
+  ///
+  /// In ko, this message translates to:
+  /// **'빌라·주택'**
+  String get cgHomeVilla;
+
+  /// No description provided for @cgGroupRowInfo.
+  ///
+  /// In ko, this message translates to:
+  /// **'{chooser} · 상품 {count}개'**
+  String cgGroupRowInfo(String chooser, String count);
+
+  /// No description provided for @cgGroupHidden.
+  ///
+  /// In ko, this message translates to:
+  /// **'숨김'**
+  String get cgGroupHidden;
+
+  /// No description provided for @cgGroupShown.
+  ///
+  /// In ko, this message translates to:
+  /// **'앱에 보임'**
+  String get cgGroupShown;
+
+  /// No description provided for @cgGroupSaved.
+  ///
+  /// In ko, this message translates to:
+  /// **'묶음을 저장했어요'**
+  String get cgGroupSaved;
+
+  /// No description provided for @cgGroupErrTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'제목은 1~40자로 적어 주세요'**
+  String get cgGroupErrTitle;
+
+  /// No description provided for @cgGroupErrOrder.
+  ///
+  /// In ko, this message translates to:
+  /// **'순서는 0~99 사이로 적어 주세요'**
+  String get cgGroupErrOrder;
+
+  /// No description provided for @cgGroupErrMembers.
+  ///
+  /// In ko, this message translates to:
+  /// **'상품을 하나 이상 골라 주세요'**
+  String get cgGroupErrMembers;
+
+  /// No description provided for @cgGroupErrDirect.
+  ///
+  /// In ko, this message translates to:
+  /// **'바로 열기는 상품을 하나만 골라 주세요'**
+  String get cgGroupErrDirect;
+
+  /// No description provided for @cgGroupErrMove.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 집과 오래된 집 상품, 집 크기 선택지를 골라 주세요'**
+  String get cgGroupErrMove;
+
+  /// No description provided for @cgGroupErrOtherGroup.
+  ///
+  /// In ko, this message translates to:
+  /// **'상품이 다른 묶음에 들어 있어요. 그 묶음에서 먼저 빼 주세요'**
+  String get cgGroupErrOtherGroup;
+
+  /// No description provided for @cgGroupErrIcon.
+  ///
+  /// In ko, this message translates to:
+  /// **'그림을 다시 골라 주세요'**
+  String get cgGroupErrIcon;
+
+  /// No description provided for @cgGroupErrUnknown.
+  ///
+  /// In ko, this message translates to:
+  /// **'저장하지 못했어요. 다시 확인해 주세요'**
+  String get cgGroupErrUnknown;
 
   /// No description provided for @cTitle.
   ///
@@ -2053,6 +2461,198 @@ abstract class T {
   /// **'서버 주소 변경'**
   String get cServerChange;
 
+  /// No description provided for @svc_window.
+  ///
+  /// In ko, this message translates to:
+  /// **'창문 청소'**
+  String get svc_window;
+
+  /// No description provided for @svc_disinfection.
+  ///
+  /// In ko, this message translates to:
+  /// **'방역·소독'**
+  String get svc_disinfection;
+
+  /// No description provided for @svcDesc_window.
+  ///
+  /// In ko, this message translates to:
+  /// **'창문 안팎을 창 크기별 개수대로 청소해요'**
+  String get svcDesc_window;
+
+  /// No description provided for @svcDesc_disinfection.
+  ///
+  /// In ko, this message translates to:
+  /// **'필요한 방역과 소독을 골라 주세요'**
+  String get svcDesc_disinfection;
+
+  /// No description provided for @unitTitle_window.
+  ///
+  /// In ko, this message translates to:
+  /// **'창문 크기와 개수를\n골라 주세요.'**
+  String get unitTitle_window;
+
+  /// No description provided for @unitTitle_disinfection.
+  ///
+  /// In ko, this message translates to:
+  /// **'방역 종류를\n골라 주세요.'**
+  String get unitTitle_disinfection;
+
+  /// No description provided for @unit_window_small.
+  ///
+  /// In ko, this message translates to:
+  /// **'작은 창 (1m 미만)'**
+  String get unit_window_small;
+
+  /// No description provided for @unit_window_large.
+  ///
+  /// In ko, this message translates to:
+  /// **'큰 창 (1m 이상)'**
+  String get unit_window_large;
+
+  /// No description provided for @unit_pest.
+  ///
+  /// In ko, this message translates to:
+  /// **'해충 방역'**
+  String get unit_pest;
+
+  /// No description provided for @unit_mite_bedbug.
+  ///
+  /// In ko, this message translates to:
+  /// **'진드기·빈대 퇴치'**
+  String get unit_mite_bedbug;
+
+  /// No description provided for @unit_sanitize.
+  ///
+  /// In ko, this message translates to:
+  /// **'살균·바이러스 소독'**
+  String get unit_sanitize;
+
+  /// No description provided for @unit_sick_house.
+  ///
+  /// In ko, this message translates to:
+  /// **'새집증후군 제거'**
+  String get unit_sick_house;
+
+  /// No description provided for @unitShort_wall.
+  ///
+  /// In ko, this message translates to:
+  /// **'벽걸이'**
+  String get unitShort_wall;
+
+  /// No description provided for @unitShort_stand.
+  ///
+  /// In ko, this message translates to:
+  /// **'스탠드'**
+  String get unitShort_stand;
+
+  /// No description provided for @unitShort_two_in_one.
+  ///
+  /// In ko, this message translates to:
+  /// **'2in1'**
+  String get unitShort_two_in_one;
+
+  /// No description provided for @unitShort_ceiling.
+  ///
+  /// In ko, this message translates to:
+  /// **'천장형'**
+  String get unitShort_ceiling;
+
+  /// No description provided for @unitShort_seat_1_2.
+  ///
+  /// In ko, this message translates to:
+  /// **'1~2인용'**
+  String get unitShort_seat_1_2;
+
+  /// No description provided for @unitShort_seat_3.
+  ///
+  /// In ko, this message translates to:
+  /// **'3인용'**
+  String get unitShort_seat_3;
+
+  /// No description provided for @unitShort_seat_4_plus.
+  ///
+  /// In ko, this message translates to:
+  /// **'4인용 이상'**
+  String get unitShort_seat_4_plus;
+
+  /// No description provided for @unitShort_l_shape.
+  ///
+  /// In ko, this message translates to:
+  /// **'L자'**
+  String get unitShort_l_shape;
+
+  /// No description provided for @unitShort_small.
+  ///
+  /// In ko, this message translates to:
+  /// **'작은 창 (1m 미만)'**
+  String get unitShort_small;
+
+  /// No description provided for @unitShort_large.
+  ///
+  /// In ko, this message translates to:
+  /// **'큰 창 (1m 이상)'**
+  String get unitShort_large;
+
+  /// No description provided for @unitShort_pest.
+  ///
+  /// In ko, this message translates to:
+  /// **'해충 방역'**
+  String get unitShort_pest;
+
+  /// No description provided for @unitShort_mite_bedbug.
+  ///
+  /// In ko, this message translates to:
+  /// **'진드기·빈대'**
+  String get unitShort_mite_bedbug;
+
+  /// No description provided for @unitShort_sanitize.
+  ///
+  /// In ko, this message translates to:
+  /// **'살균·소독'**
+  String get unitShort_sanitize;
+
+  /// No description provided for @unitShort_sick_house.
+  ///
+  /// In ko, this message translates to:
+  /// **'새집증후군'**
+  String get unitShort_sick_house;
+
+  /// No description provided for @unitHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'필요한 만큼 +, −로 골라 주세요'**
+  String get unitHint;
+
+  /// No description provided for @countsDiscount.
+  ///
+  /// In ko, this message translates to:
+  /// **'{percent}% 할인 적용 (2개 이상 선택)'**
+  String countsDiscount(String percent);
+
+  /// No description provided for @countMinus.
+  ///
+  /// In ko, this message translates to:
+  /// **'개수 줄이기'**
+  String get countMinus;
+
+  /// No description provided for @countPlus.
+  ///
+  /// In ko, this message translates to:
+  /// **'개수 늘리기'**
+  String get countPlus;
+
+  /// No description provided for @countSelect.
+  ///
+  /// In ko, this message translates to:
+  /// **'선택'**
+  String get countSelect;
+
+  /// No description provided for @svcNotes_disinfection.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격은 약 30평 기준이에요\n더 넓은 집은 채팅에서 금액을 조정해 드려요'**
+  String get svcNotes_disinfection;
+
   /// No description provided for @ok.
   ///
   /// In ko, this message translates to:
@@ -2176,7 +2776,7 @@ abstract class T {
   /// No description provided for @err_studio_too_large.
   ///
   /// In ko, this message translates to:
-  /// **'원룸 청소는 10평 이하 집만 가능해요'**
+  /// **'원룸 청소는 10평 이하만 가능해요.'**
   String get err_studio_too_large;
 
   /// No description provided for @err_date_out_of_range.
@@ -2458,7 +3058,7 @@ abstract class T {
   /// No description provided for @svcDesc_studio.
   ///
   /// In ko, this message translates to:
-  /// **'방 1개, 화장실 1개인 10평 이하 원룸을 2시간 동안 꼼꼼히 청소해요.'**
+  /// **'방 1개, 화장실 1개인 10평 이하 원룸을 2시간 동안 꼼꼼하게 청소해요.'**
   String get svcDesc_studio;
 
   /// No description provided for @svcDesc_kitchen.
@@ -2824,7 +3424,7 @@ abstract class T {
   /// No description provided for @addressDetail.
   ///
   /// In ko, this message translates to:
-  /// **'상세 주소'**
+  /// **'상세주소'**
   String get addressDetail;
 
   /// No description provided for @addressSize.
@@ -2938,7 +3538,7 @@ abstract class T {
   /// No description provided for @prepBody.
   ///
   /// In ko, this message translates to:
-  /// **'준비되지 않으면 일부 작업이 제한될 수 있어요'**
+  /// **'준비하지 않으면 일부 서비스가 제한될 수 있어요.'**
   String get prepBody;
 
   /// No description provided for @prepAsk.
@@ -3097,11 +3697,11 @@ abstract class T {
   /// **'결제수단을 등록해 주세요'**
   String get needMethod;
 
-  /// No description provided for @freeCancelUntil.
+  /// No description provided for @dfCancelNote.
   ///
   /// In ko, this message translates to:
-  /// **'{date}까지 무료 취소'**
-  String freeCancelUntil(String date);
+  /// **'방문 2일 전까지 무료로 취소할 수 있어요. 결제시 이용약관 및 취소 규정에 동의한 것으로 간주합니다.'**
+  String get dfCancelNote;
 
   /// No description provided for @doneTitle.
   ///
@@ -3118,7 +3718,7 @@ abstract class T {
   /// No description provided for @doneBody.
   ///
   /// In ko, this message translates to:
-  /// **'청소팀이 배정되면 바로 알려드릴게요'**
+  /// **'매니저님이 배정되면 알림으로 알려드릴게요.'**
   String get doneBody;
 
   /// No description provided for @doneQuoteTitle.
@@ -3460,7 +4060,7 @@ abstract class T {
   /// No description provided for @chatHours.
   ///
   /// In ko, this message translates to:
-  /// **'평일 09:00–18:00'**
+  /// **'평일 09:00~18:00'**
   String get chatHours;
 
   /// No description provided for @chatEmpty.
@@ -3652,7 +4252,7 @@ abstract class T {
   /// No description provided for @morePoints.
   ///
   /// In ko, this message translates to:
-  /// **'청소 포인트'**
+  /// **'포인트'**
   String get morePoints;
 
   /// No description provided for @moreAccount.
@@ -4423,6 +5023,48 @@ abstract class T {
   /// **'현관 바닥 청소'**
   String get dfScopeEntrance;
 
+  /// No description provided for @dfScopePest.
+  ///
+  /// In ko, this message translates to:
+  /// **'해충 방역 약제 살포'**
+  String get dfScopePest;
+
+  /// No description provided for @dfScopeMite.
+  ///
+  /// In ko, this message translates to:
+  /// **'진드기·빈대 퇴치'**
+  String get dfScopeMite;
+
+  /// No description provided for @dfScopeSanitize.
+  ///
+  /// In ko, this message translates to:
+  /// **'살균·바이러스 소독'**
+  String get dfScopeSanitize;
+
+  /// No description provided for @dfScopeSickHouse.
+  ///
+  /// In ko, this message translates to:
+  /// **'새집증후군 제거 작업'**
+  String get dfScopeSickHouse;
+
+  /// No description provided for @dfScopeWholeHomeGroup.
+  ///
+  /// In ko, this message translates to:
+  /// **'집 전체 청소'**
+  String get dfScopeWholeHomeGroup;
+
+  /// No description provided for @dfScopeWindowGroup.
+  ///
+  /// In ko, this message translates to:
+  /// **'창문 청소'**
+  String get dfScopeWindowGroup;
+
+  /// No description provided for @dfScopeDisinfGroup.
+  ///
+  /// In ko, this message translates to:
+  /// **'방역·소독'**
+  String get dfScopeDisinfGroup;
+
   /// No description provided for @dfBasicService.
   ///
   /// In ko, this message translates to:
@@ -4552,8 +5194,8 @@ abstract class T {
   /// No description provided for @dfStudioToast.
   ///
   /// In ko, this message translates to:
-  /// **'{service}는 {max}평 이하만 가능해요. {label}({size}평)는 상담으로 안내해 드릴게요.'**
-  String dfStudioToast(String service, String max, String label, String size);
+  /// **'{service}는 {max}평 이하만 가능해요.'**
+  String dfStudioToast(String service, String max);
 
   /// No description provided for @dfOverPyeong.
   ///
@@ -4602,6 +5244,12 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'방문 시간'**
   String get dfVisitTime;
+
+  /// No description provided for @dfConsultNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'상담으로 안내해 드릴게요.'**
+  String get dfConsultNote;
 
   /// No description provided for @dfSelect.
   ///
@@ -4764,6 +5412,24 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'이삿짐을 풀지 않은 상태'**
   String get luggage_not_unpacked;
+
+  /// No description provided for @luggage_out_partly_unpacked.
+  ///
+  /// In ko, this message translates to:
+  /// **'이삿짐을 일부 푼 상태'**
+  String get luggage_out_partly_unpacked;
+
+  /// No description provided for @luggage_out_fully_lived_in.
+  ///
+  /// In ko, this message translates to:
+  /// **'짐을 다 풀었거나 생활 중인 상태'**
+  String get luggage_out_fully_lived_in;
+
+  /// No description provided for @luggage_out_unknown.
+  ///
+  /// In ko, this message translates to:
+  /// **'짐 상태를 잘 모르겠어요'**
+  String get luggage_out_unknown;
 
   /// No description provided for @dfReviewsTitle.
   ///
@@ -6679,6 +7345,174 @@ abstract class T {
   /// **'친구 초대 시 둘 다 {amount}'**
   String referralOfferLine(String amount);
 
+  /// No description provided for @hgMoveQuestion.
+  ///
+  /// In ko, this message translates to:
+  /// **'어떤 집으로 입주하시나요?'**
+  String get hgMoveQuestion;
+
+  /// No description provided for @hgNewBuild.
+  ///
+  /// In ko, this message translates to:
+  /// **'신축'**
+  String get hgNewBuild;
+
+  /// No description provided for @hgNewBuildBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'새로 지은 집 · 입주 청소'**
+  String get hgNewBuildBody;
+
+  /// No description provided for @hgOldBuild.
+  ///
+  /// In ko, this message translates to:
+  /// **'구축'**
+  String get hgOldBuild;
+
+  /// No description provided for @hgOldBuildBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'오래된 집 · 이사 청소'**
+  String get hgOldBuildBody;
+
+  /// No description provided for @hgSizeQuestion.
+  ///
+  /// In ko, this message translates to:
+  /// **'집 크기는 어떻게 되나요?'**
+  String get hgSizeQuestion;
+
+  /// No description provided for @hgHomeOneTwo.
+  ///
+  /// In ko, this message translates to:
+  /// **'원룸·투룸'**
+  String get hgHomeOneTwo;
+
+  /// No description provided for @hgHomeApartment.
+  ///
+  /// In ko, this message translates to:
+  /// **'아파트'**
+  String get hgHomeApartment;
+
+  /// No description provided for @hgHomeVilla.
+  ///
+  /// In ko, this message translates to:
+  /// **'빌라·주택'**
+  String get hgHomeVilla;
+
+  /// No description provided for @hgEstimateOnly.
+  ///
+  /// In ko, this message translates to:
+  /// **'예상 견적'**
+  String get hgEstimateOnly;
+
+  /// No description provided for @hgEstimateNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격은 예상 견적이에요. 상담 후 확정 견적을 드려요.'**
+  String get hgEstimateNote;
+
+  /// No description provided for @hgFloorTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'몇 층인가요?'**
+  String get hgFloorTitle;
+
+  /// No description provided for @hgFloorLow.
+  ///
+  /// In ko, this message translates to:
+  /// **'1~2층'**
+  String get hgFloorLow;
+
+  /// No description provided for @hgFloorHigh.
+  ///
+  /// In ko, this message translates to:
+  /// **'3층 이상'**
+  String get hgFloorHigh;
+
+  /// No description provided for @hgAddressAlias.
+  ///
+  /// In ko, this message translates to:
+  /// **'주소 별칭'**
+  String get hgAddressAlias;
+
+  /// No description provided for @inboxSummaryTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'예약 요약'**
+  String get inboxSummaryTitle;
+
+  /// No description provided for @inboxSummaryService.
+  ///
+  /// In ko, this message translates to:
+  /// **'서비스'**
+  String get inboxSummaryService;
+
+  /// No description provided for @inboxSummaryVisit.
+  ///
+  /// In ko, this message translates to:
+  /// **'방문 일시'**
+  String get inboxSummaryVisit;
+
+  /// No description provided for @inboxSummaryAddress.
+  ///
+  /// In ko, this message translates to:
+  /// **'주소'**
+  String get inboxSummaryAddress;
+
+  /// No description provided for @inboxSummaryAmount.
+  ///
+  /// In ko, this message translates to:
+  /// **'금액'**
+  String get inboxSummaryAmount;
+
+  /// No description provided for @inboxSummaryStatus.
+  ///
+  /// In ko, this message translates to:
+  /// **'상태'**
+  String get inboxSummaryStatus;
+
+  /// No description provided for @inboxSummaryCustomer.
+  ///
+  /// In ko, this message translates to:
+  /// **'고객'**
+  String get inboxSummaryCustomer;
+
+  /// No description provided for @inboxSummaryNoBooking.
+  ///
+  /// In ko, this message translates to:
+  /// **'예약 정보를 불러오지 못했어요'**
+  String get inboxSummaryNoBooking;
+
+  /// No description provided for @quoteSentEntry.
+  ///
+  /// In ko, this message translates to:
+  /// **'견적 발송됨 · {amount} · {time}'**
+  String quoteSentEntry(String amount, String time);
+
+  /// No description provided for @quoteResend.
+  ///
+  /// In ko, this message translates to:
+  /// **'재발송'**
+  String get quoteResend;
+
+  /// No description provided for @quoteRevise.
+  ///
+  /// In ko, this message translates to:
+  /// **'수정'**
+  String get quoteRevise;
+
+  /// No description provided for @quoteResent.
+  ///
+  /// In ko, this message translates to:
+  /// **'견적을 다시 보냈어요'**
+  String get quoteResent;
+
+  /// No description provided for @quoteSentChip.
+  ///
+  /// In ko, this message translates to:
+  /// **'견적 발송'**
+  String get quoteSentChip;
+
   /// No description provided for @locUseCurrent.
   ///
   /// In ko, this message translates to:
@@ -7086,6 +7920,48 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'줄바꿈이나 조절 문자는 넣을 수 없어요.'**
   String get ntErrChars;
+
+  /// No description provided for @unit_mattress.
+  ///
+  /// In ko, this message translates to:
+  /// **'매트리스'**
+  String get unit_mattress;
+
+  /// No description provided for @unitShort_mattress.
+  ///
+  /// In ko, this message translates to:
+  /// **'매트리스'**
+  String get unitShort_mattress;
+
+  /// No description provided for @svc_whole_home.
+  ///
+  /// In ko, this message translates to:
+  /// **'집 전체 청소'**
+  String get svc_whole_home;
+
+  /// No description provided for @svcShort_whole_home.
+  ///
+  /// In ko, this message translates to:
+  /// **'집 전체'**
+  String get svcShort_whole_home;
+
+  /// No description provided for @svcShort_window.
+  ///
+  /// In ko, this message translates to:
+  /// **'창문'**
+  String get svcShort_window;
+
+  /// No description provided for @svcShort_disinfection.
+  ///
+  /// In ko, this message translates to:
+  /// **'방역·소독'**
+  String get svcShort_disinfection;
+
+  /// No description provided for @svcNote_studio_limit.
+  ///
+  /// In ko, this message translates to:
+  /// **'※ 10평을 넘는 집은 원룸 청소를 예약할 수 없어요. 상담으로 맞는 서비스를 안내해 드려요.'**
+  String get svcNote_studio_limit;
 
   /// No description provided for @cOps.
   ///
@@ -8149,6 +9025,132 @@ abstract class T {
   /// **'고객 예상가'**
   String get pCustomerEstimate;
 
+  /// No description provided for @pHomeOneTwo.
+  ///
+  /// In ko, this message translates to:
+  /// **'원룸·투룸'**
+  String get pHomeOneTwo;
+
+  /// No description provided for @pHomeApartment.
+  ///
+  /// In ko, this message translates to:
+  /// **'아파트'**
+  String get pHomeApartment;
+
+  /// No description provided for @pHomeVillaHouse.
+  ///
+  /// In ko, this message translates to:
+  /// **'빌라·주택'**
+  String get pHomeVillaHouse;
+
+  /// No description provided for @pCountsTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'수량'**
+  String get pCountsTitle;
+
+  /// No description provided for @pUnitWall.
+  ///
+  /// In ko, this message translates to:
+  /// **'벽걸이'**
+  String get pUnitWall;
+
+  /// No description provided for @pUnitStand.
+  ///
+  /// In ko, this message translates to:
+  /// **'스탠드'**
+  String get pUnitStand;
+
+  /// No description provided for @pUnitTwoInOne.
+  ///
+  /// In ko, this message translates to:
+  /// **'2in1'**
+  String get pUnitTwoInOne;
+
+  /// No description provided for @pUnitCeiling.
+  ///
+  /// In ko, this message translates to:
+  /// **'천장형'**
+  String get pUnitCeiling;
+
+  /// No description provided for @pUnitSeat12.
+  ///
+  /// In ko, this message translates to:
+  /// **'1~2인용'**
+  String get pUnitSeat12;
+
+  /// No description provided for @pUnitSeat3.
+  ///
+  /// In ko, this message translates to:
+  /// **'3인용'**
+  String get pUnitSeat3;
+
+  /// No description provided for @pUnitSeat4Plus.
+  ///
+  /// In ko, this message translates to:
+  /// **'4인용 이상'**
+  String get pUnitSeat4Plus;
+
+  /// No description provided for @pUnitLShape.
+  ///
+  /// In ko, this message translates to:
+  /// **'L자'**
+  String get pUnitLShape;
+
+  /// No description provided for @pUnitMattress.
+  ///
+  /// In ko, this message translates to:
+  /// **'매트리스'**
+  String get pUnitMattress;
+
+  /// No description provided for @pUnitWindowSmall.
+  ///
+  /// In ko, this message translates to:
+  /// **'작은 창'**
+  String get pUnitWindowSmall;
+
+  /// No description provided for @pUnitWindowLarge.
+  ///
+  /// In ko, this message translates to:
+  /// **'큰 창'**
+  String get pUnitWindowLarge;
+
+  /// No description provided for @pUnitPest.
+  ///
+  /// In ko, this message translates to:
+  /// **'해충 방제'**
+  String get pUnitPest;
+
+  /// No description provided for @pUnitMiteBedbug.
+  ///
+  /// In ko, this message translates to:
+  /// **'진드기·베드버그'**
+  String get pUnitMiteBedbug;
+
+  /// No description provided for @pUnitSanitize.
+  ///
+  /// In ko, this message translates to:
+  /// **'살균'**
+  String get pUnitSanitize;
+
+  /// No description provided for @pUnitSickHouse.
+  ///
+  /// In ko, this message translates to:
+  /// **'새집 증후군'**
+  String get pUnitSickHouse;
+
+  /// No description provided for @pLogoutConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그아웃할까요?'**
+  String get pLogoutConfirm;
+
+  /// No description provided for @pLogoutBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 로그인하면 일감과 일정을 그대로 볼 수 있어요.'**
+  String get pLogoutBody;
+
   /// No description provided for @pNew.
   ///
   /// In ko, this message translates to:
@@ -9186,6 +10188,36 @@ abstract class T {
   /// **'끄면 정해진 가격과 정기 청소는 기본 가격으로 예약돼요. 견적은 항상 할증을 보여줘요'**
   String get cgPeakFixedScopeHint;
 
+  /// No description provided for @popularServices.
+  ///
+  /// In ko, this message translates to:
+  /// **'인기 서비스'**
+  String get popularServices;
+
+  /// No description provided for @reviewsSeeAll.
+  ///
+  /// In ko, this message translates to:
+  /// **'후기 전체 보기'**
+  String get reviewsSeeAll;
+
+  /// No description provided for @reviewsAllTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'후기'**
+  String get reviewsAllTitle;
+
+  /// No description provided for @reviewsEmpty.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 후기가 없어요'**
+  String get reviewsEmpty;
+
+  /// No description provided for @reviewMenu.
+  ///
+  /// In ko, this message translates to:
+  /// **'후기 메뉴'**
+  String get reviewMenu;
+
   /// No description provided for @oFlags.
   ///
   /// In ko, this message translates to:
@@ -9894,6 +10926,132 @@ abstract class T {
   /// **'자동 계산 결과예요'**
   String get cQualityLastCalc;
 
+  /// No description provided for @qaHomeType.
+  ///
+  /// In ko, this message translates to:
+  /// **'집 유형'**
+  String get qaHomeType;
+
+  /// No description provided for @homeType_one_two_room.
+  ///
+  /// In ko, this message translates to:
+  /// **'원룸·투룸'**
+  String get homeType_one_two_room;
+
+  /// No description provided for @homeType_apartment.
+  ///
+  /// In ko, this message translates to:
+  /// **'아파트'**
+  String get homeType_apartment;
+
+  /// No description provided for @homeType_villa_house.
+  ///
+  /// In ko, this message translates to:
+  /// **'빌라·주택'**
+  String get homeType_villa_house;
+
+  /// No description provided for @qaCleaningType.
+  ///
+  /// In ko, this message translates to:
+  /// **'청소 종류'**
+  String get qaCleaningType;
+
+  /// No description provided for @qaLuggage.
+  ///
+  /// In ko, this message translates to:
+  /// **'짐 상태'**
+  String get qaLuggage;
+
+  /// No description provided for @qaLayout.
+  ///
+  /// In ko, this message translates to:
+  /// **'집 구조'**
+  String get qaLayout;
+
+  /// No description provided for @qaFloor.
+  ///
+  /// In ko, this message translates to:
+  /// **'층수'**
+  String get qaFloor;
+
+  /// No description provided for @qaFloorLow.
+  ///
+  /// In ko, this message translates to:
+  /// **'1~2층'**
+  String get qaFloorLow;
+
+  /// No description provided for @qaFloorHigh.
+  ///
+  /// In ko, this message translates to:
+  /// **'3층 이상'**
+  String get qaFloorHigh;
+
+  /// No description provided for @quoteUnknown.
+  ///
+  /// In ko, this message translates to:
+  /// **'미입력'**
+  String get quoteUnknown;
+
+  /// No description provided for @qaPeak.
+  ///
+  /// In ko, this message translates to:
+  /// **'주말·공휴일·저녁 할증'**
+  String get qaPeak;
+
+  /// No description provided for @previewRequestCard.
+  ///
+  /// In ko, this message translates to:
+  /// **'예약 요청 카드'**
+  String get previewRequestCard;
+
+  /// No description provided for @previewQuoteCard.
+  ///
+  /// In ko, this message translates to:
+  /// **'견적 카드 · {amount}'**
+  String previewQuoteCard(String amount);
+
+  /// No description provided for @nameNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'이름 없음'**
+  String get nameNone;
+
+  /// No description provided for @qaTotal.
+  ///
+  /// In ko, this message translates to:
+  /// **'합계'**
+  String get qaTotal;
+
+  /// No description provided for @qaVat.
+  ///
+  /// In ko, this message translates to:
+  /// **'부가세 10%'**
+  String get qaVat;
+
+  /// No description provided for @quoteSizeTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'선택한 구조와 저장된 평수가 달라요'**
+  String get quoteSizeTitle;
+
+  /// No description provided for @quoteSizeBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 주소는 {size}이라 {layout} 구조와 맞지 않을 수 있어요.'**
+  String quoteSizeBody(String size, String layout);
+
+  /// No description provided for @quoteSizeChangeLayout.
+  ///
+  /// In ko, this message translates to:
+  /// **'구조 바꾸기'**
+  String get quoteSizeChangeLayout;
+
+  /// No description provided for @quoteSizeChangeSize.
+  ///
+  /// In ko, this message translates to:
+  /// **'평수 고치기'**
+  String get quoteSizeChangeSize;
+
   /// No description provided for @rnwTitle.
   ///
   /// In ko, this message translates to:
@@ -10319,6 +11477,12 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'이 시간에 이미 다른 일정이 있어요'**
   String get err_schedule_overlap;
+
+  /// No description provided for @servicePhotoSlot.
+  ///
+  /// In ko, this message translates to:
+  /// **'서비스 대표 사진 자리'**
+  String get servicePhotoSlot;
 
   /// No description provided for @rulesTab.
   ///

@@ -38,6 +38,7 @@ pub fn routes() -> Router<AppState> {
         .route("/bookings/{id}/cancel", crate::idempotency::replayable(post(cancel)))
         .route("/bookings/{id}/quotes", get(quotes_for))
         .route("/bookings/{id}/send-quote", post(send_quote))
+        .route("/bookings/{id}/resend-quote", post(resend_quote))
         .route("/threads", get(inbox))
         .route("/threads/{id}/messages", get(chat::messages).post(chat::send))
         .route("/threads/{id}/read", post(chat::mark_read))
@@ -176,7 +177,9 @@ async fn booking_detail(State(s): State<AppState>, Staff(st): Staff, Path(id): P
     let estimate_breakdown = match answers {
         Some(a) => {
             let lines = super::catalog::addon_lines(&s.db, &a).await?;
-            Some(serde_json::to_value(load_formula(&s.db).await?.estimate_with_addons(&a, 0, &lines)?).unwrap_or(Value::Null))
+            // The booking was priced with its slot's peak surcharge; the breakdown must show the same peak.
+            let peak_bps = super::catalog::slot_peak_bps(&s.db, booking.visit_date, booking.start_hour).await?;
+            Some(serde_json::to_value(load_formula(&s.db).await?.estimate_with_addons(&a, peak_bps, &lines)?).unwrap_or(Value::Null))
         }
         None => None,
     };
@@ -423,18 +426,60 @@ async fn send_quote(State(s): State<AppState>, Staff(st): Staff, Path(id): Path<
     Ok(Json(msg))
 }
 
+/// Re-sends the booking's last quote card to the customer, byte for byte: the price, deposit and
+/// estimate are not recomputed, so the desk cannot change the amount through this action.
+async fn resend_quote(State(s): State<AppState>, Staff(st): Staff, Path(id): Path<Uuid>) -> ApiResult<Json<MessageRow>> {
+    let b = load_booking(&s.db, id).await?;
+    if b.status()? != BookingStatus::Consultation || b.answers.is_none() {
+        return Err(ApiError::Conflict("not_open_quote"));
+    }
+    let mut tx = s.db.begin().await?;
+    let thread = chat::booking_thread(&mut tx, "customer", b.user_id, id, &b.service_code).await?;
+    let last: Option<Value> =
+        sqlx::query_scalar("SELECT body FROM chat_messages WHERE thread_id = $1 AND kind = 'quote' ORDER BY created_at DESC, id DESC LIMIT 1")
+            .bind(thread)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let body = last.ok_or(ApiError::Conflict("no_quote_sent"))?;
+    let msg = chat::insert_message(&mut tx, thread, "staff", Some(st.id), "quote", body.clone()).await?;
+    tx.commit().await?;
+    chat::broadcast_message(&s, &msg).await?;
+    audit(
+        &s.db,
+        "staff",
+        Some(st.id),
+        "quote.resend",
+        &id.to_string(),
+        json!({ "message_id": msg.id, "final_price": body["final_price"] }),
+    )
+    .await?;
+    Ok(Json(msg))
+}
+
 #[derive(Deserialize)]
 struct InboxQuery {
     audience: Option<String>,
 }
 
-async fn inbox(State(s): State<AppState>, _st: Staff, Query(q): Query<InboxQuery>) -> ApiResult<Json<Vec<ThreadRow>>> {
+/// Staff inbox row: the thread plus the customer's name and phone (empty for partner threads).
+#[derive(Serialize, sqlx::FromRow)]
+struct InboxRow {
+    #[serde(flatten)]
+    #[sqlx(flatten)]
+    thread: ThreadRow,
+    customer_name: Option<String>,
+    customer_phone: Option<String>,
+}
+
+async fn inbox(State(s): State<AppState>, _st: Staff, Query(q): Query<InboxQuery>) -> ApiResult<Json<Vec<InboxRow>>> {
     let aud = q.audience.unwrap_or_else(|| "customer".into());
     if aud != "customer" && aud != "partner" {
         return Err(ApiError::BadRequest("invalid_audience"));
     }
     let rows = sqlx::query_as(&format!(
-        "SELECT {THREAD_COLS} FROM chat_threads t WHERE t.audience = $1 ORDER BY (t.unread_staff > 0) DESC, t.last_message_at DESC LIMIT $2"
+        "SELECT {THREAD_COLS}, u.name AS customer_name, u.phone AS customer_phone FROM chat_threads t
+           LEFT JOIN users u ON u.id = t.user_id
+          WHERE t.audience = $1 ORDER BY (t.unread_staff > 0) DESC, t.last_message_at DESC LIMIT $2"
     ))
     .bind(aud)
     .bind(LIST_LIMIT)

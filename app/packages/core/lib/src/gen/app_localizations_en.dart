@@ -15,6 +15,10 @@ class TEn extends T {
   String get addressSearchButton => 'Search';
 
   @override
+  String get addressSearchOffHint =>
+      'Address search is not ready yet. Please type your address.';
+
+  @override
   String get addressSearchMinChars => 'Enter at least 2 characters';
 
   @override
@@ -447,6 +451,119 @@ class TEn extends T {
   String get cSetupHostingProvider => 'Hosting provider';
 
   @override
+  String cancelRefundCta(String amount) {
+    return 'Cancel and get $amount back';
+  }
+
+  @override
+  String get cancelNoRefund => 'Nothing is refunded for this cancellation';
+
+  @override
+  String cancelTierLine(String days, String percent) {
+    return 'Cancelling $days days before the visit · $percent% fee';
+  }
+
+  @override
+  String cancelFeeLine(String fee) {
+    return 'Cancellation fee $fee';
+  }
+
+  @override
+  String cancelRefundLine(String refund) {
+    return 'Refund $refund';
+  }
+
+  @override
+  String get cancelMethodLine => 'Refunded to the payment method you used';
+
+  @override
+  String get cancelPolicyLink => 'View the cancellation and refund policy';
+
+  @override
+  String get cancelPolicyTitle => 'Cancellation and refund policy';
+
+  @override
+  String get cancelReasonTitle => 'Reason for cancelling (optional)';
+
+  @override
+  String get cancelReasonSchedule => 'The date does not work';
+
+  @override
+  String get cancelReasonProvider => 'I chose another provider';
+
+  @override
+  String get cancelReasonPrice => 'The price is too high';
+
+  @override
+  String get cancelReasonOther => 'Other';
+
+  @override
+  String get bookingsEmptyDay => 'No bookings on this day';
+
+  @override
+  String get cntTitle => 'Counted pricing';
+
+  @override
+  String get cntHelp =>
+      'Customers pick a count for each option. Two or more items get the discount. Prices are examples you can change';
+
+  @override
+  String get cntAddOption => 'Add option';
+
+  @override
+  String get cntOptionName => 'Option name';
+
+  @override
+  String get cntMaxEach => 'Max per option (empty = no limit)';
+
+  @override
+  String get cntDiscount => 'Discount for two or more (%)';
+
+  @override
+  String get cntPreview => 'Preview (pick counts)';
+
+  @override
+  String cntPreviewTotal(String price, String time) {
+    return 'Total $price · about $time';
+  }
+
+  @override
+  String cntPreviewDiscount(String amount) {
+    return 'Discount −$amount';
+  }
+
+  @override
+  String get cntMoveUp => 'Move up';
+
+  @override
+  String get cntMoveDown => 'Move down';
+
+  @override
+  String get cntRemove => 'Remove option';
+
+  @override
+  String get cntLess => 'One less';
+
+  @override
+  String get cntMore => 'One more';
+
+  @override
+  String get cntNeedOption => 'Add at least one option';
+
+  @override
+  String get cntNeedName => 'Enter a name for every option';
+
+  @override
+  String get cntNeedPrice =>
+      'Enter a price and time above zero for every option';
+
+  @override
+  String get cntMaxEachInvalid => 'Max per option must be 1 to 20';
+
+  @override
+  String get cntDiscountInvalid => 'Discount must be 0 to 50%';
+
+  @override
   String get cgTabPeak => 'Peak surcharges';
 
   @override
@@ -601,6 +718,119 @@ class TEn extends T {
   @override
   String get cgCodeWrong =>
       'The code is wrong or already used. Enter the current code';
+
+  @override
+  String get cgTabGroups => 'Service groups';
+
+  @override
+  String get cgGroupsHelp =>
+      'The four big tiles on the app\'s home screen. Change titles, order and member services here';
+
+  @override
+  String get cgGroupTitleKo => 'Title (Korean)';
+
+  @override
+  String get cgGroupTitleEn => 'Title (English)';
+
+  @override
+  String get cgGroupOrder => 'Order (smaller comes first)';
+
+  @override
+  String get cgGroupIcon => 'Picture';
+
+  @override
+  String get cgGroupChooser => 'When tapped';
+
+  @override
+  String get cgChooserMove => 'Move questions first';
+
+  @override
+  String get cgChooserList => 'Pick a service';
+
+  @override
+  String get cgChooserDirect => 'Open the service directly';
+
+  @override
+  String get cgChooserMoveHelp =>
+      'Asks whether the home is new or old, then the home size';
+
+  @override
+  String get cgChooserListHelp => 'Shows the member services as a list';
+
+  @override
+  String get cgChooserDirectHelp =>
+      'With one service, goes straight to its screen';
+
+  @override
+  String get cgGroupMembers => 'Member services (shown in this order)';
+
+  @override
+  String get cgGroupMembersHelp =>
+      'A service in another group must be removed from that group first';
+
+  @override
+  String cgMemberOtherGroup(String group) {
+    return 'In another group: $group';
+  }
+
+  @override
+  String get cgMoveNewService => 'Service for a new home';
+
+  @override
+  String get cgMoveOldService => 'Service for an older home';
+
+  @override
+  String get cgMoveHomeTypes => 'Home size choices';
+
+  @override
+  String get cgHomeOneTwo => 'Studio or two-room';
+
+  @override
+  String get cgHomeApartment => 'Apartment';
+
+  @override
+  String get cgHomeVilla => 'Villa or house';
+
+  @override
+  String cgGroupRowInfo(String chooser, String count) {
+    return '$chooser · $count services';
+  }
+
+  @override
+  String get cgGroupHidden => 'Hidden';
+
+  @override
+  String get cgGroupShown => 'Shown in app';
+
+  @override
+  String get cgGroupSaved => 'Group saved';
+
+  @override
+  String get cgGroupErrTitle => 'Titles must be 1 to 40 characters';
+
+  @override
+  String get cgGroupErrOrder => 'Order must be 0 to 99';
+
+  @override
+  String get cgGroupErrMembers => 'Pick at least one service';
+
+  @override
+  String get cgGroupErrDirect => 'Open directly needs exactly one service';
+
+  @override
+  String get cgGroupErrMove =>
+      'Pick the new-home and older-home services and at least one home size';
+
+  @override
+  String get cgGroupErrOtherGroup =>
+      'A service is already in another group. Remove it there first';
+
+  @override
+  String get cgGroupErrIcon => 'Pick the picture again';
+
+  @override
+  String get cgGroupErrUnknown =>
+      'Could not save. Check the details and try again';
 
   @override
   String get cTitle => 'Operations console';
@@ -1027,6 +1257,107 @@ class TEn extends T {
   String get cServerChange => 'Change server address';
 
   @override
+  String get svc_window => 'Window cleaning';
+
+  @override
+  String get svc_disinfection => 'Pest control & disinfection';
+
+  @override
+  String get svcDesc_window =>
+      'Inside and outside of windows, priced per window size';
+
+  @override
+  String get svcDesc_disinfection =>
+      'Choose the pest control and disinfection you need';
+
+  @override
+  String get unitTitle_window => 'Choose window sizes\nand counts.';
+
+  @override
+  String get unitTitle_disinfection => 'Choose the\ntreatments.';
+
+  @override
+  String get unit_window_small => 'Small window (under 1 m)';
+
+  @override
+  String get unit_window_large => 'Large window (1 m or more)';
+
+  @override
+  String get unit_pest => 'Pest control';
+
+  @override
+  String get unit_mite_bedbug => 'Mite & bed bug treatment';
+
+  @override
+  String get unit_sanitize => 'Sanitising & virus disinfection';
+
+  @override
+  String get unit_sick_house => 'New-home syndrome removal';
+
+  @override
+  String get unitShort_wall => 'Wall';
+
+  @override
+  String get unitShort_stand => 'Stand';
+
+  @override
+  String get unitShort_two_in_one => '2-in-1';
+
+  @override
+  String get unitShort_ceiling => 'Ceiling';
+
+  @override
+  String get unitShort_seat_1_2 => '1–2 seats';
+
+  @override
+  String get unitShort_seat_3 => '3 seats';
+
+  @override
+  String get unitShort_seat_4_plus => '4+ seats';
+
+  @override
+  String get unitShort_l_shape => 'L-shape';
+
+  @override
+  String get unitShort_small => 'Small window (under 1 m)';
+
+  @override
+  String get unitShort_large => 'Large window (1 m or more)';
+
+  @override
+  String get unitShort_pest => 'Pest control';
+
+  @override
+  String get unitShort_mite_bedbug => 'Mites & bed bugs';
+
+  @override
+  String get unitShort_sanitize => 'Sanitising';
+
+  @override
+  String get unitShort_sick_house => 'New-home syndrome';
+
+  @override
+  String get unitHint => 'Use + and − to choose what you need';
+
+  @override
+  String countsDiscount(String percent) {
+    return '$percent% off for 2 or more';
+  }
+
+  @override
+  String get countMinus => 'Decrease count';
+
+  @override
+  String get countPlus => 'Increase count';
+
+  @override
+  String get countSelect => 'Select';
+
+  @override
+  String get svcNotes_disinfection =>
+      'Prices assume about 30 pyeong\nLarger homes are adjusted in chat';
+
+  @override
   String get ok => 'OK';
 
   @override
@@ -1088,7 +1419,7 @@ class TEn extends T {
 
   @override
   String get err_studio_too_large =>
-      'Studio cleaning is for homes up to 10 pyeong';
+      'Studio cleaning is for homes up to 10 pyeong.';
 
   @override
   String get err_date_out_of_range =>
@@ -1516,7 +1847,7 @@ class TEn extends T {
   String get prepTitle => 'Please have these ready';
 
   @override
-  String get prepBody => 'Some tasks may be limited without them';
+  String get prepBody => 'Some tasks may be limited without them.';
 
   @override
   String get prepAsk => 'Can\'t prepare these? Let our team know';
@@ -1601,9 +1932,8 @@ class TEn extends T {
   String get needMethod => 'Add a payment method first';
 
   @override
-  String freeCancelUntil(String date) {
-    return 'Free cancellation until $date';
-  }
+  String get dfCancelNote =>
+      'Free cancellation up to 2 days before the visit. Paying means you agree to the terms and the cancellation policy.';
 
   @override
   String get doneTitle => 'You\'re booked!';
@@ -1612,7 +1942,8 @@ class TEn extends T {
   String get doneConfirmedTitle => 'Your booking is confirmed';
 
   @override
-  String get doneBody => 'We\'ll let you know as soon as a team is assigned';
+  String get doneBody =>
+      'We\'ll send you a notification once a manager is assigned.';
 
   @override
   String get doneQuoteTitle => 'Request received';
@@ -1799,7 +2130,7 @@ class TEn extends T {
   String get chatTeam => 'Support team';
 
   @override
-  String get chatHours => 'Weekdays 09:00–18:00';
+  String get chatHours => 'Weekdays 09:00~18:00';
 
   @override
   String get chatEmpty => 'Questions? Ask us anytime';
@@ -2312,6 +2643,27 @@ class TEn extends T {
   String get dfScopeEntrance => 'Entrance floor';
 
   @override
+  String get dfScopePest => 'Spraying pest control treatment';
+
+  @override
+  String get dfScopeMite => 'Mite and bedbug treatment';
+
+  @override
+  String get dfScopeSanitize => 'Sterilising and virus disinfection';
+
+  @override
+  String get dfScopeSickHouse => 'New-home syndrome removal treatment';
+
+  @override
+  String get dfScopeWholeHomeGroup => 'Whole-home cleaning';
+
+  @override
+  String get dfScopeWindowGroup => 'Window cleaning';
+
+  @override
+  String get dfScopeDisinfGroup => 'Pest control and disinfection';
+
+  @override
   String get dfBasicService => 'Included';
 
   @override
@@ -2377,8 +2729,8 @@ class TEn extends T {
   String get dfEdit => 'Edit';
 
   @override
-  String dfStudioToast(String service, String max, String label, String size) {
-    return '$service is for homes up to $max pyeong. We\'ll help with $label ($size pyeong) in chat.';
+  String dfStudioToast(String service, String max) {
+    return '$service is for homes up to $max pyeong.';
   }
 
   @override
@@ -2406,6 +2758,9 @@ class TEn extends T {
 
   @override
   String get dfVisitTime => 'Visit time';
+
+  @override
+  String get dfConsultNote => 'We\'ll help you with this in chat.';
 
   @override
   String get dfSelect => 'Choose';
@@ -2494,6 +2849,15 @@ class TEn extends T {
 
   @override
   String get luggage_not_unpacked => 'Boxes not unpacked yet';
+
+  @override
+  String get luggage_out_partly_unpacked => 'Boxes partly unpacked';
+
+  @override
+  String get luggage_out_fully_lived_in => 'Fully unpacked or lived in';
+
+  @override
+  String get luggage_out_unknown => 'Not sure about the boxes';
 
   @override
   String get dfReviewsTitle => 'See what customers say.';
@@ -3581,6 +3945,93 @@ class TEn extends T {
   }
 
   @override
+  String get hgMoveQuestion => 'Which kind of home are you moving into?';
+
+  @override
+  String get hgNewBuild => 'New build';
+
+  @override
+  String get hgNewBuildBody => 'Newly built home · move-in cleaning';
+
+  @override
+  String get hgOldBuild => 'Existing building';
+
+  @override
+  String get hgOldBuildBody => 'Older home · move-out cleaning';
+
+  @override
+  String get hgSizeQuestion => 'How big is your home?';
+
+  @override
+  String get hgHomeOneTwo => 'Studio · 2-room';
+
+  @override
+  String get hgHomeApartment => 'Apartment';
+
+  @override
+  String get hgHomeVilla => 'Villa · house';
+
+  @override
+  String get hgEstimateOnly => 'Estimate';
+
+  @override
+  String get hgEstimateNote =>
+      'This is an estimate. We confirm the final quote after a consultation.';
+
+  @override
+  String get hgFloorTitle => 'Which floor is it on?';
+
+  @override
+  String get hgFloorLow => 'Floors 1–2';
+
+  @override
+  String get hgFloorHigh => 'Floor 3 or higher';
+
+  @override
+  String get hgAddressAlias => 'Address label';
+
+  @override
+  String get inboxSummaryTitle => 'Booking summary';
+
+  @override
+  String get inboxSummaryService => 'Service';
+
+  @override
+  String get inboxSummaryVisit => 'Visit';
+
+  @override
+  String get inboxSummaryAddress => 'Address';
+
+  @override
+  String get inboxSummaryAmount => 'Amount';
+
+  @override
+  String get inboxSummaryStatus => 'Status';
+
+  @override
+  String get inboxSummaryCustomer => 'Customer';
+
+  @override
+  String get inboxSummaryNoBooking => 'Could not load the booking';
+
+  @override
+  String quoteSentEntry(String amount, String time) {
+    return 'Quote sent · $amount · $time';
+  }
+
+  @override
+  String get quoteResend => 'Resend';
+
+  @override
+  String get quoteRevise => 'Revise';
+
+  @override
+  String get quoteResent => 'Quote sent again';
+
+  @override
+  String get quoteSentChip => 'Quote sent';
+
+  @override
   String get locUseCurrent => 'Use my current location';
 
   @override
@@ -3812,6 +4263,28 @@ class TEn extends T {
   @override
   String get ntErrChars =>
       'Line breaks and control characters are not allowed.';
+
+  @override
+  String get unit_mattress => 'Mattress';
+
+  @override
+  String get unitShort_mattress => 'Mattress';
+
+  @override
+  String get svc_whole_home => 'Whole-home cleaning';
+
+  @override
+  String get svcShort_whole_home => 'Whole home';
+
+  @override
+  String get svcShort_window => 'Window';
+
+  @override
+  String get svcShort_disinfection => 'Disinfection';
+
+  @override
+  String get svcNote_studio_limit =>
+      'Homes over 10 pyeong can\'t book studio cleaning. We\'ll suggest the right service in chat.';
 
   @override
   String get cOps => 'System status';
@@ -4412,6 +4885,69 @@ class TEn extends T {
   String get pCustomerEstimate => 'Customer estimate';
 
   @override
+  String get pHomeOneTwo => 'Studio / two-room';
+
+  @override
+  String get pHomeApartment => 'Apartment';
+
+  @override
+  String get pHomeVillaHouse => 'Villa / house';
+
+  @override
+  String get pCountsTitle => 'Quantities';
+
+  @override
+  String get pUnitWall => 'Wall-mounted';
+
+  @override
+  String get pUnitStand => 'Standing';
+
+  @override
+  String get pUnitTwoInOne => '2-in-1';
+
+  @override
+  String get pUnitCeiling => 'Ceiling';
+
+  @override
+  String get pUnitSeat12 => '1–2 seats';
+
+  @override
+  String get pUnitSeat3 => '3 seats';
+
+  @override
+  String get pUnitSeat4Plus => '4+ seats';
+
+  @override
+  String get pUnitLShape => 'L-shape';
+
+  @override
+  String get pUnitMattress => 'Mattress';
+
+  @override
+  String get pUnitWindowSmall => 'Small window';
+
+  @override
+  String get pUnitWindowLarge => 'Large window';
+
+  @override
+  String get pUnitPest => 'Pest control';
+
+  @override
+  String get pUnitMiteBedbug => 'Mites and bed bugs';
+
+  @override
+  String get pUnitSanitize => 'Sanitizing';
+
+  @override
+  String get pUnitSickHouse => 'Sick-house care';
+
+  @override
+  String get pLogoutConfirm => 'Sign out?';
+
+  @override
+  String get pLogoutBody => 'Sign in again to see your jobs and schedule.';
+
+  @override
   String get pNew => 'NEW';
 
   @override
@@ -4964,6 +5500,21 @@ class TEn extends T {
       'When off, fixed-price and subscription visits are booked at the base price. Quotes always show the surcharge';
 
   @override
+  String get popularServices => 'Popular services';
+
+  @override
+  String get reviewsSeeAll => 'See all reviews';
+
+  @override
+  String get reviewsAllTitle => 'Reviews';
+
+  @override
+  String get reviewsEmpty => 'No reviews yet';
+
+  @override
+  String get reviewMenu => 'Review options';
+
+  @override
   String get oFlags => 'Feature switches';
 
   @override
@@ -5348,6 +5899,73 @@ class TEn extends T {
   String get cQualityLastCalc => 'Calculated automatically';
 
   @override
+  String get qaHomeType => 'Home type';
+
+  @override
+  String get homeType_one_two_room => 'Studio / two rooms';
+
+  @override
+  String get homeType_apartment => 'Apartment';
+
+  @override
+  String get homeType_villa_house => 'Villa / house';
+
+  @override
+  String get qaCleaningType => 'Cleaning type';
+
+  @override
+  String get qaLuggage => 'Belongings';
+
+  @override
+  String get qaLayout => 'Layout';
+
+  @override
+  String get qaFloor => 'Floor';
+
+  @override
+  String get qaFloorLow => 'Floors 1–2';
+
+  @override
+  String get qaFloorHigh => 'Floor 3 or higher';
+
+  @override
+  String get quoteUnknown => 'Not answered';
+
+  @override
+  String get qaPeak => 'Weekend / holiday / evening surcharge';
+
+  @override
+  String get previewRequestCard => 'Booking request card';
+
+  @override
+  String previewQuoteCard(String amount) {
+    return 'Quote card · $amount';
+  }
+
+  @override
+  String get nameNone => 'No name';
+
+  @override
+  String get qaTotal => 'Total';
+
+  @override
+  String get qaVat => 'VAT 10%';
+
+  @override
+  String get quoteSizeTitle => 'The layout and the saved size don\'t match';
+
+  @override
+  String quoteSizeBody(String size, String layout) {
+    return 'This address is $size, which may not suit the $layout layout.';
+  }
+
+  @override
+  String get quoteSizeChangeLayout => 'Change layout';
+
+  @override
+  String get quoteSizeChangeSize => 'Change size';
+
+  @override
   String get rnwTitle => 'Renewal calendar';
 
   @override
@@ -5572,6 +6190,9 @@ class TEn extends T {
 
   @override
   String get err_schedule_overlap => 'You already have a job at this time';
+
+  @override
+  String get servicePhotoSlot => 'Service photo goes here';
 
   @override
   String get rulesTab => 'Operating rules';

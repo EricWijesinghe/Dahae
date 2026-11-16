@@ -3,171 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
 
-import 'screens/audit.dart';
+import 'nav_sections.dart';
 import 'screens/bookings.dart';
-import 'screens/catalog.dart';
-import 'screens/dashboard.dart';
-import 'screens/finance.dart';
-import 'screens/inbox.dart';
-import 'screens/marketing.dart';
-import 'screens/notify_templates.dart';
-import 'screens/ops.dart';
-import 'screens/owner_account.dart';
-import 'screens/rules.dart';
-import 'screens/people.dart';
-import 'screens/privacy_requests.dart';
-import 'screens/renewals.dart';
-import 'screens/setup.dart';
-import 'screens/subscriptions.dart';
 import 'state.dart';
-
-class _Section {
-  const _Section(
-    this.id,
-    this.icon,
-    this.label,
-    this.build, {
-    this.adminOnly = false,
-  });
-
-  /// 3D rail art id (plan §4). [icon] stays for the command palette.
-  final String id;
-  final IconData icon;
-  final String Function(T) label;
-  final Widget Function() build;
-  final bool adminOnly;
-}
-
-final _sections = <_Section>[
-  _Section(
-    'c_dashboard',
-    Icons.space_dashboard_rounded,
-    (t) => t.cDashboard,
-    () => const DashboardScreen(),
-  ),
-  _Section(
-    'c_bookings',
-    Icons.event_note_rounded,
-    (t) => t.cBookings,
-    () => const BookingsScreen(),
-  ),
-  _Section(
-    'c_quotes',
-    Icons.request_quote_rounded,
-    (t) => t.cQuoteDesk,
-    () => const BookingsScreen(quoteDesk: true),
-  ),
-  _Section(
-    'c_settings',
-    Icons.forum_rounded,
-    (t) => t.cInbox,
-    () => const InboxScreen(),
-  ),
-  _Section(
-    'c_monitor',
-    Icons.sell_rounded,
-    (t) => t.cCatalog,
-    () => const CatalogScreen(),
-  ),
-  _Section(
-    'c_chat',
-    Icons.campaign_rounded,
-    (t) => t.cMarketing,
-    () => const MarketingScreen(),
-  ),
-  _Section(
-    'c_pricing',
-    Icons.engineering_rounded,
-    (t) => t.cPartners,
-    () => const PartnersScreen(),
-  ),
-  _Section(
-    'c_marketing',
-    Icons.payments_rounded,
-    (t) => t.cSettlements,
-    () => const SettlementsScreen(),
-  ),
-  _Section(
-    'c_partners',
-    Icons.account_balance_wallet_rounded,
-    (t) => t.fFinance,
-    () => const FinanceScreen(),
-    adminOnly: true,
-  ),
-  _Section(
-    'c_payments',
-    Icons.event_repeat_rounded,
-    (t) => t.cSubsTitle,
-    () => const SubscriptionsScreen(),
-  ),
-  _Section(
-    'c_payouts',
-    Icons.people_alt_rounded,
-    (t) => t.cCustomers,
-    () => const CustomersScreen(),
-  ),
-  _Section(
-    'c_subscriptions',
-    Icons.badge_rounded,
-    (t) => t.cStaff,
-    () => const StaffScreen(),
-    adminOnly: true,
-  ),
-  _Section(
-    'c_owner_account',
-    Icons.manage_accounts_rounded,
-    (t) => t.oaTitle,
-    () => const OwnerAccountScreen(),
-    adminOnly: true,
-  ),
-  _Section(
-    'c_customers',
-    Icons.tune_rounded,
-    (t) => t.cSetup,
-    () => const SetupScreen(),
-    adminOnly: true,
-  ),
-  _Section(
-    'c_rules',
-    Icons.rule_rounded,
-    (t) => t.rulesTab,
-    () => const RulesScreen(),
-    adminOnly: true,
-  ),
-  _Section(
-    'c_settings',
-    Icons.notifications_active_rounded,
-    (t) => t.ntNavLabel,
-    () => const NotifyTemplatesScreen(),
-    adminOnly: true,
-  ),
-  _Section(
-    'c_staff',
-    Icons.monitor_heart_rounded,
-    (t) => t.cOps,
-    () => const OpsScreen(),
-  ),
-  _Section(
-    'c_audit',
-    Icons.history_rounded,
-    (t) => t.cAudit,
-    () => const AuditScreen(),
-    adminOnly: true,
-  ),
-  _Section(
-    'c_privacy',
-    Icons.privacy_tip_rounded,
-    (t) => t.prqTitle,
-    () => const PrivacyRequestsScreen(),
-  ),
-  _Section(
-    'c_renewals',
-    Icons.event_repeat_rounded,
-    (t) => t.rnwTitle,
-    () => const RenewalsScreen(),
-    adminOnly: true,
-  ),
-];
 
 /// Linear-style: side menu on desktop, drawer on phone, Ctrl+K palette, Ctrl+1..9 to jump.
 class ConsoleShell extends StatefulWidget {
@@ -188,8 +26,9 @@ class _ConsoleShellState extends State<ConsoleShell> {
     s.realtime.connect();
   }
 
-  List<_Section> get _visible =>
-      _sections.where((s) => !s.adminOnly || context.console.isAdmin).toList();
+  List<ConsoleSection> get _visible => consoleSections
+      .where((s) => !s.adminOnly || context.console.isAdmin)
+      .toList();
 
   void _go(int i) => setState(() => _index = i);
 
@@ -371,7 +210,7 @@ class _ConsoleShellState extends State<ConsoleShell> {
   }
 }
 
-/// One-tap theme cycle: dark -> light -> system. Icon shows the current mode.
+/// Opens the three-option theme sheet (shared with the customer app). Icon shows the current mode.
 class _ThemeButton extends StatelessWidget {
   const _ThemeButton();
 
@@ -386,7 +225,7 @@ class _ThemeButton extends StatelessWidget {
     return IconButton(
       tooltip: '${context.t.themeTip}: ${context.t.themeLabel(theme.mode)}',
       visualDensity: VisualDensity.compact,
-      onPressed: () => Deps.read(context).theme.cycle(),
+      onPressed: () => showThemeSheet(context, theme),
       icon: Icon(icon, size: 20),
     );
   }
@@ -394,7 +233,7 @@ class _ThemeButton extends StatelessWidget {
 
 class _Palette extends StatefulWidget {
   const _Palette({required this.sections, required this.t});
-  final List<_Section> sections;
+  final List<ConsoleSection> sections;
   final T t;
   @override
   State<_Palette> createState() => _PaletteState();

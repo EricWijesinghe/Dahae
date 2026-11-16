@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:customer/screens/booking_flow.dart';
+import 'package:customer/screens/quote_flow.dart';
 import 'package:customer/screens/service.dart';
 import 'package:customer/screens/service_scope.dart';
 import 'package:customer/state.dart';
@@ -10,13 +11,7 @@ import 'package:ui/ui.dart';
 
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
-
-/// From the home grid, open a service's detail screen.
-Future<void> _openFromHome(WidgetTester tester, String code) async {
-  await pumpUntilFound(tester, find.text(koT.service(code)));
-  await tester.tap(find.text(koT.service(code)));
-  await settle(tester);
-}
+import 'support/home_groups.dart';
 
 /// Every slot the schedule asks for is open, unless a test overrides it.
 void _openSlots(FakeApi fake, {bool available = true}) {
@@ -53,7 +48,7 @@ void main() {
       stockCustomerApi(fake);
       final env = await TestEnv.create(fake: fake);
       await pumpCustomerApp(tester, env);
-      await _openFromHome(tester, 'bathroom');
+      await openServiceFromHome(tester, 'bathroom');
 
       expect(
         _barAmount(39000),
@@ -179,8 +174,11 @@ void main() {
       stockCustomerApi(fake, addresses: [addressJson(sizePyeong: 8)]);
       _openSlots(fake);
       final env = await TestEnv.create(fake: fake);
-      await pumpCustomerApp(tester, env);
-      await _openFromHome(tester, 'studio');
+      await pumpCustomerScreen(
+        tester,
+        env,
+        ServiceScreen(service: Service.fromJson(serviceJson('studio'))),
+      );
 
       await _tap(tester, find.text(koT.dfBookNow));
       expect(find.byType(ScheduleScreen), findsOneWidget);
@@ -219,10 +217,15 @@ void main() {
         reason: 'the fitting address is preselected',
       );
       expect(find.text(koT.dfAddressTitle), findsOneWidget);
+      expect(
+        find.text(koT.dfConsultNote),
+        findsOneWidget,
+        reason: 'the 24 pyeong card says so',
+      );
       await _tap(tester, find.text('본가'));
       expect(d.address?.id, 'a-home', reason: 'too big to select');
       expect(
-        find.text(koT.dfStudioToast(koT.service('studio'), '10', '본가', '24')),
+        find.text(koT.dfStudioToast(koT.service('studio'), '10')),
         findsOneWidget,
       );
       expect(
@@ -374,6 +377,25 @@ void main() {
   });
 
   testWidgets(
+    'move-in from home goes to the quote flow, never to instant checkout (CR-3)',
+    (tester) async {
+      setViewport(tester, phoneSize);
+      final fake = FakeApi();
+      stockCustomerApi(fake);
+      final env = await TestEnv.create(fake: fake);
+      await pumpCustomerApp(tester, env);
+      await tapHomeGroup(tester, 'move_in');
+      await _tap(tester, find.text(koT.hgNewBuild));
+      await _tap(tester, find.text(koT.hgHomeOneTwo));
+
+      expect(find.byType(QuoteFlowScreen), findsOneWidget);
+      expect(find.byType(CheckoutScreen), findsNothing);
+      expect(fake.callsTo('POST', '/bookings'), isEmpty);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
     'checkout pre-applies the best coupon and pays with the saved card in one POST',
     (tester) async {
       setViewport(tester, phoneSize);
@@ -399,8 +421,15 @@ void main() {
       );
       _openSlots(fake);
       final env = await TestEnv.create(fake: fake);
-      await pumpCustomerApp(tester, env);
-      await _openFromHome(tester, 'studio');
+      final app = await _loaded(env);
+      await tester.pumpWidget(
+        CustomerTestHost(
+          env: env,
+          app: app,
+          home: ServiceScreen(service: Service.fromJson(serviceJson('studio'))),
+        ),
+      );
+      await settle(tester);
 
       await _tap(tester, find.text(koT.dfBookNow));
       await _tap(
@@ -494,7 +523,7 @@ void main() {
   );
 
   testWidgets(
-    'studio detail: the hero art idles, and nothing moves with reduced motion',
+    'studio detail: the photo slot stays still, with and without reduced motion',
     (tester) async {
       setViewport(tester, phoneSize);
       // On, as in the real app (the test config turns idle loops off for every other test).
@@ -516,8 +545,8 @@ void main() {
       await show();
       expect(
         tester.hasRunningAnimations,
-        isTrue,
-        reason: 'the 3D hero floats while the page rests',
+        isFalse,
+        reason: 'the design hero is a photo slot, not a floating 3D icon (p07)',
       );
 
       tester.platformDispatcher.accessibilityFeaturesTestValue =

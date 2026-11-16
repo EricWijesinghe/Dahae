@@ -218,7 +218,7 @@ fn move_answers(addons: serde_json::Value) -> serde_json::Value {
     json!({
         "cleaning_type": "standard", "luggage": "empty", "building": "commercial", "layout": "two_rooms",
         "duplex": false, "bathrooms": 1, "balconies": 0, "elevator": true, "floor_3_or_higher": false,
-        "ac_addons": addons
+        "ac_addons": addons, "service_code": "move_out"
     })
 }
 
@@ -342,6 +342,26 @@ async fn studio_at_eleven_pyeong_is_refused_by_the_server(pool: PgPool) {
     .await;
     assert_eq!(st, StatusCode::UNPROCESSABLE_ENTITY, "{b}");
     assert_eq!(b["error"]["code"], "studio_too_large");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn address_road_must_match_its_district(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5000-0403").await;
+    let road = "서울특별시 송파구 올림픽로 300";
+    let (st, b) = call(
+        &app,
+        "POST",
+        "/v1/me/addresses",
+        Some(c.token.as_str()),
+        Some(json!({
+            "kind": "home", "label": "집", "road_address": road, "detail": "",
+            "district_code": common::DISTRICT, "size_pyeong": 11
+        })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "{b}");
+    assert_eq!(b["error"]["code"], "invalid_address");
 }
 
 /// Owner approval for a new team member: the platform admin approves, the team lead cannot.

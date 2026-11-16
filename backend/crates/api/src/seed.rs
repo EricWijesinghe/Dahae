@@ -1,16 +1,32 @@
 //! Idempotent first-run data: catalogue, quote formula, slot capacity, first admin, starter content.
 
 use crate::{auth::hash_password, config::Config};
-use domain::{catalog::default_catalog, quote::QuoteFormula};
+use domain::{
+    catalog::default_catalog,
+    quote::QuoteFormula,
+    service_group::{default_group_of, hidden_from_home},
+};
 use serde_json::json;
 use sqlx::PgPool;
 
 /// Default capacity per arrival hour until staff change it (decision #6).
 const DEFAULT_SLOT_CAPACITY: i32 = 6;
 
-/// Home tile order for a fresh catalogue (owner brief): 원룸, 이사, 입주, 화장실, 주방, 매트리스, 에어컨, 소파.
+/// Catalogue order for a fresh database, by home group (CR-7.3; migration 0231 applies it to older ones).
 /// Only the first insert uses it, so an order the owner set in the console is never overwritten.
-pub const SEED_ORDER: [&str; 8] = ["studio", "move_out", "move_in", "bathroom", "kitchen", "mattress", "aircon", "sofa"];
+pub const SEED_ORDER: [&str; 11] = [
+    "studio",
+    "move_out",
+    "move_in",
+    "bathroom",
+    "kitchen",
+    "whole_home",
+    "window",
+    "mattress",
+    "aircon",
+    "sofa",
+    "disinfection",
+];
 
 /// Home tile badges of the owner design: N on mattress, HOT on aircon (`content.badge`, read by the app).
 /// Like the order, only the first insert writes them, so a badge the owner removes stays removed.
@@ -24,19 +40,36 @@ fn old_welcome_title() -> serde_json::Value {
 
 // i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)
 pub(crate) fn welcome_title() -> serde_json::Value {
-    json!({ "ko": "첫 청소 15,000원 웰컴쿠폰", "en": "₩15,000 welcome coupon for your first clean" })
+    json!({ "ko": "첫 청소 웰컴 쿠폰팩 즉시 지급", "en": "Welcome coupon pack for your first clean, issued now" })
+}
+
+/// The welcome banner's body: the sun theme, the coupons link and the art card (design p01).
+/// shortcut: the card value is fixed text, not the live welcome coupon amount; upgrade when the home reads it.
+pub(crate) fn welcome_body() -> serde_json::Value {
+    json!({
+        "theme": "sun",
+        "link": "coupons",
+        "text": { "ko": "신규 고객 웰컴 쿠폰", "en": "Welcome coupon for new customers" },
+        "card": {
+            "label": { "ko": "웰컴 혜택", "en": "Welcome gift" },
+            "value": { "ko": "15,000 원", "en": "₩15,000" },
+        },
+    })
 }
 
 pub async fn run(db: &PgPool, config: &Config) -> Result<(), Box<dyn std::error::Error>> {
     for s in default_catalog() {
         // Unlisted codes go after the brief's eight, in catalogue order.
         let order = SEED_ORDER.iter().position(|c| *c == s.code).unwrap_or(SEED_ORDER.len());
-        let content = SEED_BADGES
+        let mut content = SEED_BADGES
             .iter()
             .find(|(code, _)| *code == s.code)
             .map_or_else(|| json!({}), |(_, badge)| json!({ "badge": badge }));
+        if hidden_from_home(&s.code) {
+            content["hidden_from_home"] = json!(true);
+        }
         sqlx::query(
-            "INSERT INTO services (code, pricing, needs_preparation, max_pyeong, sort_order, content) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (code) DO NOTHING",
+            "INSERT INTO services (code, pricing, needs_preparation, max_pyeong, sort_order, content, group_code) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (code) DO NOTHING",
         )
         .bind(&s.code)
         .bind(sqlx::types::Json(&s.pricing))
@@ -44,6 +77,7 @@ pub async fn run(db: &PgPool, config: &Config) -> Result<(), Box<dyn std::error:
         .bind(s.max_pyeong.map(|p| p as i16))
         .bind(order as i32)
         .bind(content)
+        .bind(default_group_of(&s.code))
         .execute(db)
         .await?;
     }
@@ -75,12 +109,15 @@ pub async fn run(db: &PgPool, config: &Config) -> Result<(), Box<dyn std::error:
             .execute(db)
             .await?;
     }
-    let has_content: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM content_items)").fetch_one(db).await?;
+    // FAQ rows come from migration 0237 before this runs on a fresh database, so only non-FAQ content counts here.
+    let has_content: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM content_items WHERE kind <> 'faq')")
+        .fetch_one(db)
+        .await?;
     if !has_content {
         let welcome = welcome_title();
         sqlx::query("INSERT INTO content_items (kind, title, body, sort_order) VALUES ('banner', $1, $2, 0)")
             .bind(&welcome)
-            .bind(json!({"theme":"sun","link":"coupons"}))
+            .bind(welcome_body())
             .execute(db)
             .await?;
         let faq = json!({ "ko": "취소는 언제까지 무료인가요?", "en": "Until when can I cancel for free?" });
@@ -92,9 +129,10 @@ pub async fn run(db: &PgPool, config: &Config) -> Result<(), Box<dyn std::error:
             .await?;
     }
     // Upgrade: only a banner still carrying the exact old seeded title; an edited one is the owner's.
-    sqlx::query("UPDATE content_items SET title = $1 WHERE kind = 'banner' AND title = $2")
+    sqlx::query("UPDATE content_items SET title = $1, body = body || $3 WHERE kind = 'banner' AND title = $2")
         .bind(welcome_title())
         .bind(old_welcome_title())
+        .bind(welcome_body())
         .execute(db)
         .await?;
     Ok(())

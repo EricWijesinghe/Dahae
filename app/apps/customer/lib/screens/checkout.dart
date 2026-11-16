@@ -7,6 +7,7 @@ import 'package:ui/ui.dart';
 
 import '../state.dart';
 import 'booking_detail.dart';
+import 'auth.dart' show ensureCustomerName;
 import 'booking_flow.dart';
 import 'cancel_policy_card.dart';
 import 'more.dart' show LegalScreen;
@@ -68,6 +69,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _pay(int total, int points) async {
     final choice = _choice;
     if (choice == null || _busy) return;
+    if (!await ensureCustomerName(context) || !mounted) return;
     setState(() => _busy = true);
     final app = context.appRead;
     try {
@@ -195,7 +197,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final points = viaWindow && _usePoints ? maxPoints : 0;
     final due = total - points;
     final coupon = app.coupons.where((c) => c.id == d.couponId).firstOrNull;
-    final freeUntil = freeCancelDeadline(d.date!, DateTime.now());
     return Scaffold(
       backgroundColor: context.colors.surface,
       appBar: AppBar(
@@ -274,7 +275,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   title: Text(
                     [
                       t.service(d.service.code),
-                      if (d.unitIndex != null)
+                      if (d.service.isCounts)
+                        t.unitCounts(d.service, d.counts)
+                      else if (d.unitIndex != null)
                         t.unit(d.service.units[d.unitIndex!].labelKey),
                     ].join(' · '),
                     style: context.text.titleMedium?.copyWith(
@@ -338,7 +341,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ],
               ),
               const SizedBox(height: Space.md),
-              AgreementBox(total: total, freeUntil: freeUntil),
+              AgreementBox(total: total),
             ],
           ),
         ],
@@ -495,9 +498,8 @@ class _IconRow extends StatelessWidget {
 /// Free-cancel line, 결제대행(PG) notice, and links to the terms and the cancel/refund rules,
 /// right above the pay button.
 class AgreementBox extends StatelessWidget {
-  const AgreementBox({super.key, required this.total, this.freeUntil});
+  const AgreementBox({super.key, required this.total});
   final int total;
-  final DateTime? freeUntil;
 
   @override
   Widget build(BuildContext context) {
@@ -514,11 +516,7 @@ class AgreementBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (freeUntil != null)
-            Text(
-              t.freeCancelUntil(dateLabel(freeUntil!, context.lang)),
-              style: small,
-            ),
+          Text(t.dfCancelNote, style: small),
           Text(t.dfPgNotice, style: small),
           Wrap(
             spacing: Space.xs,

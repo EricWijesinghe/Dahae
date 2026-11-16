@@ -53,11 +53,27 @@ pub const VISIBLE: &str = "p.status = 'verified'
     AND (CASE WHEN b.start_hour < 12 THEN 'morning' ELSE 'afternoon' END) = ANY(pp.day_parts)
     AND NOT (b.visit_date = ANY(pp.days_off))";
 
+/// The booking's counts options in the owner's catalogue order: `[{label_key, label}]`, null for non-counts services.
+/// Read from the live catalogue so owner-added options show with the owner's label.
+const COUNT_UNITS: &str = "(SELECT jsonb_agg(jsonb_build_object('label_key', u.v->'label_key', 'label', u.v->'label') ORDER BY u.ord)
+    FROM services s, jsonb_array_elements(s.pricing->'units') WITH ORDINALITY AS u(v, ord)
+    WHERE s.code = b.service_code AND s.pricing->>'type' = 'counts')";
+
+async fn count_units(db: &PgPool, id: Uuid) -> ApiResult<Value> {
+    let units: Option<Value> = sqlx::query_scalar(&format!("SELECT {COUNT_UNITS} FROM bookings b WHERE b.id = $1"))
+        .bind(id)
+        .fetch_one(db)
+        .await?;
+    Ok(units.unwrap_or(Value::Null))
+}
+
 #[derive(Serialize, sqlx::FromRow)]
 struct JobCard {
     id: Uuid,
     service_code: String,
     unit_index: Option<i16>,
+    unit_counts: Option<Vec<i16>>,
+    count_units: Option<Value>,
     district_code: String,
     road_area: Option<String>,
     visit_date: NaiveDate,
@@ -101,7 +117,7 @@ async fn feed(State(s): State<AppState>, Pro(a): Pro, Query(q): Query<FeedQuery>
     };
     // Only the neighbourhood (dong) part of the road address is exposed before commitment.
     let rows = sqlx::query_as(&format!(
-        "SELECT b.id, b.service_code, b.unit_index, b.district_code, split_part(b.address->>'road_address', ' ', 2) AS road_area, b.visit_date, b.start_hour, b.minutes,
+        "SELECT b.id, b.service_code, b.unit_index, b.unit_counts, {COUNT_UNITS} AS count_units, b.district_code, split_part(b.address->>'road_address', ' ', 2) AS road_area, b.visit_date, b.start_hour, b.minutes,
            (b.address->>'size_pyeong')::int AS size_pyeong, b.answers->>'building' AS building, b.answers, b.list_price AS customer_price, b.estimate, p.fee_bps,
            (SELECT amount FROM quotes q WHERE q.booking_id = b.id AND q.pro_id = p.id AND q.state <> 'withdrawn') AS my_quote,
            (b.pro_id IS NULL AND b.status IN ({consultation}, {confirmed})) AS is_open, b.created_at
@@ -144,11 +160,12 @@ async fn job(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) -> Ap
     }
     let pay = gross(&b).map(|g| payout(Won(g), i64::from(fee_bps)));
     let mut view = json!({
-        "id": b.id, "number": b.number, "service_code": b.service_code, "unit_index": b.unit_index, "district_code": b.district_code,
+        "id": b.id, "number": b.number, "service_code": b.service_code, "unit_index": b.unit_index, "unit_counts": b.unit_counts, "district_code": b.district_code,
         "visit_date": b.visit_date, "start_hour": b.start_hour, "minutes": b.minutes, "status": b.status, "answers": b.answers,
         "estimate": b.estimate, "size_pyeong": b.address.get("size_pyeong"), "kind": b.address.get("kind"),
         "reschedule": b.reschedule, "cancelled": b.status == -1, "is_quote": b.answers.is_some(), "balance_paid": b.balance_paid,
     });
+    view["count_units"] = count_units(&s.db, id).await?;
     view["emergency"] = crate::safety::emergency_contacts(&s.db).await?;
     view["entry_code_set"] = json!(b.entry_code_set);
     view["checked_in_at"] = json!(b.checked_in_at);

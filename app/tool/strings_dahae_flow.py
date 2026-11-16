@@ -22,6 +22,13 @@ ROWS = {
   "dfScopeWindows": ["창틀·샷시 먼지 제거", "Dusting window frames and sashes"],
   "dfScopeShoes": ["신발장 내부 청소", "Inside the shoe cabinet"],
   "dfScopeEntrance": ["현관 바닥 청소", "Entrance floor"],
+  "dfScopePest": ["해충 방역 약제 살포", "Spraying pest control treatment"],
+  "dfScopeMite": ["진드기·빈대 퇴치", "Mite and bedbug treatment"],
+  "dfScopeSanitize": ["살균·바이러스 소독", "Sterilising and virus disinfection"],
+  "dfScopeSickHouse": ["새집증후군 제거 작업", "New-home syndrome removal treatment"],
+  "dfScopeWholeHomeGroup": ["집 전체 청소", "Whole-home cleaning"],
+  "dfScopeWindowGroup": ["창문 청소", "Window cleaning"],
+  "dfScopeDisinfGroup": ["방역·소독", "Pest control and disinfection"],
   "dfBasicService": ["기본 서비스", "Included"],
   "dfNotProvided": ["제공하지 않는 서비스", "Not included"],
   "dfNp1": ["세탁 및 빨래 정리", "Laundry and folding"],
@@ -44,7 +51,7 @@ ROWS = {
   # Address (p09)
   "dfAddressTitle": ["예약할 주소를 선택해 주세요.", "Choose the address to book."],
   "dfEdit": ["수정", "Edit"],
-  "dfStudioToast": ["{service}는 {max}평 이하만 가능해요. {label}({size}평)는 상담으로 안내해 드릴게요.", "{service} is for homes up to {max} pyeong. We'll help with {label} ({size} pyeong) in chat."],
+  "dfStudioToast": ["{service}는 {max}평 이하만 가능해요.", "{service} is for homes up to {max} pyeong."],
   "dfOverPyeong": ["{max}평 이하만 예약할 수 있어요", "Only homes up to {max} pyeong"],
   # Date / time (p10, p17)
   "dfDateTitle": ["날짜/시간을 선택해 주세요.", "Choose a date and time."],
@@ -54,6 +61,7 @@ ROWS = {
   "dfChange": ["변경", "Change"],
   "dfVisitDay": ["방문 일", "Visit date"],
   "dfVisitTime": ["방문 시간", "Visit time"],
+  "dfConsultNote": ["상담으로 안내해 드릴게요.", "We'll help you with this in chat."],
   "dfSelect": ["선택", "Choose"],
   "dfSlotClosed": ["마감", "Full"],
   "dfSelectDone": ["선택 완료", "Done"],
@@ -85,6 +93,10 @@ ROWS = {
   "dfSummaryPaid": ["결제 금액", "Paid"],
   # Move 1/7 - 3/7 (p14-p16)
   "luggage_not_unpacked": ["이삿짐을 풀지 않은 상태", "Boxes not unpacked yet"],
+  # Move-out (퇴거 청소) luggage wording differs from move-in (design p14)
+  "luggage_out_partly_unpacked": ["이삿짐을 일부 푼 상태", "Boxes partly unpacked"],
+  "luggage_out_fully_lived_in": ["짐을 다 풀었거나 생활 중인 상태", "Fully unpacked or lived in"],
+  "luggage_out_unknown": ["짐 상태를 잘 모르겠어요", "Not sure about the boxes"],
   "dfReviewsTitle": ["생생한 이용 후기를 확인하세요.", "See what customers say."],
   "dfBefore": ["BEFORE", "BEFORE"],
   "dfAfter": ["AFTER", "AFTER"],

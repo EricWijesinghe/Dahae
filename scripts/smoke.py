@@ -49,6 +49,10 @@ def sql(statement):
     subprocess.run([psql, "-h", "localhost", "-p", os.environ.get("PGPORT", "5433"), "-U", "postgres", "-d", os.environ.get("PGDATABASE", "cleaning"), "-qc", statement], check=True, env=env)
 
 
+def customer_consents():
+    return [{"kind": k, "granted": True, "version": CONSENT_VERSION} for k in ("terms", "privacy", "overseas_transfer")]
+
+
 def phone():
     return f"010{random.randint(10000000, 99999999)}"
 
@@ -167,7 +171,7 @@ def main():
     step("completion needs photos; payout 41,600 (52,000 - 20%) scheduled")
 
     answers = {"cleaning_type": "after_interior", "luggage": "empty", "building": "apartment", "layout": "three_rooms", "duplex": False, "bathrooms": 2, "balconies": 2, "elevator": True, "floor_3_or_higher": True}
-    assert call("POST", "/v1/quote/estimate", answers)["total"] == 580800
+    assert call("POST", "/v1/quote/estimate", {**answers, "service_code": "move_in"})["total"] == 580800
     q = call("POST", "/v1/bookings", {"service_code": "move_in", "address_id": big["id"], "visit_date": visit, "start_hour": 8, "answers": answers}, cust)
     assert (q["status"], q["estimate"]) == (0, 580800) and q["thread_id"], q
     msgs = call("GET", f"/v1/chat/threads/{q['thread_id']}/messages", token=cust)

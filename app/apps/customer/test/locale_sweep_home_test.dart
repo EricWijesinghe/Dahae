@@ -7,6 +7,7 @@ import 'package:ui/ui.dart';
 
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
+import 'support/home_groups.dart';
 
 /// Dahae home on the smallest phone we support at large and largest system text, in every
 /// language: header toggle, 8 tiles with badges, upcoming booking, recommended, banner pager and the
@@ -17,27 +18,56 @@ const _scrollSteps = 20;
 const _gutter = Offset(3, 300);
 
 /// Long titles in the app language where one exists: content is written per language in the console.
-Json _item(String id, String kind, String title, {String? link}) =>
-    contentJson(id: id, kind: kind, title: {'ko': title, 'en': title}, link: link);
+Json _item(String id, String kind, String title, {String? link}) => contentJson(
+  id: id,
+  kind: kind,
+  title: {'ko': title, 'en': title},
+  link: link,
+);
 
 FakeApi _homeApi() {
   final fake = FakeApi()
-    ..onGet('/content', (call) => switch (call.query['kind']) {
-      'banner' => [
-        _item('b-1', 'banner', 'First cleaning 15,000 KRW welcome coupon for every new customer', link: 'coupons'),
-        _item('b-2', 'banner', 'Move-in cleaning including the pre-move-out cleaning', link: 'service/move_in'),
-        _item('b-3', 'banner', 'Two-in-one air conditioner cleaning is now open for booking in every district'),
-      ],
-      'news' => [
-        _item('n-1', 'news', 'Studio cleaning service area expansion: Seongnam and Hanam'),
-        _item('n-2', 'news', 'Consultation hours'),
-      ],
-      'tip' => [
-        _item('t-1', 'tip', 'What causes air conditioner odours, and how to stop them?'),
-        _item('t-2', 'tip', 'Limescale'),
-      ],
-      _ => [_item('c-1', 'notice', 'Maintenance')],
-    });
+    ..onGet(
+      '/content',
+      (call) => switch (call.query['kind']) {
+        'banner' => [
+          _item(
+            'b-1',
+            'banner',
+            'First cleaning 15,000 KRW welcome coupon for every new customer',
+            link: 'coupons',
+          ),
+          _item(
+            'b-2',
+            'banner',
+            'Move-in cleaning including the pre-move-out cleaning',
+            link: 'service/move_in',
+          ),
+          _item(
+            'b-3',
+            'banner',
+            'Two-in-one air conditioner cleaning is now open for booking in every district',
+          ),
+        ],
+        'news' => [
+          _item(
+            'n-1',
+            'news',
+            'Studio cleaning service area expansion: Seongnam and Hanam',
+          ),
+          _item('n-2', 'news', 'Consultation hours'),
+        ],
+        'tip' => [
+          _item(
+            't-1',
+            'tip',
+            'What causes air conditioner odours, and how to stop them?',
+          ),
+          _item('t-2', 'tip', 'Limescale'),
+        ],
+        _ => [_item('c-1', 'notice', 'Maintenance')],
+      },
+    );
   fake.reply('GET', '/services', [
     for (final code in catalogCodes)
       {
@@ -52,10 +82,29 @@ FakeApi _homeApi() {
     fake,
     name: 'Nguyễn Thị Phương Thảo',
     coupons: [couponJson(id: 'cp-1', name: 'welcome_any', amount: 15000)],
-    bookings: [bookingJson(id: 'b1', status: 0, serviceCode: 'move_out', estimate: 420000)],
+    bookings: [
+      bookingJson(
+        id: 'b1',
+        status: 0,
+        serviceCode: 'move_out',
+        estimate: 420000,
+      ),
+    ],
     feed: [
-      {'kind': 'seasonal', 'score': 10, 'service': 'aircon', 'reason': 'summer_aircon', 'facts': 0},
-      {'kind': 'resume_quote', 'score': 9, 'service': 'move_in', 'reason': 'draft_unfinished', 'facts': 0},
+      {
+        'kind': 'seasonal',
+        'score': 10,
+        'service': 'aircon',
+        'reason': 'summer_aircon',
+        'facts': 0,
+      },
+      {
+        'kind': 'resume_quote',
+        'score': 9,
+        'service': 'move_in',
+        'reason': 'draft_unfinished',
+        'facts': 0,
+      },
     ],
   );
   return fake;
@@ -65,7 +114,9 @@ void main() {
   for (final locale in LocaleController.supported) {
     final code = locale.languageCode;
     for (final scale in _scales) {
-      testWidgets('[$code x$scale] home fits a small phone from header to news', (tester) async {
+      testWidgets('[$code x$scale] home fits a small phone from header to news', (
+        tester,
+      ) async {
         setViewport(tester, _smallPhone);
         tester.platformDispatcher.textScaleFactorTestValue = scale;
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
@@ -86,27 +137,36 @@ void main() {
         await tester.tap(find.text(t.dhHomePick(BrandConfig.placeholder.name)));
         await settle(tester, duration: const Duration(milliseconds: 600));
         expect(find.text(t.dhHomeRecommended), findsOneWidget);
-        expect(find.text(t.service('sofa')), findsNothing);
+        expect(find.text(homeGroupTitle('sofa', lang: code)), findsNothing);
         await tester.tap(find.text(t.dhHomeAll));
         await settle(tester, duration: const Duration(milliseconds: 600));
-        expect(find.text(t.service('sofa')), findsOneWidget);
+        expect(find.text(homeGroupTitle('sofa', lang: code)), findsOneWidget);
 
         var sawBanner = false, sawNews = false;
         for (var i = 0; i < _scrollSteps; i++) {
-          await tester.dragFrom(_gutter, const Offset(0, -260)); // start in the gutter, on no tile
+          await tester.dragFrom(
+            _gutter,
+            const Offset(0, -260),
+          ); // start in the gutter, on no tile
           await settle(tester, duration: const Duration(milliseconds: 300));
           sawBanner |= find.byType(BannerCarousel).evaluate().isNotEmpty;
           sawNews |= find.text(t.dhHomeNews).evaluate().isNotEmpty;
         }
         FlutterError.onError = saved;
-        final where = RegExp(r'file:///[^\s)]+/(?:customer/lib|ui/lib)/[^\s)]+');
+        final where = RegExp(
+          r'file:///[^\s)]+/(?:customer/lib|ui/lib)/[^\s)]+',
+        );
         final failures = {
           for (final d in errors)
             '${d.exceptionAsString().split('\n').first} @ '
                 '${where.allMatches(d.toString()).map((m) => m.group(0)).take(3).join(' ')}',
         };
         expect(failures, isEmpty, reason: failures.join('\n'));
-        expect((sawBanner, sawNews), (true, true), reason: 'the banner and the news list were built');
+        expect(
+          (sawBanner, sawNews),
+          (true, true),
+          reason: 'the banner and the news list were built',
+        );
         await unmount(tester);
       });
     }

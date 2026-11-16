@@ -20,6 +20,7 @@ pub mod pricing;
 pub mod quality;
 pub mod quote;
 pub mod schedule;
+pub mod service_group;
 pub mod subscription;
 pub mod tax;
 pub mod tip;
