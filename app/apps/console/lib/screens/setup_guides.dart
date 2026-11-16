@@ -41,18 +41,38 @@ class Guide {
   final List<Tr> screenshots;
 }
 
+/// PortOne channel slots, in the order the card shows them: the checkout methods, then billing, identity and cash receipts.
 const paymentMethodKeys = [
   'card',
+  'card_billing',
   'kakaopay',
   'naverpay',
   'tosspay',
+  'virtual_account',
+  'identity',
+  'cash_receipt',
   'payco',
   'samsungpay',
   'applepay',
   'transfer',
-  'virtual_account',
   'phone',
 ];
+
+const slotLabels = <String, Tr>{
+  'card': Tr('일반결제 (카드)', 'Card payment'),
+  'card_billing': Tr('정기결제 (빌링키)', 'Recurring billing key'),
+  'kakaopay': Tr('카카오페이', 'KakaoPay'),
+  'naverpay': Tr('네이버페이', 'NaverPay'),
+  'tosspay': Tr('토스페이', 'TossPay'),
+  'virtual_account': Tr('가상계좌', 'Virtual account'),
+  'identity': Tr('본인인증', 'Identity verification'),
+  'cash_receipt': Tr('현금영수증', 'Cash receipt'),
+  'payco': Tr('페이코 (기타)', 'PAYCO (other)'),
+  'samsungpay': Tr('삼성페이 (기타)', 'Samsung Pay (other)'),
+  'applepay': Tr('애플페이 (기타)', 'Apple Pay (other)'),
+  'transfer': Tr('계좌이체 (기타)', 'Bank transfer (other)'),
+  'phone': Tr('휴대폰 결제 (기타)', 'Phone bill (other)'),
+};
 const messageEventKeys = [
   'booking.status',
   'booking.completed',
@@ -96,7 +116,7 @@ final guides = <String, Guide>{
     fields: const {
       'store_id': FieldGuide(
         Tr('상점 아이디 (Store ID)', 'Store ID'),
-        hint: Tr('store-로 시작해요', 'Starts with store-'),
+        hint: Tr('store-로 시작해요. PortOne 콘솔의 상점 정보에서 복사해요', 'Starts with store-. Copy it from the store info in the PortOne console'),
       ),
       'cash_receipts': FieldGuide(
         Tr('현금영수증 발급', 'Issue cash receipts'),
@@ -105,13 +125,17 @@ final guides = <String, Guide>{
           'Off means no cash receipts are issued. Test in the PortOne sandbox before turning it on.',
         ),
       ),
-      'api_secret': FieldGuide(Tr('V2 API Secret', 'V2 API Secret')),
+      'api_secret': FieldGuide(
+        Tr('V2 API Secret', 'V2 API Secret'),
+        hint: Tr('PortOne 콘솔 연동 정보의 V2 API Secret을 복사해요', 'Copy the V2 API Secret from the PortOne console integration info'),
+      ),
       'webhook_secret': FieldGuide(
         Tr('웹훅 시크릿', 'Webhook secret'),
         hint: Tr('whsec_ 로 시작해요', 'Starts with whsec_'),
       ),
       'channel_keys': FieldGuide(
         Tr('결제수단별 채널 키', 'Channel key per payment method'),
+        hint: Tr('PortOne 콘솔 채널 관리에서 채널 키를 복사해요. 없는 칸은 비워 두세요', 'Copy each channel key from PortOne channel settings. Leave unused slots empty'),
         suggestions: paymentMethodKeys,
       ),
     },
@@ -466,5 +490,11 @@ String setupMessage(T t, String code) => switch (code) {
   'missing_field' => t.err_missing_field,
   'toss_unverified' => t.err_toss_unverified,
   'invalid_cap' => t.err_invalid_cap,
+  'invalid_store_id' => t.err_invalid_store_id,
+  'invalid_api_secret' => t.err_invalid_api_secret,
+  'invalid_channel_key' => t.err_invalid_channel_key,
+  'unknown_channel_key' => t.err_unknown_channel_key,
+  'invalid_secret_key' => t.err_invalid_secret_key,
+  'invalid_security_key' => t.err_invalid_security_key,
   _ => t.cInvalidValue,
 };

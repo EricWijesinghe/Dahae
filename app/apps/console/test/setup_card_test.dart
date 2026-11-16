@@ -52,6 +52,8 @@ Future<void> _pump(WidgetTester tester, Json card, {String? webhookUrl, String? 
 }
 
 void main() {
+  _lockedTests();
+
   testWidgets('a saved test key shows the 테스트 badge and no live badge', (tester) async {
     await _pump(tester, _payoutCard(mode: 'test'));
 
@@ -99,7 +101,7 @@ void main() {
     expect(find.text(koT.cSetupWebhook), findsOneWidget);
     expect(find.text(url), findsOneWidget);
 
-    await tester.tap(find.byTooltip(koT.cCopied));
+    await tester.tap(find.byTooltip(koT.cCopy));
     await settle(tester);
 
     expect(copied, [url]);
@@ -115,6 +117,85 @@ void main() {
 
     await _pump(tester, _portoneCard(), tossWebhookUrl: tossUrl);
     expect(find.text(tossUrl), findsNothing);
+    await unmount(tester);
+  });
+}
+
+Json _lockedPortone({bool unlocked = false}) => {
+  'code': 'portone',
+  'source': 'console',
+  'configured': true,
+  'locked': !unlocked,
+  'unlock_expires_at': unlocked ? '2099-01-01T00:05:00Z' : null,
+  'fields': [
+    _field('store_id', 'text', set: true, preview: '••••0000'),
+    _field('api_secret', 'secret', set: true, preview: '••••0000'),
+    _field('webhook_secret', 'secret'),
+    _field('channel_keys', 'map', set: true, preview: {'card': '••••0000'}),
+    _field('cash_receipts', 'toggle'),
+  ],
+  'last_test': null,
+};
+
+void _lockedTests() {
+  testWidgets('a saved card is locked: badge, disabled fields, disabled save, unlock button', (tester) async {
+    await _pump(tester, _lockedPortone());
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+
+    expect(find.text(koT.cSetupLockedBadge), findsOneWidget);
+    expect(find.text(koT.cSetupUnlock), findsOneWidget);
+    final save = tester.widget<FilledButton>(find.widgetWithText(FilledButton, koT.cSetupSave));
+    expect(save.onPressed, isNull);
+    final store = tester.widget<TextField>(find.byType(TextField).first);
+    expect(store.enabled, isFalse);
+    await unmount(tester);
+  });
+
+  testWidgets('saved values are masked and never filled into the paste boxes', (tester) async {
+    await _pump(tester, _lockedPortone());
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+
+    expect(find.textContaining('••••0000'), findsWidgets);
+    final store = tester.widget<TextField>(find.byType(TextField).first);
+    expect(store.controller!.text, isEmpty);
+    await unmount(tester);
+  });
+
+  testWidgets('an unlocked card shows the unlocked badge and a lock-now button', (tester) async {
+    await _pump(tester, _lockedPortone(unlocked: true));
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+
+    expect(find.text(koT.cSetupUnlockedBadge), findsOneWidget);
+    expect(find.text(koT.cSetupLockNow), findsOneWidget);
+    expect(find.text(koT.cSetupLockedBadge), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('a secret paste box can show and hide what is typed', (tester) async {
+    await _pump(tester, _portoneCard());
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+
+    final secret = find.byType(TextField).at(1);
+    expect(tester.widget<TextField>(secret).obscureText, isTrue);
+    await tester.tap(find.byTooltip(koT.cSetupShow));
+    await settle(tester);
+    expect(tester.widget<TextField>(secret).obscureText, isFalse);
+    await unmount(tester);
+  });
+
+  testWidgets('a bad store id shows a friendly message under the box', (tester) async {
+    await _pump(tester, _portoneCard());
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+
+    await tester.enterText(find.byType(TextField).first, 'shop-1');
+    await settle(tester);
+
+    expect(find.text(koT.err_invalid_store_id), findsOneWidget);
     await unmount(tester);
   });
 }
