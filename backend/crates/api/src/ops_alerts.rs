@@ -23,7 +23,7 @@ use std::{
 };
 use tokio::task::JoinHandle;
 
-pub const RULES: [&str; 12] = [
+pub const RULES: [&str; 13] = [
     "sms_failing",
     "push_failing",
     "payment_failing",
@@ -31,6 +31,7 @@ pub const RULES: [&str; 12] = [
     "payment_mismatch",
     "social_failing",
     "auth_suspicious",
+    "otp_volume",
     "backup_stale",
     "disk_low",
     "unassigned_stale",
@@ -38,6 +39,10 @@ pub const RULES: [&str; 12] = [
     "tax_deadline",
 ];
 pub const COOLDOWN_HOURS: i64 = 6;
+/// Hourly sign-in code sends (all numbers) that raise the owner's `otp_volume` alert. Nothing is refused at this level.
+pub const OTP_GLOBAL_WARN_PER_HOUR: i64 = 3_000;
+/// Hard stop on hourly sign-in code sends (all numbers): 10x the warn level, far above normal peaks, so spend is bounded.
+pub const OTP_GLOBAL_CEILING_PER_HOUR: i64 = 10 * OTP_GLOBAL_WARN_PER_HOUR;
 const PREFS_KEY: &str = "ops_alerts";
 const BUSINESS_KEY: &str = "business";
 const PASS_EVERY: StdDuration = StdDuration::from_secs(300);
@@ -218,6 +223,7 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
             body: "직원 로그인 또는 인증 번호에 반복 실패가 있어 잠금이 걸렸어요. 감사 로그에서 대상 계정과 시간을 확인하고, 본인이 아니면 비밀번호를 바꾸세요.",
         });
     }
+    out.extend(otp_volume(db).await?);
     out.extend(payout_findings(db).await?);
     out.extend(business_findings_or_skip(db, &s.config).await);
     out.extend(job_finding());
@@ -240,6 +246,21 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
         });
     }
     Ok(out)
+}
+
+/// Sign-in code sends in the last hour across all numbers, at or over the warn level.
+pub async fn otp_volume(db: &PgPool) -> ApiResult<Vec<Finding>> {
+    let sent: i64 = sqlx::query_scalar("SELECT count(*) FROM otp_codes WHERE created_at > now() - interval '1 hour'")
+        .fetch_one(db)
+        .await?;
+    if sent < OTP_GLOBAL_WARN_PER_HOUR {
+        return Ok(Vec::new());
+    }
+    Ok(vec![Finding {
+        rule: "otp_volume",
+        title: "인증 번호 발송이 평소보다 많아요",
+        body: "한 시간 동안 인증 번호가 아주 많이 나갔어요. 같은 IP나 번호에서 반복 요청이 없는지 확인하세요. 계속되면 문자 비용이 늘어나요.",
+    }])
 }
 
 /// Business rules fail soft: a failed KPI query is logged and skipped, so the infrastructure alerts still run.

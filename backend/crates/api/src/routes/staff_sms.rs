@@ -153,9 +153,11 @@ async fn issue_reset(
             .fetch_optional(&mut *tx)
             .await?;
     let (stored, pending, enrolled) = row.ok_or(ApiError::NotFound)?;
-    // Copy shows the code to the admin. Without a second factor the admin then holds the password and the
-    // account's first enrolment, so a copy reset is only for an invite or an account that already has TOTP.
-    if req.channel == Channel::Copy && !pending && !enrolled {
+    // Copy shows the code to the admin, and an admin-given phone (no number on file) receives it. Without a
+    // second factor either one hands the admin the password and the account's first enrolment. An invite is
+    // exempt: it is the first sign-in itself.
+    let admin_sees_code = req.channel == Channel::Copy || stored.is_none();
+    if admin_sees_code && !pending && !enrolled {
         return Err(ApiError::BadRequest("sms_required"));
     }
     let phone = resolve_phone(&mut tx, id, stored, req.phone.as_deref()).await?;
