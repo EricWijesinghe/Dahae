@@ -492,6 +492,12 @@ async fn cashback_is_earned_on_a_discounted_booking(pool: PgPool) {
     let coupon = discount_coupon(&pool, c.user, 2_000).await;
     let (pro, _) = verified_pro(&app, &pool, "010-5700-0102").await;
     let (id, _) = book(&app, &c, 10, Some(coupon)).await;
+    let (discount,): (i64,) = sqlx::query_as("SELECT discount FROM bookings WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .expect("discount");
+    assert!(discount > 0, "the booking carries a discount");
     complete_job(&app, &pool, id, pro.as_str()).await;
     let (st, pts) = call(&app, "GET", "/v1/me/points", Some(c.token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{pts}");
