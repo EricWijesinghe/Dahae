@@ -110,7 +110,7 @@ This agreement is written in Korean (Part 1) and English (Part 2). If the two ve
 
 1. **역할 구분.** 라이선시는 라이선시 서비스에서 고객의 개인정보를 수집, 저장, 이용, 제공하는 자로서, 자신의 서버에서 처리되는 해당 개인정보에 대한 「개인정보 보호법」상 개인정보처리자의 책임을 집니다. 라이선서는 라이선시가 소프트웨어를 설치하고 운영하는 환경의 개인정보에 대하여 개인정보처리자가 아닙니다.
 2. **접근 원칙.** 라이선서는 라이선시 서버와 라이선시 데이터에 접근하지 않습니다. 단, 제4조 제4항에 따라 라이선시가 승인한 지원 접근은 예외입니다.
-3. **라이선서의 개인정보 수집 금지.** 라이선서는 소프트웨어를 통하여 라이선시의 개인정보를 수집하거나 자신의 목적으로 이용하지 않습니다. 텔레메트리나 오류 보고를 보내는 기능이 있다면, 그 내용과 설정 방법은 라이선시가 확인할 수 있도록 문서로 제공합니다. [텔레메트리 사용 여부 확인 필요]
+3. **라이선서의 개인정보 수집 금지.** 라이선서는 소프트웨어를 통하여 라이선시의 개인정보를 수집하거나 자신의 목적으로 이용하지 않습니다. 소프트웨어는 라이선서에게 어떠한 사용 통계나 원격 측정 정보도 보내지 않습니다. 앱 오류 보고는 라이선시 자신의 서버로만 전송되고, 푸시 알림은 라이선시가 직접 설정한 Firebase 프로젝트를 통해서만 발송됩니다.
 4. **업무위탁.** 라이선서가 제4조 제4항에 따라 개인정보를 처리하는 경우, 라이선시와 라이선서는 「개인정보 보호법」 제26조에 따라 다음 내용을 포함하는 업무위탁 계약을 별도로 체결합니다. 이 계약은 그 계약의 효력을 대신하지 않습니다.
    - 위탁 업무의 목적과 범위
    - 재위탁 금지 또는 재위탁 시 사전 동의 절차
@@ -334,7 +334,7 @@ Except where the law permits, the Licensee shall not:
 
 1. **Roles.** The Licensee collects, stores, uses and provides its customers' personal information through the Licensed Service. For personal information processed on servers the Licensee controls, the Licensee is the personal information controller under PIPA and bears that responsibility. The Licensor is not a personal information controller for personal information in environments where the Licensee installs and operates the Software.
 2. **Access principle.** The Licensor does not access the Licensee's servers or Licensee Data, except for support access approved by the Licensee under Article 4(4).
-3. **No collection by the Licensor.** The Licensor does not collect the Licensee's personal information through the Software or use it for its own purposes. If the Software includes telemetry or error reporting, the Licensor documents what it sends and how the Licensee can turn it off. [Confirm whether telemetry exists]
+3. **No collection by the Licensor.** The Licensor does not collect the Licensee's personal information through the Software or use it for its own purposes. The Software sends no usage statistics or telemetry to the Licensor. App error reports go only to the Licensee's own server, and push notifications are sent only through a Firebase project that the Licensee configures.
 4. **Entrustment.** Where the Licensor processes personal information under Article 4(4), the parties sign a separate processing entrustment agreement under Article 26 of PIPA covering at least:
    - the purpose and scope of the entrusted processing;
    - restrictions on subcontracting, or the prior consent procedure for it;
