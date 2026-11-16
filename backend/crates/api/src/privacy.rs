@@ -19,14 +19,18 @@ use uuid::Uuid;
 /// Bump when any of them changes: every stored consent with another version stops counting.
 pub const CONSENT_VERSION: &str = "2026-11-19";
 
-/// Kind and whether the service cannot run without it. Marketing and location are optional and withdrawable.
+/// Kind and whether the service cannot run without it once signed up. Overseas transfer, marketing and location
+/// are withdrawable (the public notice promises it); withdrawing overseas transfer stops push and the AI chat.
 pub const CONSENTS: [(&str, bool); 5] = [
     ("terms", true),
     ("privacy", true),
-    ("overseas_transfer", true),
+    ("overseas_transfer", false),
     ("marketing", false),
     (LOCATION, false),
 ];
+
+/// Kinds a sign-up must grant. Overseas transfer is required to sign up but withdrawable afterwards.
+const SIGNUP_REQUIRED: [&str; 3] = ["terms", "privacy", "overseas_transfer"];
 
 /// 위치기반서비스 이용약관 (위치정보법): asked in the app before the first "use my current location".
 pub const LOCATION: &str = "location";
@@ -61,6 +65,11 @@ fn effective(rows: &[Latest], kind: &str) -> bool {
 /// Whether a marketing message may go to this customer now.
 pub async fn marketing_allowed(db: &PgPool, user: Uuid) -> sqlx::Result<bool> {
     Ok(effective(&latest(db, user).await?, "marketing"))
+}
+
+/// Whether this customer's data may go abroad now (Google FCM push, Anthropic AI chat).
+pub async fn overseas_allowed(db: &PgPool, user: Uuid) -> sqlx::Result<bool> {
+    Ok(effective(&latest(db, user).await?, "overseas_transfer"))
 }
 
 #[derive(Serialize)]
@@ -160,9 +169,7 @@ fn check_kinds_and_versions(consents: &[ConsentChange]) -> ApiResult<()> {
 /// Signup must grant every required consent for the current policy version. Optional ones may be unticked.
 pub fn check_signup_consents(consents: &[ConsentChange]) -> ApiResult<()> {
     check_kinds_and_versions(consents)?;
-    let missing = CONSENTS
-        .iter()
-        .any(|(k, required)| *required && !consents.iter().any(|c| c.kind == *k && c.granted));
+    let missing = SIGNUP_REQUIRED.iter().any(|k| !consents.iter().any(|c| c.kind == *k && c.granted));
     if missing {
         return Err(ApiError::BadRequest("required_consent"));
     }

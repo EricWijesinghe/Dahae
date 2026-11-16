@@ -472,3 +472,16 @@ async fn reply_quoting_a_spelled_amount_the_shop_does_not_list_is_replaced(pool:
     let replies = ai_replies(&pool, w.thread).await;
     assert_eq!(replies.last().expect("a reply")["text"], HANDOFF_KO, "{replies:?}");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn withdrawn_overseas_consent_keeps_the_ai_quiet(pool: PgPool) {
+    let w = world(pool.clone(), Mode::AlwaysFirst).await;
+    set_hours(&pool, true).await;
+    let consent = json!({ "consents": [{ "kind": "overseas_transfer", "granted": false, "version": api::privacy::CONSENT_VERSION }] });
+    let (st, body) = call(&w.app, "PUT", "/v1/me/consents", Some(w.customer.as_str()), Some(consent)).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    customer_says(&pool, w.thread, "예약 확인 부탁해요").await;
+    answer(&w.state, w.thread).await.expect("answer");
+    assert!(w.fake.calls.lock().expect("calls").is_empty(), "no message leaves for the model abroad");
+    assert!(ai_replies(&pool, w.thread).await.is_empty());
+}

@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5905,7 +5906,7 @@ class TKo extends T {
 
   @override
   String get sgOverseasNote =>
-      '서비스 이용에 꼭 필요한 동의라서 철회할 수 없어요. 동의하지 않으면 가입할 수 없어요.';
+      '서비스 가입에 꼭 필요한 동의예요. 동의하지 않으면 가입할 수 없어요. 가입 후에는 동의 관리에서 철회할 수 있지만, 철회하면 푸시 알림과 AI 상담을 쓸 수 없어요.';
 
   @override
   String get cStaffInvite => '직원 초대';

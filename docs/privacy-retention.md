@@ -5,9 +5,9 @@ Source of truth for what the server keeps, purges and deletes. Code: `backend/cr
 ## Consent (`user_consents`, migration 0016)
 
 - Append-only. Each change is a row `(user, kind, version, granted, created_at)`. The newest row per kind is the current state.
-- Kinds: `terms`, `privacy`, `overseas_transfer` (required); `marketing` (optional, withdrawable).
+- Kinds: `terms`, `privacy`, `overseas_transfer` (required at sign-up); `marketing` (optional). `overseas_transfer` and `marketing` are withdrawable later; withdrawing `overseas_transfer` stops push notifications (Google FCM) and the AI chat (Anthropic) for that customer.
 - A consent counts only when granted for `CONSENT_VERSION` (privacy.rs). Bumping the version forces re-consent of required kinds (`reconsent_required: true`) and stops marketing until re-asked.
-- API: `GET/PUT /v1/me/consents`. A change with a stale version is rejected; required kinds cannot be withdrawn.
+- API: `GET/PUT /v1/me/consents`. A change with a stale version is rejected. `terms` and `privacy` cannot be withdrawn while the customer uses the service; the other kinds can.
 - Marketing sends: `realtime::notify` drops any `marketing.*` kind unless `marketing_allowed`. Transactional kinds are unaffected.
 
 ## Deletion (`DELETE /v1/me`)

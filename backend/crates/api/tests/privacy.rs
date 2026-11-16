@@ -524,6 +524,32 @@ async fn staff_reads_of_customer_contacts_are_audit_logged(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn overseas_transfer_consent_can_be_withdrawn_and_stays_off(pool: PgPool) {
+    let app = app(pool.clone());
+    let c = customer(&app, &pool, "010-8100-0005").await;
+    let (st, body) = call(
+        &app,
+        "PUT",
+        "/v1/me/consents",
+        Some(c.token.as_str()),
+        Some(json!({ "consents": [{ "kind": "overseas_transfer", "granted": false, "version": CONSENT_VERSION }] })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "the notice promises withdrawal in 동의 관리: {body}");
+    let (st, s) = call(&app, "GET", "/v1/me/consents", Some(c.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(s["reconsent_required"], false, "a withdrawn overseas consent is not asked again");
+    let item = s["items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .find(|i| i["kind"] == "overseas_transfer")
+        .expect("item");
+    assert_eq!(item["granted"], false);
+    assert_eq!(item["required"], false, "the switch is unlocked in the app");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn partner_export_omits_account_number_and_delete_clears_notifications(pool: PgPool) {
     let app = app(pool.clone());
     let (token, pro) = common::verified_pro(&app, &pool, "010-8100-0007").await;

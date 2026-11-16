@@ -1858,7 +1858,7 @@
  "cSlotHintMethod": "Copy this payment method's channel key from the PortOne console",
  "sgConsentHint": "Agree to the required items to get a verification code.",
  "err_required_consent": "Please agree to all required terms to sign up",
- "sgOverseasNote": "This consent is needed to use the service, so it cannot be withdrawn. Without it you cannot sign up.",
+ "sgOverseasNote": "This consent is needed to sign up. Without it you cannot sign up. After signing up you can withdraw it in Consent settings, but then push notifications and the AI chat stop.",
  "cStaffInvite": "Invite staff",
  "cStaffInviteTitle": "Invite a staff member",
  "cStaffInviteBody": "We text a sign-in code to the staff member's phone. They set a password with it within 24 hours.",
