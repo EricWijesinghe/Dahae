@@ -32,8 +32,8 @@
 <details open>
 <summary><b>1단계. 서버와 도메인 빌리기</b></summary>
 
-- 서버 임대 회사에서 **Ubuntu 24.04, CPU 2개, 메모리 4 GB** 서버를 빌려요. 메모리 2 GB 가 최소예요.
-- 비용은 대략 **서버 월 1.5~3만 원**, **도메인(예: `myshop.co.kr`) 연 1~2만 원**이에요. 회사와 시기에 따라 달라요.
+- 서버 임대 회사에서 **Ubuntu 24.04, CPU 2개, 메모리 4 GB** 서버를 빌려요 (22.04 와 Debian 12 도 설치돼요). 설치 프로그램은 메모리 1 GB 이상에서 실행돼요.
+- 서버와 도메인 비용은 업체와 시기에 따라 달라요. 가입 전에 업체 요금표를 확인하세요.
 - 서버 방화벽에서 **22, 80, 443 포트**를 열어요.
 - 자세히: [0. 한 번에 설치하기](docs/guide/00-한번에-설치.md) ①②
 
@@ -69,7 +69,7 @@ curl -fsSL <설치 주소> | sudo bash
 4. **로그인과 앱 푸시**: 카카오, 네이버, 구글, 애플, Firebase (쓰는 것만)
 5. **백업**: 외부 저장소를 연결하면 매일 암호화된 백업을 한 부 더 보관해요. 안 해도 서버 안 백업(14일)은 계속돼요.
 
-카드마다 **[연결 테스트]**가 자동으로 돌아서, 초록색 "연결됨"이 나오면 끝이에요.
+저장하면 카드마다 **연결 확인**이 자동으로 돌아서, 초록색 "연결됨"이 나오면 끝이에요.
 
 <p align="center"><img src="docs/assets/readme/console-payments.webp" alt="결제 연동 카드를 펼친 화면. 상점 아이디, 시크릿, 웹훅 주소 입력칸이 보여요" width="520"><br><sub>결제 연동 카드 (데모 데이터)</sub></p>
 
@@ -116,6 +116,8 @@ curl -fsSL <설치 주소> | sudo bash
 
 ## 주요 기능
 
+전체 목록과 코드 위치는 [기능 카탈로그](docs/FEATURES.md)에 있어요.
+
 ### 예약
 - 서비스마다 정해진 가격과 카탈로그 기준 가격 계산
 - 이사·입주 청소는 견적을 받고, 예약금(견적의 10%)을 먼저 받아요
@@ -155,8 +157,16 @@ curl -fsSL <설치 주소> | sudo bash
 - 고객, 파트너, 사장님 사이 실시간 채팅과 견적 카드
 - 앱 푸시 (FCM), 문자 (Solapi SMS), 카카오 알림톡
 - **상담 도우미 (선택 기능)**: 직원이 없을 때, 또는 설정에 따라 항상 먼저, 고객 채팅에 답해요. 끄는 것도 설정에서 해요.
-  - 답을 만들기 위해 고객이 채팅에 쓴 내용이 미국에 있는 외부 서비스로 전송돼요. 그래서 고객에게 **국외 이전 동의**를 받고, 동의하지 않으면 이 기능을 쓸 수 없어요.
+  - 답을 만들기 위해 고객이 채팅에 쓴 내용이 외부 응답 API 제공사로 전송돼요. 개인정보 처리방침은 이 제공사를 미국 법인으로 적어요. 그래서 가입할 때 고객에게 **국외 이전 동의**를 받아요. 가입할 때 동의는 필수이고, 철회는 아직 앱에서 할 수 없어요 ([알려진 한계](docs/SECURITY-AND-PRIVACY.md#known-gaps-and-open-items)).
   - 자세한 내용은 [개인정보 처리방침](website/privacy.html)의 국외 이전 항목을 보세요.
+
+## 보안 한눈에 보기
+
+- 연동 키(결제, 문자, 간편 로그인, 푸시 등)는 암호화해서 보관해요. 결제 키는 처음 저장하거나 잠금을 풀 때 사장님 2단계 인증을 거쳐요.
+- 직원 계정은 TOTP 2단계 인증을 쓰고, 로그인 실패가 반복되면 잠가요.
+- 인증 코드 요청과 로그인에 속도 제한이 있어요. 결제와 지급 웹훅은 서명을 확인해요.
+- 고객의 개인정보 열람·삭제 요청과 보관 기간 설정을 시스템에서 처리해요.
+- 통제 항목, 근거 코드, 알려진 공백은 [보안과 개인정보](docs/SECURITY-AND-PRIVACY.md)에 있어요. 취약점 신고는 [SECURITY.md](SECURITY.md)를 보세요.
 
 ## 구조
 
@@ -192,15 +202,31 @@ flowchart LR
   BK --> S3
 ```
 
+## 문서 / Documentation
+
+| 문서 | 무엇이 들어 있나요 |
+|---|---|
+| [기능 카탈로그](docs/FEATURES.md) | 고객, 파트너, 사장님, 시스템이 하는 일을 기능별로 정리하고, 코드 위치와 알려진 한계를 적었어요 (한국어·영어) |
+| [아키텍처](docs/ARCHITECTURE.md) | 구성 요소, 요청과 데이터 흐름, 배포 구조, 현재 상태 (한국어 요약, 영어 본문) |
+| [보안과 개인정보](docs/SECURITY-AND-PRIVACY.md) | 신뢰 경계, 인증, 권한, 암호화, 개인정보 흐름, 알려진 공백 (한국어·영어) |
+| [보안 정책](SECURITY.md) | 취약점 신고 방법과 범위 |
+| [운영 가이드](docs/OPERATIONS.md) | 설치 뒤 할 일, `dahae` 명령, 백업, 업데이트와 채널 (한국어·영어) |
+| [장애 대응 런북](docs/RUNBOOK.md) | 증상별 첫 확인 순서와 복구 절차 (한국어·영어) |
+| [품질과 검사](docs/QUALITY.md) | 테스트 구성과 수, CI 게이트, 릴리스 파이프라인, 알려진 공백 |
+| [API 색인](docs/api/README.md) | 경로 목록과 공통 규칙 (멱등성, 오류 형식, 버전) |
+| [안내서 모음](docs/guide/README.md) | 사장님과 설치 담당을 위한 단계별 안내서 (한국어) |
+| [배포 상세](docs/DEPLOY.md) | 배포와 운영 절차 세부 |
+| [라이선스](LICENSE), [제3자 고지](THIRD_PARTY_NOTICES.md) | 사용 조건과 포함된 외부 구성요소의 라이선스 |
+
 ## 자주 묻는 질문
 
 **Q. 비용은 얼마나 드나요?**
-서버 월 1.5~3만 원, 도메인 연 1~2만 원 정도예요 (대략). 결제 수수료와 문자·알림톡 요금은 각 회사(PortOne, Solapi 등)의 요금표를 따라요. 이 프로그램의 사용 조건은 저장소의 [LICENSE](LICENSE)를 보고, 도입 전에 개발자와 따로 확인하세요.
+서버와 도메인 비용은 업체 요금표를 따라요. 결제 수수료와 문자·알림톡 요금은 각 회사(PortOne, Solapi 등)의 요금표를 따라요. 이 프로그램의 사용 조건은 저장소의 [LICENSE](LICENSE)를 보고, 도입 전에 개발자와 따로 확인하세요.
 
 **Q. 설치하기 전에 무엇을 신청해야 하나요?**
 - **사업자등록증과 통신판매업 신고증**: 사업장 정보와 결제 심사에 필요해요.
-- **PortOne (결제)**: 가입하고 PG사 심사를 받아요. 심사에 보통 3~10일 걸려요.
-- **Solapi (문자)**: 가입하고 발신번호를 등록해요. 1~2일 걸려요. 알림톡을 쓰려면 카카오 비즈니스 채널과 템플릿 승인도 필요해요 ([06번 안내서](docs/guide/06-알림톡-템플릿-등록.md)).
+- **PortOne (결제)**: 가입하고 PG사 심사를 받아요. 심사 기간은 회사 기준이에요.
+- **Solapi (문자)**: 가입하고 발신번호를 등록해요. 알림톡을 쓰려면 카카오 비즈니스 채널과 템플릿 승인도 필요해요 ([06번 안내서](docs/guide/06-알림톡-템플릿-등록.md)).
 - **토스페이먼츠 지급대행**: 파트너 정산을 자동으로 지급할 때만 필요해요. 기본은 직접 이체예요.
 - **Firebase, 카카오·네이버·구글·애플 개발자 계정**: 앱 푸시와 간편 로그인을 쓸 때만 필요해요.
 
@@ -212,7 +238,7 @@ flowchart LR
 **Q. 백업은 어떻게 되나요?**
 - 매일 새벽 3시 30분에 서버 안에 백업하고 14일 동안 보관해요.
 - 외부 저장소(S3 호환)를 연결하면 매일 암호화된 백업을 한 부 더 보관해요.
-- 백업 파일은 서버의 `/opt/malkkeum/.env` 안의 `DATA_KEY`로 암호화돼요. **이 파일을 따로 안전한 곳에 보관해 두세요.** 이 파일이 없으면 백업을 열 수 없어요.
+- 백업 파일은 서버의 `/opt/malkkeum/.env` 안의 `DATA_KEY`로 암호화돼요. **이 파일을 따로 안전한 곳에 보관해 두세요.** 이 파일이 없으면 백업을 열 수 없어요. `sudo dahae keys-backup` 은 이 파일을 비밀번호로 잠근 사본을 만들어요.
 
 **Q. 서버가 고장 나면 어떻게 하나요?**
 새 서버를 빌려 같은 방식으로 설치한 뒤, 보관해 둔 `.env` 파일과 외부 백업으로 되살려요 (`sudo dahae restore-offsite`). 외부 백업이 없으면 서버 안 백업만 남아 있어요. 그래서 외부 저장소 연결을 권해요. 서버가 꺼졌을 때 알림을 받으려면 `dahae heartbeat` 로 외부 가동 확인 주소를 연결하세요 ([7. 운영 명령어](docs/guide/07-운영-명령어.md)).
@@ -255,12 +281,16 @@ cd apps/customer && flutter run --dart-define=API_BASE=http://localhost:8080
 ## 기여와 보안
 
 - 기여 방법: [CONTRIBUTING.md](CONTRIBUTING.md)
-- 보안 문제는 공개 이슈로 올리지 마세요. 저장소의 **Security → Report a vulnerability** 를 쓰거나, 아래 연락처로 알려 주세요. 자세한 내용은 [SECURITY.md](SECURITY.md)에 있어요.
-  - 보안 문의 연락처: `[운영자가 채울 연락처]`
+- 보안 문제는 공개 이슈로 올리지 마세요. 저장소의 **Security → Report a vulnerability** 또는 [직접 신고 양식](https://github.com/EricWijesinghe/Dahae/security/advisories/new)을 쓰세요. 자세한 내용은 [SECURITY.md](SECURITY.md)에 있어요.
 
 ## 라이선스
 
-Proprietary. All rights reserved. 자세한 내용은 [LICENSE](LICENSE)를 보세요.
+이 소프트웨어는 저작권자 Eric Wijesinghe의 독점 소프트웨어이며, 모든 권리는 저작권자에게 있습니다. 사용 권리는 저작권자와 맺은 서면 라이선스 계약으로만 주어집니다.
+
+- 라이선스 조건: [LICENSE](LICENSE) (정본은 영문이며 파일 상단에 한국어 요약이 있어요)
+- 제3자 구성요소와 각 라이선스: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- '다해'와 'Dahae' 이름과 로고는 라이선스로 부여되지 않아요.
+- 소스 코드는 공개로 볼 수 있지만, 보거나 복제해도 라이선스가 부여되지 않아요 (LICENSE 1.4조 및 3.1조).
 
 ---
 
@@ -288,11 +318,13 @@ Screenshots use demo data: sample shop news, bookings, names and dashboard figur
 
 ## Set up for your company in 3 steps
 
-1. **Rent a server and a domain.** Ubuntu 24.04 with 2 vCPU and 4 GB RAM (2 GB minimum). Roughly KRW 15,000–30,000 per month for the server and KRW 10,000–20,000 per year for a domain. Prices vary by provider. Open ports 22, 80 and 443. See [guide 0](docs/guide/00-한번에-설치.md) (Korean).
+1. **Rent a server and a domain.** Ubuntu 24.04 (22.04 and Debian 12 also work) with 2 vCPU and 4 GB RAM recommended; the installer needs at least 1 GB. Prices vary by provider. Open ports 22, 80 and 443. See [guide 0](docs/guide/00-한번에-설치.md) (Korean).
 2. **Run the installer.** Paste one command on the server, `curl -fsSL <install address> | sudo bash`, where the install address comes from the developer, then enter your domain and an email. If a black terminal is hard to use, the developer can give you an install page that builds the same setup for pasting into the server's "user data" box when you create it (see the "other way" section of [guide 0](docs/guide/00-한번에-설치.md)). Open `https://your-domain/admin/` and create the owner account with the setup code the installer prints. See [guide 0](docs/guide/00-한번에-설치.md) and [guide 1](docs/guide/01-서버-설치.md) (Korean).
 3. **Use the setup wizard.** In the console, open **[Settings]** and fill in business details, PortOne payments (paste the keys and save; they are stored encrypted), Solapi SMS, social sign-in, Firebase push and an optional offsite backup. Each card runs a connection test when you save. See [the setup wizard guide](docs/guide/02-설정-마법사.md) (Korean) and [payment setup](docs/guide/payments-setup.md) (bilingual).
 
 ## Features
+
+The full list, with code locations and known limits, is in the [feature catalogue](docs/FEATURES.md).
 
 - **Booking:** fixed prices from the catalogue, quotes for move-in and move-out with a 10% deposit, rescheduling, cancellation with refunds under the cancellation policy, waitlist, subscriptions with renewals, peak pricing, tips.
 - **Payments and payouts:** PortOne V2 checkout (cards, easy-pay, bank transfer, virtual account; channels set per method), signed webhooks, payment reconciliation, cash receipts, tax invoices, points and coupons. Partner payouts are recorded manually by default, or sent automatically through Toss Payments payouts. VAT and withholding exports as CSV.
@@ -300,7 +332,15 @@ Screenshots use demo data: sample shop news, bookings, names and dashboard figur
 - **Security and privacy:** encrypted storage of integration keys, rate limits and escalating lockouts on sign-in and codes, signature checks on webhooks, privacy requests, account deletion that also unlinks social sign-in, retention settings, a breached-password check.
 - **Backups and operations:** daily server backup at 03:30 (14 days kept), encrypted offsite backup to any S3-compatible bucket, weekly automatic update at Monday 04:00 with backup first and rollback if the new version does not respond, signed container images, automatic HTTPS (Caddy), the `dahae` command (status, logs, backup, restore, update, rollback, heartbeat).
 - **Messaging:** real-time chat with quote cards, app push (FCM), SMS and KakaoTalk AlimTalk through Solapi, Korean and English.
-- **Support helper (optional):** answers customer chat when staff are away, or first when the owner chooses. It can be turned off in settings. Chat text is sent to a US-based external service to produce replies, so customers are asked for consent to cross-border transfer. See the [privacy policy](website/privacy.html).
+- **Support helper (optional):** answers customer chat when staff are away, or first when the owner chooses. It can be turned off in settings. Chat text is sent to an external response API provider to produce replies. The privacy policy names this provider as a US company, so customers are asked to consent to the cross-border transfer when they sign up. Consent is required to sign up, and withdrawing it is not yet possible in the app ([known gaps](docs/SECURITY-AND-PRIVACY.md#known-gaps-and-open-items)). See the [privacy policy](website/privacy.html).
+
+## Security at a glance
+
+- Integration keys (payments, SMS, social sign-in, push and others) are stored encrypted. Saving a payment key for the first time, or unlocking it, requires the owner's two-factor code.
+- Staff accounts use TOTP two-factor sign-in and are locked after repeated failed sign-ins.
+- Sign-in and code requests are rate limited. Payment and payout webhooks check their signatures.
+- Customers' data requests (access and deletion) and retention settings are handled in the system.
+- Controls, the code behind each one, and the known gaps are in [Security and privacy](docs/SECURITY-AND-PRIVACY.md). To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## System overview
 
@@ -336,15 +376,31 @@ flowchart LR
   BK --> S3
 ```
 
+## Documentation
+
+| Document | What is in it |
+|---|---|
+| [Feature catalogue](docs/FEATURES.md) | What owners, customers, partners and the system do, feature by feature, with code locations and known limits (Korean and English) |
+| [Architecture](docs/ARCHITECTURE.md) | Components, request and data flows, deployment layout, current status (Korean summary, English body) |
+| [Security and privacy](docs/SECURITY-AND-PRIVACY.md) | Trust boundaries, authentication, authorisation, encryption, personal data flows, known gaps (Korean and English) |
+| [Security policy](SECURITY.md) | How to report a vulnerability, and what is in scope |
+| [Operations guide](docs/OPERATIONS.md) | After install, the `dahae` commands, backups, updates and channels (Korean and English) |
+| [Incident runbook](docs/RUNBOOK.md) | First checks by symptom, and recovery steps (Korean and English) |
+| [Quality and checks](docs/QUALITY.md) | Test layers and counts, CI gates, release pipeline, known gaps |
+| [API index](docs/api/README.md) | Endpoint list and shared rules (idempotency, error shape, versioning) |
+| [Guides](docs/guide/README.md) | Step-by-step guides for owners and installers (Korean, with English titles) |
+| [Deployment details](docs/DEPLOY.md) | Deployment and operations detail |
+| [License](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md) | Terms of use and licences of bundled components |
+
 ## FAQ
 
-**What does it cost?** Roughly KRW 15,000–30,000 per month for a server and KRW 10,000–20,000 per year for a domain. Payment fees and SMS charges follow the rates of PortOne, Solapi and the other providers. For the terms of use of this software, read [LICENSE](LICENSE) and confirm with the developer before you adopt it.
+**What does it cost?** Server and domain prices depend on the provider. Payment fees and SMS charges follow the rates of PortOne, Solapi and the other providers. For the terms of use of this software, read [LICENSE](LICENSE) and confirm with the developer before you adopt it.
 
-**What do I need to sign up for?** A business registration and mail-order sales registration (needed for the business details and payment review); a PortOne account with payment-channel review (3–10 days); a Solapi account with a registered sender number (1–2 days), plus a KakaoTalk business channel if you use AlimTalk; a Toss Payments payouts contract only if you want automatic payouts; Firebase and social sign-in developer accounts only if you use push or social sign-in. See [guide 2](docs/guide/02-설정-마법사.md) (Korean).
+**What do I need to sign up for?** A business registration and mail-order sales registration (needed for the business details and payment review); a PortOne account with payment-channel review; a Solapi account with a registered sender number, plus a KakaoTalk business channel if you use AlimTalk; a Toss Payments payouts contract only if you want automatic payouts; Firebase and social sign-in developer accounts only if you use push or social sign-in. See [guide 2](docs/guide/02-설정-마법사.md) (Korean).
 
 **How do updates work?** The server updates itself every Monday at 04:00. It backs up first and rolls back if the new version does not respond. You can run `sudo dahae update` or `sudo dahae rollback` yourself.
 
-**How do backups work?** A backup runs daily at 03:30 and is kept for 14 days on the server. If you connect an S3-compatible bucket, an encrypted copy is also stored there every day. Backups are encrypted with the `DATA_KEY` in `/opt/malkkeum/.env`, so keep a copy of that file somewhere safe.
+**How do backups work?** A backup runs daily at 03:30 and is kept for 14 days on the server. If you connect an S3-compatible bucket, an encrypted copy is also stored there every day. Backups are encrypted with the `DATA_KEY` in `/opt/malkkeum/.env`, so keep a copy of that file somewhere safe. `sudo dahae keys-backup` makes a copy locked with a password.
 
 **What if the server breaks?** Rent a new server, install the same way, then restore with the saved `.env` file and an offsite backup (`sudo dahae restore-offsite`). Without the `.env` file, backups cannot be opened. Connect a heartbeat URL with `dahae heartbeat` to be told when the server goes down.
 
@@ -367,10 +423,15 @@ Layout: `app/` (Flutter workspace: customer, partner and console apps, shared pa
 ## Contributing and security
 
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Security: report privately through **Security → Report a vulnerability** on this repository, or contact `[maintainer to fill in]`. See [SECURITY.md](SECURITY.md).
+- Report vulnerabilities privately, not in public issues: **Security → Report a vulnerability** on this repository, or the [direct form](https://github.com/EricWijesinghe/Dahae/security/advisories/new). See [SECURITY.md](SECURITY.md).
 
 ## License
 
-Proprietary. All rights reserved. See [LICENSE](LICENSE).
+This software is proprietary to its copyright holder, Eric Wijesinghe. All rights reserved. Use rights are granted only by a separate written license agreement.
+
+- License terms: [LICENSE](LICENSE) (the English text governs; a Korean summary is at the top of the file)
+- Third-party components and their licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- The names and logos Dahae and 다해 are not licensed.
+- The source is publicly visible. Viewing or cloning it grants no license (LICENSE sections 1.4 and 3.1).
 
 <p align="center"><a href="#다해-dahae">Back to 한국어</a></p>
