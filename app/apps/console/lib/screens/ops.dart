@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import 'flow_card.dart';
 import 'platform.dart';
 
 /// System status: green / yellow / red per check, the external services, and the owner's alert settings.
@@ -56,6 +57,8 @@ class _OpsScreenState extends State<OpsScreen> {
               SectionTitle(t.oChecks),
               const SizedBox(height: Space.sm),
               _Checks(status: status),
+              const SizedBox(height: Space.lg),
+              FlowCard(flow: status['flow'] as Json?),
               const SizedBox(height: Space.lg),
               SectionTitle(t.oJobs),
               const SizedBox(height: Space.sm),
@@ -437,6 +440,9 @@ final _ruleLabels = <String, String Function(T)>{
   'backup_stale': (T t) => t.oRuleBackup,
   'disk_low': (T t) => t.oRuleDisk,
   'auth_suspicious': (T t) => t.oRuleAuth,
+  'unassigned_stale': (T t) => t.oRuleUnassigned,
+  'same_day_cancel': (T t) => t.oRuleSameDayCancel,
+  'tax_deadline': (T t) => t.oRuleTaxDeadline,
 };
 
 class _AlertsCard extends StatefulWidget {

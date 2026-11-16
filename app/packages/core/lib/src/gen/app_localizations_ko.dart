@@ -3863,6 +3863,15 @@ class TKo extends T {
   String get oRuleAuth => '계정 보안 이상(로그인 잠금 등)';
 
   @override
+  String get oRuleUnassigned => '기사님 미배정 예약 (오래 방치)';
+
+  @override
+  String get oRuleSameDayCancel => '당일 취소가 많음';
+
+  @override
+  String get oRuleTaxDeadline => '부가가치세 신고 기한 임박';
+
+  @override
   String get oQuietHours => '조용한 시간';
 
   @override
@@ -3974,6 +3983,50 @@ class TKo extends T {
 
   @override
   String get oJob_notify_outbox => '알림 발송함';
+
+  @override
+  String get oFlowTitle => '예약 흐름 (최근 30일)';
+
+  @override
+  String get oFlowUnavailable => '흐름 지표를 지금 불러올 수 없어요';
+
+  @override
+  String get oFlowAssign => '기사님 배정까지 걸린 시간 (중앙값)';
+
+  @override
+  String oFlowAssignValue(String hours) {
+    return '$hours시간';
+  }
+
+  @override
+  String get oFlowNoAssignYet => '배정된 예약이 아직 없어요';
+
+  @override
+  String get oFlowUnassigned => '24시간 넘게 기사님이 없는 예약';
+
+  @override
+  String oFlowUnassignedValue(String count) {
+    return '$count건';
+  }
+
+  @override
+  String get oFlowSameDay => '오늘 당일 취소';
+
+  @override
+  String oFlowSameDayValue(String cancelled, String booked) {
+    return '$cancelled건 / 오늘 예약 $booked건';
+  }
+
+  @override
+  String get oFlowNoShow => '서비스별 미도착(노쇼) 비율';
+
+  @override
+  String oFlowNoShowValue(String noShows, String bookings, String pct) {
+    return '$noShows건 / $bookings건 ($pct%)';
+  }
+
+  @override
+  String get oFlowNoBookings => '예약이 없어요';
 
   @override
   String get err_owner_exists => '이미 소유자가 있어요';
@@ -5469,6 +5522,15 @@ class TKo extends T {
 
   @override
   String get ruleDiskWarnPct => '디스크 여유가 이 비율 아래면 노란불 (%)';
+
+  @override
+  String get ruleUnassignedAlertHours => '기사님 미배정 예약 알림 기준 (시간)';
+
+  @override
+  String get ruleSameDayCancelAlertPct => '당일 취소 비율 알림 기준 (%)';
+
+  @override
+  String get ruleTaxDeadlineRemindDays => '부가가치세 신고 며칠 전에 알림 (일)';
 
   @override
   String get ruleMaintenanceOn => '점검 모드 (새 예약 막기)';

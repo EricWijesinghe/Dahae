@@ -7333,6 +7333,24 @@ abstract class T {
   /// **'계정 보안 이상(로그인 잠금 등)'**
   String get oRuleAuth;
 
+  /// No description provided for @oRuleUnassigned.
+  ///
+  /// In ko, this message translates to:
+  /// **'기사님 미배정 예약 (오래 방치)'**
+  String get oRuleUnassigned;
+
+  /// No description provided for @oRuleSameDayCancel.
+  ///
+  /// In ko, this message translates to:
+  /// **'당일 취소가 많음'**
+  String get oRuleSameDayCancel;
+
+  /// No description provided for @oRuleTaxDeadline.
+  ///
+  /// In ko, this message translates to:
+  /// **'부가가치세 신고 기한 임박'**
+  String get oRuleTaxDeadline;
+
   /// No description provided for @oQuietHours.
   ///
   /// In ko, this message translates to:
@@ -7542,6 +7560,78 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'알림 발송함'**
   String get oJob_notify_outbox;
+
+  /// No description provided for @oFlowTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'예약 흐름 (최근 30일)'**
+  String get oFlowTitle;
+
+  /// No description provided for @oFlowUnavailable.
+  ///
+  /// In ko, this message translates to:
+  /// **'흐름 지표를 지금 불러올 수 없어요'**
+  String get oFlowUnavailable;
+
+  /// No description provided for @oFlowAssign.
+  ///
+  /// In ko, this message translates to:
+  /// **'기사님 배정까지 걸린 시간 (중앙값)'**
+  String get oFlowAssign;
+
+  /// No description provided for @oFlowAssignValue.
+  ///
+  /// In ko, this message translates to:
+  /// **'{hours}시간'**
+  String oFlowAssignValue(String hours);
+
+  /// No description provided for @oFlowNoAssignYet.
+  ///
+  /// In ko, this message translates to:
+  /// **'배정된 예약이 아직 없어요'**
+  String get oFlowNoAssignYet;
+
+  /// No description provided for @oFlowUnassigned.
+  ///
+  /// In ko, this message translates to:
+  /// **'24시간 넘게 기사님이 없는 예약'**
+  String get oFlowUnassigned;
+
+  /// No description provided for @oFlowUnassignedValue.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count}건'**
+  String oFlowUnassignedValue(String count);
+
+  /// No description provided for @oFlowSameDay.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 당일 취소'**
+  String get oFlowSameDay;
+
+  /// No description provided for @oFlowSameDayValue.
+  ///
+  /// In ko, this message translates to:
+  /// **'{cancelled}건 / 오늘 예약 {booked}건'**
+  String oFlowSameDayValue(String cancelled, String booked);
+
+  /// No description provided for @oFlowNoShow.
+  ///
+  /// In ko, this message translates to:
+  /// **'서비스별 미도착(노쇼) 비율'**
+  String get oFlowNoShow;
+
+  /// No description provided for @oFlowNoShowValue.
+  ///
+  /// In ko, this message translates to:
+  /// **'{noShows}건 / {bookings}건 ({pct}%)'**
+  String oFlowNoShowValue(String noShows, String bookings, String pct);
+
+  /// No description provided for @oFlowNoBookings.
+  ///
+  /// In ko, this message translates to:
+  /// **'예약이 없어요'**
+  String get oFlowNoBookings;
 
   /// No description provided for @err_owner_exists.
   ///
@@ -10433,6 +10523,24 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'디스크 여유가 이 비율 아래면 노란불 (%)'**
   String get ruleDiskWarnPct;
+
+  /// No description provided for @ruleUnassignedAlertHours.
+  ///
+  /// In ko, this message translates to:
+  /// **'기사님 미배정 예약 알림 기준 (시간)'**
+  String get ruleUnassignedAlertHours;
+
+  /// No description provided for @ruleSameDayCancelAlertPct.
+  ///
+  /// In ko, this message translates to:
+  /// **'당일 취소 비율 알림 기준 (%)'**
+  String get ruleSameDayCancelAlertPct;
+
+  /// No description provided for @ruleTaxDeadlineRemindDays.
+  ///
+  /// In ko, this message translates to:
+  /// **'부가가치세 신고 며칠 전에 알림 (일)'**
+  String get ruleTaxDeadlineRemindDays;
 
   /// No description provided for @ruleMaintenanceOn.
   ///
