@@ -1358,6 +1358,7 @@
  "oRuleSocial": "Social sign-in fails",
  "oRuleBackup": "Automatic backup missed",
  "oRuleBackupPhotos": "Offsite photo backup failed",
+ "oRuleBackupOffsite": "Offsite database backup failed",
  "oRuleDisk": "Disk nearly full",
  "oRuleAuth": "Suspicious sign-in activity",
  "oRuleUnassigned": "Confirmed bookings with no pro for a long time",

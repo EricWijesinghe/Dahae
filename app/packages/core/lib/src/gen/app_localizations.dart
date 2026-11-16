@@ -8245,6 +8245,12 @@ abstract class T {
   /// **'사진 외부 백업 실패'**
   String get oRuleBackupPhotos;
 
+  /// No description provided for @oRuleBackupOffsite.
+  ///
+  /// In ko, this message translates to:
+  /// **'데이터베이스 외부 백업 실패'**
+  String get oRuleBackupOffsite;
+
   /// No description provided for @oRuleDisk.
   ///
   /// In ko, this message translates to:

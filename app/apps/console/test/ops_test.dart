@@ -302,4 +302,35 @@ void main() {
       await unmount(tester);
     },
   );
+
+  testWidgets(
+    'a failed database offsite backup has its own owner alert switch',
+    (tester) async {
+      setViewport(tester, wideSize);
+      final fake = FakeApi()
+        ..reply('GET', '/admin/ops/status', _status(level: 'red'))
+        ..reply('GET', '/admin/ops/alerts', _alerts)
+        ..reply('GET', '/admin/config', _config)
+        ..reply('GET', '/admin/client-errors', _errors);
+      final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+      await pumpConsoleScreen(tester, env, const OpsScreen());
+      await settle(tester);
+
+      final page = find.descendant(
+        of: find.byType(OpsScreen),
+        matching: find.byType(Scrollable),
+      );
+      await tester.scrollUntilVisible(
+        find.text(koT.oRuleBackupOffsite),
+        200,
+        scrollable: page,
+      );
+      expect(
+        find.text(koT.oRuleBackupOffsite),
+        findsOneWidget,
+        reason: 'the owner can see and switch the database offsite alert',
+      );
+      await unmount(tester);
+    },
+  );
 }

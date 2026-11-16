@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -4454,6 +4453,9 @@ class TEn extends T {
 
   @override
   String get oRuleBackupPhotos => 'Offsite photo backup failed';
+
+  @override
+  String get oRuleBackupOffsite => 'Offsite database backup failed';
 
   @override
   String get oRuleDisk => 'Disk nearly full';

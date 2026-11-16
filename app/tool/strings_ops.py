@@ -48,6 +48,7 @@ S = {
   "oRuleSocial": ["소셜 로그인 실패", "Social sign-in fails"],
   "oRuleBackup": ["자동 백업 누락", "Automatic backup missed"],
   "oRuleBackupPhotos": ["사진 외부 백업 실패", "Offsite photo backup failed"],
+  "oRuleBackupOffsite": ["데이터베이스 외부 백업 실패", "Offsite database backup failed"],
   "oRuleDisk": ["디스크 부족", "Disk nearly full"],
   "oRuleAuth": ["계정 보안 이상(로그인 잠금 등)", "Suspicious sign-in activity"],
   "oRuleUnassigned": ["기사님 미배정 예약 (오래 방치)", "Confirmed bookings with no pro for a long time"],

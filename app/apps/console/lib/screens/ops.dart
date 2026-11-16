@@ -439,6 +439,7 @@ final _ruleLabels = <String, String Function(T)>{
   'payment_mismatch': (T t) => t.oRuleMismatch,
   'social_failing': (T t) => t.oRuleSocial,
   'backup_stale': (T t) => t.oRuleBackup,
+  'backup_offsite_failing': (T t) => t.oRuleBackupOffsite,
   'backup_uploads_failing': (T t) => t.oRuleBackupPhotos,
   'disk_low': (T t) => t.oRuleDisk,
   'auth_suspicious': (T t) => t.oRuleAuth,
