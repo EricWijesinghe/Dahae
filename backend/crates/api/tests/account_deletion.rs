@@ -14,6 +14,11 @@ use uuid::Uuid;
 
 async fn social(app: &axum::Router, sub: &str, code: Option<&str>, audience: &str) -> (StatusCode, Value) {
     let mut body = json!({ "provider": "apple", "token": format!("dev:{sub}"), "audience": audience });
+    if audience == "customer" {
+        // A new customer must grant every required signup consent; returning sign-ins ignore them.
+        let grant = |kind: &str| json!({ "kind": kind, "granted": true, "version": privacy::CONSENT_VERSION });
+        body["consents"] = json!([grant("terms"), grant("privacy"), grant("overseas_transfer")]);
+    }
     if let Some(c) = code {
         body["authorization_code"] = json!(c);
     }

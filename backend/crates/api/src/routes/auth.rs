@@ -553,6 +553,9 @@ struct SocialLogin {
     audience: Audience,
     #[serde(default)]
     attribution: Option<Value>,
+    /// Customer consents shown at signup. A new customer must grant every required one, as on the phone flow.
+    #[serde(default)]
+    consents: Vec<ConsentChange>,
 }
 
 #[derive(Serialize)]
@@ -577,7 +580,7 @@ async fn social_login(State(s): State<AppState>, Json(req): Json<SocialLogin>) -
         Audience::Partner => Role::Pro,
     };
     let attribution = crate::acquisition::clean(req.attribution.as_ref());
-    let (id, is_new) = find_or_create_identity(&s, &req.provider, &social, role, attribution).await?;
+    let (id, is_new) = find_or_create_identity(&s, &req.provider, &social, role, attribution, &req.consents).await?;
     ensure_active(&s, id, role).await?;
     let code = req.authorization_code.as_deref().filter(|c| !c.is_empty() && c.len() <= MAX_SOCIAL_TOKEN);
     let refresh = match (req.provider.as_str(), code) {
@@ -643,8 +646,16 @@ async fn find_identity(s: &AppState, provider: &str, social: &SocialUser, role: 
         .await?)
 }
 
-/// Finds the account behind a provider identity, or creates it with its identity row in one transaction.
-async fn find_or_create_identity(s: &AppState, provider: &str, social: &SocialUser, role: Role, attribution: Option<Value>) -> ApiResult<(Uuid, bool)> {
+/// Finds the account behind a provider identity, or creates it with its identity row and signup consents in one
+/// transaction, so a new customer refused for missing consents leaves no account or identity behind.
+async fn find_or_create_identity(
+    s: &AppState,
+    provider: &str,
+    social: &SocialUser,
+    role: Role,
+    attribution: Option<Value>,
+    consents: &[ConsentChange],
+) -> ApiResult<(Uuid, bool)> {
     if let Some(id) = find_identity(s, provider, social, role).await? {
         return Ok((id, false));
     }
@@ -684,6 +695,9 @@ async fn find_or_create_identity(s: &AppState, provider: &str, social: &SocialUs
             .bind(id)
             .execute(&mut *tx)
             .await?;
+    }
+    if role == Role::Customer {
+        privacy::record_signup(&mut tx, id, consents).await?;
     }
     tx.commit().await?;
     Ok((id, true))
