@@ -427,3 +427,73 @@ async fn admin_edits_the_welcome_pack_and_new_sign_ups_get_it(pool: PgPool) {
     assert_eq!(st, StatusCode::OK, "{b}");
     assert!(sign_up(&app, &pool, "010-5600-0003").await.is_empty());
 }
+
+async fn discount_coupon(pool: &PgPool, user: Uuid, amount: i64) -> Uuid {
+    sqlx::query_scalar("INSERT INTO coupons (user_id, name, amount, expires_at) VALUES ($1, 'manual', $2, now() + interval '30 days') RETURNING id")
+        .bind(user)
+        .bind(amount)
+        .fetch_one(pool)
+        .await
+        .expect("coupon")
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn referral_pays_when_the_friends_booking_carries_a_coupon(pool: PgPool) {
+    seed_catalog(&pool).await;
+    set_setting(&pool, "referral_offer", json!({ "enabled": true, "amount": 3000 })).await;
+    let app = common::app(pool.clone());
+    let referrer = customer(&app, &pool, "010-5700-0001").await;
+    let (_, mine) = call(&app, "GET", "/v1/me/referral", Some(referrer.token.as_str()), None).await;
+    let code = mine["code"].as_str().expect("code").to_string();
+    let friend = customer(&app, &pool, "010-5700-0002").await;
+    let (st, b) = call(
+        &app,
+        "POST",
+        "/v1/me/referral/claim",
+        Some(friend.token.as_str()),
+        Some(json!({ "code": code })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+
+    let coupon = discount_coupon(&pool, friend.user, 2_000).await;
+    let (pro, _) = verified_pro(&app, &pool, "010-5700-0101").await;
+    let (id, _) = book(&app, &friend, 10, Some(coupon)).await;
+    let (discount,): (i64,) = sqlx::query_as("SELECT discount FROM bookings WHERE id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .expect("discount");
+    assert!(discount > 0, "the booking carries a discount");
+    complete_job(&app, &pool, id, pro.as_str()).await;
+    assert_eq!(
+        coupons_from_referral(&pool, friend.user).await,
+        1,
+        "discounted booking still rewards the friend"
+    );
+    assert_eq!(
+        coupons_from_referral(&pool, referrer.user).await,
+        1,
+        "discounted booking still rewards the referrer"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn cashback_is_earned_on_a_discounted_booking(pool: PgPool) {
+    seed_catalog(&pool).await;
+    set_setting(
+        &pool,
+        "points_policy",
+        json!({ "enabled": true, "earn_bps": 1000, "welcome_points": 0, "referral_points": 0, "expiry_days": 365, "notify_days": 30, "max_use_bps": 10000 }),
+    )
+    .await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5700-0003").await;
+    let coupon = discount_coupon(&pool, c.user, 2_000).await;
+    let (pro, _) = verified_pro(&app, &pool, "010-5700-0102").await;
+    let (id, _) = book(&app, &c, 10, Some(coupon)).await;
+    complete_job(&app, &pool, id, pro.as_str()).await;
+    let (st, pts) = call(&app, "GET", "/v1/me/points", Some(c.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{pts}");
+    assert!(pts["balance"].as_i64().unwrap_or(0) > 0, "cashback on the cash paid: {pts}");
+}

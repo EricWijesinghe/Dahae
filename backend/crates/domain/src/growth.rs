@@ -149,6 +149,11 @@ pub fn paid_in_full(paid: i64, final_price: Option<i64>) -> bool {
     final_price.is_some_and(|p| paid > 0 && paid >= p)
 }
 
+/// What a booking owes: the quoted final price, else the list price less every discount taken.
+pub fn owed_amount(final_price: Option<i64>, list_price: Option<i64>, discount: i64) -> Option<i64> {
+    final_price.or_else(|| list_price.map(|list| list - discount))
+}
+
 /// Shows a social-proof count only once it is persuasive.
 pub fn proof_count(n: i64) -> Option<i64> {
     (n >= MIN_PROOF_COUNT).then_some(n)
@@ -440,6 +445,17 @@ mod tests {
         assert!(!paid_in_full(0, None), "nothing paid");
         assert!(!paid_in_full(10_000, Some(50_000)), "quote deposit only");
         assert!(paid_in_full(50_000, Some(50_000)), "quote fully paid");
+    }
+
+    #[test]
+    fn owed_is_the_price_after_discounts() {
+        assert_eq!(owed_amount(None, Some(52_000), 15_000), Some(37_000), "fixed price after coupon");
+        assert_eq!(owed_amount(Some(40_000), Some(52_000), 15_000), Some(40_000), "quoted price wins");
+        assert_eq!(owed_amount(None, None, 0), None, "no price known");
+        assert!(
+            paid_in_full(37_000, owed_amount(None, Some(52_000), 15_000)),
+            "paid what it cost after discount"
+        );
     }
 
     #[test]

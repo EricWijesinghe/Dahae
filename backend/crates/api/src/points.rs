@@ -23,7 +23,7 @@ use axum::{
 use chrono::{DateTime, Utc};
 use domain::{
     Won,
-    growth::paid_in_full,
+    growth::{owed_amount, paid_in_full},
     points::{Lot, PointsError, PointsPolicy, Split, allocate, available, cashback, expiring_within, lapsed, split_payment},
 };
 use serde::{Deserialize, Serialize};
@@ -164,12 +164,12 @@ pub async fn on_completed(conn: &mut PgConnection, booking: Uuid) -> ApiResult<(
     if !policy.enabled {
         return Ok(());
     }
-    let (user, paid, final_price, completed): (Uuid, i64, Option<i64>, bool) =
-        sqlx::query_as("SELECT user_id, paid_amount, COALESCE(final_price, list_price), status = 3 FROM bookings WHERE id = $1")
+    let (user, paid, final_price, list_price, discount, completed): (Uuid, i64, Option<i64>, Option<i64>, i64, bool) =
+        sqlx::query_as("SELECT user_id, paid_amount, final_price, list_price, discount, status = 3 FROM bookings WHERE id = $1")
             .bind(booking)
             .fetch_one(&mut *conn)
             .await?;
-    if !completed || !paid_in_full(paid, final_price) {
+    if !completed || !paid_in_full(paid, owed_amount(final_price, list_price, discount)) {
         return Ok(());
     }
     // Cashback is on cash paid only; points used to pay are not earned again.
