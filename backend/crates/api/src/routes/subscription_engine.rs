@@ -16,9 +16,9 @@ use crate::{
     state::AppState,
     util::{KST_TODAY, best_effort, lock_and_count_slot, refund_or_alert, today_kst},
 };
-use chrono::{Duration, NaiveDate, Utc};
+use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
 use domain::{
-    Won,
+    DomainError, Won,
     pricing::{PriceBreakdown, price_booking_with},
     schedule::{STANDARD_SLOTS, check_capacity},
     subscription::{Cadence, HORIZON_DAYS, Retry, after_failure, visit_dates, visit_price},
@@ -29,8 +29,11 @@ use std::time::Duration as StdDuration;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-const PASS_EVERY: StdDuration = StdDuration::from_secs(5 * 60);
+const PASS_MINUTES: i64 = 5;
+const PASS_EVERY: StdDuration = StdDuration::from_secs(PASS_MINUTES as u64 * 60);
 const DUE_BATCH: i64 = 200;
+/// What a dev lookup reports as captured for its mock ids; PortOne itself reports the real amount.
+const DEV_LOOKUP_TOTAL: i64 = 1;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct PassReport {
@@ -65,7 +68,32 @@ struct SubRow {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Failure {
     Declined(String),
+    /// The slot filled after the charge was sent. Not a card problem: it is refunded, retried, and never pauses.
+    Full,
+    /// PortOne captured another amount than today's price. Refunded and retried; not a card problem either.
+    Repriced,
     Blocked,
+}
+
+impl Failure {
+    /// Only a decline or a refused booking counts toward the pause: a full slot or a price change says nothing about the card.
+    fn counts(&self) -> bool {
+        matches!(self, Failure::Declined(_) | Failure::Blocked)
+    }
+
+    /// The customer notice as (kind, title, body). Each kind has this one text, owner-editable (`i18n::EVENTS`).
+    fn notice(&self) -> (&'static str, &'static str, &'static str) {
+        match self {
+            Failure::Declined(_) => ("subscription.payment_failed", "정기 청소 결제가 실패했어요", "카드 정보를 확인해 주세요"),
+            Failure::Full => ("subscription.slot_full", "정기 청소 시간이 가득 찼어요", "결제된 금액은 환불해 드려요"),
+            Failure::Repriced => ("subscription.price_changed", "정기 청소 금액이 바뀌었어요", "먼저 결제된 금액은 환불해 드려요"),
+            Failure::Blocked => (
+                "subscription.visit_blocked",
+                "정기 청소 예약을 진행하지 못했어요",
+                "주소와 결제 수단을 확인해 주세요",
+            ),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -90,8 +118,14 @@ pub fn spawn(state: AppState) -> JoinHandle<()> {
 
 /// One full pass. Each step logs its own errors so a bad row cannot stop the others.
 pub async fn pass(s: &AppState) -> ApiResult<PassReport> {
+    pass_at(s, Utc::now()).await
+}
+
+/// [`pass`] with the clock that schedules retries passed in, so the end of the charge window can be tested.
+#[doc(hidden)]
+pub async fn pass_at(s: &AppState, now: DateTime<Utc>) -> ApiResult<PassReport> {
     let planned = plan(s).await?;
-    let (booked, failed) = charge_due(s).await?;
+    let (booked, failed) = charge_due(s, now).await?;
     let missed = expire(s).await?;
     Ok(PassReport {
         planned,
@@ -205,7 +239,7 @@ async fn free_hour(conn: &mut PgConnection, date: NaiveDate, preferred: u8) -> A
 }
 
 /// Charges every planned visit due tomorrow (KST) whose retry time has come. Returns (booked, failed).
-async fn charge_due(s: &AppState) -> ApiResult<(usize, usize)> {
+async fn charge_due(s: &AppState, now: DateTime<Utc>) -> ApiResult<(usize, usize)> {
     let due: Vec<Due> = sqlx::query_as(&format!(
         "SELECT v.id AS visit_id, s.id AS sub_id, s.user_id, v.visit_date, v.start_hour
          FROM subscription_visits v JOIN subscriptions s ON s.id = v.subscription_id
@@ -222,7 +256,7 @@ async fn charge_due(s: &AppState) -> ApiResult<(usize, usize)> {
             Ok(Attempt::Booked(_)) => booked += 1,
             Ok(Attempt::Failed(f)) => {
                 failed += 1;
-                if let Err(e) = record_failure(s, d, &f).await {
+                if let Err(e) = record_failure(s, d, &f, now).await {
                     tracing::warn!(error = %e, visit = %d.visit_id, "recording a failed charge failed");
                 }
             }
@@ -279,6 +313,33 @@ fn settle(r: Result<String, ProviderError>) -> Settled {
         Err(ProviderError::Declined(code)) => Settled::Declined(code),
         Err(_) => Settled::Unknown,
     }
+}
+
+/// What PortOne's answer for a stored payment id means. `expected` is the price today.
+#[derive(Debug, PartialEq, Eq)]
+enum Verdict {
+    Book,
+    /// Captured for another amount than today's price: refund the captured amount.
+    Refund(i64),
+    Declined(String),
+    Open,
+}
+
+fn verdict(status: &str, paid: i64, expected: i64) -> Verdict {
+    match status {
+        "PAID" if paid == expected => Verdict::Book,
+        "PAID" => Verdict::Refund(paid),
+        "FAILED" | "CANCELLED" => Verdict::Declined(format!("payment_{}", status.to_lowercase())),
+        _ => Verdict::Open,
+    }
+}
+
+/// When to retry a visit's charge, or `None` when no pass is left to do it. Charges go out the day before the visit (KST),
+/// so the window closes at KST midnight of the visit. A retry is held one pass interval earlier so the last pass still sees it due.
+fn next_try(now: DateTime<Utc>, hours: i64, visit: NaiveDate) -> Option<DateTime<Utc>> {
+    let last = visit.and_time(NaiveTime::MIN).and_utc() - Duration::hours(9) - Duration::minutes(PASS_MINUTES);
+    let at = (now + Duration::hours(hours)).min(last);
+    (at > now).then_some(at)
 }
 
 async fn charge_visit(s: &AppState, d: &Due) -> ApiResult<Attempt> {
@@ -364,14 +425,19 @@ async fn persist_ref(s: &AppState, visit: Uuid, pid: &str) -> ApiResult<bool> {
 async fn reconcile(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attempt> {
     let total = c.price.total.0;
     match s.providers.payment(pid, total).await {
-        Ok(info) if info.status == "PAID" && info.total == total => finalize(s, c, Some((pid, pid))).await,
-        Ok(info) if matches!(info.status.as_str(), "FAILED" | "CANCELLED") => {
-            Ok(Attempt::Failed(Failure::Declined(format!("payment_{}", info.status.to_lowercase()))))
-        }
-        Ok(info) => {
-            tracing::warn!(status = %info.status, payment = pid, "subscription payment not settled; checked again next pass");
-            Ok(Attempt::Pending)
-        }
+        Ok(info) => match verdict(&info.status, info.total, total) {
+            Verdict::Book => finalize(s, c, Some((pid, pid))).await,
+            // Captured at another price: give the money back, then the next try charges today's price under a new id.
+            Verdict::Refund(paid) => {
+                refund_or_alert(s, "portone", pid, paid).await;
+                Ok(Attempt::Failed(Failure::Repriced))
+            }
+            Verdict::Declined(code) => Ok(Attempt::Failed(Failure::Declined(code))),
+            Verdict::Open => {
+                tracing::warn!(status = %info.status, payment = pid, "subscription payment not settled; checked again next pass");
+                Ok(Attempt::Pending)
+            }
+        },
         // PortOne has no record of this id, so nothing was charged and sending it again is safe.
         Err(ProviderError::NotFound) => charge_once(s, c, pid).await,
         Err(e) => {
@@ -419,8 +485,10 @@ async fn book_visit(s: &AppState, c: &Charge<'_>, paid: Option<(&str, &str)>) ->
     if !matches!(&live, Some((status, state)) if status == "active" && state == "planned") {
         return Ok(Attempt::Skipped);
     }
-    if let Err(e) = lock_slot(&mut tx, c.d.visit_date, c.d.start_hour as u8).await {
-        return blocked(e);
+    match lock_slot(&mut tx, c.d.visit_date, c.d.start_hour as u8, Some(c.d.visit_id)).await {
+        Ok(()) => {}
+        Err(ApiError::Domain(DomainError::SlotFull)) => return Ok(Attempt::Failed(Failure::Full)),
+        Err(e) => return blocked(e),
     }
     let number = insert_paid(&mut tx, &s.config.data_key, id, c.d.user_id, c.prep, c.body, c.price).await?;
     if let Some((pid, tx_id)) = paid {
@@ -481,98 +549,147 @@ async fn pro_free_for(conn: &mut PgConnection, booking: Uuid, pro: Uuid) -> ApiR
     Ok(ok)
 }
 
-/// Counts a failed attempt, schedules the retry, and pauses after repeated failures. The customer is told each time.
-async fn record_failure(s: &AppState, d: &Due, failure: &Failure) -> ApiResult<()> {
+/// Counts a failed attempt, schedules the retry, and pauses after repeated failures. The customer is told each time,
+/// and also told the visit is lost when no retry fits before the charge window closes.
+async fn record_failure(s: &AppState, d: &Due, failure: &Failure, now: DateTime<Utc>) -> ApiResult<()> {
     let failures: i32 = sqlx::query_scalar(
-        "UPDATE subscriptions SET consecutive_failures = consecutive_failures + 1, updated_at = now() WHERE id = $1 RETURNING consecutive_failures",
+        "UPDATE subscriptions SET consecutive_failures = consecutive_failures + $2, updated_at = now() WHERE id = $1 RETURNING consecutive_failures",
     )
     .bind(d.sub_id)
+    .bind(i32::from(failure.counts()))
     .fetch_one(&s.db)
     .await?;
     let retry = after_failure(u32::try_from(failures).unwrap_or(u32::MAX));
-    let hours = match retry {
-        Retry::After { hours } => Some(hours as i32),
+    let due = match retry {
+        Retry::After { hours } => next_try(now, hours, d.visit_date),
         Retry::Pause => None,
     };
+    let lost = retry != Retry::Pause && due.is_none();
     sqlx::query(
-        "UPDATE subscription_visits SET charge_attempts = charge_attempts + 1, payment_ref = NULL,
-           retry_at = CASE WHEN $2::int IS NULL THEN NULL ELSE now() + make_interval(hours => $2::int) END, updated_at = now()
+        "UPDATE subscription_visits SET charge_attempts = charge_attempts + 1, payment_ref = NULL, retry_at = $2,
+           state = CASE WHEN $3 AND state = 'planned' THEN 'missed' ELSE state END, updated_at = now()
          WHERE id = $1",
     )
     .bind(d.visit_id)
-    .bind(hours)
+    .bind(due)
+    .bind(lost)
     .execute(&s.db)
     .await?;
     if retry == Retry::Pause {
-        let reason = match failure {
-            Failure::Declined(_) => "payment",
-            Failure::Blocked => "booking",
-        };
-        let paused = sqlx::query("UPDATE subscriptions SET status = 'paused', paused_reason = $2, updated_at = now() WHERE id = $1 AND status = 'active'")
-            .bind(d.sub_id)
-            .bind(reason)
-            .execute(&s.db)
-            .await?
-            .rows_affected();
-        if paused == 1 {
-            best_effort(
-                "notify",
-                notify(
-                    s,
-                    Recipient::User(d.user_id),
-                    "subscription.paused",
-                    "정기 청소가 일시 정지됐어요",
-                    "결제 수단을 확인한 뒤 재개해 주세요",
-                    json!({ "subscription_id": d.sub_id }),
-                ),
-            )
-            .await;
-        }
+        pause(s, d, failure).await?;
     }
+    let (kind, title, body) = failure.notice();
+    let data = json!({ "subscription_id": d.sub_id, "visit_date": d.visit_date });
+    best_effort("notify", notify(s, Recipient::User(d.user_id), kind, title, body, data)).await;
+    if lost {
+        announce_missed(s, d.user_id).await;
+    }
+    Ok(())
+}
+
+/// Pauses the subscription after repeated failures and tells the customer.
+async fn pause(s: &AppState, d: &Due, failure: &Failure) -> ApiResult<()> {
+    let reason = match failure {
+        Failure::Declined(_) => "payment",
+        Failure::Full | Failure::Repriced | Failure::Blocked => "booking",
+    };
+    let paused = sqlx::query("UPDATE subscriptions SET status = 'paused', paused_reason = $2, updated_at = now() WHERE id = $1 AND status = 'active'")
+        .bind(d.sub_id)
+        .bind(reason)
+        .execute(&s.db)
+        .await?
+        .rows_affected();
+    if paused == 1 {
+        best_effort(
+            "notify",
+            notify(
+                s,
+                Recipient::User(d.user_id),
+                "subscription.paused",
+                "정기 청소가 일시 정지됐어요",
+                "결제 수단을 확인한 뒤 재개해 주세요",
+                json!({ "subscription_id": d.sub_id }),
+            ),
+        )
+        .await;
+    }
+    Ok(())
+}
+
+async fn announce_missed(s: &AppState, user: Uuid) {
     best_effort(
         "notify",
         notify(
             s,
-            Recipient::User(d.user_id),
-            "subscription.payment_failed",
-            "정기 청소 결제가 실패했어요",
-            "카드 정보를 확인해 주세요",
-            json!({ "subscription_id": d.sub_id, "visit_date": d.visit_date }),
+            Recipient::User(user),
+            "subscription.visit_missed",
+            "이번 정기 청소를 잡지 못했어요",
+            "고객센터로 문의해 주세요",
+            json!({}),
         ),
     )
     .await;
-    Ok(())
 }
 
 /// Planned visits whose day has arrived without a charge become `missed`. Returns how many.
+/// A visit still holding a charge id is settled first, so money captured for it is never left unrefunded.
 async fn expire(s: &AppState) -> ApiResult<usize> {
+    settle_open_charges(s).await?;
     let missed: Vec<(Uuid,)> = sqlx::query_as(&format!(
         "UPDATE subscription_visits v SET state = 'missed', updated_at = now() FROM subscriptions s
-         WHERE s.id = v.subscription_id AND v.state = 'planned' AND v.visit_date <= {KST_TODAY}
+         WHERE s.id = v.subscription_id AND v.state = 'planned' AND v.visit_date <= {KST_TODAY} AND v.payment_ref IS NULL
          RETURNING s.user_id"
     ))
     .fetch_all(&s.db)
     .await?;
     for (user,) in &missed {
-        best_effort(
-            "notify",
-            notify(
-                s,
-                Recipient::User(*user),
-                "subscription.visit_missed",
-                "이번 정기 청소를 잡지 못했어요",
-                "고객센터로 문의해 주세요",
-                json!({}),
-            ),
-        )
-        .await;
+        announce_missed(s, *user).await;
     }
     Ok(missed.len())
+}
+
+/// Visits whose charge id is still stored and that will not be booked (day come, or skipped or cancelled meanwhile):
+/// PortOne is asked once per pass. A capture is refunded, a failure or an unknown id clears the id, an open answer waits.
+async fn settle_open_charges(s: &AppState) -> ApiResult<()> {
+    let open: Vec<(Uuid, String)> = sqlx::query_as(&format!(
+        "SELECT id, payment_ref FROM subscription_visits
+         WHERE payment_ref IS NOT NULL AND state <> 'booked' AND (state <> 'planned' OR visit_date <= {KST_TODAY})"
+    ))
+    .fetch_all(&s.db)
+    .await?;
+    for (visit, pid) in open {
+        // The visit does not store its price; the refund takes what PortOne says it captured.
+        let clear = match s.providers.payment(&pid, DEV_LOOKUP_TOTAL).await {
+            Ok(info) => match verdict(&info.status, info.total, info.total) {
+                // The visit can no longer be booked, so a capture goes back to the customer.
+                Verdict::Book | Verdict::Refund(_) => {
+                    refund_or_alert(s, "portone", &pid, info.total).await;
+                    true
+                }
+                Verdict::Declined(_) => true,
+                Verdict::Open => false,
+            },
+            Err(ProviderError::NotFound) => true,
+            Err(e) => {
+                tracing::warn!(error = %e, payment = %pid, "open subscription payment lookup failed; checked again next pass");
+                false
+            }
+        };
+        if clear {
+            sqlx::query("UPDATE subscription_visits SET payment_ref = NULL, updated_at = now() WHERE id = $1 AND payment_ref = $2")
+                .bind(visit)
+                .bind(&pid)
+                .execute(&s.db)
+                .await?;
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::TimeZone;
 
     #[test]
     fn retry_reuses_the_stored_payment_id() {
@@ -582,6 +699,50 @@ mod tests {
         assert_eq!(payment_ref_for(Some(first.clone()), visit, 0), first);
         // A confirmed decline bumps the attempt count, which gives the next try a new id.
         assert_ne!(payment_ref_for(None, visit, 1), first);
+    }
+
+    #[test]
+    fn a_payment_that_settled_at_another_amount_is_refunded_not_booked() {
+        assert_eq!(verdict("PAID", 52_000, 52_000), Verdict::Book);
+        assert_eq!(verdict("PAID", 52_000, 47_000), Verdict::Refund(52_000));
+        assert_eq!(verdict("FAILED", 0, 47_000), Verdict::Declined("payment_failed".into()));
+        assert_eq!(verdict("VIRTUAL_ACCOUNT_ISSUED", 0, 47_000), Verdict::Open);
+    }
+
+    #[test]
+    fn a_retry_never_falls_after_the_charge_window_closes() {
+        // Declined 19:00 KST on 11-19 for a 11-20 visit: the window closes at KST midnight, 15:00 UTC.
+        let visit = NaiveDate::from_ymd_opt(2026, 11, 20).expect("date");
+        let declined = Utc.with_ymd_and_hms(2026, 11, 19, 10, 0, 0).single().expect("time");
+        let retry = next_try(declined, 6, visit);
+        // Last pass before midnight is at most one pass interval earlier; the retry must be due by then.
+        assert_eq!(retry, Utc.with_ymd_and_hms(2026, 11, 19, 14, 55, 0).single());
+        // A retry that fits inside the window keeps the normal delay.
+        let early = Utc.with_ymd_and_hms(2026, 11, 19, 6, 0, 0).single().expect("time");
+        assert_eq!(next_try(early, 6, visit), Utc.with_ymd_and_hms(2026, 11, 19, 12, 0, 0).single());
+    }
+
+    #[test]
+    fn a_decline_in_the_last_minutes_before_midnight_has_no_retry_in_the_past() {
+        // Declined 23:57 KST on 11-19 for a 11-20 visit: no pass before midnight is left for a retry.
+        let visit = NaiveDate::from_ymd_opt(2026, 11, 20).expect("date");
+        let late = Utc.with_ymd_and_hms(2026, 11, 19, 14, 57, 0).single().expect("time");
+        assert_eq!(next_try(late, 6, visit), None, "a retry time already past is never charged");
+    }
+
+    #[test]
+    fn only_a_card_or_booking_refusal_counts_and_each_failure_says_its_reason() {
+        let declined = Failure::Declined("card_declined".into());
+        assert!(declined.counts() && Failure::Blocked.counts());
+        assert!(!Failure::Repriced.counts() && !Failure::Full.counts());
+        assert_eq!(declined.notice().0, "subscription.payment_failed");
+        for f in [Failure::Repriced, Failure::Full, Failure::Blocked] {
+            let (kind, title, body) = f.notice();
+            assert_ne!(kind, "subscription.payment_failed", "{f:?}");
+            assert_ne!(body, declined.notice().2, "{f:?}");
+            let ev = crate::i18n::event(kind).expect("listed for the owner");
+            assert_eq!((ev.title, ev.body), (title, body), "{f:?}");
+        }
     }
 
     #[test]

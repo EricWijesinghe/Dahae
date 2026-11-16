@@ -56,7 +56,7 @@ pub struct WaitRow {
 async fn join(State(s): State<AppState>, Customer(a): Customer, Json(b): Json<BookingBody>) -> ApiResult<Json<WaitRow>> {
     prepare(&s.db, a.id, &b).await?;
     let mut tx = s.db.begin().await?;
-    match lock_slot(&mut tx, b.visit_date, b.start_hour).await {
+    match lock_slot(&mut tx, b.visit_date, b.start_hour, None).await {
         Err(ApiError::Domain(DomainError::SlotFull)) => {}
         Ok(()) => return Err(ApiError::Conflict("slot_available")),
         Err(e) => return Err(e),

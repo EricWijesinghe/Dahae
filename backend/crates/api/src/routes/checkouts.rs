@@ -312,7 +312,7 @@ async fn booking_intent(s: &AppState, user: Uuid, body: &BookingBody, expected_t
         return Err(ApiError::BadRequest("quote_not_payable"));
     }
     let mut tx = s.db.begin().await?;
-    lock_slot(&mut tx, body.visit_date, body.start_hour).await?;
+    lock_slot(&mut tx, body.visit_date, body.start_hour, None).await?;
     let price = price_for(&mut tx, user, &prep, body, false).await?;
     // Read-only so far: commit just releases the slot lock.
     tx.commit().await?;
@@ -672,7 +672,7 @@ async fn fulfil(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResult<U
 async fn book(tx: &mut Transaction<'_, Postgres>, key: &[u8; 32], user: Uuid, prep: &Prepared, body: &BookingBody, amount: i64) -> ApiResult<(Uuid, String)> {
     check_date(today_kst(), body.visit_date)?;
     check_slot(prep.service.is_quote(), body.start_hour)?;
-    lock_slot(tx, body.visit_date, body.start_hour).await?;
+    lock_slot(tx, body.visit_date, body.start_hour, None).await?;
     let price = price_for(tx, user, prep, body, true).await?;
     if price.total.0 != amount {
         return Err(ApiError::Conflict("price_changed"));
