@@ -163,7 +163,7 @@ fn custom_data_checkout_id(custom: &Value) -> Option<Uuid> {
 
 /// Billing (saved card) needs the API secret, the store and a card channel key.
 pub fn billing_ready(p: &PortOne) -> bool {
-    p.api_secret.is_some() && p.store_id.is_some() && p.channel_keys.contains_key("card")
+    p.api_secret.is_some() && p.store_id.is_some() && p.channel_keys.contains_key("card_billing")
 }
 
 /// Verifies a billing key the browser SDK issued before we store it. The key must be `ISSUED` and bound to
@@ -469,6 +469,8 @@ mod tests {
         };
         assert!(!billing_ready(&p));
         p.channel_keys.insert("card".into(), "ch".into());
+        assert!(!billing_ready(&p));
+        p.channel_keys.insert("card_billing".into(), "ch".into());
         assert!(billing_ready(&p));
         p.api_secret = None;
         assert!(!billing_ready(&p));

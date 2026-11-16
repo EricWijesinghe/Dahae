@@ -193,7 +193,7 @@ pub fn can_settle(status: &str) -> bool {
 
 async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Json<CreateBody>) -> ApiResult<Json<CheckoutIntent>> {
     let CreateBody { req, points } = body;
-    ensure_enabled(&s.db, req.method()).await?;
+    ensure_enabled(&s, req.method()).await?;
     if matches!(req, CheckoutRequest::Booking { .. }) && super::config::maintenance_on(&s.db, &s.config).await? {
         return Err(ApiError::Unavailable("maintenance"));
     }

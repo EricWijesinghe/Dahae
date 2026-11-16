@@ -44,12 +44,17 @@ pub async fn enabled_codes(db: &PgPool) -> ApiResult<Vec<String>> {
     Ok(stored.map(|j| j.0).unwrap_or_else(|| METHODS.iter().map(|m| m.0.to_string()).collect()))
 }
 
-/// Rejects unknown or switched-off methods before any intent is created.
-pub async fn ensure_enabled(db: &PgPool, code: &str) -> ApiResult<()> {
+/// Outside dev mode a method is offered only once its PortOne channel key is saved.
+pub fn has_channel_key(s: &AppState, code: &str) -> bool {
+    s.config.dev_mode || s.providers.integ().portone.channel_keys.contains_key(code)
+}
+
+/// Rejects unknown, switched-off or keyless methods before any intent is created.
+pub async fn ensure_enabled(s: &AppState, code: &str) -> ApiResult<()> {
     if !METHODS.iter().any(|m| m.0 == code) {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
-    if !enabled_codes(db).await?.iter().any(|c| c == code) {
+    if !enabled_codes(&s.db).await?.iter().any(|c| c == code) || !has_channel_key(s, code) {
         return Err(ApiError::BadRequest("payment_method_disabled"));
     }
     Ok(())
@@ -66,7 +71,7 @@ async fn enabled(State(s): State<AppState>) -> ApiResult<Json<Vec<Method>>> {
     Ok(Json(
         METHODS
             .iter()
-            .filter(|(code, _)| on.iter().any(|c| c == code))
+            .filter(|(code, _)| on.iter().any(|c| c == code) && has_channel_key(&s, code))
             .map(|&(code, flow)| Method { code, flow })
             .collect(),
     ))
@@ -77,22 +82,25 @@ struct AdminMethod {
     code: &'static str,
     flow: &'static str,
     enabled: bool,
+    /// False while the method has no PortOne channel key (the customer list hides it outside dev mode).
+    has_key: bool,
 }
 
-async fn admin_view(db: &PgPool) -> ApiResult<Vec<AdminMethod>> {
-    let on = enabled_codes(db).await?;
+async fn admin_view(s: &AppState) -> ApiResult<Vec<AdminMethod>> {
+    let on = enabled_codes(&s.db).await?;
     Ok(METHODS
         .iter()
         .map(|&(code, flow)| AdminMethod {
             code,
             flow,
             enabled: on.iter().any(|c| c == code),
+            has_key: has_channel_key(s, code),
         })
         .collect())
 }
 
 async fn admin_list(State(s): State<AppState>, Admin(_): Admin) -> ApiResult<Json<Vec<AdminMethod>>> {
-    Ok(Json(admin_view(&s.db).await?))
+    Ok(Json(admin_view(&s).await?))
 }
 
 #[derive(Deserialize)]
@@ -113,5 +121,5 @@ async fn admin_update(State(s): State<AppState>, Admin(a): Admin, Json(u): Json<
         .execute(&s.db)
         .await?;
     audit(&s.db, "staff", Some(a.id), "payment_methods.update", SETTING, json!(codes)).await?;
-    Ok(Json(admin_view(&s.db).await?))
+    Ok(Json(admin_view(&s).await?))
 }

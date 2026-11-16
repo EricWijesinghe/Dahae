@@ -380,10 +380,15 @@ async fn billing_setup(State(s): State<AppState>, Customer(a): Customer) -> ApiR
         .bind(a.id)
         .fetch_one(&s.db)
         .await?;
+    // The app reads the billing channel under "card"; the one-off card channel stays server-side.
+    let mut channels = p.channel_keys.clone();
+    if let Some(billing) = channels.get("card_billing").cloned() {
+        channels.insert("card".into(), billing);
+    }
     Ok(Json(json!({
         "enabled": true,
         "store_id": p.store_id,
-        "channels": p.channel_keys,
+        "channels": channels,
         "issue_id": issue,
         "customer_id": a.id,
     })))

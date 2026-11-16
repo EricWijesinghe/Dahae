@@ -293,3 +293,60 @@ async fn secrets_never_come_back_in_any_response(db: PgPool) {
     let field = card["fields"].as_array().unwrap().iter().find(|f| f["name"] == "api_secret").unwrap();
     assert_eq!(field["preview"], "••••0000");
 }
+
+const CHANNEL: &str = "channel-key-00000000-0000-0000-0000-000000000000";
+const BILLING_CHANNEL: &str = "channel-key-11111111-1111-1111-1111-111111111111";
+
+/// Saves the PortOne card with these channel keys as the owner (the card must be unlocked first if already saved).
+async fn save_channels(app: &Router, token: &str, channels: Value) {
+    let body = json!({ "store_id": "store-00000000-0000-0000-0000-000000000000", "api_secret": SECRET, "channel_keys": channels });
+    let (st, body) = common::call_owner(app, "PUT", PORTONE, token, None, body).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+}
+
+fn method_codes(body: &Value) -> Vec<&str> {
+    body.as_array().unwrap().iter().map(|m| m["code"].as_str().unwrap()).collect()
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn customers_see_only_methods_that_have_a_channel_key(db: PgPool) {
+    let app = common::prod_app(db.clone(), "http://127.0.0.1:9");
+    let (token, _) = enrolled_owner(&db).await;
+    save_channels(&app, &token, json!({ "card": CHANNEL, "kakaopay": CHANNEL })).await;
+    let (st, body) = common::call(&app, "GET", "/v1/payments/methods", None, None).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(method_codes(&body), ["card", "kakaopay"]);
+
+    let dev = common::app(db.clone());
+    let (_, all) = common::call(&dev, "GET", "/v1/payments/methods", None, None).await;
+    assert_eq!(all.as_array().unwrap().len(), 10, "dev mode keeps every method open");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn admin_list_says_which_methods_have_a_key(db: PgPool) {
+    let app = common::prod_app(db.clone(), "http://127.0.0.1:9");
+    let (token, _) = enrolled_owner(&db).await;
+    save_channels(&app, &token, json!({ "card": CHANNEL })).await;
+    let (admin, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
+    let (st, body) = common::call(&app, "GET", "/v1/admin/payment-methods", Some(&admin), None).await;
+    assert_eq!(st, StatusCode::OK);
+    let has_key = |code: &str| body.as_array().unwrap().iter().find(|m| m["code"] == code).unwrap()["has_key"].clone();
+    assert_eq!((has_key("card"), has_key("kakaopay")), (json!(true), json!(false)));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn billing_is_ready_only_with_its_own_channel_key(db: PgPool) {
+    let app = common::prod_app(db.clone(), "http://127.0.0.1:9");
+    let (token, _) = enrolled_owner(&db).await;
+    save_channels(&app, &token, json!({ "card": CHANNEL })).await;
+    let dev = common::app(db.clone());
+    let c = common::customer(&dev, &db, "010-7100-0002").await;
+    let (_, setup) = common::call(&app, "GET", "/v1/me/payment-methods/setup", Some(&c.token), None).await;
+    assert_eq!(setup["enabled"], false, "one-off card key does not enable billing");
+
+    assert_eq!(unlock(&app, &token, &code_now()).await.0, StatusCode::OK);
+    save_channels(&app, &token, json!({ "card": CHANNEL, "card_billing": BILLING_CHANNEL })).await;
+    let (_, setup) = common::call(&app, "GET", "/v1/me/payment-methods/setup", Some(&c.token), None).await;
+    assert_eq!(setup["enabled"], true);
+    assert_eq!(setup["channels"]["card"], BILLING_CHANNEL, "the app reads billing under card");
+}
