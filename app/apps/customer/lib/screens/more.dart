@@ -196,8 +196,8 @@ class MoreTab extends StatelessWidget {
         row('menu_licenses', t.moreLicenses, () async {
           final version = await _buildVersion();
           if (!context.mounted) return;
-          showLicensePage(
-            context: context,
+          showDahaeLicensePage(
+            context,
             applicationName: brand,
             applicationVersion: version,
           );

@@ -3929,6 +3929,10 @@ class TKo extends T {
   String get quoteSentChip => '견적 발송';
 
   @override
+  String get legalCopyright =>
+      '다해 소프트웨어 © 2026 Eric Wijesinghe. All rights reserved.';
+
+  @override
   String get locUseCurrent => '현재 위치로 찾기';
 
   @override

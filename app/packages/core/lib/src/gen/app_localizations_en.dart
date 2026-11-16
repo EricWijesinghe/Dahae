@@ -4032,6 +4032,10 @@ class TEn extends T {
   String get quoteSentChip => 'Quote sent';
 
   @override
+  String get legalCopyright =>
+      'Dahae software © 2026 Eric Wijesinghe. All rights reserved.';
+
+  @override
   String get locUseCurrent => 'Use my current location';
 
   @override

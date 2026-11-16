@@ -7513,6 +7513,12 @@ abstract class T {
   /// **'견적 발송'**
   String get quoteSentChip;
 
+  /// No description provided for @legalCopyright.
+  ///
+  /// In ko, this message translates to:
+  /// **'다해 소프트웨어 © 2026 Eric Wijesinghe. All rights reserved.'**
+  String get legalCopyright;
+
   /// No description provided for @locUseCurrent.
   ///
   /// In ko, this message translates to:

@@ -159,9 +159,26 @@ class _ConsoleShellState extends State<ConsoleShell> {
         const Divider(),
         ListTile(
           dense: true,
+          leading: const Icon(Icons.article_rounded, size: 20),
+          title: Text(t.moreLicenses),
+          onTap: () => showDahaeLicensePage(
+            context,
+            applicationName: BrandConfig.placeholder.name,
+          ),
+        ),
+        ListTile(
+          dense: true,
           leading: const Icon(Icons.logout_rounded, size: 20),
           title: Text(t.logout),
           onTap: Deps.read(context).session.logout,
+        ),
+        Padding(
+          padding: const EdgeInsets.all(Space.sm),
+          child: Text(
+            t.legalCopyright,
+            style: context.text.labelSmall,
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     );
