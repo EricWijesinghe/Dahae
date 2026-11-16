@@ -68,6 +68,8 @@ use tower_http::{
 };
 
 const BODY_LIMIT_BYTES: usize = 12 * 1024 * 1024;
+/// Anonymous error reports (4000-char stack, JSON-escaped) and analytics batches (50 events) fit well inside this.
+const INGEST_BODY_LIMIT: usize = 64 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub fn router(state: AppState) -> Router {
@@ -108,8 +110,8 @@ pub fn router(state: AppState) -> Router {
         .merge(setup::public_routes())
         .merge(address::public_routes())
         .merge(config::routes())
-        .merge(crate::client_errors::routes())
-        .merge(crate::analytics::public_routes())
+        .merge(crate::client_errors::routes().layer(DefaultBodyLimit::max(INGEST_BODY_LIMIT)))
+        .merge(crate::analytics::public_routes().layer(DefaultBodyLimit::max(INGEST_BODY_LIMIT)))
         .nest(
             "/admin",
             admin::routes()

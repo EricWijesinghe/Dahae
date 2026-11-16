@@ -137,8 +137,9 @@ async fn job(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) -> Ap
     let b = load_booking(&s.db, id).await?;
     let fee_bps: i32 = sqlx::query_scalar("SELECT fee_bps FROM pros WHERE id = $1").bind(a.id).fetch_one(&s.db).await?;
     let committed = b.pro_id == Some(a.id);
-    // Pros see a job only if it matches their prefs (same rule as the feed) or it is theirs.
-    if !committed && !visible_to(&s, id, a.id).await? {
+    // Pros see a job only if it is theirs, or still open and matches their prefs (same rule as the feed).
+    let open_to_claim = b.pro_id.is_none() && visible_to(&s, id, a.id).await?;
+    if !committed && !open_to_claim {
         return Err(ApiError::NotFound);
     }
     let pay = gross(&b).map(|g| payout(Won(g), i64::from(fee_bps)));
