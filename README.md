@@ -214,6 +214,7 @@ flowchart LR
 | [장애 대응 런북](docs/RUNBOOK.md) | 증상별 첫 확인 순서와 복구 절차 (한국어·영어) |
 | [품질과 검사](docs/QUALITY.md) | 테스트 구성과 수, CI 게이트, 릴리스 파이프라인, 알려진 공백 |
 | [API 색인](docs/api/README.md) | 경로 목록과 공통 규칙 (멱등성, 오류 형식, 버전) |
+| [클라우드 배포 안내](docs/guide/08-클라우드-배포.md) | 내 클라우드 계정에 서버를 만들고, 도메인을 연결하고, 설치하고, 외부 백업을 붙이는 순서 (한국어·영어) |
 | [안내서 모음](docs/guide/README.md) | 사장님과 설치 담당을 위한 단계별 안내서 (한국어) |
 | [배포 상세](docs/DEPLOY.md) | 배포와 운영 절차 세부 |
 | [라이선스](LICENSE), [제3자 고지](THIRD_PARTY_NOTICES.md) | 사용 조건과 포함된 외부 구성요소의 라이선스 |
@@ -285,12 +286,16 @@ cd apps/customer && flutter run --dart-define=API_BASE=http://localhost:8080
 
 ## 라이선스
 
-이 소프트웨어는 저작권자 Eric Wijesinghe의 독점 소프트웨어이며, 모든 권리는 저작권자에게 있습니다. 사용 권리는 저작권자와 맺은 서면 라이선스 계약으로만 주어집니다.
+이 소프트웨어는 저작권자 Eric Wijesinghe(EricWijesinghe@hotmail.com)의 독점 소프트웨어이며, 모든 권리는 저작권자에게 있습니다. 소프트웨어와 소스 코드, 디자인, 로고, 문서의 권리와 저작권자가 만든 모든 개선물은 저작권자에게 있어요. 사용 권리는 저작권자와 맺은 서면 라이선스 계약으로만 주어집니다.
 
 - 라이선스 조건: [LICENSE](LICENSE) (정본은 영문이며 파일 상단에 한국어 요약이 있어요)
+- 소유권 고지: [NOTICE](NOTICE)
+- 상업 라이선스 계약서 양식: [docs/legal/COMMERCIAL-LICENSE-AGREEMENT.md](docs/legal/COMMERCIAL-LICENSE-AGREEMENT.md) (서명 전 변호사 검토 필요)
+- 법적 문서 안내: [docs/legal/README.md](docs/legal/README.md)
 - 제3자 구성요소와 각 라이선스: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-- '다해'와 'Dahae' 이름과 로고는 라이선스로 부여되지 않아요.
+- '다해'와 'Dahae' 이름과 로고는 저작권자의 상표(™)이며 라이선스로 부여되지 않아요.
 - 소스 코드는 공개로 볼 수 있지만, 보거나 복제해도 라이선스가 부여되지 않아요 (LICENSE 1.4조 및 3.1조).
+- 라이선스 문의와 사용 허가 요청: EricWijesinghe@hotmail.com
 
 ---
 
@@ -388,6 +393,7 @@ flowchart LR
 | [Incident runbook](docs/RUNBOOK.md) | First checks by symptom, and recovery steps (Korean and English) |
 | [Quality and checks](docs/QUALITY.md) | Test layers and counts, CI gates, release pipeline, known gaps |
 | [API index](docs/api/README.md) | Endpoint list and shared rules (idempotency, error shape, versioning) |
+| [Cloud deployment guide](docs/guide/08-클라우드-배포.md) | Creating the server on your own cloud account, connecting your domain, running the installer and offsite backup (Korean and English) |
 | [Guides](docs/guide/README.md) | Step-by-step guides for owners and installers (Korean, with English titles) |
 | [Deployment details](docs/DEPLOY.md) | Deployment and operations detail |
 | [License](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md) | Terms of use and licences of bundled components |
@@ -427,11 +433,17 @@ Layout: `app/` (Flutter workspace: customer, partner and console apps, shared pa
 
 ## License
 
-This software is proprietary to its copyright holder, Eric Wijesinghe. All rights reserved. Use rights are granted only by a separate written license agreement.
+This software is proprietary to its copyright holder, Eric Wijesinghe (EricWijesinghe@hotmail.com). All rights reserved. The software, its source code, designs, logos and documentation, and all improvements made by or for the copyright holder, belong to the copyright holder. Use rights are granted only by a separate written license agreement.
 
 - License terms: [LICENSE](LICENSE) (the English text governs; a Korean summary is at the top of the file)
+- Ownership notice: [NOTICE](NOTICE)
+- Commercial license agreement template: [docs/legal/COMMERCIAL-LICENSE-AGREEMENT.md](docs/legal/COMMERCIAL-LICENSE-AGREEMENT.md) (have it reviewed by a lawyer before signing)
+- Guide to the legal documents: [docs/legal/README.md](docs/legal/README.md)
 - Third-party components and their licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-- The names and logos Dahae and 다해 are not licensed.
+- The names and logos Dahae and 다해 are trademarks (™) of the copyright holder and are not licensed.
 - The source is publicly visible. Viewing or cloning it grants no license (LICENSE sections 1.4 and 3.1).
+- Licensing inquiries, permission requests and security contact: EricWijesinghe@hotmail.com
 
 <p align="center"><a href="#다해-dahae">Back to 한국어</a></p>
+
+<p align="center">© 2026 Eric Wijesinghe</p>
