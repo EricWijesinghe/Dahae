@@ -71,13 +71,15 @@ curl -fsSL <설치 주소> | sudo bash
 
 카드마다 **[연결 테스트]**가 자동으로 돌아서, 초록색 "연결됨"이 나오면 끝이에요.
 
+<p align="center"><img src="docs/assets/readme/console-payments.webp" alt="결제 연동 카드를 펼친 화면. 상점 아이디, 시크릿, 웹훅 주소 입력칸이 보여요" width="520"><br><sub>결제 연동 카드 (데모 데이터)</sub></p>
+
 - 자세히: [2. 설정 마법사](docs/guide/02-설정-마법사.md), [결제 연동 설정 가이드](docs/guide/payments-setup.md), [6. 알림톡 템플릿 등록](docs/guide/06-알림톡-템플릿-등록.md)
 
 </details>
 
 ## 화면 미리보기
 
-실제 앱과 콘솔 화면을 캡처한 이미지예요. 고객 화면에 나오는 예약, 주소, 이름은 연습용 데이터예요.
+실제 앱과 콘솔 화면을 캡처한 이미지예요. 화면의 가게 소식, 예약, 주소, 이름, 매출과 평점은 모두 **데모 데이터**예요.
 
 **고객 앱**
 
@@ -104,7 +106,7 @@ curl -fsSL <설치 주소> | sudo bash
 
 <table>
   <tr>
-    <td align="center"><img src="docs/assets/readme/console-dashboard.webp" alt="콘솔 대시보드" width="420"><br><sub>대시보드</sub></td>
+    <td align="center"><img src="docs/assets/readme/console-dashboard.webp" alt="콘솔 대시보드" width="420"><br><sub>대시보드 (데모 데이터)</sub></td>
   </tr>
 </table>
 
@@ -273,6 +275,8 @@ Proprietary. All rights reserved. 자세한 내용은 [LICENSE](LICENSE)를 보�
 **Bookings, payments, partner payouts and backups for a home-cleaning business. Each owner runs it on their own server.**
 
 Dahae is a home-services platform for the Korean market. It has a customer app, a partner (cleaner) app, a web owner console and a Rust API. A business installs it on its own Linux server with one command, then fills in its payment and messaging keys in a setup wizard.
+
+Screenshots use demo data: sample shop news, bookings, names and dashboard figures.
 
 ## Who it is for
 
