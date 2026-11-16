@@ -8,6 +8,11 @@ Please report security issues **privately** through GitHub:
 [private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)).
 Do not open a public issue, pull request or discussion for a suspected vulnerability.
 
+If GitHub reporting is not possible for you, email the copyright holder at
+**EricWijesinghe@hotmail.com**. Use the subject line "Dahae security report" and send the details
+in the same form as below. Do not send customer data by email; describe the issue and we will agree
+a safe way to share the details.
+
 The security model, the controls behind each claim, and the known gaps are in
 [docs/SECURITY-AND-PRIVACY.md](docs/SECURITY-AND-PRIVACY.md) (Korean summary first).
 
