@@ -1,0 +1,110 @@
+//! Staff authorization: exports need a live admin and a fresh step-up, copy-channel resets stay off
+//! accounts with no second factor, deactivation ends the staff session, and OTP sends are not cut off
+//! globally by one busy client.
+
+mod common;
+
+use api::auth::Role;
+use axum::http::StatusCode;
+use common::{call, staff_token};
+use serde_json::{Value, json};
+use sqlx::PgPool;
+use uuid::Uuid;
+
+const PERIOD: &str = "period=custom&from=2026-03-01&to=2026-03-31";
+
+/// An active staff row with a password and phone, not enrolled in TOTP (the reset target in the findings).
+async fn plain_staff(db: &PgPool, role: &str, phone: &str) -> Uuid {
+    sqlx::query_scalar("INSERT INTO staff (email, name, password_hash, role, phone) VALUES ($1, 'Target', 'x', $2, $3) RETURNING id")
+        .bind(format!("{}@test.local", Uuid::now_v7()))
+        .bind(role)
+        .bind(phone)
+        .fetch_one(db)
+        .await
+        .expect("staff row")
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn exports_need_a_live_admin_and_a_fresh_step_up(db: PgPool) {
+    let app = common::app(db.clone());
+    let (token, id) = staff_token(&db, Role::StaffAdmin).await;
+    let uris = [
+        format!("/v1/admin/finance/export/payroll?{PERIOD}"),
+        format!("/v1/admin/finance/export/withholding?{PERIOD}"),
+        format!("/v1/admin/finance/export/ledger?{PERIOD}"),
+        format!("/v1/admin/finance/export/settlements?{PERIOD}"),
+        format!("/v1/admin/finance/export/monthly?{PERIOD}"),
+        "/v1/admin/finance/export/vat?year=2026&quarter=1".to_string(),
+        format!("/v1/admin/finance/export/tax-invoices?{PERIOD}"),
+    ];
+    // No step-up in the last few minutes: every export refuses.
+    sqlx::query("UPDATE staff SET stepup_at = NULL WHERE id = $1")
+        .bind(id)
+        .execute(&db)
+        .await
+        .expect("stale");
+    for uri in &uris {
+        let (st, b) = call(&app, "GET", uri, Some(token.as_str()), None).await;
+        assert_eq!(
+            (st, b["error"]["code"].as_str()),
+            (StatusCode::FORBIDDEN, Some("stepup_required")),
+            "{uri}: {b}"
+        );
+    }
+    // A stepped-up admin demoted to consultant: the stored role decides, not the token claim.
+    sqlx::query("UPDATE staff SET stepup_at = now(), role = 'consultant' WHERE id = $1")
+        .bind(id)
+        .execute(&db)
+        .await
+        .expect("demote");
+    for uri in &uris {
+        let (st, b) = call(&app, "GET", uri, Some(token.as_str()), None).await;
+        assert_eq!(st, StatusCode::FORBIDDEN, "{uri}: {b}");
+    }
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn copy_channel_reset_is_refused_for_an_account_with_no_second_factor(db: PgPool) {
+    let app = common::app(db.clone());
+    let (admin, _) = staff_token(&db, Role::StaffAdmin).await;
+    let target = plain_staff(&db, "consultant", "01012345678").await;
+    let uri = format!("/v1/admin/staff/{target}/password-reset");
+    let (st, b): (StatusCode, Value) = call(&app, "POST", &uri, Some(admin.as_str()), Some(json!({ "channel": "copy" }))).await;
+    assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::BAD_REQUEST, Some("sms_required")), "{b}");
+    let (st, b) = call(&app, "POST", &uri, Some(admin.as_str()), Some(json!({ "channel": "sms" }))).await;
+    assert_eq!(st, StatusCode::OK, "the code goes to the staff member's own phone: {b}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn deactivating_staff_ends_their_access_token(db: PgPool) {
+    let app = common::app(db.clone());
+    let (admin, _) = staff_token(&db, Role::StaffAdmin).await;
+    let (other, other_id) = staff_token(&db, Role::StaffAdmin).await;
+    let (st, _) = call(&app, "GET", "/v1/auth/sessions", Some(other.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "token works before deactivation");
+    let (st, b) = call(
+        &app,
+        "POST",
+        &format!("/v1/admin/staff/{other_id}/active"),
+        Some(admin.as_str()),
+        Some(json!({ "active": false })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let (st, b) = call(&app, "POST", "/v1/realtime/ticket", Some(other.as_str()), None).await;
+    assert_eq!(st, StatusCode::UNAUTHORIZED, "the deactivated session's token is dead at once: {b}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn otp_sends_are_not_cut_off_for_every_number_by_a_global_count(db: PgPool) {
+    // 3000 codes for other numbers in the last hour: the old global ceiling refused every sign-in.
+    sqlx::query(
+        "INSERT INTO otp_codes (phone, code_hash, expires_at) SELECT '0108' || lpad(g::text, 7, '0'), 'x', now() + interval '3 minutes' FROM generate_series(1, 3000) g",
+    )
+    .execute(&db)
+    .await
+    .expect("seed codes");
+    let app = common::app(db.clone());
+    let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": "010-5555-0101" }))).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+}

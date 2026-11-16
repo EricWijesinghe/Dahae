@@ -76,17 +76,21 @@ async fn request_otp(State(s): State<AppState>, Json(req): Json<OtpRequest>) -> 
         .bind(&phone)
         .fetch_one(&s.db)
         .await?;
-    // Global ceiling too: stops SMS-pumping across many numbers (cost + table growth).
+    // Global count is only watched, never refused: a hard ceiling would let one client lock every number out.
+    // Per-number and per-IP limits still bound each sender.
     let global: i64 = sqlx::query_scalar("SELECT count(*) FROM otp_codes WHERE created_at > now() - interval '1 hour'")
         .fetch_one(&s.db)
         .await?;
+    if global >= OTP_GLOBAL_PER_HOUR {
+        tracing::warn!(global, "OTP sends over the hourly watch level");
+    }
     let cooling: bool =
         sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM otp_codes WHERE phone = $1 AND created_at > now() - ($2::float8 * interval '1 second'))")
             .bind(&phone)
             .bind(OTP_RESEND_COOLDOWN_SECS)
             .fetch_one(&s.db)
             .await?;
-    if recent >= OTP_MAX_PER_HOUR || global >= OTP_GLOBAL_PER_HOUR || cooling {
+    if recent >= OTP_MAX_PER_HOUR || cooling {
         return Err(ApiError::RateLimited);
     }
     // Store-review demo number: the owner's fixed code, no SMS (reviewers are abroad).
