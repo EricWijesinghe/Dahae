@@ -441,9 +441,10 @@ async fn owner_edits_pauses_and_reads_metrics(pool: PgPool) {
     assert_eq!(st, StatusCode::OK, "{edited}");
     assert_eq!(edited["subscription"]["cadence_weeks"], 2);
     assert!(
+        // Tomorrow's visit keeps its charge and its old date; everything after it moves to the new weekday.
         visits(&edited).iter().filter(|v| v["state"] == "planned").all(|v| {
             let d: NaiveDate = v["visit_date"].as_str().unwrap().parse().unwrap();
-            weekday_index(d) == 4
+            d <= kst_today() + Duration::days(1) || weekday_index(d) == 4
         }),
         "{edited}"
     );
