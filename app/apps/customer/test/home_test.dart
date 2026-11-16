@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:customer/screens/content_rail.dart';
+import 'package:customer/screens/move_chooser.dart';
 import 'package:customer/screens/more.dart';
 import 'package:customer/screens/request_status.dart';
 import 'package:customer/screens/service.dart';
@@ -11,6 +12,7 @@ import 'package:ui/ui.dart';
 
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
+import 'support/home_groups.dart';
 
 const _hero = '첫 청소 웰컴 쿠폰팩 즉시 지급';
 const _cardLabel = '웰컴 혜택';
@@ -129,6 +131,9 @@ const _tileOrder = [
 /// The four built-in home groups (CR-2) in tile order.
 final _groupTitles = [for (final g in defaultServiceGroups) g.titleFor('ko')];
 
+/// The 거주 청소 / 가전·가구 청소 tiles hold the services these tests open from home.
+final _appliance = homeGroupTitle('sofa');
+
 double _top(WidgetTester tester, String text) =>
     tester.getTopLeft(find.text(text).first).dy;
 
@@ -144,15 +149,16 @@ void main() {
       final env = await TestEnv.create(fake: fake);
 
       await pumpCustomerApp(tester, env);
-      await pumpUntilFound(tester, find.text(koT.service('sofa')));
+      await pumpUntilFound(tester, find.text(_appliance));
       await settle(
         tester,
       ); // let the stagger finish; faded-out tiles drop out of semantics
 
       expect(find.byType(DahaeLogo), findsOneWidget);
       // CR-2: four group tiles in one row, in server order (the built-in groups here).
+      // Tops, not centres: a two-line label moves its centre, the labels all start under the plate.
       final spots = [
-        for (final title in _groupTitles) tester.getCenter(find.text(title)),
+        for (final title in _groupTitles) tester.getTopLeft(find.text(title)),
       ];
       for (var i = 1; i < spots.length; i++) {
         expect(
@@ -181,22 +187,38 @@ void main() {
     },
   );
 
-  testWidgets('a move tile opens its own service', (tester) async {
+  testWidgets(
+    'a list group tile opens its member picker, and a member opens its service',
+    (tester) async {
+      setViewport(tester, phoneSize);
+      final fake = FakeApi();
+      stockCustomerApi(fake);
+      final env = await TestEnv.create(fake: fake);
+
+      await pumpCustomerApp(tester, env);
+      await openServiceFromHome(tester, 'bathroom');
+
+      expect(
+        tester.widget<ServiceScreen>(find.byType(ServiceScreen)).service.code,
+        'bathroom',
+      );
+      await unmount(tester);
+    },
+  );
+
+  testWidgets('the moving tile asks the home type before any service opens', (
+    tester,
+  ) async {
     setViewport(tester, phoneSize);
     final fake = FakeApi();
     stockCustomerApi(fake);
     final env = await TestEnv.create(fake: fake);
 
     await pumpCustomerApp(tester, env);
-    await pumpUntilFound(tester, find.text(koT.service('move_in')));
-    await settle(tester);
-    await tester.tap(find.text(koT.service('move_in')));
-    await settle(tester);
+    await tapHomeGroup(tester, 'move_in');
 
-    expect(
-      tester.widget<ServiceScreen>(find.byType(ServiceScreen)).service.code,
-      'move_in',
-    );
+    expect(find.byType(MoveChooserScreen), findsOneWidget);
+    expect(find.byType(ServiceScreen), findsNothing);
     await unmount(tester);
   });
 
@@ -217,7 +239,7 @@ void main() {
       await settle(tester);
 
       final order = [
-        _top(tester, koT.service('sofa')),
+        _top(tester, _appliance),
         _top(tester, koT.dhHomeRecommended),
         _top(tester, _pick),
         _top(tester, _hero),
@@ -390,7 +412,7 @@ void main() {
       expect(find.text(_pick), findsOneWidget);
       expect(find.text(koT.feedTitleSeasonal), findsOneWidget);
       expect(find.text(koT.feedWhySummer), findsOneWidget);
-      expect(find.text(koT.service('sofa')), findsNothing);
+      expect(find.text(_appliance), findsNothing);
       expect(find.text(_hero), findsNothing);
       expect(find.text(koT.dhHomeNews), findsNothing);
 
@@ -416,7 +438,7 @@ void main() {
 
       await tester.tap(find.text(koT.dhHomeAll));
       await settle(tester);
-      expect(find.text(koT.service('sofa')), findsOneWidget);
+      expect(find.text(_appliance), findsOneWidget);
       expect(find.text(_hero), findsOneWidget);
       await unmount(tester);
     },
@@ -431,7 +453,7 @@ void main() {
       final env = await TestEnv.create(fake: fake);
 
       await pumpCustomerApp(tester, env);
-      await pumpUntilFound(tester, find.text(koT.service('sofa')));
+      await pumpUntilFound(tester, find.text(_appliance));
       await settle(tester);
 
       expect(find.text(koT.dhHomeNews), findsNothing);
@@ -473,7 +495,7 @@ void main() {
       await settle(tester);
 
       final order = [
-        _top(tester, koT.service('sofa')),
+        _top(tester, _appliance),
         tester.getTopLeft(find.textContaining(koT.homeUpcoming)).dy,
         _top(tester, koT.dhHomeRecommended),
       ];
@@ -497,7 +519,7 @@ void main() {
   );
 
   testWidgets(
-    'a guest sees the banner, 8 tiles and the news without any account call',
+    'a guest sees the banner, the 4 group tiles and the news without any account call',
     (tester) async {
       setViewport(tester, _tallPhone);
       final fake = FakeApi();
@@ -510,11 +532,11 @@ void main() {
       await settle(tester);
 
       expect(find.text(_hero), findsOneWidget);
-      for (final code in catalogCodes) {
+      for (final group in defaultServiceGroups) {
         expect(
-          find.text(koT.service(code)),
+          find.text(group.titleFor('ko')),
           findsWidgets,
-          reason: 'tile for $code',
+          reason: 'tile for ${group.code}',
         );
       }
       expect(find.text(_pick), findsOneWidget);
@@ -535,7 +557,7 @@ void main() {
     final env = await TestEnv.create(fake: fake);
 
     await pumpCustomerApp(tester, env);
-    await pumpUntilFound(tester, find.text(koT.service('studio')));
+    await pumpUntilFound(tester, find.text(_groupTitles.first));
     await unmount(tester);
   });
 
