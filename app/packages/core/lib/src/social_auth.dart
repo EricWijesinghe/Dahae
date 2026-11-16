@@ -179,8 +179,9 @@ bool isDevApiBase(String baseUrl) {
 /// RFC 1918 addresses: a demo server on the office Wi-Fi (the server refuses dev mode on public hosts).
 bool _isPrivateIpv4(String host) {
   final p = host.split('.').map(int.tryParse).toList();
-  if (p.length != 4 || p.any((n) => n == null || n < 0 || n > 255))
+  if (p.length != 4 || p.any((n) => n == null || n < 0 || n > 255)) {
     return false;
+  }
   final a = p[0]!, b = p[1]!;
   return a == 10 || (a == 172 && b >= 16 && b <= 31) || (a == 192 && b == 168);
 }
