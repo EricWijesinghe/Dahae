@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -28,11 +29,20 @@ const shotDevices = [
 
 /// Comma lists from `--dart-define`, e.g. `--dart-define=SHOT_LANGS=ko,en`.
 // i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)
-final shotLangs = const String.fromEnvironment('SHOT_LANGS', defaultValue: 'ko,en').split(',');
-final shotDeviceSlugs = const String.fromEnvironment('SHOT_DEVICES', defaultValue: 'ios-6.9,ios-6.5,ipad-13,android').split(',');
+final shotLangs = const String.fromEnvironment(
+  'SHOT_LANGS',
+  defaultValue: 'ko,en',
+).split(',');
+final shotDeviceSlugs = const String.fromEnvironment(
+  'SHOT_DEVICES',
+  defaultValue: 'ios-6.9,ios-6.5,ipad-13,android',
+).split(',');
 
 /// Where PNGs go (relative to the app package). The framing step reads from here.
-final shotOutRoot = const String.fromEnvironment('SHOT_OUT', defaultValue: 'build/store_shots/raw');
+final shotOutRoot = const String.fromEnvironment(
+  'SHOT_OUT',
+  defaultValue: 'build/store_shots/raw',
+);
 
 /// Loads Dahae Sans (the app font) plus CJK fallbacks, and the Material icon font.
 /// Flutter's test engine otherwise draws Ahem boxes for every glyph.
@@ -40,10 +50,16 @@ final shotOutRoot = const String.fromEnvironment('SHOT_OUT', defaultValue: 'buil
 /// family names the theme already falls back to ('Noto Sans JP' / 'Noto Sans SC').
 Future<void> loadShotFonts() async {
   // flutter test runs with the app folder as cwd (app/apps/<app>); the ui package sits beside it.
-  final fontDir = Directory('${Directory.current.path}/../../packages/ui/assets/fonts');
+  final fontDir = Directory(
+    '${Directory.current.path}/../../packages/ui/assets/fonts',
+  );
   // The theme names the font with `package: 'ui'`, so the engine looks it up as
   // 'packages/ui/<family>'; register both spellings.
-  final otfs = fontDir.listSync().whereType<File>().where((f) => f.path.endsWith('.otf')).toList();
+  final otfs = fontDir
+      .listSync()
+      .whereType<File>()
+      .where((f) => f.path.endsWith('.otf'))
+      .toList();
   for (final family in const ['Dahae Sans', 'packages/ui/Dahae Sans']) {
     final loader = FontLoader(family);
     for (final f in otfs) {
@@ -53,17 +69,24 @@ Future<void> loadShotFonts() async {
   }
   // The theme's first fallback face (rare Hangul syllables), bundled in a subfolder.
   final fullFace = File('${fontDir.path}/full/DahaeSansFull-Regular.otf');
-  for (final family in const ['Dahae Sans Full', 'packages/ui/Dahae Sans Full']) {
-    final loader = FontLoader(family)..addFont(Future.value(fullFace.readAsBytesSync().buffer.asByteData()));
+  for (final family in const [
+    'Dahae Sans Full',
+    'packages/ui/Dahae Sans Full',
+  ]) {
+    final loader = FontLoader(family)
+      ..addFont(Future.value(fullFace.readAsBytesSync().buffer.asByteData()));
     await loader.load();
   }
 
-  final winFonts = Platform.environment['SHOT_WIN_FONTS'] ?? '${Platform.environment['WINDIR'] ?? r'C:\Windows'}\\Fonts';
+  final winFonts =
+      Platform.environment['SHOT_WIN_FONTS'] ??
+      '${Platform.environment['WINDIR'] ?? r'C:\Windows'}\\Fonts';
   Future<void> cjk(String family, String file) async {
     final f = File('$winFonts${Platform.pathSeparator}$file');
     if (!f.existsSync()) return;
     for (final name in [family, 'packages/ui/$family']) {
-      final loader = FontLoader(name)..addFont(Future.value(f.readAsBytesSync().buffer.asByteData()));
+      final loader = FontLoader(name)
+        ..addFont(Future.value(f.readAsBytesSync().buffer.asByteData()));
       await loader.load();
     }
   }
@@ -72,32 +95,78 @@ Future<void> loadShotFonts() async {
   await cjk('Noto Sans JP', 'YuGothM.ttc');
 
   final flutterRoot = Platform.environment['FLUTTER_ROOT'] ?? '';
-  final icons = File('$flutterRoot/bin/cache/artifacts/material_fonts/materialicons-regular.otf');
+  final icons = File(
+    '$flutterRoot/bin/cache/artifacts/material_fonts/materialicons-regular.otf',
+  );
   if (icons.existsSync()) {
-    final loader = FontLoader('MaterialIcons')..addFont(Future.value(icons.readAsBytesSync().buffer.asByteData()));
+    final loader = FontLoader('MaterialIcons')
+      ..addFont(Future.value(icons.readAsBytesSync().buffer.asByteData()));
     await loader.load();
   }
 }
 
 /// Pumps frames for [duration] of fake time (no pumpAndSettle: looping animations never settle).
-Future<void> shotSettle(WidgetTester tester, {Duration duration = const Duration(seconds: 2)}) async {
+Future<void> shotSettle(
+  WidgetTester tester, {
+  Duration duration = const Duration(seconds: 2),
+}) async {
   for (var i = 0; i < duration.inMilliseconds ~/ 100; i++) {
     await tester.pump(const Duration(milliseconds: 100));
   }
 }
 
+/// Resolves every [Image] in the tree in real time. Asset images decode outside the fake clock, so
+/// pumps alone leave their placeholder frames (blank tiles, empty avatars) in the PNG.
+Future<void> decodeShotImages(WidgetTester tester) async {
+  for (var pass = 0; pass < 2; pass++) {
+    final providers = tester
+        .widgetList<Image>(find.byType(Image))
+        .map((i) => i.image)
+        .toList();
+    await tester.runAsync(() => Future.wait(providers.map(_resolveImage)));
+    await tester.pump();
+  }
+}
+
+Future<void> _resolveImage(ImageProvider provider) {
+  final done = Completer<void>();
+  final stream = provider.resolve(ImageConfiguration.empty);
+  late final ImageStreamListener listener;
+  void finish() {
+    stream.removeListener(listener);
+    if (!done.isCompleted) done.complete();
+  }
+
+  listener = ImageStreamListener(
+    (_, _) => finish(),
+    onError: (_, _) => finish(),
+  );
+  stream.addListener(listener);
+  return done.future.timeout(const Duration(seconds: 10), onTimeout: () {});
+}
+
 /// Renders [app] at [device] size and writes it to [path] as a PNG.
-Future<void> captureShot(WidgetTester tester, Widget app, ShotDevice device, String path) async {
+Future<void> captureShot(
+  WidgetTester tester,
+  Widget app,
+  ShotDevice device,
+  String path,
+) async {
   final boundary = GlobalKey();
   tester.view.devicePixelRatio = device.dpr;
-  tester.view.physicalSize = Size(device.width.toDouble(), device.height.toDouble());
+  tester.view.physicalSize = Size(
+    device.width.toDouble(),
+    device.height.toDouble(),
+  );
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
   await tester.pumpWidget(RepaintBoundary(key: boundary, child: app));
+  await decodeShotImages(tester);
   await shotSettle(tester);
   await tester.runAsync(() async {
-    final render = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final render =
+        boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     final image = await render.toImage(pixelRatio: device.dpr);
     final bytes = (await image.toByteData(format: ui.ImageByteFormat.png))!;
     File(path)
