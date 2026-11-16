@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -425,6 +424,84 @@ class TKo extends T {
 
   @override
   String get apPayManageTitle => '간편결제 등록';
+
+  @override
+  String get bankKdb => '산업은행';
+
+  @override
+  String get bankIbk => '기업은행';
+
+  @override
+  String get bankKookmin => '국민은행';
+
+  @override
+  String get bankSuhyup => '수협은행';
+
+  @override
+  String get bankSuhyupFederation => '수협중앙회';
+
+  @override
+  String get bankNonghyup => '농협은행';
+
+  @override
+  String get bankLocalNonghyup => '지역농축협';
+
+  @override
+  String get bankWoori => '우리은행';
+
+  @override
+  String get bankStandardChartered => 'SC제일은행';
+
+  @override
+  String get bankCiti => '한국씨티은행';
+
+  @override
+  String get bankDaegu => '대구은행(iM뱅크)';
+
+  @override
+  String get bankBusan => '부산은행';
+
+  @override
+  String get bankKwangju => '광주은행';
+
+  @override
+  String get bankJeju => '제주은행';
+
+  @override
+  String get bankJeonbuk => '전북은행';
+
+  @override
+  String get bankKyongnam => '경남은행';
+
+  @override
+  String get bankKfcc => '새마을금고';
+
+  @override
+  String get bankShinhyup => '신협';
+
+  @override
+  String get bankSavingsBank => '저축은행';
+
+  @override
+  String get bankNfcf => '산림조합';
+
+  @override
+  String get bankPost => '우체국';
+
+  @override
+  String get bankHana => '하나은행';
+
+  @override
+  String get bankShinhan => '신한은행';
+
+  @override
+  String get bankKBank => '케이뱅크';
+
+  @override
+  String get bankKakao => '카카오뱅크';
+
+  @override
+  String get bankToss => '토스뱅크';
 
   @override
   String get bizInfoTitle => '사업자 정보';

@@ -47,6 +47,37 @@ extension PayLabels on T {
     PayFailure.unknown => error(ApiException(400, code)),
   };
 
+  /// Bank name for a PortOne V2 `Bank` code (virtual accounts); an unknown code is shown as sent.
+  String bankName(String code) => switch (code) {
+    'KDB' => bankKdb,
+    'IBK' => bankIbk,
+    'KOOKMIN' => bankKookmin,
+    'SUHYUP' => bankSuhyup,
+    'SUHYUP_FEDERATION' => bankSuhyupFederation,
+    'NONGHYUP' => bankNonghyup,
+    'LOCAL_NONGHYUP' => bankLocalNonghyup,
+    'WOORI' => bankWoori,
+    'STANDARD_CHARTERED' => bankStandardChartered,
+    'CITI' => bankCiti,
+    'DAEGU' => bankDaegu,
+    'BUSAN' => bankBusan,
+    'KWANGJU' => bankKwangju,
+    'JEJU' => bankJeju,
+    'JEONBUK' => bankJeonbuk,
+    'KYONGNAM' => bankKyongnam,
+    'KFCC' => bankKfcc,
+    'SHINHYUP' => bankShinhyup,
+    'SAVINGS_BANK' => bankSavingsBank,
+    'NFCF' => bankNfcf,
+    'POST' => bankPost,
+    'HANA' => bankHana,
+    'SHINHAN' => bankShinhan,
+    'K_BANK' => bankKBank,
+    'KAKAO' => bankKakao,
+    'TOSS' => bankToss,
+    _ => code,
+  };
+
   /// Label for a server channel code.
   String payMethod(String code) => switch (code) {
     'card' => apMethodCard,

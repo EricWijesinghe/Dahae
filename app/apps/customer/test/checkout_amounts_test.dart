@@ -250,6 +250,7 @@ void main() {
         expect(find.text(koT.apVaAmount), findsOneWidget);
         expect(find.text(formatWon(37000, 'ko')), findsOneWidget);
         expect(find.text('123-456-789012'), findsOneWidget);
+        expect(find.text('국민은행'), findsOneWidget, reason: 'not KOOKMIN');
         await unmount(tester);
       },
     );

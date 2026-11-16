@@ -39,7 +39,7 @@ class VirtualAccountScreen extends StatelessWidget {
           AppCard(
             child: Column(
               children: [
-                _Row(label: t.apVaBank, value: account.bank),
+                _Row(label: t.apVaBank, value: t.bankName(account.bank)),
                 _Row(
                   label: t.apVaAccount,
                   value: account.accountNumber,
