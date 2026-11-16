@@ -89,7 +89,12 @@ class _AuditScreenState extends State<AuditScreen> {
   @override
   Widget build(BuildContext context) {
     final t = context.t;
-    _pager ??= Pager<Json>(context.api, '/admin/audit', (row) => row, query: _query);
+    _pager ??= Pager<Json>(
+      context.api,
+      '/admin/audit',
+      (row) => row,
+      query: _query,
+    );
     final pager = _pager!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -181,9 +186,15 @@ class _Filters extends StatelessWidget {
         DropdownButton<String?>(
           value: role,
           items: [
-            DropdownMenuItem(value: null, child: Text('${t.audFilterWho}: ${t.audWhoAll}')),
+            DropdownMenuItem(
+              value: null,
+              child: Text('${t.audFilterWho}: ${t.audWhoAll}'),
+            ),
             for (final r in roles)
-              DropdownMenuItem(value: r, child: Text('${t.audFilterWho}: ${_roleLabel(t, r)}')),
+              DropdownMenuItem(
+                value: r,
+                child: Text('${t.audFilterWho}: ${_roleLabel(t, r)}'),
+              ),
           ],
           onChanged: onRole,
         ),
@@ -191,7 +202,10 @@ class _Filters extends StatelessWidget {
           value: prefix,
           items: [
             for (final e in prefixes.entries)
-              DropdownMenuItem(value: e.key, child: Text('${t.audFilterWhat}: ${e.value}')),
+              DropdownMenuItem(
+                value: e.key,
+                child: Text('${t.audFilterWhat}: ${e.value}'),
+              ),
           ],
           onChanged: onPrefix,
         ),
@@ -209,7 +223,12 @@ class _Rows extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.t;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(Space.xl, Space.xs, Space.xl, Space.xl),
+      padding: const EdgeInsets.fromLTRB(
+        Space.xl,
+        Space.xs,
+        Space.xl,
+        Space.xl,
+      ),
       children: [
         if (rows.isEmpty)
           EmptyState(icon: Icons.history_rounded, title: t.audEmpty)
@@ -230,11 +249,14 @@ class _RowTile extends StatelessWidget {
     final t = context.t;
     final role = row['actor_role'] as String? ?? '';
     final name = row['actor_name'] as String?;
-    final who = name ?? (role == 'system' ? t.audRoleSystem : t.audUnknownActor);
+    final who =
+        name ?? (role == 'system' ? t.audRoleSystem : t.audUnknownActor);
     final action = row['action'] as String? ?? '';
     return ListTile(
       title: Text(auditActionLabel(t, action)),
-      subtitle: Text('$who · ${auditStamp(row['created_at'] as String? ?? '')}'),
+      subtitle: Text(
+        '$who · ${auditStamp(row['created_at'] as String? ?? '')}',
+      ),
       onTap: () => _showDetail(context, row),
     );
   }
@@ -262,7 +284,10 @@ class _RowTile extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(t.audClose)),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(t.audClose),
+          ),
         ],
       ),
     );

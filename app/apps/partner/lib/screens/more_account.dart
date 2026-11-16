@@ -236,9 +236,9 @@ class _TeamState extends State<TeamScreen> {
                     : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (m['invite_status'] == 'invited')
+                          if (m['invite_status'] == 'pending_approval')
                             Tag(
-                              label: t.pInvited,
+                              label: t.cPro_pending,
                               hue: StatusHues.consultation,
                             ),
                           IconButton(

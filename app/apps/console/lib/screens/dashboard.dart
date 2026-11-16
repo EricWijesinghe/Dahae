@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import 'flow_card.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -212,6 +213,8 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: Space.xl),
+          StaggerIn(index: 3, child: FlowCard(flow: d['flow'] as Json?)),
         ],
       ),
     );

@@ -346,8 +346,8 @@ async fn admin_list_says_which_methods_have_a_key(db: PgPool) {
     let (admin, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
     let (st, body) = common::call(&app, "GET", "/v1/admin/payment-methods", Some(&admin), None).await;
     assert_eq!(st, StatusCode::OK);
-    let has_key = |code: &str| body.as_array().unwrap().iter().find(|m| m["code"] == code).unwrap()["has_key"].clone();
-    assert_eq!((has_key("card"), has_key("kakaopay")), (json!(true), json!(false)));
+    let configured = |code: &str| body.as_array().unwrap().iter().find(|m| m["code"] == code).unwrap()["configured"].clone();
+    assert_eq!((configured("card"), configured("kakaopay")), (json!(true), json!(false)));
 }
 
 #[sqlx::test(migrations = "../../migrations")]

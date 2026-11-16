@@ -64,7 +64,7 @@ fn code_of(body: &Value) -> String {
 async fn reset_code_sets_new_password_once_and_signs_out_everywhere(db: PgPool) {
     let target = insert(&db, "consultant-reset@test.local", "consultant", Some(PHONE)).await;
     let admin = insert(&db, "admin-reset@test.local", "admin", None).await;
-    let app = common::app(db);
+    let app = common::app_without_staff_mfa(db);
     let admin_tok = admin_token(admin);
 
     let (_, before) = login(&app, "consultant-reset@test.local", OLD).await;

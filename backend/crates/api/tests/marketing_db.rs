@@ -4,7 +4,7 @@
 
 mod common;
 
-use api::{auth, marketing, privacy::CONSENT_VERSION, settings_registry, state::AppState};
+use api::{auth, marketing, privacy::CONSENT_VERSION, realtime::Recipient, settings_registry, state::AppState};
 use axum::http::StatusCode;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use common::{SECRET, app, book, call, customer, login, seed_catalog};
@@ -298,4 +298,84 @@ async fn desktop_platforms_are_stored_and_unknown_ones_rejected_by_the_db(pool: 
         .execute(&pool)
         .await;
     assert!(bad.is_err(), "the DB must reject a platform outside the allowlist");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn day_before_reminders_reach_every_due_visit_across_passes(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = app(pool.clone());
+    let c = customer(&app, &pool, "010-5400-0009").await;
+    let (first, _) = book(&app, &c, 1, None).await;
+    sqlx::query("UPDATE bookings SET status = 1 WHERE id = $1")
+        .bind(first)
+        .execute(&pool)
+        .await
+        .expect("confirm");
+    sqlx::query(
+        "INSERT INTO bookings (number, user_id, service_code, address, district_code, visit_date, start_hour, status)
+         SELECT 'RM' || g, user_id, service_code, address, district_code, visit_date, (g % 20 + 8)::smallint, 1
+         FROM bookings, generate_series(1, 599) AS g WHERE id = $1",
+    )
+    .bind(first)
+    .execute(&pool)
+    .await
+    .expect("600 due visits");
+    let state = state(&pool);
+
+    let one = marketing::send_reminders(&state).await.expect("first pass");
+    let two = marketing::send_reminders(&state).await.expect("second pass");
+
+    assert_eq!(one, 500, "one batch");
+    assert_eq!(two, 100, "claimed visits are skipped in SQL, so the rest are reached");
+    let claims: i64 = sqlx::query_scalar("SELECT count(*) FROM alert_sends WHERE dedupe_key LIKE 'reminder:%'")
+        .fetch_one(&pool)
+        .await
+        .expect("claims");
+    assert_eq!(claims, 600, "every due visit claimed exactly once");
+}
+
+/// 2026-11-11 22:00 KST: inside quiet hours, the notice waits for 08:00 KST on 2026-11-12.
+fn ten_pm() -> DateTime<Utc> {
+    Utc.with_ymd_and_hms(2026, 11, 11, 13, 0, 0).single().expect("valid instant")
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn advertising_notice_is_held_in_quiet_hours_and_stored_at_noon(pool: PgPool) {
+    let app = app(pool.clone());
+    let c = customer(&app, &pool, "010-5400-0021").await;
+    grant_marketing(&pool, c.user, true).await;
+    let state = state(&pool);
+
+    api::realtime::notify_at(&state, Recipient::User(c.user), "marketing.campaign", "t", "b", json!({}), ten_pm())
+        .await
+        .expect("notify at 22:00");
+    let inbox: i64 = sqlx::query_scalar("SELECT count(*) FROM notifications WHERE owner_id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(inbox, 0, "no inbox row at 22:00 KST");
+    let (stored, last_error, until): (bool, Option<String>, DateTime<Utc>) =
+        sqlx::query_as("SELECT stored, last_error, next_attempt_at FROM notification_outbox WHERE owner_id = $1 AND kind = 'marketing.campaign'")
+            .bind(c.user)
+            .fetch_one(&pool)
+            .await
+            .expect("held outbox row");
+    assert!(!stored, "not stored yet");
+    assert_eq!(last_error.as_deref(), Some("quiet_hours"));
+    assert_eq!(
+        until,
+        Utc.with_ymd_and_hms(2026, 11, 11, 23, 0, 0).single().expect("08:00 KST"),
+        "held until 08:00 KST"
+    );
+
+    api::realtime::notify_at(&state, Recipient::User(c.user), "marketing.campaign", "t", "b", json!({}), daytime())
+        .await
+        .expect("notify at noon");
+    let inbox: i64 = sqlx::query_scalar("SELECT count(*) FROM notifications WHERE owner_id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(inbox, 1, "stored at 12:00 KST");
 }

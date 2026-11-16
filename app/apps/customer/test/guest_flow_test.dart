@@ -8,8 +8,15 @@ import 'package:ui/ui.dart';
 
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
+import 'support/signup_consent.dart';
 
-Json _draftCard() => {'kind': 'resume_quote', 'score': 1000, 'service': 'move_in', 'reason': 'draft_unfinished', 'facts': 0};
+Json _draftCard() => {
+  'kind': 'resume_quote',
+  'score': 1000,
+  'service': 'move_in',
+  'reason': 'draft_unfinished',
+  'facts': 0,
+};
 
 void _stockVerify(FakeApi fake) {
   fake
@@ -36,6 +43,7 @@ Future<void> _newAccountVerify(FakeApi fake) async {
 Future<void> _signInInSheet(WidgetTester tester) async {
   await tester.enterText(find.byType(TextField).last, '01012345678');
   await settle(tester, duration: const Duration(milliseconds: 300));
+  await agreeSignupConsents(tester);
   await tester.tap(find.text(koT.loginSendCode));
   await settle(tester);
   await tester.enterText(find.byType(TextField).last, '123456');
@@ -46,146 +54,200 @@ Future<void> _signInInSheet(WidgetTester tester) async {
 
 void main() {
   group('guest mode', () {
-    testWidgets('first launch goes straight to home with a feed and no account calls', (tester) async {
-      setViewport(tester, phoneSize);
-      final fake = FakeApi();
-      stockCustomerApi(fake, feed: [_draftCard()]);
-      final env = await TestEnv.create(fake: fake, signedIn: false);
-      await pumpCustomerApp(tester, env);
-      await settle(tester, duration: const Duration(milliseconds: 500));
+    testWidgets(
+      'first launch goes straight to home with a feed and no account calls',
+      (tester) async {
+        setViewport(tester, phoneSize);
+        final fake = FakeApi();
+        stockCustomerApi(fake, feed: [_draftCard()]);
+        final env = await TestEnv.create(fake: fake, signedIn: false);
+        await pumpCustomerApp(tester, env);
+        await settle(tester, duration: const Duration(milliseconds: 500));
 
-      // Language picker is shown on first run only; the test env has already picked one.
-      expect(find.text(koT.introStart), findsNothing);
-      expect(find.text(koT.dhHomeRecommended), findsOneWidget);
-      expect(find.text(koT.feedTitleDraft), findsOneWidget);
-      expect(find.text(koT.feedWhyDraft), findsOneWidget);
-      expect(fake.callsTo('GET', '/me'), isEmpty);
-      expect(fake.callsTo('GET', '/bookings'), isEmpty);
-      expect(fake.callsTo('GET', '/me/feed'), isEmpty);
-      expect(fake.callsTo('GET', '/feed'), isNotEmpty);
-      await unmount(tester);
-    });
+        // Language picker is shown on first run only; the test env has already picked one.
+        expect(find.text(koT.introStart), findsNothing);
+        expect(find.text(koT.dhHomeRecommended), findsOneWidget);
+        expect(find.text(koT.feedTitleDraft), findsOneWidget);
+        expect(find.text(koT.feedWhyDraft), findsOneWidget);
+        expect(fake.callsTo('GET', '/me'), isEmpty);
+        expect(fake.callsTo('GET', '/bookings'), isEmpty);
+        expect(fake.callsTo('GET', '/me/feed'), isEmpty);
+        expect(fake.callsTo('GET', '/feed'), isNotEmpty);
+        await unmount(tester);
+      },
+    );
 
-    testWidgets('booking asks for sign-in in a sheet and keeps the draft when signed in', (tester) async {
-      setViewport(tester, phoneSize);
-      final fake = FakeApi();
-      stockCustomerApi(fake);
-      _stockVerify(fake);
-      final env = await TestEnv.create(fake: fake, signedIn: false);
-      await pumpCustomerApp(tester, env);
-      await settle(tester, duration: const Duration(milliseconds: 500));
+    testWidgets(
+      'booking asks for sign-in in a sheet and keeps the draft when signed in',
+      (tester) async {
+        setViewport(tester, phoneSize);
+        final fake = FakeApi();
+        stockCustomerApi(fake);
+        _stockVerify(fake);
+        final env = await TestEnv.create(fake: fake, signedIn: false);
+        await pumpCustomerApp(tester, env);
+        await settle(tester, duration: const Duration(milliseconds: 500));
 
-      await tester.tap(find.text(koT.service('studio')).first);
-      await settle(tester);
-      expect(find.text(koT.dfBookNow), findsOneWidget);
+        await tester.tap(find.text(koT.service('studio')).first);
+        await settle(tester);
+        expect(find.text(koT.dfBookNow), findsOneWidget);
 
-      await tester.tap(find.text(koT.dfBookNow));
-      await settle(tester);
-      expect(find.text(koT.guestReasonBook), findsOneWidget, reason: 'protected action opens the sheet');
-      expect(fake.callsTo('POST', '/auth/otp'), isEmpty);
+        await tester.tap(find.text(koT.dfBookNow));
+        await settle(tester);
+        expect(
+          find.text(koT.guestReasonBook),
+          findsOneWidget,
+          reason: 'protected action opens the sheet',
+        );
+        expect(fake.callsTo('POST', '/auth/otp'), isEmpty);
 
-      await tester.enterText(find.byType(TextField).last, '01012345678');
-      await settle(tester, duration: const Duration(milliseconds: 300));
-      await tester.tap(find.text(koT.loginSendCode));
-      await settle(tester);
-      await tester.enterText(find.byType(TextField).last, '123456');
-      await settle(tester, duration: const Duration(milliseconds: 300));
-      await tester.tap(find.text(koT.loginVerify));
-      await settle(tester);
+        await tester.enterText(find.byType(TextField).last, '01012345678');
+        await settle(tester, duration: const Duration(milliseconds: 300));
+        await agreeSignupConsents(tester);
+        await tester.tap(find.text(koT.loginSendCode));
+        await settle(tester);
+        await tester.enterText(find.byType(TextField).last, '123456');
+        await settle(tester, duration: const Duration(milliseconds: 300));
+        await tester.tap(find.text(koT.loginVerify));
+        await settle(tester);
 
-      expect(fake.lastCall('POST', '/auth/verify'), isNotNull);
-      expect(find.text(koT.guestReasonBook), findsNothing, reason: 'sheet closes on success');
-      expect(fake.callsTo('GET', '/me'), isNotEmpty, reason: 'account data loads after sign-in');
-      expect(fake.callsTo('GET', '/bookings'), isNotEmpty, reason: 'the tabs reload with the account bookings');
-      await unmount(tester);
-    });
+        expect(fake.lastCall('POST', '/auth/verify'), isNotNull);
+        expect(
+          find.text(koT.guestReasonBook),
+          findsNothing,
+          reason: 'sheet closes on success',
+        );
+        expect(
+          fake.callsTo('GET', '/me'),
+          isNotEmpty,
+          reason: 'account data loads after sign-in',
+        );
+        expect(
+          fake.callsTo('GET', '/bookings'),
+          isNotEmpty,
+          reason: 'the tabs reload with the account bookings',
+        );
+        await unmount(tester);
+      },
+    );
 
-    testWidgets('a guest who signs in on the service detail with one fitting address goes to the schedule', (tester) async {
-      setViewport(tester, phoneSize);
-      final fake = FakeApi();
-      stockCustomerApi(fake, addresses: [addressJson(sizePyeong: 10)]);
-      _stockVerify(fake);
-      fake.reply('GET', '/slots', [slotJson(8)]);
-      final env = await TestEnv.create(fake: fake, signedIn: false);
-      // Addresses are not loaded yet: sign-in must fetch them before the step is chosen.
-      await pumpCustomerScreen(tester, env, ServiceScreen(service: Service.fromJson(serviceJson('studio'))));
-      await settle(tester);
-      await tester.tap(find.text(koT.dfBookNow));
-      await settle(tester);
-      await tester.enterText(find.byType(TextField).last, '01012345678');
-      await settle(tester, duration: const Duration(milliseconds: 300));
-      await tester.tap(find.text(koT.loginSendCode));
-      await settle(tester);
-      await tester.enterText(find.byType(TextField).last, '123456');
-      await settle(tester, duration: const Duration(milliseconds: 300));
-      await tester.tap(find.text(koT.loginVerify));
-      await settle(tester);
+    testWidgets(
+      'a guest who signs in on the service detail with one fitting address goes to the schedule',
+      (tester) async {
+        setViewport(tester, phoneSize);
+        final fake = FakeApi();
+        stockCustomerApi(fake, addresses: [addressJson(sizePyeong: 10)]);
+        _stockVerify(fake);
+        fake.reply('GET', '/slots', [slotJson(8)]);
+        final env = await TestEnv.create(fake: fake, signedIn: false);
+        // Addresses are not loaded yet: sign-in must fetch them before the step is chosen.
+        await pumpCustomerScreen(
+          tester,
+          env,
+          ServiceScreen(service: Service.fromJson(serviceJson('studio'))),
+        );
+        await settle(tester);
+        await tester.tap(find.text(koT.dfBookNow));
+        await settle(tester);
+        await tester.enterText(find.byType(TextField).last, '01012345678');
+        await settle(tester, duration: const Duration(milliseconds: 300));
+        await agreeSignupConsents(tester);
+        await tester.tap(find.text(koT.loginSendCode));
+        await settle(tester);
+        await tester.enterText(find.byType(TextField).last, '123456');
+        await settle(tester, duration: const Duration(milliseconds: 300));
+        await tester.tap(find.text(koT.loginVerify));
+        await settle(tester);
 
-      expect(find.byType(ScheduleScreen), findsOneWidget, reason: 'the one saved address is used');
-      expect(find.byType(AddressPickScreen), findsNothing);
-      await unmount(tester);
-    });
+        expect(
+          find.byType(ScheduleScreen),
+          findsOneWidget,
+          reason: 'the one saved address is used',
+        );
+        expect(find.byType(AddressPickScreen), findsNothing);
+        await unmount(tester);
+      },
+    );
 
-    testWidgets('a new account that signs in from the sheet lands on the name step', (tester) async {
-      setViewport(tester, phoneSize);
-      final fake = FakeApi();
-      stockCustomerApi(fake, name: '');
-      _stockVerify(fake);
-      fake.reply('POST', '/auth/verify', {
-        'access_token': 'access-new',
-        'refresh_token': 'refresh-new',
-        'role': 'customer',
-        'subject': 'user-new',
-        'is_new': true,
-      });
-      final env = await TestEnv.create(fake: fake, signedIn: false);
-      await pumpCustomerApp(tester, env);
-      await settle(tester, duration: const Duration(milliseconds: 500));
-      await tester.tap(find.text(koT.service('studio')).first);
-      await settle(tester);
-      await tester.tap(find.text(koT.dfBookNow));
-      await settle(tester);
-      await tester.enterText(find.byType(TextField).last, '01012345678');
-      await settle(tester, duration: const Duration(milliseconds: 300));
-      await tester.tap(find.text(koT.loginSendCode));
-      await settle(tester);
-      await tester.enterText(find.byType(TextField).last, '123456');
-      await settle(tester, duration: const Duration(milliseconds: 300));
-      await tester.tap(find.text(koT.loginVerify));
-      await settle(tester);
+    testWidgets(
+      'a new account that signs in from the sheet lands on the name step',
+      (tester) async {
+        setViewport(tester, phoneSize);
+        final fake = FakeApi();
+        stockCustomerApi(fake, name: '');
+        _stockVerify(fake);
+        fake.reply('POST', '/auth/verify', {
+          'access_token': 'access-new',
+          'refresh_token': 'refresh-new',
+          'role': 'customer',
+          'subject': 'user-new',
+          'is_new': true,
+        });
+        final env = await TestEnv.create(fake: fake, signedIn: false);
+        await pumpCustomerApp(tester, env);
+        await settle(tester, duration: const Duration(milliseconds: 500));
+        await tester.tap(find.text(koT.service('studio')).first);
+        await settle(tester);
+        await tester.tap(find.text(koT.dfBookNow));
+        await settle(tester);
+        await tester.enterText(find.byType(TextField).last, '01012345678');
+        await settle(tester, duration: const Duration(milliseconds: 300));
+        await agreeSignupConsents(tester);
+        await tester.tap(find.text(koT.loginSendCode));
+        await settle(tester);
+        await tester.enterText(find.byType(TextField).last, '123456');
+        await settle(tester, duration: const Duration(milliseconds: 300));
+        await tester.tap(find.text(koT.loginVerify));
+        await settle(tester);
 
-      expect(fake.callsTo('PATCH', '/me'), isNotEmpty, reason: 'the chosen language is saved to the account');
-      expect(find.text(koT.profileTitle), findsOneWidget, reason: 'a nameless account is asked for its name');
-      await unmount(tester);
-    });
+        expect(
+          fake.callsTo('PATCH', '/me'),
+          isNotEmpty,
+          reason: 'the chosen language is saved to the account',
+        );
+        expect(
+          find.text(koT.profileTitle),
+          findsOneWidget,
+          reason: 'a nameless account is asked for its name',
+        );
+        await unmount(tester);
+      },
+    );
 
-    testWidgets('a network failure on send code shows a localized message with retry', (tester) async {
-      setViewport(tester, phoneSize);
-      final fake = FakeApi()..on('POST', '/auth/otp', (_) => throw Exception('offline'));
-      stockCustomerApi(fake);
-      final env = await TestEnv.create(fake: fake, signedIn: false);
-      await pumpCustomerApp(tester, env);
-      await settle(tester, duration: const Duration(milliseconds: 500));
-      await tester.tap(find.text(koT.service('studio')).first);
-      await settle(tester);
-      await tester.tap(find.text(koT.dfBookNow));
-      await settle(tester);
-      await tester.enterText(find.byType(TextField).last, '01012345678');
-      await settle(tester, duration: const Duration(milliseconds: 300));
+    testWidgets(
+      'a network failure on send code shows a localized message with retry',
+      (tester) async {
+        setViewport(tester, phoneSize);
+        final fake = FakeApi()
+          ..on('POST', '/auth/otp', (_) => throw Exception('offline'));
+        stockCustomerApi(fake);
+        final env = await TestEnv.create(fake: fake, signedIn: false);
+        await pumpCustomerApp(tester, env);
+        await settle(tester, duration: const Duration(milliseconds: 500));
+        await tester.tap(find.text(koT.service('studio')).first);
+        await settle(tester);
+        await tester.tap(find.text(koT.dfBookNow));
+        await settle(tester);
+        await tester.enterText(find.byType(TextField).last, '01012345678');
+        await settle(tester, duration: const Duration(milliseconds: 300));
 
-      await tester.tap(find.text(koT.loginSendCode));
-      await settle(tester);
-      expect(find.text(koT.errorNetwork), findsOneWidget);
-      expect(find.text(koT.retry), findsOneWidget);
+        await agreeSignupConsents(tester);
+        await tester.tap(find.text(koT.loginSendCode));
+        await settle(tester);
+        expect(find.text(koT.errorNetwork), findsOneWidget);
+        expect(find.text(koT.retry), findsOneWidget);
 
-      // Retry is live: the same action is sent again.
-      await tester.tap(find.text(koT.retry));
-      await settle(tester);
-      expect(fake.callsTo('POST', '/auth/otp'), hasLength(2));
-      await unmount(tester);
-    });
+        // Retry is live: the same action is sent again.
+        await tester.tap(find.text(koT.retry));
+        await settle(tester);
+        expect(fake.callsTo('POST', '/auth/otp'), hasLength(2));
+        await unmount(tester);
+      },
+    );
 
-    testWidgets('the send button stays above the on-screen keyboard', (tester) async {
+    testWidgets('the send button stays above the on-screen keyboard', (
+      tester,
+    ) async {
       setViewport(tester, phoneSize);
       final fake = FakeApi();
       stockCustomerApi(fake);
@@ -198,62 +260,92 @@ void main() {
       await settle(tester);
 
       const keyboard = 320.0;
-      tester.view.viewInsets = FakeViewPadding(bottom: keyboard * 3 * tester.view.devicePixelRatio);
+      tester.view.viewInsets = FakeViewPadding(
+        bottom: keyboard * 3 * tester.view.devicePixelRatio,
+      );
       addTearDown(tester.view.resetViewInsets);
       await settle(tester, duration: const Duration(milliseconds: 300));
 
       final visibleBottom = phoneSize.height - keyboard;
       final cta = tester.getRect(find.byType(PrimaryButton).last);
-      expect(cta.bottom, lessThanOrEqualTo(visibleBottom), reason: 'CTA hidden behind the keyboard');
+      expect(
+        cta.bottom,
+        lessThanOrEqualTo(visibleBottom),
+        reason: 'CTA hidden behind the keyboard',
+      );
       await unmount(tester);
     });
 
-    testWidgets('naming a new account from a booking keeps the booking screen under the flow', (tester) async {
-      setViewport(tester, phoneSize);
-      final fake = FakeApi();
-      stockCustomerApi(fake, name: '');
-      _stockVerify(fake);
-      await _newAccountVerify(fake);
-      final env = await TestEnv.create(fake: fake, signedIn: false);
-      await pumpCustomerApp(tester, env);
-      await settle(tester, duration: const Duration(milliseconds: 500));
-      await tester.tap(find.text(koT.service('studio')).first);
-      await settle(tester);
-      await tester.tap(find.text(koT.dfBookNow));
-      await settle(tester);
-      await _signInInSheet(tester);
+    testWidgets(
+      'naming a new account from a booking keeps the booking screen under the flow',
+      (tester) async {
+        setViewport(tester, phoneSize);
+        final fake = FakeApi();
+        stockCustomerApi(fake, name: '');
+        _stockVerify(fake);
+        await _newAccountVerify(fake);
+        final env = await TestEnv.create(fake: fake, signedIn: false);
+        await pumpCustomerApp(tester, env);
+        await settle(tester, duration: const Duration(milliseconds: 500));
+        await tester.tap(find.text(koT.service('studio')).first);
+        await settle(tester);
+        await tester.tap(find.text(koT.dfBookNow));
+        await settle(tester);
+        await _signInInSheet(tester);
 
-      expect(find.text(koT.profileTitle), findsOneWidget);
-      await tester.enterText(find.byType(TextField).last, '지민');
-      await settle(tester);
-      await tester.tap(find.text(koT.profileDone));
-      await settle(tester);
+        expect(find.text(koT.profileTitle), findsOneWidget);
+        await tester.enterText(find.byType(TextField).last, '지민');
+        await settle(tester);
+        await tester.tap(find.text(koT.profileDone));
+        await settle(tester);
 
-      expect(find.text(koT.profileTitle), findsNothing, reason: 'saving the name closes only the name step');
-      // Booking carries on to the next step on top of the service screen the guest started from.
-      expect(find.byType(ServiceScreen, skipOffstage: false), findsOneWidget, reason: 'the booking the guest started is still open');
-      expect(find.byWidgetPredicate((w) => w is AddressPickScreen || w is ScheduleScreen), findsOneWidget, reason: 'booking continues after the name step');
-      expect(fake.callsTo('PATCH', '/me'), isNotEmpty);
-      await unmount(tester);
-    });
+        expect(
+          find.text(koT.profileTitle),
+          findsNothing,
+          reason: 'saving the name closes only the name step',
+        );
+        // Booking carries on to the next step on top of the service screen the guest started from.
+        expect(
+          find.byType(ServiceScreen, skipOffstage: false),
+          findsOneWidget,
+          reason: 'the booking the guest started is still open',
+        );
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is AddressPickScreen || w is ScheduleScreen,
+          ),
+          findsOneWidget,
+          reason: 'booking continues after the name step',
+        );
+        expect(fake.callsTo('PATCH', '/me'), isNotEmpty);
+        await unmount(tester);
+      },
+    );
 
-    testWidgets('a nameless account that signs in from a More row gets the name step', (tester) async {
-      setViewport(tester, phoneSize);
-      final fake = FakeApi();
-      stockCustomerApi(fake, name: '');
-      _stockVerify(fake);
-      await _newAccountVerify(fake);
-      final env = await TestEnv.create(fake: fake, signedIn: false);
-      await pumpCustomerApp(tester, env);
-      await settle(tester, duration: const Duration(milliseconds: 500));
-      await tester.tap(find.text(koT.tabMore));
-      await settle(tester);
-      await tester.tap(find.text(koT.moreAccount));
-      await settle(tester);
-      await _signInInSheet(tester);
+    testWidgets(
+      'a nameless account that signs in from a More row gets the name step',
+      (tester) async {
+        setViewport(tester, phoneSize);
+        final fake = FakeApi();
+        stockCustomerApi(fake, name: '');
+        _stockVerify(fake);
+        await _newAccountVerify(fake);
+        final env = await TestEnv.create(fake: fake, signedIn: false);
+        await pumpCustomerApp(tester, env);
+        await settle(tester, duration: const Duration(milliseconds: 500));
+        await tester.tap(find.text(koT.tabMore));
+        await settle(tester);
+        await tester.tap(find.text(koT.moreAccount));
+        await settle(tester);
+        await _signInInSheet(tester);
 
-      expect(find.text(koT.profileTitle), findsOneWidget, reason: 'the name step opens after a sign-in from More');
-      await unmount(tester);
-    });
+        expect(
+          find.text(koT.profileTitle),
+          findsOneWidget,
+          reason: 'the name step opens after a sign-in from More',
+        );
+        await unmount(tester);
+      },
+    );
   });
 }

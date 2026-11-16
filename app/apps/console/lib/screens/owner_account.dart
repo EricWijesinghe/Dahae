@@ -24,9 +24,14 @@ class OwnerAccountScreen extends StatelessWidget {
   );
 }
 
-List<Widget> _adminCards(BuildContext context, Json me, Future<void> Function() reload) {
+List<Widget> _adminCards(
+  BuildContext context,
+  Json me,
+  Future<void> Function() reload,
+) {
   final t = context.t;
-  final ready = me['two_factor_enrolled'] == true && me['recovery_confirmed'] == true;
+  final ready =
+      me['two_factor_enrolled'] == true && me['recovery_confirmed'] == true;
   return [
     _Card(
       icon: Icons.shield_outlined,
@@ -49,9 +54,14 @@ List<Widget> _adminCards(BuildContext context, Json me, Future<void> Function() 
   ];
 }
 
-List<Widget> _ownerCards(BuildContext context, Json me, Future<void> Function() reload) {
+List<Widget> _ownerCards(
+  BuildContext context,
+  Json me,
+  Future<void> Function() reload,
+) {
   final t = context.t;
-  final ready = me['two_factor_enrolled'] == true && me['recovery_confirmed'] == true;
+  final ready =
+      me['two_factor_enrolled'] == true && me['recovery_confirmed'] == true;
   final phone = me['alert_phone_masked'] as String?;
   return [
     _Card(
@@ -60,7 +70,9 @@ List<Widget> _ownerCards(BuildContext context, Json me, Future<void> Function() 
       body: ready ? null : t.oaTwoFactorHint,
       trailing: null,
     ),
-    if (!ready && me['recovery_confirmed'] != true && me['two_factor_enrolled'] == true)
+    if (!ready &&
+        me['recovery_confirmed'] != true &&
+        me['two_factor_enrolled'] == true)
       _Card(
         icon: Icons.checklist_rounded,
         title: t.oaConfirmCodes,
@@ -119,7 +131,12 @@ List<Widget> _ownerCards(BuildContext context, Json me, Future<void> Function() 
 }
 
 class _Card extends StatelessWidget {
-  const _Card({required this.icon, required this.title, required this.body, required this.trailing});
+  const _Card({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.trailing,
+  });
   final IconData icon;
   final String title;
   final String? body;
@@ -138,7 +155,10 @@ class _Card extends StatelessWidget {
   );
 }
 
-Future<void> _claim(BuildContext context, Future<void> Function() reload) async {
+Future<void> _claim(
+  BuildContext context,
+  Future<void> Function() reload,
+) async {
   final t = context.t;
   if (!await confirmAction(context, t.oaClaim) || !context.mounted) return;
   final r = await runOwnerAction(
@@ -149,7 +169,10 @@ Future<void> _claim(BuildContext context, Future<void> Function() reload) async 
   if (r != null) await reload();
 }
 
-Future<void> _changePhone(BuildContext context, Future<void> Function() reload) async {
+Future<void> _changePhone(
+  BuildContext context,
+  Future<void> Function() reload,
+) async {
   final t = context.t;
   final v = await askFields(
     context,
@@ -174,12 +197,20 @@ Future<void> _changePassword(BuildContext context) async {
     title: t.oaPassword,
     body: t.oaPasswordNote,
     confirm: t.oaPassword,
-    fields: [FieldSpec(t.oaCurrentPassword, obscure: true), FieldSpec(t.oaNewPassword, obscure: true)],
+    fields: [
+      FieldSpec(t.oaCurrentPassword, obscure: true),
+      FieldSpec(t.oaNewPassword, obscure: true),
+    ],
   );
   if (v == null || !context.mounted) return;
   final r = await runOwnerAction(
     context,
-    (h) => context.api.post('/admin/me/password', {'current_password': v[0], 'new_password': v[1]}, null, h),
+    (h) => context.api.post(
+      '/admin/me/password',
+      {'current_password': v[0], 'new_password': v[1]},
+      null,
+      h,
+    ),
     done: t.oaPasswordChanged,
   );
   if (r != null && context.mounted) await context.console.session.logout();
@@ -196,23 +227,33 @@ Future<void> _signOutAll(BuildContext context) async {
   if (r != null && context.mounted) await context.console.session.logout();
 }
 
-Future<void> _reissueCodes(BuildContext context, Future<void> Function() reload) async {
+Future<void> _reissueCodes(
+  BuildContext context,
+  Future<void> Function() reload,
+) async {
   final t = context.t;
-  if (!await confirmAction(context, t.oaRecoveryCodes) || !context.mounted) return;
+  if (!await confirmAction(context, t.oaRecoveryCodes) || !context.mounted) {
+    return;
+  }
   final r = await runOwnerAction(
     context,
     (h) => context.api.post('/admin/me/recovery-codes', null, null, h),
     done: t.oaRecoveryShown,
   );
   if (r == null || !context.mounted) return;
-  final codes = [for (final c in (r as Json)['recovery_codes'] as List) c as String];
+  final codes = [
+    for (final c in (r as Json)['recovery_codes'] as List) c as String,
+  ];
   if (await showRecoveryCodes(context, codes) && context.mounted) {
     await _confirmCodes(context, reload);
   }
   await reload();
 }
 
-Future<void> _confirmCodes(BuildContext context, Future<void> Function() reload) async {
+Future<void> _confirmCodes(
+  BuildContext context,
+  Future<void> Function() reload,
+) async {
   final t = context.t;
   final code = await askRecoveryCode(context);
   if (code == null || !context.mounted) return;
@@ -225,7 +266,11 @@ Future<void> _confirmCodes(BuildContext context, Future<void> Function() reload)
   }
 }
 
-Future<void> _transfer(BuildContext context, Json me, Future<void> Function() reload) async {
+Future<void> _transfer(
+  BuildContext context,
+  Json me,
+  Future<void> Function() reload,
+) async {
   final t = context.t;
   final staff = (await context.api.get('/admin/staff') as List).cast<Json>();
   final candidates = [
@@ -249,7 +294,12 @@ Future<void> _transfer(BuildContext context, Json me, Future<void> Function() re
   if (v == null || !context.mounted) return;
   final r = await runOwnerAction(
     context,
-    (h) => context.api.post('/admin/owner/transfer', {'to': pick['id'], 'code': v.first}, null, h),
+    (h) => context.api.post(
+      '/admin/owner/transfer',
+      {'to': pick['id'], 'code': v.first},
+      null,
+      h,
+    ),
     done: t.oaTransferDone,
   );
   if (r != null) await reload();

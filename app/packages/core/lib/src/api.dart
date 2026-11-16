@@ -59,8 +59,9 @@ class ApiClient {
       for (final e in (query ?? {}).entries)
         if (e.value != null) e.key: e.value!,
     };
-    return Uri.parse('$baseUrl/v1$path')
-        .replace(queryParameters: q.isEmpty ? null : q);
+    return Uri.parse(
+      '$baseUrl/v1$path',
+    ).replace(queryParameters: q.isEmpty ? null : q);
   }
 
   /// Cold start: only the refresh token is restored, so get an access token once, before the first
@@ -132,6 +133,19 @@ class ApiClient {
     final bytes = await _exec(
       path,
       () => http.Request('GET', _uri(path, query)),
+      raw: true,
+    );
+    return bytes as List<int>;
+  }
+
+  /// Raw response bytes from a POST that returns a CSV (owner re-export). Same token rules as [getBytes].
+  Future<List<int>> postBytes(
+    String path, {
+    Map<String, String?>? query,
+  }) async {
+    final bytes = await _exec(
+      path,
+      () => http.Request('POST', _uri(path, query)),
       raw: true,
     );
     return bytes as List<int>;
@@ -219,11 +233,13 @@ class ApiClient {
   /// token signs the user out; a network blip keeps the session for the next attempt.
   Future<bool> _refresh() => _refreshing ??= () async {
     try {
-      final r = await _exec('/auth/refresh', () {
-        return http.Request('POST', _uri('/auth/refresh'))
-          ..headers['Content-Type'] = 'application/json'
-          ..body = jsonEncode({'refresh_token': session.refreshToken});
-      }, retried: true) as Map<String, dynamic>;
+      final r =
+          await _exec('/auth/refresh', () {
+                return http.Request('POST', _uri('/auth/refresh'))
+                  ..headers['Content-Type'] = 'application/json'
+                  ..body = jsonEncode({'refresh_token': session.refreshToken});
+              }, retried: true)
+              as Map<String, dynamic>;
       await session.save(r);
       return true;
     } on ApiException catch (e) {

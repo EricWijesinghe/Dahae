@@ -99,8 +99,13 @@ process holds port 80 or 443.
 ### Outside the server (owner checklist, mirrored in guide 01)
 
 1. Domain and an A record for the bare domain pointing at the server IP.
-2. Ports 22/80/443 open in the cloud firewall (the installer only touches `ufw`, and only
-   when it is already active).
+2. Ports 22/80/443 open in the cloud firewall. The installer also installs `ufw`, fail2ban and
+   unattended security upgrades. It asks before turning `ufw` on (only 22, 80, 443 allowed;
+   `MALKKEUM_FIREWALL=on|off` skips the question). fail2ban bans an address for 1 hour after 5
+   failed SSH logins in 10 minutes. If the account you sign in with (the sudo user, or root) already
+   has a public key in its `authorized_keys`, the installer offers to turn off SSH password login.
+   Docker-published ports bypass `ufw`, so keep the cloud
+   firewall rules too.
 3. PortOne + PG merchant contracts; keys go into the console wizard.
 4. Solapi account, sender-number registration, Kakao channel and approved AlimTalk templates (guide 06).
 5. Kakao / Naver / Google / Apple developer apps for sign-in; Apple Developer and Google Play accounts (guide 03).
@@ -126,17 +131,52 @@ process holds port 80 or 443.
   binary against the already-migrated schema. So a release may add tables, columns and indexes, but
   must not drop, rename or tighten anything the previous release still reads or writes. Remove the
   old shape one release later, once no rollback target uses it.
+- **Saved cards are a one-way step (migration 0326).** On first start the server seals every saved-card
+  billing key (`billing_keys::seal_stored`). The previous binary reads plaintext keys, so after that start
+  a rollback breaks saved-card charges and account-deletion key cleanup. Roll forward, or restore the
+  pre-update backup. Run one server instance during this update: stop the old container before the new
+  one starts, so no old process writes a plaintext key after the seal. The old `payment_methods_billing_key_live`
+  index is dropped in the contract migration of the next release.
 - **Backups, RPO and RTO.** Every server takes a `pg_dump` daily at 03:30 KST and before every
-  update, kept 14 days on the server's own disk; the optional offsite copy (setup wizard, S3-compatible)
-  is AES-256-GCM encrypted. There is no WAL archiving, so the recovery point objective is **24 hours**
-  (up to one day of bookings can be lost). Recovery time on a fresh VPS is about **1 hour**: run the
+  update, kept 14 days on the server's own disk. The disk copy is sealed in the same AES-256-GCM format
+  as the offsite copy (`*.sql.gz.enc`, opened again by `dahae restore`), so no plaintext dump stays on
+  the server. Plaintext dumps left by older installs are sealed on the next backup. The one exception:
+  if sealing fails, the plaintext copy is kept (never deleted before its `.enc` exists), `dahae backup`
+  exits with an error, and update, rollback and restore refuse to run until a backup completes. The optional offsite copy (setup wizard, S3-compatible) is sealed the same way. Without WAL archiving the recovery point objective is **24 hours**
+  (up to one day of bookings can be lost). With WAL archiving on (engineer setup below) it drops to
+  **about 5 minutes**. Recovery time on a fresh VPS is about **1 hour**: run the
   installer, put the old `.env` back, `sudo dahae restore-offsite <name>`. Without offsite backups a
   lost disk is a total loss: configure them before launch.
+- **WAL archiving (engineer path, optional).** Point-in-time recovery to S3-compatible storage with
+  pgBackRest, sealed with its own cipher. The owner sees no terminal step: restore is a setup-wizard
+  step (in progress). Setup, on the server, in the install folder:
+  1. Copy `deploy/wal` to `/opt/malkkeum/wal`. Put these in `.env` (never commit them):
+     `WAL_S3_BUCKET`, `WAL_S3_ENDPOINT`, `WAL_S3_KEY`, `WAL_S3_SECRET`, `WAL_CIPHER_PASS` (a long random
+     string; without it the archive cannot be read, so keep a copy off the server like `DATA_KEY`).
+  2. `bash wal/wal-setup.sh`: builds the pgBackRest database image with archiving still off, then turns
+     `WAL_ARCHIVE_MODE` on, creates the stanza, checks archiving and takes the first full base backup. If any
+     step fails, archiving is turned back off. Once it succeeds, `dahae write-cron` adds the weekly base backup
+     (Sunday 02:15, `wal/base-backup.sh`) to the cron table. The daily `pg_dump` stays as it is.
+  - While `WAL_ARCHIVE_MODE=on` every `dahae` command (update, rollback, restore) also loads
+    `wal/docker-compose.wal.yml`, so the database keeps the pgBackRest image. Never start the stock
+    `postgres:17` image with archiving on: it cannot archive and WAL piles up on the disk.
+  - `archive_timeout=300` makes Postgres close a WAL segment at least every 5 minutes, which is what gives the
+    5-minute recovery point on a quiet platform.
+  - `pg_stat_statements` is loaded on every database. Existing installs run once:
+    `docker compose exec -T db psql -U app -d cleaning -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements"`.
+  - If archiving fails, WAL piles up on the database disk: check `pgbackrest --stanza=malkkeum check`
+    after every change and keep the disk alert on.
+  - Restore drill (engineer): `bash scripts/ci/backup-drill.sh` with `WAL_DRILL=1` and `PGBACKREST_*` set
+    takes a fresh full backup, checks that archiving delivers it, restores it, replays the archive and
+    compares row counts with a seeded database. Run it on the server, while the database is idle.
+    For a real recovery, run `pgbackrest --stanza=malkkeum --type=time "--target=<ISO time>" restore`
+    into an empty data volume with the same image, then start the stack.
 - **`DATA_KEY` and `.env` are not in any backup.** `/opt/malkkeum/.env` holds `DATA_KEY` (it encrypts
   integration keys, payout accounts and the offsite backups), `JWT_SECRET` and the database passwords.
   Offsite backups cannot be decrypted without the same `DATA_KEY`. Right after install, copy `.env` to
   a password manager or an encrypted USB stick kept away from the server, and copy it again after any
-  key rotation. Rotating `DATA_KEY` makes older offsite backups unreadable with the new key, so keep the
+  key rotation. `sudo dahae keys-backup` makes a passphrase-locked copy and asks the owner to confirm it
+  is stored off the server; `dahae status` warns until that confirmation is recorded. Rotating `DATA_KEY` makes older offsite backups unreadable with the new key, so keep the
   old value until those backups expire.
 - Re-running the installer on an installed server is the same safe update (backup → new images →
   health check → rollback on failure); settings and data are kept.
@@ -298,9 +338,13 @@ Not in the docs (do not assume): the webhook signature scheme (none documented, 
 The server cannot report its own outage, so watch it from outside.
 
 - **Heartbeat (required):** create a check at healthchecks.io (or any compatible service) with period 5 min, grace 15 min, then on the server run `sudo dahae heartbeat <ping URL>` (https only; `sudo dahae heartbeat off` disables it). The command stores the URL, restarts the API so the console checklist item clears, and sends one test ping. Unattended installs can pass `MALKKEUM_HEARTBEAT_URL=` instead. Cron runs `/usr/local/bin/malkkeum-heartbeat` every 5 minutes. It pings only when `https://DOMAIN/health` returns `"ok":true`, so a dead API stops the pings and the service alerts you by email/SMS.
+- **SSH alerts:** the host status file `/opt/malkkeum/host/host.json` carries `ssh_failed` (failed SSH logins counted by fail2ban) and `ssh_banned` (addresses banned right now); `null` means fail2ban is not running. When the banned count rises, the agent runs `dahae alert ssh <count>`, which sends a failure ping to the heartbeat URL (same channel as failed updates, so the check turns red). It sends once per rise, not on every status refresh. Without a heartbeat URL nothing is sent. The counts themselves are not on the heartbeat. Look at them with `sudo cat /opt/malkkeum/host/host.json` or `sudo fail2ban-client status sshd`. Unbanning: `sudo fail2ban-client set sshd unbanip <address>`.
 - **Missing config:** without a heartbeat URL, `sudo dahae status` prints a warning and the heartbeat log says so. Nothing is alerted until the URL is set.
 - **HTTP checks (optional, free tiers):** UptimeRobot or BetterStack, HTTPS `GET https://DOMAIN/health`, expect keyword `"ok":true`, interval 5 min. Use this to catch a crashed proxy as well.
 - Logs: `/opt/malkkeum/backups/heartbeat.log` (rotated weekly, 8 kept). Server metrics and request ids are covered by the ops screens, not here.
+- **Edge access log:** Caddy writes JSON access logs to the `caddylogs` volume (`/var/log/caddy/access.log`, 10 MB per file, 14 kept). Query strings are redacted for `ticket`, `token`, `sig`, `code` and `state`, and the token in `/ops-progress/<token>` paths is redacted too; Authorization and Cookie headers are dropped. Container logs keep 14 files of 10 MB each per container.
+- **Edge rate limit: not in place.** The stock Caddy image has no `rate_limit` module, so `/v1/auth/*` has only the app-level buckets. Add a custom Caddy build with `mholt/caddy-ratelimit` if abuse shows up in the access log.
+- **Monitoring profile (optional, off by default):** set `COMPOSE_PROFILES=monitoring` in the install folder's `.env`, then `docker compose up -d`. This starts Uptime Kuma on `127.0.0.1:3001` only (reach it through an SSH tunnel); it is not routed by Caddy and does not start unless the profile is set.
 
 ## 9. Operations: probes, logs, metrics, shutdown (operators)
 

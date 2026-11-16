@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import 'flow_card.dart';
 import 'platform.dart';
 
 /// System status: green / yellow / red per check, the external services, and the owner's alert settings.
@@ -57,6 +58,8 @@ class _OpsScreenState extends State<OpsScreen> {
               const SizedBox(height: Space.sm),
               _Checks(status: status),
               const SizedBox(height: Space.lg),
+              FlowCard(flow: status['flow'] as Json?),
+              const SizedBox(height: Space.lg),
               SectionTitle(t.oJobs),
               const SizedBox(height: Space.sm),
               _Jobs(
@@ -74,10 +77,7 @@ class _OpsScreenState extends State<OpsScreen> {
               const SizedBox(height: Space.lg),
               SectionTitle(t.oAlerts),
               const SizedBox(height: Space.sm),
-              _AlertsCard(
-                initial: data['alerts'] as Json,
-                onSaved: _reload,
-              ),
+              _AlertsCard(initial: data['alerts'] as Json, onSaved: _reload),
               const SizedBox(height: Space.lg),
               SectionTitle(t.oFlags),
               const SizedBox(height: Space.sm),
@@ -277,6 +277,7 @@ String _jobName(T t, String job) => switch (job) {
 class _Jobs extends StatelessWidget {
   const _Jobs({required this.jobs, this.deadLetters = 0});
   final List<Json> jobs;
+
   /// Texts (SMS, AlimTalk) that used up their retries. Shown on the outbox card.
   final int deadLetters;
 
@@ -289,10 +290,7 @@ class _Jobs extends StatelessWidget {
       runSpacing: Space.sm,
       children: [
         for (final j in jobs)
-          SizedBox(
-            width: 300,
-            child: AppCard(child: _job(context, t, j)),
-          ),
+          SizedBox(width: 300, child: AppCard(child: _job(context, t, j))),
       ],
     );
   }
@@ -437,10 +435,14 @@ final _ruleLabels = <String, String Function(T)>{
   'push_failing': (T t) => t.oRulePush,
   'payment_failing': (T t) => t.oRulePayment,
   'payment_stuck': (T t) => t.oRuleStuck,
+  'payment_mismatch': (T t) => t.oRuleMismatch,
   'social_failing': (T t) => t.oRuleSocial,
   'backup_stale': (T t) => t.oRuleBackup,
   'disk_low': (T t) => t.oRuleDisk,
   'auth_suspicious': (T t) => t.oRuleAuth,
+  'unassigned_stale': (T t) => t.oRuleUnassigned,
+  'same_day_cancel': (T t) => t.oRuleSameDayCancel,
+  'tax_deadline': (T t) => t.oRuleTaxDeadline,
 };
 
 class _AlertsCard extends StatefulWidget {

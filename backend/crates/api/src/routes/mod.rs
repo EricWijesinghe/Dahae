@@ -6,7 +6,7 @@ mod auth;
 mod booking_core;
 pub(crate) mod bookings;
 pub mod cases;
-mod cash_receipts;
+pub mod cash_receipts;
 pub(crate) mod catalog;
 pub(crate) mod chat;
 mod checkout_policy;
@@ -16,11 +16,13 @@ pub(crate) mod config;
 mod demo_admin;
 mod feed;
 mod finance;
+mod finance_payroll;
 pub(crate) mod growth;
 mod host_jobs;
 mod keys;
 pub(crate) mod me;
 mod member;
+mod member_approval;
 mod notify_templates;
 mod ops;
 mod owner;
@@ -29,6 +31,7 @@ pub(crate) mod partner_jobs;
 pub(crate) mod payments;
 pub(crate) mod payouts;
 mod privacy_requests;
+mod pro_verification;
 mod renewals;
 pub(crate) mod seller;
 mod settings;
@@ -38,7 +41,7 @@ mod staff_mfa;
 mod staff_sms;
 pub mod subscription_engine;
 pub(crate) mod subscriptions;
-mod tax_invoices;
+pub mod tax_invoices;
 pub(crate) mod tips;
 pub mod uploads;
 pub(crate) mod waitlist;
@@ -66,6 +69,8 @@ use tower_http::{
 };
 
 const BODY_LIMIT_BYTES: usize = 12 * 1024 * 1024;
+/// Anonymous error reports (4000-char stack, JSON-escaped) and analytics batches (50 events) fit well inside this.
+const INGEST_BODY_LIMIT: usize = 64 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub fn router(state: AppState) -> Router {
@@ -106,14 +111,15 @@ pub fn router(state: AppState) -> Router {
         .merge(setup::public_routes())
         .merge(address::public_routes())
         .merge(config::routes())
-        .merge(crate::client_errors::routes())
-        .merge(crate::analytics::public_routes())
+        .merge(crate::client_errors::routes().layer(DefaultBodyLimit::max(INGEST_BODY_LIMIT)))
+        .merge(crate::analytics::public_routes().layer(DefaultBodyLimit::max(INGEST_BODY_LIMIT)))
         .nest(
             "/admin",
             admin::routes()
                 .merge(staff_sms::admin_routes())
                 .merge(owner::admin_routes())
                 .merge(admin_content::routes())
+                .merge(member_approval::admin_routes())
                 .merge(notify_templates::routes())
                 .merge(growth::admin_routes())
                 .merge(crate::points::admin_routes())
@@ -187,7 +193,7 @@ pub fn router(state: AppState) -> Router {
         .with_state(state)
 }
 
-/// Writes an audit record for any staff or money-moving action.
+/// Writes an audit record for any staff or money-moving action. Pass a transaction to commit it with the action.
 pub(crate) async fn audit(
     db: impl sqlx::PgExecutor<'_>,
     actor_role: &str,

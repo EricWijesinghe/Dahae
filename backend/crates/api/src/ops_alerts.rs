@@ -4,14 +4,16 @@
 //! Quiet hours (KST) hold everything until they end; the condition is still there then.
 
 use crate::{
+    config::Config,
     error::{ApiError, ApiResult},
     lifecycle::next_tick,
     metrics::job_pass,
     ops::{self, Level},
     realtime::{Recipient, notify},
+    settings_registry,
     state::AppState,
 };
-use chrono::{DateTime, Duration, FixedOffset, Timelike, Utc};
+use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -21,15 +23,19 @@ use std::{
 };
 use tokio::task::JoinHandle;
 
-pub const RULES: [&str; 8] = [
+pub const RULES: [&str; 12] = [
     "sms_failing",
     "push_failing",
     "payment_failing",
     "payment_stuck",
+    "payment_mismatch",
     "social_failing",
     "auth_suspicious",
     "backup_stale",
     "disk_low",
+    "unassigned_stale",
+    "same_day_cancel",
+    "tax_deadline",
 ];
 pub const COOLDOWN_HOURS: i64 = 6;
 const PREFS_KEY: &str = "ops_alerts";
@@ -42,6 +48,8 @@ const PUSH_FAILURES: i64 = 5;
 const PAYMENT_WINDOW_MIN: i64 = 15;
 const PAYMENT_FAILURES: i64 = 3;
 const STUCK_WINDOW_MIN: i64 = 60;
+/// The daily PortOne diff logs its mismatches once a day; the alert reads the last day of them.
+const MISMATCH_WINDOW_MIN: i64 = 24 * 60;
 const DEAD_LETTER_WINDOW_MIN: i64 = 60;
 const SOCIAL_WINDOW_MIN: i64 = 30;
 const SOCIAL_FAILURES: i64 = 5;
@@ -50,6 +58,10 @@ const SOCIAL_PROVIDERS: [&str; 4] = ["kakao", "naver", "google", "apple"];
 const AUTH_WINDOW_MIN: i64 = 60;
 const AUTH_EVENTS: i64 = 5;
 const KST_OFFSET_SECS: i32 = 9 * 3600;
+/// A same-day cancel rate needs this many bookings for the day before it can alert.
+const CANCEL_MIN_BOOKINGS: i64 = 5;
+/// Quarterly VAT filing months; the filing day is the 25th of each.
+const VAT_MONTHS: [u32; 4] = [1, 4, 7, 10];
 
 /// What the owner chose on the console's alert card.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -185,6 +197,13 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
             body: "고객에게 가지 못한 문자가 있어요. 설정 > 문자(Solapi)에서 키와 발신번호를 확인하고 연결 테스트를 해 주세요.",
         });
     }
+    if count(db, &["payment_mismatch"], MISMATCH_WINDOW_MIN).await? >= 1 {
+        out.push(Finding {
+            rule: "payment_mismatch",
+            title: "PG 결제 내역이 우리 기록과 달라요",
+            body: "PortOne 관리자 화면에서 어제 결제 목록을 확인하고, 예약·결제 내역과 금액이 맞지 않는 건을 직접 확인하세요.",
+        });
+    }
     if count(db, &SOCIAL_PROVIDERS, SOCIAL_WINDOW_MIN).await? >= SOCIAL_FAILURES {
         out.push(Finding {
             rule: "social_failing",
@@ -200,6 +219,7 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
         });
     }
     out.extend(payout_findings(db).await?);
+    out.extend(business_findings_or_skip(db, &s.config).await);
     out.extend(job_finding());
     let backup = ops::backup_status(db).await?;
     let age = ops::backup_age_hours(backup.as_ref(), Utc::now());
@@ -220,6 +240,65 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
         });
     }
     Ok(out)
+}
+
+/// Business rules fail soft: a failed KPI query is logged and skipped, so the infrastructure alerts still run.
+async fn business_findings_or_skip(db: &PgPool, cfg: &Config) -> Vec<Finding> {
+    business_findings(db, cfg).await.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "business alert rules skipped");
+        Vec::new()
+    })
+}
+
+/// Business rules, owner-toggleable: confirmed bookings left without a pro, a bad same-day cancel rate, and the VAT deadline.
+/// shortcut: VAT only; withholding (원천세) dates depend on the business's filing cycle, the owner confirms those.
+/// shortcut: VAT dates are the corporate quarterly months for everyone; individual taxpayers file 1·7월 only, the owner's tax adviser confirms, then make the months a setting.
+pub async fn business_findings(db: &PgPool, cfg: &Config) -> ApiResult<Vec<Finding>> {
+    let mut out = Vec::new();
+    let hours = settings_registry::get(db, cfg, "unassigned_alert_hours").await?;
+    if ops::unassigned_older_than(db, hours).await? > 0 {
+        out.push(Finding {
+            rule: "unassigned_stale",
+            title: "기사님이 정해지지 않은 예약이 있어요",
+            body: "확정된 예약 중 오래 배정되지 않은 건이 있어요. 예약 목록에서 기사님이나 팀을 지정해 주세요.",
+        });
+    }
+    let (cancelled, total) = ops::same_day_cancels(db).await?;
+    let pct = settings_registry::get(db, cfg, "same_day_cancel_alert_pct").await?;
+    if same_day_cancel_high(cancelled, total, pct) {
+        out.push(Finding {
+            rule: "same_day_cancel",
+            title: "오늘 당일 취소가 많아요",
+            body: "오늘 방문 예정 예약의 당일 취소 비율이 기준보다 높아요. 취소 사유를 확인하고 기사님 배정을 점검하세요.",
+        });
+    }
+    let days = settings_registry::get(db, cfg, "tax_deadline_remind_days").await?;
+    if vat_deadline_due(today_kst(), days) {
+        out.push(Finding {
+            rule: "tax_deadline",
+            title: "부가가치세 신고 기한이 다가와요",
+            body: "부가가치세 신고 기한이 다가와요. 날짜는 사업자 유형에 따라 달라요. 법인은 1·4·7·10월 25일, 개인 일반과세자는 보통 1·7월 25일이에요. 세무 담당자와 확인하세요.",
+        });
+    }
+    Ok(out)
+}
+
+fn today_kst() -> NaiveDate {
+    (Utc::now() + Duration::seconds(i64::from(KST_OFFSET_SECS))).date_naive()
+}
+
+/// Same-day cancels above the threshold percent, once the day has enough bookings for a rate to mean something.
+pub fn same_day_cancel_high(cancelled: i64, total: i64, threshold_pct: i64) -> bool {
+    total >= CANCEL_MIN_BOOKINGS && cancelled * 100 > total * threshold_pct
+}
+
+/// True on a VAT filing day or within `days_before` days ahead of one. The setting caps at 14 days, so
+/// the same year's dates are enough: the next January 25 is always more than 14 days away from December.
+pub fn vat_deadline_due(today: NaiveDate, days_before: i64) -> bool {
+    VAT_MONTHS
+        .iter()
+        .filter_map(|&m| NaiveDate::from_ymd_opt(today.year(), m, 25))
+        .any(|d| (0..=days_before).contains(&(d - today).num_days()))
 }
 
 /// Payout alerts. Not owner-toggleable: a stuck or failed transfer is money the owner must look at.
@@ -457,5 +536,27 @@ mod tests {
         );
         let none = parse_input(&json!({"quiet_start": 22, "quiet_end": 7, "alert_phone": " "})).expect("blank phone ok");
         assert_eq!(none.alert_phone, None);
+    }
+
+    fn day(y: i32, m: u32, d: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(y, m, d).expect("valid date")
+    }
+
+    #[test]
+    fn same_day_cancel_needs_a_sample_and_more_than_the_threshold() {
+        assert!(!same_day_cancel_high(4, 4, 30), "four bookings is too few to alert");
+        assert!(!same_day_cancel_high(3, 10, 30), "exactly the threshold is not over it");
+        assert!(same_day_cancel_high(4, 10, 30), "40% is over 30%");
+        assert!(!same_day_cancel_high(0, 0, 5), "an empty day never alerts");
+    }
+
+    #[test]
+    fn vat_reminder_fires_before_each_filing_day_only() {
+        assert!(vat_deadline_due(day(2026, 4, 18), 7), "seven days ahead of 4/25");
+        assert!(vat_deadline_due(day(2026, 4, 25), 7), "the filing day itself");
+        assert!(!vat_deadline_due(day(2026, 4, 17), 7), "eight days ahead");
+        assert!(!vat_deadline_due(day(2026, 5, 10), 7), "no filing day near May");
+        assert!(vat_deadline_due(day(2027, 1, 20), 7), "January 25 is in reach");
+        assert!(!vat_deadline_due(day(2026, 12, 20), 7), "January 25 is still five weeks off");
     }
 }

@@ -32,18 +32,37 @@ Future<void> _start() async {
   final locale = LocaleController();
   final theme = ThemeController();
   final brand = BrandController(api: api, fallback: partnerBrand);
-  await Future.wait([session.restore(), locale.restore(), theme.restore(), brand.restore()]);
+  await Future.wait([
+    session.restore(),
+    locale.restore(),
+    theme.restore(),
+    brand.restore(),
+  ]);
   // One refresh now instead of a 401 on every first screen call.
   api.warmUp().ignore();
   // The business's colours and logo; the saved brand paints until this answers (and stays if offline).
   brand.refresh().ignore();
-  final app = PartnerState(api, Realtime(api), outbox: await CompletionOutbox.open());
-  runApp(PartnerApp(session: session, app: app, locale: locale, theme: theme, brand: brand));
+  final app = PartnerState(
+    api,
+    Realtime(api),
+    outbox: await CompletionOutbox.open(),
+  );
+  runApp(
+    PartnerApp(
+      session: session,
+      app: app,
+      locale: locale,
+      theme: theme,
+      brand: brand,
+    ),
+  );
   // Back from the background: a fresh socket; its resync reloads jobs and drains the outbox.
   Foreground(onResume: app.realtime.reconnect);
   // Push (Firebase, launch tap) after the first frame, as in the customer app: keeps cold start fast.
   // A launch tap that arrives before the shell listens is kept by PushService until taken.
-  WidgetsBinding.instance.addPostFrameCallback((_) => PushService.init().ignore());
+  WidgetsBinding.instance.addPostFrameCallback(
+    (_) => PushService.init().ignore(),
+  );
 }
 
 class PartnerApp extends StatelessWidget {
@@ -77,7 +96,10 @@ class PartnerApp extends StatelessWidget {
             child: UpdateGate(
               api: session.api,
               app: 'partner',
-              child: RemoteConfigGate(api: session.api, child: child ?? const SizedBox.shrink()),
+              child: RemoteConfigGate(
+                api: session.api,
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
           ),
           onGenerateTitle: (_) => (brand?.brand ?? partnerBrand).name,

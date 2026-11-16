@@ -1,0 +1,7 @@
+{
+  "cashReceipt": {
+    "status": "ISSUED",
+    "issueNumber": "1234567890",
+    "url": "https://example.test/receipts/1234567890"
+  }
+}

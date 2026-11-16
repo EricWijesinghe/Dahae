@@ -124,10 +124,17 @@ pub const SPECS: &[Spec] = &[
     tightened(int("points_adjust_max", "points", 1, 1_000_000, 100_000), Tighten::Down),
     int("quality_window_days", "quality", 7, 365, 90),
     int("quality_on_time_grace_min", "quality", 0, 60, 15),
+    // Off until the owner has a way to publish training and partners can finish it; then offers wait on it.
+    boolean("training_gate_enabled", "quality", false),
     tightened(int("backup_stale_hours", "ops", 1, 168, 36), Tighten::Down),
     tightened(int("backup_late_hours", "ops", 1, 168, 26), Tighten::Down),
     tightened(int("disk_low_pct", "ops", 1, 50, 10), Tighten::Up),
     tightened(int("disk_warn_pct", "ops", 1, 80, 20), Tighten::Up),
+    // Business alerts (ops_alerts): unassigned confirmed bookings, same-day cancel rate, VAT deadline reminder.
+    // Tighten-only like the other alert thresholds: the owner can alert sooner, never quieter than the default.
+    tightened(int("unassigned_alert_hours", "ops", 1, 168, 24), Tighten::Down),
+    tightened(int("same_day_cancel_alert_pct", "ops", 5, 100, 30), Tighten::Down),
+    tightened(int("tax_deadline_remind_days", "ops", 1, 14, 7), Tighten::Up),
     boolean("maintenance_on", "ops", false),
     text("maintenance_message", "ops", 200, ""),
 ];
@@ -450,6 +457,19 @@ mod tests {
         assert!(validate(disk, &json!(5)).is_err());
         let reports = by_key("review_report_threshold");
         assert!(validate(reports, &json!(1)).is_err(), "one report must not hide a review");
+    }
+
+    #[test]
+    fn business_alerts_can_only_alert_sooner() {
+        let hours = by_key("unassigned_alert_hours");
+        assert!(validate(hours, &json!(12)).is_ok());
+        assert!(validate(hours, &json!(48)).is_err(), "a quieter alert is refused");
+        let pct = by_key("same_day_cancel_alert_pct");
+        assert!(validate(pct, &json!(20)).is_ok());
+        assert!(validate(pct, &json!(50)).is_err());
+        let days = by_key("tax_deadline_remind_days");
+        assert!(validate(days, &json!(14)).is_ok());
+        assert!(validate(days, &json!(3)).is_err(), "a later reminder is refused");
     }
 
     #[test]

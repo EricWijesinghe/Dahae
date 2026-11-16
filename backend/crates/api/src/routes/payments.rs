@@ -10,6 +10,7 @@ use axum::{Json, Router, extract::State, routing::get};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
+use std::collections::HashMap;
 
 const SETTING: &str = "payment_methods";
 
@@ -44,17 +45,28 @@ pub async fn enabled_codes(db: &PgPool) -> ApiResult<Vec<String>> {
     Ok(stored.map(|j| j.0).unwrap_or_else(|| METHODS.iter().map(|m| m.0.to_string()).collect()))
 }
 
-/// Outside dev mode a method is offered only once its PortOne channel key is saved.
-pub fn has_channel_key(s: &AppState, code: &str) -> bool {
-    s.config.dev_mode || s.providers.integ().portone.channel_keys.contains_key(code)
+/// The PortOne channel key for a method; a blank value counts as not configured.
+pub fn channel_key(channel_keys: &HashMap<String, String>, code: &str) -> Option<String> {
+    channel_keys.get(code).map(|k| k.trim()).filter(|k| !k.is_empty()).map(str::to_string)
 }
 
-/// Rejects unknown, switched-off or keyless methods before any intent is created.
+/// Methods offered to customers: switched on by an admin and, on the real PortOne gateway, given a channel key.
+/// The dev fake provider takes no keys, so every enabled method is offered there (a local demo can pay).
+pub async fn offered_codes(s: &AppState) -> ApiResult<Vec<String>> {
+    let on = enabled_codes(&s.db).await?;
+    if s.providers.dev() {
+        return Ok(on);
+    }
+    let integ = s.providers.integ();
+    Ok(on.into_iter().filter(|c| channel_key(&integ.portone.channel_keys, c).is_some()).collect())
+}
+
+/// Rejects unknown, switched-off or unconfigured methods before any intent is created.
 pub async fn ensure_enabled(s: &AppState, code: &str) -> ApiResult<()> {
     if !METHODS.iter().any(|m| m.0 == code) {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
-    if !enabled_codes(&s.db).await?.iter().any(|c| c == code) || !has_channel_key(s, code) {
+    if !offered_codes(s).await?.iter().any(|c| c == code) {
         return Err(ApiError::BadRequest("payment_method_disabled"));
     }
     Ok(())
@@ -67,11 +79,11 @@ struct Method {
 }
 
 async fn enabled(State(s): State<AppState>) -> ApiResult<Json<Vec<Method>>> {
-    let on = enabled_codes(&s.db).await?;
+    let on = offered_codes(&s).await?;
     Ok(Json(
         METHODS
             .iter()
-            .filter(|(code, _)| on.iter().any(|c| c == code) && has_channel_key(&s, code))
+            .filter(|(code, _)| on.iter().any(|c| c == code))
             .map(|&(code, flow)| Method { code, flow })
             .collect(),
     ))
@@ -81,20 +93,23 @@ async fn enabled(State(s): State<AppState>) -> ApiResult<Json<Vec<Method>>> {
 struct AdminMethod {
     code: &'static str,
     flow: &'static str,
+    /// Switched on by an admin.
     enabled: bool,
-    /// False while the method has no PortOne channel key (the customer list hides it outside dev mode).
-    has_key: bool,
+    /// Has a PortOne channel key; without one the method is never shown to customers even when enabled.
+    configured: bool,
 }
 
 async fn admin_view(s: &AppState) -> ApiResult<Vec<AdminMethod>> {
     let on = enabled_codes(&s.db).await?;
+    let fake = s.providers.dev();
+    let keys = &s.providers.integ().portone.channel_keys;
     Ok(METHODS
         .iter()
         .map(|&(code, flow)| AdminMethod {
             code,
             flow,
             enabled: on.iter().any(|c| c == code),
-            has_key: has_channel_key(s, code),
+            configured: fake || channel_key(keys, code).is_some(),
         })
         .collect())
 }
@@ -110,6 +125,10 @@ struct Update {
 }
 
 async fn admin_update(State(s): State<AppState>, Admin(a): Admin, Json(u): Json<Update>) -> ApiResult<Json<Vec<AdminMethod>>> {
+    if u.enabled.is_empty() {
+        // Saving nothing would hide every payment method from customers.
+        return Err(ApiError::BadRequest("payment_methods_empty"));
+    }
     if u.enabled.iter().any(|c| !METHODS.iter().any(|m| m.0 == c)) {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
@@ -122,4 +141,23 @@ async fn admin_update(State(s): State<AppState>, Admin(a): Admin, Json(u): Json<
         .await?;
     audit(&s.db, "staff", Some(a.id), "payment_methods.update", SETTING, json!(codes)).await?;
     Ok(Json(admin_view(&s).await?))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::channel_key;
+    use std::collections::HashMap;
+
+    fn keys(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+    }
+
+    #[test]
+    fn channel_key_is_trimmed_and_blank_counts_as_missing() {
+        let map = keys(&[("card", " ch-card "), ("kakaopay", "  "), ("tosspay", "")]);
+        assert_eq!(channel_key(&map, "card").as_deref(), Some("ch-card"));
+        assert_eq!(channel_key(&map, "kakaopay"), None);
+        assert_eq!(channel_key(&map, "tosspay"), None);
+        assert_eq!(channel_key(&map, "naverpay"), None);
+    }
 }

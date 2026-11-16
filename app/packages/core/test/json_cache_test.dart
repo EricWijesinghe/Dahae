@@ -8,15 +8,38 @@ class _MemStorage extends FlutterSecureStorage {
   final Map<String, String> data;
 
   @override
-  Future<String?> read({required String key, AppleOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions, AppleOptions? mOptions, WindowsOptions? wOptions}) async =>
-      data[key];
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => data[key];
 
   @override
-  Future<void> delete({required String key, AppleOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions, AppleOptions? mOptions, WindowsOptions? wOptions}) async =>
-      data.remove(key);
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => data.remove(key);
 
   @override
-  Future<void> write({required String key, required String? value, AppleOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions, AppleOptions? mOptions, WindowsOptions? wOptions}) async {
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     if (value == null) {
       data.remove(key);
     } else {
@@ -41,7 +64,9 @@ void main() {
   });
 
   test('a corrupt snapshot reads as a cold start, not an error', () async {
-    final cache = JsonCache(storage: _MemStorage({'cache.services': '{not json'}));
+    final cache = JsonCache(
+      storage: _MemStorage({'cache.services': '{not json'}),
+    );
 
     expect(await cache.read('services'), isNull);
   });
@@ -51,7 +76,10 @@ void main() {
   });
 
   test('clear removes only the named snapshot', () async {
-    final storage = _MemStorage({'cache.feed.me': '[]', 'cache.services': '[]'});
+    final storage = _MemStorage({
+      'cache.feed.me': '[]',
+      'cache.services': '[]',
+    });
 
     await JsonCache(storage: storage).clear('feed.me');
 

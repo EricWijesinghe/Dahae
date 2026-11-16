@@ -191,71 +191,83 @@ void main() {
     expect(events, isEmpty);
   });
 
-  test('a new sign-in after sign-out opens a socket for the new account when connected again', () async {
-    rt.connect();
-    await pumpEventQueue();
-    await session.clear();
-    await session.save({
-      'access_token': 'b1',
-      'refresh_token': 'r2',
-      'role': 'customer',
-      'subject': 'u2',
-    });
-    expect(
-      opened,
-      hasLength(1),
-      reason: 'the app decides when the next account goes live',
-    );
-    rt.connect();
-    await pumpEventQueue();
-    expect(opened, hasLength(2));
-    expect(
-      opened.last.uri.queryParameters['ticket'],
-      'tk-2',
-      reason: 'a fresh ticket for the new session',
-    );
-  });
+  test(
+    'a new sign-in after sign-out opens a socket for the new account when connected again',
+    () async {
+      rt.connect();
+      await pumpEventQueue();
+      await session.clear();
+      await session.save({
+        'access_token': 'b1',
+        'refresh_token': 'r2',
+        'role': 'customer',
+        'subject': 'u2',
+      });
+      expect(
+        opened,
+        hasLength(1),
+        reason: 'the app decides when the next account goes live',
+      );
+      rt.connect();
+      await pumpEventQueue();
+      expect(opened, hasLength(2));
+      expect(
+        opened.last.uri.queryParameters['ticket'],
+        'tk-2',
+        reason: 'a fresh ticket for the new session',
+      );
+    },
+  );
 
-  test('each connect spends a new ticket and the access token never reaches the URL', () async {
-    rt.connect();
-    await pumpEventQueue();
-    rt.reconnect();
-    await pumpEventQueue();
-    expect(opened.map((c) => c.uri.queryParameters['ticket']), [
-      'tk-1',
-      'tk-2',
-    ]);
-    for (final c in opened) {
-      expect(c.uri.queryParameters.containsKey('token'), isFalse);
-      expect(c.uri.path, '/v1/ws');
-      expect(c.uri.scheme, 'ws');
-    }
-  });
+  test(
+    'each connect spends a new ticket and the access token never reaches the URL',
+    () async {
+      rt.connect();
+      await pumpEventQueue();
+      rt.reconnect();
+      await pumpEventQueue();
+      expect(opened.map((c) => c.uri.queryParameters['ticket']), [
+        'tk-1',
+        'tk-2',
+      ]);
+      for (final c in opened) {
+        expect(c.uri.queryParameters.containsKey('token'), isFalse);
+        expect(c.uri.path, '/v1/ws');
+        expect(c.uri.scheme, 'ws');
+      }
+    },
+  );
 
-  test('a 401 on the ticket refreshes the session once and then connects with the new session', () async {
-    fake.rejected = {'a1'};
-    rt.connect();
-    await pumpEventQueue();
-    expect(fake.refreshes, 1);
-    expect(session.accessToken, 'fresh');
-    expect(opened, hasLength(1));
-    expect(opened.single.uri.queryParameters['ticket'], 'tk-1');
-  });
+  test(
+    'a 401 on the ticket refreshes the session once and then connects with the new session',
+    () async {
+      fake.rejected = {'a1'};
+      rt.connect();
+      await pumpEventQueue();
+      expect(fake.refreshes, 1);
+      expect(session.accessToken, 'fresh');
+      expect(opened, hasLength(1));
+      expect(opened.single.uri.queryParameters['ticket'], 'tk-1');
+    },
+  );
 
-  test('a ticket that is still refused after the refresh leaves the socket closed and retries later', () async {
-    fake.rejected = {'a1', 'fresh'};
-    rt.connect();
-    await pumpEventQueue();
-    expect(
-      fake.refreshes,
-      1,
-      reason: 'one refresh, then the retry is refused as well',
-    );
-    expect(opened, isEmpty);
-    expect(events, [
-      'resync',
-    ], reason: 'the failed attempt asks screens to refetch');
-  });
+  test(
+    'a ticket that is still refused after the refresh leaves the socket closed and retries later',
+    () async {
+      fake.rejected = {'a1', 'fresh'};
+      rt.connect();
+      await pumpEventQueue();
+      expect(
+        fake.refreshes,
+        1,
+        reason: 'one refresh, then the retry is refused as well',
+      );
+      expect(opened, isEmpty);
+      expect(events, [
+        'resync',
+      ], reason: 'the failed attempt asks screens to refetch');
+    },
+  );
 
   test(
     'a socket that comes back after failed tries asks screens to refetch again',

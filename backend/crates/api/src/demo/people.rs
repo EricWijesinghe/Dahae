@@ -214,24 +214,28 @@ async fn addresses(c: &mut Ctx<'_>, user: Uuid, created: DateTime<Utc>) -> Resul
 /// One card for everyone; some customers also have a Kakao Pay method.
 async fn card(c: &mut Ctx<'_>, user: Uuid, created: DateTime<Utc>) -> Result<(), DemoError> {
     let id = c.id();
-    let key = format!("demo_bk_{}", c.hex(12));
-    sqlx::query("INSERT INTO payment_methods (id, user_id, provider, billing_key, display_name, created_at) VALUES ($1,$2,'card',$3,'데모 카드 1234',$4)")
+    let token = format!("demo_bk_{}", c.hex(12));
+    let (key, digest) = crypto::seal_billing_key(&c.data_key, &token);
+    sqlx::query("INSERT INTO payment_methods (id, user_id, provider, billing_key, billing_key_digest, display_name, created_at) VALUES ($1,$2,'card',$3,$4,'데모 카드 1234',$5)")
         .bind(id)
         .bind(user)
         .bind(&key)
+        .bind(&digest)
         .bind(created)
         .execute(&mut *c.tx)
         .await?;
     c.reg("payment_methods", id).await?;
     if c.chance(0.4) {
         let extra = c.id();
-        let key = format!("demo_bk_{}", c.hex(12));
+        let token = format!("demo_bk_{}", c.hex(12));
+        let (key, digest) = crypto::seal_billing_key(&c.data_key, &token);
         sqlx::query(
-            "INSERT INTO payment_methods (id, user_id, provider, billing_key, display_name, created_at) VALUES ($1,$2,'kakaopay',$3,'데모 카카오페이',$4)",
+            "INSERT INTO payment_methods (id, user_id, provider, billing_key, billing_key_digest, display_name, created_at) VALUES ($1,$2,'kakaopay',$3,$4,'데모 카카오페이',$5)",
         )
         .bind(extra)
         .bind(user)
         .bind(&key)
+        .bind(&digest)
         .bind(created)
         .execute(&mut *c.tx)
         .await?;
@@ -372,7 +376,7 @@ async fn pros(c: &mut Ctx<'_>) -> Result<Vec<Pro>, DemoError> {
             for (n, member) in ["정다운", "백하준"].iter().enumerate() {
                 let mid = c.id();
                 let mphone = format!("0100002{:04}", i * 10 + n + 1);
-                let invite = if n == 0 { "active" } else { "invited" };
+                let invite = if n == 0 { "active" } else { "pending_approval" };
                 let last_login = (n == 0).then(|| c.now - Duration::days(3));
                 sqlx::query(
                     "INSERT INTO team_members (id, pro_id, name, phone, role, invite_status, created_at, last_login_at) VALUES ($1,$2,$3,$4,'member',$5,$6,$7)",

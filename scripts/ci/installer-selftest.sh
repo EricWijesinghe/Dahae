@@ -94,6 +94,7 @@ printf 'DOMAIN=myshop.co.kr\nIMAGE_SOURCE=local\n' > .env
 DAHAE_SELFTEST=1 . "$SB/dahae"
 set +e
 t  "uploads_for"           eq "$(uploads_for backups/db-20261110-033000.sql.gz)" backups/uploads-20261110-033000.tar.gz
+t  "uploads_for sealed"    eq "$(uploads_for backups/db-20261110-033000.sql.gz.enc)" backups/uploads-20261110-033000.tar.gz
 t  "fingerprint ok"        valid_fingerprints "$(printf 'AB:%.0s' $(seq 31))CD"
 t  "two fingerprints"      valid_fingerprints "$(printf 'ab:%.0s' $(seq 31))cd,$(printf 'AB:%.0s' $(seq 31))EF"
 nt "fingerprint short"     valid_fingerprints AB:CD
@@ -244,11 +245,39 @@ mkdir -p "$SB/compose" && (cd "$SB/compose" && write_compose)
 t  "embedded compose = deploy/docker-compose.yml" diff <(norm_compose "$ROOT/deploy/docker-compose.yml") <(norm_compose "$SB/compose/docker-compose.yml")
 # shellcheck disable=SC2016 # literal ${...} on purpose
 t  "embedded compose pins images from .env" eq "$(grep -c 'image: ${\(API\|WEB\)_IMAGE:?set by install.sh}' "$SB/compose/docker-compose.yml")" 2
-t  "every service hardened" eq "$(grep -c '<<: \*hardened' "$ROOT/deploy/docker-compose.yml")" 3
+t  "every service hardened" eq "$(grep -c '<<: \*hardened' "$ROOT/deploy/docker-compose.yml")" 4
 for k in 'no-new-privileges:true' 'cap_drop: \[ALL\]' 'read_only: true'; do
   t "hardening has $k" grep -q "^  .*$k" "$ROOT/deploy/docker-compose.yml"
 done
-t  "every service memory-capped" eq "$(grep -c '^    mem_limit:' "$ROOT/deploy/docker-compose.yml")" 3
+t  "every service memory-capped" eq "$(grep -c '^    mem_limit:' "$ROOT/deploy/docker-compose.yml")" 4
+
+# ---- local backups: plaintext stays until its sealed copy exists; restore takes only backups/ paths ----
+mkdir -p backups
+api_backup() { return 1; } # the seal step fails
+printf 'dump' > backups/db-t1.sql.gz
+seal_local backups/db-t1.sql.gz >/dev/null 2>&1 || true
+t  "seal failure keeps plaintext"     test -f backups/db-t1.sql.gz
+nt "seal failure leaves no .enc"      test -e backups/db-t1.sql.gz.enc
+api_backup() { [ -f "${2#/}" ] && printf 'MKB1' > "${3#/}"; } # the container's seal step, on this sandbox: needs its input
+printf 'dump' > backups/db-t2.sql.gz
+t  "seal success"                     seal_local backups/db-t2.sql.gz
+nt "seal success removes plaintext"   test -e backups/db-t2.sql.gz
+t  "seal success keeps .enc"          test -s backups/db-t2.sql.gz.enc
+printf 'old' > backups/db-t3.sql.gz
+seal_leftover_plaintext >/dev/null 2>&1
+t  "leftover plaintext gets sealed"   test -s backups/db-t3.sql.gz.enc
+t  "sealing an already sealed dump"   seal_local backups/db-t3.sql.gz
+t  "...keeps its sealed copy"         test -s backups/db-t3.sql.gz.enc
+t  "backup path in backups/"          backup_path_ok backups/db-t2.sql.gz.enc
+nt "backup path outside backups/"     backup_path_ok /etc/passwd
+nt "backup path bare name"            backup_path_ok db-t2.sql.gz.enc
+nt "backup path traversal"            backup_path_ok backups/../x
+t  "full path from 'dahae backup' maps into backups/" eq "$(backup_rel "$DIR/backups/db-t2.sql.gz.enc")" backups/db-t2.sql.gz.enc
+t  "relative path unchanged"          eq "$(backup_rel backups/db-t2.sql.gz.enc)" backups/db-t2.sql.gz.enc
+nt "other absolute path still refused" backup_path_ok "$(backup_rel /etc/passwd)"
+unset -f api_backup
+YES=1 key_escrow_confirm >/dev/null 2>&1
+t  "--yes never attests key copy"     eq "$(env_get KEY_ESCROW_AT)" ""
 
 # ---- secret key copy (dahae keys-backup / keys-restore) ----
 printf 'DB_PASSWORD=%s\nDATA_KEY=%s\nJWT_SECRET=%s\n' "$(printf 'a%.0s' $(seq 48))" "$(printf 'b%.0s' $(seq 64))" "$(printf 'c%.0s' $(seq 64))" > "$SB/keys.env"
@@ -306,7 +335,7 @@ nt "moved tag is refused"  pub v1.0.0
 # ---- scheduled jobs: cron table, update gates, setup code expiry (a copy of the CLI writes into the sandbox, never /etc) ----
 set +e
 cd "$SB"
-sed "s|/etc/cron.d/malkkeum|$SB/cron-out|" "$SB/dahae" > "$SB/dahae-cron"
+sed -e "s|/etc/cron.d/malkkeum|$SB/cron-out|" -e "s|__DIR__|$SB|" "$SB/dahae" > "$SB/dahae-cron"
 cron_cli() { ( DAHAE_SELFTEST=1 . "$SB/dahae-cron"; cd "$SB"; "$@" ) >/dev/null 2>&1; }
 has_updated() { case "$1" in *UPDATED*) return 0 ;; *) return 1 ;; esac; }
 auto_run() { ( DAHAE_SELFTEST=1 . "$SB/dahae-cron"; cd "$SB"; cmd_update() { echo UPDATED; }; docker() { case "$*" in *malkkeum-web*) [ -z "${WEB_FAIL:-}" ] || return 1 ;; esac; printf '%s' "$FAKE_MANIFEST"; }; cmd_auto_update ) 2>&1; }
@@ -323,6 +352,25 @@ nt "bad schedule refused"                cron_cli cmd_update_schedule mon@4:00
 cron_cli cmd_update_schedule off
 nt "off removes the update line"         grep -qF "auto-update" "$SB/cron-out"
 t  "off keeps the backup line"           grep -qF "dahae backup" "$SB/cron-out"
+
+# ---- WAL archiving: compose calls add the pgBackRest override once archiving is on; weekly base backup in cron ----
+WALON="$SB/walon"; WALOFF="$SB/waloff"; NOWAL="$SB/nowal"
+mkdir -p "$WALON/wal" "$WALOFF" "$NOWAL"; : > "$WALON/wal/docker-compose.wal.yml"
+printf 'DOMAIN=myshop.co.kr\nWAL_ARCHIVE_MODE=on\n' > "$WALON/.env"
+printf 'DOMAIN=myshop.co.kr\nWAL_ARCHIVE_MODE=off\n' > "$WALOFF/.env"
+printf 'DOMAIN=myshop.co.kr\nWAL_ARCHIVE_MODE=on\n' > "$NOWAL/.env"
+dc_args() { ( DAHAE_SELFTEST=1 . "$1"; cd "$2"; docker() { echo "$*"; }; dc ps ) 2>/dev/null; } # dc_args 스크립트 폴더 : 실제로 넘어갈 인자
+WAL_ARGS="compose -f docker-compose.yml -f wal/docker-compose.wal.yml --env-file .env ps"
+PLAIN_ARGS="compose -f docker-compose.yml --env-file .env ps"
+t  "install.sh dc adds the wal override when archiving is on" eq "$(dc_args "$ROOT/deploy/install.sh" "$WALON")" "$WAL_ARGS"
+t  "dahae dc adds the wal override when archiving is on" eq "$(dc_args "$SB/dahae-cron" "$WALON")" "$WAL_ARGS"
+t  "archiving off: plain compose call" eq "$(dc_args "$SB/dahae-cron" "$WALOFF")" "$PLAIN_ARGS"
+nt "archiving on without wal/ refuses to start" dc_args "$SB/dahae-cron" "$NOWAL"
+printf 'WAL_ARCHIVE_MODE=on\n' >> "$SB/.env"; mkdir -p "$SB/wal"; : > "$SB/wal/base-backup.sh"
+cron_cli cmd_write_cron
+t  "archiving on: weekly base backup under the lock" grep -qF "15 2 * * 0 root cd $SB && flock -w 3600 /run/dahae.lock bash wal/base-backup.sh" "$SB/cron-out"
+sed -i '/^WAL_ARCHIVE_MODE=/d' "$SB/.env"; cron_cli cmd_write_cron
+nt "archiving off: no base backup line" grep -qF "base-backup.sh" "$SB/cron-out"
 
 # auto-update: a skip mark, a waiting job, and the 24-hour wait for a new stable digest each skip the update
 mkdir -p "$SB/host" "$SB/jobs/inbox"
@@ -412,12 +460,77 @@ t  "api mounts inbox read-write"         grep -qF "/opt/malkkeum/jobs/inbox:/job
 t  "api mounts status and out read-only" grep -qF "/opt/malkkeum/jobs/status:/jobs/status:ro, /opt/malkkeum/jobs/out:/jobs/out:ro]" "$ROOT/deploy/docker-compose.yml"
 t  "web mounts progress read-only"       grep -qF ":/srv/ops-progress:ro]" "$ROOT/deploy/docker-compose.yml"
 t  "Caddy progress route is no-store"    grep -qF 'Cache-Control "no-store"' "$ROOT/deploy/Caddyfile"
+# edge logs: rotated JSON access log, secrets in query strings redacted, probes answer 404 publicly
+t  "Caddy access log rotates 14 files"   grep -qF "roll_keep 14" "$ROOT/deploy/Caddyfile"
+t  "Caddy access log redacts the ws ticket, signed links and ops-progress token" grep -qF '(ops-progress/|[?&](ticket|token|sig|code|state)=)' "$ROOT/deploy/Caddyfile"
+t  "Caddy /ready and /metrics answer 404" grep -qF "@internal path /ready /metrics" "$ROOT/deploy/Caddyfile"
+t  "uptime-kuma is opt-in and loopback-only" grep -qF 'profiles: [monitoring]' "$ROOT/deploy/docker-compose.yml"
+t  "embedded compose has the access log volume" grep -qF "caddylogs:/var/log/caddy" "$SB/compose/docker-compose.yml"
 # the agent is installed on a fresh install and on an update: install_agent is called from main, not from a branch
 t  "install_agent runs in main"          grep -qE '^  install_agent( |$)' "$ROOT/deploy/install.sh"
 # shellcheck disable=SC2016 # literal text searched in the installer
 t  "cron table written by the CLI"       grep -qF '"$BIN/dahae" write-cron' "$ROOT/deploy/install.sh"
 # shellcheck disable=SC2016 # literal text searched in the publisher
 t  "publish fills RELEASE_RAW"           grep -qF 'RELEASE_RAW=$RAW/$ref' "$ROOT/deploy/publish-delivery.sh"
+
+# ---- host hardening (SEC-9): firewall, fail2ban, unattended upgrades, key-only SSH ----
+HB="$SB/hardening"; mkdir -p "$HB"
+fw() { ( MALKKEUM_FIREWALL="$1"; firewall_wanted ); }
+t  "sshd -T reports password login"        password_login_on "$(printf 'port 22\npasswordauthentication yes\n')"
+nt "sshd -T with password login off"       password_login_on "$(printf 'passwordauthentication no\n')"
+t  "firewall on when MALKKEUM_FIREWALL=on" fw on
+nt "firewall stays off when MALKKEUM_FIREWALL=off" fw off
+t  "fail2ban jail enables sshd"            write_f2b_jail "$HB/jail.local"
+t  "fail2ban jail text"                    grep -qx '\[sshd\]' "$HB/jail.local"
+t  "unattended upgrades on"                write_auto_upgrades "$HB/auto"
+t  "unattended upgrades text"              grep -qx 'APT::Periodic::Unattended-Upgrade "1";' "$HB/auto"
+t  "key-only drop-in"                      write_keyonly_dropin "$HB/keyonly.conf"
+t  "key-only drop-in text"                 grep -qx 'PasswordAuthentication no' "$HB/keyonly.conf"
+: > "$HB/empty-keys"; printf 'ssh-ed25519 AAAA test\n' > "$HB/keys"
+nt "empty authorized_keys is not a key"   has_key "$HB/empty-keys"
+t  "authorized_keys with a key"            has_key "$HB/no-such" "$HB/keys"
+t  "install installs ufw fail2ban unattended-upgrades" grep -qF 'ufw fail2ban unattended-upgrades' "$ROOT/deploy/install.sh"
+t  "install runs harden_host in main"      grep -qE '^  harden_host( |$)' "$ROOT/deploy/install.sh"
+# behavior: firewall_setup and ssh_keyonly_check with stubbed ufw, sshd, ask, systemctl (no real /etc or firewall changes)
+FWLOG="$HB/fw.log"
+fw_run() { # fw_run 방화벽상태 모드 : firewall_setup 을 가짜 ufw 로 돌리고 실행한 명령을 fw.log 에 남겨요
+  : > "$FWLOG"
+  ( UFW_STATUS="$1"; MALKKEUM_FIREWALL="$2"
+    ufw() { if [ "$1" = status ]; then printf '%s\n' "$UFW_STATUS"; else printf '%s\n' "$*" >> "$FWLOG"; fi; }
+    firewall_setup ) >/dev/null 2>&1
+}
+fw_enabled()   { grep -qF -- '--force enable' "$FWLOG"; }
+fw_web_ports() { grep -qF -- 'allow 22/tcp' "$FWLOG" && grep -qF -- 'allow 80/tcp' "$FWLOG" && grep -qF -- 'allow 443/tcp' "$FWLOG"; }
+fw_ssh_first() { awk '/allow 22\/tcp/ { a = NR } /--force enable/ { e = NR } END { exit !(a && e && a < e) }' "$FWLOG"; }
+fw_run 'Status: inactive' on;  t  "inactive ufw is enabled when MALKKEUM_FIREWALL=on" fw_enabled
+fw_run 'Status: inactive' on;  t  "web ports are allowed before ufw is enabled" fw_ssh_first
+fw_run 'Status: inactive' on;  t  "ports 22 80 443 are allowed on enable" fw_web_ports
+fw_run 'Status: active' on;    nt "active ufw is not enabled again" fw_enabled
+fw_run 'Status: active' on;    t  "active ufw gets the web rules" fw_web_ports
+fw_run 'Status: inactive' off; nt "inactive ufw stays off when MALKKEUM_FIREWALL=off" fw_enabled
+ssh_run() { # ssh_run sshd설정 키파일 응답 : ssh_keyonly_check 를 가짜 sshd·ask 로 돌려요 (기록은 fw.log, 출력은 ssh.out)
+  : > "$FWLOG"
+  ( SSHD_CFG="$1"; KEYF="$2"; ASK_ANSWER="$3"
+    sshd() { if [ "$1" = -T ]; then [ -z "${SSHD_FAIL:-}" ] || return 1; printf '%s\n' "$SSHD_CFG"; fi; return 0; }
+    login_key_file() { printf '%s' "$KEYF"; }
+    ask() { printf '%s\n' "$1" >> "$FWLOG"; printf '%s' "$ASK_ANSWER"; }
+    write_keyonly_dropin() { printf 'dropin %s\n' "$1" >> "$FWLOG"; }
+    systemctl() { return 0; }
+    KEYONLY_CONF="$HB/keyonly-test.conf"
+    ssh_keyonly_check ) >"$HB/ssh.out" 2>&1
+}
+dropin_written() { grep -q '^dropin ' "$FWLOG"; }
+PW_ON='passwordauthentication yes'
+ssh_run "$PW_ON" "$HB/keys" y;         t  "key on the operator account and answer y turns password login off" dropin_written
+SSHD_FAIL=1 ssh_run "$PW_ON" "$HB/keys" y; nt "sshd -T failure never turns password login off" dropin_written
+SSHD_FAIL=1 ssh_run "$PW_ON" "$HB/keys" y; t  "sshd -T failure is reported" grep -qF '읽지 못해' "$HB/ssh.out"
+ssh_run "$PW_ON" "$HB/none" y;         nt "no key for the account: password login stays on" dropin_written
+ssh_run "$PW_ON" "$HB/keys" n;         nt "answer n keeps password login" dropin_written
+SUDO_USER=alice ssh_run "$PW_ON" "$HB/keys" y; t "prompt names the operator account" grep -qF "'alice'" "$FWLOG"
+eq "$(SUDO_USER=alice operator_account)" alice
+eq "$(SUDO_USER='' operator_account)" root
+eq "$(login_key_file root)" /root/.ssh/authorized_keys
+nt "odd account name refused for key lookup" login_key_file 'a;rm'
 
 bash "$ROOT/scripts/ci/agent-selftest.sh" >/dev/null || { FAIL=$((FAIL + 1)); echo "FAIL: agent self-test (run scripts/ci/agent-selftest.sh)"; }
 

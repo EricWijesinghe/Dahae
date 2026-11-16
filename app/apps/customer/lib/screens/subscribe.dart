@@ -55,7 +55,9 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
   }
 
   Future<void> _submit() async {
-    if (!await requireSignIn(context, reason: SignInReason.book) || !mounted) return;
+    if (!await requireSignIn(context, reason: SignInReason.book) || !mounted) {
+      return;
+    }
     final t = context.t;
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
@@ -87,7 +89,12 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
     final methods = app.methods;
     // Maintenance pauses new bookings, and a subscription creates them: hold the submit until it is over.
     final paused = RemoteConfigScope.of(context).maintenance;
-    final ready = _service != null && _address != null && _method != null && !_saving && !paused;
+    final ready =
+        _service != null &&
+        _address != null &&
+        _method != null &&
+        !_saving &&
+        !paused;
     final narrow = MaterialLocalizations.of(context).narrowWeekdays;
     return Scaffold(
       appBar: AppBar(title: Text(t.subNew)),
@@ -98,21 +105,30 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
           DropdownButtonFormField<String>(
             key: const Key('sub-service'),
             initialValue: _service,
-            items: [for (final s in services) DropdownMenuItem(value: s.code, child: Text(t.service(s.code)))],
+            items: [
+              for (final s in services)
+                DropdownMenuItem(value: s.code, child: Text(t.service(s.code))),
+            ],
             onChanged: (v) => setState(() => _service = v),
           ),
           const SizedBox(height: Space.md),
           DropdownButtonFormField<String>(
             key: const Key('sub-address'),
             initialValue: _address,
-            items: [for (final a in addresses) DropdownMenuItem(value: a.id, child: Text(a.label))],
+            items: [
+              for (final a in addresses)
+                DropdownMenuItem(value: a.id, child: Text(a.label)),
+            ],
             onChanged: (v) => setState(() => _address = v),
           ),
           const SizedBox(height: Space.md),
           DropdownButtonFormField<String>(
             key: const Key('sub-method'),
             initialValue: _method,
-            items: [for (final m in methods) DropdownMenuItem(value: m.id, child: Text(m.displayName))],
+            items: [
+              for (final m in methods)
+                DropdownMenuItem(value: m.id, child: Text(m.displayName)),
+            ],
             onChanged: (v) => setState(() => _method = v),
           ),
           const SizedBox(height: Space.lg),
@@ -120,7 +136,10 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
           const SizedBox(height: Space.xs),
           SegmentedButton<int>(
             key: const Key('sub-cadence'),
-            segments: [for (final w in subscriptionCadences) ButtonSegment(value: w, label: Text(cadenceLabel(t, w)))],
+            segments: [
+              for (final w in subscriptionCadences)
+                ButtonSegment(value: w, label: Text(cadenceLabel(t, w))),
+            ],
             selected: {_cadence},
             onSelectionChanged: (s) => setState(() => _cadence = s.first),
           ),
@@ -131,7 +150,10 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
             key: const Key('sub-weekday'),
             // Seven segments: the check mark would push the selected day past a phone's width.
             showSelectedIcon: false,
-            segments: [for (var i = 0; i < 7; i++) ButtonSegment(value: i, label: Text(narrow[(i + 1) % 7]))],
+            segments: [
+              for (var i = 0; i < 7; i++)
+                ButtonSegment(value: i, label: Text(narrow[(i + 1) % 7])),
+            ],
             selected: {_weekday},
             onSelectionChanged: (s) => setState(() => _weekday = s.first),
           ),
@@ -142,7 +164,10 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
             key: const Key('sub-hour'),
             segments: [
               for (final h in subscriptionHours)
-                ButtonSegment(value: h, label: Text('${h.toString().padLeft(2, '0')}:00')),
+                ButtonSegment(
+                  value: h,
+                  label: Text('${h.toString().padLeft(2, '0')}:00'),
+                ),
             ],
             selected: {_hour},
             onSelectionChanged: (s) => setState(() => _hour = s.first),
@@ -152,7 +177,11 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
           const SizedBox(height: Space.sm),
           Text(t.subChargeNote),
           const SizedBox(height: Space.xl),
-          FilledButton(key: const Key('sub-submit'), onPressed: ready ? _submit : null, child: Text(t.subCreate)),
+          FilledButton(
+            key: const Key('sub-submit'),
+            onPressed: ready ? _submit : null,
+            child: Text(t.subCreate),
+          ),
         ],
       ),
     );

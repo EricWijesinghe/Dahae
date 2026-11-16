@@ -56,7 +56,10 @@ pub struct QualityThresholds {
 
 impl Default for QualityThresholds {
     fn default() -> Self {
-        Self { warning_below: 75, pause_below: 60 }
+        Self {
+            warning_below: 75,
+            pause_below: 60,
+        }
     }
 }
 
@@ -164,7 +167,6 @@ pub enum QualityTip {
 }
 
 /// Up to three tips, weakest component first, for components below 0.9.
-/// Dispatch: order candidates by `score` descending, after dropping `can_receive_offers == false`.
 pub fn tips(c: &QualityComponents) -> Vec<QualityTip> {
     let mut ranked = [
         (c.rating, QualityTip::ImproveRating),
@@ -174,12 +176,7 @@ pub fn tips(c: &QualityComponents) -> Vec<QualityTip> {
         (c.complaints, QualityTip::ReduceComplaints),
     ];
     ranked.sort_by(|a, b| a.0.total_cmp(&b.0));
-    ranked
-        .into_iter()
-        .filter(|(v, _)| *v < 0.9)
-        .take(3)
-        .map(|(_, t)| t)
-        .collect()
+    ranked.into_iter().filter(|(v, _)| *v < 0.9).take(3).map(|(_, t)| t).collect()
 }
 
 #[cfg(test)]
@@ -208,7 +205,11 @@ mod tests {
 
     #[test]
     fn one_bad_rating_does_not_zero_a_new_partner() {
-        let one_bad = QualityInputs { rating_sum: 1, rating_count: 1, ..QualityInputs::default() };
+        let one_bad = QualityInputs {
+            rating_sum: 1,
+            rating_count: 1,
+            ..QualityInputs::default()
+        };
         let c = components(&one_bad);
         assert!(c.rating > 0.5, "smoothed rating should stay near prior, got {}", c.rating);
     }
@@ -220,13 +221,19 @@ mod tests {
 
     #[test]
     fn late_checkins_lower_the_score() {
-        let late = QualityInputs { checkins_on_time: 10, ..perfect() };
+        let late = QualityInputs {
+            checkins_on_time: 10,
+            ..perfect()
+        };
         assert!(score(&late) < score(&perfect()));
     }
 
     #[test]
     fn cancellations_and_complaints_lower_the_score() {
-        let cancels = QualityInputs { cancellations_or_no_shows: 12, ..perfect() };
+        let cancels = QualityInputs {
+            cancellations_or_no_shows: 12,
+            ..perfect()
+        };
         let complaints = QualityInputs { complaints: 12, ..perfect() };
         assert!(score(&cancels) < score(&perfect()));
         assert!(score(&complaints) < score(&perfect()));
@@ -252,10 +259,40 @@ mod tests {
     #[test]
     fn validate_rejects_impossible_counts() {
         assert!(perfect().validate().is_ok());
-        assert!(QualityInputs { rating_sum: 1, rating_count: 2, ..perfect() }.validate().is_err());
-        assert!(QualityInputs { rating_sum: 11, rating_count: 2, ..perfect() }.validate().is_err());
-        assert!(QualityInputs { jobs_completed: 41, ..perfect() }.validate().is_err());
-        assert!(QualityInputs { checkins_on_time: 41, ..perfect() }.validate().is_err());
+        assert!(
+            QualityInputs {
+                rating_sum: 1,
+                rating_count: 2,
+                ..perfect()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            QualityInputs {
+                rating_sum: 11,
+                rating_count: 2,
+                ..perfect()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            QualityInputs {
+                jobs_completed: 41,
+                ..perfect()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            QualityInputs {
+                checkins_on_time: 41,
+                ..perfect()
+            }
+            .validate()
+            .is_err()
+        );
     }
 
     #[test]
@@ -296,18 +333,41 @@ mod tests {
 
     #[test]
     fn thresholds_must_be_ordered() {
-        assert!(QualityThresholds { warning_below: 75, pause_below: 60 }.validate().is_ok());
-        assert!(QualityThresholds { warning_below: 50, pause_below: 60 }.validate().is_err());
-        assert!(QualityThresholds { warning_below: 101, pause_below: 60 }.validate().is_err());
+        assert!(
+            QualityThresholds {
+                warning_below: 75,
+                pause_below: 60
+            }
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            QualityThresholds {
+                warning_below: 50,
+                pause_below: 60
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            QualityThresholds {
+                warning_below: 101,
+                pause_below: 60
+            }
+            .validate()
+            .is_err()
+        );
     }
 
     #[test]
     fn tips_point_at_weakest_components() {
-        let late = QualityInputs { checkins_on_time: 0, ..perfect() };
+        let late = QualityInputs {
+            checkins_on_time: 0,
+            ..perfect()
+        };
         let t = tips(&components(&late));
         assert_eq!(t.first(), Some(&QualityTip::CheckInOnTime));
         assert!(t.len() <= 3);
         assert!(tips(&components(&perfect())).is_empty());
     }
-
 }

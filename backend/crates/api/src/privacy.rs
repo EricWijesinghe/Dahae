@@ -2,15 +2,17 @@
 //! deletion cascade. Consent rows are append-only evidence; the newest row per kind is the current state.
 
 use crate::{
+    crypto,
     error::{ApiError, ApiResult},
     providers::portone,
     state::AppState,
 };
 use axum::{Json, extract::State};
 use chrono::{DateTime, Utc};
+use domain::booking::BookingStatus;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 /// Version of the policy texts the customer agrees to (privacy, terms, overseas transfer notice, marketing, location terms).
@@ -117,14 +119,7 @@ pub async fn update_consents(db: &PgPool, user: Uuid, update: ConsentUpdate) -> 
     if update.consents.is_empty() || update.consents.len() > CONSENTS.len() {
         return Err(ApiError::BadRequest("invalid_consents"));
     }
-    for c in &update.consents {
-        if !CONSENTS.iter().any(|(k, _)| *k == c.kind) {
-            return Err(ApiError::BadRequest("invalid_consent_kind"));
-        }
-        if c.version != CONSENT_VERSION {
-            return Err(ApiError::BadRequest("stale_consent_version"));
-        }
-    }
+    check_kinds_and_versions(&update.consents)?;
     let mut rows = latest(db, user).await?;
     for c in &update.consents {
         rows.retain(|r| r.kind != c.kind);
@@ -141,17 +136,56 @@ pub async fn update_consents(db: &PgPool, user: Uuid, update: ConsentUpdate) -> 
         return Err(ApiError::BadRequest("required_consent"));
     }
     let mut tx = db.begin().await?;
-    for c in &update.consents {
+    insert_rows(&mut tx, user, &update.consents).await?;
+    tx.commit().await?;
+    consent_state(db, user).await
+}
+
+/// Every change names a known kind and the current policy version, each kind at most once.
+fn check_kinds_and_versions(consents: &[ConsentChange]) -> ApiResult<()> {
+    for (i, c) in consents.iter().enumerate() {
+        if !CONSENTS.iter().any(|(k, _)| *k == c.kind) {
+            return Err(ApiError::BadRequest("invalid_consent_kind"));
+        }
+        if c.version != CONSENT_VERSION {
+            return Err(ApiError::BadRequest("stale_consent_version"));
+        }
+        if consents[..i].iter().any(|p| p.kind == c.kind) {
+            return Err(ApiError::BadRequest("duplicate_consent_kind"));
+        }
+    }
+    Ok(())
+}
+
+/// Signup must grant every required consent for the current policy version. Optional ones may be unticked.
+pub fn check_signup_consents(consents: &[ConsentChange]) -> ApiResult<()> {
+    check_kinds_and_versions(consents)?;
+    let missing = CONSENTS
+        .iter()
+        .any(|(k, required)| *required && !consents.iter().any(|c| c.kind == *k && c.granted));
+    if missing {
+        return Err(ApiError::BadRequest("required_consent"));
+    }
+    Ok(())
+}
+
+/// Records a new customer's consents inside the signup transaction, so a refused signup leaves no account.
+pub async fn record_signup(tx: &mut Transaction<'_, Postgres>, user: Uuid, consents: &[ConsentChange]) -> ApiResult<()> {
+    check_signup_consents(consents)?;
+    insert_rows(tx, user, consents).await
+}
+
+async fn insert_rows(tx: &mut Transaction<'_, Postgres>, user: Uuid, consents: &[ConsentChange]) -> ApiResult<()> {
+    for c in consents {
         sqlx::query("INSERT INTO user_consents (user_id, kind, version, granted) VALUES ($1,$2,$3,$4)")
             .bind(user)
             .bind(&c.kind)
             .bind(&c.version)
             .bind(c.granted)
-            .execute(&mut *tx)
+            .execute(&mut **tx)
             .await?;
     }
-    tx.commit().await?;
-    consent_state(db, user).await
+    Ok(())
 }
 
 pub async fn get_consents(State(s): State<AppState>, crate::auth::Customer(a): crate::auth::Customer) -> ApiResult<Json<ConsentState>> {
@@ -194,7 +228,7 @@ pub async fn export(State(s): State<AppState>, crate::auth::Customer(a): crate::
 /// Deletes the customer's gateway keys (saved cards) before personal data is removed. Fails closed:
 /// if the gateway refuses, nothing is anonymised and the customer can retry.
 async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
-    let keys: Vec<String> = sqlx::query_scalar("SELECT billing_key FROM payment_methods WHERE user_id = $1 AND billing_key <> ''")
+    let keys: Vec<(Uuid, String)> = sqlx::query_as("SELECT id, billing_key FROM payment_methods WHERE user_id = $1 AND billing_key <> ''")
         .bind(user)
         .fetch_all(&s.db)
         .await?;
@@ -208,8 +242,12 @@ async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
         tracing::warn!(%user, count = keys.len(), "billing keys cannot be deleted: PortOne API secret not configured");
         return Err(ApiError::Unavailable("billing_key_delete_failed"));
     }
-    for key in &keys {
-        portone::delete_billing_key(&s.providers, key)
+    for (id, stored) in &keys {
+        let Some(key) = crypto::open_billing_key(&s.config.data_key, stored) else {
+            tracing::error!(%user, payment_method = %id, "saved-card billing key cannot be opened: account deletion blocked");
+            return Err(ApiError::Unavailable("billing_key_delete_failed"));
+        };
+        portone::delete_billing_key(&s.providers, &key)
             .await
             .map_err(|_| ApiError::Unavailable("billing_key_delete_failed"))?;
     }
@@ -222,129 +260,22 @@ async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
 /// waitlist places. Kept for legal retention, linked only to the anonymised row: bookings, payments, paid
 /// checkouts, tips, cash receipts, tax invoice requests and payouts (전자상거래법 5년, 부가가치세법), review ratings,
 /// the consent log (proof of consent), chat text with the sender unlinked (분쟁 처리), and a referral's phone only
-/// as a keyed digest (`crypto::phone_digest`) so the one-reward-per-phone rule still holds. Safe to run twice.
+/// as a keyed digest (`crypto::phone_digest`) so the one-reward-per-phone rule still holds. A finished booking
+/// also loses its street address, answers, visit notes and household (`pseudonymise_closed_bookings`). Safe to run twice.
 pub async fn delete_account(s: &AppState, user: Uuid) -> ApiResult<()> {
     delete_billing_keys(s, user).await?;
     let mut tx = s.db.begin().await?;
     let links = crate::providers::social::links(&mut tx, &s.config.data_key, "customer", user).await?;
-    // Login codes are keyed by phone, so they go before the phone is wiped.
-    sqlx::query("DELETE FROM otp_codes WHERE phone = (SELECT phone FROM users WHERE id = $1)")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    let anonymised = sqlx::query(
-        "UPDATE users SET deleted_at = now(), name = '', email = NULL, phone = 'deleted:' || id::text, ci_hash = NULL,
-         identity_verified_at = NULL, referral_code = NULL, acquisition = NULL WHERE id = $1 AND deleted_at IS NULL",
-    )
-    .bind(user)
-    .execute(&mut *tx)
-    .await?;
     // Already anonymised (a replayed Apple notification, or a concurrent deletion that committed first): nothing
     // left to do, so roll back instead of repeating the cascade. Replays must succeed, so this is Ok, not an error.
-    if anonymised.rows_affected() == 0 {
+    if !anonymise_user_row(&mut tx, user).await? {
         return Ok(());
     }
-    let referral_phone: Option<String> =
-        sqlx::query_scalar("SELECT referred_phone FROM referrals WHERE referred_user_id = $1 AND referred_phone NOT LIKE 'hmac:%' FOR UPDATE")
-            .bind(user)
-            .fetch_optional(&mut *tx)
-            .await?;
-    if let Some(phone) = referral_phone {
-        sqlx::query("UPDATE referrals SET referred_phone = $2 WHERE referred_user_id = $1")
-            .bind(user)
-            .bind(crate::crypto::phone_digest(&s.config.data_key, &phone))
-            .execute(&mut *tx)
-            .await?;
-    }
-    // Provider ids and emails; their stored refresh tokens go with them (ON DELETE CASCADE).
-    sqlx::query("DELETE FROM user_identities WHERE role = 'customer' AND subject_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query(
-        "UPDATE subscriptions SET status = 'cancelled', paused_reason = NULL, cancelled_at = now(), updated_at = now()
-         WHERE user_id = $1 AND status <> 'cancelled'",
-    )
-    .bind(user)
-    .execute(&mut *tx)
-    .await?;
-    sqlx::query(
-        "UPDATE subscription_visits SET state = 'cancelled', updated_at = now()
-         WHERE state = 'planned' AND subscription_id IN (SELECT id FROM subscriptions WHERE user_id = $1)",
-    )
-    .bind(user)
-    .execute(&mut *tx)
-    .await?;
-    let offered: Vec<(chrono::NaiveDate, i16)> =
-        sqlx::query_as("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'offered' RETURNING visit_date, start_hour")
-            .bind(user)
-            .fetch_all(&mut *tx)
-            .await?;
-    sqlx::query("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'waiting'")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    // The booking request snapshot holds the address and notes.
-    sqlx::query("UPDATE waitlist_entries SET body = '{}'::jsonb WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    // Unsettled checkouts may still be paid (late deposit), so their draft stays until retention clears it.
-    sqlx::query(
-        "UPDATE checkouts SET draft = NULL, virtual_account = NULL
-         WHERE user_id = $1 AND status IN ('failed','cancelled','refunded') AND (draft IS NOT NULL OR virtual_account IS NOT NULL)",
-    )
-    .bind(user)
-    .execute(&mut *tx)
-    .await?;
-    // Ratings stay for the partner's score; the customer's words and photos go.
-    sqlx::query("UPDATE reviews SET body = '', photos = '[]'::jsonb WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    // A subscription references its address, so that row is emptied instead of deleted.
-    sqlx::query("UPDATE addresses SET label = '', road_address = '', detail = '', deleted_at = COALESCE(deleted_at, now()) WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM addresses a WHERE a.user_id = $1 AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.address_id = a.id)")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("UPDATE payment_methods SET deleted_at = COALESCE(deleted_at, now()), billing_key = '', display_name = '' WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM identity_sessions WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM billing_issues WHERE user_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM push_tokens WHERE owner_role = 'customer' AND owner_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM notifications WHERE owner_role = 'customer' AND owner_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    // Undelivered notifications go too, or a retry would write a new inbox row after the deletion.
-    sqlx::query("DELETE FROM notification_outbox WHERE owner_role = 'customer' AND owner_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1 AND revoked_at IS NULL")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
-    // Threads keep their user_id: chat_threads_check requires it for customer threads, and the anonymised user row holds no contact data.
-    sqlx::query("UPDATE chat_messages SET sender_id = NULL WHERE sender = 'customer' AND sender_id = $1")
-        .bind(user)
-        .execute(&mut *tx)
-        .await?;
+    pseudonymise_referral_phone(&mut tx, s, user).await?;
+    remove_sign_in_and_devices(&mut tx, user).await?;
+    let offered = end_commitments(&mut tx, user).await?;
+    clear_customer_content(&mut tx, user).await?;
+    pseudonymise_closed_bookings(&mut *tx, Some(user)).await?;
     tx.commit().await?;
     // Network and disk work after commit: no row lock is held across it.
     crate::providers::social::unlink(&s.providers, "customer", user, links).await;
@@ -358,6 +289,171 @@ pub async fn delete_account(s: &AppState, user: Uuid) -> ApiResult<()> {
         .await;
     }
     Ok(())
+}
+
+/// Clears the login codes and the contact data on the user row. Returns false when the row was already anonymised.
+async fn anonymise_user_row(tx: &mut Transaction<'_, Postgres>, user: Uuid) -> ApiResult<bool> {
+    // Login codes are keyed by phone, so they go before the phone is wiped.
+    sqlx::query("DELETE FROM otp_codes WHERE phone = (SELECT phone FROM users WHERE id = $1)")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    let anonymised = sqlx::query(
+        "UPDATE users SET deleted_at = now(), name = '', email = NULL, phone = 'deleted:' || id::text, ci_hash = NULL,
+         identity_verified_at = NULL, referral_code = NULL, acquisition = NULL WHERE id = $1 AND deleted_at IS NULL",
+    )
+    .bind(user)
+    .execute(&mut **tx)
+    .await?;
+    Ok(anonymised.rows_affected() > 0)
+}
+
+/// A referral keeps one-reward-per-phone only as a keyed digest, so the plain phone is replaced by it.
+async fn pseudonymise_referral_phone(tx: &mut Transaction<'_, Postgres>, s: &AppState, user: Uuid) -> ApiResult<()> {
+    let referral_phone: Option<String> =
+        sqlx::query_scalar("SELECT referred_phone FROM referrals WHERE referred_user_id = $1 AND referred_phone NOT LIKE 'hmac:%' FOR UPDATE")
+            .bind(user)
+            .fetch_optional(&mut **tx)
+            .await?;
+    if let Some(phone) = referral_phone {
+        sqlx::query("UPDATE referrals SET referred_phone = $2 WHERE referred_user_id = $1")
+            .bind(user)
+            .bind(crate::crypto::phone_digest(&s.config.data_key, &phone))
+            .execute(&mut **tx)
+            .await?;
+    }
+    Ok(())
+}
+
+/// Sign-in identities, sessions, devices, notifications and refresh tokens. Undelivered notifications go too,
+/// or a retry would write a new inbox row after the deletion.
+async fn remove_sign_in_and_devices(tx: &mut Transaction<'_, Postgres>, user: Uuid) -> ApiResult<()> {
+    // Provider ids and emails; their stored refresh tokens go with them (ON DELETE CASCADE).
+    sqlx::query("DELETE FROM user_identities WHERE role = 'customer' AND subject_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM identity_sessions WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM billing_issues WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM push_tokens WHERE owner_role = 'customer' AND owner_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM notifications WHERE owner_role = 'customer' AND owner_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM notification_outbox WHERE owner_role = 'customer' AND owner_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1 AND revoked_at IS NULL")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+}
+
+/// Ends subscriptions, planned visits and waitlist places. Returns the offered seats, which the caller re-offers
+/// once the transaction has committed.
+async fn end_commitments(tx: &mut Transaction<'_, Postgres>, user: Uuid) -> ApiResult<Vec<(chrono::NaiveDate, i16)>> {
+    sqlx::query(
+        "UPDATE subscriptions SET status = 'cancelled', paused_reason = NULL, cancelled_at = now(), updated_at = now()
+         WHERE user_id = $1 AND status <> 'cancelled'",
+    )
+    .bind(user)
+    .execute(&mut **tx)
+    .await?;
+    sqlx::query(
+        "UPDATE subscription_visits SET state = 'cancelled', updated_at = now()
+         WHERE state = 'planned' AND subscription_id IN (SELECT id FROM subscriptions WHERE user_id = $1)",
+    )
+    .bind(user)
+    .execute(&mut **tx)
+    .await?;
+    let offered: Vec<(chrono::NaiveDate, i16)> =
+        sqlx::query_as("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'offered' RETURNING visit_date, start_hour")
+            .bind(user)
+            .fetch_all(&mut **tx)
+            .await?;
+    sqlx::query("UPDATE waitlist_entries SET status = 'cancelled' WHERE user_id = $1 AND status = 'waiting'")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    // The booking request snapshot holds the address and notes.
+    sqlx::query("UPDATE waitlist_entries SET body = '{}'::jsonb WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    Ok(offered)
+}
+
+/// Customer-written text, photos, addresses, saved card labels and chat sender links.
+async fn clear_customer_content(tx: &mut Transaction<'_, Postgres>, user: Uuid) -> ApiResult<()> {
+    // Unsettled checkouts may still be paid (late deposit), so their draft stays until retention clears it.
+    sqlx::query(
+        "UPDATE checkouts SET draft = NULL, virtual_account = NULL
+         WHERE user_id = $1 AND status IN ('failed','cancelled','refunded') AND (draft IS NOT NULL OR virtual_account IS NOT NULL)",
+    )
+    .bind(user)
+    .execute(&mut **tx)
+    .await?;
+    // Ratings stay for the partner's score; the customer's words and photos go.
+    sqlx::query("UPDATE reviews SET body = '', photos = '[]'::jsonb WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    // A subscription references its address, so that row is emptied instead of deleted.
+    sqlx::query("UPDATE addresses SET label = '', road_address = '', detail = '', deleted_at = COALESCE(deleted_at, now()) WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM addresses a WHERE a.user_id = $1 AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.address_id = a.id)")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("UPDATE payment_methods SET deleted_at = COALESCE(deleted_at, now()), billing_key = '', billing_key_digest = NULL, display_name = '' WHERE user_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    // Threads keep their user_id: chat_threads_check requires it for customer threads, and the anonymised user row holds no contact data.
+    sqlx::query("UPDATE chat_messages SET sender_id = NULL WHERE sender = 'customer' AND sender_id = $1")
+        .bind(user)
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+}
+
+/// Finished bookings (completed or cancelled) of deleted customers lose the street address, the answers,
+/// the visit notes (entrance instructions) and the household profile. Amounts, dates, service code, status,
+/// the district and the size stay for the 전자상거래법 record. Answers become `{}` rather than NULL so a
+/// completed quote still reads as a quote to the partner. Open bookings are skipped: the visit and the
+/// quote-job payout rule still read them. Idempotent: a row is matched only while it still holds personal
+/// fields. `user` limits the sweep to one customer (account deletion); `None` sweeps all (`retention::purge`).
+pub(crate) async fn pseudonymise_closed_bookings<'c>(conn: impl sqlx::PgExecutor<'c>, user: Option<Uuid>) -> sqlx::Result<u64> {
+    let done = sqlx::query(
+        "UPDATE bookings SET
+           address = jsonb_build_object('district_code', district_code, 'size_pyeong', address -> 'size_pyeong', 'kind', address -> 'kind'),
+           answers = CASE WHEN answers IS NULL THEN NULL ELSE '{}'::jsonb END,
+           visit_notes = '{}'::jsonb, household = '{}'::jsonb
+         WHERE status IN ($1, $2)
+           AND (answers IS NOT NULL AND answers <> '{}'::jsonb OR address ->> 'road_address' IS NOT NULL
+                OR visit_notes <> '{}'::jsonb OR household <> '{}'::jsonb)
+           AND user_id IN (SELECT id FROM users WHERE deleted_at IS NOT NULL)
+           AND ($3::uuid IS NULL OR user_id = $3)",
+    )
+    .bind(BookingStatus::Completed.as_i16())
+    .bind(BookingStatus::Cancelled.as_i16())
+    .bind(user)
+    .execute(conn)
+    .await?;
+    Ok(done.rows_affected())
 }
 
 /// The customer's uploaded photos (review, chat, booking): file first, then its row, so a failed removal
@@ -462,4 +558,75 @@ async fn handle_apple_event(s: &AppState, n: &crate::providers::apple::Notificat
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn change(kind: &str, granted: bool) -> ConsentChange {
+        ConsentChange {
+            kind: kind.into(),
+            granted,
+            version: CONSENT_VERSION.into(),
+        }
+    }
+
+    fn required_set() -> Vec<ConsentChange> {
+        vec![change("terms", true), change("privacy", true), change("overseas_transfer", true)]
+    }
+
+    fn refusal(r: ApiResult<()>) -> Option<&'static str> {
+        match r {
+            Err(ApiError::BadRequest(code)) => Some(code),
+            Err(_) => Some("other"),
+            Ok(()) => None,
+        }
+    }
+
+    #[test]
+    fn signup_with_required_consents_passes_without_marketing() {
+        assert_eq!(refusal(check_signup_consents(&required_set())), None);
+    }
+
+    #[test]
+    fn signup_missing_any_required_consent_is_refused() {
+        for kind in ["terms", "privacy", "overseas_transfer"] {
+            let mut set = required_set();
+            set.retain(|c| c.kind != kind);
+            assert_eq!(refusal(check_signup_consents(&set)), Some("required_consent"), "missing {kind}");
+        }
+    }
+
+    #[test]
+    fn signup_with_a_required_consent_declined_is_refused() {
+        let mut set = required_set();
+        set[2].granted = false;
+        assert_eq!(refusal(check_signup_consents(&set)), Some("required_consent"));
+    }
+
+    #[test]
+    fn signup_with_stale_policy_version_is_refused() {
+        let mut set = required_set();
+        set[0].version = "1999-01-01".into();
+        assert_eq!(refusal(check_signup_consents(&set)), Some("stale_consent_version"));
+    }
+
+    #[test]
+    fn signup_with_unknown_or_repeated_kind_is_refused() {
+        let mut unknown = required_set();
+        unknown.push(change("ads_everywhere", true));
+        assert_eq!(refusal(check_signup_consents(&unknown)), Some("invalid_consent_kind"));
+
+        let mut repeated = required_set();
+        repeated.push(change("terms", false));
+        assert_eq!(refusal(check_signup_consents(&repeated)), Some("duplicate_consent_kind"));
+    }
+
+    #[test]
+    fn optional_marketing_granted_is_accepted_with_required() {
+        let mut set = required_set();
+        set.push(change("marketing", true));
+        assert_eq!(refusal(check_signup_consents(&set)), None);
+    }
 }

@@ -72,6 +72,10 @@ class TEn extends T {
   String get aiCapHint => 'Numbers only. Leave empty for the default.';
 
   @override
+  String get aiOutageBanner =>
+      'AI replies are having trouble connecting. Please answer chats directly.';
+
+  @override
   String get cAppLinkTitle => 'App links';
 
   @override
@@ -2910,6 +2914,10 @@ class TEn extends T {
       'This payment method isn\'t available right now.';
 
   @override
+  String get err_payment_methods_empty =>
+      'Keep at least one payment method on. With none on, customers can\'t pay.';
+
+  @override
   String get err_invalid_payment_method =>
       'That payment method can\'t be used. Choose another.';
 
@@ -2971,6 +2979,14 @@ class TEn extends T {
 
   @override
   String get err_job_not_started => 'Start the job first.';
+
+  @override
+  String get err_not_checked_in =>
+      'The arrival isn\'t recorded. Check in first, or give a reason.';
+
+  @override
+  String get err_override_reason_too_long =>
+      'Keep the reason to 200 characters or fewer.';
 
   @override
   String get err_job_not_active => 'This job isn\'t active.';
@@ -3950,6 +3966,9 @@ class TEn extends T {
   String get oRuleStuck => 'Payment not processed automatically';
 
   @override
+  String get oRuleMismatch => 'Payments differ from PortOne';
+
+  @override
   String get oRuleSocial => 'Social sign-in fails';
 
   @override
@@ -3960,6 +3979,16 @@ class TEn extends T {
 
   @override
   String get oRuleAuth => 'Suspicious sign-in activity';
+
+  @override
+  String get oRuleUnassigned =>
+      'Confirmed bookings with no pro for a long time';
+
+  @override
+  String get oRuleSameDayCancel => 'High same-day cancellations';
+
+  @override
+  String get oRuleTaxDeadline => 'VAT filing deadline approaching';
 
   @override
   String get oQuietHours => 'Quiet hours';
@@ -4076,6 +4105,50 @@ class TEn extends T {
 
   @override
   String get oJob_notify_outbox => 'Notification outbox';
+
+  @override
+  String get oFlowTitle => 'Booking flow (last 30 days)';
+
+  @override
+  String get oFlowUnavailable => 'Flow figures are unavailable right now';
+
+  @override
+  String get oFlowAssign => 'Median time to assign a pro';
+
+  @override
+  String oFlowAssignValue(String hours) {
+    return '$hours h';
+  }
+
+  @override
+  String get oFlowNoAssignYet => 'No assigned bookings yet';
+
+  @override
+  String get oFlowUnassigned => 'Bookings with no pro for over 24 h';
+
+  @override
+  String oFlowUnassignedValue(String count) {
+    return '$count';
+  }
+
+  @override
+  String get oFlowSameDay => 'Same-day cancellations today';
+
+  @override
+  String oFlowSameDayValue(String cancelled, String booked) {
+    return '$cancelled of $booked booked today';
+  }
+
+  @override
+  String get oFlowNoShow => 'No-show rate by service';
+
+  @override
+  String oFlowNoShowValue(String noShows, String bookings, String pct) {
+    return '$noShows of $bookings ($pct%)';
+  }
+
+  @override
+  String get oFlowNoBookings => 'No bookings';
 
   @override
   String get err_owner_exists => 'An owner is already set';
@@ -4530,6 +4603,13 @@ class TEn extends T {
   String get pChecklist => 'Checklist';
 
   @override
+  String get pCheckInReasonTitle => 'Why there is no arrival record';
+
+  @override
+  String get pCheckInReasonHint =>
+      'e.g. Could not tap arrival in the app (confirmed by phone)';
+
+  @override
   String get pCheck1 => 'All requested areas cleaned';
 
   @override
@@ -4876,6 +4956,14 @@ class TEn extends T {
   }
 
   @override
+  String get cgPeakFixedScope =>
+      'Apply surcharge to fixed-price and subscription visits';
+
+  @override
+  String get cgPeakFixedScopeHint =>
+      'When off, fixed-price and subscription visits are booked at the base price. Quotes always show the surcharge';
+
+  @override
   String get oFlags => 'Feature switches';
 
   @override
@@ -5035,6 +5123,229 @@ class TEn extends T {
 
   @override
   String get prqBy => 'Handled by';
+
+  @override
+  String get cPfTitle => 'Staff profile · verification';
+
+  @override
+  String get cPfTabChecklist => 'Verification checklist';
+
+  @override
+  String get cPfTabProfile => 'Profile';
+
+  @override
+  String get cPfChecklistHelp =>
+      'Every item must be ticked before the pro can be approved as active.';
+
+  @override
+  String get cPfItemIdentity => 'ID document checked';
+
+  @override
+  String get cPfItemTaxType => 'Tax type confirmed (business or wage income)';
+
+  @override
+  String get cPfItemExperience => 'Experience checked';
+
+  @override
+  String get cPfItemEmergency => 'Emergency contact confirmed';
+
+  @override
+  String get cPfLegacyNote =>
+      'Approved before checklists existed, so nothing is recorded yet. Check the items and save.';
+
+  @override
+  String get cPfIncomplete => 'Tick every checklist item before approving.';
+
+  @override
+  String get cPfSaveChecklist => 'Save checklist';
+
+  @override
+  String get cPfApprove => 'Approve as active';
+
+  @override
+  String get cPfPhoto => 'Photo';
+
+  @override
+  String get cPfPickPhoto => 'Upload photo';
+
+  @override
+  String get cPfBio => 'Bio';
+
+  @override
+  String get cPfEmployment => 'Employment type';
+
+  @override
+  String get cPfEmpFreelance => 'Freelance';
+
+  @override
+  String get cPfEmpEmployee => 'Employee';
+
+  @override
+  String get cPfEmpContract => 'Contract';
+
+  @override
+  String get cPfEmergency => 'Emergency contact';
+
+  @override
+  String get cPfEmergencyHelp =>
+      'Digits and hyphens only. Stored encrypted; every view is logged.';
+
+  @override
+  String get cPfHiredOn => 'Hire date';
+
+  @override
+  String get cPfNoDate => 'Not set';
+
+  @override
+  String get cPfPayee => 'Resident or business registration number';
+
+  @override
+  String get cPfPayeeHelp =>
+      'Used only for the 지급명세서 (payment statement). Stored encrypted. Enter it only after the partner consents. Every view is logged.';
+
+  @override
+  String cPfPayeeSaved(String masked) {
+    return 'On file: $masked';
+  }
+
+  @override
+  String get cPfPayeeReveal => 'Show full number (needs verification)';
+
+  @override
+  String get cPfPayeeRevealTitle => 'Identifier';
+
+  @override
+  String get cPfPayeeRevealBody =>
+      'This view is logged. It cannot be shown again after you close this.';
+
+  @override
+  String get err_invalid_payee_identifier =>
+      'Check the resident number (13 digits) or business number (10 digits).';
+
+  @override
+  String get cPfSaveProfile => 'Save profile';
+
+  @override
+  String get err_checklist_incomplete =>
+      'Tick every checklist item before approving.';
+
+  @override
+  String get err_invalid_checklist =>
+      'Checklist data is out of date. Reload the screen.';
+
+  @override
+  String get err_invalid_emergency_contact =>
+      'Emergency contact: digits and hyphens only, 30 characters at most.';
+
+  @override
+  String get err_invalid_employment_type =>
+      'Pick an employment type from the list.';
+
+  @override
+  String get err_invalid_photo =>
+      'Only photos uploaded here can be used. Upload the photo again.';
+
+  @override
+  String get err_invalid_bio => 'Keep the bio to 500 characters.';
+
+  @override
+  String get pQualityScore => 'Quality score';
+
+  @override
+  String get pQualityNone => 'No score yet. It appears once you have jobs';
+
+  @override
+  String get pQualityReadOnly =>
+      'Scores are recalculated regularly. This screen is read-only';
+
+  @override
+  String get pQualityOk => 'Good standing';
+
+  @override
+  String get pQualityWarning => 'Needs attention';
+
+  @override
+  String get pQualityPaused => 'Paused · no new jobs';
+
+  @override
+  String get pQualityOverridden => 'Pause lifted by operations';
+
+  @override
+  String get pQualityComponents => 'By category';
+
+  @override
+  String get pQualityRating => 'Customer rating';
+
+  @override
+  String get pQualityCompletion => 'Assigned jobs completed';
+
+  @override
+  String get pQualityOnTime => 'On-time arrival';
+
+  @override
+  String get pQualityReliability => 'Cancellations and no-shows';
+
+  @override
+  String get pQualityComplaints => 'Complaints';
+
+  @override
+  String get pQualityTips => 'Tips to improve';
+
+  @override
+  String get pTipImproveRating =>
+      'To raise ratings, check the finish carefully before you leave';
+
+  @override
+  String get pTipCompleteAssigned => 'Finish the jobs you accept';
+
+  @override
+  String get pTipCheckInOnTime => 'Check in on time when you arrive';
+
+  @override
+  String get pTipAvoidCancellations => 'Avoid cancellations and no-shows';
+
+  @override
+  String get pTipReduceComplaints => 'Reduce complaints';
+
+  @override
+  String get err_quality_paused =>
+      'This partner is paused for quality and cannot take jobs. Choose another partner.';
+
+  @override
+  String get err_training_required =>
+      'This partner has not finished required training. Choose a partner who has.';
+
+  @override
+  String get err_no_partner_available =>
+      'No partner is available for this job right now.';
+
+  @override
+  String get err_reassign_closed =>
+      'This job can no longer be reassigned. Check its status.';
+
+  @override
+  String get cQualityScore => 'Quality score';
+
+  @override
+  String get cQualityNone => 'No score yet';
+
+  @override
+  String get cQualityOk => 'Good';
+
+  @override
+  String get cQualityWarning => 'Warning';
+
+  @override
+  String get cQualityPaused => 'Paused';
+
+  @override
+  String get cQualityOverridden => 'Pause lifted';
+
+  @override
+  String get cQualityTips => 'Improvement tips';
+
+  @override
+  String get cQualityLastCalc => 'Calculated automatically';
 
   @override
   String get rnwTitle => 'Renewal calendar';
@@ -5260,6 +5571,9 @@ class TEn extends T {
   String get caseSave => 'Save';
 
   @override
+  String get err_schedule_overlap => 'You already have a job at this time';
+
+  @override
   String get rulesTab => 'Operating rules';
 
   @override
@@ -5367,6 +5681,10 @@ class TEn extends T {
   String get ruleQualityOnTimeGraceMin => 'On-time grace period (minutes)';
 
   @override
+  String get ruleTrainingGateEnabled =>
+      'Block job acceptance until partner training is complete';
+
+  @override
   String get ruleBackupStaleHours => 'Backup overdue after (hours)';
 
   @override
@@ -5377,6 +5695,18 @@ class TEn extends T {
 
   @override
   String get ruleDiskWarnPct => 'Disk free space yellow below (%)';
+
+  @override
+  String get ruleUnassignedAlertHours =>
+      'Alert when a booking has no pro for (hours)';
+
+  @override
+  String get ruleSameDayCancelAlertPct =>
+      'Same-day cancel rate alert above (%)';
+
+  @override
+  String get ruleTaxDeadlineRemindDays =>
+      'VAT reminder days before the filing day';
 
   @override
   String get ruleMaintenanceOn => 'Maintenance mode (blocks new bookings)';
@@ -5483,6 +5813,10 @@ class TEn extends T {
   @override
   String get cSetupPayMethodsHint =>
       'Turn the methods customers see on or off. Applies instantly.';
+
+  @override
+  String get cPayMethodNoKey =>
+      'This payment channel is not connected yet, so customers can\'t see it. Ask whoever manages your setup.';
 
   @override
   String get cReviewTitle => 'Store review demo account';
@@ -5744,6 +6078,18 @@ class TEn extends T {
       'Copy this payment method\'s channel key from the PortOne console';
 
   @override
+  String get sgConsentHint =>
+      'Agree to the required items to get a verification code.';
+
+  @override
+  String get err_required_consent =>
+      'Please agree to all required terms to sign up';
+
+  @override
+  String get sgOverseasNote =>
+      'This consent is needed to use the service, so it cannot be withdrawn. Without it you cannot sign up.';
+
+  @override
   String get cStaffInvite => 'Invite staff';
 
   @override
@@ -5880,6 +6226,23 @@ class TEn extends T {
   @override
   String get cStaffResetBody =>
       'This code works once, for 24 hours. Once the staff member sets a password, they are signed out everywhere.';
+
+  @override
+  String get cStepUpTitle => 'Confirm with your authenticator';
+
+  @override
+  String get cStepUpBody =>
+      'This action needs a 6-digit code from your authenticator app. Once confirmed, it stays unlocked for 5 minutes.';
+
+  @override
+  String get cStepUpConfirm => 'Confirm and continue';
+
+  @override
+  String get cStepUpCancel => 'Cancel';
+
+  @override
+  String get err_stepup_required =>
+      'This action needs a fresh authenticator code. Confirm it, then try again.';
 
   @override
   String get subTitle => 'Regular cleaning';
@@ -6021,6 +6384,16 @@ class TEn extends T {
 
   @override
   String get tExportTaxInvoices => 'Tax invoice upload CSV';
+
+  @override
+  String get tReExport => 'Export again';
+
+  @override
+  String get tReExportTitle => 'Export again';
+
+  @override
+  String get tReExportConfirm =>
+      'Downloads the already exported tax invoice requests again. Use only if the file was lost or damaged.';
 
   @override
   String get tTaxLayoutNote =>

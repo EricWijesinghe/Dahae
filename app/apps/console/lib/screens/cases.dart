@@ -79,8 +79,13 @@ class _CaseQueueState extends State<CaseQueue> {
       _note.clear();
       if (mounted) setState(() => _open = d);
       await _load();
-    } catch (_) {
-      if (mounted) showToast(context, context.t.actionFailed);
+    } catch (e) {
+      if (mounted) {
+        showToast(
+          context,
+          e is ApiException ? context.t.error(e) : context.t.actionFailed,
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

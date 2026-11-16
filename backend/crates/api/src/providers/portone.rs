@@ -3,6 +3,9 @@
 
 use super::{IdentityInfo, PaymentInfo, ProviderError, Providers};
 use crate::config::PortOne;
+
+/// The refusal code for a cancel whose balance moved since our books were written. Retrying cannot succeed.
+pub const BALANCE_MOVED: &str = "cancellable_amount_changed";
 use base64::{Engine, engine::general_purpose::STANDARD};
 use hmac::{Hmac, Mac};
 use reqwest::{StatusCode, header::AUTHORIZATION};
@@ -77,9 +80,60 @@ pub async fn payment(p: &Providers, id: &str) -> Result<PaymentInfo, ProviderErr
         status: text(&v["status"]),
         // Missing amount reads as -1, which never matches a checkout: the payment gets refunded.
         total: v["amount"]["total"].as_i64().unwrap_or(-1),
+        cancelled: v["amount"]["cancelled"].as_i64().unwrap_or(-1),
         currency: text(&v["currency"]),
         method: v["method"].clone(),
     })
+}
+
+/// One payment from the daily list: what the reconciliation diff needs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProviderPayment {
+    pub id: String,
+    pub status: String,
+    pub total: i64,
+}
+
+fn listed(item: &Value) -> Result<ProviderPayment, ProviderError> {
+    let id = item["id"].as_str().ok_or_else(|| ProviderError::Upstream("payment without id".into()))?;
+    let total = item["amount"]["total"]
+        .as_i64()
+        .ok_or_else(|| ProviderError::Upstream("payment without amount".into()))?;
+    Ok(ProviderPayment {
+        id: id.to_string(),
+        status: text(&item["status"]),
+        total,
+    })
+}
+
+/// One page of the store's payments created in `[from, until)` (RFC 3339), with the total count.
+/// A missing or malformed field fails the page rather than dropping that payment from the diff.
+pub async fn list_payments(p: &Providers, from: &str, until: &str, page: u32, size: u32) -> Result<(Vec<ProviderPayment>, i64), ProviderError> {
+    let integ = p.integ();
+    let store = integ.portone.store_id.as_deref().ok_or(ProviderError::NotConfigured("portone"))?;
+    let (page, size) = (page.to_string(), size.to_string());
+    let resp = p
+        .http()
+        .get(format!("{}/payments", p.portone_api()))
+        .query(&[
+            ("storeId", store),
+            ("from", from),
+            ("until", until),
+            ("pageNumber", page.as_str()),
+            ("pageSize", size.as_str()),
+        ])
+        .header(AUTHORIZATION, auth(p)?)
+        .send()
+        .await
+        .map_err(upstream)?;
+    let body = read_json(resp).await?;
+    let items = body["items"]
+        .as_array()
+        .ok_or_else(|| ProviderError::Upstream("payment list without items".into()))?;
+    let total = body["page"]["totalCount"]
+        .as_i64()
+        .ok_or_else(|| ProviderError::Upstream("payment list without totalCount".into()))?;
+    Ok((items.iter().map(listed).collect::<Result<_, _>>()?, total))
 }
 
 /// Full or partial cancellation of a PAID payment (used for refunds). With `cancellable`, PortOne only
@@ -119,7 +173,7 @@ async fn landed_before(p: &Providers, id: &str, expected_left: i64) -> Result<()
         tracing::warn!(payment = id, "cancel already applied at PortOne; recording it");
         Ok(())
     } else {
-        Err(ProviderError::Declined("cancellable_amount_changed".into()))
+        Err(ProviderError::Declined(BALANCE_MOVED.into()))
     }
 }
 
@@ -328,6 +382,7 @@ pub fn dev_payment(id: &str, total: i64) -> Option<PaymentInfo> {
     Some(PaymentInfo {
         status: status.into(),
         total,
+        cancelled: 0,
         currency: "KRW".into(),
         method,
     })

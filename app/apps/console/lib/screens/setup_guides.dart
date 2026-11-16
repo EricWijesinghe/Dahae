@@ -113,13 +113,13 @@ final guides = <String, Guide>{
       ),
     ],
     devHelp: true,
-    screenshots: const [
-      Tr('[결제 연동 → 식별코드 화면 캡처 자리]', '[Screenshot slot: Integration → IDs page]'),
-    ],
     fields: const {
       'store_id': FieldGuide(
         Tr('상점 아이디 (Store ID)', 'Store ID'),
-        hint: Tr('store-로 시작해요. PortOne 콘솔의 상점 정보에서 복사해요', 'Starts with store-. Copy it from the store info in the PortOne console'),
+        hint: Tr(
+          'store-로 시작해요. PortOne 콘솔의 상점 정보에서 복사해요',
+          'Starts with store-. Copy it from the store info in the PortOne console',
+        ),
       ),
       'cash_receipts': FieldGuide(
         Tr('현금영수증 발급', 'Issue cash receipts'),
@@ -130,7 +130,10 @@ final guides = <String, Guide>{
       ),
       'api_secret': FieldGuide(
         Tr('V2 API Secret', 'V2 API Secret'),
-        hint: Tr('PortOne 콘솔 연동 정보의 V2 API Secret을 복사해요', 'Copy the V2 API Secret from the PortOne console integration info'),
+        hint: Tr(
+          'PortOne 콘솔 연동 정보의 V2 API Secret을 복사해요',
+          'Copy the V2 API Secret from the PortOne console integration info',
+        ),
       ),
       'webhook_secret': FieldGuide(
         Tr('웹훅 시크릿', 'Webhook secret'),
@@ -138,7 +141,10 @@ final guides = <String, Guide>{
       ),
       'channel_keys': FieldGuide(
         Tr('결제수단별 채널 키', 'Channel key per payment method'),
-        hint: Tr('PortOne 콘솔 채널 관리에서 채널 키를 복사해요. 없는 칸은 비워 두세요', 'Copy each channel key from PortOne channel settings. Leave unused slots empty'),
+        hint: Tr(
+          'PortOne 콘솔 채널 관리에서 채널 키를 복사해요. 없는 칸은 비워 두세요',
+          'Copy each channel key from PortOne channel settings. Leave unused slots empty',
+        ),
         suggestions: paymentMethodKeys,
       ),
     },
@@ -193,7 +199,6 @@ final guides = <String, Guide>{
     title: (t) => t.cIntSolapi,
     site: 'https://console.solapi.com',
     devHelp: true,
-    screenshots: const [Tr('[화면 캡처 자리]', '[Screenshot slot]')],
     steps: const [
       Tr(
         'solapi.com 에 가입하고, [발신번호 관리] 에서 고객센터 번호를 등록해요. (통신서비스 이용증명원이 필요해요)',
@@ -258,7 +263,6 @@ final guides = <String, Guide>{
     title: (t) => t.cIntKakao,
     site: 'https://developers.kakao.com/console/app',
     devHelp: true,
-    screenshots: const [Tr('[화면 캡처 자리]', '[Screenshot slot]')],
     steps: const [
       Tr(
         'developers.kakao.com 에서 [내 애플리케이션] → [애플리케이션 추가하기] 를 눌러요.',
@@ -329,7 +333,6 @@ final guides = <String, Guide>{
     title: (t) => t.cIntApple,
     site: 'https://developer.apple.com/account/resources/identifiers/list',
     devHelp: true,
-    screenshots: const [Tr('[화면 캡처 자리]', '[Screenshot slot]')],
     steps: const [
       Tr(
         'developer.apple.com → [Identifiers] 에서 고객 앱과 파트너 앱의 App ID 에 "Sign in with Apple" 을 켜요.',
@@ -385,7 +388,6 @@ final guides = <String, Guide>{
     title: (t) => t.cIntPayout,
     site: 'https://www.tosspayments.com',
     devHelp: true,
-    screenshots: const [Tr('[화면 캡처 자리]', '[Screenshot slot]')],
     steps: const [
       Tr(
         '기본은 [직접 이체] 예요. 정산 화면에 계좌와 금액이 나오면 은행 앱으로 보내고 [이체 완료] 를 눌러요.',

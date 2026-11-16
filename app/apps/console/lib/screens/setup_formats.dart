@@ -9,9 +9,11 @@ String? formatError(String card, String field, String value) {
   if (v.isEmpty) return null;
   final ok = switch ((card, field)) {
     ('portone', 'store_id') => v.startsWith('store-') && !_space.hasMatch(v),
-    ('portone', 'api_secret') => !_space.hasMatch(v) && v.length >= 16 && v.length <= 200,
+    ('portone', 'api_secret') =>
+      !_space.hasMatch(v) && v.length >= 16 && v.length <= 200,
     ('portone', 'webhook_secret') => _webhookOk(v),
-    ('portone', 'channel_keys') => v.startsWith('channel-key-') && !_space.hasMatch(v),
+    ('portone', 'channel_keys') =>
+      v.startsWith('channel-key-') && !_space.hasMatch(v),
     ('payout', 'secret_key') => _tossSecret.hasMatch(v),
     ('payout', 'security_key') => _hex64.hasMatch(v),
     _ => true,
@@ -28,6 +30,7 @@ String? formatError(String card, String field, String value) {
 }
 
 final _space = RegExp(r'\s');
+
 /// The server decodes the part after `whsec_` as padded base64, so the same check runs here.
 bool _webhookOk(String v) {
   if (!v.startsWith('whsec_')) return false;
@@ -38,5 +41,6 @@ bool _webhookOk(String v) {
     return false;
   }
 }
+
 final _tossSecret = RegExp(r'^(test|live)_sk_\S+$');
 final _hex64 = RegExp(r'^[0-9a-fA-F]{64}$');

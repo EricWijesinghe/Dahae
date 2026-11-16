@@ -138,7 +138,9 @@ class _GroupFormState extends State<_GroupForm> {
           children: [
             for (final item in items)
               _RuleRow(
-                key: ValueKey('${item['key']}|${item['value']}|${item['source']}'),
+                key: ValueKey(
+                  '${item['key']}|${item['value']}|${item['source']}',
+                ),
                 item: item,
                 onChanged: (v) => _changed(item['key'] as String, v),
                 onReset: () => _reset(item['key'] as String),
@@ -200,10 +202,14 @@ class _RuleRowState extends State<_RuleRow> {
       'points_adjust_max' => t.rulePointsAdjustMax,
       'quality_window_days' => t.ruleQualityWindowDays,
       'quality_on_time_grace_min' => t.ruleQualityOnTimeGraceMin,
+      'training_gate_enabled' => t.ruleTrainingGateEnabled,
       'backup_stale_hours' => t.ruleBackupStaleHours,
       'backup_late_hours' => t.ruleBackupLateHours,
       'disk_low_pct' => t.ruleDiskLowPct,
       'disk_warn_pct' => t.ruleDiskWarnPct,
+      'unassigned_alert_hours' => t.ruleUnassignedAlertHours,
+      'same_day_cancel_alert_pct' => t.ruleSameDayCancelAlertPct,
+      'tax_deadline_remind_days' => t.ruleTaxDeadlineRemindDays,
       'maintenance_on' => t.ruleMaintenanceOn,
       'maintenance_message' => t.ruleMaintenanceMessage,
       _ => '$key',
@@ -257,7 +263,8 @@ class _RuleRowState extends State<_RuleRow> {
     final readOnly = item['read_only'] == true;
     final tighten = item['tighten'];
     final notes = [
-      if (item['type'] == 'int') '${t.rulesRange}: ${item['min']} – ${item['max']}',
+      if (item['type'] == 'int')
+        '${t.rulesRange}: ${item['min']} – ${item['max']}',
       if (item['type'] == 'text') '${t.rulesMaxLength}: ${item['max_length']}',
       if (tighten == 'down') t.rulesTightenDown,
       if (tighten == 'up') t.rulesTightenUp,

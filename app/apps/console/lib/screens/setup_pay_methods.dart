@@ -100,11 +100,14 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
                     height: 32,
                   ),
                   title: Text(t.payMethod(m['code'] as String)),
-                  subtitle: m['has_key'] == true
+                  subtitle: m['configured'] == true
                       ? null
+                      : m['enabled'] == true
+                      ? Text(t.cPayMethodNoKey, style: context.text.bodySmall)
                       : Text(t.cSetupNeedsKey),
                   value: m['enabled'] == true,
-                  onChanged: _busy || (m['has_key'] != true && m['enabled'] != true)
+                  onChanged:
+                      _busy || (m['configured'] != true && m['enabled'] != true)
                       ? null
                       : (v) => _toggle(m['code'] as String, v),
                 ),

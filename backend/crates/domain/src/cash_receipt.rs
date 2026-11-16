@@ -20,7 +20,11 @@ fn digits(raw: &str) -> String {
 /// 휴대폰번호 for 소득공제용: 01[016789] followed by 7 or 8 digits.
 pub fn normalize_phone(raw: &str) -> Result<String, DomainError> {
     let d = digits(raw);
-    let ok = d.len() >= 10 && d.len() <= 11 && d.starts_with("01") && d.bytes().all(|b| b.is_ascii_digit()) && matches!(d.as_bytes()[2], b'0' | b'1' | b'6' | b'7' | b'8' | b'9');
+    let ok = d.len() >= 10
+        && d.len() <= 11
+        && d.starts_with("01")
+        && d.bytes().all(|b| b.is_ascii_digit())
+        && matches!(d.as_bytes()[2], b'0' | b'1' | b'6' | b'7' | b'8' | b'9');
     if ok { Ok(d) } else { Err(DomainError::OutOfRange("phone")) }
 }
 
@@ -34,7 +38,11 @@ pub fn normalize_business_number(raw: &str) -> Result<String, DomainError> {
     const WEIGHTS: [u32; 9] = [1, 3, 7, 1, 3, 7, 1, 3, 5];
     let mut sum: u32 = (0..9).map(|i| v[i] * WEIGHTS[i]).sum();
     sum += v[8] * 5 / 10;
-    if (10 - sum % 10) % 10 == v[9] { Ok(d) } else { Err(DomainError::OutOfRange("business_number")) }
+    if (10 - sum % 10) % 10 == v[9] {
+        Ok(d)
+    } else {
+        Err(DomainError::OutOfRange("business_number"))
+    }
 }
 
 #[cfg(test)]

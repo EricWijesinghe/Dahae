@@ -63,7 +63,10 @@ async fn payment(State(g): State<Shared>, Path(id): Path<String>, h: HeaderMap) 
         c if c == total => "CANCELLED",
         _ => "PARTIAL_CANCELLED",
     };
-    (StatusCode::OK, Json(json!({ "status": status, "amount": { "total": total, "cancelled": cancelled }, "currency": "KRW", "method": {} })))
+    (
+        StatusCode::OK,
+        Json(json!({ "status": status, "amount": { "total": total, "cancelled": cancelled }, "currency": "KRW", "method": {} })),
+    )
 }
 
 async fn cancel(State(g): State<Shared>, Path(id): Path<String>, h: HeaderMap, Json(b): Json<Value>) -> Reply {
@@ -81,7 +84,10 @@ async fn cancel(State(g): State<Shared>, Path(id): Path<String>, h: HeaderMap, J
         return refused(StatusCode::CONFLICT, "CancelAmountExceedsCancellableAmountError");
     }
     entry.1 += amount;
-    (StatusCode::OK, Json(json!({ "cancellation": { "status": "SUCCEEDED", "id": "cancel-1", "totalAmount": amount } })))
+    (
+        StatusCode::OK,
+        Json(json!({ "cancellation": { "status": "SUCCEEDED", "id": "cancel-1", "totalAmount": amount } })),
+    )
 }
 
 async fn start_gateway() -> (String, Shared) {
@@ -153,7 +159,10 @@ async fn keys_checkout_signed_webhook_partial_refund_and_repeat_webhook(pool: Pg
         "channel_keys": { "card": "channel-key-e2e-card" },
         "webhook_secret": webhook_secret,
     });
-    let code = format!("{:06}", api::totp::code_at(seed, (chrono::Utc::now().timestamp() / api::totp::STEP_SECS) as u64));
+    let code = format!(
+        "{:06}",
+        api::totp::code_at(seed, (chrono::Utc::now().timestamp() / api::totp::STEP_SECS) as u64)
+    );
     let (st, saved) = common::call_owner(&prod, "PUT", "/v1/admin/setup/portone", &owner, Some(&code), keys).await;
     assert_eq!(st, StatusCode::OK, "{saved}");
 
@@ -164,7 +173,11 @@ async fn keys_checkout_signed_webhook_partial_refund_and_repeat_webhook(pool: Pg
     let (st, intent) = call(&prod, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(body)).await;
     assert_eq!(st, StatusCode::OK, "{intent}");
     let checkout: Uuid = intent["id"].as_str().expect("checkout id").parse().expect("uuid");
-    let amount: i64 = sqlx::query_scalar("SELECT amount FROM checkouts WHERE id = $1").bind(checkout).fetch_one(&pool).await.expect("amount");
+    let amount: i64 = sqlx::query_scalar("SELECT amount FROM checkouts WHERE id = $1")
+        .bind(checkout)
+        .fetch_one(&pool)
+        .await
+        .expect("amount");
     gateway.lock().expect("gateway").payments.insert(checkout.to_string(), (amount, 0));
     let (st, done) = call(
         &prod,
@@ -185,18 +198,36 @@ async fn keys_checkout_signed_webhook_partial_refund_and_repeat_webhook(pool: Pg
     let (_, preview) = call(&prod, "GET", &format!("/v1/bookings/{booking}/cancel-preview"), tok, None).await;
     let fee = preview["fee"].as_i64().expect("fee");
     assert!(fee > 0, "a two-day-out cancel keeps a fee: {preview}");
-    let (st, cancelled) = call(&prod, "POST", &format!("/v1/bookings/{booking}/cancel"), tok, Some(json!({ "accepted_fee": fee }))).await;
+    let (st, cancelled) = call(
+        &prod,
+        "POST",
+        &format!("/v1/bookings/{booking}/cancel"),
+        tok,
+        Some(json!({ "accepted_fee": fee })),
+    )
+    .await;
     assert_eq!(st, StatusCode::OK, "{cancelled}");
     let refund = amount - fee;
     let sent = gateway.lock().expect("gateway").cancels.clone();
     assert_eq!(sent.len(), 1, "one provider cancel: {sent:?}");
     assert_eq!(sent[0]["amount"].as_i64(), Some(refund), "the refund is the amount after the fee");
-    let refunded: i64 = sqlx::query_scalar("SELECT refunded_amount FROM payments WHERE booking_id = $1").bind(booking).fetch_one(&pool).await.expect("refunded");
+    let refunded: i64 = sqlx::query_scalar("SELECT refunded_amount FROM payments WHERE booking_id = $1")
+        .bind(booking)
+        .fetch_one(&pool)
+        .await
+        .expect("refunded");
     assert_eq!(refunded, refund, "our ledger records the same partial refund");
 
     // 5. PortOne reports that partial cancel back, signed. The refund is not booked twice.
-    assert_eq!(signed_webhook(&prod, "Transaction.PartialCancelled", &checkout.to_string()).await, StatusCode::OK);
-    let again: i64 = sqlx::query_scalar("SELECT refunded_amount FROM payments WHERE booking_id = $1").bind(booking).fetch_one(&pool).await.expect("refunded");
+    assert_eq!(
+        signed_webhook(&prod, "Transaction.PartialCancelled", &checkout.to_string()).await,
+        StatusCode::OK
+    );
+    let again: i64 = sqlx::query_scalar("SELECT refunded_amount FROM payments WHERE booking_id = $1")
+        .bind(booking)
+        .fetch_one(&pool)
+        .await
+        .expect("refunded");
     assert_eq!(again, refund, "the PartialCancelled webhook moves no money");
     assert_eq!(gateway.lock().expect("gateway").cancels.len(), 1, "no second provider cancel");
 }

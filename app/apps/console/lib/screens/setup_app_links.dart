@@ -122,6 +122,8 @@ class _AppLinksFormState extends State<_AppLinksForm> {
               OutlinedButton(onPressed: _check, child: Text(t.cAppLinkCheck)),
               const SizedBox(width: Space.sm),
               FilledButton(
+                // The theme's full-width minimum cannot lay out inside a Row.
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
                 onPressed: !context.console.isAdmin ? null : _save,
                 child: Text(t.save),
               ),
@@ -154,7 +156,8 @@ class _CheckResult extends StatelessWidget {
           ios ? t.cAppLinkIosOn : t.cAppLinkIosOff,
           style: context.text.bodyMedium,
         ),
-        if (!android || !ios) Text(t.cAppLinkNone, style: context.text.bodySmall),
+        if (!android || !ios)
+          Text(t.cAppLinkNone, style: context.text.bodySmall),
         Text(t.cAppLinkChecked, style: context.text.bodySmall),
       ],
     );

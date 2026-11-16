@@ -85,10 +85,12 @@ class Session extends ChangeNotifier {
   }
 
   /// Returns true for a brand-new account (show the profile step).
+  /// [consents] are the signup answers (customer app); a new customer account needs every required one.
   Future<bool> verifyOtp(
     String phone,
     String code, {
     required String audience,
+    List<Map<String, dynamic>> consents = const [],
   }) async {
     final r =
         await api.post('/auth/verify', {
@@ -96,6 +98,7 @@ class Session extends ChangeNotifier {
               'code': code,
               'audience': audience,
               'attribution': Attribution.get(),
+              'consents': consents,
             })
             as Map<String, dynamic>;
     await save(r);

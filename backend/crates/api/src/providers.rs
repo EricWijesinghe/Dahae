@@ -13,6 +13,7 @@ pub mod toss_webhook;
 
 use crate::{
     config::Config,
+    crypto,
     error::ApiError,
     integrations::{Integrations, PayoutMode},
     ops,
@@ -64,6 +65,8 @@ pub const FAKE_DECLINE_KEY: &str = "fake_decline";
 pub struct PaymentInfo {
     pub status: String,
     pub total: i64,
+    /// Amount the provider has taken back so far (-1 when it reports none).
+    pub cancelled: i64,
     pub currency: String,
     /// Provider's method object; for virtual accounts it carries the account details.
     pub method: Value,
@@ -169,7 +172,8 @@ impl Providers {
         &self.http
     }
 
-    fn dev(&self) -> bool {
+    /// Dev mode: every provider call is answered by the in-process fake, so no PortOne keys are needed.
+    pub fn dev(&self) -> bool {
         self.cfg.dev_mode
     }
 
@@ -237,10 +241,14 @@ impl Providers {
     }
 
     /// Charges a saved PortOne billing key once (subscription visits, booking payments, tips).
-    /// Dev mode fakes it; `FAKE_DECLINE_KEY` declines.
-    pub async fn charge_billing(&self, billing_key: &str, amount: i64, payment_id: &str, order: &str, customer: Uuid) -> Result<String, ProviderError> {
+    /// Takes the stored (sealed) key and opens it first. Dev mode fakes it; `FAKE_DECLINE_KEY` declines.
+    pub async fn charge_billing(&self, stored_key: &str, amount: i64, payment_id: &str, order: &str, customer: Uuid) -> Result<String, ProviderError> {
+        let Some(billing_key) = crypto::open_billing_key(&self.cfg.data_key, stored_key) else {
+            tracing::error!(%customer, payment_id, "saved-card billing key cannot be opened: charge refused");
+            return Err(ProviderError::Declined("billing_key_unreadable".into()));
+        };
         if !self.dev() {
-            let charged = portone::charge_billing(self, billing_key, payment_id, amount, order, customer).await;
+            let charged = portone::charge_billing(self, &billing_key, payment_id, amount, order, customer).await;
             self.observe("portone", outcome(&charged)).await;
             return charged;
         }

@@ -4,12 +4,14 @@
 
 use crate::{
     error::{ApiError, ApiResult},
+    quality,
     realtime::{Recipient, notify},
     routes::{
         bookings::load_booking,
         cases::{self, NewCase},
         partner_jobs::VISIBLE,
     },
+    schedule::{clash, lock_schedule},
     settings_registry,
     state::AppState,
     util::{KST_TODAY, best_effort, today_kst},
@@ -118,30 +120,26 @@ pub async fn reassign(s: &AppState, booking: Uuid, coupon: i64) -> ApiResult<Uui
         return Err(ApiError::Conflict("reassign_closed"));
     }
     let assigned = BookingStatus::TeamAssigned.as_i16();
-    let next: Option<Uuid> = sqlx::query_scalar(&format!(
-        "SELECT p.id FROM bookings b, pros p JOIN partner_prefs pp ON pp.pro_id = p.id
-         WHERE b.id = $1 AND p.id IS DISTINCT FROM b.pro_id AND {VISIBLE}
-           AND NOT EXISTS (SELECT 1 FROM bookings x WHERE x.pro_id = p.id AND x.visit_date = b.visit_date AND x.start_hour = b.start_hour AND x.status = {assigned})
-         ORDER BY (SELECT count(*) FROM bookings x WHERE x.pro_id = p.id AND x.visit_date = b.visit_date), p.id
-         LIMIT 1"
-    ))
-    .bind(booking)
-    .fetch_optional(&s.db)
-    .await?;
-    let next = next.ok_or(ApiError::Conflict("no_partner_available"))?;
+    let next = pick_partner(s, booking).await?;
+    let mut tx = s.db.begin().await?;
+    lock_schedule(&mut tx, next).await?;
     let moved = sqlx::query(&format!(
         "UPDATE bookings SET pro_id = $2, assignee_id = (SELECT id FROM team_members WHERE pro_id = $2 AND role = 'owner'), accepted_at = now(), updated_at = now()
-         WHERE id = $1 AND status = {assigned} AND checked_in_at IS NULL AND pro_id IS NOT DISTINCT FROM $3"
+         WHERE id = $1 AND status = {assigned} AND checked_in_at IS NULL AND pro_id IS NOT DISTINCT FROM $3
+           AND NOT EXISTS (SELECT 1 FROM bookings o WHERE o.pro_id = $2 AND {})
+           AND NOT EXISTS (SELECT 1 FROM partner_quality q WHERE q.pro_id = $2 AND q.status = 'paused')",
+        clash("bookings")
     ))
     .bind(booking)
     .bind(next)
     .bind(b.pro_id)
-    .execute(&s.db)
+    .execute(&mut *tx)
     .await?
     .rows_affected();
     if moved == 0 {
         return Err(ApiError::Conflict("reassign_closed"));
     }
+    tx.commit().await?;
     if coupon > 0 {
         sqlx::query(
             "INSERT INTO coupons (user_id, name, amount, campaign, issued_at, expires_at)
@@ -193,4 +191,36 @@ pub async fn reassign(s: &AppState, booking: Uuid, coupon: i64) -> ApiResult<Uui
     .await;
     s.hub.send(Recipient::Staff, "booking.updated", json!({ "booking_id": booking }));
     Ok(next)
+}
+
+/// First candidate (fewest jobs that day) who passes the same offer gate as accepting a job: not
+/// quality-paused and, when the owner requires it, trained. When nobody passes, staff get the most
+/// specific reason: a pause beats missing training, and no matching free partner is the fallback.
+async fn pick_partner(s: &AppState, booking: Uuid) -> ApiResult<Uuid> {
+    let candidates: Vec<Uuid> = sqlx::query_scalar(&format!(
+        "SELECT p.id FROM bookings b, pros p JOIN partner_prefs pp ON pp.pro_id = p.id
+         WHERE b.id = $1 AND p.id IS DISTINCT FROM b.pro_id AND {VISIBLE}
+           AND NOT EXISTS (SELECT 1 FROM bookings o WHERE o.pro_id = p.id AND {})
+         ORDER BY (SELECT count(*) FROM bookings x WHERE x.pro_id = p.id AND x.visit_date = b.visit_date), p.id",
+        clash("b")
+    ))
+    .bind(booking)
+    .fetch_all(&s.db)
+    .await?;
+    let mut reason: Option<&'static str> = None;
+    for pro in candidates {
+        match quality::check_offer_gate(s, pro).await {
+            Ok(()) => return Ok(pro),
+            Err(ApiError::Conflict(code)) => reason = Some(stricter(reason, code)),
+            Err(e) => return Err(e),
+        }
+    }
+    Err(ApiError::Conflict(reason.unwrap_or("no_partner_available")))
+}
+
+fn stricter(current: Option<&'static str>, next: &'static str) -> &'static str {
+    match current {
+        Some("quality_paused") => "quality_paused",
+        _ => next,
+    }
 }

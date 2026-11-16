@@ -255,10 +255,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
           ..._guide.fields[name]?.suggestions ?? const <String>[],
           ...saved.keys,
         };
-        _map[name] = {
-          for (final k in keys)
-            k: TextEditingController(),
-        };
+        _map[name] = {for (final k in keys) k: TextEditingController()};
       } else if (kind == 'toggle') {
         _toggles[name] = f['set'] == true ? preview == true : null;
       } else {
@@ -404,7 +401,9 @@ class _IntegrationCardState extends State<IntegrationCard> {
   Future<void> _unlock() => _run(() async {
     final code = await askOwnerCode(context);
     if (code == null || !mounted) return;
-    await context.api.post('/admin/setup/$_code/unlock', null, null, {ownerTotpHeader: code});
+    await context.api.post('/admin/setup/$_code/unlock', null, null, {
+      ownerTotpHeader: code,
+    });
     widget.onChanged();
   });
 
@@ -475,7 +474,9 @@ class _IntegrationCardState extends State<IntegrationCard> {
                 if (mode != null)
                   Tag(
                     label: mode == 'live' ? t.cSetupModeLive : t.cSetupModeTest,
-                    hue: mode == 'live' ? StatusHues.assigned : StatusHues.consultation,
+                    hue: mode == 'live'
+                        ? StatusHues.assigned
+                        : StatusHues.consultation,
                   ),
               ],
             ),
@@ -506,7 +507,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
                       _code == 'portone' ? t.cSetupTestApiKey : t.cSetupTest,
                     ),
                   ),
-                if (widget.card['locked'] == true && widget.card['source'] == 'console')
+                if (widget.card['locked'] == true &&
+                    widget.card['source'] == 'console')
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _unlock,
                     icon: const Icon(Icons.lock_open_rounded),
@@ -544,7 +546,9 @@ class _IntegrationCardState extends State<IntegrationCard> {
     final shown = _revealed.contains(name);
     return IconButton(
       tooltip: shown ? t.cSetupHide : t.cSetupShow,
-      icon: Icon(shown ? Icons.visibility_off_rounded : Icons.visibility_rounded),
+      icon: Icon(
+        shown ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+      ),
       onPressed: () {
         setState(() => shown ? _revealed.remove(name) : _revealed.add(name));
       },
@@ -682,7 +686,10 @@ class _Steps extends StatelessWidget {
             child: Chip(
               avatar: const Icon(Icons.engineering_rounded, size: 18),
               label: Text(
-                const Tr('개발자 첫 도움 필요', 'Needs a developer the first time').of(context.lang),
+                const Tr(
+                  '개발자 첫 도움 필요',
+                  'Needs a developer the first time',
+                ).of(context.lang),
               ),
             ),
           ),
@@ -758,14 +765,20 @@ class HeartbeatCard extends StatelessWidget {
     return AppCard(
       child: Row(
         children: [
-          Icon(configured ? Icons.favorite_rounded : Icons.heart_broken_rounded, color: color),
+          Icon(
+            configured ? Icons.favorite_rounded : Icons.heart_broken_rounded,
+            color: color,
+          ),
           const SizedBox(width: Space.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(t.oHeartbeat, style: context.text.titleSmall),
-                Text(configured ? t.oHeartbeatOn : t.oHeartbeatOff, style: context.text.bodySmall),
+                Text(
+                  configured ? t.oHeartbeatOn : t.oHeartbeatOff,
+                  style: context.text.bodySmall,
+                ),
               ],
             ),
           ),

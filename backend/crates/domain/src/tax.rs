@@ -4,6 +4,7 @@
 use crate::finance::{self, Cell};
 use crate::{DomainError, Won};
 use chrono::NaiveDate;
+use std::collections::BTreeMap;
 
 /// 사업소득 원천징수 세율 3% (소득세법 제129조 일대; ACCOUNTANT: confirm article and rate).
 const BUSINESS_INCOME_TAX_BPS: i64 = 300;
@@ -59,7 +60,7 @@ pub struct VatInput {
     pub methods: Vec<VatMethod>,
     /// Platform fee (settlements.fee) in the period; the existing finance VAT basis.
     pub platform_fee: Won,
-    /// Refunds recorded on payments created in the period. ACCOUNTANT: refunds by payment date, not refund date.
+    /// Refunds in the period on the finance summary basis (cancel date, else payment date). ACCOUNTANT: confirm this basis.
     pub refunds: Won,
 }
 
@@ -78,7 +79,11 @@ pub fn vat_document(input: &VatInput) -> Vec<Vec<Cell>> {
     doc.push(vec![text("합계"), Cell::Number(count), Cell::Number(amount)]);
     doc.push(vec![text("환불액"), Cell::Number(0), Cell::Number(input.refunds.0)]);
     doc.push(vec![text("플랫폼수수료(과세표준 추정)"), Cell::Number(0), Cell::Number(input.platform_fee.0)]);
-    doc.push(vec![text("부가세 추정(수수료의 10%)"), Cell::Number(0), Cell::Number(finance::vat_estimate(input.platform_fee).0)]);
+    doc.push(vec![
+        text("부가세 추정(수수료의 10%)"),
+        Cell::Number(0),
+        Cell::Number(finance::vat_estimate(input.platform_fee).0),
+    ]);
     doc
 }
 
@@ -107,7 +112,18 @@ pub struct InvoiceRow {
 /// Column layout of the owner's 홈택스 upload sheet. UNVERIFIED: the 홈택스 일괄작성 양식 was not available to
 /// check when this was written. Map these columns to the downloaded template with the accountant before uploading.
 pub const TAX_INVOICE_HEADERS: [&str; 12] = [
-    "작성일자", "사업자등록번호", "상호", "대표자", "업태", "종목", "주소", "이메일", "품목", "공급가액", "세액", "합계",
+    "작성일자",
+    "사업자등록번호",
+    "상호",
+    "대표자",
+    "업태",
+    "종목",
+    "주소",
+    "이메일",
+    "품목",
+    "공급가액",
+    "세액",
+    "합계",
 ];
 
 /// Rows for the owner's 홈택스 upload, in request order. Supplier columns are filled on 홈택스 from the owner's login.
@@ -140,7 +156,12 @@ pub fn tax_invoice_document(rows: &[InvoiceRow]) -> Vec<Vec<Cell>> {
 pub fn payout_withholding(tax_type: &str, gross: Won) -> Withholding {
     match tax_type {
         "freelancer" | "unset" => business_withholding(gross),
-        _ => Withholding { gross, income_tax: Won::ZERO, local_tax: Won::ZERO, net: gross },
+        _ => Withholding {
+            gross,
+            income_tax: Won::ZERO,
+            local_tax: Won::ZERO,
+            net: gross,
+        },
     }
 }
 
@@ -176,6 +197,75 @@ pub fn withholding_document(lines: &[WithholdingLine]) -> Vec<Vec<Cell>> {
     doc
 }
 
+/// One paid payout for the outside-payroll sheet. `pro_id` groups the payouts of one person.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PayrollLine {
+    pub pro_id: String,
+    pub name: String,
+    pub team: String,
+    /// Employment type as stored on the profile (`freelance` / `employee` / `contract`), `None` if not recorded.
+    pub employment: Option<String>,
+    pub split: Withholding,
+}
+
+/// Column layout of the per-person amounts sheet handed to an outside payroll service.
+pub const PAYROLL_HEADERS: [&str; 8] = ["이름", "팀명", "고용형태", "지급건수", "지급총액", "소득세", "지방소득세", "실지급액"];
+
+fn employment_label(raw: Option<&str>) -> &str {
+    match raw {
+        Some("freelance") => "프리랜서",
+        Some("employee") => "직원",
+        Some("contract") => "계약",
+        Some(other) => other,
+        None => "미등록",
+    }
+}
+
+/// One row per person (by name, then id), summing each payout's split. Each payout is rounded on its own, as it is
+/// paid, so the sums are not recomputed from totals. A 합계 row closes the sheet.
+pub fn payroll_document(lines: &[PayrollLine]) -> Vec<Vec<Cell>> {
+    let text = |s: &str| Cell::Text(s.to_string());
+    // Value per person: team, employment label, and [count, gross, income tax, local tax, net].
+    let mut people: BTreeMap<(String, String), (String, String, [i64; 5])> = BTreeMap::new();
+    for l in lines {
+        let entry = people
+            .entry((l.name.clone(), l.pro_id.clone()))
+            .or_insert_with(|| (l.team.clone(), employment_label(l.employment.as_deref()).to_string(), [0; 5]));
+        let s = &l.split;
+        for (acc, v) in entry.2.iter_mut().zip([1, s.gross.0, s.income_tax.0, s.local_tax.0, s.net.0]) {
+            *acc += v;
+        }
+    }
+    let mut doc = vec![PAYROLL_HEADERS.iter().map(|h| text(h)).collect::<Vec<_>>()];
+    let mut total = [0i64; 5];
+    for ((name, _), (team, employment, sums)) in &people {
+        doc.push(vec![
+            text(name),
+            text(team),
+            text(employment),
+            Cell::Number(sums[0]),
+            Cell::Number(sums[1]),
+            Cell::Number(sums[2]),
+            Cell::Number(sums[3]),
+            Cell::Number(sums[4]),
+        ]);
+        for (t, v) in total.iter_mut().zip(sums.iter()) {
+            *t += v;
+        }
+    }
+    doc.push(vec![
+        text("합계"),
+        text(""),
+        text(""),
+        Cell::Number(total[0]),
+        Cell::Number(total[1]),
+        Cell::Number(total[2]),
+        Cell::Number(total[3]),
+        Cell::Number(total[4]),
+    ]);
+    doc
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -189,6 +279,49 @@ mod tests {
         assert_eq!(w.income_tax.0 + w.local_tax.0 + w.net.0, 123_456);
     }
 
+    /// Characterization, not agreement: pins the current business withholding (ACCOUNTANT: base and rounding unconfirmed).
+    #[test]
+    fn withholding_rounding_boundaries_golden() {
+        // (gross, income tax, local tax, net): income tax floors to won, local tax floors to 10 won.
+        let cases = [
+            (33, 0, 0, 33),
+            (34, 1, 0, 33),
+            (3_333, 99, 0, 3_234),
+            (3_366, 100, 10, 3_256),
+            (333_333, 9_999, 990, 322_344),
+            (1_000_000, 30_000, 3_000, 967_000),
+        ];
+        for (gross, income, local, net) in cases {
+            let w = business_withholding(Won(gross));
+            assert_eq!((w.income_tax.0, w.local_tax.0, w.net.0), (income, local, net), "gross {gross}");
+        }
+    }
+
+    #[test]
+    fn payroll_sums_each_payout_and_closes_with_a_total() {
+        let freelance = |pro: &str, name: &str, employment: Option<&str>, split: Withholding| PayrollLine {
+            pro_id: pro.into(),
+            name: name.into(),
+            team: "T1".into(),
+            employment: employment.map(Into::into),
+            split,
+        };
+        let lines = vec![
+            freelance("a", "김", Some("freelance"), business_withholding(Won(100_000))),
+            freelance("a", "김", Some("freelance"), business_withholding(Won(100_000))),
+            freelance("b", "이", None, payout_withholding("business", Won(50_000))),
+        ];
+        let doc = payroll_document(&lines);
+        let num = |n: i64| Cell::Number(n);
+        assert_eq!(doc[0][0], Cell::Text("이름".into()));
+        assert_eq!(doc[1][2], Cell::Text("프리랜서".into()));
+        assert_eq!(doc[1][3..], [num(2), num(200_000), num(6_000), num(600), num(193_400)]);
+        assert_eq!(doc[2][2], Cell::Text("미등록".into()));
+        assert_eq!(doc[2][3..], [num(1), num(50_000), num(0), num(0), num(50_000)]);
+        assert_eq!(doc[3][0], Cell::Text("합계".into()));
+        assert_eq!(doc[3][3..], [num(3), num(250_000), num(6_000), num(600), num(243_400)]);
+    }
+
     #[test]
     fn withholding_round_numbers_and_zero() {
         let w = business_withholding(Won(100_000));
@@ -200,7 +333,10 @@ mod tests {
 
     #[test]
     fn quarter_ranges_cover_the_year_without_gaps() {
-        assert_eq!(quarter_range(2026, 1).unwrap(), (NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(), NaiveDate::from_ymd_opt(2026, 3, 31).unwrap()));
+        assert_eq!(
+            quarter_range(2026, 1).unwrap(),
+            (NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(), NaiveDate::from_ymd_opt(2026, 3, 31).unwrap())
+        );
         assert_eq!(quarter_range(2026, 4).unwrap().1, NaiveDate::from_ymd_opt(2026, 12, 31).unwrap());
         assert!(quarter_range(2026, 0).is_err());
         assert!(quarter_range(2026, 5).is_err());
@@ -259,8 +395,16 @@ mod tests {
     fn vat_document_matches_golden() {
         let input = VatInput {
             methods: vec![
-                VatMethod { method: "card".into(), count: 3, amount: 330_000 },
-                VatMethod { method: "transfer".into(), count: 1, amount: 110_000 },
+                VatMethod {
+                    method: "card".into(),
+                    count: 3,
+                    amount: 330_000,
+                },
+                VatMethod {
+                    method: "transfer".into(),
+                    count: 1,
+                    amount: 110_000,
+                },
             ],
             platform_fee: Won(88_000),
             refunds: Won(22_000),
