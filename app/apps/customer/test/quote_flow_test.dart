@@ -3,7 +3,6 @@ import 'package:customer/screens/booking_flow.dart';
 import 'package:customer/screens/chat.dart';
 import 'package:customer/screens/quote_flow.dart';
 import 'package:customer/screens/request_status.dart';
-import 'package:customer/screens/service.dart';
 import 'package:customer/state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -257,7 +256,7 @@ void main() {
     (tester) async {
       final fake = await _pumpMoveOut(tester, maintenance: true);
       await _tap(tester, find.text(koT.type_standard));
-      await _tap(tester, find.text(koT.luggage_partly_unpacked));
+      await _tap(tester, find.text(koT.luggage_out_partly_unpacked));
       await _tap(tester, _next());
       await _tap(tester, find.text(koT.building_commercial));
       await _tap(tester, find.text(koT.dfLayoutTwo));
@@ -285,7 +284,7 @@ void main() {
     (tester) async {
       await _pumpMoveOut(tester, sizePyeong: 8);
       await _tap(tester, find.text(koT.type_standard));
-      await _tap(tester, find.text(koT.luggage_partly_unpacked));
+      await _tap(tester, find.text(koT.luggage_out_partly_unpacked));
       await _tap(tester, _next());
 
       await _tap(tester, find.text(koT.building_apartment));
@@ -323,7 +322,7 @@ void main() {
       expect(find.text(koT.luggage_fully_lived_in), findsNothing);
       expect(find.text(koT.luggage_unknown), findsNothing);
       await _tap(tester, find.text(koT.type_standard));
-      await _tap(tester, find.text(koT.luggage_partly_unpacked));
+      await _tap(tester, find.text(koT.luggage_out_partly_unpacked));
       expect(find.text('정말 깨끗해졌어요'), findsOneWidget);
       await _tap(tester, _next());
 
@@ -473,7 +472,8 @@ void main() {
       await pumpCustomerScreen(
         tester,
         env,
-        ServiceScreen(service: Service.fromJson(serviceJson('move_in'))),
+        // move_in opens the home chooser first; the quote flow itself starts at step 1.
+        QuoteFlowScreen(service: Service.fromJson(serviceJson('move_in'))),
       );
       await settle(tester);
 
@@ -591,6 +591,15 @@ void main() {
   ) async {
     setViewport(tester, phoneSize);
     final fake = FakeApi()
+      ..reply('GET', '/bookings/bk-q/cancel-preview', {
+        'can_cancel': true,
+        'days_before': 10,
+        'percent': 0,
+        'paid': 346500,
+        'fee': 0,
+        'refund': 346500,
+        'reschedule_allowed': true,
+      })
       ..reply('POST', '/bookings/bk-q/cancel', {'ok': true});
     stockCustomerApi(fake);
     final env = await TestEnv.create(fake: fake);
@@ -635,7 +644,14 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await _tap(tester, find.text(koT.cancelBooking));
-    await _tap(tester, find.widgetWithText(FilledButton, koT.cancelBooking));
+    // Full refund: the sheet's confirm button names the refund amount, not plain 예약 취소.
+    await _tap(
+      tester,
+      find.widgetWithText(
+        FilledButton,
+        koT.cancelRefundCta(formatWon(346500, 'ko')),
+      ),
+    );
     expect(
       fake.lastCall('POST', '/bookings/bk-q/cancel')!.json['accepted_fee'],
       0,
