@@ -4,6 +4,7 @@
 
 use super::{
     audit,
+    bookings::Actor,
     checkouts::load_owned,
     finance::{PeriodQuery, csv_response, resolve},
 };
@@ -26,7 +27,7 @@ use domain::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::{FromRow, PgExecutor, PgPool};
+use sqlx::{FromRow, PgConnection, PgExecutor, PgPool};
 use uuid::Uuid;
 
 /// Line item name on the invoice. ACCOUNTANT: confirm the 품목 wording for cleaning services.
@@ -128,15 +129,20 @@ async fn request(State(s): State<AppState>, Customer(a): Customer, Path(checkout
     Ok(Json(view(&s.db, id).await?))
 }
 
-/// Called after a checkout settles: links the pending request to the payment and queues it for the owner.
-pub async fn on_settled(s: &AppState, checkout: Uuid, provider_tx_id: &str) {
+/// Called after a checkout settles: links the pending request to the payment and queues it for the owner. A payment
+/// already refunded in full by the time the link lands is cancelled instead, never queued.
+pub async fn on_settled(db: &PgPool, checkout: Uuid, provider_tx_id: &str) {
     let linked = sqlx::query(
-        "UPDATE tax_invoice_requests SET payment_id = (SELECT id FROM payments WHERE provider = 'portone' AND provider_tx_id = $2 LIMIT 1),
-         state = 'requested', updated_at = now() WHERE checkout_id = $1 AND state = 'pending'",
+        "UPDATE tax_invoice_requests SET
+           payment_id = (SELECT id FROM payments WHERE provider = 'portone' AND provider_tx_id = $2 LIMIT 1),
+           state = CASE WHEN (SELECT status FROM payments WHERE provider = 'portone' AND provider_tx_id = $2 LIMIT 1) = 'refunded'
+                        THEN 'cancelled' ELSE 'requested' END,
+           updated_at = now()
+         WHERE checkout_id = $1 AND state = 'pending'",
     )
     .bind(checkout)
     .bind(provider_tx_id)
-    .execute(&s.db)
+    .execute(db)
     .await;
     if let Err(e) = linked {
         tracing::error!(error = %e, checkout = %checkout, "tax invoice link failed");
@@ -304,6 +310,38 @@ async fn mark_issued(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<
     }
     audit(&s.db, "staff", Some(a.id), "tax_invoice.issued", "tax_invoice", json!({ "id": id })).await?;
     Ok(Json(view(&s.db, id).await?))
+}
+
+/// Runs inside the refund transaction when a payment is refunded in full. An open request (pending, or queued and not
+/// exported) is cancelled, including one not yet linked to the payment when its checkout paid it. A request already
+/// exported or issued stays (the owner has it): an audit row raises it so it is cancelled on 홈택스.
+pub async fn cancel_for_refunded_payment(conn: &mut PgConnection, payment: Uuid, actor: Actor<'_>) -> ApiResult<()> {
+    sqlx::query(
+        "UPDATE tax_invoice_requests SET state = 'cancelled', updated_at = now()
+         WHERE state IN ('pending', 'requested') AND exported_at IS NULL AND (payment_id = $1 OR (payment_id IS NULL AND checkout_id IN (
+           SELECT id FROM checkouts WHERE provider_payment_id = (SELECT provider_tx_id FROM payments WHERE id = $1))))",
+    )
+    .bind(payment)
+    .execute(&mut *conn)
+    .await?;
+    let kept: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM tax_invoice_requests WHERE payment_id = $1 AND (state = 'issued' OR (state = 'requested' AND exported_at IS NOT NULL))",
+    )
+    .bind(payment)
+    .fetch_all(&mut *conn)
+    .await?;
+    if !kept.is_empty() {
+        audit(
+            &mut *conn,
+            actor.role,
+            actor.id,
+            "tax_invoice.refund_needs_cancel",
+            "tax_invoices",
+            json!({ "payment": payment, "requests": kept }),
+        )
+        .await?;
+    }
+    Ok(())
 }
 
 /// Customer routes, merged at the top level like the checkout routes.

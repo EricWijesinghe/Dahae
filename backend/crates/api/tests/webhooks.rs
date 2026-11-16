@@ -330,3 +330,36 @@ async fn cancel_we_made_is_recorded_without_a_flag(pool: PgPool) {
     assert_eq!(payment_state(&pool, payment).await, (30_000, "partially_refunded".into()));
     assert_eq!(flags(&pool, booking).await, (0, 0), "a refund the app already recorded is not a dispute");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn portone_full_cancel_from_the_console_cancels_the_queued_tax_invoice_request(pool: PgPool) {
+    let (booking, payment) = paid_booking(&pool, CANCEL_PAYMENT, 0).await;
+    let checkout: Uuid = sqlx::query_scalar(
+        "INSERT INTO checkouts (user_id, kind, booking_id, method, amount, status, expires_at)
+         VALUES ((SELECT user_id FROM bookings WHERE id = $1), 'booking', $1, 'card', $2, 'paid', now() + interval '1 day') RETURNING id",
+    )
+    .bind(booking)
+    .bind(TOTAL)
+    .fetch_one(&pool)
+    .await
+    .expect("checkout");
+    let request: Uuid = sqlx::query_scalar(
+        "INSERT INTO tax_invoice_requests (checkout_id, payment_id, business_number, company_name, email, state)
+         VALUES ($1, $2, '2208162517', 'CONSOLE-CO', 'tax@example.test', 'requested') RETURNING id",
+    )
+    .bind(checkout)
+    .bind(payment)
+    .fetch_one(&pool)
+    .await
+    .expect("request");
+    let app = prod_app(pool.clone(), &portone_stand_in(TOTAL).await);
+    let body = cancel_event("Transaction.Cancelled", CANCEL_PAYMENT, "tx_console_tax");
+    let headers = signed_headers(KEY, "msg_tax_1", &body);
+    assert_eq!(post(&app, "/v1/webhooks/portone", &headers, body).await, StatusCode::OK);
+    let state: String = sqlx::query_scalar("SELECT state FROM tax_invoice_requests WHERE id = $1")
+        .bind(request)
+        .fetch_one(&pool)
+        .await
+        .expect("state");
+    assert_eq!(state, "cancelled", "a full refund from the console cancels the open request");
+}

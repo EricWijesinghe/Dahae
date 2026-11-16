@@ -419,6 +419,7 @@ async fn refund_locked(s: &AppState, conn: &mut PgConnection, booking: Uuid, max
         )
         .await?;
         if status == "refunded" {
+            super::tax_invoices::cancel_for_refunded_payment(conn, pid, actor).await?;
             out.closed.push((pid, tx));
         }
         left -= amt;

@@ -2,8 +2,10 @@
 //! secret only dev mode accepts unsigned events (smoke tests); production refuses them.
 //! Events never move money on their own: the payment is re-read from the provider.
 
+use super::bookings::Actor;
 use super::cases::{self, NewCase};
 use super::checkouts::{CheckoutRow, find_by_id, find_by_payment, settle};
+use super::tax_invoices;
 use crate::{
     error::{ApiError, ApiResult},
     providers::{
@@ -219,6 +221,9 @@ async fn record_external_cancel(tx: &mut sqlx::PgConnection, c: Recorded<'_>) ->
         .bind(c.status)
         .execute(&mut *tx)
         .await?;
+    if c.status == "refunded" {
+        tax_invoices::cancel_for_refunded_payment(&mut *tx, c.payment, Actor { role: "system", id: None }).await?;
+    }
     let key = format!("{}:{}", c.payment, c.cancelled);
     let opened: Option<Uuid> =
         sqlx::query_scalar("INSERT INTO disputes (payment_id, provider_tx_id, kind) VALUES ($1, $2, $3) ON CONFLICT (provider_tx_id) DO NOTHING RETURNING id")
