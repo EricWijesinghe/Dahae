@@ -214,6 +214,7 @@ flowchart LR
 | [장애 대응 런북](docs/RUNBOOK.md) | 증상별 첫 확인 순서와 복구 절차 (한국어·영어) |
 | [품질과 검사](docs/QUALITY.md) | 테스트 구성과 수, CI 게이트, 릴리스 파이프라인, 알려진 공백 |
 | [API 색인](docs/api/README.md) | 경로 목록과 공통 규칙 (멱등성, 오류 형식, 버전) |
+| [클라우드 배포 안내](docs/guide/08-클라우드-배포.md) | 내 클라우드 계정에 서버를 만들고, 도메인을 연결하고, 설치하고, 외부 백업을 붙이는 순서 (한국어·영어) |
 | [안내서 모음](docs/guide/README.md) | 사장님과 설치 담당을 위한 단계별 안내서 (한국어) |
 | [배포 상세](docs/DEPLOY.md) | 배포와 운영 절차 세부 |
 | [라이선스](LICENSE), [제3자 고지](THIRD_PARTY_NOTICES.md) | 사용 조건과 포함된 외부 구성요소의 라이선스 |
@@ -388,6 +389,7 @@ flowchart LR
 | [Incident runbook](docs/RUNBOOK.md) | First checks by symptom, and recovery steps (Korean and English) |
 | [Quality and checks](docs/QUALITY.md) | Test layers and counts, CI gates, release pipeline, known gaps |
 | [API index](docs/api/README.md) | Endpoint list and shared rules (idempotency, error shape, versioning) |
+| [Cloud deployment guide](docs/guide/08-클라우드-배포.md) | Creating the server on your own cloud account, connecting your domain, running the installer and offsite backup (Korean and English) |
 | [Guides](docs/guide/README.md) | Step-by-step guides for owners and installers (Korean, with English titles) |
 | [Deployment details](docs/DEPLOY.md) | Deployment and operations detail |
 | [License](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md) | Terms of use and licences of bundled components |
