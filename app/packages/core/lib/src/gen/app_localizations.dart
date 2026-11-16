@@ -6475,6 +6475,12 @@ abstract class T {
   /// **'확인된 정산 계좌가 없어요. 먼저 계좌를 확인해 주세요.'**
   String get err_payout_account_unverified;
 
+  /// No description provided for @err_sms_required.
+  ///
+  /// In ko, this message translates to:
+  /// **'인증 앱을 아직 등록하지 않은 직원은 본인 휴대폰으로 가는 문자로만 재설정할 수 있어요.'**
+  String get err_sms_required;
+
   /// No description provided for @err_invite_pending.
   ///
   /// In ko, this message translates to:
@@ -8244,6 +8250,12 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'디스크 부족'**
   String get oRuleDisk;
+
+  /// No description provided for @oRuleOtp.
+  ///
+  /// In ko, this message translates to:
+  /// **'인증 번호 발송이 평소보다 많음(문자 비용)'**
+  String get oRuleOtp;
 
   /// No description provided for @oRuleAuth.
   ///
