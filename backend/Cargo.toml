@@ -6,6 +6,7 @@ members = ["crates/domain", "crates/api"]
 edition = "2024"
 version = "0.1.0"
 license = "LicenseRef-Proprietary"
+authors = ["Eric Wijesinghe <EricWijesinghe@hotmail.com>"]
 
 [workspace.dependencies]
 chrono = { version = "0.4", default-features = false, features = ["std", "clock", "serde"] }
