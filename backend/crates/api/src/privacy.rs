@@ -232,6 +232,28 @@ pub async fn export(State(s): State<AppState>, crate::auth::Customer(a): crate::
     Ok(Json(export_doc(&s.db, a.id).await?))
 }
 
+/// Revokes one saved card's gateway key (PortOne). Fails closed: an error means the key may still be live, so the
+/// caller must keep its local copy and the customer can retry.
+pub(crate) async fn revoke_billing_key(s: &AppState, method: Uuid, stored: &str) -> ApiResult<()> {
+    // Dev mode saves no gateway keys (the test cards are local rows), so there is nothing to revoke.
+    if s.config.dev_mode {
+        return Ok(());
+    }
+    // Deleting a key needs only the API secret, so a store or channel that is off does not matter. Without a
+    // secret the key stays live at the gateway: refuse, so the card is not erased while still billable.
+    if s.providers.integ().portone.api_secret.is_none() {
+        tracing::warn!(payment_method = %method, "billing key cannot be deleted: PortOne API secret not configured");
+        return Err(ApiError::Unavailable("billing_key_delete_failed"));
+    }
+    let Some(key) = crypto::open_billing_key(&s.config.data_key, stored) else {
+        tracing::error!(payment_method = %method, "saved-card billing key cannot be opened: revoke blocked");
+        return Err(ApiError::Unavailable("billing_key_delete_failed"));
+    };
+    portone::delete_billing_key(&s.providers, &key)
+        .await
+        .map_err(|_| ApiError::Unavailable("billing_key_delete_failed"))
+}
+
 /// Deletes the customer's gateway keys (saved cards) before personal data is removed. Fails closed:
 /// if the gateway refuses, nothing is anonymised and the customer can retry.
 async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
@@ -239,24 +261,8 @@ async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
         .bind(user)
         .fetch_all(&s.db)
         .await?;
-    // Dev mode saves no gateway keys (the test cards are local rows), so there is nothing to revoke.
-    if keys.is_empty() || s.config.dev_mode {
-        return Ok(());
-    }
-    // Deleting a key needs only the API secret, so a store or channel that is off does not matter. Without a
-    // secret the key stays live at the gateway: refuse, so the account is not erased with a card still billable.
-    if s.providers.integ().portone.api_secret.is_none() {
-        tracing::warn!(%user, count = keys.len(), "billing keys cannot be deleted: PortOne API secret not configured");
-        return Err(ApiError::Unavailable("billing_key_delete_failed"));
-    }
     for (id, stored) in &keys {
-        let Some(key) = crypto::open_billing_key(&s.config.data_key, stored) else {
-            tracing::error!(%user, payment_method = %id, "saved-card billing key cannot be opened: account deletion blocked");
-            return Err(ApiError::Unavailable("billing_key_delete_failed"));
-        };
-        portone::delete_billing_key(&s.providers, &key)
-            .await
-            .map_err(|_| ApiError::Unavailable("billing_key_delete_failed"))?;
+        revoke_billing_key(s, *id, stored).await?;
     }
     Ok(())
 }

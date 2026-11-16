@@ -10,7 +10,7 @@ use api::{
     providers::{FAKE_DECLINE_KEY, ProviderError},
 };
 use axum::http::StatusCode;
-use common::{app, call, customer, seed_catalog, test_config};
+use common::{app, call, customer, prod_app, seed_catalog, test_config};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -111,4 +111,63 @@ async fn startup_seals_legacy_plaintext_keys_once(pool: PgPool) {
     assert_eq!(open_billing_key(&key, &stored).as_deref(), Some("bk_legacy_1"));
     assert_eq!(digest, Some(billing_key_digest(&key, "bk_legacy_1")));
     assert_eq!(billing_keys::seal_stored(&pool, &key).await.expect("rerun"), 0, "a rerun changes nothing");
+}
+
+/// PortOne stand-in for the billing-key delete: records each request path and answers `status`.
+async fn gateway_stand_in(status: axum::http::StatusCode) -> (String, std::sync::Arc<std::sync::Mutex<Vec<String>>>) {
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let log = seen.clone();
+    let app = axum::Router::new().fallback(move |req: axum::extract::Request| {
+        let log = log.clone();
+        async move {
+            log.lock().expect("log").push(format!("{} {}", req.method(), req.uri().path()));
+            status
+        }
+    });
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    let addr = listener.local_addr().expect("addr");
+    tokio::spawn(async move { axum::serve(listener, app).await.expect("serve") });
+    (format!("http://{addr}"), seen)
+}
+
+/// A customer with one saved card whose sealed billing key is `bk_live_card`.
+async fn card_with_live_key(pool: &PgPool) -> common::Customer {
+    let dev = app(pool.clone());
+    let c = customer(&dev, pool, "010-7100-0400").await;
+    let (sealed, digest) = seal_billing_key(&test_config().data_key, "bk_live_card");
+    sqlx::query("UPDATE payment_methods SET billing_key = $2, billing_key_digest = $3 WHERE id = $1")
+        .bind(c.card)
+        .bind(sealed)
+        .bind(digest)
+        .execute(pool)
+        .await
+        .expect("live key");
+    c
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn deleting_a_saved_card_revokes_its_billing_key_at_the_gateway(pool: PgPool) {
+    let c = card_with_live_key(&pool).await;
+    let (base, seen) = gateway_stand_in(StatusCode::OK).await;
+    let prod = prod_app(pool.clone(), &base);
+    let (st, body) = call(&prod, "DELETE", &format!("/v1/me/payment-methods/{}", c.card), Some(c.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(
+        seen.lock().expect("log").as_slice(),
+        ["DELETE /billing-keys/bk_live_card"],
+        "PortOne told to drop the key"
+    );
+    let (stored, _) = stored_row(&pool, c.card).await;
+    assert_eq!(stored, "", "the local copy is erased after the revoke");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn deleting_a_saved_card_fails_closed_when_the_gateway_refuses(pool: PgPool) {
+    let c = card_with_live_key(&pool).await;
+    let (base, _seen) = gateway_stand_in(StatusCode::INTERNAL_SERVER_ERROR).await;
+    let prod = prod_app(pool.clone(), &base);
+    let (st, body) = call(&prod, "DELETE", &format!("/v1/me/payment-methods/{}", c.card), Some(c.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+    let (stored, _) = stored_row(&pool, c.card).await;
+    assert!(!stored.is_empty(), "the key stays on file so the removal can be retried");
 }
