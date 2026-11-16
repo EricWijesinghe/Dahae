@@ -12,7 +12,7 @@ Google 의 기준 (2026-11 확인, https://support.google.com/googleplay/android
 
 ## 기준 빌드
 
-아래 답은 **v1.4.0 출시 빌드** 기준이에요. 포인트, 앱 오류 보고(외부 SDK 없음), 탈퇴 시 소셜 연결 삭제와 Apple 토큰 해지가 모두 들어 있어요.
+아래 답은 **v1.5.0 출시 빌드** 기준이에요. 포인트, 앱 오류 보고(외부 SDK 없음), 탈퇴 시 소셜 연결 삭제와 Apple 토큰 해지가 모두 들어 있어요.
 
 ## 1. 공통 질문 (두 앱 모두)
 
@@ -82,7 +82,7 @@ Google 의 기준 (2026-11 확인, https://support.google.com/googleplay/android
 | Anthropic | AI 상담 답변 생성 (고객이 쓴 상담 문장, 해당 예약 요약, 가게 요금·영업시간) | 운영자가 AI 상담을 켠 경우에만. 미국 이전. 끄면 전송 없음 (`backend/crates/api/src/ai.rs`) |
 | 저장소 사업자 (S3 호환) | 사진 파일, 암호화된 DB 백업 | 운영자가 설정한 위치 |
 
-고객은 가입할 때 국외 이전(Google, Anthropic)에 동의하고, 앱 [더보기] → [계정] → [동의 관리]에서 확인·철회할 수 있어요 (`user_consents`, 종류 `overseas_transfer`).
+고객은 가입할 때 국외 이전(Google, Anthropic)에 동의하고, 앱 [더보기] → [계정] → [동의 관리]에서 확인·철회할 수 있어요 (`user_consents`, 종류 `overseas_transfer`). 철회하면 AI 상담과 푸시 알림(Google FCM)이 함께 멈추고, 개인정보 처리방침 문구가 바뀌면 다시 동의를 물어요 (v1.5.0).
 
 ## 5. 판단이 필요한 항목 (제출 전에 사장님·개발자가 확인)
 
