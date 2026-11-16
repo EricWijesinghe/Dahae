@@ -107,6 +107,14 @@ async fn request(State(s): State<AppState>, Customer(a): Customer, Path(checkout
         return Err(ApiError::BadRequest("email"));
     }
     let mut tx = s.db.begin().await?;
+    // Same row lock the settle takes: it waits for this request, or has already marked the checkout paid.
+    let status: String = sqlx::query_scalar("SELECT status FROM checkouts WHERE id = $1 FOR UPDATE")
+        .bind(checkout)
+        .fetch_one(&mut *tx)
+        .await?;
+    if status != "pending" && status != "awaiting_deposit" {
+        return Err(ApiError::Conflict("checkout_not_open"));
+    }
     sqlx::query("DELETE FROM tax_invoice_requests WHERE checkout_id = $1 AND state = 'pending'")
         .bind(checkout)
         .execute(&mut *tx)
