@@ -159,7 +159,7 @@ async fn owner_saves_business_and_keys_secrets_come_back_masked(pool: PgPool) {
     assert_eq!(st, StatusCode::OK);
     let (_, all) = call(&app, "GET", "/v1/admin/setup", t, None).await;
     let portone = all["integrations"].as_array().unwrap().iter().find(|c| c["code"] == "portone").unwrap().clone();
-    assert_eq!(portone["fields"][0]["preview"], "store-2");
+    assert_eq!(portone["fields"][0]["preview"], "••••");
     assert_eq!(portone["fields"][1]["set"], true);
 
     unlock(&app, &pool, &token, &secret, "portone").await;

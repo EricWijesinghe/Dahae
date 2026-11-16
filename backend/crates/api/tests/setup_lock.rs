@@ -250,14 +250,16 @@ async fn clearing_keeps_the_card_locked(db: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn short_secrets_are_not_previewed(db: PgPool) {
+async fn too_short_api_secret_is_refused_before_anything_is_saved(db: PgPool) {
     let app = common::app(db.clone());
     let (token, _) = enrolled_owner(&db).await;
     let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, None, keys("abc1")).await;
-    assert_eq!(st, StatusCode::OK, "{body}");
-    let field = body["fields"].as_array().unwrap().iter().find(|f| f["name"] == "api_secret").unwrap();
-    assert_eq!(field["preview"], "••••", "{body}");
-    assert!(!body.to_string().contains("abc1"), "{body}");
+    assert_eq!(
+        (st, body["error"]["code"].as_str()),
+        (StatusCode::BAD_REQUEST, Some("invalid_api_secret")),
+        "{body}"
+    );
+    assert!(actions(&db).await.is_empty());
 }
 
 #[sqlx::test(migrations = "../../migrations")]

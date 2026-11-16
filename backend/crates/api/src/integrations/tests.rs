@@ -4,22 +4,41 @@ fn obj(v: Value) -> Map<String, Value> {
     v.as_object().cloned().unwrap()
 }
 
+const FAKE_API_SECRET: &str = "fake-portone-api-secret-000000";
+
+#[test]
+fn portone_channel_slots_and_api_secret_format() {
+    let base = Integrations::default();
+    let slots = json!({"card": "channel-key-1", "card_billing": "channel-key-2", "identity": "channel-key-3", "cash_receipt": "channel-key-4", "kakaopay": "channel-key-5"});
+    let ok = json!({"store_id": "store-1", "api_secret": FAKE_API_SECRET, "channel_keys": slots.to_string()});
+    assert_eq!(apply(&base, Section::Portone, &obj(ok)).unwrap().portone.channel_keys.len(), 5);
+    let unknown = json!({"store_id": "store-1", "api_secret": FAKE_API_SECRET, "channel_keys": "{\"cash\":\"channel-key-1\"}"});
+    assert_eq!(apply(&base, Section::Portone, &obj(unknown)).unwrap_err(), Invalid("unknown_channel_key"));
+    for bad in ["", "short", "has space in the secret value"] {
+        let v = json!({"store_id": "store-1", "api_secret": bad});
+        assert_eq!(
+            apply(&base, Section::Portone, &obj(v)).unwrap_err(),
+            Invalid(if bad.is_empty() { "missing_field" } else { "invalid_api_secret" })
+        );
+    }
+}
+
 #[test]
 fn portone_requires_store_and_secret_and_checks_webhook_format() {
     let base = Integrations::default();
     assert_eq!(
-        apply(&base, Section::Portone, &obj(json!({"api_secret": "k"}))).unwrap_err(),
+        apply(&base, Section::Portone, &obj(json!({"api_secret": FAKE_API_SECRET}))).unwrap_err(),
         Invalid("missing_field")
     );
-    let bad = json!({"store_id": "store-1", "api_secret": "k", "webhook_secret": "nope"});
+    let bad = json!({"store_id": "store-1", "api_secret": FAKE_API_SECRET, "webhook_secret": "nope"});
     assert_eq!(apply(&base, Section::Portone, &obj(bad)).unwrap_err(), Invalid("invalid_webhook_secret"));
-    let ok = json!({"store_id": "store-1", "api_secret": "k", "webhook_secret": "whsec_aGVsbG8=", "channel_keys": "{\"card\":\"channel-key-1\"}"});
+    let ok = json!({"store_id": "store-1", "api_secret": FAKE_API_SECRET, "webhook_secret": "whsec_aGVsbG8=", "channel_keys": "{\"card\":\"channel-key-1\"}"});
     let out = apply(&base, Section::Portone, &obj(ok)).unwrap();
     assert_eq!(out.portone.store_id.as_deref(), Some("store-1"));
     assert_eq!(out.portone.channel_keys.get("card").map(String::as_str), Some("channel-key-1"));
-    let bad_store = json!({"store_id": "s", "api_secret": "k"});
+    let bad_store = json!({"store_id": "s", "api_secret": FAKE_API_SECRET});
     assert_eq!(apply(&base, Section::Portone, &obj(bad_store)).unwrap_err(), Invalid("invalid_store_id"));
-    let bad_channel = json!({"store_id": "store-1", "api_secret": "k", "channel_keys": "{\"card\":\"ch-1\"}"});
+    let bad_channel = json!({"store_id": "store-1", "api_secret": FAKE_API_SECRET, "channel_keys": "{\"card\":\"ch-1\"}"});
     assert_eq!(apply(&base, Section::Portone, &obj(bad_channel)).unwrap_err(), Invalid("invalid_channel_key"));
     assert!(out.has(Section::Portone));
 }
@@ -106,7 +125,9 @@ fn preview_masks_secrets_and_shows_key_file_email() {
     assert_eq!(preview(Kind::Secret, &json!("ab")), json!("••••"));
     assert_eq!(preview(Kind::Secret, &json!("abcdefgh")), json!("••••"));
     assert_eq!(preview(Kind::File, &json!({"client_email": "push@p.iam"})), json!("push@p.iam"));
-    assert_eq!(preview(Kind::Text, &json!("store-1")), json!("store-1"));
+    assert_eq!(preview(Kind::Text, &json!("store-00000000-0000-0000-0000-000000000000")), json!("••••0000"));
+    assert_eq!(preview(Kind::Text, &Value::Null), Value::Null);
+    assert_eq!(preview(Kind::Map, &json!({"card": "channel-key-1234"})), json!({"card": "••••1234"}));
 }
 
 #[test]
@@ -314,13 +335,13 @@ fn every_section_code_round_trips() {
 #[test]
 fn cash_receipt_switch_takes_a_bool_and_defaults_to_env() {
     let base = Integrations::default();
-    let on = json!({"store_id": "store-1", "api_secret": "k", "cash_receipts": true});
+    let on = json!({"store_id": "store-1", "api_secret": FAKE_API_SECRET, "cash_receipts": true});
     assert!(apply(&base, Section::Portone, &obj(on)).unwrap().portone.cash_receipts);
-    let text = json!({"store_id": "store-1", "api_secret": "k", "cash_receipts": "on"});
+    let text = json!({"store_id": "store-1", "api_secret": FAKE_API_SECRET, "cash_receipts": "on"});
     assert_eq!(apply(&base, Section::Portone, &obj(text)).unwrap_err(), Invalid("invalid_toggle"));
     let mut env = Integrations::default();
     env.portone.cash_receipts = true;
-    let unset = json!({"store_id": "store-1", "api_secret": "k"});
+    let unset = json!({"store_id": "store-1", "api_secret": FAKE_API_SECRET});
     assert!(apply(&env, Section::Portone, &obj(unset)).unwrap().portone.cash_receipts);
     assert!(toggle_default(&env, Section::Portone, "cash_receipts"));
     assert!(!toggle_default(&base, Section::Portone, "cash_receipts"));
@@ -330,7 +351,7 @@ fn cash_receipt_switch_takes_a_bool_and_defaults_to_env() {
 fn saved_console_value_beats_env_value() {
     let mut env = Integrations::default();
     env.portone.store_id = Some("store-env".into());
-    let saved = json!({"store_id": "store-db", "api_secret": "k"});
+    let saved = json!({"store_id": "store-db", "api_secret": FAKE_API_SECRET});
     let out = apply(&env, Section::Portone, &obj(saved)).unwrap();
     assert_eq!(out.portone.store_id.as_deref(), Some("store-db"));
 }

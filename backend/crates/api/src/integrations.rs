@@ -368,6 +368,19 @@ fn digits(s: &str) -> String {
     s.chars().filter(char::is_ascii_digit).collect()
 }
 
+/// Channel slots the PortOne card takes: every checkout method, plus billing, identity and cash receipts.
+fn known_channel_slot(k: &str) -> bool {
+    matches!(k, "card_billing" | "identity" | "cash_receipt") || crate::routes::payments::METHODS.iter().any(|m| m.0 == k)
+}
+
+/// PortOne's secret format is not documented here, so only values that cannot be a key are refused.
+fn check_api_secret(s: &str) -> Result<(), Invalid> {
+    if s.chars().any(char::is_whitespace) || !(16..=200).contains(&s.chars().count()) {
+        return Err(Invalid("invalid_api_secret"));
+    }
+    Ok(())
+}
+
 fn check_webhook_secret(s: &str) -> Result<(), Invalid> {
     let raw = s.strip_prefix("whsec_").ok_or(Invalid("invalid_webhook_secret"))?;
     STANDARD.decode(raw).map(|_| ()).map_err(|_| Invalid("invalid_webhook_secret"))
@@ -491,11 +504,16 @@ pub fn apply(base: &Integrations, section: Section, v: &Map<String, Value>) -> R
                 return Err(Invalid("invalid_store_id"));
             }
             let channel_keys = string_map(v, "channel_keys")?;
+            if channel_keys.keys().any(|k| !known_channel_slot(k)) {
+                return Err(Invalid("unknown_channel_key"));
+            }
             if channel_keys.values().any(|k| !k.starts_with(PORTONE_CHANNEL_PREFIX)) {
                 return Err(Invalid("invalid_channel_key"));
             }
+            let api_secret = required(v, "api_secret")?;
+            check_api_secret(&api_secret)?;
             out.portone = PortOne {
-                api_secret: Some(required(v, "api_secret")?),
+                api_secret: Some(api_secret),
                 webhook_secret,
                 store_id: Some(store_id),
                 channel_keys,
@@ -589,18 +607,24 @@ const MASK: &str = "••••";
 const PREVIEW_TAIL_LEN: usize = 4;
 const PREVIEW_MIN_LEN: usize = 8;
 
-/// What the wizard shows for a saved value: secrets end in their last 4 characters only.
+/// A saved text shows its last 4 characters; short values would show in full, so they get the mask alone.
+fn masked(s: &str) -> Value {
+    if s.chars().count() <= PREVIEW_MIN_LEN {
+        return json!(MASK);
+    }
+    let tail: String = s.chars().rev().take(PREVIEW_TAIL_LEN).collect::<Vec<_>>().into_iter().rev().collect();
+    json!(format!("{MASK}{tail}"))
+}
+
+/// What the wizard shows for a saved value: every saved text is masked, so a locked value cannot be read back.
 pub fn preview(kind: Kind, v: &Value) -> Value {
     match kind {
-        Kind::Secret => {
-            let s = v.as_str().unwrap_or_default();
-            // Short values would show in full, so they get the mask alone.
-            if s.chars().count() <= PREVIEW_MIN_LEN {
-                return json!(MASK);
-            }
-            let tail: String = s.chars().rev().take(PREVIEW_TAIL_LEN).collect::<Vec<_>>().into_iter().rev().collect();
-            json!(format!("{MASK}{tail}"))
-        }
+        Kind::Text | Kind::List | Kind::Secret if v.is_null() => Value::Null,
+        Kind::Text | Kind::List | Kind::Secret => masked(v.as_str().unwrap_or_default()),
+        Kind::Map => match v {
+            Value::Object(o) => Value::Object(o.iter().map(|(k, val)| (k.clone(), masked(val.as_str().unwrap_or_default()))).collect()),
+            _ => v.clone(),
+        },
         Kind::File => {
             let email = match v {
                 Value::String(s) => serde_json::from_str::<Value>(s).ok().and_then(|j| j["client_email"].as_str().map(String::from)),
