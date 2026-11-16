@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Photo uploads (chat photos, completion photos). Validated by magic bytes, stripped of EXIF/GPS, stored under random names.
 //! Files are never mounted publicly: `/v1/files/<name>?exp=&sig=` serves them when the HMAC (key derived
 //! from DATA_KEY) over name and expiry checks out. Stored values are `/files/<name>`; `sign_json` turns

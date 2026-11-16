@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Korean tax rules for owner compliance exports. Pure: amounts and dates in, numbers out.
 //! Rules marked `ACCOUNTANT` are not verified against a statute text and must be confirmed (see docs/finance-tax.md).
 

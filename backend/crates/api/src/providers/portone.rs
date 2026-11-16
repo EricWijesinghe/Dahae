@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! PortOne V2 adapter: payments, identity verification, cancellations and
 //! Standard Webhooks signatures. Dev fakes only answer `dev:` ids.
 

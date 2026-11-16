@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Setup wizard API: first admin in the browser (one-time setup code), business profile, and the
 //! integration cards (save, clear, test connection). The console's wizard is the only client.
 

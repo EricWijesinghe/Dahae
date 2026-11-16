@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! 현금영수증 (cash receipts). The customer asks at checkout (`PUT /checkouts/{id}/cash-receipt`), the receipt is
 //! issued when the payment settles, cancelled on a full refund, and the owner can list and reissue failures.
 //! Off unless `PORTONE_CASH_RECEIPTS=1`. Failures never fail the payment: they are recorded for the console.

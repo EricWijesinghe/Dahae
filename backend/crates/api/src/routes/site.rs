@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! On-site steps for a partner: check-in and check-out (times are staff-visible), and the door/entry
 //! code, revealed on the visit day only. Every reveal is audited.
 

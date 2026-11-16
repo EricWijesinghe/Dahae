@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Provider callbacks. The Standard Webhooks signature is the gate. Without a configured
 //! secret only dev mode accepts unsigned events (smoke tests); production refuses them.
 //! Events never move money on their own: the payment is re-read from the provider.

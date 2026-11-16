@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Logging setup and request ids. Every request carries an `x-request-id`: a sane incoming value is
 //! kept (so a proxy or the app can correlate), anything else is replaced by a generated UUID. The id
 //! is echoed on the response, recorded on the request span, and returned in error bodies.

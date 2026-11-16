@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Operations API over the real router and a migrated database: the status page is for staff only,
 //! alert settings are owner-only, and a failing integration shows up as red with its error code.
 

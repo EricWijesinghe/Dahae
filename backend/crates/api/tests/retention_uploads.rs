@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Upload retention and upload writes: a photo that any record still names survives the orphan purge, and an
 //! upload that does not commit leaves neither a row nor a file behind. Needs DATABASE_URL (sqlx::test).
 

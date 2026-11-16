@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! One-off payments through PortOne: checkout intents, confirm, virtual-account deposits, expiry.
 //! Money moves only through `settle`: a PAID payment is checked against the checkout, then
 //! fulfilled in one transaction. Any failure after PAID refunds the payment (durably: see

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 use crate::{db::DbSettings, providers::fcm::ServiceAccount};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use std::{collections::HashMap, env, net::SocketAddr, path::PathBuf};

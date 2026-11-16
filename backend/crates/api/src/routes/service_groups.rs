@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Home categories (CR-8.1): the public group list the app reads, and the console's audited edits.
 //! Membership is `services.group_code`; the listed order is written into the members' `sort_order` slots.
 

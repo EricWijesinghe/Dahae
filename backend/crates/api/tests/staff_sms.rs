@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Staff invites and SMS-code password resets over the real router: single use, expiry, guess limit, resend
 //! cooldown and daily cap, role limits, and session revocation. Needs DATABASE_URL (sqlx::test).
 

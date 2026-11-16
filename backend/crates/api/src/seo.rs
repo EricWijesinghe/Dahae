@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Public SEO pages, rendered per request from live data (per-owner, so no build step at install):
 //! service x district landing pages under `/c/{service}/{district}`, `sitemap.xml`, `robots.txt`,
 //! the notices RSS feed, and Search Console / Search Advisor verification files.

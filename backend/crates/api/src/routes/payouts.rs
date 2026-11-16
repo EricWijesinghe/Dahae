@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Console: partner payouts. requested -> sent -> paid, or failed (retryable). Transitions live in
 //! [`crate::payout`]; every change runs in one transaction on a locked row, so a payout can be paid
 //! at most once and a settlement is marked paid only together with its payout.

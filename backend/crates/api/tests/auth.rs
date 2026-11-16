@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Customer signup consents over the real router and a migrated database: a new account needs every
 //! required consent, and the grants are recorded with the policy version and time. Needs DATABASE_URL (sqlx::test).
 

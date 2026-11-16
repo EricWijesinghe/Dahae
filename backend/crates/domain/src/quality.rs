@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Partner quality score: rating, completion, on-time check-in, reliability and complaints.
 //! Every rate is Bayesian-smoothed toward a prior so a new partner with 1 job is not 0% or 100%.
 //! Pure: the API layer aggregates counts from bookings, check-ins, ratings and cases.

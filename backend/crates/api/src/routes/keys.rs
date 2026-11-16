@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Keys bundle for restores on a fresh server (`keys_bundle.rs`). Every request needs the owner and a TOTP code
 //! in `X-Owner-Totp` (`owner::OwnerTotp`).
 

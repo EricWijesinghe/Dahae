@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! PIPA (개인정보 보호법) customer rights: consent records, the data export (열람), and the account
 //! deletion cascade. Consent rows are append-only evidence; the newest row per kind is the current state.
 

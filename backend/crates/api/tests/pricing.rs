@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Peak surcharge on fixed-price and subscription visits. The stored list price of each visit must equal
 //! the base price plus the surcharge rule for its slot, rounded like quotes, and the owner's scope switch
 //! turns the surcharge off for these visits. Quote estimates are covered in flows.rs.

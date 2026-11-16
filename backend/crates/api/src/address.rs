@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! 도로명주소 검색 API (business.juso.go.kr) proxy. The confirm key (`confmKey`) stays on the
 //! server; the app only receives address hits. Keywords are checked before they leave us.
 

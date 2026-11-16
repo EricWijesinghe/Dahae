@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Staff authorization: exports need a live admin and a fresh step-up, copy-channel resets stay off
 //! accounts with no second factor, deactivation ends the staff session, and OTP sends are not cut off
 //! globally by one busy client.

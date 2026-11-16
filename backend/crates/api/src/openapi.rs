@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! `GET /v1/openapi.json`: the hand-maintained spec, served to staff admins only (it lists admin routes).
 
 use crate::auth::Admin;

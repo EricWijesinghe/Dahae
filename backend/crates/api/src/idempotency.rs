@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! `Idempotency-Key` replay for money-moving and duplicate-prone POSTs. A key is scoped to the caller
 //! (the verified user, not one access token) and path, bound to the request body hash, and replays the stored response for 24h.
 //! Only final answers are stored: a 5xx or an auth/rate refusal releases the key so the client can retry.

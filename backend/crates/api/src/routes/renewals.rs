@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Renewal calendar for the console (갱신 일정). Admins only. Every write is audited; reminders are sent by
 //! `renewals::spawn`, so changing a due date re-arms its reminders.
 

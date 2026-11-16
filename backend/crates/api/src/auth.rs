@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Tokens, roles, password + OTP hashing, and the request extractor.
 
 use crate::entropy;

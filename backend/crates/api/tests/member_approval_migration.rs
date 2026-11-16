@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! The approval migration must move invites that were waiting before it shipped, on a database that already has them.
 
 use sqlx::{PgPool, migrate::Migrator};

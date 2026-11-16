@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Offsite backups. `api backup-upload <file>` (run by `malkkeum backup` after the local dump)
 //! records the backup status, encrypts the file with a key derived from DATA_KEY, uploads it to
 //! the S3-compatible bucket from the console's `backup` card, and applies the retention window.

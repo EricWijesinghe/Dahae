@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Home categories (CR-8.1). Membership lives on `services.group_code`; the group row holds
 //! title, order, chooser and its question config. Pure rules only: storage is in the API crate.
 

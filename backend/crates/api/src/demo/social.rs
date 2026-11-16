@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Conversations and what surrounds them: chat threads and messages (customer, partner and support),
 //! notifications, push tokens, the staff audit log, console content and the placeholder upload row.
 //! Nothing here calls SMS, push or chat providers: rows are written straight to the database.

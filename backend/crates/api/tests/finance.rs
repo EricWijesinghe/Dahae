@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner finance over a migrated Postgres: the summary, partner and CSV numbers match hand-computed seed rows.
 //! Needs DATABASE_URL (sqlx::test). Rows are inserted directly so every figure is known in advance.
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Personalized home feed. `GET /v1/feed` serves guests from device context only (district code,
 //! unfinished draft); `GET /v1/me/feed` adds the customer's own history, saved home and consent.
 //! The ranking lives in `domain::feed`; this file only gathers facts.

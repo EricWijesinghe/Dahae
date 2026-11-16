@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Cleaner verification checklist and employee profile. Console only: the owner ticks the checklist
 //! before verifying a pro, and keeps the employee details on the profile.
 

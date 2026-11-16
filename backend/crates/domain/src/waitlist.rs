@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Waitlist for a full slot. When capacity frees, the first eligible entry gets a time-limited hold.
 
 use crate::DomainError;

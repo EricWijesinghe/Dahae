@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Personalized feed over the real router: guests read it with no session, members only with one,
 //! and a half-finished quote on the device comes first.
 

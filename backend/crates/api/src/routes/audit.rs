@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Staff activity log for the owner: `GET /v1/admin/audit`. Newest first, cursor-paged on
 //! `(created_at, id)`. Filters are checked here before they reach SQL. Recorded `data` leaves as
 //! plain text (a JSON string), so the console shows it as text and never interprets it.

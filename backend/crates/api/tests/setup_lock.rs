@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Saved console payment cards lock: a save or clear is refused until the owner unlocks the card with a TOTP,
 //! the unlock lasts a few minutes, and every step is audited. Needs DATABASE_URL (sqlx::test).
 

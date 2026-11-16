@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Rollback safety: the previous image must start against a database a newer release already migrated.
 
 use sqlx::{PgPool, migrate::MigrateError};

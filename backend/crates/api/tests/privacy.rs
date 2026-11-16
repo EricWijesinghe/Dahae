@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! PIPA customer rights over the real router and a migrated database: consent records and re-consent,
 //! marketing withdrawal gating sends, the data export, the account deletion cascade, the retention
 //! purge, and the staff access record for customer contact details.

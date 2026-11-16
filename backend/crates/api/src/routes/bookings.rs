@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Customer booking engine: create (+pay), list, detail, cancel, deposit, balance, notes, reschedule, review.
 
 use super::{

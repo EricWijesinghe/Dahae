@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! PortOne V2 현금영수증 calls. Shapes follow `@portone/server-sdk` 0.19.0 (`IssueCashReceiptBody`,
 //! `IssueCashReceiptCustomerInput`, `CashReceiptClient.cancelCashReceiptByPaymentId`).
 //! Success is read from `cashReceipt.issueNumber` (PortOne openapi `CashReceiptSummary`, no status field).

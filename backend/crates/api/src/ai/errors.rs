@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Failed model calls (transport, non-2xx, unreadable body). They spend no reply cap, so a provider
 //! outage gets its own ceiling: otherwise every customer message would still reach the provider.
 

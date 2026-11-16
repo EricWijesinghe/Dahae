@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Payment method catalogue: the methods customers can pay with, and the admin switch for each.
 
 use super::audit;

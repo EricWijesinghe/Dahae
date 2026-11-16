@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! People and accounts: customers with addresses, cards, coupons and sign-in identities; partners
 //! with teams, preferences and payout accounts; two demo staff; sign-in records (refresh tokens, OTP).
 

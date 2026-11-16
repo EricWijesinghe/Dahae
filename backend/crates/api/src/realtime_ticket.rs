@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Socket tickets: the WebSocket is opened with a 30-second, single-use ticket instead of the access token,
 //! so the long-lived credential never appears in a URL (proxies and access logs record those).
 

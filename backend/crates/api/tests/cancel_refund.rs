@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Cancellation refunds against a PortOne mock with DEV_MODE off: concurrent cancels refund once, a
 //! cancel that loses to a completion refunds nothing, a retry after a lost commit does not refund twice,
 //! staff money actions check the live role, and the saved-card routes (booking, tip, waitlist accept)

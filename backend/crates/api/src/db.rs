@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Postgres connection pool with server-side guards on every connection: a statement timeout, an
 //! idle-in-transaction timeout, and a slow-statement log. Sizes come from `DB_*` env vars (see `config.rs`).
 

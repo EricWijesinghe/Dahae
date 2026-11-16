@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Live job state from the server agent's `status/<id>.json`. Root writes these files on the server; the API
 //! reads them as untrusted text: size-capped, known states only, every text field length-capped.
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Schedule guards: a quote deposit cannot double-book a pro, a pro-assigned reschedule waits for the pro's
 //! confirmation, and a stale on-site stamp is refused once the job changed hands or was cancelled.
 //! Same DB and fakes as the other flow tests.

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Firebase Cloud Messaging HTTP v1. Service-account JWT (RS256) -> OAuth access token (cached
 //! until 60 s before expiry) -> `projects/{id}/messages:send` once per device token.
 //! Docs: https://firebase.google.com/docs/cloud-messaging/send-message

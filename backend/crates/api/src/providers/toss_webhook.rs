@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Toss webhook signature. HMAC-SHA256 over `{rawBody}:{transmission-time}`, keyed with the 보안 키 (security key),
 //! base64 encoded, sent as `v1:<sig>` in `tosspayments-webhook-signature`. Several signatures may be space separated.
 //! shortcut: the key bytes are the security key text as given; confirm against one live test webhook before go-live.

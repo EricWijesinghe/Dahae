@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Server-sent text (push, inbox, SMS) in the recipient's language.
 //!
 //! Call sites keep writing the Korean source text; [`tr`] looks it up here. Unknown text (booking

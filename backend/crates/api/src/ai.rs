@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! AI support agent. When staff are away (or always, if the owner chose "always_first") it answers
 //! the customer's chat with the Anthropic Messages API. Decision, prompt building and the HTTP call
 //! live here; `routes::chat::send` only calls [`schedule`] after a customer or partner message.

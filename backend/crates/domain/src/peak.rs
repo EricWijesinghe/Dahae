@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Peak pricing: weekend, Korean public holiday, Seollal/Chuseok period and evening-hour surcharges.
 //! Pure: callers pass the UTC start instant; all calendar math happens in KST (UTC+9).
 

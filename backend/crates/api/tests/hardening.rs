@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Abuse and pagination hardening over the real router and a migrated database: lockout and rate
 //! limits that survive a restart, and cursor pagination on the partner and payout lists.
 //! Needs DATABASE_URL (sqlx::test).

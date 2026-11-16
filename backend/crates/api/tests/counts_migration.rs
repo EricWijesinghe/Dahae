@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Migration 0233 over a seeded database: legacy mattress rows gain `unit_counts` only while the
 //! mattress service is counts pricing. Owner-edited unit pricing keeps its legacy `unit_index`.
 

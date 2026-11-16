@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 use thiserror::Error;
 
 /// Every rule violation has a stable machine code so apps can localize the message.

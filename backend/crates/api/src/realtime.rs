@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Live events over WebSocket plus durable notifications and push fallback.
 //!
 //! Fan-out across replicas: `Hub::send` delivers to sockets on this node at once and queues the

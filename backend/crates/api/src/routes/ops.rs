@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Operations API for the console: the status page and the owner's alert settings. Staff can read;
 //! only the owner changes alert settings.
 

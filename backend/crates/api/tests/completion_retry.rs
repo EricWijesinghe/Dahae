@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! A retried completion (the first response was lost on a bad signal) returns the first result, once.
 
 mod common;

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Post-commit notifications (outbox), background job safety across replicas, campaign resume, and the
 //! job completion shared by the owner and the team member. Same DB and fakes as the other flow tests.
 

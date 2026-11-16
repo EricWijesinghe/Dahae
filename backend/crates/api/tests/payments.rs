@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Payment method offer: a method is listed to customers only when an admin switched it on and its PortOne
 //! channel key is configured, a checkout for an unconfigured method is refused before any row exists, and the
 //! admin list cannot be saved empty. Needs DATABASE_URL (sqlx::test).

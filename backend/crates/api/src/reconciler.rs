@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Background recovery for checkouts whose confirm or webhook never arrived (money taken,
 //! booking missing), and for compensating refunds that failed (`refund_queue`). Runs on every
 //! replica: each pass claims rows with `FOR UPDATE SKIP LOCKED` and stamps them with a lease, and

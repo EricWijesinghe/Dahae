@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Partner quality recompute. Aggregates each partner's last 90 days (ratings, check-ins, bookings,
 //! cases), stores the score, auto-pauses offers below the owner's floor (the owner can lift a pause per
 //! partner), and notifies a partner once when they drop into the warning band or pause.

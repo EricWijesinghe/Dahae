@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Subscriptions over the real router: planning, the day-before charge, declines and pause, partner continuity,
 //! slot capacity, skip and move, cancel, owner edits, policy and metrics. PortOne billing runs in dev mode;
 //! the `fake_decline` billing key is the mock decline.

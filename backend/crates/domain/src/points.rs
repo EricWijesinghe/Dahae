@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Malkkeum points: a loyalty programme, NOT stored value. There is no cash top-up, so points
 //! are never prepaid e-money (선불전자지급수단). See docs/finance-tax.md.
 //! Pure functions: the API passes the ledger facts and "now" in, gets amounts out.

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Account deletion completeness and Sign in with Apple compliance over the real router and a migrated
 //! database: every table holding customer personal data is checked after deletion, Apple refresh tokens are
 //! stored encrypted and removed with the identity, and Apple server-to-server notifications are verified,

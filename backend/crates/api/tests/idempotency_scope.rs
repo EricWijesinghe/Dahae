@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Idempotency-Key replay holds across access-token refreshes: the key belongs to the user, not
 //! to one token, so a retry after the app refreshed its token never books or charges twice.
 

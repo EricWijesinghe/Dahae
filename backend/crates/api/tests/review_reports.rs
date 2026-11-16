@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Review reports (Play UGC policy): one report per user, the threshold queues for staff (never auto-hides), the staff
 //! queue and decisions, and blocked review authors. Same DB and fakes as growth.rs.
 

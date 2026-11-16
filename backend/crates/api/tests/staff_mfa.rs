@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Staff second factor over the real router and a migrated database: enrolment, TOTP and recovery-code
 //! sign-in, replay refusal, and that a password alone cannot replace an active second factor.
 //! Needs DATABASE_URL (sqlx::test).

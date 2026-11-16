@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Tax-invoice CSV export is idempotent: a second export returns no rows, and a confirmed re-export sends the same
 //! rows again without clearing exported_at. Needs DATABASE_URL (sqlx::test).
 

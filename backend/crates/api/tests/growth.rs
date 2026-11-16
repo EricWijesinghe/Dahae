@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Growth flows over the real router: review permissions, public social proof, referral rewards,
 //! the welcome offer and honest seat counts. Same DB and fakes as flows.rs.
 

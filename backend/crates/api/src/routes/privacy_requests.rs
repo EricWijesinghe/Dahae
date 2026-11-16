@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Console: customer rights requests (PIPA 열람·삭제). Admins look a customer up by phone, export that
 //! customer's data (JSON or CSV) and see the outcome of each request. Export and deletion need a TOTP step-up
 //! within five minutes, and deleting needs the customer's phone typed back in. Every step is audit-logged

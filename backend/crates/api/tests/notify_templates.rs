@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner-edited notification text: console CRUD and preview over the real router, and the text customers see.
 
 mod common;

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Payout flow over a migrated Postgres: request -> reveal -> confirm, with the double-pay guard,
 //! failure and retry. Needs DATABASE_URL (sqlx::test).
 

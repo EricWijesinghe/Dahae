@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 use crate::{config::Config, providers::Providers, realtime::Hub};
 use sqlx::PgPool;
 use std::sync::Arc;

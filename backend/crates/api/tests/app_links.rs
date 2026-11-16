@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Android App Links and Apple Universal Links over the real router: env fallback, owner-saved values
 //! beating env, validation, the dry run, and who may save.
 

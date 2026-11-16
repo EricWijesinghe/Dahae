@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Saved-card billing keys at rest: a registered card is stored sealed with a keyed digest, the charge path
 //! opens the key before the gateway sees it, legacy plaintext rows are sealed at startup (rerun-safe), and one
 //! live card per billing key is enforced on the digest. Needs DATABASE_URL (sqlx::test).

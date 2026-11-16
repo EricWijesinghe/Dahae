@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner account over the real router and a migrated database: the owner gate (live flag, per-request TOTP,
 //! single-use steps), claim and transfer, recovery codes, alert number, password, sign-out-everywhere,
 //! and the server-issued reset after a lost second factor. Needs DATABASE_URL (sqlx::test).

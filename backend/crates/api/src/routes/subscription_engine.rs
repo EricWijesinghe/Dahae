@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Subscription engine, one pass every few minutes:
 //! 1. plans visits up to `HORIZON_DAYS` ahead for active subscriptions (preferred arrival window first, then any free one);
 //! 2. charges each planned visit that is due tomorrow: booking and charge in one transaction, so a declined card leaves no booking;

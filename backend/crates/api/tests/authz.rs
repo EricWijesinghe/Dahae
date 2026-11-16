@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Cross-owner authorization table over the real router and a migrated database. Every owner-scoped `:id`
 //! route in bookings, chat, cases and partner jobs is called by a signed-in user who does not own the record.
 //! The answer must be 403 or 404 (409 for a job another pro already claimed), and the record must not change.

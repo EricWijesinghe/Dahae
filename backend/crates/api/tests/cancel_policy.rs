@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Cancellation fee preview, fee acceptance, refunds and household copy over the real router.
 //! Visit dates are counted in KST days, the same unit the policy uses.
 

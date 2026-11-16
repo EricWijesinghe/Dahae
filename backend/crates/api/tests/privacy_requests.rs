@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Admin handling of customer rights requests over the real router and a migrated database: lookup by
 //! phone, the per-customer export (JSON and CSV), deletion with the phone typed back, and the request log.
 //! Consultants get none of it. Test staff are stepped up, so the step-up window is open for them.

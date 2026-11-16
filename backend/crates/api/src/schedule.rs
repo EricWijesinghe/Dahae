@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Pro and team-member schedules: one live job per time window. Writers take `lock_schedule` for the
 //! pro first, write, then ask `schedule_clash` whether the written row now overlaps another live job.
 

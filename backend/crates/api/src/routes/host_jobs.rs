@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner-queued server jobs (`/admin/host/jobs`). An accepted request writes one job file into the agent's
 //! inbox and records a row; the live state is read back from the agent's status files.
 

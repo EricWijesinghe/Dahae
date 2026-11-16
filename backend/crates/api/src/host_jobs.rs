@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Server jobs an owner queues from the console: the kinds the server agent runs, their argument rules,
 //! and the job file format `deploy/agent.sh` reads from the inbox. Nothing here touches the disk.
 

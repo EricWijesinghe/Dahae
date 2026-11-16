@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Address search (juso.go.kr proxy) for signed-in customers and partners, and the public feature
 //! switches the apps read at start-up.
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Sign in with Apple server calls: the client secret, the authorization-code exchange (its refresh token is kept
 //! only for revocation), token revocation on account deletion (App Store Review 5.1.1(v)), and verification of
 //! Apple's server-to-server notifications.

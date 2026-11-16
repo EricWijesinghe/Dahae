@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Renewal calendar over the real router and a migrated database: admin-only CRUD with audit rows, and the
 //! reminder pass sends one SMS per threshold, re-arms when a due date moves, and derives the keys test.
 //! Needs DATABASE_URL (sqlx::test).

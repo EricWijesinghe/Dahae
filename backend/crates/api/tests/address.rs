@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Address search: signed-in customers and partners only, with a per-user minute bucket. The feature
 //! flags stay public. Dev mode has no Juso key, so an allowed search answers 503 without network.
 //! Needs DATABASE_URL (sqlx::test).

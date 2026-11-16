@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Waitlist for a full slot. A customer joins with their booking request when the slot is full. When
 //! a seat frees up, the first waiting customer gets a 15-minute offer that holds the seat (see
 //! `util::lock_and_count_slot`). Accepting the offer creates the booking through the normal create path.

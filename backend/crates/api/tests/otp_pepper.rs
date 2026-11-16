@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Login-code hashes: OTP_PEPPER is the primary key for new codes, and jwt_secret still verifies codes
 //! issued before the pepper was set.
 

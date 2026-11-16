@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Partner onboarding training: a module is complete when every checklist item is ticked and its quiz
 //! is passed. A partner receives jobs only after every required module is complete.
 

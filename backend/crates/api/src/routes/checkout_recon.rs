@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Checkout recovery and listing: the reconciler pass (unfinished checkouts and queued refunds)
 //! and the customer and console checkout lists. Settlement itself lives in `checkouts`.
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Login and OTP lockout with exponential backoff, counted on two keys per attempt:
 //! - the (IP, account) pair locks one client after a few failures, so the account stays usable for others;
 //! - the account alone has a wider free budget and locks it against a distributed guesser. Login refuses

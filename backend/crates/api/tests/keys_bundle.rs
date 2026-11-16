@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Keys bundle over the real router and a migrated database: owner TOTP and admin role on every request,
 //! the bundle opens with its passphrase and matches the live keys, and only a matching upload sets verified_at.
 //! Needs DATABASE_URL (sqlx::test).

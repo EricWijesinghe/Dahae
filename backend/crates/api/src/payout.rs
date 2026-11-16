@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Partner payout state machine. Money only moves along the edges in [`next`]; every other
 //! (state, action) pair is refused, and paid is terminal.
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Per-IP request limits. Auth (`/v1/auth/*`) and uploads (`/v1/uploads`) have their own buckets, as do the
 //! public write routes that anonymous clients can hit freely (error reports, analytics batches, the Toss webhook)
 //! and address search. Everything else shares the general bucket.

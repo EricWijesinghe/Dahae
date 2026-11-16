@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Text messages (SMS and AlimTalk) through the notification outbox. A send stores a row and makes one
 //! attempt at once. A failure stays in the row and the `notify_outbox` job retries it with the push
 //! backoff. After `MAX_ATTEMPTS` the row is dead-lettered and the owner gets the `sms_dead_letter` alert.

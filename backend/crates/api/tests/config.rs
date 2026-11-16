@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Maintenance mode: the owner can still sign in and switch it off; new bookings are refused meanwhile.
 
 mod common;

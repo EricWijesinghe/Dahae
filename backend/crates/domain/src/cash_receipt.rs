@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! 현금영수증 rules: which payments may carry one and how the customer identity is checked. Pure.
 //! ACCOUNTANT: mandatory issuance (의무발행) applies to cash-type sales by listed businesses; confirm the
 //! industry list covers cleaning services before relying on `MANDATORY_ISSUE_MIN`.

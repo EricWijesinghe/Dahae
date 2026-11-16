@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Operations signals: last success and failure per external integration, a failure log for the
 //! alert windows, an hourly 5xx counter, disk and database figures, and the status summary the
 //! console's status page shows. Only short error codes are stored, never provider messages.

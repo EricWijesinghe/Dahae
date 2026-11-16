@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Keys bundle: the two secrets a restore on a fresh server cannot run without (DATA_KEY and JWT_SECRET),
 //! sealed under a passphrase the server generates and shows once. `routes/keys.rs` makes and tests it;
 //! `api keys-open` (run by the host agent for `keys-restore`) prints the two lines back.

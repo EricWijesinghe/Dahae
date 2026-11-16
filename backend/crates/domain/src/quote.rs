@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Move-in / move-out estimate. The formula's numbers are configuration
 //! (editable in admin); the shape of the calculation is fixed here.
 

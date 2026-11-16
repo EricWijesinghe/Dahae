@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Cleaner verification: a pro is verified only with a complete checklist, and the checklist, the status
 //! and the audit row commit together. The employee profile round-trips, and its emergency contact is
 //! encrypted at rest. Same DB and fakes as the other flow tests.

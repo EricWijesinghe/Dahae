@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Regular cleaning subscriptions. Customer: create, manage, skip or move one visit. Partner: the recurring
 //! customers they serve (district only, no contact details). Owner: list, edit or pause on behalf of a customer,
 //! the discount policy, and recurring metrics (MRR, churn, prorated revenue).

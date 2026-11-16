@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Admin booking detail: the estimate breakdown of a weekend booking carries its peak surcharge,
 //! so its total equals the estimate the customer was quoted and charged against.
 

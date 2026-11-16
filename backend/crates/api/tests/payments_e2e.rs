@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Payment path end to end against a PortOne mock with DEV_MODE off: the owner saves the PortOne keys
 //! (with a webhook secret), a checkout is confirmed, a signed Transaction.Paid arrives, the customer cancels
 //! late (a partial refund sent to PortOne), and a signed Transaction.PartialCancelled arrives without moving

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Console: owner-editable limits and thresholds, one group at a time (see `settings_registry`).
 
 use crate::{auth::Admin, error::ApiResult, settings_registry, state::AppState};

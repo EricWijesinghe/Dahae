@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Owner alerts. A pass every few minutes checks a handful of rules over the ops failure log, the
 //! backup status and free disk. A firing rule goes to the console inbox, to the owner's phone (SMS)
 //! and to staff push devices, then sits out a cooldown so one incident sends one message per cooldown.

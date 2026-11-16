@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Removes embedded metadata (EXIF with GPS, XMP, IPTC, text chunks) from uploaded photos before they are
 //! stored. Pixels are never decoded or re-encoded: only the container is rewritten, so quality is untouched.
 //! A JPEG keeps a one-tag EXIF block with its orientation, or phone photos would display sideways.

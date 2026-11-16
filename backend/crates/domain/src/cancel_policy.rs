@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Cancellation and reschedule fee policy. Owner-configurable; the built-in default keeps the
 //! original rule (free until 2 calendar days before the visit, later cancels go to staff).
 //! Days are KST calendar days between today and the visit date, so the default matches the old rule exactly.

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Idempotent first-run data: catalogue, quote formula, slot capacity, first admin, starter content.
 
 use crate::{auth::hash_password, config::Config};
