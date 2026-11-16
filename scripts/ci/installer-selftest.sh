@@ -168,7 +168,7 @@ t  "purge: --confirm domain"     sub purge_ok other.co.kr
 t  "plain uninstall still takes --yes" sub confirm "q" yes
 
 # ---- image signatures: verified by digest, no silent skip ----
-t  "signer ok"             valid_signer EricWijesinghe/malkkeum
+t  "signer ok"             valid_signer EricWijesinghe/Dahae
 nt "signer regex chars"    valid_signer 'a/b|.*'
 nt "signer no repo"        valid_signer EricWijesinghe
 t  "signer identity regex" eq "$(signer_re Eric.W/mal.keum)" '(?i)^https://github\.com/Eric\.W/mal\.keum/\.github/workflows/release\.yml@refs/tags/v[0-9]'
@@ -187,16 +187,16 @@ echo 'Verification for x --' >&2
 echo '[{"critical":{"image":{"docker-manifest-digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}]'
 COS
 chmod 755 "$SB/bin/cosign"
-env_set SIGNER_REPO EricWijesinghe/malkkeum
+env_set SIGNER_REPO EricWijesinghe/Dahae
 export FAKE_COSIGN=ok
 t  "verify -> pinned digest" eq "$(verify_image ghcr.io/o/malkkeum-api:stable)" ghcr.io/o/malkkeum-api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 t  "verify pins the OIDC issuer" grep -q -- "--certificate-oidc-issuer https://token.actions.githubusercontent.com" "$SB/bin/args"
-t  "verify pins release.yml on tags" grep -qF 'EricWijesinghe/malkkeum/\.github/workflows/release\.yml@refs/tags/v' "$SB/bin/args"
+t  "verify pins release.yml on tags" grep -qF 'EricWijesinghe/Dahae/\.github/workflows/release\.yml@refs/tags/v' "$SB/bin/args"
 FAKE_COSIGN=bad
 nt "unsigned image refused" sub verify_image ghcr.io/o/malkkeum-api:stable
 FAKE_COSIGN=ok; env_set SIGNER_REPO 'bad repo'
 nt "bad signer refused"    sub verify_image ghcr.io/o/malkkeum-api:stable
-env_set SIGNER_REPO EricWijesinghe/malkkeum; rm -f "$SB/bin/cosign"
+env_set SIGNER_REPO EricWijesinghe/Dahae; rm -f "$SB/bin/cosign"
 nt "missing cosign refused (no silent skip)" sub verify_image ghcr.io/o/malkkeum-api:stable
 
 # ---- app DB role: not a superuser; restores drop owner/extension lines ----
@@ -359,6 +359,7 @@ mkdir -p "$WALON/wal" "$WALOFF" "$NOWAL"; : > "$WALON/wal/docker-compose.wal.yml
 printf 'DOMAIN=myshop.co.kr\nWAL_ARCHIVE_MODE=on\n' > "$WALON/.env"
 printf 'DOMAIN=myshop.co.kr\nWAL_ARCHIVE_MODE=off\n' > "$WALOFF/.env"
 printf 'DOMAIN=myshop.co.kr\nWAL_ARCHIVE_MODE=on\n' > "$NOWAL/.env"
+# shellcheck source=/dev/null # the CLI script under test is passed in
 dc_args() { ( DAHAE_SELFTEST=1 . "$1"; cd "$2"; docker() { echo "$*"; }; dc ps ) 2>/dev/null; } # dc_args 스크립트 폴더 : 실제로 넘어갈 인자
 WAL_ARGS="compose -f docker-compose.yml -f wal/docker-compose.wal.yml --env-file .env ps"
 PLAIN_ARGS="compose -f docker-compose.yml --env-file .env ps"
