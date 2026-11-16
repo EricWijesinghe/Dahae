@@ -15,11 +15,15 @@ import random
 import sys
 import urllib.error
 import urllib.request
+
+# Must match backend/crates/api/src/privacy.rs CONSENT_VERSION.
+CONSENT_VERSION = "2026-11-19"
 from datetime import date, timedelta
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8080"
 ADMIN = ("admin@local.test", "change-me-now-please")
 DISTRICT = "11680"  # Gangnam-gu
+CHECKLIST = {"identity": True, "tax_type": True, "experience": True, "emergency_contact": True}
 
 
 def call(method, path, body=None, token=None, expect=200):
@@ -52,15 +56,18 @@ def phone():
 def login(audience):
     p = phone()
     code = call("POST", "/v1/auth/otp", {"phone": p})["dev_code"]
-    call("POST", "/v1/auth/verify", {"phone": p, "code": "000000" if code != "000000" else "111111", "audience": audience}, expect=400)
-    return call("POST", "/v1/auth/verify", {"phone": p, "code": code, "audience": audience})["access_token"]
+    # A new customer must grant the required consents at signup (the app's signup screen does the same).
+    consents = [{"kind": k, "granted": True, "version": CONSENT_VERSION} for k in ("terms", "privacy", "overseas_transfer")] if audience == "customer" else []
+    call("POST", "/v1/auth/verify", {"phone": p, "code": "000000" if code != "000000" else "111111", "audience": audience, "consents": consents}, expect=400)
+    return call("POST", "/v1/auth/verify", {"phone": p, "code": code, "audience": audience, "consents": consents})["access_token"]
 
 
 def add_card(token, auth_key, name):
     # Cards need an open billing-issue ticket; /v1/me/payment-methods/setup only opens one when PortOne is configured.
     me = call("GET", "/v1/me", token=token)
     if auth_key == "fake_decline":  # the dev decline key is one live billing key DB-wide: free it so reruns work
-        sql("UPDATE payment_methods SET deleted_at = now() WHERE billing_key = 'fake_decline' AND deleted_at IS NULL")
+        # Stored keys are ciphertext, so match the smoke-only display name instead of the key.
+        sql("UPDATE payment_methods SET deleted_at = now() WHERE display_name = '거절카드' AND deleted_at IS NULL")
     sql(f"INSERT INTO billing_issues (id, user_id, expires_at) VALUES (gen_random_uuid(), '{me['id']}', now() + interval '30 minutes')")
     return call("POST", "/v1/me/payment-methods", {"provider": "card", "auth_key": auth_key, "display_name": name}, token)
 
@@ -128,7 +135,7 @@ def main():
     pro_list = call("GET", "/v1/admin/pros", token=staff)
     for t in pros:
         me = call("GET", "/v1/partner/me", token=t)
-        call("POST", f"/v1/admin/pros/{me['id']}/status", {"status": "verified"}, staff)
+        call("POST", f"/v1/admin/pros/{me['id']}/status", {"status": "verified", "checklist": CHECKLIST}, staff)
         call("PUT", "/v1/partner/prefs", {"services": ["bathroom", "move_in"], "districts": [DISTRICT], "weekdays": [0, 1, 2, 3, 4, 5, 6], "day_parts": ["morning", "afternoon"], "days_off": [], "notify": {}}, t)
         call("PUT", "/v1/partner/payout-account", {"bank": "신한", "account_number": "110-123-456789", "holder": "홍길동"}, t)
     feed = call("GET", "/v1/partner/jobs?kind=direct", token=pros[0])
@@ -149,7 +156,8 @@ def main():
     early = call("POST", f"/v1/partner/jobs/{b['id']}/complete", {"before_photos": [photo], "after_photos": [photo], "checklist": [True] * 4}, pros[0], expect=409)
     assert early["error"]["code"] == "job_not_started"
     sql(f"UPDATE bookings SET visit_date = (now() AT TIME ZONE 'Asia/Seoul')::date WHERE id = '{b['id']}'")  # time travel to visit day
-    done = call("POST", f"/v1/partner/jobs/{b['id']}/complete", {"before_photos": [photo], "after_photos": [photo], "checklist": [True] * 4}, pros[0])
+    call("POST", f"/v1/partner/jobs/{b['id']}/check-in", token=pros[0])
+    done =call("POST", f"/v1/partner/jobs/{b['id']}/complete", {"before_photos": [photo], "after_photos": [photo], "checklist": [True] * 4}, pros[0])
     assert done["net"] == 41600, done
     assert call("GET", f"/v1/bookings/{b['id']}", token=cust)["status"] == 3
     step("completion needs photos; payout 41,600 (52,000 - 20%) scheduled")
@@ -276,7 +284,7 @@ def social_flow(staff, visit):
     spro = call("POST", "/v1/auth/social", {"provider": "kakao", "token": f"dev:pro-{random.randint(10**9, 10**10)}", "audience": "partner"})
     pt = spro["access_token"]
     pro_id = call("GET", "/v1/partner/me", token=pt)["id"]
-    call("POST", f"/v1/admin/pros/{pro_id}/status", {"status": "verified"}, staff)
+    call("POST", f"/v1/admin/pros/{pro_id}/status", {"status": "verified", "checklist": CHECKLIST}, staff)
     refused = call("POST", f"/v1/partner/jobs/{done['booking_id']}/accept", token=pt, expect=409)
     assert refused["error"]["code"] == "phone_required", refused
     step("social pro without a phone: accept -> 409 phone_required")

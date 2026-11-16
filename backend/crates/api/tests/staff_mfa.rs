@@ -1,4 +1,4 @@
-//! Staff second factor over the real router and a migrated database: admin enrolment, TOTP and recovery-code
+//! Staff second factor over the real router and a migrated database: enrolment, TOTP and recovery-code
 //! sign-in, replay refusal, and that a password alone cannot replace an active second factor.
 //! Needs DATABASE_URL (sqlx::test).
 
@@ -39,18 +39,23 @@ async fn enrol(app: &axum::Router, mfa: &str) -> (Vec<u8>, Vec<String>) {
     let (st, e) = call(app, "POST", "/v1/auth/staff/mfa/enrol", None, Some(json!({ "mfa_token": mfa }))).await;
     assert_eq!(st, StatusCode::OK, "{e}");
     let secret = totp::decode_secret(e["secret"].as_str().unwrap()).unwrap();
-    let (st, c) = call(app, "POST", "/v1/auth/staff/mfa/enrol/confirm", None, Some(json!({ "mfa_token": mfa, "code": code_now(&secret) }))).await;
+    let (st, c) = call(
+        app,
+        "POST",
+        "/v1/auth/staff/mfa/enrol/confirm",
+        None,
+        Some(json!({ "mfa_token": mfa, "code": code_now(&secret) })),
+    )
+    .await;
     assert_eq!(st, StatusCode::OK, "{c}");
     assert!(c["access_token"].is_string());
-    let codes = c["recovery_codes"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
+    let codes = c["recovery_codes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
     (secret, codes)
-}
-
-#[sqlx::test(migrations = "../../migrations")]
-async fn consultant_signs_in_with_password_only(db: PgPool) {
-    insert_staff(&db, "consultant@test.local", "consultant").await;
-    let b = password_step(&common::app(db), "consultant@test.local").await;
-    assert!(b["access_token"].is_string(), "{b}");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -95,11 +100,25 @@ async fn recovery_code_works_once(db: PgPool) {
     let rc = codes[0].to_lowercase(); // input form does not matter
 
     let mfa = password_step(&app, "admin3@test.local").await["mfa_token"].as_str().unwrap().to_string();
-    let (st, ok) = call(&app, "POST", "/v1/auth/staff/mfa/verify", None, Some(json!({ "mfa_token": mfa, "recovery_code": rc }))).await;
+    let (st, ok) = call(
+        &app,
+        "POST",
+        "/v1/auth/staff/mfa/verify",
+        None,
+        Some(json!({ "mfa_token": mfa, "recovery_code": rc })),
+    )
+    .await;
     assert_eq!(st, StatusCode::OK, "{ok}");
 
     let mfa = password_step(&app, "admin3@test.local").await["mfa_token"].as_str().unwrap().to_string();
-    let (st, _) = call(&app, "POST", "/v1/auth/staff/mfa/verify", None, Some(json!({ "mfa_token": mfa, "recovery_code": rc }))).await;
+    let (st, _) = call(
+        &app,
+        "POST",
+        "/v1/auth/staff/mfa/verify",
+        None,
+        Some(json!({ "mfa_token": mfa, "recovery_code": rc })),
+    )
+    .await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "a recovery code is single use");
 }
 
@@ -133,10 +152,24 @@ async fn wrong_codes_lock_the_account(db: PgPool) {
     enrol(&app, &mfa).await;
     for _ in 0..5 {
         let mfa = password_step(&app, "admin6@test.local").await["mfa_token"].as_str().unwrap().to_string();
-        let (st, _) = call(&app, "POST", "/v1/auth/staff/mfa/verify", None, Some(json!({ "mfa_token": mfa, "code": "000000" }))).await;
+        let (st, _) = call(
+            &app,
+            "POST",
+            "/v1/auth/staff/mfa/verify",
+            None,
+            Some(json!({ "mfa_token": mfa, "code": "000000" })),
+        )
+        .await;
         assert!(st == StatusCode::BAD_REQUEST || st == StatusCode::TOO_MANY_REQUESTS, "{st}");
     }
-    let (st, _) = call(&app, "POST", "/v1/auth/staff/login", None, Some(json!({ "email": "admin6@test.local", "password": PASSWORD }))).await;
+    let (st, _) = call(
+        &app,
+        "POST",
+        "/v1/auth/staff/login",
+        None,
+        Some(json!({ "email": "admin6@test.local", "password": PASSWORD })),
+    )
+    .await;
     assert_eq!(st, StatusCode::TOO_MANY_REQUESTS, "locked after repeated bad second factors");
 }
 

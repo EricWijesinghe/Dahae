@@ -139,7 +139,10 @@ pub fn allocate<K: Copy>(lots: &[Lot<K>], amount: i64, now: DateTime<Utc>) -> Re
 
 /// Lots past their expiry that still hold points: the expiry job writes one `expire` row each.
 pub fn lapsed<K: Copy>(lots: &[Lot<K>], now: DateTime<Utc>) -> Vec<(K, i64)> {
-    lots.iter().filter(|l| l.expires_at <= now && l.remaining() > 0).map(|l| (l.id, l.remaining())).collect()
+    lots.iter()
+        .filter(|l| l.expires_at <= now && l.remaining() > 0)
+        .map(|l| (l.id, l.remaining()))
+        .collect()
 }
 
 /// How a booking total is paid: points first (capped), the rest through the PG.
@@ -165,7 +168,10 @@ pub fn split_payment(total: Won, requested: i64, available: i64, max_use_bps: i6
     if requested > available {
         return Err(PointsError::Insufficient { available });
     }
-    Ok(Split { points: requested, pg: Won(total.0 - requested) })
+    Ok(Split {
+        points: requested,
+        pg: Won(total.0 - requested),
+    })
 }
 
 /// The cash part of `amount` on a booking that paid `paid` in total, `points` of it with points.
@@ -197,7 +203,12 @@ mod tests {
     }
 
     fn lot(id: u8, issued: i64, consumed: i64, expires_day: i64) -> Lot<u8> {
-        Lot { id, issued, consumed, expires_at: at(expires_day) }
+        Lot {
+            id,
+            issued,
+            consumed,
+            expires_at: at(expires_day),
+        }
     }
 
     #[test]
@@ -251,13 +262,22 @@ mod tests {
     #[test]
     fn split_pays_points_first_and_the_rest_by_pg() {
         let s = split_payment(Won(52_000), 10_000, 20_000, 10_000).unwrap();
-        assert_eq!(s, Split { points: 10_000, pg: Won(42_000) });
+        assert_eq!(
+            s,
+            Split {
+                points: 10_000,
+                pg: Won(42_000)
+            }
+        );
         assert_eq!(split_payment(Won(52_000), 0, 20_000, 10_000).unwrap().pg, Won(52_000));
     }
 
     #[test]
     fn split_refuses_over_balance_and_over_cap() {
-        assert_eq!(split_payment(Won(52_000), 9_000, 8_000, 10_000), Err(PointsError::Insufficient { available: 8_000 }));
+        assert_eq!(
+            split_payment(Won(52_000), 9_000, 8_000, 10_000),
+            Err(PointsError::Insufficient { available: 8_000 })
+        );
         assert_eq!(split_payment(Won(52_000), 20_000, 90_000, 3_000), Err(PointsError::OverCap { cap: 15_600 }));
         assert_eq!(split_payment(Won(52_000), -1, 0, 10_000), Err(PointsError::NonPositive));
     }

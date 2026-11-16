@@ -32,6 +32,7 @@ pub fn routes() -> Router<AppState> {
         .route("/payout-account", get(get_account).put(put_account))
         .route("/settlements", get(settlements))
         .route("/reviews", get(reviews))
+        .route("/quality", get(crate::quality::partner_read))
         .route("/threads", get(threads))
         .route("/export", get(export))
 }
@@ -244,8 +245,18 @@ async fn invite(State(s): State<AppState>, Pro(a): Pro, Json(i): Json<Invite>) -
     if count >= MAX_TEAM {
         return Err(ApiError::Conflict("team_full"));
     }
-    let id: Uuid = sqlx::query_scalar("INSERT INTO team_members (pro_id, name, phone, role) VALUES ($1,$2,$3,'member') ON CONFLICT (pro_id, phone) DO UPDATE SET name = $2, invite_status = 'invited' RETURNING id")
-        .bind(a.id).bind(i.name.trim()).bind(&phone).fetch_one(&s.db).await?;
+    // A new or revived invite waits for the platform owner; an already approved member keeps their approval.
+    let id: Uuid = sqlx::query_scalar(
+        "INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1,$2,$3,'member','pending_approval')
+         ON CONFLICT (pro_id, phone) DO UPDATE SET name = $2,
+           invite_status = CASE WHEN team_members.invite_status = 'active' THEN 'active' ELSE 'pending_approval' END
+         RETURNING id",
+    )
+    .bind(a.id)
+    .bind(i.name.trim())
+    .bind(&phone)
+    .fetch_one(&s.db)
+    .await?;
     let locale = crate::i18n::locale_of(&s.db, crate::realtime::Recipient::Pro(a.id)).await;
     let text = crate::i18n::tr(&locale, "팀원으로 초대됐어요. 파트너 앱을 설치해 주세요.");
     if let Err(e) = crate::sms_outbox::send(&s, None, &phone, "team.invite", crate::sms_outbox::Message::Sms(&text)).await {

@@ -339,7 +339,7 @@ async fn review_account_signs_in_with_the_owner_code_and_no_sms_code_is_echoed(p
         "POST",
         "/v1/auth/verify",
         None,
-        Some(json!({"phone": "010-9999-0001", "code": "123456", "audience": "customer"})),
+        Some(json!({"phone": "010-9999-0001", "code": "123456", "audience": "customer", "consents": common::required_consents()})),
     )
     .await;
     assert_eq!(st, StatusCode::OK, "{b}");

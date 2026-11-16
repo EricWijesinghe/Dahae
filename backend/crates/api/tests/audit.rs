@@ -77,6 +77,54 @@ fn targets(page: &Value) -> Vec<String> {
         .collect()
 }
 
+/// Update, delete and truncate on the evidence tables fail; the row stays as written.
+#[sqlx::test(migrations = "../../migrations")]
+async fn audit_rows_cannot_be_updated_or_deleted(pool: PgPool) {
+    let (_, s1) = staff_token(&pool, Role::StaffAdmin).await;
+    record(
+        &pool,
+        Some(s1),
+        "staff",
+        "case.refund",
+        "A",
+        "2026-05-01T10:00:00+09:00",
+        json!({ "amount": 5000 }),
+    )
+    .await;
+
+    let update = sqlx::query("UPDATE audit_log SET action = 'nothing' WHERE target = 'A'").execute(&pool).await;
+    assert!(update.expect_err("update refused").to_string().contains("append-only"));
+    let delete = sqlx::query("DELETE FROM audit_log WHERE target = 'A'").execute(&pool).await;
+    assert!(delete.expect_err("delete refused").to_string().contains("append-only"));
+    let truncate = sqlx::query("TRUNCATE audit_log").execute(&pool).await;
+    assert!(truncate.expect_err("truncate refused").to_string().contains("append-only"));
+
+    let kept: String = sqlx::query_scalar("SELECT action FROM audit_log WHERE target = 'A'")
+        .fetch_one(&pool)
+        .await
+        .expect("row");
+    assert_eq!(kept, "case.refund");
+}
+
+/// Consent records are kept too: a withdrawal is a new row, never an edit of the old one.
+#[sqlx::test(migrations = "../../migrations")]
+async fn consent_records_cannot_be_updated_or_deleted(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let c = common::customer(&app, &pool, "010-7300-0001").await;
+    sqlx::query("INSERT INTO user_consents (user_id, kind, version, granted) VALUES ($1, 'marketing', 'v1', true)")
+        .bind(c.user)
+        .execute(&pool)
+        .await
+        .expect("consent row");
+    let update = sqlx::query("UPDATE user_consents SET granted = false WHERE user_id = $1")
+        .bind(c.user)
+        .execute(&pool)
+        .await;
+    assert!(update.expect_err("update refused").to_string().contains("append-only"));
+    let delete = sqlx::query("DELETE FROM user_consents WHERE user_id = $1").bind(c.user).execute(&pool).await;
+    assert!(delete.expect_err("delete refused").to_string().contains("append-only"));
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn audit_is_owner_only(pool: PgPool) {
     let app = common::app(pool.clone());

@@ -311,6 +311,13 @@ pub async fn status(s: &AppState) -> ApiResult<Value> {
     let disk = disk_usage(s.config.upload_dir.clone()).await;
 
     let integ = s.providers.integ();
+    let receipts = match crate::routes::cash_receipts::ops_status(&s.db, integ.portone.cash_receipts).await {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!(error = %e, "cash receipt status unavailable");
+            Value::Null
+        }
+    };
     let integrations: Vec<Value> = INTEGRATIONS
         .iter()
         .map(|sec| {
@@ -359,9 +366,22 @@ pub async fn status(s: &AppState) -> ApiResult<Value> {
         "backup": backup.map(|b| json!({ "status": b, "age_hours": backup_age })),
         "checks": checks,
         "integrations": integrations,
+        "cash_receipts": receipts,
         "jobs": jobs,
         "sms_dead_letters": sms_dead,
+        "flow": flow_status(&s.db).await,
     }))
+}
+
+/// Flow figures for the dashboard and the status page. A failed read is logged and shown as null, so the page still loads.
+pub async fn flow_status(db: &PgPool) -> Option<FlowMetrics> {
+    match flow_metrics(db).await {
+        Ok(flow) => Some(flow),
+        Err(e) => {
+            tracing::warn!(error = %e, "flow metrics unreadable");
+            None
+        }
+    }
 }
 
 fn level_of(s: &str) -> Level {
@@ -396,6 +416,95 @@ pub async fn failures_within(db: &PgPool, integrations: &[&str], minutes: i64) -
         .bind(minutes as i32)
         .fetch_one(db)
         .await
+}
+
+/// Business flow figures over the last 30 days. Shared by the dashboard, the status page and the owner alerts.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FlowMetrics {
+    /// Median hours from booking to a pro or team being set. Null until one booking has been assigned.
+    pub median_hours_to_assign: Option<f64>,
+    /// Confirmed bookings with nobody assigned that were created more than 24 hours ago and visit today or later.
+    pub unassigned_over_24h: i64,
+    /// Today's same-day cancellations against all of today's bookings.
+    pub same_day: SameDay,
+    pub no_show_by_service: Vec<ServiceNoShow>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct SameDay {
+    pub cancelled: i64,
+    pub booked: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow)]
+pub struct ServiceNoShow {
+    pub service_code: String,
+    pub bookings: i64,
+    pub no_shows: i64,
+    /// No-shows per 10,000 bookings (basis points), so 250 is 2.5%.
+    pub rate_bps: i64,
+}
+
+pub async fn flow_metrics(db: &PgPool) -> Result<FlowMetrics, sqlx::Error> {
+    let (cancelled, booked) = same_day_cancels(db).await?;
+    Ok(FlowMetrics {
+        median_hours_to_assign: median_hours_to_assign(db).await?,
+        unassigned_over_24h: unassigned_older_than(db, 24).await?,
+        same_day: SameDay { cancelled, booked },
+        no_show_by_service: no_show_by_service(db).await?,
+    })
+}
+
+pub async fn median_hours_to_assign(db: &PgPool) -> Result<Option<f64>, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM accepted_at - created_at) / 3600.0)
+         FROM bookings
+         WHERE accepted_at IS NOT NULL AND status <> -1 AND created_at > now() - interval '30 days'",
+    )
+    .fetch_one(db)
+    .await
+}
+
+/// Confirmed bookings with no pro and no team that were created at least `hours` ago and visit today (Seoul) or later.
+/// Past visits are left out: an abandoned booking whose day has gone must not keep the owner alert firing.
+pub async fn unassigned_older_than(db: &PgPool, hours: i64) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT count(*) FROM bookings
+         WHERE status = 1 AND pro_id IS NULL AND team_name IS NULL AND created_at < now() - make_interval(hours => $1::int)
+           AND visit_date >= (now() AT TIME ZONE 'Asia/Seoul')::date",
+    )
+    .bind(hours as i32)
+    .fetch_one(db)
+    .await
+}
+
+/// Today's bookings (Seoul date) as (cancelled on the visit day, all bookings for today).
+pub async fn same_day_cancels(db: &PgPool) -> Result<(i64, i64), sqlx::Error> {
+    sqlx::query_as(
+        "SELECT count(*) FILTER (WHERE status = -1 AND (cancelled_at AT TIME ZONE 'Asia/Seoul')::date = visit_date), count(*)
+         FROM bookings WHERE visit_date = (now() AT TIME ZONE 'Asia/Seoul')::date",
+    )
+    .fetch_one(db)
+    .await
+}
+
+/// No-shows per service: distinct non-cancelled bookings created in the last 30 days that have a no-show case,
+/// over the same bookings. One anchor (the booking's creation date) on both sides keeps the rate at most 100%.
+pub async fn no_show_by_service(db: &PgPool) -> Result<Vec<ServiceNoShow>, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT b.service_code, b.bookings, COALESCE(n.no_shows, 0) AS no_shows,
+                COALESCE(n.no_shows, 0) * 10000 / b.bookings AS rate_bps
+         FROM (SELECT service_code, count(*) AS bookings FROM bookings
+               WHERE status <> -1 AND created_at > now() - interval '30 days' GROUP BY service_code) b
+         LEFT JOIN (SELECT bk.service_code, count(DISTINCT bk.id) AS no_shows
+                    FROM cases c JOIN bookings bk ON bk.id = c.booking_id
+                    WHERE c.kind = 'no_show' AND bk.status <> -1 AND bk.created_at > now() - interval '30 days'
+                    GROUP BY bk.service_code) n
+           USING (service_code)
+         ORDER BY b.service_code",
+    )
+    .fetch_all(db)
+    .await
 }
 
 #[cfg(test)]

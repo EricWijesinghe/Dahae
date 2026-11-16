@@ -71,6 +71,9 @@ class TKo extends T {
   String get aiCapHint => '숫자만 입력해요. 비워두면 기본값을 써요.';
 
   @override
+  String get aiOutageBanner => 'AI 답변 연결에 문제가 있어요. 상담원이 직접 응대해 주세요.';
+
+  @override
   String get cAppLinkTitle => '앱 링크';
 
   @override
@@ -2854,6 +2857,10 @@ class TKo extends T {
   String get err_payment_method_disabled => '지금은 이 결제수단을 쓸 수 없어요.';
 
   @override
+  String get err_payment_methods_empty =>
+      '결제 수단을 하나 이상 켜 주세요. 모두 끄면 고객이 결제할 수 없어요.';
+
+  @override
   String get err_invalid_payment_method => '선택한 결제수단을 쓸 수 없어요. 다른 방법을 골라 주세요.';
 
   @override
@@ -2907,6 +2914,12 @@ class TKo extends T {
 
   @override
   String get err_job_not_started => '먼저 작업을 시작해 주세요.';
+
+  @override
+  String get err_not_checked_in => '도착 기록이 없어요. 먼저 도착을 기록하거나 사유를 적어 주세요.';
+
+  @override
+  String get err_override_reason_too_long => '사유는 200자 이하로 적어 주세요.';
 
   @override
   String get err_job_not_active => '지금은 진행할 수 없는 작업이에요.';
@@ -3834,6 +3847,9 @@ class TKo extends T {
   String get oRuleStuck => '결제 자동 처리 실패';
 
   @override
+  String get oRuleMismatch => 'PortOne 결제 내역 불일치';
+
+  @override
   String get oRuleSocial => '소셜 로그인 실패';
 
   @override
@@ -3844,6 +3860,15 @@ class TKo extends T {
 
   @override
   String get oRuleAuth => '계정 보안 이상(로그인 잠금 등)';
+
+  @override
+  String get oRuleUnassigned => '기사님 미배정 예약 (오래 방치)';
+
+  @override
+  String get oRuleSameDayCancel => '당일 취소가 많음';
+
+  @override
+  String get oRuleTaxDeadline => '부가가치세 신고 기한 임박';
 
   @override
   String get oQuietHours => '조용한 시간';
@@ -3957,6 +3982,50 @@ class TKo extends T {
 
   @override
   String get oJob_notify_outbox => '알림 발송함';
+
+  @override
+  String get oFlowTitle => '예약 흐름 (최근 30일)';
+
+  @override
+  String get oFlowUnavailable => '흐름 지표를 지금 불러올 수 없어요';
+
+  @override
+  String get oFlowAssign => '기사님 배정까지 걸린 시간 (중앙값)';
+
+  @override
+  String oFlowAssignValue(String hours) {
+    return '$hours시간';
+  }
+
+  @override
+  String get oFlowNoAssignYet => '배정된 예약이 아직 없어요';
+
+  @override
+  String get oFlowUnassigned => '24시간 넘게 기사님이 없는 예약';
+
+  @override
+  String oFlowUnassignedValue(String count) {
+    return '$count건';
+  }
+
+  @override
+  String get oFlowSameDay => '오늘 당일 취소';
+
+  @override
+  String oFlowSameDayValue(String cancelled, String booked) {
+    return '$cancelled건 / 오늘 예약 $booked건';
+  }
+
+  @override
+  String get oFlowNoShow => '서비스별 미도착(노쇼) 비율';
+
+  @override
+  String oFlowNoShowValue(String noShows, String bookings, String pct) {
+    return '$noShows건 / $bookings건 ($pct%)';
+  }
+
+  @override
+  String get oFlowNoBookings => '예약이 없어요';
 
   @override
   String get err_owner_exists => '이미 소유자가 있어요';
@@ -4392,6 +4461,12 @@ class TKo extends T {
   String get pChecklist => '확인 항목';
 
   @override
+  String get pCheckInReasonTitle => '도착 기록 없이 완료하는 이유';
+
+  @override
+  String get pCheckInReasonHint => '예: 앱에서 도착을 누르지 못했어요 (전화로 확인)';
+
+  @override
   String get pCheck1 => '요청한 모든 공간을 청소했어요';
 
   @override
@@ -4734,6 +4809,13 @@ class TKo extends T {
   }
 
   @override
+  String get cgPeakFixedScope => '정해진 가격·정기 청소에도 할증 적용';
+
+  @override
+  String get cgPeakFixedScopeHint =>
+      '끄면 정해진 가격과 정기 청소는 기본 가격으로 예약돼요. 견적은 항상 할증을 보여줘요';
+
+  @override
   String get oFlags => '기능 스위치';
 
   @override
@@ -4886,6 +4968,216 @@ class TKo extends T {
 
   @override
   String get prqBy => '처리한 직원';
+
+  @override
+  String get cPfTitle => '직원 프로필 · 검증';
+
+  @override
+  String get cPfTabChecklist => '검증 체크리스트';
+
+  @override
+  String get cPfTabProfile => '프로필';
+
+  @override
+  String get cPfChecklistHelp => '모든 항목을 체크해야 활동 중으로 승인할 수 있어요.';
+
+  @override
+  String get cPfItemIdentity => '신분증 확인';
+
+  @override
+  String get cPfItemTaxType => '세금 유형 확인 (사업소득·근로소득)';
+
+  @override
+  String get cPfItemExperience => '경력 확인';
+
+  @override
+  String get cPfItemEmergency => '비상연락처 확인';
+
+  @override
+  String get cPfLegacyNote => '이전에 승인된 직원이라 체크 기록이 없어요. 항목을 확인하고 저장해 주세요.';
+
+  @override
+  String get cPfIncomplete => '체크리스트를 모두 채워야 승인할 수 있어요.';
+
+  @override
+  String get cPfSaveChecklist => '체크리스트 저장';
+
+  @override
+  String get cPfApprove => '활동 중으로 승인';
+
+  @override
+  String get cPfPhoto => '사진';
+
+  @override
+  String get cPfPickPhoto => '사진 올리기';
+
+  @override
+  String get cPfBio => '소개';
+
+  @override
+  String get cPfEmployment => '고용 형태';
+
+  @override
+  String get cPfEmpFreelance => '프리랜서';
+
+  @override
+  String get cPfEmpEmployee => '직원';
+
+  @override
+  String get cPfEmpContract => '위탁';
+
+  @override
+  String get cPfEmergency => '비상연락처';
+
+  @override
+  String get cPfEmergencyHelp => '숫자와 - 만 입력해요. 암호화되어 저장되고, 열람할 때마다 기록이 남아요.';
+
+  @override
+  String get cPfHiredOn => '입사일';
+
+  @override
+  String get cPfNoDate => '입력 안 함';
+
+  @override
+  String get cPfPayee => '주민등록번호 또는 사업자등록번호';
+
+  @override
+  String get cPfPayeeHelp =>
+      '지급명세서 작성에만 쓰며 암호화하여 보관해요. 파트너 동의를 받은 뒤 입력하세요. 열람할 때마다 기록이 남아요.';
+
+  @override
+  String cPfPayeeSaved(String masked) {
+    return '등록됨: $masked';
+  }
+
+  @override
+  String get cPfPayeeReveal => '원본 보기 (본인 인증 필요)';
+
+  @override
+  String get cPfPayeeRevealTitle => '식별번호';
+
+  @override
+  String get cPfPayeeRevealBody => '열람 기록이 남았어요. 화면을 닫은 뒤에는 다시 볼 수 없어요.';
+
+  @override
+  String get err_invalid_payee_identifier =>
+      '주민등록번호(13자리) 또는 사업자등록번호(10자리)를 확인해 주세요.';
+
+  @override
+  String get cPfSaveProfile => '프로필 저장';
+
+  @override
+  String get err_checklist_incomplete => '체크리스트 항목을 모두 체크해야 승인할 수 있어요.';
+
+  @override
+  String get err_invalid_checklist => '체크리스트 항목이 올바르지 않아요. 화면을 새로고침해 주세요.';
+
+  @override
+  String get err_invalid_emergency_contact => '비상연락처는 숫자와 - 만 넣어 주세요. (30자 이내)';
+
+  @override
+  String get err_invalid_employment_type => '고용 형태를 목록에서 골라 주세요.';
+
+  @override
+  String get err_invalid_photo => '사진은 직접 올린 파일만 쓸 수 있어요. 다시 올려 주세요.';
+
+  @override
+  String get err_invalid_bio => '소개는 500자 이내로 적어 주세요.';
+
+  @override
+  String get pQualityScore => '품질 점수';
+
+  @override
+  String get pQualityNone => '아직 점수가 없어요. 일감을 진행하면 점수가 만들어져요';
+
+  @override
+  String get pQualityReadOnly => '점수는 주기적으로 다시 계산돼요. 이 화면에서는 보기만 할 수 있어요';
+
+  @override
+  String get pQualityOk => '정상';
+
+  @override
+  String get pQualityWarning => '주의 필요';
+
+  @override
+  String get pQualityPaused => '일시 중지 · 새 일감을 받을 수 없어요';
+
+  @override
+  String get pQualityOverridden => '운영팀이 중지를 풀었어요';
+
+  @override
+  String get pQualityComponents => '항목별 점수';
+
+  @override
+  String get pQualityRating => '고객 별점';
+
+  @override
+  String get pQualityCompletion => '배정 일감 완료';
+
+  @override
+  String get pQualityOnTime => '정시 도착';
+
+  @override
+  String get pQualityReliability => '취소·노쇼 관리';
+
+  @override
+  String get pQualityComplaints => '불만 관리';
+
+  @override
+  String get pQualityTips => '개선 팁';
+
+  @override
+  String get pTipImproveRating => '고객 별점을 올리려면 마무리 점검을 꼼꼼히 해 보세요';
+
+  @override
+  String get pTipCompleteAssigned => '배정받은 일감은 끝까지 완료해 주세요';
+
+  @override
+  String get pTipCheckInOnTime => '약속 시간에 맞춰 도착 체크인을 해 주세요';
+
+  @override
+  String get pTipAvoidCancellations => '취소와 노쇼를 줄여 주세요';
+
+  @override
+  String get pTipReduceComplaints => '접수된 불만을 줄여 주세요';
+
+  @override
+  String get err_quality_paused =>
+      '이 파트너는 품질 점수 때문에 일감을 받을 수 없어요. 다른 파트너를 골라 주세요.';
+
+  @override
+  String get err_training_required =>
+      '필수 교육을 마치지 않은 파트너예요. 교육을 끝낸 파트너를 골라 주세요.';
+
+  @override
+  String get err_no_partner_available => '지금 이 일감을 맡을 수 있는 파트너가 없어요.';
+
+  @override
+  String get err_reassign_closed => '이 일감은 지금 배정을 바꿀 수 없어요. 상태를 확인해 주세요.';
+
+  @override
+  String get cQualityScore => '품질 점수';
+
+  @override
+  String get cQualityNone => '점수 없음';
+
+  @override
+  String get cQualityOk => '정상';
+
+  @override
+  String get cQualityWarning => '주의';
+
+  @override
+  String get cQualityPaused => '배정 중지';
+
+  @override
+  String get cQualityOverridden => '중지 해제';
+
+  @override
+  String get cQualityTips => '개선 팁';
+
+  @override
+  String get cQualityLastCalc => '자동 계산 결과예요';
 
   @override
   String get rnwTitle => '갱신 일정';
@@ -5107,6 +5399,9 @@ class TKo extends T {
   String get caseSave => '저장';
 
   @override
+  String get err_schedule_overlap => '이 시간에 이미 다른 일정이 있어요';
+
+  @override
   String get rulesTab => '운영 규칙';
 
   @override
@@ -5213,6 +5508,9 @@ class TKo extends T {
   String get ruleQualityOnTimeGraceMin => '정시 도착 허용 시간 (분)';
 
   @override
+  String get ruleTrainingGateEnabled => '파트너 교육 완료 전 일감 수락 막기';
+
+  @override
   String get ruleBackupStaleHours => '백업이 이 시간 넘게 없으면 빨간불 (시간)';
 
   @override
@@ -5223,6 +5521,15 @@ class TKo extends T {
 
   @override
   String get ruleDiskWarnPct => '디스크 여유가 이 비율 아래면 노란불 (%)';
+
+  @override
+  String get ruleUnassignedAlertHours => '기사님 미배정 예약 알림 기준 (시간)';
+
+  @override
+  String get ruleSameDayCancelAlertPct => '당일 취소 비율 알림 기준 (%)';
+
+  @override
+  String get ruleTaxDeadlineRemindDays => '부가가치세 신고 며칠 전에 알림 (일)';
 
   @override
   String get ruleMaintenanceOn => '점검 모드 (새 예약 막기)';
@@ -5323,6 +5630,10 @@ class TKo extends T {
 
   @override
   String get cSetupPayMethodsHint => '고객 앱에 보여줄 결제 수단을 켜고 꺼요. 바로 적용돼요.';
+
+  @override
+  String get cPayMethodNoKey =>
+      '결제 채널이 아직 연결되지 않아 고객에게 보이지 않아요. 설정 담당자에게 문의해 주세요.';
 
   @override
   String get cReviewTitle => '스토어 심사용 데모 계정';
@@ -5505,6 +5816,16 @@ class TKo extends T {
   String get cInvalidValue => '입력값을 확인해 주세요';
 
   @override
+  String get sgConsentHint => '필수 항목에 동의해야 인증번호를 받을 수 있어요.';
+
+  @override
+  String get err_required_consent => '가입하려면 필수 약관에 모두 동의해 주세요';
+
+  @override
+  String get sgOverseasNote =>
+      '서비스 이용에 꼭 필요한 동의라서 철회할 수 없어요. 동의하지 않으면 가입할 수 없어요.';
+
+  @override
   String get cStaffInvite => '직원 초대';
 
   @override
@@ -5633,6 +5954,21 @@ class TKo extends T {
   @override
   String get cStaffResetBody =>
       '이 인증번호는 24시간 동안 한 번만 쓸 수 있어요. 직원이 비밀번호를 정하면 모든 기기에서 로그아웃돼요.';
+
+  @override
+  String get cStepUpTitle => '인증 앱 코드로 한 번 더 확인';
+
+  @override
+  String get cStepUpBody => '이 작업은 인증 앱의 6자리 코드가 필요해요. 확인하면 5분 동안 이어서 쓸 수 있어요.';
+
+  @override
+  String get cStepUpConfirm => '확인하고 계속';
+
+  @override
+  String get cStepUpCancel => '취소';
+
+  @override
+  String get err_stepup_required => '이 작업은 인증 앱 코드로 한 번 더 확인해야 해요.';
 
   @override
   String get subTitle => '정기 청소';
@@ -5771,6 +6107,16 @@ class TKo extends T {
 
   @override
   String get tExportTaxInvoices => '세금계산서 업로드 CSV';
+
+  @override
+  String get tReExport => '다시 내보내기';
+
+  @override
+  String get tReExportTitle => '다시 내보내기';
+
+  @override
+  String get tReExportConfirm =>
+      '이미 내보낸 세금계산서 요청을 같은 파일로 다시 받아요. 파일을 잃어버렸거나 손상됐을 때만 사용하세요.';
 
   @override
   String get tTaxLayoutNote => '홈택스 실제 양식과 대조한 뒤 올려주세요. 열 구성은 아직 확인되지 않았어요.';

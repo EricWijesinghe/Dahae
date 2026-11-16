@@ -114,12 +114,15 @@ class _FinanceScreenState extends State<FinanceScreen> {
   Future<void> _exportAt(
     String path,
     Map<String, String?> query,
-    String fileName,
-  ) async {
+    String fileName, {
+    bool post = false,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     final t = context.t;
     try {
-      final bytes = await context.api.getBytes(path, query: query);
+      final bytes = post
+          ? await context.api.postBytes(path, query: query)
+          : await context.api.getBytes(path, query: query);
       final saved = await saveCsv(bytes, fileName);
       messenger.showSnackBar(
         SnackBar(content: Text(saved ? t.fDownload : t.fDownloadWebOnly)),
@@ -172,7 +175,16 @@ class _FinanceScreenState extends State<FinanceScreen> {
             const SizedBox(height: Space.xl),
             _ExportCard(onExport: _export),
             const SizedBox(height: Space.xl),
-            TaxSection(periodQuery: _periodQuery, onExport: _exportAt),
+            TaxSection(
+              periodQuery: _periodQuery,
+              onExport: _exportAt,
+              onReExport: () => _exportAt(
+                '/admin/finance/export/tax-invoices/re-export',
+                {..._periodQuery, 'confirm': 'true'},
+                'malkkeum-tax-invoices-again.csv',
+                post: true,
+              ),
+            ),
           ],
         ],
       ),
@@ -286,11 +298,36 @@ class _KpiGrid extends StatelessWidget {
         Icons.event_busy_rounded,
         ServiceHues.moveIn,
       ),
-      (t.cMrr, context.won(_n(rec, 'mrr')), Icons.autorenew_rounded, ServiceHues.studio),
-      (t.cChurn, '${(_n(rec, 'churn_bps') / 100).toStringAsFixed(1)}%', Icons.trending_down_rounded, ServiceHues.moveIn),
-      (t.cActiveSubs, '${_n(rec, 'active')}', Icons.event_repeat_rounded, ServiceHues.bathroom),
-      (t.cRecognized, context.won(_n(rec, 'recognized')), Icons.stacked_line_chart_rounded, ServiceHues.aircon),
-      (t.fGross, context.won(_n(summary, 'gross')), Icons.receipt_long_rounded, ServiceHues.studio),
+      (
+        t.cMrr,
+        context.won(_n(rec, 'mrr')),
+        Icons.autorenew_rounded,
+        ServiceHues.studio,
+      ),
+      (
+        t.cChurn,
+        '${(_n(rec, 'churn_bps') / 100).toStringAsFixed(1)}%',
+        Icons.trending_down_rounded,
+        ServiceHues.moveIn,
+      ),
+      (
+        t.cActiveSubs,
+        '${_n(rec, 'active')}',
+        Icons.event_repeat_rounded,
+        ServiceHues.bathroom,
+      ),
+      (
+        t.cRecognized,
+        context.won(_n(rec, 'recognized')),
+        Icons.stacked_line_chart_rounded,
+        ServiceHues.aircon,
+      ),
+      (
+        t.fGross,
+        context.won(_n(summary, 'gross')),
+        Icons.receipt_long_rounded,
+        ServiceHues.studio,
+      ),
     ];
     return LayoutBuilder(
       builder: (context, c) {

@@ -5,6 +5,7 @@ use super::booking_core::checked_household;
 use crate::{
     auth::{Auth, Customer, normalize_phone, sha256_hex},
     contract::{PageQuery, cursor_part, decode_cursor, encode_cursor, page_limit, paged, ts_key},
+    crypto,
     error::{ApiError, ApiResult},
     providers::{ProviderError, portone},
     state::AppState,
@@ -428,12 +429,14 @@ async fn register_method(State(s): State<AppState>, Customer(a): Customer, Json(
         .bind(issue)
         .execute(&mut *tx)
         .await?;
+    let (sealed, digest) = crypto::seal_billing_key(&s.config.data_key, &key);
     let row = sqlx::query_as(
-        "INSERT INTO payment_methods (user_id, provider, billing_key, display_name) VALUES ($1,$2,$3,$4) RETURNING id, provider, display_name, created_at",
+        "INSERT INTO payment_methods (user_id, provider, billing_key, billing_key_digest, display_name) VALUES ($1,$2,$3,$4,$5) RETURNING id, provider, display_name, created_at",
     )
     .bind(a.id)
     .bind(&r.provider)
-    .bind(key)
+    .bind(sealed)
+    .bind(digest)
     .bind(&r.display_name)
     .fetch_one(&mut *tx)
     .await?;
@@ -442,7 +445,7 @@ async fn register_method(State(s): State<AppState>, Customer(a): Customer, Json(
 }
 
 async fn delete_method(State(s): State<AppState>, Customer(a): Customer, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
-    sqlx::query("UPDATE payment_methods SET deleted_at = now(), billing_key = '' WHERE id = $1 AND user_id = $2")
+    sqlx::query("UPDATE payment_methods SET deleted_at = now(), billing_key = '', billing_key_digest = NULL WHERE id = $1 AND user_id = $2")
         .bind(id)
         .bind(a.id)
         .execute(&s.db)

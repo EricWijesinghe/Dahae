@@ -10,6 +10,7 @@ use axum::{Json, Router, extract::State, routing::get};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
+use std::collections::HashMap;
 
 const SETTING: &str = "payment_methods";
 
@@ -44,12 +45,27 @@ pub async fn enabled_codes(db: &PgPool) -> ApiResult<Vec<String>> {
     Ok(stored.map(|j| j.0).unwrap_or_else(|| METHODS.iter().map(|m| m.0.to_string()).collect()))
 }
 
-/// Rejects unknown or switched-off methods before any intent is created.
-pub async fn ensure_enabled(db: &PgPool, code: &str) -> ApiResult<()> {
+/// The PortOne channel key for a method; a blank value counts as not configured.
+pub fn channel_key(channel_keys: &HashMap<String, String>, code: &str) -> Option<String> {
+    channel_keys.get(code).map(|k| k.trim()).filter(|k| !k.is_empty()).map(str::to_string)
+}
+
+/// Methods offered to customers: switched on by an admin and given a PortOne channel key.
+pub async fn offered_codes(db: &PgPool, channel_keys: &HashMap<String, String>) -> ApiResult<Vec<String>> {
+    Ok(enabled_codes(db)
+        .await?
+        .into_iter()
+        .filter(|c| channel_key(channel_keys, c).is_some())
+        .collect())
+}
+
+/// Rejects unknown, switched-off or unconfigured methods before any intent is created.
+pub async fn ensure_enabled(s: &AppState, code: &str) -> ApiResult<()> {
     if !METHODS.iter().any(|m| m.0 == code) {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
-    if !enabled_codes(db).await?.iter().any(|c| c == code) {
+    let integ = s.providers.integ();
+    if !offered_codes(&s.db, &integ.portone.channel_keys).await?.iter().any(|c| c == code) {
         return Err(ApiError::BadRequest("payment_method_disabled"));
     }
     Ok(())
@@ -62,7 +78,8 @@ struct Method {
 }
 
 async fn enabled(State(s): State<AppState>) -> ApiResult<Json<Vec<Method>>> {
-    let on = enabled_codes(&s.db).await?;
+    let integ = s.providers.integ();
+    let on = offered_codes(&s.db, &integ.portone.channel_keys).await?;
     Ok(Json(
         METHODS
             .iter()
@@ -76,23 +93,28 @@ async fn enabled(State(s): State<AppState>) -> ApiResult<Json<Vec<Method>>> {
 struct AdminMethod {
     code: &'static str,
     flow: &'static str,
+    /// Switched on by an admin.
     enabled: bool,
+    /// Has a PortOne channel key; without one the method is never shown to customers even when enabled.
+    configured: bool,
 }
 
-async fn admin_view(db: &PgPool) -> ApiResult<Vec<AdminMethod>> {
-    let on = enabled_codes(db).await?;
+async fn admin_view(s: &AppState) -> ApiResult<Vec<AdminMethod>> {
+    let on = enabled_codes(&s.db).await?;
+    let keys = &s.providers.integ().portone.channel_keys;
     Ok(METHODS
         .iter()
         .map(|&(code, flow)| AdminMethod {
             code,
             flow,
             enabled: on.iter().any(|c| c == code),
+            configured: channel_key(keys, code).is_some(),
         })
         .collect())
 }
 
 async fn admin_list(State(s): State<AppState>, Admin(_): Admin) -> ApiResult<Json<Vec<AdminMethod>>> {
-    Ok(Json(admin_view(&s.db).await?))
+    Ok(Json(admin_view(&s).await?))
 }
 
 #[derive(Deserialize)]
@@ -102,6 +124,10 @@ struct Update {
 }
 
 async fn admin_update(State(s): State<AppState>, Admin(a): Admin, Json(u): Json<Update>) -> ApiResult<Json<Vec<AdminMethod>>> {
+    if u.enabled.is_empty() {
+        // Saving nothing would hide every payment method from customers.
+        return Err(ApiError::BadRequest("payment_methods_empty"));
+    }
     if u.enabled.iter().any(|c| !METHODS.iter().any(|m| m.0 == c)) {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
@@ -113,5 +139,24 @@ async fn admin_update(State(s): State<AppState>, Admin(a): Admin, Json(u): Json<
         .execute(&s.db)
         .await?;
     audit(&s.db, "staff", Some(a.id), "payment_methods.update", SETTING, json!(codes)).await?;
-    Ok(Json(admin_view(&s.db).await?))
+    Ok(Json(admin_view(&s).await?))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::channel_key;
+    use std::collections::HashMap;
+
+    fn keys(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+    }
+
+    #[test]
+    fn channel_key_is_trimmed_and_blank_counts_as_missing() {
+        let map = keys(&[("card", " ch-card "), ("kakaopay", "  "), ("tosspay", "")]);
+        assert_eq!(channel_key(&map, "card").as_deref(), Some("ch-card"));
+        assert_eq!(channel_key(&map, "kakaopay"), None);
+        assert_eq!(channel_key(&map, "tosspay"), None);
+        assert_eq!(channel_key(&map, "naverpay"), None);
+    }
 }

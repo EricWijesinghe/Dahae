@@ -113,8 +113,16 @@ pub enum Cell {
 
 /// Escapes one text cell: formula triggers get a leading apostrophe, then RFC 4180 quoting.
 pub fn csv_text(v: &str) -> String {
-    let guarded = if v.starts_with(['=', '+', '-', '@', '\t', '\r']) { format!("'{v}") } else { v.to_string() };
-    if guarded.contains([',', '"', '\n', '\r']) { format!("\"{}\"", guarded.replace('"', "\"\"")) } else { guarded }
+    let guarded = if v.starts_with(['=', '+', '-', '@', '\t', '\r']) {
+        format!("'{v}")
+    } else {
+        v.to_string()
+    };
+    if guarded.contains([',', '"', '\n', '\r']) {
+        format!("\"{}\"", guarded.replace('"', "\"\""))
+    } else {
+        guarded
+    }
 }
 
 /// A whole CSV document: BOM, then `\r\n` line endings.
@@ -139,7 +147,11 @@ fn month_start(year: i32, month: u32) -> NaiveDate {
 }
 
 fn next_month(first: NaiveDate) -> NaiveDate {
-    if first.month() == 12 { month_start(first.year() + 1, 1) } else { month_start(first.year(), first.month() + 1) }
+    if first.month() == 12 {
+        month_start(first.year() + 1, 1)
+    } else {
+        month_start(first.year(), first.month() + 1)
+    }
 }
 
 fn last_day_of_month(first: NaiveDate) -> NaiveDate {
@@ -195,7 +207,10 @@ mod tests {
     #[test]
     fn weekly_buckets_start_on_monday() {
         // 2026-11-11 is a Wednesday, so its week starts on Monday 2026-11-09.
-        assert_eq!(buckets(Grain::Week, d(2026, 11, 11), d(2026, 11, 25)), vec![d(2026, 11, 9), d(2026, 11, 16), d(2026, 11, 23)]);
+        assert_eq!(
+            buckets(Grain::Week, d(2026, 11, 11), d(2026, 11, 25)),
+            vec![d(2026, 11, 9), d(2026, 11, 16), d(2026, 11, 23)]
+        );
     }
 
     #[test]

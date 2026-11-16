@@ -64,6 +64,7 @@ pub fn test_config() -> Config {
         review_report_threshold: 3,
         max_threads_per_day: 100,
         reconcile_interval_secs: 60,
+        payment_diff_interval_secs: 3600,
         anthropic_base_url: "http://127.0.0.1:9".into(),
         android_cert_sha256: Vec::new(),
         apple_team_id: None,
@@ -80,6 +81,21 @@ pub fn test_config() -> Config {
 pub fn app(db: PgPool) -> Router {
     let state = build_state(db, test_config()).expect("http client");
     routes::router(state)
+}
+
+/// The API router with PortOne channel keys set for `channels`: a payment method is offered only when its key is here.
+pub fn app_with_channels(db: PgPool, channels: &[&str]) -> Router {
+    let mut cfg = test_config();
+    cfg.portone.channel_keys = channels.iter().map(|c| (c.to_string(), format!("ch-{c}"))).collect();
+    routes::router(build_state(db, cfg).expect("http client"))
+}
+
+/// The API router with staff second factors off, for tests about sessions, lockouts and resets rather than MFA
+/// (MFA itself is covered by auth_mfa and staff_mfa).
+pub fn app_without_staff_mfa(db: PgPool) -> Router {
+    let mut cfg = test_config();
+    cfg.staff_mfa_required = false;
+    routes::router(build_state(db, cfg).expect("http client"))
 }
 
 /// The API router configured like production (`DEV_MODE` off): PortOne calls go to `portone_api` (a mock).
@@ -103,7 +119,8 @@ pub const PORTONE_SECRET: &str = "test-portone-secret";
 pub async fn staff_token(db: &PgPool, role: Role) -> (String, Uuid) {
     let id = Uuid::now_v7();
     let db_role = if role == Role::StaffAdmin { "admin" } else { "consultant" };
-    sqlx::query("INSERT INTO staff (id, email, name, password_hash, role) VALUES ($1, $2, 'tester', 'x', $3)")
+    // Stepped up, so sensitive actions (export, deletion, payouts) are open to the test token.
+    sqlx::query("INSERT INTO staff (id, email, name, password_hash, role, stepup_at) VALUES ($1, $2, 'tester', 'x', $3, now())")
         .bind(id)
         .bind(format!("{id}@test.local"))
         .bind(db_role)
@@ -147,17 +164,25 @@ pub async fn call_keyed(app: &Router, method: &str, uri: &str, token: Option<&st
     (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
 }
 
+/// The required customer consents, granted for the current policy version, as the app sends them at signup.
+pub fn required_consents() -> Value {
+    let grant = |kind: &str| json!({ "kind": kind, "granted": true, "version": api::privacy::CONSENT_VERSION });
+    json!([grant("terms"), grant("privacy"), grant("overseas_transfer")])
+}
+
 /// Signs in through the OTP flow (dev mode echoes the code). Returns (access token, subject id).
+/// A customer sign-up grants the required consents, as the app does.
 pub async fn login(app: &Router, phone: &str, audience: &str) -> (String, String) {
     let (st, sent) = call(app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": phone }))).await;
     assert_eq!(st, StatusCode::OK, "otp request: {sent}");
     let code = sent["dev_code"].as_str().expect("dev_code in dev mode").to_string();
+    let consents = if audience == "customer" { required_consents() } else { json!([]) };
     let (st, tokens) = call(
         app,
         "POST",
         "/v1/auth/verify",
         None,
-        Some(json!({ "phone": phone, "code": code, "audience": audience })),
+        Some(json!({ "phone": phone, "code": code, "audience": audience, "consents": consents })),
     )
     .await;
     assert_eq!(st, StatusCode::OK, "verify: {tokens}");
@@ -226,10 +251,13 @@ pub async fn customer(app: &Router, db: &PgPool, phone: &str) -> Customer {
     )
     .await;
     assert_eq!(st, StatusCode::OK, "address: {addr}");
+    let (sealed, digest) = api::crypto::seal_billing_key(&test_config().data_key, &format!("bk_test_{user}"));
     let card: Uuid = sqlx::query_scalar(
-        "INSERT INTO payment_methods (user_id, provider, billing_key, display_name) VALUES ($1, 'pg', 'bk_test_' || $1::text, 'test card') RETURNING id",
+        "INSERT INTO payment_methods (user_id, provider, billing_key, billing_key_digest, display_name) VALUES ($1, 'pg', $2, $3, 'test card') RETURNING id",
     )
     .bind(user)
+    .bind(sealed)
+    .bind(digest)
     .fetch_one(db)
     .await
     .expect("payment method");

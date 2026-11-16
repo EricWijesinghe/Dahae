@@ -102,6 +102,7 @@ async fn member_sees_only_the_assigned_job_and_can_complete_it(pool: PgPool) {
     .await;
     assert_eq!(st, StatusCode::OK, "{team}");
     let member_id = team["id"].as_str().expect("member id").to_string();
+    approve_member(&app, &pool, &member_id).await;
     let (st, assigned) = call(
         &app,
         "POST",
@@ -143,9 +144,18 @@ async fn member_sees_only_the_assigned_job_and_can_complete_it(pool: PgPool) {
         .execute(&pool)
         .await
         .expect("visit today");
+    let (st, b) = call(&app, "POST", &format!("/v1/member/jobs/{job_a}/check-in"), Some(m.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
     common::register_photo(&pool, member_id.parse().expect("member uuid")).await;
     let done_body = json!({ "before_photos": [PHOTO], "after_photos": [PHOTO], "checklist": [true, true, true, true] });
-    let (st, done) = call(&app, "POST", &format!("/v1/member/jobs/{job_a}/complete"), Some(m.as_str()), Some(done_body.clone())).await;
+    let (st, done) = call(
+        &app,
+        "POST",
+        &format!("/v1/member/jobs/{job_a}/complete"),
+        Some(m.as_str()),
+        Some(done_body.clone()),
+    )
+    .await;
     assert_eq!(st, StatusCode::OK, "{done}");
     assert!(done.get("net").is_none(), "no payout in the member response");
     let (status,): (i16,) = sqlx::query_as("SELECT status FROM bookings WHERE id = $1")
@@ -332,4 +342,143 @@ async fn studio_at_eleven_pyeong_is_refused_by_the_server(pool: PgPool) {
     .await;
     assert_eq!(st, StatusCode::UNPROCESSABLE_ENTITY, "{b}");
     assert_eq!(b["error"]["code"], "studio_too_large");
+}
+
+/// Owner approval for a new team member: the platform admin approves, the team lead cannot.
+async fn approve_member(app: &axum::Router, db: &PgPool, member_id: &str) {
+    let (admin, _) = common::staff_token(db, Role::StaffAdmin).await;
+    let (st, body) = call(app, "POST", &format!("/v1/admin/team-members/{member_id}/approve"), Some(admin.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+}
+
+/// Invites a member to the owner's team and returns the member id.
+async fn invite_member(app: &axum::Router, owner: &str, phone: &str) -> String {
+    let (st, team) = call(app, "POST", "/v1/partner/team", Some(owner), Some(json!({ "name": "김팀원", "phone": phone }))).await;
+    assert_eq!(st, StatusCode::OK, "{team}");
+    team["id"].as_str().expect("member id").to_string()
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn new_member_waits_for_owner_approval_before_assignment(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5000-0301").await;
+    let (job, _) = book(&app, &c, 10, None).await;
+    let (owner, _) = verified_pro(&app, &pool, "010-5000-0302").await;
+    let (st, body) = call(&app, "POST", &format!("/v1/partner/jobs/{job}/accept"), Some(owner.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    let member_id = invite_member(&app, &owner, "010-5000-0303").await;
+
+    let status: String = sqlx::query_scalar("SELECT invite_status FROM team_members WHERE id = $1::uuid")
+        .bind(&member_id)
+        .fetch_one(&pool)
+        .await
+        .expect("status");
+    assert_eq!(status, "pending_approval");
+
+    let assign = format!("/v1/partner/jobs/{job}/assign");
+    let (st, _) = call(&app, "POST", &assign, Some(owner.as_str()), Some(json!({ "member_id": member_id }))).await;
+    assert_ne!(st, StatusCode::OK, "an unapproved member cannot be assigned");
+
+    // Signing in does not approve: the member gets a session, but no jobs and no address.
+    let (m, _) = login(&app, "010-5000-0303", "partner").await;
+    let (st, me) = call(&app, "GET", "/v1/member/me", Some(m.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{me}");
+    assert_eq!(me["approved"], false);
+    let from = api::util::today_kst();
+    let (st, list) = call(
+        &app,
+        "GET",
+        &format!("/v1/member/jobs?from={from}&to={}", from + Duration::days(30)),
+        Some(m.as_str()),
+        None,
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{list}");
+    assert_eq!(list, json!([]));
+
+    approve_member(&app, &pool, &member_id).await;
+    let (st, assigned) = call(&app, "POST", &assign, Some(owner.as_str()), Some(json!({ "member_id": member_id }))).await;
+    assert_eq!(st, StatusCode::OK, "{assigned}");
+    let (st, detail) = call(&app, "GET", &format!("/v1/member/jobs/{job}"), Some(m.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{detail}");
+    assert!(!detail["booking"]["address"].is_null(), "an approved member sees the address");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn reinvited_member_loses_access_to_assigned_jobs_until_reapproved(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5000-0311").await;
+    let (job, _) = book(&app, &c, 10, None).await;
+    let (owner, _) = verified_pro(&app, &pool, "010-5000-0312").await;
+    let (st, body) = call(&app, "POST", &format!("/v1/partner/jobs/{job}/accept"), Some(owner.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    let member_id = invite_member(&app, &owner, "010-5000-0313").await;
+    approve_member(&app, &pool, &member_id).await;
+    let assign = format!("/v1/partner/jobs/{job}/assign");
+    let (st, _) = call(&app, "POST", &assign, Some(owner.as_str()), Some(json!({ "member_id": member_id }))).await;
+    assert_eq!(st, StatusCode::OK);
+    let (m, _) = login(&app, "010-5000-0313", "partner").await;
+    let (st, _) = call(&app, "GET", &format!("/v1/member/jobs/{job}"), Some(m.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "approved member sees the job");
+
+    // Re-inviting an approved member keeps the approval: same phone, same person.
+    assert_eq!(invite_member(&app, &owner, "010-5000-0313").await, member_id);
+    let (st, _) = call(&app, "GET", &format!("/v1/member/jobs/{job}"), Some(m.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "a re-invite keeps the approval");
+
+    // Removed, then invited again: the new invite waits for the platform owner.
+    let (st, body) = call(&app, "DELETE", &format!("/v1/partner/team/{member_id}"), Some(owner.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(invite_member(&app, &owner, "010-5000-0313").await, member_id);
+    let status: String = sqlx::query_scalar("SELECT invite_status FROM team_members WHERE id = $1::uuid")
+        .bind(&member_id)
+        .fetch_one(&pool)
+        .await
+        .expect("status");
+    assert_eq!(status, "pending_approval");
+    let (m, _) = login(&app, "010-5000-0313", "partner").await;
+    let (st, detail) = call(&app, "GET", &format!("/v1/member/jobs/{job}"), Some(m.as_str()), None).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "{detail}");
+    let from = api::util::today_kst();
+    let (st, list) = call(
+        &app,
+        "GET",
+        &format!("/v1/member/jobs?from={from}&to={}", from + Duration::days(30)),
+        Some(m.as_str()),
+        None,
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{list}");
+    assert_eq!(list, json!([]));
+    let (st, _) = call(&app, "POST", &format!("/v1/member/jobs/{job}/check-in"), Some(m.as_str()), None).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "an unapproved member cannot check in");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn only_platform_admin_approves_and_the_approval_is_audited(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let (owner, _) = verified_pro(&app, &pool, "010-5000-0321").await;
+    let member_id = invite_member(&app, &owner, "010-5000-0322").await;
+    let uri = format!("/v1/admin/team-members/{member_id}/approve");
+
+    let (st, _) = call(&app, "POST", &uri, Some(owner.as_str()), None).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "the team lead cannot approve their own invitee");
+    let (consultant, _) = common::staff_token(&pool, Role::StaffConsultant).await;
+    let (st, _) = call(&app, "POST", &uri, Some(consultant.as_str()), None).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "consultants cannot approve");
+
+    let (admin, admin_id) = common::staff_token(&pool, Role::StaffAdmin).await;
+    let (st, _) = call(&app, "POST", &uri, Some(admin.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK);
+    let (st, _) = call(&app, "POST", &uri, Some(admin.as_str()), None).await;
+    assert_eq!(st, StatusCode::NOT_FOUND, "approving twice is not a second approval");
+    let audited: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE action = 'team_member.approve' AND actor_id = $1")
+        .bind(admin_id)
+        .fetch_one(&pool)
+        .await
+        .expect("audit");
+    assert_eq!(audited, 1);
 }

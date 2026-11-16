@@ -1514,6 +1514,23 @@
         }
       }
     },
+    "/v1/partner/quality": {
+      "get": {
+        "operationId": "partnerGetQuality",
+        "tags": [
+          "pro"
+        ],
+        "summary": "Own quality score, status and tips",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/partner/me": {
       "get": {
         "operationId": "partnerGetMe",
@@ -2807,13 +2824,74 @@
         }
       }
     },
+    "/v1/admin/team-members/pending": {
+      "get": {
+        "operationId": "adminListPendingMembers",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Team members waiting for platform approval",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/team-members/{id}/approve": {
+      "post": {
+        "operationId": "adminApproveMember",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Approve a team member's invite (audited)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/pros/{id}/quality": {
+      "get": {
+        "operationId": "adminGetProQuality",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Quality score, status and tips of a pro",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/pros/{id}/status": {
       "post": {
         "operationId": "adminSetProStatus",
         "tags": [
           "admin"
         ],
-        "summary": "Verify, suspend or set a partner fee",
+        "summary": "Verify (needs a complete checklist), suspend or set a partner fee",
         "parameters": [
           {
             "$ref": "#/components/parameters/Id"
@@ -2822,6 +2900,73 @@
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
         },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/pros/{id}/profile": {
+      "get": {
+        "operationId": "adminGetProProfile",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Verification checklist, status and employee profile of a pro (emergency contact decrypted, audited)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "adminPutProProfile",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Save the employee profile of a pro (emergency contact encrypted)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/pros/{id}/payee-identifier/reveal": {
+      "post": {
+        "operationId": "revealPayeeIdentifier",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Show a partner's decrypted payee identifier once (admin with recent TOTP step-up, audited, not cached)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -4175,6 +4320,23 @@
         }
       }
     },
+    "/v1/admin/finance/export/payroll": {
+      "get": {
+        "operationId": "exportPayroll",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Export paid payouts per partner for payroll and withholding filing (CSV, admin only, audited)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/me/identity/setup": {
       "get": {
         "operationId": "identitySetup",
@@ -4382,6 +4544,23 @@
         }
       }
     },
+    "/v1/auth/staff/mfa/step-up": {
+      "post": {
+        "operationId": "staffMfaStepUp",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Fresh TOTP step-up for customer export and deletion, bank-detail reveals and payouts (valid for five minutes)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/staff/{id}/password-reset": {
       "post": {
         "operationId": "adminIssueStaffPasswordReset",
@@ -4453,6 +4632,26 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/finance/export/tax-invoices/re-export": {
+      "post": {
+        "operationId": "reExportTaxInvoices",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Re-send tax-invoice rows already exported (CSV, confirm=true required)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "confirm=true missing"
           },
           "default": {
             "$ref": "#/components/responses/Error"

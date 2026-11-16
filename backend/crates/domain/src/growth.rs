@@ -3,6 +3,7 @@
 
 use crate::{DomainError, Won, pricing::PriceBreakdown};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 /// Social-proof counts stay hidden below this, so a tiny number never persuades.
 pub const MIN_PROOF_COUNT: i64 = 10;
@@ -29,7 +30,11 @@ pub struct WelcomeOffer {
 
 impl Default for WelcomeOffer {
     fn default() -> Self {
-        Self { enabled: false, kind: DiscountKind::Amount, value: 5_000 }
+        Self {
+            enabled: false,
+            kind: DiscountKind::Amount,
+            value: 5_000,
+        }
     }
 }
 
@@ -39,7 +44,11 @@ impl WelcomeOffer {
             DiscountKind::Amount => (1, MAX_AMOUNT),
             DiscountKind::Percent => (1, MAX_PERCENT),
         };
-        if (min..=max).contains(&self.value) { Ok(()) } else { Err(DomainError::OutOfRange("welcome_value")) }
+        if (min..=max).contains(&self.value) {
+            Ok(())
+        } else {
+            Err(DomainError::OutOfRange("welcome_value"))
+        }
     }
 
     /// Discount for a list price, never more than the price itself.
@@ -85,7 +94,11 @@ impl Default for ReferralOffer {
 
 impl ReferralOffer {
     pub fn validate(&self) -> Result<(), DomainError> {
-        if (1..=MAX_AMOUNT).contains(&self.amount) { Ok(()) } else { Err(DomainError::OutOfRange("referral_amount")) }
+        if (1..=MAX_AMOUNT).contains(&self.amount) {
+            Ok(())
+        } else {
+            Err(DomainError::OutOfRange("referral_amount"))
+        }
     }
 }
 
@@ -155,7 +168,11 @@ pub fn mask_name(name: &str) -> String {
         [only] => format!("{only}*"),
         [first, .., last] => {
             let middle = "*".repeat(chars.len() - 2);
-            if chars.len() == 2 { format!("{first}*") } else { format!("{first}{middle}{last}") }
+            if chars.len() == 2 {
+                format!("{first}*")
+            } else {
+                format!("{first}{middle}{last}")
+            }
         }
     }
 }
@@ -165,13 +182,23 @@ pub fn mask_name(name: &str) -> String {
 pub fn redact_contacts(text: &str) -> String {
     let words: Vec<String> = text
         .split(' ')
-        .map(|w| if w.contains('@') && w.contains('.') { "***".to_string() } else { w.to_string() })
+        .map(|w| {
+            if w.contains('@') && w.contains('.') {
+                "***".to_string()
+            } else {
+                w.to_string()
+            }
+        })
         .collect();
     let joined = words.join(" ");
     let mut out = String::with_capacity(joined.len());
     let mut run = String::new();
     let flush = |run: &mut String, out: &mut String| {
-        if run.chars().filter(char::is_ascii_digit).count() >= 4 { out.push_str("***") } else { out.push_str(run) }
+        if run.chars().filter(char::is_ascii_digit).count() >= 4 {
+            out.push_str("***")
+        } else {
+            out.push_str(run)
+        }
         run.clear();
     };
     for c in joined.chars() {
@@ -186,17 +213,152 @@ pub fn redact_contacts(text: &str) -> String {
     out
 }
 
+/// Refund, discount and compensation words. A reply may use one only when the facts use it too.
+const CLAIM_TERMS: [&str; 8] = ["환불", "할인", "쿠폰", "보상", "refund", "discount", "coupon", "compensat"];
+
+/// Korean digit words 일..구 (1..9), the value a single word stands for.
+fn korean_digit(c: char) -> Option<u64> {
+    ['일', '이', '삼', '사', '오', '육', '칠', '팔', '구']
+        .iter()
+        .position(|&k| k == c)
+        .map(|i| i as u64 + 1)
+}
+
+/// Small units 십, 백, 천 and big units 만, 억 that spell amounts such as `3천` or `6만 3천`.
+fn small_unit(c: char) -> Option<u64> {
+    match c {
+        '십' => Some(10),
+        '백' => Some(100),
+        '천' => Some(1_000),
+        _ => None,
+    }
+}
+
+fn big_unit(c: char) -> Option<u64> {
+    match c {
+        '만' => Some(10_000),
+        '억' => Some(100_000_000),
+        _ => None,
+    }
+}
+
+fn is_amount_char(c: char) -> bool {
+    c.is_ascii_digit() || c == ',' || korean_digit(c).is_some() || small_unit(c).is_some() || big_unit(c).is_some()
+}
+
+/// A Korean digit word counts only when a unit follows it (`구천`, `삼만`) or it ends the amount, so
+/// the particle or noun before a number (`이 3천`, `2일 3만`) is not read as a digit.
+fn word_is_digit(chars: &[char], i: usize) -> bool {
+    match chars[i + 1..].iter().find(|&&c| c != ' ') {
+        None => true,
+        Some(&next) => small_unit(next).is_some() || big_unit(next).is_some(),
+    }
+}
+
+/// Value of a spelled or digit amount: `9,900` -> 9900, `3천` -> 3000, `6만 3천` -> 63000. None on overflow.
+fn spelled_value(run: &str) -> Option<u64> {
+    let chars: Vec<char> = run.chars().collect();
+    let (mut total, mut section, mut num) = (0u64, 0u64, 0u64);
+    for (i, &c) in chars.iter().enumerate() {
+        if let Some(d) = c.to_digit(10) {
+            num = num.checked_mul(10)?.checked_add(u64::from(d))?;
+        } else if let Some(d) = korean_digit(c).filter(|_| word_is_digit(&chars, i)) {
+            num = d;
+        } else if let Some(unit) = small_unit(c) {
+            section = section.checked_add(num.max(1).checked_mul(unit)?)?;
+            num = 0;
+        } else if let Some(unit) = big_unit(c) {
+            section = section.checked_add(num)?;
+            total = total.checked_add(section.max(1).checked_mul(unit)?)?;
+            section = 0;
+            num = 0;
+        }
+    }
+    total.checked_add(section)?.checked_add(num)
+}
+
+/// Amount text before `end`, spaces allowed inside (`6만 3천원`), so `2명 9900원` yields ` 9900`.
+fn run_before(chars: &[char], end: usize) -> String {
+    let mut start = end;
+    while start > 0 && (is_amount_char(chars[start - 1]) || chars[start - 1] == ' ') {
+        start -= 1;
+    }
+    chars[start..end].iter().collect()
+}
+
+/// Digits from `start` on, leading spaces skipped (`₩60,000`, `KRW 60000`). Spelled words stop it,
+/// since a particle such as `이` often follows the figure (`₩60,000이에요`).
+fn run_after(chars: &[char], start: usize) -> String {
+    chars
+        .iter()
+        .skip(start)
+        .skip_while(|&&c| c == ' ')
+        .take_while(|&&c| c.is_ascii_digit() || c == ',')
+        .collect()
+}
+
+/// True when `word` (lowercase ASCII) starts at `i` as a whole word, so `won` does not match `wonder`.
+fn word_at(lower: &[char], i: usize, word: &str) -> bool {
+    let len = word.chars().count();
+    word.chars().enumerate().all(|(k, w)| lower.get(i + k) == Some(&w)) && !lower.get(i + len).is_some_and(|c| c.is_ascii_alphabetic())
+}
+
+/// Won amounts a reply states, as numbers: `9,900원`, `6만원`, `3천원`, `₩60,000`, `60000 KRW`, `60,000 won`.
+/// Zero is not an amount to check.
+fn won_amounts(text: &str) -> Vec<u64> {
+    let chars: Vec<char> = text.chars().collect();
+    let lower: Vec<char> = chars.iter().map(|c| c.to_ascii_lowercase()).collect();
+    let mut runs = Vec::new();
+    for i in 0..chars.len() {
+        if chars[i] == '원' || word_at(&lower, i, "krw") || word_at(&lower, i, "won") {
+            runs.push(run_before(&chars, i));
+        }
+        if chars[i] == '₩' {
+            runs.push(run_after(&chars, i + 1));
+        }
+        if word_at(&lower, i, "krw") {
+            runs.push(run_after(&chars, i + 3));
+        }
+    }
+    runs.iter().filter_map(|r| spelled_value(r)).filter(|&v| v > 0).collect()
+}
+
+/// Every number the facts state: plain digit runs (`60000`, `60,000`) and won amounts spelled out.
+fn known_amounts(facts: &str) -> HashSet<u64> {
+    let mut known: HashSet<u64> = facts.split(|c: char| !c.is_ascii_digit()).filter_map(|s| s.parse().ok()).collect();
+    known.extend(won_amounts(facts));
+    known
+}
+
+/// True when a model reply states a won amount, or a refund or discount term, that the grounding
+/// facts (shop data and the customer's booking, as JSON text) do not contain. Such replies are not shown.
+pub fn ungrounded_claim(reply: &str, facts: &str) -> bool {
+    let known = known_amounts(facts);
+    let facts_lower = facts.to_lowercase();
+    let reply_lower = reply.to_lowercase();
+    won_amounts(reply).iter().any(|amount| !known.contains(amount)) || CLAIM_TERMS.iter().any(|term| reply_lower.contains(term) && !facts_lower.contains(term))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn price(list: i64) -> PriceBreakdown {
-        PriceBreakdown { list_price: Won(list), discount: Won::ZERO, total: Won(list), minutes: 60 }
+        PriceBreakdown {
+            list_price: Won(list),
+            discount: Won::ZERO,
+            total: Won(list),
+            minutes: 60,
+        }
     }
 
     #[test]
     fn welcome_is_first_booking_only_and_never_stacks_on_coupons() {
-        let on = WelcomeOffer { enabled: true, kind: DiscountKind::Amount, value: 5_000 };
+        let on = WelcomeOffer {
+            enabled: true,
+            kind: DiscountKind::Amount,
+            value: 5_000,
+        };
         assert!(welcome_applies(&on, 0, false));
         assert!(!welcome_applies(&on, 1, false), "second booking");
         assert!(!welcome_applies(&on, 0, true), "coupon wins, no stacking");
@@ -205,9 +367,17 @@ mod tests {
 
     #[test]
     fn welcome_discount_is_capped_and_rounded_server_side() {
-        let amount = WelcomeOffer { enabled: true, kind: DiscountKind::Amount, value: 10_000 };
+        let amount = WelcomeOffer {
+            enabled: true,
+            kind: DiscountKind::Amount,
+            value: 10_000,
+        };
         assert_eq!(amount.discount_for(Won(7_000)), Won(7_000), "never below zero");
-        let pct = WelcomeOffer { enabled: true, kind: DiscountKind::Percent, value: 10 };
+        let pct = WelcomeOffer {
+            enabled: true,
+            kind: DiscountKind::Percent,
+            value: 10,
+        };
         assert_eq!(pct.discount_for(Won(52_000)), Won(5_200).round100());
         assert_eq!(WelcomeOffer { enabled: false, ..pct }.discount_for(Won(52_000)), Won::ZERO);
         let p = apply_welcome(price(52_000), &amount);
@@ -216,10 +386,41 @@ mod tests {
 
     #[test]
     fn welcome_config_bounds() {
-        assert!(WelcomeOffer { enabled: true, kind: DiscountKind::Percent, value: 51 }.validate().is_err());
-        assert!(WelcomeOffer { enabled: true, kind: DiscountKind::Percent, value: 50 }.validate().is_ok());
-        assert!(WelcomeOffer { enabled: true, kind: DiscountKind::Amount, value: 0 }.validate().is_err());
-        assert!(ReferralOffer { enabled: true, amount: 100_001 }.validate().is_err());
+        assert!(
+            WelcomeOffer {
+                enabled: true,
+                kind: DiscountKind::Percent,
+                value: 51
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            WelcomeOffer {
+                enabled: true,
+                kind: DiscountKind::Percent,
+                value: 50
+            }
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            WelcomeOffer {
+                enabled: true,
+                kind: DiscountKind::Amount,
+                value: 0
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            ReferralOffer {
+                enabled: true,
+                amount: 100_001
+            }
+            .validate()
+            .is_err()
+        );
     }
 
     #[test]
@@ -271,5 +472,51 @@ mod tests {
         assert_eq!(redact_contacts("문의 kim@mail.com 으로"), "문의 *** 으로");
         assert_eq!(redact_contacts("3시간 걸렸고 2번 와주셨어요"), "3시간 걸렸고 2번 와주셨어요");
         assert_eq!(redact_contacts("101동 1203호"), "101동 ***호");
+    }
+
+    #[test]
+    fn replies_stating_unlisted_amounts_or_refund_terms_are_ungrounded() {
+        let facts = r#"{"pricing":{"kind":"fixed","price":60000},"final_price":null}"#;
+        assert!(!ungrounded_claim("스튜디오 청소는 60,000원이에요.", facts));
+        assert!(!ungrounded_claim("60000원입니다", facts));
+        assert!(ungrounded_claim("환불 금액은 99,000원입니다.", facts));
+        assert!(ungrounded_claim("6000원 할인 가능해요", facts));
+        assert!(!ungrounded_claim("6만원까지 가능해요", facts), "6만원 is 60000, which is listed");
+        assert!(ungrounded_claim("7만원까지 가능해요", facts));
+        assert!(ungrounded_claim("refund will be issued", facts));
+        assert!(!ungrounded_claim("2시간 걸리고 3명이 가요", facts));
+    }
+
+    #[test]
+    fn terms_pass_only_when_the_facts_name_them() {
+        let facts = r#"{"refund":"5 days before visit"}"#;
+        assert!(!ungrounded_claim("환불 정책은 방문 5일 전까지예요", "환불 정책 5일"));
+        assert!(!ungrounded_claim("refund rules apply", facts));
+        assert!(ungrounded_claim("쿠폰을 드릴게요", facts));
+    }
+
+    #[test]
+    fn spelled_and_symbol_amounts_are_checked_too() {
+        let facts = r#"{"pricing":{"kind":"fixed","price":60000}}"#;
+        assert!(ungrounded_claim("3천원에 해드려요", facts));
+        assert!(ungrounded_claim("6만 3천원이에요", facts));
+        assert!(ungrounded_claim("구천원이면 돼요", facts));
+        assert!(ungrounded_claim("₩63,000 입니다", facts));
+        assert!(ungrounded_claim("KRW 63000 입니다", facts));
+        assert!(!ungrounded_claim("₩60,000이에요", facts));
+        assert!(!ungrounded_claim("60000 KRW입니다", facts));
+        assert!(!ungrounded_claim("60,000 won이에요", facts));
+        assert!(!ungrounded_claim("6만원이에요", facts));
+        assert!(!ungrounded_claim("2명 6만원이에요", facts));
+        assert!(!ungrounded_claim("0원이에요", facts), "zero is not an amount");
+        assert!(!ungrounded_claim("3 wonderful days", facts), "won must be a whole word");
+        assert!(!ungrounded_claim("3천원이에요", r#"{"fee":"3천원"}"#), "spelled amounts in facts count too");
+        assert!(!ungrounded_claim("이 6만원이면 돼요", facts), "a particle before the amount is not a digit");
+    }
+
+    #[test]
+    fn refund_terms_pass_when_shop_data_states_them() {
+        let facts = r#"{"policy":"방문 5일 전 환불 가능"}"#;
+        assert!(!ungrounded_claim("환불은 방문 5일 전까지 가능해요", facts));
     }
 }

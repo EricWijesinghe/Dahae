@@ -53,6 +53,8 @@ pub struct Config {
     pub max_threads_per_day: u32,
     /// Checkout reconciler period (seconds).
     pub reconcile_interval_secs: u64,
+    /// Minimum seconds between attempts at the daily PortOne payment diff (a failed day retries after this).
+    pub payment_diff_interval_secs: u64,
     /// Anthropic API root for the AI support agent (tests point it at a fake server).
     pub anthropic_base_url: String,
     /// SHA-256 of the Android app signing certificate(s) (Play App Signing key). Empty: no assetlinks.json.
@@ -292,6 +294,15 @@ impl Config {
             .collect()
     }
 
+    /// Staff second factors are on unless `STAFF_MFA_REQUIRED=0`, which only the local demo kits set, with `DEV_MODE`.
+    fn staff_mfa_required_from(raw: Option<&str>, dev_mode: bool) -> Result<bool, ConfigError> {
+        let required = raw.is_none_or(|v| v != "0" && v != "false");
+        if !required && !dev_mode {
+            return Err(ConfigError::Invalid("STAFF_MFA_REQUIRED", "0 is only allowed with DEV_MODE=1".into()));
+        }
+        Ok(required)
+    }
+
     pub fn from_env() -> Result<Self, ConfigError> {
         let jwt_secret = req("JWT_SECRET")?.into_bytes();
         if jwt_secret.len() < MIN_SECRET_BYTES {
@@ -338,7 +349,7 @@ impl Config {
             host_jobs_dir: env::var("HOST_JOBS_DIR").unwrap_or_else(|_| "/jobs".into()).into(),
             public_base_url,
             dev_mode,
-            staff_mfa_required: env::var("STAFF_MFA_REQUIRED").map(|v| v != "0" && v != "false").unwrap_or(true),
+            staff_mfa_required: Self::staff_mfa_required_from(env::var("STAFF_MFA_REQUIRED").ok().as_deref(), dev_mode)?,
             allowed_origins: env::var("ALLOWED_ORIGINS")
                 .map(|v| v.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect())
                 .unwrap_or_default(),
@@ -361,6 +372,7 @@ impl Config {
             review_report_threshold: number("REVIEW_REPORT_THRESHOLD", 3, 1)?,
             max_threads_per_day: number("MAX_CHAT_THREADS_PER_DAY", 10, 1)?,
             reconcile_interval_secs: number("RECONCILE_INTERVAL_SECS", 60, 10)?,
+            payment_diff_interval_secs: number("PAYMENT_DIFF_INTERVAL_SECS", 3600, 300)?,
             anthropic_base_url: opt("ANTHROPIC_BASE_URL").unwrap_or_else(|| "https://api.anthropic.com".into()),
             android_cert_sha256: cert_fingerprints("ANDROID_CERT_SHA256", list("ANDROID_CERT_SHA256"))?,
             apple_team_id,
@@ -454,6 +466,15 @@ mod tests {
         assert!(cert_fingerprints("K", vec!["AB:CD".into()]).is_err(), "too short");
         assert!(cert_fingerprints("K", vec![good.replacen("ab", "zz", 1)]).is_err(), "not hex");
         assert!(cert_fingerprints("K", Vec::new()).expect("empty ok").is_empty());
+    }
+
+    #[test]
+    fn staff_second_factor_cannot_be_switched_off_outside_dev_mode() {
+        assert!(Config::staff_mfa_required_from(None, false).expect("default on"));
+        assert!(Config::staff_mfa_required_from(Some("1"), false).expect("on"));
+        assert!(Config::staff_mfa_required_from(Some("0"), true).is_ok_and(|v| !v), "dev kit");
+        assert!(Config::staff_mfa_required_from(Some("0"), false).is_err(), "production refuses");
+        assert!(Config::staff_mfa_required_from(Some("false"), false).is_err(), "production refuses");
     }
 
     #[test]

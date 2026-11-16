@@ -217,6 +217,12 @@ abstract class T {
   /// **'숫자만 입력해요. 비워두면 기본값을 써요.'**
   String get aiCapHint;
 
+  /// No description provided for @aiOutageBanner.
+  ///
+  /// In ko, this message translates to:
+  /// **'AI 답변 연결에 문제가 있어요. 상담원이 직접 응대해 주세요.'**
+  String get aiOutageBanner;
+
   /// No description provided for @cAppLinkTitle.
   ///
   /// In ko, this message translates to:
@@ -5485,6 +5491,12 @@ abstract class T {
   /// **'지금은 이 결제수단을 쓸 수 없어요.'**
   String get err_payment_method_disabled;
 
+  /// No description provided for @err_payment_methods_empty.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제 수단을 하나 이상 켜 주세요. 모두 끄면 고객이 결제할 수 없어요.'**
+  String get err_payment_methods_empty;
+
   /// No description provided for @err_invalid_payment_method.
   ///
   /// In ko, this message translates to:
@@ -5592,6 +5604,18 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'먼저 작업을 시작해 주세요.'**
   String get err_job_not_started;
+
+  /// No description provided for @err_not_checked_in.
+  ///
+  /// In ko, this message translates to:
+  /// **'도착 기록이 없어요. 먼저 도착을 기록하거나 사유를 적어 주세요.'**
+  String get err_not_checked_in;
+
+  /// No description provided for @err_override_reason_too_long.
+  ///
+  /// In ko, this message translates to:
+  /// **'사유는 200자 이하로 적어 주세요.'**
+  String get err_override_reason_too_long;
 
   /// No description provided for @err_job_not_active.
   ///
@@ -7279,6 +7303,12 @@ abstract class T {
   /// **'결제 자동 처리 실패'**
   String get oRuleStuck;
 
+  /// No description provided for @oRuleMismatch.
+  ///
+  /// In ko, this message translates to:
+  /// **'PortOne 결제 내역 불일치'**
+  String get oRuleMismatch;
+
   /// No description provided for @oRuleSocial.
   ///
   /// In ko, this message translates to:
@@ -7302,6 +7332,24 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'계정 보안 이상(로그인 잠금 등)'**
   String get oRuleAuth;
+
+  /// No description provided for @oRuleUnassigned.
+  ///
+  /// In ko, this message translates to:
+  /// **'기사님 미배정 예약 (오래 방치)'**
+  String get oRuleUnassigned;
+
+  /// No description provided for @oRuleSameDayCancel.
+  ///
+  /// In ko, this message translates to:
+  /// **'당일 취소가 많음'**
+  String get oRuleSameDayCancel;
+
+  /// No description provided for @oRuleTaxDeadline.
+  ///
+  /// In ko, this message translates to:
+  /// **'부가가치세 신고 기한 임박'**
+  String get oRuleTaxDeadline;
 
   /// No description provided for @oQuietHours.
   ///
@@ -7512,6 +7560,78 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'알림 발송함'**
   String get oJob_notify_outbox;
+
+  /// No description provided for @oFlowTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'예약 흐름 (최근 30일)'**
+  String get oFlowTitle;
+
+  /// No description provided for @oFlowUnavailable.
+  ///
+  /// In ko, this message translates to:
+  /// **'흐름 지표를 지금 불러올 수 없어요'**
+  String get oFlowUnavailable;
+
+  /// No description provided for @oFlowAssign.
+  ///
+  /// In ko, this message translates to:
+  /// **'기사님 배정까지 걸린 시간 (중앙값)'**
+  String get oFlowAssign;
+
+  /// No description provided for @oFlowAssignValue.
+  ///
+  /// In ko, this message translates to:
+  /// **'{hours}시간'**
+  String oFlowAssignValue(String hours);
+
+  /// No description provided for @oFlowNoAssignYet.
+  ///
+  /// In ko, this message translates to:
+  /// **'배정된 예약이 아직 없어요'**
+  String get oFlowNoAssignYet;
+
+  /// No description provided for @oFlowUnassigned.
+  ///
+  /// In ko, this message translates to:
+  /// **'24시간 넘게 기사님이 없는 예약'**
+  String get oFlowUnassigned;
+
+  /// No description provided for @oFlowUnassignedValue.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count}건'**
+  String oFlowUnassignedValue(String count);
+
+  /// No description provided for @oFlowSameDay.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 당일 취소'**
+  String get oFlowSameDay;
+
+  /// No description provided for @oFlowSameDayValue.
+  ///
+  /// In ko, this message translates to:
+  /// **'{cancelled}건 / 오늘 예약 {booked}건'**
+  String oFlowSameDayValue(String cancelled, String booked);
+
+  /// No description provided for @oFlowNoShow.
+  ///
+  /// In ko, this message translates to:
+  /// **'서비스별 미도착(노쇼) 비율'**
+  String get oFlowNoShow;
+
+  /// No description provided for @oFlowNoShowValue.
+  ///
+  /// In ko, this message translates to:
+  /// **'{noShows}건 / {bookings}건 ({pct}%)'**
+  String oFlowNoShowValue(String noShows, String bookings, String pct);
+
+  /// No description provided for @oFlowNoBookings.
+  ///
+  /// In ko, this message translates to:
+  /// **'예약이 없어요'**
+  String get oFlowNoBookings;
 
   /// No description provided for @err_owner_exists.
   ///
@@ -8353,6 +8473,18 @@ abstract class T {
   /// **'확인 항목'**
   String get pChecklist;
 
+  /// No description provided for @pCheckInReasonTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'도착 기록 없이 완료하는 이유'**
+  String get pCheckInReasonTitle;
+
+  /// No description provided for @pCheckInReasonHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'예: 앱에서 도착을 누르지 못했어요 (전화로 확인)'**
+  String get pCheckInReasonHint;
+
   /// No description provided for @pCheck1.
   ///
   /// In ko, this message translates to:
@@ -9006,6 +9138,18 @@ abstract class T {
   /// **'판매자 상태: {status}'**
   String poSellerDone(String status);
 
+  /// No description provided for @cgPeakFixedScope.
+  ///
+  /// In ko, this message translates to:
+  /// **'정해진 가격·정기 청소에도 할증 적용'**
+  String get cgPeakFixedScope;
+
+  /// No description provided for @cgPeakFixedScopeHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'끄면 정해진 가격과 정기 청소는 기본 가격으로 예약돼요. 견적은 항상 할증을 보여줘요'**
+  String get cgPeakFixedScopeHint;
+
   /// No description provided for @oFlags.
   ///
   /// In ko, this message translates to:
@@ -9305,6 +9449,414 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'처리한 직원'**
   String get prqBy;
+
+  /// No description provided for @cPfTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'직원 프로필 · 검증'**
+  String get cPfTitle;
+
+  /// No description provided for @cPfTabChecklist.
+  ///
+  /// In ko, this message translates to:
+  /// **'검증 체크리스트'**
+  String get cPfTabChecklist;
+
+  /// No description provided for @cPfTabProfile.
+  ///
+  /// In ko, this message translates to:
+  /// **'프로필'**
+  String get cPfTabProfile;
+
+  /// No description provided for @cPfChecklistHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'모든 항목을 체크해야 활동 중으로 승인할 수 있어요.'**
+  String get cPfChecklistHelp;
+
+  /// No description provided for @cPfItemIdentity.
+  ///
+  /// In ko, this message translates to:
+  /// **'신분증 확인'**
+  String get cPfItemIdentity;
+
+  /// No description provided for @cPfItemTaxType.
+  ///
+  /// In ko, this message translates to:
+  /// **'세금 유형 확인 (사업소득·근로소득)'**
+  String get cPfItemTaxType;
+
+  /// No description provided for @cPfItemExperience.
+  ///
+  /// In ko, this message translates to:
+  /// **'경력 확인'**
+  String get cPfItemExperience;
+
+  /// No description provided for @cPfItemEmergency.
+  ///
+  /// In ko, this message translates to:
+  /// **'비상연락처 확인'**
+  String get cPfItemEmergency;
+
+  /// No description provided for @cPfLegacyNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'이전에 승인된 직원이라 체크 기록이 없어요. 항목을 확인하고 저장해 주세요.'**
+  String get cPfLegacyNote;
+
+  /// No description provided for @cPfIncomplete.
+  ///
+  /// In ko, this message translates to:
+  /// **'체크리스트를 모두 채워야 승인할 수 있어요.'**
+  String get cPfIncomplete;
+
+  /// No description provided for @cPfSaveChecklist.
+  ///
+  /// In ko, this message translates to:
+  /// **'체크리스트 저장'**
+  String get cPfSaveChecklist;
+
+  /// No description provided for @cPfApprove.
+  ///
+  /// In ko, this message translates to:
+  /// **'활동 중으로 승인'**
+  String get cPfApprove;
+
+  /// No description provided for @cPfPhoto.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진'**
+  String get cPfPhoto;
+
+  /// No description provided for @cPfPickPhoto.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 올리기'**
+  String get cPfPickPhoto;
+
+  /// No description provided for @cPfBio.
+  ///
+  /// In ko, this message translates to:
+  /// **'소개'**
+  String get cPfBio;
+
+  /// No description provided for @cPfEmployment.
+  ///
+  /// In ko, this message translates to:
+  /// **'고용 형태'**
+  String get cPfEmployment;
+
+  /// No description provided for @cPfEmpFreelance.
+  ///
+  /// In ko, this message translates to:
+  /// **'프리랜서'**
+  String get cPfEmpFreelance;
+
+  /// No description provided for @cPfEmpEmployee.
+  ///
+  /// In ko, this message translates to:
+  /// **'직원'**
+  String get cPfEmpEmployee;
+
+  /// No description provided for @cPfEmpContract.
+  ///
+  /// In ko, this message translates to:
+  /// **'위탁'**
+  String get cPfEmpContract;
+
+  /// No description provided for @cPfEmergency.
+  ///
+  /// In ko, this message translates to:
+  /// **'비상연락처'**
+  String get cPfEmergency;
+
+  /// No description provided for @cPfEmergencyHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'숫자와 - 만 입력해요. 암호화되어 저장되고, 열람할 때마다 기록이 남아요.'**
+  String get cPfEmergencyHelp;
+
+  /// No description provided for @cPfHiredOn.
+  ///
+  /// In ko, this message translates to:
+  /// **'입사일'**
+  String get cPfHiredOn;
+
+  /// No description provided for @cPfNoDate.
+  ///
+  /// In ko, this message translates to:
+  /// **'입력 안 함'**
+  String get cPfNoDate;
+
+  /// No description provided for @cPfPayee.
+  ///
+  /// In ko, this message translates to:
+  /// **'주민등록번호 또는 사업자등록번호'**
+  String get cPfPayee;
+
+  /// No description provided for @cPfPayeeHelp.
+  ///
+  /// In ko, this message translates to:
+  /// **'지급명세서 작성에만 쓰며 암호화하여 보관해요. 파트너 동의를 받은 뒤 입력하세요. 열람할 때마다 기록이 남아요.'**
+  String get cPfPayeeHelp;
+
+  /// No description provided for @cPfPayeeSaved.
+  ///
+  /// In ko, this message translates to:
+  /// **'등록됨: {masked}'**
+  String cPfPayeeSaved(String masked);
+
+  /// No description provided for @cPfPayeeReveal.
+  ///
+  /// In ko, this message translates to:
+  /// **'원본 보기 (본인 인증 필요)'**
+  String get cPfPayeeReveal;
+
+  /// No description provided for @cPfPayeeRevealTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'식별번호'**
+  String get cPfPayeeRevealTitle;
+
+  /// No description provided for @cPfPayeeRevealBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'열람 기록이 남았어요. 화면을 닫은 뒤에는 다시 볼 수 없어요.'**
+  String get cPfPayeeRevealBody;
+
+  /// No description provided for @err_invalid_payee_identifier.
+  ///
+  /// In ko, this message translates to:
+  /// **'주민등록번호(13자리) 또는 사업자등록번호(10자리)를 확인해 주세요.'**
+  String get err_invalid_payee_identifier;
+
+  /// No description provided for @cPfSaveProfile.
+  ///
+  /// In ko, this message translates to:
+  /// **'프로필 저장'**
+  String get cPfSaveProfile;
+
+  /// No description provided for @err_checklist_incomplete.
+  ///
+  /// In ko, this message translates to:
+  /// **'체크리스트 항목을 모두 체크해야 승인할 수 있어요.'**
+  String get err_checklist_incomplete;
+
+  /// No description provided for @err_invalid_checklist.
+  ///
+  /// In ko, this message translates to:
+  /// **'체크리스트 항목이 올바르지 않아요. 화면을 새로고침해 주세요.'**
+  String get err_invalid_checklist;
+
+  /// No description provided for @err_invalid_emergency_contact.
+  ///
+  /// In ko, this message translates to:
+  /// **'비상연락처는 숫자와 - 만 넣어 주세요. (30자 이내)'**
+  String get err_invalid_emergency_contact;
+
+  /// No description provided for @err_invalid_employment_type.
+  ///
+  /// In ko, this message translates to:
+  /// **'고용 형태를 목록에서 골라 주세요.'**
+  String get err_invalid_employment_type;
+
+  /// No description provided for @err_invalid_photo.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진은 직접 올린 파일만 쓸 수 있어요. 다시 올려 주세요.'**
+  String get err_invalid_photo;
+
+  /// No description provided for @err_invalid_bio.
+  ///
+  /// In ko, this message translates to:
+  /// **'소개는 500자 이내로 적어 주세요.'**
+  String get err_invalid_bio;
+
+  /// No description provided for @pQualityScore.
+  ///
+  /// In ko, this message translates to:
+  /// **'품질 점수'**
+  String get pQualityScore;
+
+  /// No description provided for @pQualityNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 점수가 없어요. 일감을 진행하면 점수가 만들어져요'**
+  String get pQualityNone;
+
+  /// No description provided for @pQualityReadOnly.
+  ///
+  /// In ko, this message translates to:
+  /// **'점수는 주기적으로 다시 계산돼요. 이 화면에서는 보기만 할 수 있어요'**
+  String get pQualityReadOnly;
+
+  /// No description provided for @pQualityOk.
+  ///
+  /// In ko, this message translates to:
+  /// **'정상'**
+  String get pQualityOk;
+
+  /// No description provided for @pQualityWarning.
+  ///
+  /// In ko, this message translates to:
+  /// **'주의 필요'**
+  String get pQualityWarning;
+
+  /// No description provided for @pQualityPaused.
+  ///
+  /// In ko, this message translates to:
+  /// **'일시 중지 · 새 일감을 받을 수 없어요'**
+  String get pQualityPaused;
+
+  /// No description provided for @pQualityOverridden.
+  ///
+  /// In ko, this message translates to:
+  /// **'운영팀이 중지를 풀었어요'**
+  String get pQualityOverridden;
+
+  /// No description provided for @pQualityComponents.
+  ///
+  /// In ko, this message translates to:
+  /// **'항목별 점수'**
+  String get pQualityComponents;
+
+  /// No description provided for @pQualityRating.
+  ///
+  /// In ko, this message translates to:
+  /// **'고객 별점'**
+  String get pQualityRating;
+
+  /// No description provided for @pQualityCompletion.
+  ///
+  /// In ko, this message translates to:
+  /// **'배정 일감 완료'**
+  String get pQualityCompletion;
+
+  /// No description provided for @pQualityOnTime.
+  ///
+  /// In ko, this message translates to:
+  /// **'정시 도착'**
+  String get pQualityOnTime;
+
+  /// No description provided for @pQualityReliability.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소·노쇼 관리'**
+  String get pQualityReliability;
+
+  /// No description provided for @pQualityComplaints.
+  ///
+  /// In ko, this message translates to:
+  /// **'불만 관리'**
+  String get pQualityComplaints;
+
+  /// No description provided for @pQualityTips.
+  ///
+  /// In ko, this message translates to:
+  /// **'개선 팁'**
+  String get pQualityTips;
+
+  /// No description provided for @pTipImproveRating.
+  ///
+  /// In ko, this message translates to:
+  /// **'고객 별점을 올리려면 마무리 점검을 꼼꼼히 해 보세요'**
+  String get pTipImproveRating;
+
+  /// No description provided for @pTipCompleteAssigned.
+  ///
+  /// In ko, this message translates to:
+  /// **'배정받은 일감은 끝까지 완료해 주세요'**
+  String get pTipCompleteAssigned;
+
+  /// No description provided for @pTipCheckInOnTime.
+  ///
+  /// In ko, this message translates to:
+  /// **'약속 시간에 맞춰 도착 체크인을 해 주세요'**
+  String get pTipCheckInOnTime;
+
+  /// No description provided for @pTipAvoidCancellations.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소와 노쇼를 줄여 주세요'**
+  String get pTipAvoidCancellations;
+
+  /// No description provided for @pTipReduceComplaints.
+  ///
+  /// In ko, this message translates to:
+  /// **'접수된 불만을 줄여 주세요'**
+  String get pTipReduceComplaints;
+
+  /// No description provided for @err_quality_paused.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 파트너는 품질 점수 때문에 일감을 받을 수 없어요. 다른 파트너를 골라 주세요.'**
+  String get err_quality_paused;
+
+  /// No description provided for @err_training_required.
+  ///
+  /// In ko, this message translates to:
+  /// **'필수 교육을 마치지 않은 파트너예요. 교육을 끝낸 파트너를 골라 주세요.'**
+  String get err_training_required;
+
+  /// No description provided for @err_no_partner_available.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 이 일감을 맡을 수 있는 파트너가 없어요.'**
+  String get err_no_partner_available;
+
+  /// No description provided for @err_reassign_closed.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 일감은 지금 배정을 바꿀 수 없어요. 상태를 확인해 주세요.'**
+  String get err_reassign_closed;
+
+  /// No description provided for @cQualityScore.
+  ///
+  /// In ko, this message translates to:
+  /// **'품질 점수'**
+  String get cQualityScore;
+
+  /// No description provided for @cQualityNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'점수 없음'**
+  String get cQualityNone;
+
+  /// No description provided for @cQualityOk.
+  ///
+  /// In ko, this message translates to:
+  /// **'정상'**
+  String get cQualityOk;
+
+  /// No description provided for @cQualityWarning.
+  ///
+  /// In ko, this message translates to:
+  /// **'주의'**
+  String get cQualityWarning;
+
+  /// No description provided for @cQualityPaused.
+  ///
+  /// In ko, this message translates to:
+  /// **'배정 중지'**
+  String get cQualityPaused;
+
+  /// No description provided for @cQualityOverridden.
+  ///
+  /// In ko, this message translates to:
+  /// **'중지 해제'**
+  String get cQualityOverridden;
+
+  /// No description provided for @cQualityTips.
+  ///
+  /// In ko, this message translates to:
+  /// **'개선 팁'**
+  String get cQualityTips;
+
+  /// No description provided for @cQualityLastCalc.
+  ///
+  /// In ko, this message translates to:
+  /// **'자동 계산 결과예요'**
+  String get cQualityLastCalc;
 
   /// No description provided for @rnwTitle.
   ///
@@ -9726,6 +10278,12 @@ abstract class T {
   /// **'저장'**
   String get caseSave;
 
+  /// No description provided for @err_schedule_overlap.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 시간에 이미 다른 일정이 있어요'**
+  String get err_schedule_overlap;
+
   /// No description provided for @rulesTab.
   ///
   /// In ko, this message translates to:
@@ -9936,6 +10494,12 @@ abstract class T {
   /// **'정시 도착 허용 시간 (분)'**
   String get ruleQualityOnTimeGraceMin;
 
+  /// No description provided for @ruleTrainingGateEnabled.
+  ///
+  /// In ko, this message translates to:
+  /// **'파트너 교육 완료 전 일감 수락 막기'**
+  String get ruleTrainingGateEnabled;
+
   /// No description provided for @ruleBackupStaleHours.
   ///
   /// In ko, this message translates to:
@@ -9959,6 +10523,24 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'디스크 여유가 이 비율 아래면 노란불 (%)'**
   String get ruleDiskWarnPct;
+
+  /// No description provided for @ruleUnassignedAlertHours.
+  ///
+  /// In ko, this message translates to:
+  /// **'기사님 미배정 예약 알림 기준 (시간)'**
+  String get ruleUnassignedAlertHours;
+
+  /// No description provided for @ruleSameDayCancelAlertPct.
+  ///
+  /// In ko, this message translates to:
+  /// **'당일 취소 비율 알림 기준 (%)'**
+  String get ruleSameDayCancelAlertPct;
+
+  /// No description provided for @ruleTaxDeadlineRemindDays.
+  ///
+  /// In ko, this message translates to:
+  /// **'부가가치세 신고 며칠 전에 알림 (일)'**
+  String get ruleTaxDeadlineRemindDays;
 
   /// No description provided for @ruleMaintenanceOn.
   ///
@@ -10151,6 +10733,12 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'고객 앱에 보여줄 결제 수단을 켜고 꺼요. 바로 적용돼요.'**
   String get cSetupPayMethodsHint;
+
+  /// No description provided for @cPayMethodNoKey.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제 채널이 아직 연결되지 않아 고객에게 보이지 않아요. 설정 담당자에게 문의해 주세요.'**
+  String get cPayMethodNoKey;
 
   /// No description provided for @cReviewTitle.
   ///
@@ -10494,6 +11082,24 @@ abstract class T {
   /// **'입력값을 확인해 주세요'**
   String get cInvalidValue;
 
+  /// No description provided for @sgConsentHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'필수 항목에 동의해야 인증번호를 받을 수 있어요.'**
+  String get sgConsentHint;
+
+  /// No description provided for @err_required_consent.
+  ///
+  /// In ko, this message translates to:
+  /// **'가입하려면 필수 약관에 모두 동의해 주세요'**
+  String get err_required_consent;
+
+  /// No description provided for @sgOverseasNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'서비스 이용에 꼭 필요한 동의라서 철회할 수 없어요. 동의하지 않으면 가입할 수 없어요.'**
+  String get sgOverseasNote;
+
   /// No description provided for @cStaffInvite.
   ///
   /// In ko, this message translates to:
@@ -10745,6 +11351,36 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'이 인증번호는 24시간 동안 한 번만 쓸 수 있어요. 직원이 비밀번호를 정하면 모든 기기에서 로그아웃돼요.'**
   String get cStaffResetBody;
+
+  /// No description provided for @cStepUpTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'인증 앱 코드로 한 번 더 확인'**
+  String get cStepUpTitle;
+
+  /// No description provided for @cStepUpBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 작업은 인증 앱의 6자리 코드가 필요해요. 확인하면 5분 동안 이어서 쓸 수 있어요.'**
+  String get cStepUpBody;
+
+  /// No description provided for @cStepUpConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'확인하고 계속'**
+  String get cStepUpConfirm;
+
+  /// No description provided for @cStepUpCancel.
+  ///
+  /// In ko, this message translates to:
+  /// **'취소'**
+  String get cStepUpCancel;
+
+  /// No description provided for @err_stepup_required.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 작업은 인증 앱 코드로 한 번 더 확인해야 해요.'**
+  String get err_stepup_required;
 
   /// No description provided for @subTitle.
   ///
@@ -11009,6 +11645,24 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'세금계산서 업로드 CSV'**
   String get tExportTaxInvoices;
+
+  /// No description provided for @tReExport.
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 내보내기'**
+  String get tReExport;
+
+  /// No description provided for @tReExportTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 내보내기'**
+  String get tReExportTitle;
+
+  /// No description provided for @tReExportConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 내보낸 세금계산서 요청을 같은 파일로 다시 받아요. 파일을 잃어버렸거나 손상됐을 때만 사용하세요.'**
+  String get tReExportConfirm;
 
   /// No description provided for @tTaxLayoutNote.
   ///

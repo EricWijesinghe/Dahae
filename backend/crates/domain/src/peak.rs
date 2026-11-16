@@ -91,9 +91,9 @@ const KR_HOLIDAYS: &[(i32, u32, u32, DayKind)] = &[
 
 /// Looks up the holiday kind for a KST calendar date, if any.
 pub fn holiday_kind(date: NaiveDate) -> Option<DayKind> {
-    KR_HOLIDAYS.iter().find_map(|&(y, m, d, kind)| {
-        (NaiveDate::from_ymd_opt(y, m, d) == Some(date)).then_some(kind)
-    })
+    KR_HOLIDAYS
+        .iter()
+        .find_map(|&(y, m, d, kind)| (NaiveDate::from_ymd_opt(y, m, d) == Some(date)).then_some(kind))
 }
 
 /// Owner-configurable surcharges, in basis points (10_000 = 100%) of the pre-VAT amount.
@@ -108,6 +108,14 @@ pub struct PeakConfig {
     pub evening_end_hour: u32,
     /// Hard cap on the total surcharge.
     pub max_bps: i64,
+    /// Whether fixed-price and subscription visits pay the surcharge too. Quotes always show it.
+    /// Off by default: live prices change only when the owner turns it on.
+    #[serde(default = "apply_to_fixed_default")]
+    pub apply_to_fixed: bool,
+}
+
+fn apply_to_fixed_default() -> bool {
+    false
 }
 
 impl Default for PeakConfig {
@@ -121,6 +129,7 @@ impl Default for PeakConfig {
             evening_start_hour: 18,
             evening_end_hour: 22,
             max_bps: 5_000,
+            apply_to_fixed: false,
         }
     }
 }
@@ -256,7 +265,10 @@ mod tests {
 
     #[test]
     fn total_is_capped_at_max() {
-        let c = PeakConfig { max_bps: 2_500, ..PeakConfig::default() };
+        let c = PeakConfig {
+            max_bps: 2_500,
+            ..PeakConfig::default()
+        };
         // Chuseok Saturday evening would be 30% + 10% = 40%, capped to 25%.
         let s = peak_surcharge(&c, kst(2026, 9, 26, 19));
         assert_eq!(s.bps, 2_500);
@@ -272,7 +284,13 @@ mod tests {
 
     #[test]
     fn amount_on_rounds_to_100_won() {
-        let s = PeakSurcharge { bps: 1_000, day_bps: 1_000, day_kind: None, is_weekend: true, evening_bps: 0 };
+        let s = PeakSurcharge {
+            bps: 1_000,
+            day_bps: 1_000,
+            day_kind: None,
+            is_weekend: true,
+            evening_bps: 0,
+        };
         assert_eq!(s.amount_on(Won(185_000)), Won(18_500));
         assert_eq!(s.amount_on(Won(180_000 + 1_234)), Won(18_100));
     }
@@ -285,11 +303,28 @@ mod tests {
     }
 
     #[test]
+    fn saved_config_without_the_fixed_scope_keeps_peak_off_for_fixed_visits() {
+        // Settings saved before the owner scope existed: fixed visits stay at base price, as before.
+        let legacy = r#"{"weekend_bps":1000,"public_holiday_bps":2000,"lunar_period_bps":3000,"evening_bps":1000,
+            "evening_start_hour":18,"evening_end_hour":22,"max_bps":5000}"#;
+        let c: PeakConfig = serde_json::from_str(legacy).unwrap();
+        assert!(!c.apply_to_fixed);
+        assert_eq!(c, PeakConfig::default());
+    }
+
+    #[test]
     fn validate_rejects_bad_config() {
         assert!(PeakConfig::default().validate().is_ok());
-        let bad_rate = PeakConfig { weekend_bps: 10_001, ..PeakConfig::default() };
+        let bad_rate = PeakConfig {
+            weekend_bps: 10_001,
+            ..PeakConfig::default()
+        };
         assert_eq!(bad_rate.validate(), Err(DomainError::OutOfRange("peak_bps")));
-        let bad_hours = PeakConfig { evening_start_hour: 22, evening_end_hour: 18, ..PeakConfig::default() };
+        let bad_hours = PeakConfig {
+            evening_start_hour: 22,
+            evening_end_hour: 18,
+            ..PeakConfig::default()
+        };
         assert_eq!(bad_hours.validate(), Err(DomainError::OutOfRange("evening_hours")));
     }
 

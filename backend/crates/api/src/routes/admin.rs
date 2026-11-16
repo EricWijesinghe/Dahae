@@ -2,15 +2,16 @@
 
 use super::{
     audit,
-    bookings::{BOOKING_COLS, BookingRow, MAX_NOTE, apply_cancel, load_booking},
+    bookings::{Actor, BOOKING_COLS, BookingRow, MAX_NOTE, apply_cancel, load_booking},
     catalog::load_formula,
     chat::{self, MessageRow, THREAD_COLS, ThreadRow},
-    growth,
+    finance, growth,
 };
 use crate::{
     auth::{Role, Staff, live_staff_role},
     contract::{cursor_part, decode_cursor, encode_cursor, page_limit, paged},
     error::{ApiError, ApiResult},
+    ops,
     realtime::{Recipient, notify},
     state::AppState,
 };
@@ -55,16 +56,17 @@ struct Dashboard {
     average_rating: Option<f64>,
     referrals_invited: i64,
     referrals_rewarded: i64,
+    /// Booking flow: time to assign, unassigned backlog and no-show rate per service (last 30 days). Null if unreadable.
+    flow: Option<ops::FlowMetrics>,
 }
 
 async fn dashboard(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Dashboard>> {
-    let row: (i64, i64, i64, i64, i64, i64) = sqlx::query_as(
+    let row: (i64, i64, i64, i64, i64) = sqlx::query_as(
         "SELECT
            (SELECT count(*) FROM bookings WHERE visit_date = (now() AT TIME ZONE 'Asia/Seoul')::date AND status BETWEEN 1 AND 3),
            (SELECT count(*) FROM bookings WHERE status = 0),
            (SELECT count(*) FROM bookings WHERE status = 1 AND pro_id IS NULL AND team_name IS NULL),
            (SELECT count(*) FROM chat_threads WHERE unread_staff > 0),
-           (SELECT COALESCE(sum(amount - refunded_amount), 0)::bigint FROM payments WHERE status IN ('paid','partially_refunded') AND created_at > now() - interval '30 days'),
            (SELECT count(*) FROM bookings WHERE created_at > now() - interval '30 days')",
     )
     .fetch_one(&s.db)
@@ -80,12 +82,13 @@ async fn dashboard(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Dash
         open_quotes: row.1,
         unassigned: row.2,
         unread_threads: row.3,
-        revenue_30d: row.4,
-        bookings_30d: row.5,
+        revenue_30d: finance::net_revenue_30d(&s.db).await?,
+        bookings_30d: row.4,
         by_service,
         average_rating: growth.average_rating,
         referrals_invited: growth.invited,
         referrals_rewarded: growth.rewarded,
+        flow: ops::flow_status(&s.db).await,
     }))
 }
 
@@ -270,7 +273,16 @@ async fn cancel(State(s): State<AppState>, Staff(st): Staff, Path(id): Path<Uuid
     if c.refund_amount.is_some_and(|a| a < 0) {
         return Err(ApiError::BadRequest("invalid_amount"));
     }
-    apply_cancel(&s, &b, c.refund_amount, "staff").await?;
+    apply_cancel(
+        &s,
+        &b,
+        c.refund_amount,
+        Actor {
+            role: "staff",
+            id: Some(st.id),
+        },
+    )
+    .await?;
     audit(
         &s.db,
         "staff",

@@ -30,7 +30,7 @@ else
   ENVS=("MALKKEUM_IMAGES=$REG" "MALKKEUM_SKIP_SIGNATURE=1") # locally built images carry no release signature
 fi
 ENVS+=("MALKKEUM_DOMAIN=$DOMAIN" "MALKKEUM_EMAIL=ci@example.com" "MALKKEUM_VERSION=$TAG" "MALKKEUM_TLS=internal"
-  "MALKKEUM_HEALTH_WAIT=240" "MALKKEUM_AGENT_FILE=$(pwd)/deploy/agent.sh")
+  "MALKKEUM_HEALTH_WAIT=240" "MALKKEUM_AGENT_FILE=$(pwd)/deploy/agent.sh" "MALKKEUM_FIREWALL=on")
 mkdir -p "$LOG"
 
 step() { printf '\n== %s  (%s)\n' "$*" "$(date +%T)"; }
@@ -119,7 +119,8 @@ app_role_ok() { # the API signs in as dahae_api, which is not a superuser
 purge_needs_domain() { ! $SUDO setsid -w env DAHAE_YES=1 /usr/local/bin/dahae uninstall --purge --yes </dev/null >/dev/null 2>&1; } # no terminal
 mode_is() { [ "$($SUDO stat -c %a "$1")" = "$2" ]; }
 version_shown() { dahae version | grep -q "$TAG"; }
-backups_count() { $SUDO sh -c 'ls /opt/malkkeum/backups/db-*.sql.gz 2>/dev/null | wc -l'; }
+backups_count() { $SUDO sh -c 'ls /opt/malkkeum/backups/db-*.sql.gz.enc 2>/dev/null | wc -l'; }
+plaintext_dumps_count() { $SUDO sh -c 'ls /opt/malkkeum/backups/db-*.sql.gz 2>/dev/null | wc -l'; }
 create_owner() {
   post /v1/setup/admin "{\"code\":\"$CODE\",\"email\":\"$OWNER_EMAIL\",\"name\":\"Owner\",\"password\":\"$OWNER_PASSWORD\"}" \
     | grep -q '"ok":true'
@@ -161,6 +162,10 @@ expect "log rotation installed" $SUDO test -f /etc/logrotate.d/dahae
 expect "API uses the non-superuser DB role" app_role_ok
 for s in db api web; do expect "$s container hardened (read-only, no capabilities)" hardened "$s"; done
 expect "cron reports a failed unattended update" $SUDO grep -q 'dahae auto-update .*|| .*dahae alert update' /etc/cron.d/malkkeum
+expect "ufw active" sh -c "$SUDO ufw status | grep -q 'Status: active'"
+expect "ufw allows 22, 80 and 443" sh -c "$SUDO ufw status | grep -qE '^22/tcp +ALLOW' && $SUDO ufw status | grep -qE '^80/tcp +ALLOW' && $SUDO ufw status | grep -qE '^443/tcp +ALLOW'"
+expect "fail2ban running with the sshd jail" $SUDO fail2ban-client status sshd
+expect "unattended security upgrades on" $SUDO grep -q 'Unattended-Upgrade "1"' /etc/apt/apt.conf.d/20auto-upgrades
 expect "agent path unit is active" $SUDO systemctl is-active --quiet dahae-agent.path
 expect "agent timer is active" $SUDO systemctl is-active --quiet dahae-agent.timer
 expect "job status folder is root-owned" sh -c "[ \"\$($SUDO stat -c %u /opt/malkkeum/jobs/status)\" = 0 ]"
@@ -196,12 +201,15 @@ step "4. backup and restore round trip"
 dbq "insert into settings (key, value) values ('e2e_before', 'true')" >/dev/null
 dc exec -T api sh -c 'echo e2e-upload > /data/uploads/e2e-marker.txt'
 expect "dahae backup" dahae backup
-BACKUP=$($SUDO sh -c 'ls -t /opt/malkkeum/backups/db-*.sql.gz | head -n1')
+BACKUP=$($SUDO sh -c 'ls -t /opt/malkkeum/backups/db-*.sql.gz.enc | head -n1')
+expect "local dump is sealed (MKB1)" sh -c "$SUDO head -c 4 '$BACKUP' | grep -q '^MKB1'"
+expect "no plaintext dump left behind" test "$(plaintext_dumps_count)" = 0
 dbq "insert into settings (key, value) values ('e2e_after', 'true')" >/dev/null
 dc exec -T api rm /data/uploads/e2e-marker.txt
 dahae restore "$BACKUP" --yes 2>&1 | tee "$LOG/restore.txt"
 [ "${PIPESTATUS[0]}" = 0 ] || fail "dahae restore failed"
 expect "restore says done" grep -q '복원 완료' "$LOG/restore.txt"
+expect "restore leaves no opened plaintext behind" test "$(plaintext_dumps_count)" = 0
 expect "row from before the backup is back" setting_count_is e2e_before 1
 expect "row written after the backup is gone" setting_count_is e2e_after 0
 expect "uploads restored" upload_marker
