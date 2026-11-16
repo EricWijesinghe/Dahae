@@ -40,9 +40,19 @@ async fn status_is_staff_only(pool: PgPool) {
     let (st, body) = call(&app, "GET", "/v1/admin/ops/status", Some(consultant.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{body}");
     assert!(body["checks"].as_array().is_some_and(|c| c.len() == 6), "six checks: {body}");
-    assert!(body["integrations"].as_array().is_some_and(|i| i.len() == ops::INTEGRATIONS.len()));
+    assert!(
+        body["integrations"].as_array().is_some_and(|i| i.len() == ops::INTEGRATIONS.len() + 1),
+        "every integration plus the photo backup: {body}"
+    );
 
-    let (st, _) = call(&app, "PUT", "/v1/admin/ops/alerts", Some(consultant.as_str()), Some(json!({"quiet_start": 22, "quiet_end": 7}))).await;
+    let (st, _) = call(
+        &app,
+        "PUT",
+        "/v1/admin/ops/alerts",
+        Some(consultant.as_str()),
+        Some(json!({"quiet_start": 22, "quiet_end": 7})),
+    )
+    .await;
     assert_eq!(st, StatusCode::FORBIDDEN, "consultant cannot change alert settings");
 }
 
@@ -64,7 +74,14 @@ async fn owner_saves_alert_settings_and_bad_input_is_refused(pool: PgPool) {
     assert_eq!(saved["prefs"]["rules"]["sms_failing"], false);
     assert_eq!(saved["prefs"]["alert_phone"], "01022223333");
 
-    let (st, _) = call(&app, "PUT", "/v1/admin/ops/alerts", Some(owner.as_str()), Some(json!({"quiet_start": 30, "quiet_end": 6}))).await;
+    let (st, _) = call(
+        &app,
+        "PUT",
+        "/v1/admin/ops/alerts",
+        Some(owner.as_str()),
+        Some(json!({"quiet_start": 30, "quiet_end": 6})),
+    )
+    .await;
     assert_eq!(st, StatusCode::BAD_REQUEST);
 }
 
@@ -74,13 +91,44 @@ async fn failing_integration_turns_red_with_its_code_and_recovers(pool: PgPool) 
     let consultant = staff_token(&pool, "ops-red@test.local", Role::StaffConsultant).await;
     ops::write_outcome(&pool, "solapi", Err("provider_error")).await.expect("record failure");
     let (_, body) = call(&app, "GET", "/v1/admin/ops/status", Some(consultant.as_str()), None).await;
-    let solapi = body["integrations"].as_array().expect("list").iter().find(|i| i["code"] == "solapi").expect("solapi row").clone();
+    let solapi = body["integrations"]
+        .as_array()
+        .expect("list")
+        .iter()
+        .find(|i| i["code"] == "solapi")
+        .expect("solapi row")
+        .clone();
     assert_eq!(solapi["last_error"], "provider_error");
     assert_eq!(solapi["level"], "yellow", "not configured in the test config");
     assert_eq!(ops::failures_within(&pool, &["solapi"], 15).await.expect("count"), 1);
 
     ops::write_outcome(&pool, "solapi", Ok(())).await.expect("record success");
     let (_, body) = call(&app, "GET", "/v1/admin/ops/status", Some(consultant.as_str()), None).await;
-    let solapi = body["integrations"].as_array().expect("list").iter().find(|i| i["code"] == "solapi").expect("solapi row").clone();
+    let solapi = body["integrations"]
+        .as_array()
+        .expect("list")
+        .iter()
+        .find(|i| i["code"] == "solapi")
+        .expect("solapi row")
+        .clone();
     assert!(solapi["last_ok_at"].is_string(), "success is recorded");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn failing_photo_offsite_backup_has_its_own_status_row(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let consultant = staff_token(&pool, "ops-photos@test.local", Role::StaffConsultant).await;
+    ops::write_outcome(&pool, ops::PHOTOS_INTEGRATION, Err("unreachable"))
+        .await
+        .expect("record failure");
+    let (_, body) = call(&app, "GET", "/v1/admin/ops/status", Some(consultant.as_str()), None).await;
+    let row = body["integrations"]
+        .as_array()
+        .expect("list")
+        .iter()
+        .find(|i| i["code"] == "backup-uploads")
+        .expect("photo backup row")
+        .clone();
+    assert_eq!(row["last_error"], "unreachable");
+    assert!(row["last_fail_at"].is_string(), "the failure time is shown");
 }

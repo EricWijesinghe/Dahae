@@ -590,11 +590,9 @@ async fn open(config: &Config) -> Result<(PgPool, Integrations), String> {
     Ok((db, integ))
 }
 
-const PHOTOS_INTEGRATION: &str = "backup-uploads";
-
 /// Ops record key for an offsite upload: the photo tar and the database dump are recorded apart.
 fn offsite_integration(name: &str) -> &'static str {
-    if name.starts_with("uploads-") { PHOTOS_INTEGRATION } else { "backup" }
+    if name.starts_with("uploads-") { ops::PHOTOS_INTEGRATION } else { "backup" }
 }
 
 /// `api backup-upload <file>`: the cron job's second step. Local status is recorded first, so a
@@ -614,7 +612,7 @@ async fn upload_cmd(config: &Config, file: &str) -> i32 {
     };
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or(file);
     // The photo tar is recorded under its own key: its failure must not be overwritten by the database upload.
-    let photos = offsite_integration(name) == PHOTOS_INTEGRATION;
+    let photos = offsite_integration(name) == ops::PHOTOS_INTEGRATION;
     let mut status = json!({ "at": Utc::now(), "file": name, "size_bytes": meta.len(), "offsite": null });
     if !photos && let Err(e) = store_status(&db, &status).await {
         eprintln!("status: {e}");

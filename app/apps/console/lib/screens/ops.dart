@@ -357,6 +357,7 @@ final _integrationNames = <String, String Function(T)>{
   'google': (T t) => t.cIntGoogle,
   'apple': (T t) => t.cIntApple,
   'backup': (T t) => t.cIntBackup,
+  'backup-uploads': (T t) => t.cIntBackupPhotos,
 };
 
 /// "2026-11-11 14:05" in the device's time zone; the status page is for people, not logs.
@@ -438,6 +439,7 @@ final _ruleLabels = <String, String Function(T)>{
   'payment_mismatch': (T t) => t.oRuleMismatch,
   'social_failing': (T t) => t.oRuleSocial,
   'backup_stale': (T t) => t.oRuleBackup,
+  'backup_uploads_failing': (T t) => t.oRuleBackupPhotos,
   'disk_low': (T t) => t.oRuleDisk,
   'auth_suspicious': (T t) => t.oRuleAuth,
   'unassigned_stale': (T t) => t.oRuleUnassigned,

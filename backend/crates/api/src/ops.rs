@@ -15,6 +15,8 @@ use sqlx::PgPool;
 use std::{path::PathBuf, sync::OnceLock, time::Instant};
 
 pub const BACKUP_STATUS_KEY: &str = "backup_status";
+/// Ops record key for the offsite photo archive (kept apart from the database dump).
+pub const PHOTOS_INTEGRATION: &str = "backup-uploads";
 /// The nightly backup runs at 03:30; a missing run for a day and a half is a red flag.
 pub const BACKUP_STALE_HOURS: f64 = 36.0;
 pub const BACKUP_LATE_HOURS: f64 = 26.0;
@@ -318,14 +320,17 @@ pub async fn status(s: &AppState) -> ApiResult<Value> {
             Value::Null
         }
     };
-    let integrations: Vec<Value> = INTEGRATIONS
+    // The photo archive's offsite upload is set up with the database backup, so it shares that setting.
+    let rows = INTEGRATIONS
         .iter()
-        .map(|sec| {
-            let row = health.iter().find(|h| h.integration == sec.code());
-            let configured = integ.has(*sec);
+        .map(|sec| (sec.code(), integ.has(*sec)))
+        .chain([(PHOTOS_INTEGRATION, integ.has(Section::Backup))]);
+    let integrations: Vec<Value> = rows
+        .map(|(code, configured)| {
+            let row = health.iter().find(|h| h.integration == code);
             let (ok, fail) = (row.and_then(|r| r.last_ok_at), row.and_then(|r| r.last_fail_at));
             let level = integration_level(configured, ok, fail, now);
-            json!({ "code": sec.code(), "configured": configured, "level": level, "last_ok_at": ok, "last_fail_at": fail, "last_error": row.and_then(|r| r.last_error.clone()) })
+            json!({ "code": code, "configured": configured, "level": level, "last_ok_at": ok, "last_fail_at": fail, "last_error": row.and_then(|r| r.last_error.clone()) })
         })
         .collect();
     let backup_age = backup_age_hours(backup.as_ref(), now);
@@ -407,6 +412,15 @@ pub async fn prune(db: &PgPool) -> Result<(), sqlx::Error> {
         .execute(db)
         .await?;
     crate::realtime::prune_stored(db).await
+}
+
+/// Last success and last failure recorded for one integration. Both None when nothing was recorded.
+pub async fn last_outcome(db: &PgPool, integration: &str) -> Result<(Option<DateTime<Utc>>, Option<DateTime<Utc>>), sqlx::Error> {
+    let row: Option<(Option<DateTime<Utc>>, Option<DateTime<Utc>>)> = sqlx::query_as("SELECT last_ok_at, last_fail_at FROM ops_health WHERE integration = $1")
+        .bind(integration)
+        .fetch_optional(db)
+        .await?;
+    Ok(row.unwrap_or((None, None)))
 }
 
 /// Used by the alert rules: failures of one integration in the last `minutes`.

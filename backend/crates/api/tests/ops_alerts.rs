@@ -220,3 +220,24 @@ async fn owner_alert_thresholds_have_safe_defaults(pool: PgPool) {
     assert_eq!(settings_registry::get(&pool, &cfg, "same_day_cancel_alert_pct").await.expect("pct"), 30);
     assert_eq!(settings_registry::get(&pool, &cfg, "tax_deadline_remind_days").await.expect("days"), 7);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn failed_photo_offsite_backup_alerts_until_a_later_upload_succeeds(pool: PgPool) {
+    assert!(ops_alerts::photo_backup_findings(&pool).await.expect("findings").is_empty(), "no upload yet");
+    ops::write_outcome(&pool, "backup", Err("unreachable")).await.expect("database upload failed");
+    assert!(
+        ops_alerts::photo_backup_findings(&pool).await.expect("findings").is_empty(),
+        "the database upload has its own rule"
+    );
+    ops::write_outcome(&pool, ops::PHOTOS_INTEGRATION, Err("unreachable"))
+        .await
+        .expect("record failure");
+    let findings = ops_alerts::photo_backup_findings(&pool).await.expect("findings");
+    assert!(fired(&findings, "backup_uploads_failing"), "photo failure fires the owner alert");
+    assert!(ops_alerts::Prefs::default().enabled("backup_uploads_failing"), "on by default");
+    ops::write_outcome(&pool, ops::PHOTOS_INTEGRATION, Ok(())).await.expect("record success");
+    assert!(
+        ops_alerts::photo_backup_findings(&pool).await.expect("findings").is_empty(),
+        "a later success clears it"
+    );
+}

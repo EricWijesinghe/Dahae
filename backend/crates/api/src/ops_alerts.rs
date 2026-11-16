@@ -23,7 +23,7 @@ use std::{
 };
 use tokio::task::JoinHandle;
 
-pub const RULES: [&str; 12] = [
+pub const RULES: [&str; 13] = [
     "sms_failing",
     "push_failing",
     "payment_failing",
@@ -32,6 +32,7 @@ pub const RULES: [&str; 12] = [
     "social_failing",
     "auth_suspicious",
     "backup_stale",
+    "backup_uploads_failing",
     "disk_low",
     "unassigned_stale",
     "same_day_cancel",
@@ -231,6 +232,7 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
             body: "서버에서 malkkeum backup 을 실행하고, backups 폴더의 backup.log 를 확인하세요.",
         });
     }
+    out.extend(photo_backup_findings(db).await?);
     let disk = ops::disk_usage(s.config.upload_dir.clone()).await;
     if disk.is_some_and(|d| ops::disk_level(d.free_pct(), &t) == Level::Red) {
         out.push(Finding {
@@ -248,6 +250,19 @@ async fn business_findings_or_skip(db: &PgPool, cfg: &Config) -> Vec<Finding> {
         tracing::warn!(error = %e, "business alert rules skipped");
         Vec::new()
     })
+}
+
+/// The photo archive's offsite upload failed and has not succeeded since: the status page's red rule, as an owner alert.
+pub async fn photo_backup_findings(db: &PgPool) -> ApiResult<Vec<Finding>> {
+    let (ok, fail) = ops::last_outcome(db, ops::PHOTOS_INTEGRATION).await?;
+    if ops::integration_level(true, ok, fail, Utc::now()) != Level::Red {
+        return Ok(Vec::new());
+    }
+    Ok(vec![Finding {
+        rule: "backup_uploads_failing",
+        title: "사진 외부 백업이 실패했어요",
+        body: "설정 > 외부 백업에서 연결을 확인하고 연결 테스트를 해 주세요. 사진 파일이 아직 외부 저장소에 복사되지 않았어요.",
+    }])
 }
 
 /// Business rules, owner-toggleable: confirmed bookings left without a pro, a bad same-day cancel rate, and the VAT deadline.
