@@ -10,7 +10,7 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
 use common::call;
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use std::net::SocketAddr;

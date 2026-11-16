@@ -15,6 +15,7 @@ pub mod contract;
 pub mod crypto;
 pub mod db;
 pub mod demo;
+pub mod entropy;
 pub mod error;
 pub mod host_jobs;
 pub mod host_status;

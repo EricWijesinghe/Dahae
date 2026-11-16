@@ -11,6 +11,7 @@ pub mod social;
 pub mod toss_jwe;
 pub mod toss_webhook;
 
+use crate::entropy;
 use crate::{
     config::Config,
     crypto,
@@ -19,7 +20,6 @@ use crate::{
     ops,
 };
 use payout::{Transfer, TransferStatus};
-use rand::{RngCore, rngs::OsRng};
 use reqwest::{Request, StatusCode};
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -115,7 +115,7 @@ pub struct Providers {
 
 fn random_id(prefix: &str) -> String {
     let mut b = [0u8; 12];
-    OsRng.fill_bytes(&mut b);
+    entropy::fill(&mut b);
     format!("{prefix}_{}", hex::encode(b))
 }
 

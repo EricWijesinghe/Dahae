@@ -1,11 +1,11 @@
 //! Field-level encryption for sensitive values (bank account numbers).
 
+use crate::entropy;
 use aes_gcm::{
     Aes256Gcm, Key, KeyInit, Nonce,
     aead::{Aead, Payload},
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
-use rand::{RngCore, rngs::OsRng};
 
 const NONCE_LEN: usize = 12;
 /// Prefix on every new ciphertext: format version 1 (AAD-bound). Values without it are the legacy
@@ -28,7 +28,7 @@ pub mod aad {
 pub fn encrypt(key: &[u8; 32], aad: &str, plaintext: &str) -> String {
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
     let mut nonce = [0u8; NONCE_LEN];
-    OsRng.fill_bytes(&mut nonce);
+    entropy::fill(&mut nonce);
     let ct = cipher
         .encrypt(
             Nonce::from_slice(&nonce),
@@ -64,8 +64,8 @@ const PHONE_PEPPER_LABEL: &[u8] = b"malkkeum/referral-phone/v1";
 const BILLING_PEPPER_LABEL: &[u8] = b"malkkeum/billing-key/v1";
 
 fn hmac_sha256(key: &[u8], msg: &[u8]) -> [u8; 32] {
-    use hmac::{Hmac, Mac};
-    let mut mac = <Hmac<sha2::Sha256> as Mac>::new_from_slice(key).expect("HMAC takes any key length");
+    use hmac::{Hmac, KeyInit, Mac};
+    let mut mac = <Hmac<sha2::Sha256> as KeyInit>::new_from_slice(key).expect("HMAC takes any key length");
     mac.update(msg);
     mac.finalize().into_bytes().into()
 }
@@ -185,5 +185,35 @@ mod tests {
         assert_eq!(open_billing_key(&key, &legacy), None, "prefix-less value is refused");
         let payout = encrypt(&key, aad::PAYOUT_ACCOUNT, "bk_live_1");
         assert_eq!(open_billing_key(&key, &payout), None, "ciphertext moved from another column fails");
+    }
+}
+
+#[cfg(test)]
+mod known_answers {
+    use super::*;
+
+    // Pinned from an independent HMAC-SHA256 reference (Python hmac/hashlib) with key [7; 32]; a hash or HMAC
+    // crate upgrade must not change any of these, since stored digests and signatures depend on them.
+    const KEY: [u8; 32] = [7; 32];
+
+    #[test]
+    fn hmac_sha256_rfc4231_case2() {
+        assert_eq!(
+            hex::encode(hmac_sha256(b"Jefe", b"what do ya want for nothing?")),
+            "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
+        );
+    }
+
+    #[test]
+    fn keyed_digests_match_pinned_outputs() {
+        assert_eq!(secret_digest(&KEY, "pay_key_test_123"), "d2a1bf30338821262d45d52e364c7f76");
+        assert_eq!(
+            phone_digest(&KEY, "01012345678"),
+            "hmac:e07a48f2eb29265caab22ef7d97889c69da6103a2b4d73c557b4595a2748688a"
+        );
+        assert_eq!(
+            billing_key_digest(&KEY, "billing_key_abc"),
+            "hmac:dde70c934a43f2f4045a6bca77b45e4d3c2719953a4f017c1fe494bf591cccdc"
+        );
     }
 }

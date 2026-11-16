@@ -7,7 +7,7 @@ use crate::config::PortOne;
 /// The refusal code for a cancel whose balance moved since our books were written. Retrying cannot succeed.
 pub const BALANCE_MOVED: &str = "cancellable_amount_changed";
 use base64::{Engine, engine::general_purpose::STANDARD};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use reqwest::{StatusCode, header::AUTHORIZATION};
 use serde_json::{Value, json};
 use sha2::Sha256;

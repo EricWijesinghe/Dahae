@@ -3,9 +3,9 @@
 
 use super::ProviderError;
 use crate::config::SolapiConfig;
+use crate::entropy;
 use chrono::{SecondsFormat, Utc};
-use hmac::{Hmac, Mac};
-use rand::{RngCore, rngs::OsRng};
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{Value, json};
 use sha2::Sha256;
 
@@ -33,7 +33,7 @@ pub fn auth_header(api_key: &str, api_secret: &str, date: &str, salt: &str) -> S
 
 fn random_salt() -> String {
     let mut bytes = [0u8; 16];
-    OsRng.fill_bytes(&mut bytes);
+    entropy::fill(&mut bytes);
     hex::encode(bytes)
 }
 

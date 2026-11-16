@@ -1,7 +1,7 @@
 //! Server jobs an owner queues from the console: the kinds the server agent runs, their argument rules,
 //! and the job file format `deploy/agent.sh` reads from the inbox. Nothing here touches the disk.
 
-use rand::{RngCore, rngs::OsRng};
+use crate::entropy;
 use uuid::Uuid;
 
 const DAYS: [&str; 7] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -110,7 +110,7 @@ fn two_digits(s: &str) -> Option<u8> {
 /// A fresh 128-bit public progress token, as 32 lowercase hex digits (the agent's token format).
 pub fn new_progress_token() -> String {
     let mut bytes = [0u8; 16];
-    OsRng.fill_bytes(&mut bytes);
+    entropy::fill(&mut bytes);
     hex::encode(bytes)
 }
 
