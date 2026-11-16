@@ -16,7 +16,7 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
 use common::{call, customer, prod_app, seed_catalog, staff_token};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use std::{

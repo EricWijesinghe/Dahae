@@ -1,8 +1,8 @@
 //! RFC 6238 TOTP (HMAC-SHA1, 6 digits, 30 s steps) for staff two-factor sign-in.
 
+use crate::entropy;
 use data_encoding::BASE32_NOPAD;
-use hmac::{Hmac, Mac};
-use rand::{RngCore, rngs::OsRng};
+use hmac::{Hmac, KeyInit, Mac};
 use sha1::Sha1;
 use subtle::ConstantTimeEq;
 
@@ -15,7 +15,7 @@ const SECRET_BYTES: usize = 20;
 
 pub fn new_secret() -> Vec<u8> {
     let mut s = vec![0u8; SECRET_BYTES];
-    OsRng.fill_bytes(&mut s);
+    entropy::fill(&mut s);
     s
 }
 
@@ -118,5 +118,19 @@ mod tests {
         let uri = otpauth_uri("Dahae", "a@b.kr", SEED);
         assert!(uri.starts_with("otpauth://totp/Dahae:a%40b.kr?secret="));
         assert!(uri.contains("digits=6&period=30"));
+    }
+}
+
+#[cfg(test)]
+mod known_answers {
+    use super::*;
+
+    #[test]
+    fn rfc6238_sha1_vectors() {
+        // RFC 6238 appendix B secret, truncated to six digits (the RFC's 8-digit codes end in these).
+        let secret = b"12345678901234567890";
+        assert_eq!(code_at(secret, 59 / 30), 287082);
+        assert_eq!(code_at(secret, 1_111_111_109 / 30), 81804);
+        assert_eq!(code_at(secret, 2_000_000_000 / 30), 279037);
     }
 }

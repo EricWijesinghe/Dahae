@@ -2,6 +2,7 @@
 //! public social-proof numbers. Rewards are coupons; every price is still computed in booking_core.
 
 use super::{audit, uploads};
+use crate::entropy;
 use crate::{
     auth::{Admin, Customer, Staff},
     contract::{PageQuery, encode_cursor, page_limit, paged, ts_id_cursor, ts_key},
@@ -23,7 +24,6 @@ use domain::{
     coupon::{COUPON_LIFETIME_DAYS, WelcomePack},
     growth::{ReferralOffer, WelcomeOffer, check_claim, check_reward, mask_name, paid_in_full, proof_count},
 };
-use rand::{RngCore, rngs::OsRng};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value, json};
 use sqlx::{PgConnection, PgExecutor, PgPool};
@@ -106,7 +106,7 @@ async fn load_referral(db: &PgPool) -> ApiResult<ReferralOffer> {
 
 fn new_code() -> String {
     let mut bytes = [0u8; CODE_LEN];
-    OsRng.fill_bytes(&mut bytes);
+    entropy::fill(&mut bytes);
     bytes.iter().map(|b| char::from(CODE_ALPHABET[usize::from(*b) % CODE_ALPHABET.len()])).collect()
 }
 

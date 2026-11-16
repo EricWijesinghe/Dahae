@@ -3,13 +3,13 @@
 //! custom protected headers `iat` (ISO 8601 with offset) and `nonce` (unique value). Responses come back
 //! encrypted with the same key. Only the key bytes are used; there is no wrapped content key.
 
+use crate::entropy;
 use aes_gcm::{
     Aes256Gcm, Key, KeyInit, Nonce,
     aead::{Aead, Payload},
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::Utc;
-use rand::{RngCore, rngs::OsRng};
 use serde_json::{Value, json};
 
 const IV_LEN: usize = 12;
@@ -26,7 +26,7 @@ pub fn seal_with(key: &[u8; 32], plaintext: &[u8], iat: &str, nonce: &str) -> St
     let header = json!({ "alg": "dir", "enc": "A256GCM", "iat": iat, "nonce": nonce });
     let protected = URL_SAFE_NO_PAD.encode(header.to_string());
     let mut iv = [0u8; IV_LEN];
-    OsRng.fill_bytes(&mut iv);
+    entropy::fill(&mut iv);
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
     // aes-gcm appends the 16-byte tag to the ciphertext; the protected header is the AAD.
     let sealed = cipher
@@ -51,7 +51,7 @@ pub fn seal_with(key: &[u8; 32], plaintext: &[u8], iat: &str, nonce: &str) -> St
 pub fn seal(key: &[u8; 32], body: &Value) -> String {
     let iat = Utc::now().format("%Y-%m-%dT%H:%M:%S%:z").to_string();
     let mut n = [0u8; 16];
-    OsRng.fill_bytes(&mut n);
+    entropy::fill(&mut n);
     let nonce: String = n.iter().map(|b| format!("{b:02x}")).collect();
     seal_with(key, body.to_string().as_bytes(), &iat, &nonce)
 }

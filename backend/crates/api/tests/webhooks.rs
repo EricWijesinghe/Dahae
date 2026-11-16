@@ -15,7 +15,7 @@ use axum::{
 use base64::{Engine, engine::general_purpose::STANDARD};
 use chrono::Utc;
 use common::{call, customer, seed_catalog};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::json;
 use sha2::Sha256;
 use sqlx::PgPool;

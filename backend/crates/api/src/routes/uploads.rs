@@ -3,6 +3,7 @@
 //! from DATA_KEY) over name and expiry checks out. Stored values are `/files/<name>`; `sign_json` turns
 //! every such path in a JSON response into a fresh signed URL, so handlers never store expiring links.
 
+use crate::entropy;
 use crate::{
     auth::Auth,
     config::Config,
@@ -24,8 +25,7 @@ use axum::{
     routing::{get, post},
 };
 use chrono::Utc;
-use hmac::{Hmac, Mac};
-use rand::{RngCore, rngs::OsRng};
+use hmac::{Hmac, KeyInit, Mac};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sha2::Sha256;
@@ -59,13 +59,13 @@ fn sniff(bytes: &[u8]) -> Option<&'static str> {
 
 /// Key for file URL signatures, derived from DATA_KEY so the owner keeps one secret to protect.
 pub fn url_key(config: &Config) -> [u8; 32] {
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&config.data_key).expect("HMAC takes any key length");
+    let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(&config.data_key).expect("HMAC takes any key length");
     mac.update(KEY_CONTEXT);
     mac.finalize().into_bytes().into()
 }
 
 fn tag(key: &[u8; 32], name: &str, exp: i64) -> Hmac<Sha256> {
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(key).expect("HMAC takes any key length");
+    let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(key).expect("HMAC takes any key length");
     mac.update(format!("{name}\n{exp}").as_bytes());
     mac
 }
@@ -256,7 +256,7 @@ async fn upload(State(s): State<AppState>, a: Auth, mut form: Multipart) -> ApiR
     // EXIF/GPS of a customer's home must not reach anyone holding a signed URL. HEIC cannot be rewritten, so it is refused.
     let bytes = image_meta::strip(ext, &bytes).ok_or(ApiError::BadRequest("unsupported_image"))?;
     let mut name = [0u8; 16];
-    OsRng.fill_bytes(&mut name);
+    entropy::fill(&mut name);
     let file = format!("{}.{ext}", hex::encode(name));
     let size = i64::try_from(bytes.len()).unwrap_or(i64::MAX);
     // Quota check, row insert and file write share one transaction: a failed write leaves no row.
@@ -348,5 +348,18 @@ mod tests {
         for bad in ["../secret.jpg", "..%2Fsecret.jpg", "a/b.jpg", "a\\b.jpg", "..jpg", ".env.png", "x.svg", "x", ""] {
             assert!(!safe_name(bad), "{bad} must be rejected");
         }
+    }
+}
+
+#[cfg(test)]
+mod known_answers {
+    use super::*;
+
+    #[test]
+    fn file_url_signature_matches_pinned_output() {
+        assert_eq!(
+            sign(&[9; 32], "0123456789abcdef0123456789abcdef.jpg", 1_900_000_000),
+            "96dd69e845830a0352126ddc824fd9af1185c188e532c80d44955dc8a64bfed2"
+        );
     }
 }

@@ -17,7 +17,7 @@ mod social;
 
 use crate::config::Config;
 use chrono::{DateTime, Duration, FixedOffset, Utc};
-use rand::{Rng, RngCore, SeedableRng, rngs::StdRng, seq::SliceRandom};
+use rand::{Rng, RngExt, SeedableRng, rngs::StdRng, seq::IndexedRandom};
 use sqlx::{PgPool, Postgres, Transaction};
 use std::{collections::BTreeMap, fmt, path::PathBuf};
 use uuid::Uuid;
@@ -128,11 +128,11 @@ impl Ctx<'_> {
     }
 
     pub fn range(&mut self, lo: i64, hi: i64) -> i64 {
-        self.rng.gen_range(lo..=hi)
+        self.rng.random_range(lo..=hi)
     }
 
     pub fn chance(&mut self, p: f64) -> bool {
-        self.rng.gen_bool(p)
+        self.rng.random_bool(p)
     }
 
     /// `now` minus a random number of days in `lo..=hi`, at a random KST-independent hour.

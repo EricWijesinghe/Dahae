@@ -7,6 +7,7 @@
 //! [flag u8 (1 = last)][len u32 BE][AES-256-GCM ciphertext+tag], 64 KiB plaintext per frame.
 //! Nonce = prefix || frame index; the flag is authenticated, so truncation and reordering fail.
 
+use crate::entropy;
 use crate::{
     config::Config,
     integrations::{Integrations, S3Config},
@@ -19,7 +20,6 @@ use aes_gcm::{
 use chrono::{DateTime, Duration, Utc};
 use futures_util::StreamExt;
 use hmac::{Hmac, Mac};
-use rand::{RngCore, rngs::OsRng};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, postgres::PgPoolOptions};
@@ -66,7 +66,7 @@ impl Fail {
 
 /// Key for the backup files, derived from DATA_KEY so the owner keeps one secret to protect.
 pub fn file_key(data_key: &[u8; 32]) -> [u8; 32] {
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(data_key).expect("HMAC takes any key length");
+    let mut mac = <Hmac<Sha256> as hmac::KeyInit>::new_from_slice(data_key).expect("HMAC takes any key length");
     mac.update(KEY_CONTEXT);
     mac.finalize().into_bytes().into()
 }
@@ -102,7 +102,7 @@ fn read_chunk<R: Read>(input: &mut R) -> io::Result<Vec<u8>> {
 pub fn encrypt_stream<R: Read, W: Write>(key: &[u8; 32], mut input: R, mut output: W) -> io::Result<()> {
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
     let mut prefix = [0u8; 8];
-    OsRng.fill_bytes(&mut prefix);
+    entropy::fill(&mut prefix);
     output.write_all(MAGIC)?;
     output.write_all(&prefix)?;
     let mut current = read_chunk(&mut input)?;
@@ -158,7 +158,7 @@ pub fn decrypt_stream<R: Read, W: Write>(key: &[u8; 32], mut input: R, mut outpu
 }
 
 fn hmac256(key: &[u8], msg: &[u8]) -> [u8; 32] {
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(key).expect("HMAC takes any key length");
+    let mut mac = <Hmac<Sha256> as hmac::KeyInit>::new_from_slice(key).expect("HMAC takes any key length");
     mac.update(msg);
     mac.finalize().into_bytes().into()
 }
@@ -284,7 +284,14 @@ async fn hash_file(path: PathBuf) -> Result<(String, u64), Fail> {
         let mut f = std::fs::File::open(&path)?;
         let len = f.metadata()?.len();
         let mut h = Sha256::new();
-        io::copy(&mut f, &mut h)?;
+        let mut buf = vec![0u8; 64 * 1024];
+        loop {
+            let n = io::Read::read(&mut f, &mut buf)?;
+            if n == 0 {
+                break;
+            }
+            h.update(&buf[..n]);
+        }
         Ok((hex(h.finalize()), len))
     })
     .await

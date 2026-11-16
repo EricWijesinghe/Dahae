@@ -6,12 +6,12 @@
 //! Key = PBKDF2-HMAC-SHA256(canonical passphrase, salt, 600 000). The magic is the AAD.
 //! Plaintext = JSON `{"DATA_KEY": "<64 hex>", "JWT_SECRET": "<text>"}` with no other fields.
 
+use crate::entropy;
 use aes_gcm::{
     Aes256Gcm, Key, KeyInit, Nonce,
     aead::{Aead, Payload},
 };
 use hmac::{Hmac, Mac};
-use rand::{RngCore, rngs::OsRng};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
@@ -78,7 +78,7 @@ pub fn new_passphrase() -> String {
     let mut groups = Vec::with_capacity(PASS_GROUPS);
     for _ in 0..PASS_GROUPS {
         let group: String = (0..PASS_GROUP_LEN)
-            .map(|_| char::from(PASS_ALPHABET[(OsRng.next_u32() as usize) % PASS_ALPHABET.len()]))
+            .map(|_| char::from(PASS_ALPHABET[entropy::below(PASS_ALPHABET.len())]))
             .collect();
         groups.push(group);
     }
@@ -92,7 +92,7 @@ fn canonical(passphrase: &str) -> String {
 
 /// PBKDF2-HMAC-SHA256 for one 32-byte block (RFC 8018 section 5.2).
 fn derive(passphrase: &str, salt: &[u8]) -> [u8; 32] {
-    let base = <Hmac<Sha256> as Mac>::new_from_slice(canonical(passphrase).as_bytes()).expect("HMAC takes any key length");
+    let base = <Hmac<Sha256> as hmac::KeyInit>::new_from_slice(canonical(passphrase).as_bytes()).expect("HMAC takes any key length");
     let mut first = base.clone();
     first.update(salt);
     first.update(&1u32.to_be_bytes());
@@ -123,8 +123,8 @@ pub fn seal(keys: &Keys, passphrase: &str) -> Result<Vec<u8>, BundleError> {
     .map_err(|_| BundleError::Unusable)?;
     let mut salt = [0u8; SALT_LEN];
     let mut nonce = [0u8; NONCE_LEN];
-    OsRng.fill_bytes(&mut salt);
-    OsRng.fill_bytes(&mut nonce);
+    entropy::fill(&mut salt);
+    entropy::fill(&mut nonce);
     let ct = cipher_for(passphrase, &salt)
         .encrypt(Nonce::from_slice(&nonce), Payload { msg: &plain, aad: MAGIC })
         .map_err(|_| BundleError::Unusable)?;

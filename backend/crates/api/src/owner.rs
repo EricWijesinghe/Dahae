@@ -2,6 +2,7 @@
 //! Every owner-only request carries a fresh TOTP in `X-Owner-Totp`; that step is burnt like a sign-in code,
 //! so one code authorises one request. The owner flag is read live, never from the token.
 
+use crate::entropy;
 use crate::{
     auth::{self, Auth, Role},
     crypto,
@@ -16,7 +17,6 @@ use axum::{
 };
 use chrono::Utc;
 use data_encoding::BASE32_NOPAD;
-use rand::{RngCore, rngs::OsRng};
 use sqlx::{PgPool, Postgres, Transaction};
 use std::net::{IpAddr, SocketAddr};
 use uuid::Uuid;
@@ -184,7 +184,7 @@ pub async fn insert_recovery_codes(tx: &mut Transaction<'_, Postgres>, staff: Uu
 /// Random code shown once, grouped for reading: XXXX-XXXX-XXXX-XXXX.
 pub fn new_code() -> String {
     let mut bytes = [0u8; RECOVERY_CODE_BYTES];
-    OsRng.fill_bytes(&mut bytes);
+    entropy::fill(&mut bytes);
     let raw = BASE32_NOPAD.encode(&bytes);
     raw.as_bytes()
         .chunks(4)

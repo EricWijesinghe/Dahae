@@ -1,11 +1,11 @@
 //! Tokens, roles, password + OTP hashing, and the request extractor.
 
+use crate::entropy;
 use crate::{error::ApiError, state::AppState};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
 use axum::{extract::FromRequestParts, http::request::Parts};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, decode_header, encode};
-use rand::{Rng, RngCore, rngs::OsRng};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
@@ -195,7 +195,7 @@ pub async fn staff_epoch(db: &sqlx::PgPool, id: Uuid) -> Result<Option<i32>, sql
 /// Opaque refresh token; only its SHA-256 is stored.
 pub fn new_refresh_token() -> (String, String) {
     let mut bytes = [0u8; 32];
-    OsRng.fill_bytes(&mut bytes);
+    entropy::fill(&mut bytes);
     let token = hex::encode(bytes);
     let hash = sha256_hex(token.as_bytes());
     (token, hash)
@@ -206,7 +206,7 @@ pub fn sha256_hex(data: &[u8]) -> String {
 }
 
 pub fn otp_code() -> String {
-    format!("{:06}", OsRng.gen_range(0..1_000_000))
+    format!("{:06}", entropy::below(1_000_000))
 }
 
 /// Codes are short, so they are peppered with the server secret before hashing.
@@ -231,7 +231,9 @@ pub fn check_password_policy(password: &str) -> Result<(), &'static str> {
 }
 
 pub fn hash_password(password: &str) -> Result<String, ApiError> {
-    let salt = SaltString::generate(&mut OsRng);
+    let mut bytes = [0u8; 16];
+    entropy::fill(&mut bytes);
+    let salt = SaltString::encode_b64(&bytes).expect("16 bytes always encode");
     Argon2::default()
         .hash_password(password.as_bytes(), &salt)
         .map(|h| h.to_string())
@@ -466,5 +468,22 @@ mod tests {
         let h = hash_password("correct horse battery").unwrap();
         assert!(verify_password("correct horse battery", &h));
         assert!(!verify_password("wrong", &h));
+    }
+}
+
+#[cfg(test)]
+mod known_answers {
+    use super::*;
+
+    #[test]
+    fn sha256_and_otp_hash_match_pinned_outputs() {
+        assert_eq!(
+            sha256_hex(b"refresh-token-sample"),
+            "d9bb52af16886c9df8ec1ee28e0bdcf44f86cbb851ca979a89f3b132c0bd825f"
+        );
+        assert_eq!(
+            otp_hash(b"serversecret", "01012345678", "123456"),
+            "471c3498777a5716d3e83378bdc790dad1f2c94938e2acf9e5641c103f71e8c4"
+        );
     }
 }

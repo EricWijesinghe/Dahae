@@ -3,6 +3,7 @@
 
 use super::audit;
 use super::uploads;
+use crate::entropy;
 use crate::{
     address,
     auth::{Admin, Auth, hash_password},
@@ -20,7 +21,6 @@ use axum::{
     routing::{get, post, put},
 };
 use chrono::{DateTime, Utc};
-use rand::{Rng, rngs::OsRng};
 use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
@@ -69,9 +69,8 @@ async fn has_staff(db: &PgPool) -> Result<bool, sqlx::Error> {
 }
 
 fn random_code() -> String {
-    let mut rng = OsRng;
     (0..SETUP_CODE_LEN)
-        .map(|_| SETUP_ALPHABET[rng.gen_range(0..SETUP_ALPHABET.len())] as char)
+        .map(|_| SETUP_ALPHABET[entropy::below(SETUP_ALPHABET.len())] as char)
         .collect()
 }
 
