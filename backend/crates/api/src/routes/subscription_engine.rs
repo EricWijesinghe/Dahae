@@ -610,12 +610,12 @@ async fn expire(s: &AppState) -> ApiResult<usize> {
     Ok(missed.len())
 }
 
-/// Visits whose day has come while their charge id is still stored: PortOne is asked once per pass.
-/// A capture is refunded, a failure or an unknown id clears the id, and an open answer waits for the next pass.
+/// Visits whose charge id is still stored and that will not be booked (day come, or skipped or cancelled meanwhile):
+/// PortOne is asked once per pass. A capture is refunded, a failure or an unknown id clears the id, an open answer waits.
 async fn settle_open_charges(s: &AppState) -> ApiResult<()> {
     let open: Vec<(Uuid, String)> = sqlx::query_as(&format!(
         "SELECT id, payment_ref FROM subscription_visits
-         WHERE state = 'planned' AND payment_ref IS NOT NULL AND visit_date <= {KST_TODAY}"
+         WHERE payment_ref IS NOT NULL AND state <> 'booked' AND (state <> 'planned' OR visit_date <= {KST_TODAY})"
     ))
     .fetch_all(&s.db)
     .await?;
@@ -638,8 +638,9 @@ async fn settle_open_charges(s: &AppState) -> ApiResult<()> {
             }
         };
         if clear {
-            sqlx::query("UPDATE subscription_visits SET payment_ref = NULL, updated_at = now() WHERE id = $1 AND state = 'planned'")
+            sqlx::query("UPDATE subscription_visits SET payment_ref = NULL, updated_at = now() WHERE id = $1 AND payment_ref = $2")
                 .bind(visit)
+                .bind(&pid)
                 .execute(&s.db)
                 .await?;
         }

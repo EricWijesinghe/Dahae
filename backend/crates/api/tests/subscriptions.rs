@@ -602,3 +602,29 @@ async fn a_charge_still_open_at_day_end_is_settled_before_the_visit_is_missed(po
     // The gateway never captured it, so the id is cleared and the visit is missed with nothing left open.
     assert_eq!((state_now.as_str(), payment_ref), ("missed", None));
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_charge_left_open_when_the_visit_is_skipped_is_still_settled(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let (app, state) = app_and_state(pool.clone());
+    let c = customer(&app, &pool, "010-7000-0036").await;
+    let (_, body) = subscribe(&app, &c, weekday_index(kst_today() + Duration::days(2)), 1, 9, None).await;
+    let id = sub_id(&body);
+    // The customer skipped the visit while its charge id was still stored (the answer never came back).
+    sqlx::query("UPDATE subscription_visits SET state = 'skipped', payment_ref = 'subvisit-skipped-1' WHERE subscription_id = $1 AND visit_date = $2")
+        .bind(id)
+        .bind(kst_today() + Duration::days(2))
+        .execute(&pool)
+        .await
+        .expect("skipped charge");
+
+    subscription_engine::pass(&state).await.expect("pass");
+    let payment_ref: Option<String> = sqlx::query_scalar("SELECT payment_ref FROM subscription_visits WHERE subscription_id = $1 AND visit_date = $2")
+        .bind(id)
+        .bind(kst_today() + Duration::days(2))
+        .fetch_one(&pool)
+        .await
+        .expect("visit");
+    // The gateway has no such payment, so the id is cleared and the skipped visit keeps its state.
+    assert_eq!(payment_ref, None);
+}
