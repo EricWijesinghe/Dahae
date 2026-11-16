@@ -3,6 +3,7 @@ use crate::{
     crypto,
     error::{ApiError, ApiResult},
     lockout,
+    privacy::{self, ConsentChange},
     providers::{
         apple,
         social::{self, SocialUser},
@@ -119,6 +120,9 @@ struct VerifyRequest {
     /// First-touch UTM / referral the app captured; only used when the account is created.
     #[serde(default)]
     attribution: Option<Value>,
+    /// Customer consents shown at signup. A new customer must grant every required one; others are ignored.
+    #[serde(default)]
+    consents: Vec<ConsentChange>,
 }
 
 #[derive(Serialize)]
@@ -187,42 +191,58 @@ async fn verify_otp(
         return Ok(Json(member_login(&s, member).await?));
     }
 
-    let (table, role) = match req.audience {
-        Audience::Customer => ("users", Role::Customer),
-        Audience::Partner => ("pros", Role::Pro),
+    let role = match req.audience {
+        Audience::Customer => Role::Customer,
+        Audience::Partner => Role::Pro,
     };
+    let (id, is_new) = open_account(&s, role, &phone, &req).await?;
+    Ok(Json(issue_tokens(&s, id, role, is_new, None).await?))
+}
+
+/// Finds or creates the account for a verified phone. A new account and its first records are written in
+/// one transaction, so a signup refused for missing consents leaves no account behind.
+async fn open_account(s: &AppState, role: Role, phone: &str, req: &VerifyRequest) -> ApiResult<(Uuid, bool)> {
+    let mut tx = s.db.begin().await?;
     // Upsert keeps sign-up and login a single step; xmax = 0 means the row was inserted.
     let (id, is_new): (Uuid, bool) = match role {
         Role::Customer => {
             sqlx::query_as(
                 "INSERT INTO users (phone, acquisition) VALUES ($1, $2) ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone RETURNING id, (xmax = 0)",
             )
-            .bind(&phone)
+            .bind(phone)
             .bind(crate::acquisition::clean(req.attribution.as_ref()).map(sqlx::types::Json))
-            .fetch_one(&s.db)
+            .fetch_one(&mut *tx)
             .await?
         }
         _ => {
-            sqlx::query_as(&format!(
-                "INSERT INTO {table} (phone) VALUES ($1) ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone RETURNING id, (xmax = 0)"
-            ))
-            .bind(&phone)
-            .fetch_one(&s.db)
-            .await?
+            sqlx::query_as("INSERT INTO pros (phone) VALUES ($1) ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone RETURNING id, (xmax = 0)")
+                .bind(phone)
+                .fetch_one(&mut *tx)
+                .await?
         }
     };
-    if role == Role::Pro && is_new {
-        sqlx::query("INSERT INTO partner_prefs (pro_id) VALUES ($1) ON CONFLICT DO NOTHING")
-            .bind(id)
-            .execute(&s.db)
-            .await?;
-        sqlx::query("INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1, '', $2, 'owner', 'active')")
-            .bind(id)
-            .bind(&phone)
-            .execute(&s.db)
-            .await?;
+    if is_new {
+        match role {
+            Role::Customer => privacy::record_signup(&mut tx, id, &req.consents).await?,
+            _ => seed_pro(&mut tx, id, phone).await?,
+        }
     }
-    Ok(Json(issue_tokens(&s, id, role, is_new, None).await?))
+    tx.commit().await?;
+    Ok((id, is_new))
+}
+
+/// First rows of a new partner account: default preferences and the owner as its only team member.
+async fn seed_pro(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: Uuid, phone: &str) -> ApiResult<()> {
+    sqlx::query("INSERT INTO partner_prefs (pro_id) VALUES ($1) ON CONFLICT DO NOTHING")
+        .bind(id)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1, '', $2, 'owner', 'active')")
+        .bind(id)
+        .bind(phone)
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
 }
 
 /// Owner login wins: a phone that already owns a pro account is never treated as a member login.
@@ -533,6 +553,9 @@ struct SocialLogin {
     audience: Audience,
     #[serde(default)]
     attribution: Option<Value>,
+    /// Customer consents shown at signup. A new customer must grant every required one, as on the phone flow.
+    #[serde(default)]
+    consents: Vec<ConsentChange>,
 }
 
 #[derive(Serialize)]
@@ -557,7 +580,7 @@ async fn social_login(State(s): State<AppState>, Json(req): Json<SocialLogin>) -
         Audience::Partner => Role::Pro,
     };
     let attribution = crate::acquisition::clean(req.attribution.as_ref());
-    let (id, is_new) = find_or_create_identity(&s, &req.provider, &social, role, attribution).await?;
+    let (id, is_new) = find_or_create_identity(&s, &req.provider, &social, role, attribution, &req.consents).await?;
     ensure_active(&s, id, role).await?;
     let code = req.authorization_code.as_deref().filter(|c| !c.is_empty() && c.len() <= MAX_SOCIAL_TOKEN);
     let refresh = match (req.provider.as_str(), code) {
@@ -623,8 +646,16 @@ async fn find_identity(s: &AppState, provider: &str, social: &SocialUser, role: 
         .await?)
 }
 
-/// Finds the account behind a provider identity, or creates it with its identity row in one transaction.
-async fn find_or_create_identity(s: &AppState, provider: &str, social: &SocialUser, role: Role, attribution: Option<Value>) -> ApiResult<(Uuid, bool)> {
+/// Finds the account behind a provider identity, or creates it with its identity row and signup consents in one
+/// transaction, so a new customer refused for missing consents leaves no account or identity behind.
+async fn find_or_create_identity(
+    s: &AppState,
+    provider: &str,
+    social: &SocialUser,
+    role: Role,
+    attribution: Option<Value>,
+    consents: &[ConsentChange],
+) -> ApiResult<(Uuid, bool)> {
     if let Some(id) = find_identity(s, provider, social, role).await? {
         return Ok((id, false));
     }
@@ -664,6 +695,9 @@ async fn find_or_create_identity(s: &AppState, provider: &str, social: &SocialUs
             .bind(id)
             .execute(&mut *tx)
             .await?;
+    }
+    if role == Role::Customer {
+        privacy::record_signup(&mut tx, id, consents).await?;
     }
     tx.commit().await?;
     Ok((id, true))

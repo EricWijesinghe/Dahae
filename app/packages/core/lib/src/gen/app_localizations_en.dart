@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5933,6 +5934,18 @@ class TEn extends T {
 
   @override
   String get cInvalidValue => 'Please check the highlighted value';
+
+  @override
+  String get sgConsentHint =>
+      'Agree to the required items to get a verification code.';
+
+  @override
+  String get err_required_consent =>
+      'Please agree to all required terms to sign up';
+
+  @override
+  String get sgOverseasNote =>
+      'This consent is needed to use the service, so it cannot be withdrawn. Without it you cannot sign up.';
 
   @override
   String get cStaffInvite => 'Invite staff';

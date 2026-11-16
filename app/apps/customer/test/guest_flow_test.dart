@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
+import 'support/signup_consent.dart';
 
 Json _draftCard() => {
   'kind': 'resume_quote',
@@ -42,6 +43,7 @@ Future<void> _newAccountVerify(FakeApi fake) async {
 Future<void> _signInInSheet(WidgetTester tester) async {
   await tester.enterText(find.byType(TextField).last, '01012345678');
   await settle(tester, duration: const Duration(milliseconds: 300));
+  await agreeSignupConsents(tester);
   await tester.tap(find.text(koT.loginSendCode));
   await settle(tester);
   await tester.enterText(find.byType(TextField).last, '123456');
@@ -101,6 +103,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField).last, '01012345678');
         await settle(tester, duration: const Duration(milliseconds: 300));
+        await agreeSignupConsents(tester);
         await tester.tap(find.text(koT.loginSendCode));
         await settle(tester);
         await tester.enterText(find.byType(TextField).last, '123456');
@@ -148,6 +151,7 @@ void main() {
         await settle(tester);
         await tester.enterText(find.byType(TextField).last, '01012345678');
         await settle(tester, duration: const Duration(milliseconds: 300));
+        await agreeSignupConsents(tester);
         await tester.tap(find.text(koT.loginSendCode));
         await settle(tester);
         await tester.enterText(find.byType(TextField).last, '123456');
@@ -188,6 +192,7 @@ void main() {
         await settle(tester);
         await tester.enterText(find.byType(TextField).last, '01012345678');
         await settle(tester, duration: const Duration(milliseconds: 300));
+        await agreeSignupConsents(tester);
         await tester.tap(find.text(koT.loginSendCode));
         await settle(tester);
         await tester.enterText(find.byType(TextField).last, '123456');
@@ -226,6 +231,7 @@ void main() {
         await tester.enterText(find.byType(TextField).last, '01012345678');
         await settle(tester, duration: const Duration(milliseconds: 300));
 
+        await agreeSignupConsents(tester);
         await tester.tap(find.text(koT.loginSendCode));
         await settle(tester);
         expect(find.text(koT.errorNetwork), findsOneWidget);

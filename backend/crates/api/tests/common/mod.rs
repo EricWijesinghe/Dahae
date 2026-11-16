@@ -164,17 +164,25 @@ pub async fn call_keyed(app: &Router, method: &str, uri: &str, token: Option<&st
     (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
 }
 
+/// The required customer consents, granted for the current policy version, as the app sends them at signup.
+pub fn required_consents() -> Value {
+    let grant = |kind: &str| json!({ "kind": kind, "granted": true, "version": api::privacy::CONSENT_VERSION });
+    json!([grant("terms"), grant("privacy"), grant("overseas_transfer")])
+}
+
 /// Signs in through the OTP flow (dev mode echoes the code). Returns (access token, subject id).
+/// A customer sign-up grants the required consents, as the app does.
 pub async fn login(app: &Router, phone: &str, audience: &str) -> (String, String) {
     let (st, sent) = call(app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": phone }))).await;
     assert_eq!(st, StatusCode::OK, "otp request: {sent}");
     let code = sent["dev_code"].as_str().expect("dev_code in dev mode").to_string();
+    let consents = if audience == "customer" { required_consents() } else { json!([]) };
     let (st, tokens) = call(
         app,
         "POST",
         "/v1/auth/verify",
         None,
-        Some(json!({ "phone": phone, "code": code, "audience": audience })),
+        Some(json!({ "phone": phone, "code": code, "audience": audience, "consents": consents })),
     )
     .await;
     assert_eq!(st, StatusCode::OK, "verify: {tokens}");

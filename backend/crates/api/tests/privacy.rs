@@ -41,11 +41,11 @@ async fn location_terms_consent_is_recorded_on_its_own_and_withdrawable(pool: Pg
     let (_, s) = call(&app, "GET", "/v1/me/consents", Some(c.token.as_str()), None).await;
     assert_eq!(granted(&s), Some(json!(false)), "never agreed: {s}");
 
-    // No PIPA consent is on record yet; the location terms still record on their own.
+    // The location terms record on their own, separately from the PIPA consents the signup already holds.
     let (st, s) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(location(true))).await;
     assert_eq!(st, StatusCode::OK, "{s}");
     assert_eq!(granted(&s), Some(json!(true)));
-    assert_eq!(s["reconsent_required"], true, "location terms do not stand in for the required consents");
+    assert_eq!(s["reconsent_required"], false, "location terms leave the required consents as signed up");
 
     let (st, s) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(location(false))).await;
     assert_eq!(st, StatusCode::OK, "{s}");
@@ -65,7 +65,7 @@ async fn required_consents_gate_the_service_and_marketing_is_withdrawable(pool: 
 
     let (st, s) = call(&app, "GET", "/v1/me/consents", Some(c.token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK);
-    assert_eq!(s["reconsent_required"], true, "new account has no consents yet");
+    assert_eq!(s["reconsent_required"], false, "signup recorded the required consents");
     assert_eq!(s["items"].as_array().map(Vec::len), Some(5));
 
     let (st, body) = call(
@@ -73,10 +73,10 @@ async fn required_consents_gate_the_service_and_marketing_is_withdrawable(pool: 
         "PUT",
         "/v1/me/consents",
         Some(c.token.as_str()),
-        Some(json!({ "consents": [{ "kind": "marketing", "granted": true, "version": CONSENT_VERSION }] })),
+        Some(json!({ "consents": [{ "kind": "terms", "granted": false, "version": CONSENT_VERSION }] })),
     )
     .await;
-    assert_eq!(st, StatusCode::BAD_REQUEST, "required consents missing: {body}");
+    assert_eq!(st, StatusCode::BAD_REQUEST, "a required consent cannot be withdrawn: {body}");
     assert_eq!(body["error"]["code"], "required_consent");
 
     let (st, body) = call(
@@ -128,7 +128,10 @@ async fn required_consents_gate_the_service_and_marketing_is_withdrawable(pool: 
         .fetch_one(&pool)
         .await
         .expect("count");
-    assert_eq!(rows, 5, "every choice is kept as evidence (3 required + grant + withdrawal)");
+    assert_eq!(
+        rows, 8,
+        "every choice is kept as evidence (3 at signup, 3 re-recorded, marketing grant + withdrawal)"
+    );
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -246,7 +249,8 @@ async fn deletion_anonymises_and_removes_devices_but_keeps_records(pool: PgPool)
         .fetch_one(&pool)
         .await
         .expect("consent");
-    assert_eq!(consents, 3, "consent evidence kept");
+    // Three from the signup and three re-recorded below; none is removed by the deletion.
+    assert_eq!(consents, 6, "consent evidence kept");
 }
 
 /// A deleted customer's finished booking loses its street address, answers, visit notes and household,
