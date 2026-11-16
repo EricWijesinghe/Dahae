@@ -3442,6 +3442,14 @@ class TEn extends T {
       'This payout method isn\'t available right now.';
 
   @override
+  String get err_payout_in_transfer =>
+      'This payout may already be with the bank, so it can\'t be changed right now. Check its status.';
+
+  @override
+  String get err_settlement_in_transfer =>
+      'This booking\'s payout is already with the bank, so it can\'t be cancelled.';
+
+  @override
   String get err_unsupported_bank => 'This bank isn\'t supported for payouts.';
 
   @override

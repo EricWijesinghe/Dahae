@@ -3354,6 +3354,13 @@ class TKo extends T {
   String get err_payout_provider => '이 지급 방식은 지금 쓸 수 없어요.';
 
   @override
+  String get err_payout_in_transfer =>
+      '이 정산은 이미 송금되었을 수 있어 지금 바꿀 수 없어요. 상태를 확인해 주세요.';
+
+  @override
+  String get err_settlement_in_transfer => '이 예약의 정산이 송금 중이라 취소할 수 없어요.';
+
+  @override
   String get err_unsupported_bank => '이 은행은 지급을 지원하지 않아요.';
 
   @override

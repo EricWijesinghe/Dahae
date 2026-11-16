@@ -59,6 +59,16 @@ pub async fn sync_pass(s: &AppState) -> ApiResult<usize> {
     Ok(settled)
 }
 
+/// True while a Toss transfer may exist at the provider. Clearing the Toss card or switching to manual
+/// would strand it: sync needs the payout keys to ask Toss about it.
+pub async fn toss_transfers_open(db: &PgPool) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM payouts WHERE provider = 'toss' AND (state = 'sent' OR (state = 'requested' AND failure_reason IS NOT NULL)))",
+    )
+    .fetch_one(db)
+    .await
+}
+
 /// (stuck open transfers, recent Toss failures) for the owner's alert rules.
 pub async fn alert_counts(db: &PgPool) -> Result<(i64, i64), sqlx::Error> {
     sqlx::query_as(ALERT_SQL).bind(ALERT_AFTER_HOURS).fetch_one(db).await

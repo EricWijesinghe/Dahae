@@ -337,3 +337,147 @@ async fn revealed_account_is_never_cached(pool: PgPool) {
     assert_eq!(res.status(), StatusCode::OK);
     assert_eq!(res.headers().get(header::CACHE_CONTROL).and_then(|v| v.to_str().ok()), Some("no-store"));
 }
+
+async fn booking_of(db: &PgPool, settlement: Uuid) -> Uuid {
+    sqlx::query_scalar("SELECT booking_id FROM settlements WHERE id = $1")
+        .bind(settlement)
+        .fetch_one(db)
+        .await
+        .expect("booking")
+}
+
+async fn set_active(db: &PgPool, booking: Uuid) {
+    sqlx::query("UPDATE bookings SET status = 1 WHERE id = $1")
+        .bind(booking)
+        .execute(db)
+        .await
+        .expect("status");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn failed_toss_transfer_does_not_block_a_cancel(pool: PgPool) {
+    let (settlement, _pro) = seed(&pool).await;
+    let app = app(pool.clone());
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app, &token).await;
+    // Toss declined the transfer: no money moved, so the job can still be cancelled.
+    make_toss(&pool, &id, "failed", None, Some("계좌 오류"), 0).await;
+    let booking = booking_of(&pool, settlement).await;
+    set_active(&pool, booking).await;
+
+    let (code, body) = call(&app, "POST", &format!("/v1/admin/bookings/{booking}/cancel"), Some(&token), Some(json!({}))).await;
+    assert_eq!(code, StatusCode::OK, "{body}");
+    assert_eq!(settlement_state(&pool, settlement).await, "held");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn owner_cannot_mark_an_ambiguous_toss_send_failed(pool: PgPool) {
+    seed(&pool).await;
+    let app = app(pool.clone());
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app, &token).await;
+    // A send that timed out may already exist at Toss: only a sync can settle it, never a manual fail.
+    make_toss(&pool, &id, "requested", None, Some("timeout"), 0).await;
+
+    let (code, body) = call(
+        &app,
+        "POST",
+        &format!("/v1/admin/settlements/payouts/{id}/fail"),
+        Some(&token),
+        Some(json!({ "reason": "직접 확인" })),
+    )
+    .await;
+    assert_eq!(
+        (code, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("payout_in_transfer")),
+        "{body}"
+    );
+    let state: String = sqlx::query_scalar("SELECT state FROM payouts WHERE id = $1::uuid")
+        .bind(&id)
+        .fetch_one(&pool)
+        .await
+        .expect("state");
+    assert_eq!(state, "requested");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn refund_waits_for_a_send_in_flight_and_refuses_without_moving_money(pool: PgPool) {
+    let (settlement, _pro) = seed(&pool).await;
+    let app = app(pool.clone());
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app, &token).await;
+    let booking = booking_of(&pool, settlement).await;
+    set_active(&pool, booking).await;
+    let payment: Uuid = sqlx::query_scalar(
+        "INSERT INTO payments (booking_id, amount, kind, status, provider, provider_tx_id, idempotency_key)
+         VALUES ($1, 100000, 'full', 'paid', 'fake', 'tx-race', 'pay-race') RETURNING id",
+    )
+    .bind(booking)
+    .fetch_one(&pool)
+    .await
+    .expect("payment");
+
+    // A send holds the batch row while it calls Toss; the cancel must wait for it before any refund.
+    let batch = Uuid::parse_str(&id).expect("uuid");
+    let mut sending = pool.begin().await.expect("tx");
+    sqlx::query("SELECT id FROM payouts WHERE id = $1 FOR UPDATE")
+        .bind(batch)
+        .execute(&mut *sending)
+        .await
+        .expect("lock");
+    let cancel_app = app.clone();
+    let cancel_token = token.clone();
+    let cancel = tokio::spawn(async move {
+        call(
+            &cancel_app,
+            "POST",
+            &format!("/v1/admin/bookings/{booking}/cancel"),
+            Some(&cancel_token),
+            Some(json!({})),
+        )
+        .await
+    });
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    sqlx::query("UPDATE payouts SET state = 'sent', attempts = 1, provider_transfer_id = 'tp_race' WHERE id = $1")
+        .bind(batch)
+        .execute(&mut *sending)
+        .await
+        .expect("sent");
+    sending.commit().await.expect("commit");
+
+    let (code, body) = cancel.await.expect("join");
+    assert_eq!(
+        (code, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("settlement_in_transfer")),
+        "{body}"
+    );
+    let (refunded, status): (i64, String) = sqlx::query_as("SELECT refunded_amount, status FROM payments WHERE id = $1")
+        .bind(payment)
+        .fetch_one(&pool)
+        .await
+        .expect("payment");
+    assert_eq!((refunded, status.as_str()), (0, "paid"), "nothing refunded for a job that stays active");
+    let booking_status: i16 = sqlx::query_scalar("SELECT status FROM bookings WHERE id = $1")
+        .bind(booking)
+        .fetch_one(&pool)
+        .await
+        .expect("status");
+    assert_eq!(booking_status, 1);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_open_toss_transfer_blocks_clearing_the_toss_card(pool: PgPool) {
+    seed(&pool).await;
+    let app = app(pool.clone());
+    let id = first_payout_id(&app, &admin_token(&pool).await).await;
+    make_toss(&pool, &id, "sent", Some("tp_open"), None, 0).await;
+    assert!(
+        api::payout_sync::toss_transfers_open(&pool).await.expect("query"),
+        "a sent transfer needs the Toss keys to settle"
+    );
+    make_toss(&pool, &id, "paid", Some("tp_open"), None, 0).await;
+    assert!(
+        !api::payout_sync::toss_transfers_open(&pool).await.expect("query"),
+        "settled transfers do not block"
+    );
+}

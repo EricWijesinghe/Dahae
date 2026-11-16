@@ -6439,6 +6439,18 @@ abstract class T {
   /// **'이 지급 방식은 지금 쓸 수 없어요.'**
   String get err_payout_provider;
 
+  /// No description provided for @err_payout_in_transfer.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 정산은 이미 송금되었을 수 있어 지금 바꿀 수 없어요. 상태를 확인해 주세요.'**
+  String get err_payout_in_transfer;
+
+  /// No description provided for @err_settlement_in_transfer.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 예약의 정산이 송금 중이라 취소할 수 없어요.'**
+  String get err_settlement_in_transfer;
+
   /// No description provided for @err_unsupported_bank.
   ///
   /// In ko, this message translates to:

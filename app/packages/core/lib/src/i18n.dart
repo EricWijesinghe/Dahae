@@ -104,6 +104,8 @@ extension Labels on T {
     'deposit_required' => err_deposit_required,
     'payout_state' => err_payout_state,
     'payout_provider' => err_payout_provider,
+    'payout_in_transfer' => err_payout_in_transfer,
+    'settlement_in_transfer' => err_settlement_in_transfer,
     'unsupported_bank' => err_unsupported_bank,
     'seller_declined' => err_seller_declined,
     'payout_account_unverified' => err_payout_account_unverified,

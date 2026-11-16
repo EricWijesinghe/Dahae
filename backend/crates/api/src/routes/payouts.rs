@@ -93,6 +93,7 @@ struct Row {
     tax_type: String,
     provider: String,
     state: String,
+    attempts: i32,
     bank: String,
     holder: String,
     account_enc: String,
@@ -108,8 +109,13 @@ impl Row {
 
     /// A Toss transfer that may already exist at the provider: sent, or requested after an ambiguous send error.
     fn awaiting_provider(&self) -> bool {
-        self.state() == State::Sent || (self.state() == State::Requested && self.failure_reason.is_some())
+        at_provider(&self.state, self.failure_reason.as_deref())
     }
+}
+
+/// True when a batch may already exist at Toss. A declined or failed batch never moved money.
+fn at_provider(state: &str, failure: Option<&str>) -> bool {
+    state == "sent" || (state == "requested" && failure.is_some())
 }
 
 fn mode_str(m: PayoutMode) -> &'static str {
@@ -397,7 +403,7 @@ fn transfer_amount(row: &Row) -> i64 {
 
 async fn lock(tx: &mut Transaction<'_, Postgres>, id: Uuid) -> ApiResult<Row> {
     Ok(sqlx::query_as(
-        "SELECT pro_id, payout_date, amount, tax_type, provider, state, bank, holder, account_enc, idempotency_key, provider_transfer_id, failure_reason
+        "SELECT pro_id, payout_date, amount, tax_type, provider, state, attempts, bank, holder, account_enc, idempotency_key, provider_transfer_id, failure_reason
          FROM payouts WHERE id = $1 FOR UPDATE",
     )
     .bind(id)
@@ -465,6 +471,10 @@ async fn step(s: &AppState, id: Uuid, step: Owner) -> ApiResult<State> {
         Owner::Fail(reason) => {
             if row.state() != State::Requested {
                 return Err(ApiError::Conflict("payout_state"));
+            }
+            // A Toss send that was attempted may already exist at Toss: only a sync can settle it.
+            if row.provider == "toss" && (row.attempts > 0 || row.failure_reason.is_some() || row.provider_transfer_id.is_some()) {
+                return Err(ApiError::Conflict("payout_in_transfer"));
             }
             (Action::Reject, State::Failed, Some(reason.as_str()))
         }
@@ -593,34 +603,20 @@ pub(crate) async fn sync(s: &AppState, id: Uuid) -> ApiResult<State> {
     }
 }
 
-/// True when a booking's pending settlements sit in a Toss batch that may already be at the provider.
-/// Cancelling such a booking would pay for a cancelled job, so the cancel is refused up front.
-pub(crate) async fn in_transfer(db: &PgPool, booking: Uuid) -> Result<bool, sqlx::Error> {
-    sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM settlements st JOIN payouts p ON p.id = st.payout_id
-           WHERE st.booking_id = $1 AND st.state = 'pending' AND NOT (p.state = 'requested' AND p.attempts = 0 AND p.failure_reason IS NULL))",
-    )
-    .bind(booking)
-    .fetch_one(db)
-    .await
-}
-
 /// Takes a cancelled booking's pending settlements out of their batch. A batch nobody has sent is
 /// shrunk to what remains (deleted when nothing does), so its amount still matches its settlements.
-/// Refuses if such a batch was meanwhile sent. Call inside the cancel transaction.
+/// Refuses while such a batch may be at Toss. Call inside the cancel transaction before any refund:
+/// the batch row lock here waits out a send in flight, so a refused cancel never moves money.
 pub(crate) async fn detach_booking(tx: &mut Transaction<'_, Postgres>, booking: Uuid) -> ApiResult<()> {
-    let batches: Vec<(Uuid, String, i32, Option<String>)> = sqlx::query_as(
-        "SELECT p.id, p.state, p.attempts, p.failure_reason FROM payouts p
+    let batches: Vec<(Uuid, String, Option<String>)> = sqlx::query_as(
+        "SELECT p.id, p.state, p.failure_reason FROM payouts p
          WHERE p.id IN (SELECT payout_id FROM settlements WHERE booking_id = $1 AND state = 'pending' AND payout_id IS NOT NULL)
          ORDER BY p.id FOR UPDATE",
     )
     .bind(booking)
     .fetch_all(&mut **tx)
     .await?;
-    if batches
-        .iter()
-        .any(|(_, state, attempts, failure)| state != "requested" || *attempts > 0 || failure.is_some())
-    {
+    if batches.iter().any(|(_, state, failure)| at_provider(state, failure.as_deref())) {
         return Err(ApiError::Conflict("settlement_in_transfer"));
     }
     sqlx::query("UPDATE settlements SET payout_id = NULL WHERE booking_id = $1 AND state = 'pending' AND payout_id IS NOT NULL")
