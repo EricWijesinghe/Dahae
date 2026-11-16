@@ -542,6 +542,12 @@ rmdir .restore-new'
 
 # 예전 백업(소유자 app, 확장 포함)도 앱 계정으로 복원되게 소유자·확장 줄을 빼요. 확장은 db_roles 가 미리 만들어요.
 restore_filter() { sed -E '/^ALTER .* OWNER TO [^;]+;$/d; /^(DROP|CREATE) EXTENSION /d; /^COMMENT ON EXTENSION /d'; }
+# 복원 전에 public 스키마를 비워요. 지금 DB 에는 새 버전이 만든 외래키가 있어서, 예전 덤프의 DROP TABLE 이 막혀요.
+# 같은 트랜잭션 안이라 실패하면 아무것도 바뀌지 않아요. 확장은 db_roles 와 같은 것을 다시 만들어요.
+RESTORE_RESET_SQL='DROP SCHEMA public CASCADE; CREATE SCHEMA public; CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE EXTENSION IF NOT EXISTS pg_trgm;'
+restore_stream() { # restore_stream 백업.sql.gz : psql 에 넣을 SQL (스키마 비우기 → 덤프)
+  printf '%s\n' "$RESTORE_RESET_SQL"; gunzip -c "$1" | restore_filter
+}
 # 복원 SQL 은 앱 계정(슈퍼유저 아님)으로, 볼륨 없는 일회용 컨테이너에서 실행해요: 백업 파일에
 # COPY ... PROGRAM 이나 psql 의 \! 같은 명령이 섞여 있어도 서버와 데이터 폴더에 닿지 못해요.
 psql_api() {
@@ -595,8 +601,11 @@ BEGIN
 END $$;
 SQL
 }
+db_up() { # DB 컨테이너를 켜요 (이미 켜져 있으면 그대로예요). 백업·계정 준비·복원 전에 써요
+  dc up -d --wait db >/dev/null || die "DB 를 시작하지 못했어요. 'dahae logs db' 로 확인하세요."
+}
 db_roles() { # 앱 DB 계정 준비. 설치·업데이트·복원 전에 매번 실행해요 (이미 돼 있으면 바뀌는 게 없어요)
-  local pw; pw=$(env_get API_DB_PASSWORD)
+  local pw; db_up; pw=$(env_get API_DB_PASSWORD)
   printf '%s' "$pw" | grep -Eq '^[0-9a-f]{32,}$' || die "설정 파일에 API_DB_PASSWORD 가 없어요. 설치 프로그램을 다시 실행하세요."
   db_roles_sql "$pw" | dc exec -T db psql -X -v ON_ERROR_STOP=1 -q -U app -d cleaning >/dev/null \
     || die "앱 DB 계정을 준비하지 못했어요. 'dahae logs db' 로 확인하세요. 지금 서비스는 그대로예요."
@@ -656,14 +665,11 @@ running_image() { # running_image 서비스 .env태그 -> 실행 중인 컨테�
   if [ -n "$cid" ]; then docker inspect -f '{{.Image}}' "$cid"; else docker image inspect -f '{{.Id}}' "$2" 2>/dev/null || printf '%s' "$2"; fi
 }
 # 지금 쓰는 이미지를 바뀌지 않는 이름으로 기록해 둬야, 태그가 새 이미지로 옮겨 가도 되돌릴 수 있어요.
-# 저장소에서 받은 이미지는 저장소@다이제스트, tar 로 불러온 이미지는 이미지 ID 로 만든 로컬 태그(keep-…)를 써요.
+# 이미지 ID 로 만든 로컬 태그(keep-…)를 써요. 저장소@다이제스트로 두면 태그가 없어 정리 때 지워질 수 있어요.
 digest_ref() { # digest_ref 이미지 저장소이름
   local id d
   id=$(docker image inspect -f '{{.Id}}' "$1" 2>/dev/null) || { printf '%s' "$1"; return 0; }
-  if [ "$(env_get IMAGE_SOURCE)" != local ]; then
-    d=$(docker image inspect -f '{{index .RepoDigests 0}}' "$id" 2>/dev/null || true)
-    if [ -n "$d" ]; then printf '%s' "$d"; return 0; fi
-  fi
+  # 저장소에서 받은 이미지도 태그를 붙여 둬요: 태그 없는 이미지는 아래 정리(image prune)가 지워 버려요.
   d="$2:keep-$(printf '%s' "${id#sha256:}" | cut -c1-12)"
   docker tag "$id" "$d" >/dev/null
   printf '%s' "$d"
@@ -675,13 +681,18 @@ prune_keep_tags() { # 되돌리기에 쓰는 태그만 남기고 예전 keep- �
   done
   docker image prune -f --filter until=336h >/dev/null 2>&1 || true
 }
-set_images() { # 이미지 두 개를 지정해서 기동하고 .env 에 기록해요.
+set_images() { # 이미지 두 개를 지정해서 기동하고 .env 에 기록해요. 이미지가 없으면 .env 를 바꾸지 않고 멈춰요.
+  local img
+  for img in "$1" "$2"; do
+    docker image inspect "$img" >/dev/null 2>&1 || docker pull "$img" >/dev/null 2>&1 \
+      || die "이미지를 내려받지 못해서 버전을 바꾸지 않았어요: $img. 지금 버전 그대로예요."
+  done
   env_set API_IMAGE "$1"; env_set WEB_IMAGE "$2"
   dc up -d --remove-orphans
 }
 
 cmd_backup() { # BACKUP_WARN=1 이면 DB 는 백업됐지만 사진 파일이나 외부 백업이 실패했어요
-  local ts db up prune="${1:-prune}"; ts=$(date +%Y%m%d-%H%M%S); BACKUP_WARN=0
+  local ts db up prune="${1:-prune}"; ts=$(date +%Y%m%d-%H%M%S); BACKUP_WARN=0; db_up
   db="backups/db-$ts.sql.gz"; up="backups/uploads-$ts.tar.gz"
   if ! dc exec -T db pg_dump -U app -d cleaning --clean --if-exists | gzip > "$db"; then
     rm -f "$db"; die "DB 백업에 실패했어요. 'dahae logs db' 로 확인하세요."
@@ -690,7 +701,9 @@ cmd_backup() { # BACKUP_WARN=1 이면 DB 는 백업됐지만 사진 파일이나
     rm -f "$up"; BACKUP_WARN=1; warn "사진 파일 백업에 실패했어요 (DB 백업은 됐어요). 'dahae logs api' 로 확인하세요."
   fi
   # Offsite copy (콘솔: 설정 > 외부 백업). The local backup stays good if this fails or isn't set up.
-  if [ -f "$up" ]; then api_backup backup-upload "/$up" >> backups/backup.log 2>&1 || true; fi
+  if [ -f "$up" ] && ! api_backup backup-upload "/$up" >> backups/backup.log 2>&1; then
+    BACKUP_WARN=1; warn "사진 파일 외부 백업이 실패했어요 (로컬 백업은 됐어요). 콘솔 [설정 > 외부 백업]을 확인하세요"
+  fi
   api_backup backup-upload "/$db" >> backups/backup.log 2>&1 \
     || warn "외부 백업 실패 또는 미설정 — 콘솔 [설정 > 외부 백업]을 확인하세요"
   # 서버 디스크에 남는 로컬 사본은 봉인해요: 평문 덤프(고객 정보)가 그대로 남지 않아요.
@@ -818,8 +831,10 @@ cmd_status() {
   else warn "HTTPS 인증서가 아직 없어요. 도메인 A 레코드가 이 서버를 가리키면 몇 분 안에 자동으로 발급돼요."; fi
   if [ -n "$(env_get HEARTBEAT_URL)" ]; then ok "외부 가동 확인(heartbeat) 설정됨"; else warn "외부 가동 확인이 없어요 — 'dahae heartbeat <주소>' 로 켜세요 (healthchecks.io 등)"; fi
   # 로컬 백업은 DB 와 같은 디스크에 있어요: 외부 백업이 없으면 디스크 하나를 잃을 때 전부 잃어요.
-  if tail -n 40 backups/backup.log 2>/dev/null | grep -q 'offsite backup uploaded'; then ok "외부 백업 정상"
+  if tail -n 40 backups/backup.log 2>/dev/null | grep -q 'offsite backup uploaded: db-'; then ok "외부 백업 정상"
   else warn "최근 외부 백업이 없어요 — 서버 디스크를 잃으면 데이터도 모두 잃어요. 콘솔 [설정 > 외부 백업]에서 켜세요"; fi
+  if tail -n 40 backups/backup.log 2>/dev/null | grep -q 'offsite backup uploaded: uploads-'; then ok "사진 파일 외부 백업 정상"
+  else warn "최근 사진 파일 외부 백업이 없어요 — 사진은 서버 디스크에만 있어요. 'dahae logs' 로 확인하세요"; fi
   if compgen -G 'backups/keys-*.env.enc' >/dev/null; then ok "비밀 키 사본 있음"
   else warn "비밀 키 사본이 없어요 — 'dahae keys-backup' 으로 만들어 서버 밖에 보관하세요. 없으면 외부 백업을 풀 수 없어요"; fi
   if [ -n "$(env_get KEY_ESCROW_AT)" ]; then ok "비밀 키 사본을 서버 밖에 보관했다고 확인했어요"
@@ -911,7 +926,7 @@ cmd_restore() { # dahae restore 파일 [--yes]
   db_roles
   dc stop api >/dev/null
   # 한 트랜잭션으로 적용해요: 오류가 하나라도 나면 아무것도 바뀌지 않아요.
-  if ! gunzip -c "$f" | restore_filter | psql_api -v ON_ERROR_STOP=1 --single-transaction -q >/dev/null; then
+  if ! restore_stream "$f" | psql_api -v ON_ERROR_STOP=1 --single-transaction -q >/dev/null; then
     dc start api >/dev/null || true
     die "DB 복원에 실패했어요. 데이터는 복원 전 그대로예요. 위 오류를 개발자에게 전달해 주세요."
   fi
@@ -1258,7 +1273,7 @@ Description=다해 서버 작업 실행기 (root)
 Type=oneshot
 User=root
 ExecStart=/bin/bash $DIR/agent.sh run
-TimeoutStartSec=3h
+TimeoutStartSec=7h
 ProtectSystem=full
 ReadWritePaths=$DIR /etc/cron.d /etc/logrotate.d /run
 PrivateTmp=true
@@ -1326,6 +1341,9 @@ final_banner() { # final_banner https정상(1/0)
   printf '  관리 명령:  dahae status | update | rollback | backup | restore | logs | help\n%s\n' "$line"
 }
 
+install_mode() { # install_mode FRESH : 설치된 적이 있으면(0) DB 가 꺼져 있어도 업데이트로 가요 (백업 → 새 버전 → 되돌리기)
+  if [ "$1" = 0 ]; then printf update; else printf fresh; fi
+}
 main() {
   local k a m
   for k in DOMAIN EMAIL IMAGES IMAGES_TAR CHANNEL VERSION TLS SKIP_DNS_CHECK HEALTH_WAIT HEARTBEAT_URL SIGNER SKIP_SIGNATURE; do
@@ -1453,7 +1471,7 @@ EOF
     ok "이미지를 불러왔어요: $IMAGES_TAR"
   fi
 
-  if [ "$FRESH" = 0 ] && [ -n "$(dc ps -q --status running db 2>/dev/null)" ]; then
+  if [ "$(install_mode "$FRESH")" = update ]; then
     # 다시 실행 = 안전한 업데이트: 백업 → 새 버전 → 응답 확인, 실패하면 이전 버전으로 되돌려요.
     DAHAE_HEALTH_WAIT=$HEALTH_WAIT_SECS "$BIN/dahae" update "$VERSION" || die "업데이트하지 못했어요. 위 안내를 확인해 주세요."
   else

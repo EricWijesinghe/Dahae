@@ -227,9 +227,8 @@ t  "digest_ref local -> keep tag" eq "$(digest_ref r/malkkeum-api:local r/malkke
 t  "keep tag created"      grep -qx "$ID r/malkkeum-api:keep-0123456789ab" "$SB/tags"
 env_set IMAGE_SOURCE remote
 FAKE_DIGEST=r/malkkeum-api@sha256:feed
-t  "digest_ref remote -> digest" eq "$(digest_ref r/malkkeum-api:stable r/malkkeum-api)" r/malkkeum-api@sha256:feed
+t  "digest_ref remote -> keep tag too (untagged images get pruned)" eq "$(digest_ref r/malkkeum-api:stable r/malkkeum-api)" r/malkkeum-api:keep-0123456789ab
 FAKE_DIGEST=
-t  "digest_ref remote, no digest -> keep tag" eq "$(digest_ref r/malkkeum-api:stable r/malkkeum-api)" r/malkkeum-api:keep-0123456789ab
 t  "digest_ref unknown image -> as given" eq "$(digest_ref gone:tag r/x)" gone:tag
 unset -f docker
 
@@ -421,14 +420,20 @@ nt "agent without a pin refused"         agent_sha_ok "$SB/agent.sh" ""
 printf 'echo changed\n' > "$SB/agent.sh"
 nt "changed agent refused"               agent_sha_ok "$SB/agent.sh" "$pin"
 
-# systemd units: path (inbox), service (root, sandboxed, 3 h limit), timer (every minute)
+# systemd units: path (inbox), service (root, sandboxed, 7 h limit), timer (every minute)
 mkdir -p "$SB/units"; write_units "$SB/units"
 t  "unit: path watches the inbox"        grep -qF "PathExistsGlob=$SB/jobs/inbox/*.job" "$SB/units/dahae-agent.path"
 t  "unit: service runs the agent"        grep -qF "ExecStart=/bin/bash $SB/agent.sh run" "$SB/units/dahae-agent.service"
 t  "unit: service sandboxed"             grep -qF "ProtectSystem=full" "$SB/units/dahae-agent.service"
-t  "unit: service may run 3 hours"       grep -qF "TimeoutStartSec=3h" "$SB/units/dahae-agent.service"
+t  "unit: service may run 7 hours"       grep -qF "TimeoutStartSec=7h" "$SB/units/dahae-agent.service"
 t  "unit: timer every minute"            grep -qF "OnCalendar=*-*-* *:*:00" "$SB/units/dahae-agent.timer"
 t  "unit: path also watches approvals"   grep -qF "PathExistsGlob=$SB/jobs/inbox/*.approve" "$SB/units/dahae-agent.path"
+# job limits: an update may run 6 h; a queued job waits for the lock at least that long; the unit limit covers the update
+read -r run_t upd_t lock_w < <( (eval "$(grep -E '^(RUN_TIMEOUT|UPDATE_RUN_TIMEOUT|LOCK_WAIT)=' "$ROOT/deploy/agent.sh")"; echo "$RUN_TIMEOUT $UPDATE_RUN_TIMEOUT $LOCK_WAIT") )
+t  "agent: normal job keeps 30 minutes"  eq "$run_t" 1800
+t  "agent: update may run 6 hours"       eq "$upd_t" 21600
+t  "agent: lock wait covers the update"   [ "$lock_w" -ge "$upd_t" ]
+t  "agent: unit limit covers the update"  [ $((7 * 3600)) -ge "$upd_t" ]
 
 # server approval key: made once, private, and owner-reset removes it (the CLI runs in the sandbox)
 mkdir -p "$SB/host"
@@ -532,6 +537,34 @@ eq "$(SUDO_USER=alice operator_account)" alice
 eq "$(SUDO_USER='' operator_account)" root
 eq "$(login_key_file root)" /root/.ssh/authorized_keys
 nt "odd account name refused for key lookup" login_key_file 'a;rm'
+
+# ---- p07: restore resets the schema first; re-run always updates; prune keeps the rollback image; photo offsite failures warn ----
+mkdir -p backups
+printf 'DROP TABLE IF EXISTS staff;\nCREATE TABLE staff (id int);\n' | gzip -c > backups/db-p07.sql.gz
+restore_first_line() { restore_stream backups/db-p07.sql.gz | head -n1; }
+restore_has() { restore_stream backups/db-p07.sql.gz | grep -F "$1" >/dev/null; } # no -q: pipefail would see SIGPIPE
+t  "restore resets the public schema first"  grep -qF 'DROP SCHEMA public CASCADE' <(restore_first_line)
+t  "restore re-creates the app extensions"   restore_has 'CREATE EXTENSION IF NOT EXISTS pgcrypto'
+t  "restore keeps the dump after the reset"  restore_has 'CREATE TABLE staff'
+t  "re-run with stopped DB updates"          eq "$(install_mode 0)" update
+t  "first run installs"                      eq "$(install_mode 1)" fresh
+printf 'API_IMAGE=old\nWEB_IMAGE=old\n' > .env
+( docker() { case "$*" in
+    "image inspect -f {{.Id}} repo/x:v1") echo sha256:abcdef0123456789abcdef ;;
+    "image inspect -f {{index .RepoDigests 0}} sha256:abcdef0123456789abcdef") echo "repo/malkkeum-api@sha256:ff" ;;
+    tag*) echo "$*" >> "$SB/tags.log" ;;
+  esac; }
+  digest_ref repo/x:v1 repo/malkkeum-api > "$SB/digest.out" )
+t  "rollback image gets a local keep tag"    eq "$(cat "$SB/digest.out")" "repo/malkkeum-api:keep-abcdef012345"
+t  "...and it is tagged so prune keeps it"   grep -qF "tag sha256:abcdef0123456789abcdef repo/malkkeum-api:keep-abcdef012345" "$SB/tags.log"
+set_images_safe() { ( docker() { case "$*" in "image inspect"*|"pull "*) return 1 ;; esac; return 0; }; set_images "$@" ) >/dev/null 2>&1; }
+nt "missing image stops set_images"          set_images_safe repo/x:keep-1 repo/y
+t  ".env keeps the old image when pull fails" eq "$(env_get API_IMAGE)" old
+backup_warn_after() { ( api_backup() { case "$*" in backup-seal*) [ -f "${2#/}" ] && printf 'MKB1' > "${3#/}"; return 0 ;; *"backup-upload /backups/uploads-"*) return 1 ;; *) return 0 ;; esac; }
+  dc() { case "$1" in exec) printf 'dump' ;; run) printf 'tar' ;; esac; return 0; }
+  cmd_backup >/dev/null 2>&1; printf '%s' "$BACKUP_WARN" ); }
+t  "photo offsite failure sets the warning"  eq "$(backup_warn_after)" 1
+rm -f .env backups/db-p07.sql.gz* backups/uploads-* 2>/dev/null
 
 bash "$ROOT/scripts/ci/agent-selftest.sh" >/dev/null || { FAIL=$((FAIL + 1)); echo "FAIL: agent self-test (run scripts/ci/agent-selftest.sh)"; }
 

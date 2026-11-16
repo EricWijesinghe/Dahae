@@ -8401,6 +8401,18 @@ abstract class T {
   /// **'자동 백업 누락'**
   String get oRuleBackup;
 
+  /// No description provided for @oRuleBackupPhotos.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 외부 백업 실패'**
+  String get oRuleBackupPhotos;
+
+  /// No description provided for @oRuleBackupOffsite.
+  ///
+  /// In ko, this message translates to:
+  /// **'데이터베이스 외부 백업 실패'**
+  String get oRuleBackupOffsite;
+
   /// No description provided for @oRuleDisk.
   ///
   /// In ko, this message translates to:
@@ -8532,6 +8544,12 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'외부 백업 (S3 호환)'**
   String get cIntBackup;
+
+  /// No description provided for @cIntBackupPhotos.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 외부 백업 (S3 호환)'**
+  String get cIntBackupPhotos;
 
   /// No description provided for @oJobs.
   ///

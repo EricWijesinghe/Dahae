@@ -55,6 +55,14 @@ Json _status({required String level}) => {
       'last_fail_at': null,
       'last_error': null,
     },
+    {
+      'code': 'backup-uploads',
+      'configured': true,
+      'level': 'red',
+      'last_ok_at': '2026-11-10T18:30:00Z',
+      'last_fail_at': '2026-11-11T18:30:00Z',
+      'last_error': 'unreachable',
+    },
   ],
   'jobs': [
     {
@@ -253,4 +261,76 @@ void main() {
     );
     await unmount(tester);
   });
+
+  testWidgets(
+    'a failed photo offsite backup is a red row and its own owner alert',
+    (tester) async {
+      setViewport(tester, wideSize);
+      final fake = FakeApi()
+        ..reply('GET', '/admin/ops/status', _status(level: 'red'))
+        ..reply('GET', '/admin/ops/alerts', _alerts)
+        ..reply('GET', '/admin/config', _config)
+        ..reply('GET', '/admin/client-errors', _errors);
+      final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+      await pumpConsoleScreen(tester, env, const OpsScreen());
+      await settle(tester);
+
+      final page = find.descendant(
+        of: find.byType(OpsScreen),
+        matching: find.byType(Scrollable),
+      );
+      await tester.scrollUntilVisible(
+        find.text(koT.cIntBackupPhotos),
+        200,
+        scrollable: page,
+      );
+      expect(
+        find.text(koT.cIntBackupPhotos),
+        findsOneWidget,
+        reason: 'the photo offsite row is listed',
+      );
+      await tester.scrollUntilVisible(
+        find.text(koT.oRuleBackupPhotos),
+        200,
+        scrollable: page,
+      );
+      expect(
+        find.text(koT.oRuleBackupPhotos),
+        findsOneWidget,
+        reason: 'the owner can see and switch the photo backup alert',
+      );
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'a failed database offsite backup has its own owner alert switch',
+    (tester) async {
+      setViewport(tester, wideSize);
+      final fake = FakeApi()
+        ..reply('GET', '/admin/ops/status', _status(level: 'red'))
+        ..reply('GET', '/admin/ops/alerts', _alerts)
+        ..reply('GET', '/admin/config', _config)
+        ..reply('GET', '/admin/client-errors', _errors);
+      final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+      await pumpConsoleScreen(tester, env, const OpsScreen());
+      await settle(tester);
+
+      final page = find.descendant(
+        of: find.byType(OpsScreen),
+        matching: find.byType(Scrollable),
+      );
+      await tester.scrollUntilVisible(
+        find.text(koT.oRuleBackupOffsite),
+        200,
+        scrollable: page,
+      );
+      expect(
+        find.text(koT.oRuleBackupOffsite),
+        findsOneWidget,
+        reason: 'the owner can see and switch the database offsite alert',
+      );
+      await unmount(tester);
+    },
+  );
 }

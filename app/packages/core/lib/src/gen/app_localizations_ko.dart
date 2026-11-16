@@ -4421,6 +4421,12 @@ class TKo extends T {
   String get oRuleBackup => '자동 백업 누락';
 
   @override
+  String get oRuleBackupPhotos => '사진 외부 백업 실패';
+
+  @override
+  String get oRuleBackupOffsite => '데이터베이스 외부 백업 실패';
+
+  @override
   String get oRuleDisk => '디스크 부족';
 
   @override
@@ -4487,6 +4493,9 @@ class TKo extends T {
 
   @override
   String get cIntBackup => '외부 백업 (S3 호환)';
+
+  @override
+  String get cIntBackupPhotos => '사진 외부 백업 (S3 호환)';
 
   @override
   String get oJobs => '백그라운드 작업';
