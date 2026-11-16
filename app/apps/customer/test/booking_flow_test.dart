@@ -11,21 +11,7 @@ import 'package:ui/ui.dart';
 
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
-
-/// From the home grid, open a service's detail screen.
-/// Home shows category tiles (CR-8.1): open the service's group, then the service itself.
-Future<void> _openFromHome(WidgetTester tester, String code) async {
-  final group = defaultServiceGroups.firstWhere(
-    (g) => g.services.contains(code),
-  );
-  final title = group.titleFor('ko');
-  await pumpUntilFound(tester, find.text(title));
-  await tester.tap(find.text(title));
-  await settle(tester);
-  await pumpUntilFound(tester, find.text(koT.service(code)));
-  await tester.tap(find.text(koT.service(code)));
-  await settle(tester);
-}
+import 'support/home_groups.dart';
 
 /// Every slot the schedule asks for is open, unless a test overrides it.
 void _openSlots(FakeApi fake, {bool available = true}) {
@@ -62,7 +48,7 @@ void main() {
       stockCustomerApi(fake);
       final env = await TestEnv.create(fake: fake);
       await pumpCustomerApp(tester, env);
-      await _openFromHome(tester, 'bathroom');
+      await openServiceFromHome(tester, 'bathroom');
 
       expect(
         _barAmount(39000),
@@ -391,14 +377,14 @@ void main() {
   });
 
   testWidgets(
-    'studio from home goes to the quote flow, never to instant checkout (CR-3)',
+    'move-in from home goes to the quote flow, never to instant checkout (CR-3)',
     (tester) async {
       setViewport(tester, phoneSize);
       final fake = FakeApi();
       stockCustomerApi(fake);
       final env = await TestEnv.create(fake: fake);
       await pumpCustomerApp(tester, env);
-      await _openFromHome(tester, 'move_in');
+      await tapHomeGroup(tester, 'move_in');
       await _tap(tester, find.text(koT.hgNewBuild));
       await _tap(tester, find.text(koT.hgHomeOneTwo));
 
@@ -537,7 +523,7 @@ void main() {
   );
 
   testWidgets(
-    'studio detail: the hero art idles, and nothing moves with reduced motion',
+    'studio detail: the photo slot stays still, with and without reduced motion',
     (tester) async {
       setViewport(tester, phoneSize);
       // On, as in the real app (the test config turns idle loops off for every other test).
@@ -559,8 +545,8 @@ void main() {
       await show();
       expect(
         tester.hasRunningAnimations,
-        isTrue,
-        reason: 'the 3D hero floats while the page rests',
+        isFalse,
+        reason: 'the design hero is a photo slot, not a floating 3D icon (p07)',
       );
 
       tester.platformDispatcher.accessibilityFeaturesTestValue =
