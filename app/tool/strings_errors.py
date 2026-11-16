@@ -14,6 +14,7 @@ S = {
   "err_already_paid": ["이미 결제가 끝났어요.", "This is already paid."],
   "err_quote_not_payable": ["아직 결제할 수 없는 견적이에요. 상담팀에 확인해 주세요.", "This quote can't be paid yet. Check with our team."],
   "err_payment_method_disabled": ["지금은 이 결제수단을 쓸 수 없어요.", "This payment method isn't available right now."],
+  "err_payment_methods_empty": ["결제 수단을 하나 이상 켜 주세요. 모두 끄면 고객이 결제할 수 없어요.", "Keep at least one payment method on. With none on, customers can't pay."],
   "err_invalid_payment_method": ["선택한 결제수단을 쓸 수 없어요. 다른 방법을 골라 주세요.", "That payment method can't be used. Choose another."],
   "err_balance_not_due": ["잔금은 아직 결제할 시기가 아니에요.", "The balance isn't due yet."],
   "err_invalid_slot": ["이 서비스에서는 고를 수 없는 시간이에요.", "That time isn't offered for this service."],

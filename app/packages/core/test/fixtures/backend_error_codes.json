@@ -63,6 +63,7 @@
     "payment_failed",
     "payment_method_disabled",
     "payment_method_required",
+    "payment_methods_empty",
     "payment_not_for_checkout",
     "payout_account_unverified",
     "payout_provider",

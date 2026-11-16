@@ -83,6 +83,13 @@ pub fn app(db: PgPool) -> Router {
     routes::router(state)
 }
 
+/// The API router with PortOne channel keys set for `channels`: a payment method is offered only when its key is here.
+pub fn app_with_channels(db: PgPool, channels: &[&str]) -> Router {
+    let mut cfg = test_config();
+    cfg.portone.channel_keys = channels.iter().map(|c| (c.to_string(), format!("ch-{c}"))).collect();
+    routes::router(build_state(db, cfg).expect("http client"))
+}
+
 /// The API router with staff second factors off, for tests about sessions, lockouts and resets rather than MFA
 /// (MFA itself is covered by auth_mfa and staff_mfa).
 pub fn app_without_staff_mfa(db: PgPool) -> Router {

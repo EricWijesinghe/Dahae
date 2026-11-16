@@ -39,6 +39,7 @@ fn secret_for(key: &[u8]) -> String {
 fn app(db: PgPool) -> Router {
     let mut cfg = common::test_config();
     cfg.portone.webhook_secret = Some(secret_for(KEY));
+    cfg.portone.channel_keys.insert("card".into(), "ch-card".into());
     let state = build_state(db, cfg).expect("http client");
     routes::router(state)
 }
@@ -185,6 +186,7 @@ fn prod_app(db: PgPool, base: &str) -> Router {
         webhook_secret: Some(secret_for(KEY)),
         ..PortOne::default()
     };
+    cfg.portone.channel_keys.insert("card".into(), "ch-card".into());
     let mut state = build_state(db.clone(), cfg.clone()).expect("state");
     state.providers = Arc::new(Providers::new(cfg, db).expect("providers").with_portone_api(base));
     routes::router(state)

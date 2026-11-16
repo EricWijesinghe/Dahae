@@ -5,7 +5,7 @@
 mod common;
 
 use axum::{Router, http::StatusCode};
-use common::{Customer, call, customer, seed_catalog};
+use common::{Customer, app_with_channels, call, customer, seed_catalog};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -73,7 +73,7 @@ async fn assert_a_untouched(pool: &PgPool, a: Uuid, booking: Uuid, user: Uuid) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn a_foreign_payment_with_another_amount_is_refused_without_refunding_it(pool: PgPool) {
     seed_catalog(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-7100-0001").await;
     let (a, booking) = paid_checkout(&app, &pool, &c).await;
     let b = new_checkout(&app, &c, 12).await;
@@ -89,7 +89,7 @@ async fn a_foreign_payment_with_another_amount_is_refused_without_refunding_it(p
 #[sqlx::test(migrations = "../../migrations")]
 async fn a_foreign_payment_with_the_same_amount_books_nothing(pool: PgPool) {
     seed_catalog(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-7100-0002").await;
     let (a, booking) = paid_checkout(&app, &pool, &c).await;
     let b = new_checkout(&app, &c, 12).await;
@@ -106,7 +106,7 @@ async fn a_foreign_payment_with_the_same_amount_books_nothing(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn dev_payment_ids_are_bound_to_their_checkout(pool: PgPool) {
     seed_catalog(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-7100-0003").await;
     let first = new_checkout(&app, &c, 10).await;
     let second = new_checkout(&app, &c, 12).await;
@@ -130,7 +130,7 @@ async fn dev_payment_ids_are_bound_to_their_checkout(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn one_portone_payment_cannot_be_recorded_twice(pool: PgPool) {
     seed_catalog(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-7100-0004").await;
     let (a, booking) = paid_checkout(&app, &pool, &c).await;
     let dup = sqlx::query("INSERT INTO payments (booking_id, amount, kind, status, provider, provider_tx_id, idempotency_key) VALUES ($1, 1000, 'full', 'paid', 'portone', $2, 'dup')")
@@ -156,7 +156,7 @@ async fn late_payment_on_full_slot(pool: &PgPool, app: &Router, c: &Customer) ->
 #[sqlx::test(migrations = "../../migrations")]
 async fn a_failed_compensating_refund_is_pending_then_retried_until_refunded(pool: PgPool) {
     seed_catalog(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let state = api::build_state(pool.clone(), common::test_config()).expect("state");
     let c = customer(&app, &pool, "010-7100-0005").await;
     let ck = late_payment_on_full_slot(&pool, &app, &c).await;
@@ -198,7 +198,7 @@ async fn a_failed_compensating_refund_is_pending_then_retried_until_refunded(poo
 #[sqlx::test(migrations = "../../migrations")]
 async fn a_compensating_refund_that_lands_is_refunded_at_once(pool: PgPool) {
     seed_catalog(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-7100-0006").await;
     let ck = late_payment_on_full_slot(&pool, &app, &c).await;
 

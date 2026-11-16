@@ -62,6 +62,7 @@ extension Labels on T {
     'quote_not_payable' => err_quote_not_payable,
     'payment_method_disabled' => err_payment_method_disabled,
     'invalid_payment_method' => err_invalid_payment_method,
+    'payment_methods_empty' => err_payment_methods_empty,
     'balance_not_due' => err_balance_not_due,
     'invalid_slot' => err_invalid_slot,
     'booking_changed' => err_booking_changed,

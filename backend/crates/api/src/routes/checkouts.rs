@@ -3,6 +3,8 @@
 //! fulfilled in one transaction. Any failure after PAID refunds the payment (durably: see
 //! `util::refund_durably`). Recovery and the checkout lists live in `checkout_recon`.
 
+use std::collections::HashMap;
+
 use super::checkout_policy::{Action, Binding, Recovery, bind, decide, dev_lookup, refund_reason};
 use super::checkout_recon::{admin_list, list};
 use super::{
@@ -12,7 +14,7 @@ use super::{
     },
     bookings::{BookingRow, load_booking, owned},
     catalog::load_service,
-    payments::ensure_enabled,
+    payments::{channel_key, ensure_enabled},
 };
 use crate::{
     auth::Customer,
@@ -121,7 +123,7 @@ struct CheckoutIntent {
     order_name: &'static str,
     method: String,
     store_id: Option<String>,
-    channel_key: Option<String>,
+    channel_key: String,
     /// 현금영수증 request is offered only when the server has it switched on.
     cash_receipts: bool,
 }
@@ -193,7 +195,7 @@ pub fn can_settle(status: &str) -> bool {
 
 async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Json<CreateBody>) -> ApiResult<Json<CheckoutIntent>> {
     let CreateBody { req, points } = body;
-    ensure_enabled(&s.db, req.method()).await?;
+    ensure_enabled(&s, req.method()).await?;
     if matches!(req, CheckoutRequest::Booking { .. }) && super::config::maintenance_on(&s.db, &s.config).await? {
         return Err(ApiError::Unavailable("maintenance"));
     }
@@ -247,6 +249,9 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         }
         split.points
     };
+    let method = req.method();
+    // Checked before the row exists: a method without a channel key must not leave a pending checkout behind.
+    let key = channel_key_for(&s.providers.integ().portone.channel_keys, method)?;
     let id = Uuid::now_v7();
     sqlx::query("INSERT INTO checkouts (id, user_id, kind, booking_id, draft, method, amount, points, status, expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$9,'pending',$8)")
         .bind(id)
@@ -260,7 +265,6 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         .bind(points)
         .execute(&s.db)
         .await?;
-    let method = req.method();
     let integ = s.providers.integ();
     let portone = &integ.portone;
     Ok(Json(CheckoutIntent {
@@ -271,9 +275,14 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         order_name: order_name(intent.kind),
         method: method.to_string(),
         store_id: portone.store_id.clone(),
-        channel_key: portone.channel_keys.get(method).cloned(),
+        channel_key: key,
         cash_receipts: portone.cash_receipts,
     }))
+}
+
+/// The PortOne channel key for a method. `ensure_enabled` only passes methods that have one, so a miss is a config fault.
+fn channel_key_for(channel_keys: &HashMap<String, String>, method: &str) -> ApiResult<String> {
+    channel_key(channel_keys, method).ok_or(ApiError::Unavailable("provider_not_configured"))
 }
 
 /// Validates a new booking exactly like pay-now, then freezes it as a draft.
@@ -704,6 +713,20 @@ mod tests {
             currency: currency.into(),
             method: Value::Null,
         }
+    }
+
+    #[test]
+    fn checkout_channel_key_is_the_configured_one_or_a_provider_fault() {
+        let keys = HashMap::from([("card".to_string(), "ch".to_string()), ("naverpay".to_string(), " ".to_string())]);
+        assert!(matches!(channel_key_for(&keys, "card"), Ok(k) if k == "ch"));
+        assert!(matches!(
+            channel_key_for(&keys, "naverpay"),
+            Err(ApiError::Unavailable("provider_not_configured"))
+        ));
+        assert!(matches!(
+            channel_key_for(&keys, "kakaopay"),
+            Err(ApiError::Unavailable("provider_not_configured"))
+        ));
     }
 
     #[test]

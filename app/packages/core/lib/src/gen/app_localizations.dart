@@ -5491,6 +5491,12 @@ abstract class T {
   /// **'지금은 이 결제수단을 쓸 수 없어요.'**
   String get err_payment_method_disabled;
 
+  /// No description provided for @err_payment_methods_empty.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제 수단을 하나 이상 켜 주세요. 모두 끄면 고객이 결제할 수 없어요.'**
+  String get err_payment_methods_empty;
+
   /// No description provided for @err_invalid_payment_method.
   ///
   /// In ko, this message translates to:
@@ -10391,6 +10397,12 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'고객 앱에 보여줄 결제 수단을 켜고 꺼요. 바로 적용돼요.'**
   String get cSetupPayMethodsHint;
+
+  /// No description provided for @cPayMethodNoKey.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제 채널이 아직 연결되지 않아 고객에게 보이지 않아요. 설정 담당자에게 문의해 주세요.'**
+  String get cPayMethodNoKey;
 
   /// No description provided for @cReviewTitle.
   ///

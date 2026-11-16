@@ -2858,6 +2858,10 @@ class TKo extends T {
   String get err_payment_method_disabled => '지금은 이 결제수단을 쓸 수 없어요.';
 
   @override
+  String get err_payment_methods_empty =>
+      '결제 수단을 하나 이상 켜 주세요. 모두 끄면 고객이 결제할 수 없어요.';
+
+  @override
   String get err_invalid_payment_method => '선택한 결제수단을 쓸 수 없어요. 다른 방법을 골라 주세요.';
 
   @override
@@ -5445,6 +5449,10 @@ class TKo extends T {
 
   @override
   String get cSetupPayMethodsHint => '고객 앱에 보여줄 결제 수단을 켜고 꺼요. 바로 적용돼요.';
+
+  @override
+  String get cPayMethodNoKey =>
+      '결제 채널이 아직 연결되지 않아 고객에게 보이지 않아요. 설정 담당자에게 문의해 주세요.';
 
   @override
   String get cReviewTitle => '스토어 심사용 데모 계정';
