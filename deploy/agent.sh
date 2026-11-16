@@ -13,6 +13,7 @@ CLI=${DAHAE_CLI:-/usr/local/bin/dahae}
 JOB_UID=${DAHAE_JOB_UID:-10001}     # API 컨테이너의 사용자 번호: 이 번호가 아닌 주인의 파일은 무시해요
 LOCK=${DAHAE_LOCK:-/run/dahae.lock} # 예약 작업(cron)과 같은 잠금
 RUN_TIMEOUT=${DAHAE_RUN_TIMEOUT:-1800}
+UPDATE_RUN_TIMEOUT=${DAHAE_UPDATE_RUN_TIMEOUT:-21600} # 업데이트는 먼저 사진 파일까지 백업해요: 큰 사진 보관소도 끝날 만큼 길게
 LOCK_WAIT=$((RUN_TIMEOUT + 60))     # 잠금 대기는 작업 하나의 제한 시간보다 길어야 뒤의 작업이 버려지지 않아요
 OWNER_UID=${DAHAE_OWNER_UID:-0}     # 상태·작업·호스트 폴더의 주인: 관리자(root)만 쓸 수 있어야 해요
 JOB_RUNNING=""
@@ -339,10 +340,11 @@ approval_enroll() { # 승인 코드를 처음 한 번만 만들어요 (이미 �
 
 # ---- 실행 (고정 명령만) ----
 run_cli() { # run_cli 인자... : 관리 명령을 --yes 로, 입력 없이, 시간 제한을 걸어 실행해요 (종료 코드를 그대로 돌려줘요)
-  local pre=()
+  local pre=() limit="$RUN_TIMEOUT"
+  [ "$1" = update ] && limit="$UPDATE_RUN_TIMEOUT" # 제한에 걸려 중간에 끊기면 새 버전을 못 올리고 실패로 남아요
   # setsid 는 리눅스 서버에 있어요. 없는 환경(개발 PC 테스트)에서는 생략해요.
   command -v setsid >/dev/null && pre=(setsid)
-  DAHAE_YES=1 "${pre[@]}" timeout "$RUN_TIMEOUT" "$CLI" "$@" </dev/null >/dev/null 2>&1
+  DAHAE_YES=1 "${pre[@]}" timeout "$limit" "$CLI" "$@" </dev/null >/dev/null 2>&1
 }
 
 cli_out() { # cli_out 인자... : 관리 명령의 표준 출력을 내보내요 (결과 파일로 가요)
