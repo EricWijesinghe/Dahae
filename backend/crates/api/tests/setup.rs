@@ -392,3 +392,20 @@ async fn review_account_signs_in_with_the_owner_code_and_no_sms_code_is_echoed(p
     .await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "switched off: the fixed code no longer works");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn only_the_owner_can_switch_the_review_login_on_or_off(pool: PgPool) {
+    let app = common::app(pool.clone());
+    // A non-owner admin: role admin, is_owner false.
+    let (admin, _) = common::staff_token(&pool, api::auth::Role::StaffAdmin).await;
+    let body = json!({"phone": "010-9999-0001", "code": "123456"});
+    let (st, b) = call(&app, "PUT", "/v1/admin/setup/review", Some(admin.as_str()), Some(body)).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "{b}");
+    let (st, b) = call(&app, "DELETE", "/v1/admin/setup/review", Some(admin.as_str()), None).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "{b}");
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM settings WHERE key = 'review_account'")
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(n, 0, "a refused call stores no review login");
+}
