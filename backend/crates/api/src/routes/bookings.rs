@@ -224,7 +224,7 @@ async fn create_quote(s: &AppState, user: Uuid, b: &BookingBody, prep: &Prepared
         return Err(ApiError::Conflict("too_many_open_requests"));
     }
     // Serialize bookings per slot so capacity can't be oversold.
-    lock_slot(&mut tx, b.visit_date, b.start_hour).await?;
+    lock_slot(&mut tx, b.visit_date, b.start_hour, None).await?;
     let id = Uuid::now_v7();
     let number = next_number(&mut tx).await?;
     let start = domain::peak::kst_to_utc(b.visit_date, u32::from(b.start_hour)).ok_or(ApiError::BadRequest("invalid_slot"))?;
@@ -285,7 +285,7 @@ async fn create_quote(s: &AppState, user: Uuid, b: &BookingBody, prep: &Prepared
 async fn create_paid(s: &AppState, user: Uuid, req: &CreateBooking, prep: &Prepared) -> ApiResult<Uuid> {
     let method = req.payment_method_id.ok_or(ApiError::BadRequest("payment_method_required"))?;
     let mut tx = s.db.begin().await?;
-    lock_slot(&mut tx, req.body.visit_date, req.body.start_hour).await?;
+    lock_slot(&mut tx, req.body.visit_date, req.body.start_hour, None).await?;
     let price = price_for(&mut tx, user, prep, &req.body, true).await?;
     let id = Uuid::now_v7();
     let number = insert_paid(&mut tx, &s.config.data_key, id, user, prep, &req.body, &price).await?;

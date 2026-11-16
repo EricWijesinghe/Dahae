@@ -227,6 +227,8 @@ fn dev_refund_fails(tx_id: &str) -> bool {
 
 /// Serialises bookings per (date, hour) for the rest of the transaction, then counts
 /// live bookings in that slot, optionally ignoring one booking (for reschedules).
+/// Takes the slot lock and counts what holds seats: live bookings, planned subscription visits and waitlist offers.
+/// `except` leaves out one booking or subscription visit id, the one being moved or charged.
 pub async fn lock_and_count_slot(conn: &mut PgConnection, date: NaiveDate, hour: u8, except: Option<Uuid>) -> ApiResult<(u32, Option<u32>)> {
     sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1))")
         .bind(format!("slot:{date}:{hour}"))
@@ -239,6 +241,15 @@ pub async fn lock_and_count_slot(conn: &mut PgConnection, date: NaiveDate, hour:
             .bind(except)
             .fetch_one(&mut *conn)
             .await?;
+    // A planned subscription visit holds its seat until it is charged and booked.
+    let planned: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM subscription_visits WHERE state = 'planned' AND visit_date = $1 AND start_hour = $2 AND ($3::uuid IS NULL OR id <> $3)",
+    )
+    .bind(date)
+    .bind(i16::from(hour))
+    .bind(except)
+    .fetch_one(&mut *conn)
+    .await?;
     // A live waitlist offer holds a seat for 15 minutes.
     let holds: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM waitlist_entries WHERE status = 'offered' AND offer_expires_at > now()
@@ -248,7 +259,7 @@ pub async fn lock_and_count_slot(conn: &mut PgConnection, date: NaiveDate, hour:
     .bind(i16::from(hour))
     .fetch_one(&mut *conn)
     .await?;
-    let used = used + holds;
+    let used = used + planned + holds;
     let cap: Option<i32> = sqlx::query_scalar("SELECT capacity FROM slot_capacity WHERE start_hour = $1")
         .bind(i16::from(hour))
         .fetch_optional(&mut *conn)

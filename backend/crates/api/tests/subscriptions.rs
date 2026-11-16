@@ -510,3 +510,74 @@ async fn discount_policy_is_bounded_and_public(pool: PgPool) {
     assert_eq!(st, StatusCode::OK);
     assert_eq!(public["discount_percent"], 15);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn planned_visits_hold_the_slot_so_a_later_subscription_is_placed_elsewhere(pool: PgPool) {
+    seed_catalog(&pool).await;
+    sqlx::query("INSERT INTO slot_capacity (start_hour, capacity) VALUES (9, 1) ON CONFLICT (start_hour) DO UPDATE SET capacity = 1")
+        .execute(&pool)
+        .await
+        .expect("capacity");
+    let (app, _) = app_and_state(pool.clone());
+    let weekday = weekday_index(kst_today() + Duration::days(1));
+    let first = customer(&app, &pool, "010-7000-0030").await;
+    let second = customer(&app, &pool, "010-7000-0031").await;
+    let (st, body) = subscribe(&app, &first, weekday, 1, 9, None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    let (st, body) = subscribe(&app, &second, weekday, 1, 9, None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    let planned = visits(&body);
+    assert!(!planned.is_empty(), "{body}");
+    // Every date already has the first subscription's visit at 9, which fills the one seat.
+    assert!(planned.iter().all(|v| v["start_hour"] != 9), "{body}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_full_slot_at_charge_time_is_retried_without_pausing_for_payment(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let (app, state) = app_and_state(pool.clone());
+    let c = customer(&app, &pool, "010-7000-0032").await;
+    let (_, body) = subscribe(&app, &c, weekday_index(kst_today() + Duration::days(1)), 1, 9, None).await;
+    let id = sub_id(&body);
+    close_slot(&pool, 9).await;
+
+    // Three full-slot refusals in a row: none of them is a card decline, so the subscription stays active.
+    for _ in 0..3 {
+        sqlx::query("UPDATE subscription_visits SET retry_at = NULL WHERE subscription_id = $1")
+            .bind(id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(subscription_engine::pass(&state).await.expect("pass").failed, 1);
+    }
+    assert_eq!(sub_status(&pool, id).await, ("active".to_string(), None, 0));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_charge_still_open_at_day_end_is_settled_before_the_visit_is_missed(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let (app, state) = app_and_state(pool.clone());
+    let c = customer(&app, &pool, "010-7000-0033").await;
+    let tomorrow = kst_today() + Duration::days(1);
+    let (_, body) = subscribe(&app, &c, weekday_index(tomorrow), 1, 9, None).await;
+    let id = sub_id(&body);
+    // The visit's day has come while its charge id is still stored (no answer from the gateway).
+    sqlx::query("UPDATE subscription_visits SET visit_date = $2, payment_ref = 'subvisit-open-1' WHERE subscription_id = $1 AND visit_date = $3")
+        .bind(id)
+        .bind(kst_today())
+        .bind(tomorrow)
+        .execute(&pool)
+        .await
+        .expect("open charge");
+
+    subscription_engine::pass(&state).await.expect("pass");
+    let (state_now, payment_ref): (String, Option<String>) =
+        sqlx::query_as("SELECT state, payment_ref FROM subscription_visits WHERE subscription_id = $1 AND visit_date = $2")
+            .bind(id)
+            .bind(kst_today())
+            .fetch_one(&pool)
+            .await
+            .expect("visit");
+    // The gateway never captured it, so the id is cleared and the visit is missed with nothing left open.
+    assert_eq!((state_now.as_str(), payment_ref), ("missed", None));
+}

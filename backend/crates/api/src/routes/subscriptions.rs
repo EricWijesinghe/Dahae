@@ -426,7 +426,7 @@ async fn reschedule_visit(
     check_date(today_kst(), m.visit_date)?;
     check_slot(false, m.start_hour)?;
     let mut tx = s.db.begin().await?;
-    let (used, cap) = lock_and_count_slot(&mut tx, m.visit_date, m.start_hour, None).await?;
+    let (used, cap) = lock_and_count_slot(&mut tx, m.visit_date, m.start_hour, Some(visit)).await?;
     check_capacity(used, cap)?;
     let moved = sqlx::query(
         "UPDATE subscription_visits SET visit_date = $3, start_hour = $4, updated_at = now()

@@ -174,8 +174,8 @@ pub async fn price_for(conn: &mut PgConnection, user: Uuid, prep: &Prepared, b: 
 }
 
 /// Takes the per-slot lock for the rest of the transaction and fails when the slot is full.
-pub async fn lock_slot(conn: &mut PgConnection, date: NaiveDate, hour: u8) -> ApiResult<()> {
-    let (used, cap) = lock_and_count_slot(conn, date, hour, None).await?;
+pub async fn lock_slot(conn: &mut PgConnection, date: NaiveDate, hour: u8, except: Option<Uuid>) -> ApiResult<()> {
+    let (used, cap) = lock_and_count_slot(conn, date, hour, except).await?;
     Ok(check_capacity(used, cap)?)
 }
 
