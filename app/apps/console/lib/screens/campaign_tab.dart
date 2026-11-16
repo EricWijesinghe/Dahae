@@ -56,8 +56,9 @@ class CampaignLog extends StatelessWidget {
       builder: (context, snap) {
         if (snap.hasError) return Center(child: Text(t.error(snap.error!)));
         final rows = snap.data;
-        if (rows == null)
+        if (rows == null) {
           return const Center(child: CircularProgressIndicator());
+        }
         return ListView(
           children: [
             Padding(
