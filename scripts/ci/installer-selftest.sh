@@ -420,14 +420,20 @@ nt "agent without a pin refused"         agent_sha_ok "$SB/agent.sh" ""
 printf 'echo changed\n' > "$SB/agent.sh"
 nt "changed agent refused"               agent_sha_ok "$SB/agent.sh" "$pin"
 
-# systemd units: path (inbox), service (root, sandboxed, 3 h limit), timer (every minute)
+# systemd units: path (inbox), service (root, sandboxed, 7 h limit), timer (every minute)
 mkdir -p "$SB/units"; write_units "$SB/units"
 t  "unit: path watches the inbox"        grep -qF "PathExistsGlob=$SB/jobs/inbox/*.job" "$SB/units/dahae-agent.path"
 t  "unit: service runs the agent"        grep -qF "ExecStart=/bin/bash $SB/agent.sh run" "$SB/units/dahae-agent.service"
 t  "unit: service sandboxed"             grep -qF "ProtectSystem=full" "$SB/units/dahae-agent.service"
-t  "unit: service may run 3 hours"       grep -qF "TimeoutStartSec=3h" "$SB/units/dahae-agent.service"
+t  "unit: service may run 7 hours"       grep -qF "TimeoutStartSec=7h" "$SB/units/dahae-agent.service"
 t  "unit: timer every minute"            grep -qF "OnCalendar=*-*-* *:*:00" "$SB/units/dahae-agent.timer"
 t  "unit: path also watches approvals"   grep -qF "PathExistsGlob=$SB/jobs/inbox/*.approve" "$SB/units/dahae-agent.path"
+# job limits: an update may run 6 h; a queued job waits for the lock at least that long; the unit limit covers the update
+read -r run_t upd_t lock_w < <( (eval "$(grep -E '^(RUN_TIMEOUT|UPDATE_RUN_TIMEOUT|LOCK_WAIT)=' "$ROOT/deploy/agent.sh")"; echo "$RUN_TIMEOUT $UPDATE_RUN_TIMEOUT $LOCK_WAIT") )
+t  "agent: normal job keeps 30 minutes"  eq "$run_t" 1800
+t  "agent: update may run 6 hours"       eq "$upd_t" 21600
+t  "agent: lock wait covers the update"   [ "$lock_w" -ge "$upd_t" ]
+t  "agent: unit limit covers the update"  [ $((7 * 3600)) -ge "$upd_t" ]
 
 # server approval key: made once, private, and owner-reset removes it (the CLI runs in the sandbox)
 mkdir -p "$SB/host"
