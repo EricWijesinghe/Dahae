@@ -54,7 +54,7 @@ JSON: profile, consent history, addresses, payment method labels (no keys), coup
 | `refresh_tokens` | expired, or revoked over 1 day ago | fixed |
 | Ops failure and HTTP error counters | older than 3 days | fixed (`ops::prune`) |
 | AI-assisted chat messages (threads with an `ai_usage` row) | older than N days | `AI_CHAT_RETENTION_DAYS`, default 180 |
-| Uploads not referenced by bookings, chat, pros or users | older than N days; file removed, then row | `UPLOAD_ORPHAN_DAYS`, default 30 |
+| Uploads not referenced by bookings, chat, pros, users, cases, completion reports, reviews, pro profiles, content or settings | older than N days; file removed, then row | `UPLOAD_ORPHAN_DAYS`, default 30 |
 | Deleted customers' unpaid checkout snapshots | older than 30 days | fixed |
 | Bookings of deleted customers that are completed or cancelled and still hold an address, answers, visit notes or household | cleared (see Deletion) | fixed (`privacy::pseudonymise_closed_bookings`) |
 | Pending partner deletions (Apple `account-delete`) | retried until no open job or payout | fixed |

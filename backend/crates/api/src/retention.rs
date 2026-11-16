@@ -8,7 +8,19 @@ use tokio::task::JoinHandle;
 
 const EVERY: Duration = Duration::from_secs(60 * 60);
 /// Tables that can hold a reference to an upload URL. A file named in any of them is not orphaned.
-const UPLOAD_REFERENCE_TABLES: [&str; 5] = ["bookings", "chat_messages", "pros", "users", "cases"];
+/// shortcut: hand-kept list, a new column that stores a `/files/` URL must be added here, tests/retention_uploads.rs covers the added ones.
+const UPLOAD_REFERENCE_TABLES: [&str; 10] = [
+    "bookings",
+    "chat_messages",
+    "pros",
+    "users",
+    "cases",
+    "completion_reports",
+    "reviews",
+    "pro_profiles",
+    "content_items",
+    "settings",
+];
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Report {

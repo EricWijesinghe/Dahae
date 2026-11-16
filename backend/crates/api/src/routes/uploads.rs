@@ -259,7 +259,8 @@ async fn upload(State(s): State<AppState>, a: Auth, mut form: Multipart) -> ApiR
     entropy::fill(&mut name);
     let file = format!("{}.{ext}", hex::encode(name));
     let size = i64::try_from(bytes.len()).unwrap_or(i64::MAX);
-    // Quota check, row insert and file write share one transaction: a failed write leaves no row.
+    // Quota check and row insert commit before the file exists: a failed commit leaves no file, and a failed write
+    // removes its row. The purge only looks at rows, so a file without a committed row would never be removed.
     let mut tx = s.db.begin().await?;
     sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1))")
         .bind(format!("upload:{}", a.id))
@@ -281,12 +282,24 @@ async fn upload(State(s): State<AppState>, a: Auth, mut form: Multipart) -> ApiR
         .bind(size)
         .execute(&mut *tx)
         .await?;
-    tokio::fs::write(s.config.upload_dir.join(&file), &bytes)
-        .await
-        .map_err(|e| ApiError::Internal(e.to_string()))?;
     tx.commit().await?;
+    if let Err(e) = tokio::fs::write(s.config.upload_dir.join(&file), &bytes).await {
+        discard_upload(&s, &file).await?;
+        return Err(ApiError::Internal(e.to_string()));
+    }
     // Relative path; sign_json makes it a signed absolute URL on the way out.
     Ok(Json(json!({ "url": format!("/files/{file}") })))
+}
+
+/// Removes a failed upload's file (a partial write included) and then its row, so neither outlives it.
+async fn discard_upload(s: &AppState, file: &str) -> ApiResult<()> {
+    match tokio::fs::remove_file(s.config.upload_dir.join(file)).await {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(ApiError::Internal(e.to_string())),
+    }
+    sqlx::query("DELETE FROM uploads WHERE file = $1").bind(file).execute(&s.db).await?;
+    Ok(())
 }
 
 #[cfg(test)]
