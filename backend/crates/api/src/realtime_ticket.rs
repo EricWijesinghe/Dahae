@@ -2,7 +2,7 @@
 //! so the long-lived credential never appears in a URL (proxies and access logs record those).
 
 use crate::{
-    auth::{Auth, Role, new_refresh_token, sha256_hex, verify_access},
+    auth::{Auth, Role, new_refresh_token, sha256_hex, verify_access_live},
     error::{ApiError, ApiResult},
     state::AppState,
 };
@@ -55,5 +55,5 @@ pub async fn authenticate_socket(state: &AppState, q: &WsQuery) -> ApiResult<Aut
     }
     let token = q.token.as_deref().ok_or(ApiError::Unauthorized)?;
     tracing::warn!("realtime socket opened with the deprecated ?token= form; clients should send ?ticket=");
-    verify_access(&state.config.jwt_keys(), token)
+    verify_access_live(&state.db, &state.config.jwt_keys(), token).await
 }
