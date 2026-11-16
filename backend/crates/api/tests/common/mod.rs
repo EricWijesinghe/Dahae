@@ -6,8 +6,9 @@ use api::{
     auth::{self, Role},
     build_state,
     config::{Config, PortOne},
+    crypto,
     providers::Providers,
-    routes, seed,
+    routes, seed, totp,
 };
 use axum::{
     Router,
@@ -90,6 +91,20 @@ pub fn app_with_channels(db: PgPool, channels: &[&str]) -> Router {
     routes::router(build_state(db, cfg).expect("http client"))
 }
 
+/// The API router on the real PortOne gateway (DEV_MODE off, store and API secret set) with channel keys for
+/// `channels`. Payment methods are gated on their keys here; the dev fake offers every enabled method instead.
+pub fn app_real_gateway_with_channels(db: PgPool, channels: &[&str]) -> Router {
+    let mut cfg = test_config();
+    cfg.dev_mode = false;
+    cfg.portone = PortOne {
+        api_secret: Some(PORTONE_SECRET.into()),
+        store_id: Some("store-test".into()),
+        channel_keys: channels.iter().map(|c| (c.to_string(), format!("ch-{c}"))).collect(),
+        ..PortOne::default()
+    };
+    routes::router(build_state(db, cfg).expect("http client"))
+}
+
 /// The API router with staff second factors off, for tests about sessions, lockouts and resets rather than MFA
 /// (MFA itself is covered by auth_mfa and staff_mfa).
 pub fn app_without_staff_mfa(db: PgPool) -> Router {
@@ -130,6 +145,17 @@ pub async fn staff_token(db: &PgPool, role: Role) -> (String, Uuid) {
     (auth::issue_access(SECRET, id, role).expect("token"), id)
 }
 
+/// Makes a staff row an owner with a confirmed second factor whose TOTP secret is `seed` (test seeds are fake).
+pub async fn enrol_owner(db: &PgPool, id: Uuid, seed: &[u8]) {
+    let enc = crypto::encrypt(&test_config().data_key, crypto::aad::STAFF_TOTP, &totp::encode_secret(seed));
+    sqlx::query("UPDATE staff SET totp_secret = $2, totp_enabled_at = now(), recovery_confirmed_at = now(), is_owner = true WHERE id = $1")
+        .bind(id)
+        .bind(enc)
+        .execute(db)
+        .await
+        .expect("owner enrolment");
+}
+
 /// Catalogue, quote formula, slot capacity and starter content (what first boot inserts).
 pub async fn seed_catalog(db: &PgPool) {
     seed::run(db, &test_config()).await.expect("seed");
@@ -155,6 +181,29 @@ pub async fn call_keyed(app: &Router, method: &str, uri: &str, token: Option<&st
             Body::from(v.to_string())
         }
         None => Body::empty(),
+    };
+    let mut request = req.body(payload).expect("valid request");
+    request.extensions_mut().insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40_000))));
+    let resp = app.clone().oneshot(request).await.expect("router is infallible");
+    let status = resp.status();
+    let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.expect("response body");
+    (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
+}
+
+/// One request with an optional `X-Owner-Totp` header, for owner-gated routes.
+pub async fn call_owner(app: &Router, method: &str, uri: &str, token: &str, totp: Option<&str>, body: Value) -> (StatusCode, Value) {
+    let mut req = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header(header::AUTHORIZATION, format!("Bearer {token}"));
+    if let Some(code) = totp {
+        req = req.header("x-owner-totp", code);
+    }
+    let payload = if body.is_null() {
+        Body::empty()
+    } else {
+        req = req.header(header::CONTENT_TYPE, "application/json");
+        Body::from(body.to_string())
     };
     let mut request = req.body(payload).expect("valid request");
     request.extensions_mut().insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40_000))));

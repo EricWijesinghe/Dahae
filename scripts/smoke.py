@@ -53,11 +53,15 @@ def phone():
     return f"010{random.randint(10000000, 99999999)}"
 
 
+def customer_consents():
+    return [{"kind": k, "granted": True, "version": CONSENT_VERSION} for k in ("terms", "privacy", "overseas_transfer")]
+
+
 def login(audience):
     p = phone()
     code = call("POST", "/v1/auth/otp", {"phone": p})["dev_code"]
     # A new customer must grant the required consents at signup (the app's signup screen does the same).
-    consents = [{"kind": k, "granted": True, "version": CONSENT_VERSION} for k in ("terms", "privacy", "overseas_transfer")] if audience == "customer" else []
+    consents = customer_consents() if audience == "customer" else []
     call("POST", "/v1/auth/verify", {"phone": p, "code": "000000" if code != "000000" else "111111", "audience": audience, "consents": consents}, expect=400)
     return call("POST", "/v1/auth/verify", {"phone": p, "code": code, "audience": audience, "consents": consents})["access_token"]
 
@@ -221,9 +225,9 @@ def social_flow(staff, visit):
     step(f"payment methods catalogue ({len(methods)} enabled)")
 
     token = f"dev:kakao-{random.randint(10**9, 10**10)}"
-    first = call("POST", "/v1/auth/social", {"provider": "kakao", "token": token, "audience": "customer"})
+    first = call("POST", "/v1/auth/social", {"provider": "kakao", "token": token, "audience": "customer", "consents": customer_consents()})
     assert first["is_new"] is True and first["needs_phone"] is True, first
-    again = call("POST", "/v1/auth/social", {"provider": "kakao", "token": token, "audience": "customer"})
+    again = call("POST", "/v1/auth/social", {"provider": "kakao", "token": token, "audience": "customer", "consents": customer_consents()})
     assert again["subject"] == first["subject"] and again["is_new"] is False, again
     sc = first["access_token"]
     step("social dev:kakao: new account needs_phone=true; same token returns the same account")
@@ -233,7 +237,7 @@ def social_flow(staff, visit):
     bound = call("POST", "/v1/me/phone", {"phone": p, "code": code}, sc)
     assert bound["phone_verified"] is True and bound["phone"] == p, bound
     call("POST", "/v1/me/phone", {"phone": p, "code": code}, sc, expect=400)
-    assert call("POST", "/v1/auth/social", {"provider": "kakao", "token": token, "audience": "customer"})["needs_phone"] is False
+    assert call("POST", "/v1/auth/social", {"provider": "kakao", "token": token, "audience": "customer", "consents": customer_consents()})["needs_phone"] is False
     step("phone bound via OTP (code is single use); needs_phone=false afterwards")
 
     addr = call("POST", "/v1/me/addresses", {"kind": "home", "label": "소셜", "road_address": "서울 강남구 테헤란로 9", "detail": "", "district_code": DISTRICT, "size_pyeong": 9}, sc)

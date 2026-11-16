@@ -251,7 +251,12 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
     };
     let method = req.method();
     // Checked before the row exists: a method without a channel key must not leave a pending checkout behind.
-    let key = channel_key_for(&s.providers.integ().portone.channel_keys, method)?;
+    // The fake provider takes no channel key; the real gateway needs one (`ensure_enabled` checked it above).
+    let key = if s.providers.dev() {
+        channel_key(&s.providers.integ().portone.channel_keys, method).unwrap_or_default()
+    } else {
+        channel_key_for(&s.providers.integ().portone.channel_keys, method)?
+    };
     let id = Uuid::now_v7();
     sqlx::query("INSERT INTO checkouts (id, user_id, kind, booking_id, draft, method, amount, points, status, expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$9,'pending',$8)")
         .bind(id)

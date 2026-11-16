@@ -3001,6 +3001,29 @@ class TEn extends T {
   String get err_team_full => 'Your team is full.';
 
   @override
+  String get err_invalid_store_id => 'The store ID must start with store-.';
+
+  @override
+  String get err_invalid_api_secret =>
+      'The V2 API secret does not look right. Paste the whole value with no spaces.';
+
+  @override
+  String get err_invalid_channel_key =>
+      'A channel key starts with channel-key-.';
+
+  @override
+  String get err_unknown_channel_key =>
+      'This payment method slot is not known.';
+
+  @override
+  String get err_invalid_secret_key =>
+      'The secret key starts with test_sk_ or live_sk_.';
+
+  @override
+  String get err_invalid_security_key =>
+      'The security key is 64 characters, each 0-9 or a-f. Copy it from the Toss developer center as is.';
+
+  @override
   String get err_invalid_webhook_secret =>
       'The webhook secret must start with whsec_.';
 
@@ -5865,7 +5888,25 @@ class TEn extends T {
   String get cSetupSaved => 'Saved';
 
   @override
-  String get cSetupTest => 'Test connection';
+  String get cSetupTest => 'Check connection';
+
+  @override
+  String get cSetupLockNow => 'Lock now';
+
+  @override
+  String get cSetupShow => 'Show';
+
+  @override
+  String get cSetupHide => 'Hide';
+
+  @override
+  String get cSetupUnlockedBadge => 'Unlocked';
+
+  @override
+  String get cSetupOwnerOnly => 'Only the owner can unlock';
+
+  @override
+  String get cPaymentsTitle => 'Payments';
 
   @override
   String get cSetupClear => 'Disconnect';
@@ -5904,6 +5945,19 @@ class TEn extends T {
 
   @override
   String get cCopied => 'Copied';
+
+  @override
+  String get cCopy => 'Copy';
+
+  @override
+  String get cSetupLocked =>
+      'This card is locked. The owner must unlock it to change it';
+
+  @override
+  String get cSetupLockedBadge => 'Locked';
+
+  @override
+  String get cSetupUnlock => 'Unlock (owner code)';
 
   @override
   String get cSetupDevMode =>
@@ -5984,6 +6038,44 @@ class TEn extends T {
 
   @override
   String get cInvalidValue => 'Please check the highlighted value';
+
+  @override
+  String get cSetupNothingSaved =>
+      'Nothing is saved yet. Save first, then unlock';
+
+  @override
+  String cSetupUnlockLeft(String minutes) {
+    return 'Locks in $minutes min';
+  }
+
+  @override
+  String get cSetupTestApiKey => 'Check API key';
+
+  @override
+  String get cSetupNeedsKey => 'Add the channel key first';
+
+  @override
+  String get cSetupOtherMethods => 'Other payment methods';
+
+  @override
+  String get cSlotHintCard =>
+      'Copy the card payment channel key from the channel list in the PortOne console';
+
+  @override
+  String get cSlotHintBilling =>
+      'Channel key for recurring billing. Left blank, the card channel key is used';
+
+  @override
+  String get cSlotHintIdentity =>
+      'Identity verification channel key, used for identity sign-in';
+
+  @override
+  String get cSlotHintCashReceipt =>
+      'Cash receipt channel key. Used on the server only, never sent to the customer app';
+
+  @override
+  String get cSlotHintMethod =>
+      'Copy this payment method\'s channel key from the PortOne console';
 
   @override
   String get sgConsentHint =>

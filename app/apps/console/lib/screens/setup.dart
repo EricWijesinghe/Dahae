@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../state.dart';
 import 'setup_app_links.dart';
 import 'setup_business.dart';
+import 'setup_formats.dart';
 import 'setup_guides.dart';
 import 'setup_owner_code.dart';
 import 'setup_pay_methods.dart';
@@ -65,6 +68,10 @@ class _SetupScreenState extends State<SetupScreen> {
                 const AppLinksCard(),
                 for (final c in cards) ...[
                   const SizedBox(height: Space.md),
+                  if (c['code'] == 'portone') ...[
+                    Text(t.cPaymentsTitle, style: context.text.titleMedium),
+                    const SizedBox(height: Space.sm),
+                  ],
                   IntegrationCard(
                     key: ValueKey(c['code']),
                     card: c,
@@ -183,16 +190,58 @@ class _IntegrationCardState extends State<IntegrationCard> {
   final _map = <String, Map<String, TextEditingController>>{};
   // Null until the owner touches a switch or it is saved; an untouched switch is not sent (env default stays).
   final _toggles = <String, bool?>{};
+  // Secret fields the owner has asked to see while typing (show/hide).
+  final _revealed = <String>{};
   bool _busy = false;
   Json? _result;
+  // Keeps the unlock countdown current and reloads once the server has closed the window.
+  Timer? _lockTimer;
 
   String get _code => widget.card['code'] as String;
+  // The server locks a saved card; the screen only reflects it.
+  bool get _locked => widget.card['locked'] == true;
   Guide get _guide => guides[_code]!;
   List<Json> get _fields => (widget.card['fields'] as List).cast<Json>();
+  DateTime? get _unlockUntil {
+    final raw = widget.card['unlock_expires_at'];
+    return raw is String ? DateTime.tryParse(raw)?.toLocal() : null;
+  }
+
+  @override
+  void didUpdateWidget(IntegrationCard old) {
+    super.didUpdateWidget(old);
+    _watchUnlock();
+  }
+
+  void _watchUnlock() {
+    _lockTimer?.cancel();
+    _lockTimer = _unlockUntil == null
+        ? null
+        : Timer.periodic(const Duration(seconds: 15), (_) => _tickUnlock());
+  }
+
+  void _tickUnlock() {
+    final until = _unlockUntil;
+    if (!mounted || until == null) return;
+    if (DateTime.now().isBefore(until)) {
+      setState(() {});
+      return;
+    }
+    _lockTimer?.cancel();
+    widget.onChanged();
+  }
+
+  String _unlockBadge(T t) {
+    final until = _unlockUntil;
+    if (until == null) return t.cSetupUnlockedBadge;
+    final minutes = (until.difference(DateTime.now()).inSeconds / 60).ceil();
+    return t.cSetupUnlockLeft('${minutes < 1 ? 1 : minutes}');
+  }
 
   @override
   void initState() {
     super.initState();
+    _watchUnlock();
     _result = widget.card['last_test'] as Json?;
     for (final f in _fields) {
       final name = f['name'] as String;
@@ -206,24 +255,19 @@ class _IntegrationCardState extends State<IntegrationCard> {
           ..._guide.fields[name]?.suggestions ?? const <String>[],
           ...saved.keys,
         };
-        _map[name] = {
-          for (final k in keys)
-            k: TextEditingController(text: saved[k] as String? ?? ''),
-        };
+        _map[name] = {for (final k in keys) k: TextEditingController()};
       } else if (kind == 'toggle') {
         _toggles[name] = f['set'] == true ? preview == true : null;
       } else {
-        final show = kind == 'text' || kind == 'list';
-        final text = preview is List
-            ? preview.join(', ')
-            : (preview as String? ?? '');
-        _text[name] = TextEditingController(text: show ? text : '');
+        // Saved values are never read back into the box: the server only returns a masked tail.
+        _text[name] = TextEditingController();
       }
     }
   }
 
   @override
   void dispose() {
+    _lockTimer?.cancel();
     for (final c in _text.values) {
       c.dispose();
     }
@@ -258,14 +302,16 @@ class _IntegrationCardState extends State<IntegrationCard> {
     }
   }
 
-  /// 400 is a bad value; 401 and 429 on the payout card are owner-code problems.
+  /// A wrong owner code and too many wrong codes get their own copy on every card, not only on payouts.
   String _errorText(Object e) {
     final t = context.t;
     if (e is! ApiException) return t.error(e);
+    if (e.code == 'totp_invalid') return t.cOwnerCodeWrong;
+    if (e.status == 429) return t.cOwnerCodeLocked;
     return switch (e.status) {
       400 => setupMessage(t, e.code),
-      401 when _code == 'payout' => t.cOwnerCodeWrong,
-      429 when _code == 'payout' => t.cOwnerCodeLocked,
+      409 when e.code == 'card_locked' => t.cSetupLocked,
+      403 => t.cSetupOwnerOnly,
       _ => t.error(e),
     };
   }
@@ -281,8 +327,14 @@ class _IntegrationCardState extends State<IntegrationCard> {
   /// Toss payouts move money: the server refuses a change without the owner's code. Saving also counts a
   /// typed-in toss mode; clearing counts only the saved one. Null means the owner cancelled the prompt.
   Future<Map<String, String>?> _ownerHeaders({required bool clearing}) async {
+    // An open unlock window already carries the owner's code; the server ignores a second one.
+    if (widget.card['unlock_expires_at'] != null) return const {};
+    // The first save of the PortOne card sets where checkout money goes, so it needs the owner too.
     final typedToss = !clearing && _text['mode']?.text.trim() == 'toss';
-    if (_code != 'payout' || !(typedToss || _savedMode == 'toss')) {
+    final needsCode = _code == 'portone'
+        ? !clearing && !_locked
+        : _code == 'payout' && (typedToss || _savedMode == 'toss');
+    if (!needsCode) {
       return const {};
     }
     final code = await askOwnerCode(context);
@@ -294,13 +346,69 @@ class _IntegrationCardState extends State<IntegrationCard> {
     if (mounted) setState(() => _result = r);
   }
 
+  /// Stored values leave the boxes once saved: from here on only the server's masked preview is shown.
+  void _clearTyped() {
+    setState(() {
+      for (final c in _text.values) {
+        c.clear();
+      }
+      for (final m in _map.values) {
+        for (final c in m.values) {
+          c.clear();
+        }
+      }
+      _revealed.clear();
+      // The save clears the server-side test result, so the old one must not show.
+      _result = null;
+    });
+  }
+
+  /// The first typed value that breaks its format, as a server code. Checked before any request is sent.
+  String? _formatProblem() {
+    for (final e in _text.entries) {
+      final bad = formatError(_code, e.key, e.value.text);
+      if (bad != null) return bad;
+    }
+    for (final e in _map.entries) {
+      for (final m in e.value.values) {
+        final bad = formatError(_code, e.key, m.text);
+        if (bad != null) return bad;
+      }
+    }
+    return null;
+  }
+
+  String? _errorFor(String field, String value) {
+    final code = formatError(_code, field, value);
+    return code == null ? null : setupMessage(context.t, code);
+  }
+
   Future<void> _save() => _run(() async {
+    final bad = _formatProblem();
+    if (bad != null) {
+      if (mounted) showToast(context, setupMessage(context.t, bad));
+      return;
+    }
     final headers = await _ownerHeaders(clearing: false);
     if (headers == null || !mounted) return;
     await context.api.put('/admin/setup/$_code', _body(), headers);
     if (!mounted) return;
+    _clearTyped();
     showToast(context, context.t.cSetupSaved);
-    await _test();
+    widget.onChanged();
+  });
+
+  Future<void> _unlock() => _run(() async {
+    final code = await askOwnerCode(context);
+    if (code == null || !mounted) return;
+    await context.api.post('/admin/setup/$_code/unlock', null, null, {
+      ownerTotpHeader: code,
+    });
+    widget.onChanged();
+  });
+
+  Future<void> _lockNow() => _run(() async {
+    await context.api.post('/admin/setup/$_code/lock');
     widget.onChanged();
   });
 
@@ -359,6 +467,10 @@ class _IntegrationCardState extends State<IntegrationCard> {
               runSpacing: Space.xs,
               children: [
                 status,
+                if (widget.card['locked'] == true)
+                  Tag(label: t.cSetupLockedBadge, hue: StatusHues.cancelled),
+                if (widget.card['unlock_expires_at'] != null)
+                  Tag(label: _unlockBadge(t), hue: StatusHues.assigned),
                 if (mode != null)
                   Tag(
                     label: mode == 'live' ? t.cSetupModeLive : t.cSetupModeTest,
@@ -383,19 +495,34 @@ class _IntegrationCardState extends State<IntegrationCard> {
               runSpacing: Space.sm,
               children: [
                 FilledButton.icon(
-                  onPressed: _busy ? null : _save,
+                  onPressed: _busy || _locked ? null : _save,
                   icon: const Icon(Icons.save_rounded),
                   label: Text(t.cSetupSave),
                 ),
                 if (configured)
                   OutlinedButton.icon(
-                    onPressed: _busy ? null : () => _run(_test),
+                    onPressed: _busy || _locked ? null : () => _run(_test),
                     icon: const Icon(Icons.wifi_tethering_rounded),
-                    label: Text(t.cSetupTest),
+                    label: Text(
+                      _code == 'portone' ? t.cSetupTestApiKey : t.cSetupTest,
+                    ),
+                  ),
+                if (widget.card['locked'] == true &&
+                    widget.card['source'] == 'console')
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _unlock,
+                    icon: const Icon(Icons.lock_open_rounded),
+                    label: Text(t.cSetupUnlock),
+                  ),
+                if (widget.card['unlock_expires_at'] != null)
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _lockNow,
+                    icon: const Icon(Icons.lock_rounded),
+                    label: Text(t.cSetupLockNow),
                   ),
                 if (widget.card['source'] == 'console')
                   TextButton(
-                    onPressed: _busy ? null : _clear,
+                    onPressed: _busy || _locked ? null : _clear,
                     child: Text(t.cSetupClear),
                   ),
                 if (_busy)
@@ -414,6 +541,43 @@ class _IntegrationCardState extends State<IntegrationCard> {
     );
   }
 
+  Widget _revealToggle(String name) {
+    final t = context.t;
+    final shown = _revealed.contains(name);
+    return IconButton(
+      tooltip: shown ? t.cSetupHide : t.cSetupShow,
+      icon: Icon(
+        shown ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+      ),
+      onPressed: () {
+        setState(() => shown ? _revealed.remove(name) : _revealed.add(name));
+      },
+    );
+  }
+
+  Widget _slotField(
+    BuildContext context,
+    MapEntry<String, TextEditingController> e,
+    bool saved,
+  ) {
+    final t = context.t;
+    final hint = _slotHint(t, e.key);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.xs),
+      child: TextField(
+        controller: e.value,
+        enabled: !_locked,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          labelText: slotLabels[e.key]?.of(context.lang) ?? e.key,
+          helperText: saved ? '${t.cSetupKeepValue} · $hint' : hint,
+          isDense: true,
+          errorText: _errorFor('channel_keys', e.value.text),
+        ),
+      ),
+    );
+  }
+
   Widget _field(BuildContext context, Json f) {
     final t = context.t;
     final name = f['name'] as String;
@@ -423,6 +587,10 @@ class _IntegrationCardState extends State<IntegrationCard> {
         '${localFields['$_code.$name']?.label(t) ?? g?.label.of(context.lang) ?? name}${f['required'] == true ? '' : ' (${t.cSetupOptional})'}';
     final saved = f['set'] == true;
     if (kind == 'map') {
+      final entries = _map[name]!.entries;
+      final savedSlots = f['preview'] is Map
+          ? (f['preview'] as Map).keys.cast<String>().toSet()
+          : const <String>{};
       return Padding(
         padding: const EdgeInsets.only(bottom: Space.sm),
         child: Column(
@@ -430,14 +598,16 @@ class _IntegrationCardState extends State<IntegrationCard> {
           children: [
             Text(label, style: context.text.labelLarge),
             const SizedBox(height: Space.xs),
-            for (final e in _map[name]!.entries)
-              Padding(
-                padding: const EdgeInsets.only(bottom: Space.xs),
-                child: TextField(
-                  controller: e.value,
-                  decoration: InputDecoration(labelText: e.key, isDense: true),
-                ),
-              ),
+            for (final e in entries)
+              if (!otherSlotKeys.contains(e.key))
+                _slotField(context, e, savedSlots.contains(e.key)),
+            if (entries.any((e) => otherSlotKeys.contains(e.key))) ...[
+              const SizedBox(height: Space.xs),
+              Text(t.cSetupOtherMethods, style: context.text.labelMedium),
+              for (final e in entries)
+                if (otherSlotKeys.contains(e.key))
+                  _slotField(context, e, savedSlots.contains(e.key)),
+            ],
           ],
         ),
       );
@@ -451,19 +621,22 @@ class _IntegrationCardState extends State<IntegrationCard> {
         onChanged: (on) => setState(() => _toggles[name] = on),
       );
     }
-    final hidden = kind == 'secret' || kind == 'file';
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.sm),
       child: TextField(
         controller: _text[name],
-        obscureText: kind == 'secret',
+        enabled: !_locked,
+        onChanged: (_) => setState(() {}),
+        obscureText: kind == 'secret' && !_revealed.contains(name),
         maxLines: kind == 'file' ? 6 : 1,
         minLines: 1,
         autocorrect: false,
         enableSuggestions: false,
         decoration: InputDecoration(
           labelText: label,
-          helperText: hidden && saved
+          errorText: _errorFor(name, _text[name]!.text),
+          suffixIcon: kind == 'secret' ? _revealToggle(name) : null,
+          helperText: saved
               ? '${t.cSetupKeepValue} · ${preview ?? ''}'
               : localFields['$_code.$name']?.hint(t) ??
                     g?.hint?.of(context.lang),
@@ -472,6 +645,15 @@ class _IntegrationCardState extends State<IntegrationCard> {
     );
   }
 }
+
+/// Where each PortOne channel key comes from. Billing and identity have keys of their own.
+String _slotHint(T t, String slot) => switch (slot) {
+  'card' => t.cSlotHintCard,
+  'card_billing' => t.cSlotHintBilling,
+  'identity' => t.cSlotHintIdentity,
+  'cash_receipt' => t.cSlotHintCashReceipt,
+  _ => t.cSlotHintMethod,
+};
 
 class _Steps extends StatelessWidget {
   const _Steps({required this.guide});
@@ -560,7 +742,7 @@ class _CopyRow extends StatelessWidget {
       title: Text(label, style: context.text.labelLarge),
       subtitle: SelectableText(value),
       trailing: IconButton(
-        tooltip: context.t.cCopied,
+        tooltip: context.t.cCopy,
         icon: const Icon(Icons.copy_rounded),
         onPressed: () async {
           await Clipboard.setData(ClipboardData(text: value));

@@ -2934,6 +2934,26 @@ class TKo extends T {
   String get err_team_full => '팀 인원이 가득 찼어요.';
 
   @override
+  String get err_invalid_store_id => '상점 아이디는 store-로 시작해야 해요.';
+
+  @override
+  String get err_invalid_api_secret =>
+      'V2 API Secret 형식이 맞지 않아요. 공백 없이 전체를 붙여넣어 주세요.';
+
+  @override
+  String get err_invalid_channel_key => '채널 키는 channel-key-로 시작해야 해요.';
+
+  @override
+  String get err_unknown_channel_key => '이 결제수단 칸은 알 수 없어요.';
+
+  @override
+  String get err_invalid_secret_key => '시크릿 키는 test_sk_ 또는 live_sk_로 시작해야 해요.';
+
+  @override
+  String get err_invalid_security_key =>
+      '보안 키는 0~9, a~f 글자 64개예요. 토스 개발자센터에서 그대로 복사해 붙여넣어 주세요.';
+
+  @override
   String get err_invalid_webhook_secret => '웹훅 시크릿은 whsec_로 시작해야 해요.';
 
   @override
@@ -5701,7 +5721,25 @@ class TKo extends T {
   String get cSetupSaved => '저장했어요';
 
   @override
-  String get cSetupTest => '연결 테스트';
+  String get cSetupTest => '연결 확인';
+
+  @override
+  String get cSetupLockNow => '잠그기';
+
+  @override
+  String get cSetupShow => '보기';
+
+  @override
+  String get cSetupHide => '숨기기';
+
+  @override
+  String get cSetupUnlockedBadge => '잠금 해제됨';
+
+  @override
+  String get cSetupOwnerOnly => '소유자만 잠금을 풀 수 있어요';
+
+  @override
+  String get cPaymentsTitle => '결제 연결';
 
   @override
   String get cSetupClear => '연결 해제';
@@ -5738,6 +5776,18 @@ class TKo extends T {
 
   @override
   String get cCopied => '복사했어요';
+
+  @override
+  String get cCopy => '복사';
+
+  @override
+  String get cSetupLocked => '잠긴 카드예요. 소유자가 잠금을 풀어야 바꿀 수 있어요';
+
+  @override
+  String get cSetupLockedBadge => '잠김';
+
+  @override
+  String get cSetupUnlock => '잠금 해제 (소유자 코드)';
 
   @override
   String get cSetupDevMode => '테스트 모드예요. 실제 결제·문자는 나가지 않아요';
@@ -5814,6 +5864,38 @@ class TKo extends T {
 
   @override
   String get cInvalidValue => '입력값을 확인해 주세요';
+
+  @override
+  String get cSetupNothingSaved => '저장된 값이 없어요. 먼저 저장한 뒤 잠금을 풀어 주세요';
+
+  @override
+  String cSetupUnlockLeft(String minutes) {
+    return '$minutes분 후 잠겨요';
+  }
+
+  @override
+  String get cSetupTestApiKey => 'API 키 확인';
+
+  @override
+  String get cSetupNeedsKey => '채널 키를 먼저 넣어요';
+
+  @override
+  String get cSetupOtherMethods => '기타 결제수단';
+
+  @override
+  String get cSlotHintCard => 'PortOne 콘솔의 채널 목록에서 일반결제(카드) 채널 키를 복사하세요';
+
+  @override
+  String get cSlotHintBilling => '정기결제(빌링키) 채널 키예요. 비워 두면 카드 채널 키를 써요';
+
+  @override
+  String get cSlotHintIdentity => '본인인증 채널 키예요. 본인인증 로그인에 쓰여요';
+
+  @override
+  String get cSlotHintCashReceipt => '현금영수증 채널 키예요. 서버에서만 쓰고 고객 앱에는 보내지 않아요';
+
+  @override
+  String get cSlotHintMethod => '이 결제수단의 채널 키를 PortOne 콘솔에서 복사하세요';
 
   @override
   String get sgConsentHint => '필수 항목에 동의해야 인증번호를 받을 수 있어요.';
