@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

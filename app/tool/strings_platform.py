@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console platform strings: feature switches, maintenance mode, app error reports. Columns: ko (source), en.
 # i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)
 S = {

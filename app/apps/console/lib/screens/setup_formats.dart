@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'dart:convert';
 
 /// Client-side format checks for payment keys. They mirror the server (`integrations::apply`), which stays

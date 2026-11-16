@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:flutter/material.dart';
 
 /// Brand is data, not code: swap name, colors and logo here (or load from

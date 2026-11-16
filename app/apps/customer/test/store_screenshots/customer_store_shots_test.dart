@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Store screenshots for the customer app. Excluded from normal runs (tag `store_screenshots`).
 // Generate with `scripts/store/generate.sh` (see docs/guide/03-앱-출시.md). Writes PNGs under
 // build/store_shots/raw/customer/<device>/<lang>/NN-name.png; scripts/store/frame.js adds captions.

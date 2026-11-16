@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:core/core.dart';
 
 /// Values the owner can pick for a group's tap behaviour and move-chooser questions.

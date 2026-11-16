@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'api.dart';
 
 /// One road-address result from the server's juso.go.kr proxy.

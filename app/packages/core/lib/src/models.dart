@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Plain immutable models mirroring the API JSON. Hand-written: no codegen step.
 
 typedef Json = Map<String, dynamic>;

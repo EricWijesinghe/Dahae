@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:ui/ui.dart';

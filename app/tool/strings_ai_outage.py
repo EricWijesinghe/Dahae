@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # AI outage banner for the console inbox: shown while the AI's replies keep failing to connect.
 # Columns: ko (source), en.
 S = {

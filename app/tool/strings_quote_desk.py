@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console quote desk: Korean labels for customer quote answers and the estimate breakdown.
 # Columns: ko (source), en.
 S = {

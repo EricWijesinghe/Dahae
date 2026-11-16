@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Home groups (CR-2/CR-3/CR-4): move-in chooser (신축/구축, home size with "예상 견적") and
 # the floor question shown when there is no elevator.
 # Columns: ko (source), en.

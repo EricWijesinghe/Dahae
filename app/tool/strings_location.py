@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # "Use my current location" on the customer address form, and its 위치기반서비스 이용약관 consent.
 # Columns: ko (source), en.
 # i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)

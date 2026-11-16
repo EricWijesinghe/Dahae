@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console: customer rights requests screen (열람 사본, 탈퇴 처리, 처리 기록). Owner-facing, plain Korean first.
 # Columns: ko (source), en.
 S = {

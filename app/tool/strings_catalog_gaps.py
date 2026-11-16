@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console catalogue additions: new service, archive, peak and quality rules, schedule edit, sample data.
 # Columns: ko (source), en.
 S = {

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:customer/screens/booking_address.dart';
 import 'package:customer/screens/cancel_booking_sheet.dart';
 import 'package:flutter_test/flutter_test.dart';

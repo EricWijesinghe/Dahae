@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Payment confirmation wait (customer app): the PG approved but the server's answer is late.
 # Columns: ko (source), en.
 

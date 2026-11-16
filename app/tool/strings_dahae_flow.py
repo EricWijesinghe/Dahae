@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Dahae booking flows (U5, owner design PDF p07-p22): studio detail/scope, AC, address, date/time,
 # prep tools, checkout (PG notice), move-in/out 7 steps, request status. One row per key.
 # Columns: ko (source), en. S below is derived for gen_arb.py.

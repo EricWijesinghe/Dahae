@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:console/screens/inbox.dart';
 import 'package:ui/ui.dart';
 import 'package:core/core.dart';

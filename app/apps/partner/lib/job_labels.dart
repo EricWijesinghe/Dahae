@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:core/core.dart';
 
 /// One counts option in the owner's catalogue order: its key and the owner's label (null for built-in options).

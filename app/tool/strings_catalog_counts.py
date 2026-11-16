@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console counted-pricing editor (수량 선택 상품): options, per-option cap, multi-item discount, live preview.
 # Columns: ko (source), en.
 S = {

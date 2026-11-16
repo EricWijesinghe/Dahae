@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 part of 'booking_detail.dart';
 
 class _Timeline extends StatelessWidget {

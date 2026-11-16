@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console inbox: booking summary card above a conversation (K-03) and the quote-sent timeline entry (K-04).
 # Columns: ko (source), en.
 S = {

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:flutter/painting.dart';
 
 /// WCAG AA threshold for body-size text and labels on a fill.

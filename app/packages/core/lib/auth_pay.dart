@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 /// Social sign-in, identity verification, checkout and the payment window.
 /// Apps import this next to 'package:core/core.dart'.
 library;

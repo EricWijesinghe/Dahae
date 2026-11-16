@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Reported reviews waiting for a staff decision: keep, hide, or delete the review, and optionally
 // restrict its author from posting reviews. The server writes an audit row for each action.
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'dart:async';
 
 // Growth widgets: honest social proof, the review sheet with photos, and the referral card.

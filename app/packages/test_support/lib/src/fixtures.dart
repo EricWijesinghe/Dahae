@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:core/core.dart';
 
 /// JSON builders shaped exactly like the API responses the app parses (see packages/core/lib/src/models.dart).

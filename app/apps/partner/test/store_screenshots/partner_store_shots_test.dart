@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Store screenshots for the partner app. Excluded from normal runs (tag `store_screenshots`).
 // Generate with `scripts/store/generate.sh`. PNGs land in build/store_shots/raw/partner/<device>/<lang>/.
 @Tags(['store_screenshots'])

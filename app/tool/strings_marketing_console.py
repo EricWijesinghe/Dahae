@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console campaign builder and analytics views. Columns: ko (source), en.
 # i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)
 # {name} placeholders must match across languages (checked by gen_arb.py).

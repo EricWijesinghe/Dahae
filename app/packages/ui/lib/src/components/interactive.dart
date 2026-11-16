@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/physics.dart';
 import 'package:flutter/material.dart';

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'api.dart';
 
 /// Keeps this device's push token registered to the signed-in account (/v1/me/push-token).

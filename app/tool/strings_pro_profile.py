@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console: cleaner verification checklist and employee profile (people screen). Columns: ko (source), en.
 S = {
   "cPfTitle": ["직원 프로필 · 검증", "Staff profile · verification"],

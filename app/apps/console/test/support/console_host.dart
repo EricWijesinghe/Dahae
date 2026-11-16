@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:console/main.dart';
 import 'package:console/state.dart';
 import 'package:core/core.dart';

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Tax and receipt strings: owner console (VAT, withholding, cash receipts, tax invoices), partner earnings and the
 # customer checkout receipt options. Columns: ko (source), en.
 # i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)

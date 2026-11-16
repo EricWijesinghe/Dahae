@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # NTD customer gap fixes: option and service names the catalogue uses that had no label
 # (mattress option, window and disinfection short names, whole-home service) and the
 # studio 10평 footnote from the design. Columns: ko (source), en.

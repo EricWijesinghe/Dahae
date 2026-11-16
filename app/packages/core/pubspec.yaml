@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 name: core
 description: API client, auth session, realtime, models and translations shared by all apps.
 publish_to: none

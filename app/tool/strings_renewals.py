@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Console: renewal calendar (갱신 일정). Owner-facing, plain Korean first. Columns: ko (source), en.
 S = {
     "rnwTitle": ["갱신 일정", "Renewal calendar"],

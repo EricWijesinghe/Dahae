@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 part of 'booking_flow.dart';
 
 /// "{name}님 서비스 전 꼭 준비해 주세요!" (design p11): the tools to have ready, then checkout.

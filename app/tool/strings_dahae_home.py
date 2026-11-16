@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Dahae home: section headings, the all/PICK toggle, tile badges, the news list and the
 # console welcome-coupon editor.
 # Columns: ko (source), en.

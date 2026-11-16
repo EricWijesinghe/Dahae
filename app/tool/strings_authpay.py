@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Social sign-in, identity, checkout and virtual-account strings. Columns: ko (source), en.
 # i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)
 # Brand names (KakaoPay, PAYCO, Apple Pay, ...) stay as written in every language.
