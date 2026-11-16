@@ -468,7 +468,8 @@ t  "web mounts progress read-only"       grep -qF ":/srv/ops-progress:ro]" "$ROO
 t  "Caddy progress route is no-store"    grep -qF 'Cache-Control "no-store"' "$ROOT/deploy/Caddyfile"
 # edge logs: rotated JSON access log, secrets in query strings redacted, probes answer 404 publicly
 t  "Caddy access log rotates 14 files"   grep -qF "roll_keep 14" "$ROOT/deploy/Caddyfile"
-t  "Caddy access log redacts the ws ticket, signed links and ops-progress token" grep -qF '(ops-progress/|[?&](ticket|token|sig|code|state)=)' "$ROOT/deploy/Caddyfile"
+t  "Caddy access log drops every query string and the ops-progress token" grep -qF '(ops-progress/|[?]).*' "$ROOT/deploy/Caddyfile"
+t  "Caddy access log keeps 3 months at most" grep -qF "roll_keep_for 2160h" "$ROOT/deploy/Caddyfile"
 t  "Caddy /ready and /metrics answer 404" grep -qF "@internal path /ready /metrics" "$ROOT/deploy/Caddyfile"
 t  "uptime-kuma is opt-in and loopback-only" grep -qF 'profiles: [monitoring]' "$ROOT/deploy/docker-compose.yml"
 t  "embedded compose has the access log volume" grep -qF "caddylogs:/var/log/caddy" "$SB/compose/docker-compose.yml"

@@ -24,6 +24,7 @@ done
 # Behaviour, not only parsing: requests carrying the secrets must reach the access log redacted, and /ready must be
 # 404 from outside. TLS_MODE=internal because CI has no public DNS; the parse loop above covers the public case.
 ticket=SECRETTICKET123 token=SECRETTOKEN456 sig=SECRETSIG789 progress=0123456789abcdef0123456789abcdef
+phone=01099998888 name=ZZNAMEQUERY
 # shellcheck disable=SC2016 # expanded by the shell inside the container
 probe='mkdir -p /var/log/caddy
 caddy run --config /etc/caddy/Caddyfile --adapter caddyfile >/tmp/caddy.log 2>&1 &
@@ -32,18 +33,20 @@ i=0; while [ -z "$(st /health)" ] && [ "$i" -lt 30 ]; do sleep 1; i=$((i + 1)); 
 st "/v1/ws?ticket=$TICKET" >/dev/null
 st "/v1/files?token=$TOKEN&sig=$SIG" >/dev/null
 st "/ops-progress/$PROGRESS" >/dev/null
+st "/v1/admin/privacy/customers?phone=$PHONE" >/dev/null
+st "/v1/admin/customers?q=$NAME" >/dev/null
 echo "READY=$(st /ready)"
 cat /var/log/caddy/access.log'
 if ! out=$(docker run --rm --add-host shop.example.com:127.0.0.1 \
     -e DOMAIN=shop.example.com -e ACME_EMAIL=owner@example.com -e TLS_MODE=internal \
-    -e "TICKET=$ticket" -e "TOKEN=$token" -e "SIG=$sig" -e "PROGRESS=$progress" \
+    -e "TICKET=$ticket" -e "TOKEN=$token" -e "SIG=$sig" -e "PROGRESS=$progress" -e "PHONE=$phone" -e "NAME=$name" \
     -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" "$img" sh -c "$probe"); then
   echo "::error::edge redaction check could not run Caddy"; exit 1
 fi
-for s in "$ticket" "$token" "$sig" "$progress"; do
+for s in "$ticket" "$token" "$sig" "$progress" "$phone" "$name"; do
   if grep -qF "$s" <<< "$out"; then echo "::error::edge access log keeps secret $s"; fail=1; fi
 done
-for r in 'ticket=REDACTED' 'token=REDACTED' 'sig=REDACTED' '/ops-progress/REDACTED'; do
+for r in '/v1/ws?REDACTED' '/v1/files?REDACTED' '/ops-progress/REDACTED' '/v1/admin/customers?REDACTED'; do
   grep -qF "$r" <<< "$out" || { echo "::error::edge access log lacks $r"; fail=1; }
 done
 grep -qxF 'READY=404' <<< "$out" || { echo "::error::/ready is not 404 at the edge"; fail=1; }

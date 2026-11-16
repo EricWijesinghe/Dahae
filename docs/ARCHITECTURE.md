@@ -114,7 +114,7 @@ The API uses `DB_MAX_CONNECTIONS=20`; PostgreSQL runs with `max_connections=50` 
 | `dbdata` | named volume | `db` | PostgreSQL data |
 | `uploads` | named volume | `api` at `/data/uploads` | Customer and partner photos ([`routes/uploads.rs`](../backend/crates/api/src/routes/uploads.rs)) |
 | `caddydata`, `caddyconfig` | named volumes | `web` | Certificates and Caddy config |
-| `caddylogs` | named volume | `web` | JSON access log, 10 MB x 14 files, query secrets redacted ([`deploy/Caddyfile`](../deploy/Caddyfile)) |
+| `caddylogs` | named volume | `web` | JSON access log, 10 MB x 14 files, query strings dropped ([`deploy/Caddyfile`](../deploy/Caddyfile)) |
 | `kumadata` | named volume | `uptime-kuma` | Monitor data |
 | `/opt/malkkeum/jobs/inbox` | host bind, rw | `api` | The API writes server job files here |
 | `/opt/malkkeum/jobs/status`, `out` | host bind, ro | `api` | Job state and results written by the root job runner |

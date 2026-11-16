@@ -24,22 +24,23 @@
 	import tls-{$TLS_MODE}
 	encode zstd gzip
 
-	# JSON access log in the caddylogs volume: 10 MB per file, 14 files kept. Query strings carry secrets (websocket
-	# ticket, signed upload links, OAuth code and state) and the ops-progress path carries its token, so those values
-	# are replaced before anything is written. One regexp covers both: a field takes one filter only.
+	# JSON access log in the caddylogs volume: 10 MB per file, 14 files kept, 3 months at most (the retention rule in docs/privacy-retention.md). Every query string is
+	# dropped before anything is written (admin lookups carry phone numbers, names and addresses, and secrets such as
+	# the websocket ticket or signed links), and the ops-progress path's token too. One regexp covers both.
 	# shortcut: no edge rate limit on /v1/auth/*, the stock caddy image has no rate_limit module; add one (custom
 	#   image via xcaddy with mholt/caddy-ratelimit) or keep the app-level buckets (ratelimit.rs), when the edge needs it.
 	log {
 		output file /var/log/caddy/access.log {
 			roll_size 10mb
 			roll_keep 14
+			roll_keep_for 2160h
 		}
 		format filter {
 			wrap json
 			fields {
 				request>headers>Authorization delete
 				request>headers>Cookie delete
-				request>uri regexp "(ops-progress/|[?&](ticket|token|sig|code|state)=)[^?&#]*" "${1}REDACTED"
+				request>uri regexp "(ops-progress/|[?]).*" "${1}REDACTED"
 			}
 		}
 	}
