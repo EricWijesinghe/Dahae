@@ -533,6 +533,27 @@ async fn planned_visits_hold_the_slot_so_a_later_subscription_is_placed_elsewher
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn a_paused_subscription_releases_its_planned_seats(pool: PgPool) {
+    seed_catalog(&pool).await;
+    sqlx::query("INSERT INTO slot_capacity (start_hour, capacity) VALUES (9, 1) ON CONFLICT (start_hour) DO UPDATE SET capacity = 1")
+        .execute(&pool)
+        .await
+        .expect("capacity");
+    let (app, _) = app_and_state(pool.clone());
+    let weekday = weekday_index(kst_today() + Duration::days(1));
+    let first = customer(&app, &pool, "010-7000-0034").await;
+    let second = customer(&app, &pool, "010-7000-0035").await;
+    let (_, body) = subscribe(&app, &first, weekday, 1, 9, None).await;
+    let id = sub_id(&body);
+    let (st, _) = call(&app, "POST", &format!("/v1/subscriptions/{id}/pause"), Some(first.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK);
+    // A paused subscription charges nothing, so its planned visits must not keep the 9 o'clock seat.
+    let (st, body) = subscribe(&app, &second, weekday, 1, 9, None).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert!(visits(&body).iter().all(|v| v["start_hour"] == 9), "{body}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn a_full_slot_at_charge_time_is_retried_without_pausing_for_payment(pool: PgPool) {
     seed_catalog(&pool).await;
     let (app, state) = app_and_state(pool.clone());

@@ -241,9 +241,10 @@ pub async fn lock_and_count_slot(conn: &mut PgConnection, date: NaiveDate, hour:
             .bind(except)
             .fetch_one(&mut *conn)
             .await?;
-    // A planned subscription visit holds its seat until it is charged and booked.
+    // A planned visit of an active subscription holds its seat until it is charged and booked; a paused one releases it.
     let planned: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM subscription_visits WHERE state = 'planned' AND visit_date = $1 AND start_hour = $2 AND ($3::uuid IS NULL OR id <> $3)",
+        "SELECT count(*) FROM subscription_visits v JOIN subscriptions s ON s.id = v.subscription_id
+         WHERE v.state = 'planned' AND s.status = 'active' AND v.visit_date = $1 AND v.start_hour = $2 AND ($3::uuid IS NULL OR v.id <> $3)",
     )
     .bind(date)
     .bind(i16::from(hour))
