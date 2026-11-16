@@ -100,7 +100,10 @@ pub fn visit_price(list: i64, discount_percent: u8) -> Result<VisitPrice, Domain
     }
     let list = list.max(0);
     let discount = list * i64::from(discount_percent) / 100;
-    Ok(VisitPrice { discount, total: list - discount })
+    Ok(VisitPrice {
+        discount,
+        total: list - discount,
+    })
 }
 
 /// Monthly recurring revenue of one subscription: per-visit price times visits per month (52 / 12 / weeks), rounded.
@@ -197,9 +200,18 @@ mod tests {
     #[test]
     fn visits_step_by_cadence_and_stay_in_window() {
         let anchor = d(2026, 11, 16); // a Monday
-        assert_eq!(visit_dates(anchor, Cadence::Weekly, d(2026, 11, 1), d(2026, 11, 30)), vec![d(2026, 11, 16), d(2026, 11, 23), d(2026, 11, 30)]);
-        assert_eq!(visit_dates(anchor, Cadence::Biweekly, d(2026, 11, 17), d(2026, 12, 15)), vec![d(2026, 11, 30), d(2026, 12, 14)]);
-        assert_eq!(visit_dates(anchor, Cadence::Every4Weeks, d(2026, 11, 1), d(2026, 12, 31)), vec![d(2026, 11, 16), d(2026, 12, 14)]);
+        assert_eq!(
+            visit_dates(anchor, Cadence::Weekly, d(2026, 11, 1), d(2026, 11, 30)),
+            vec![d(2026, 11, 16), d(2026, 11, 23), d(2026, 11, 30)]
+        );
+        assert_eq!(
+            visit_dates(anchor, Cadence::Biweekly, d(2026, 11, 17), d(2026, 12, 15)),
+            vec![d(2026, 11, 30), d(2026, 12, 14)]
+        );
+        assert_eq!(
+            visit_dates(anchor, Cadence::Every4Weeks, d(2026, 11, 1), d(2026, 12, 31)),
+            vec![d(2026, 11, 16), d(2026, 12, 14)]
+        );
         assert!(visit_dates(anchor, Cadence::Weekly, d(2026, 12, 1), d(2026, 11, 1)).is_empty());
     }
 
@@ -217,7 +229,10 @@ mod tests {
                     assert!(got.iter().all(|v| (*v - anchor).num_days().rem_euclid(step) == 0), "off-cadence: {got:?}");
                     assert!(got.windows(2).all(|w| (w[1] - w[0]).num_days() == step), "gap: {got:?}");
                     // Nothing on the cadence inside the window is missed.
-                    let expected = (0..=HORIZON_DAYS).map(|i| from + Duration::days(i)).filter(|v| (*v - anchor).num_days() >= 0 && (*v - anchor).num_days().rem_euclid(step) == 0).count();
+                    let expected = (0..=HORIZON_DAYS)
+                        .map(|i| from + Duration::days(i))
+                        .filter(|v| (*v - anchor).num_days() >= 0 && (*v - anchor).num_days().rem_euclid(step) == 0)
+                        .count();
                     assert_eq!(got.len(), expected, "anchor {anchor} window {from}");
                 }
             }
@@ -227,7 +242,13 @@ mod tests {
     #[test]
     fn visit_price_discounts_and_bounds() {
         assert_eq!(visit_price(50_000, 0), Ok(VisitPrice { discount: 0, total: 50_000 }));
-        assert_eq!(visit_price(50_000, 10), Ok(VisitPrice { discount: 5_000, total: 45_000 }));
+        assert_eq!(
+            visit_price(50_000, 10),
+            Ok(VisitPrice {
+                discount: 5_000,
+                total: 45_000
+            })
+        );
         // Rounds the discount down: 10% of 12_345 is 1_234.5 -> 1_234.
         assert_eq!(visit_price(12_345, 10).unwrap().discount, 1_234);
         assert_eq!(visit_price(50_000, 31), Err(DomainError::OutOfRange("discount_percent")));
@@ -300,7 +321,19 @@ mod tests {
     #[test]
     fn policy_bounds() {
         assert!(Policy::default().validate().is_ok());
-        assert!(Policy { discount_percent: MAX_DISCOUNT_PERCENT }.validate().is_ok());
-        assert!(Policy { discount_percent: MAX_DISCOUNT_PERCENT + 1 }.validate().is_err());
+        assert!(
+            Policy {
+                discount_percent: MAX_DISCOUNT_PERCENT
+            }
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            Policy {
+                discount_percent: MAX_DISCOUNT_PERCENT + 1
+            }
+            .validate()
+            .is_err()
+        );
     }
 }

@@ -90,13 +90,24 @@ pub struct FeedCard {
 }
 
 fn card(kind: CardKind, score: u32, reason: &'static str) -> FeedCard {
-    FeedCard { kind, score, service: None, partner_id: None, reason, facts: 0, district: None }
+    FeedCard {
+        kind,
+        score,
+        service: None,
+        partner_id: None,
+        reason,
+        facts: 0,
+        district: None,
+    }
 }
 
 /// Resume the quote the customer left half-finished on this device. Highest: they were about to buy.
 fn resume_quote(f: &FeedFacts) -> Option<FeedCard> {
     let service = f.draft_service.clone()?;
-    Some(FeedCard { service: Some(service), ..card(CardKind::ResumeQuote, 1000, "draft_unfinished") })
+    Some(FeedCard {
+        service: Some(service),
+        ..card(CardKind::ResumeQuote, 1000, "draft_unfinished")
+    })
 }
 
 /// Next cleaning due: the most overdue service whose cadence has come up (within a week).
@@ -138,11 +149,20 @@ fn seasonal(today: NaiveDate) -> Option<FeedCard> {
         let lead = (*h - today).num_days();
         (0..=HOLIDAY_LEAD_DAYS).contains(&lead)
     }) {
-        return Some(FeedCard { facts: (holiday - today).num_days(), ..card(CardKind::Seasonal, 520, "holiday_deep_clean") });
+        return Some(FeedCard {
+            facts: (holiday - today).num_days(),
+            ..card(CardKind::Seasonal, 520, "holiday_deep_clean")
+        });
     }
     match today.month() {
-        5 | 6 => Some(FeedCard { service: Some("aircon".into()), ..card(CardKind::Seasonal, 500, "summer_aircon") }),
-        2 | 3 | 8 | 9 => Some(FeedCard { service: Some("move_in".into()), ..card(CardKind::Seasonal, 450, "moving_peak") }),
+        5 | 6 => Some(FeedCard {
+            service: Some("aircon".into()),
+            ..card(CardKind::Seasonal, 500, "summer_aircon")
+        }),
+        2 | 3 | 8 | 9 => Some(FeedCard {
+            service: Some("move_in".into()),
+            ..card(CardKind::Seasonal, 450, "moving_peak")
+        }),
         _ => None,
     }
 }
@@ -212,11 +232,20 @@ mod tests {
     }
 
     fn facts(today: NaiveDate) -> FeedFacts {
-        FeedFacts { today: Some(today), marketing_consent: true, ..Default::default() }
+        FeedFacts {
+            today: Some(today),
+            marketing_consent: true,
+            ..Default::default()
+        }
     }
 
     fn clean(service: &str, on: NaiveDate, rating: Option<i16>, partner: Option<&str>) -> LastClean {
-        LastClean { service: service.into(), completed_on: on, partner_id: partner.map(str::to_owned), rating }
+        LastClean {
+            service: service.into(),
+            completed_on: on,
+            partner_id: partner.map(str::to_owned),
+            rating,
+        }
     }
 
     fn kinds(cards: &[FeedCard]) -> Vec<CardKind> {
@@ -238,7 +267,10 @@ mod tests {
         assert_eq!((due.service.as_deref(), due.facts, due.reason), (Some("studio"), 24, "cadence_due"));
 
         f.last_cleans = vec![clean("studio", today - Duration::days(10), None, None)];
-        assert!(!rank(&f).iter().any(|c| c.kind == CardKind::NextDue), "10 days into a 28-day cadence is not due");
+        assert!(
+            !rank(&f).iter().any(|c| c.kind == CardKind::NextDue),
+            "10 days into a 28-day cadence is not due"
+        );
     }
 
     #[test]
@@ -325,7 +357,11 @@ mod tests {
     #[test]
     fn guest_feed_has_no_personal_or_marketing_cards() {
         let today = day(2026, 6, 3);
-        let guest = FeedFacts { today: Some(today), district: Some(("송파구".into(), 40)), ..Default::default() };
+        let guest = FeedFacts {
+            today: Some(today),
+            district: Some(("송파구".into(), 40)),
+            ..Default::default()
+        };
         assert_eq!(kinds(&rank(&guest)), vec![CardKind::Seasonal, CardKind::DistrictProof]);
     }
 
