@@ -509,6 +509,7 @@ def check_web():
     check('name="referrer" content="no-referrer"' in page, "website/auth/naver/callback.html: must send no Referer")
     check("<script" not in page.lower(), "website/auth/naver/callback.html: no script may read the one-time code")
     caddy = (REPO / "deploy" / "Caddyfile").read_text(encoding="utf-8")
+    check_edge_log(caddy)
     m = re.search(r"@api path ([^\n]+)", caddy)
     api_paths = m.group(1).split() if m else []
     for want in ["/.well-known/assetlinks.json", "/.well-known/apple-app-site-association"]:
@@ -533,6 +534,29 @@ def check_web():
     compose =(REPO / "deploy" / "docker-compose.yml").read_text(encoding="utf-8")
     check("ANDROID_CERT_SHA256" in compose and "APPLE_TEAM_ID" in compose,
           "deploy/docker-compose.yml: API needs ANDROID_CERT_SHA256 and APPLE_TEAM_ID")
+
+
+def check_edge_log(caddy):
+    """Query strings reach the access log only after the regexp redacts them: admin lookups carry phone numbers,
+    names and addresses, so the whole query must go, not a list of secret keys."""
+    m = re.search(r'request>uri regexp "([^"]*)" "([^"]*)"', caddy)
+    check(m is not None, "deploy/Caddyfile: access log must redact request>uri with a regexp")
+    if m is None:
+        return
+    pattern, repl = m.group(1), m.group(2).replace("${1}", "\\1")
+    samples = {
+        "/v1/admin/privacy/customers?phone=01012345678": "01012345678",
+        "/v1/admin/customers?q=%ED%99%8D%EA%B8%B8%EB%8F%99&page=2": "%ED%99%8D",
+        "/v1/admin/bookings?q=Seoul+Gangnam-gu+Teheran-ro": "Gangnam",
+        "/v1/ws?ticket=SECRETTICKET123": "SECRETTICKET123",
+        "/ops-progress/0123456789abcdef0123456789abcdef": "0123456789abcdef",
+    }
+    for uri, secret in samples.items():
+        out = re.sub(pattern, repl, uri)
+        check(secret not in out, f"deploy/Caddyfile: access log keeps query/path data from {uri.split('?')[0]}")
+    check(re.sub(pattern, repl, "/v1/admin/customers?q=x") == "/v1/admin/customers?REDACTED",
+          "deploy/Caddyfile: a redacted query must leave the path and a REDACTED marker")
+    check(re.search(r"roll_keep_for \S+", caddy) is not None, "deploy/Caddyfile: access log needs a time-based retention (roll_keep_for)")
 
 
 def check_site_csp(caddy):
