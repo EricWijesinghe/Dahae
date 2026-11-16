@@ -1365,6 +1365,7 @@
  "oRuleUnassigned": "Confirmed bookings with no pro for a long time",
  "oRuleSameDayCancel": "High same-day cancellations",
  "oRuleTaxDeadline": "VAT filing deadline approaching",
+ "oRulePayoutUnconfirmed": "Toss payout result unknown for over 30 minutes",
  "oQuietHours": "Quiet hours",
  "oQuietFrom": "From",
  "oQuietTo": "To",

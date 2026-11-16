@@ -2244,6 +2244,7 @@
  "oRuleUnassigned": "기사님 미배정 예약 (오래 방치)",
  "oRuleSameDayCancel": "당일 취소가 많음",
  "oRuleTaxDeadline": "부가가치세 신고 기한 임박",
+ "oRulePayoutUnconfirmed": "토스 정산 송금 결과 확인 안 됨 (30분 이상)",
  "oQuietHours": "조용한 시간",
  "oQuietFrom": "시작",
  "oQuietTo": "끝",

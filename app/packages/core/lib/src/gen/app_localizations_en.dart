@@ -4480,6 +4480,10 @@ class TEn extends T {
   String get oRuleTaxDeadline => 'VAT filing deadline approaching';
 
   @override
+  String get oRulePayoutUnconfirmed =>
+      'Toss payout result unknown for over 30 minutes';
+
+  @override
   String get oQuietHours => 'Quiet hours';
 
   @override

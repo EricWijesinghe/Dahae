@@ -52,6 +52,7 @@ S = {
   "oRuleUnassigned": ["기사님 미배정 예약 (오래 방치)", "Confirmed bookings with no pro for a long time"],
   "oRuleSameDayCancel": ["당일 취소가 많음", "High same-day cancellations"],
   "oRuleTaxDeadline": ["부가가치세 신고 기한 임박", "VAT filing deadline approaching"],
+  "oRulePayoutUnconfirmed": ["토스 정산 송금 결과 확인 안 됨 (30분 이상)", "Toss payout result unknown for over 30 minutes"],
   "oQuietHours": ["조용한 시간", "Quiet hours"],
   "oQuietFrom": ["시작", "From"],
   "oQuietTo": ["끝", "To"],

@@ -8287,6 +8287,12 @@ abstract class T {
   /// **'부가가치세 신고 기한 임박'**
   String get oRuleTaxDeadline;
 
+  /// No description provided for @oRulePayoutUnconfirmed.
+  ///
+  /// In ko, this message translates to:
+  /// **'토스 정산 송금 결과 확인 안 됨 (30분 이상)'**
+  String get oRulePayoutUnconfirmed;
+
   /// No description provided for @oQuietHours.
   ///
   /// In ko, this message translates to:

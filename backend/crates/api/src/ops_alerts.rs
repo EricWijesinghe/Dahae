@@ -23,7 +23,7 @@ use std::{
 };
 use tokio::task::JoinHandle;
 
-pub const RULES: [&str; 12] = [
+pub const RULES: [&str; 13] = [
     "sms_failing",
     "push_failing",
     "payment_failing",
@@ -36,6 +36,7 @@ pub const RULES: [&str; 12] = [
     "unassigned_stale",
     "same_day_cancel",
     "tax_deadline",
+    "payout_unconfirmed",
 ];
 pub const COOLDOWN_HOURS: i64 = 6;
 const PREFS_KEY: &str = "ops_alerts";
@@ -301,7 +302,8 @@ pub fn vat_deadline_due(today: NaiveDate, days_before: i64) -> bool {
         .any(|d| (0..=days_before).contains(&(d - today).num_days()))
 }
 
-/// Payout alerts. Not owner-toggleable: a stuck or failed transfer is money the owner must look at.
+/// Payout alerts. Stuck and failed are not owner-toggleable: that is money the owner must look at. An
+/// unconfirmed Toss send (`payout_unconfirmed`) is on by default and listed on the alert card.
 async fn payout_findings(db: &PgPool) -> Result<Vec<Finding>, sqlx::Error> {
     let (stuck, failed) = crate::payout_sync::alert_counts(db).await?;
     let mut out = Vec::new();
@@ -310,6 +312,13 @@ async fn payout_findings(db: &PgPool) -> Result<Vec<Finding>, sqlx::Error> {
             rule: "payout_stuck",
             title: "정산 송금이 24시간 넘게 끝나지 않았어요",
             body: "정산 > 송금 목록에서 해당 건을 찾아 상태 동기화를 눌러 주세요. 계속 대기 중이면 PG 관리자 화면을 확인하세요.",
+        });
+    }
+    if crate::payout_sync::unconfirmed_count(db).await? > 0 {
+        out.push(Finding {
+            rule: "payout_unconfirmed",
+            title: "토스 정산 송금 결과를 확인하지 못했어요",
+            body: "정산 > 지급 내역에서 'Toss에서 확인하기'를 눌러 주세요. 확인되지 않으면 토스 상점관리자의 지급대행 내역을 보고 '송금되지 않았음을 확인'을 누를 수 있어요.",
         });
     }
     if failed > 0 {

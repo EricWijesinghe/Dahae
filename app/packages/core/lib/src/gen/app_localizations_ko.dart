@@ -4364,6 +4364,9 @@ class TKo extends T {
   String get oRuleTaxDeadline => '부가가치세 신고 기한 임박';
 
   @override
+  String get oRulePayoutUnconfirmed => '토스 정산 송금 결과 확인 안 됨 (30분 이상)';
+
+  @override
   String get oQuietHours => '조용한 시간';
 
   @override

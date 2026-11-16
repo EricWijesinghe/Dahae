@@ -443,6 +443,7 @@ final _ruleLabels = <String, String Function(T)>{
   'unassigned_stale': (T t) => t.oRuleUnassigned,
   'same_day_cancel': (T t) => t.oRuleSameDayCancel,
   'tax_deadline': (T t) => t.oRuleTaxDeadline,
+  'payout_unconfirmed': (T t) => t.oRulePayoutUnconfirmed,
 };
 
 class _AlertsCard extends StatefulWidget {
