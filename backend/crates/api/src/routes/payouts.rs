@@ -546,6 +546,8 @@ async fn send(s: &AppState, id: Uuid) -> ApiResult<State> {
             tx.commit().await?;
             Ok(State::Failed)
         }
+        // Refused before any request left (no key, or Toss rejected it): nothing was sent, so the row is left as it was.
+        Err(e @ ProviderError::NotConfigured(_)) => Err(e.into()),
         Err(e) => {
             // Ambiguous (timeout, 5xx): the transfer may exist. Stay requested with the same key.
             sqlx::query("UPDATE payouts SET failure_reason = $2, attempts = attempts + 1, updated_at = now() WHERE id = $1 AND state = 'requested'")

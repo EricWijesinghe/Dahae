@@ -4,13 +4,13 @@
 
 mod common;
 
-use api::{auth::Role, crypto};
+use api::{auth::Role, crypto, providers::payout as adapter};
 use axum::{
     body::Body,
     http::{Request, StatusCode, header},
 };
 use chrono::Duration;
-use common::{app, call, seed_catalog, test_config};
+use common::{app, call, prod_app, seed_catalog, test_config};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -506,4 +506,40 @@ async fn owner_can_fail_a_toss_payout_that_was_declined_and_retried(pool: PgPool
         .await
         .expect("state");
     assert_eq!(state, "failed");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_send_refused_for_missing_keys_leaves_the_batch_as_it_was(pool: PgPool) {
+    seed(&pool).await;
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app(pool.clone()), &token).await;
+    sqlx::query("UPDATE payouts SET provider = 'toss', attempts = 0 WHERE id = $1::uuid")
+        .bind(&id)
+        .execute(&pool)
+        .await
+        .expect("toss");
+    let fingerprint = adapter::account_fingerprint(adapter::bank_code("국민은행").expect("bank"), "110-123-456789", "홍길동");
+    sqlx::query("UPDATE pros SET toss_seller_id = 'seller-1', toss_seller_fp = $1")
+        .bind(fingerprint)
+        .execute(&pool)
+        .await
+        .expect("seller");
+
+    // Production router with no Toss keys: refused before any request leaves, so nothing may be recorded as sent.
+    let prod = prod_app(pool.clone(), "http://127.0.0.1:9");
+    let (_, body) = call(
+        &prod,
+        "POST",
+        &format!("/v1/admin/settlements/payouts/{id}/send"),
+        Some(&token),
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(body["error"]["code"].as_str(), Some("provider_not_configured"), "{body}");
+    let row: (String, i32, Option<String>) = sqlx::query_as("SELECT state, attempts, failure_reason FROM payouts WHERE id = $1::uuid")
+        .bind(&id)
+        .fetch_one(&pool)
+        .await
+        .expect("row");
+    assert_eq!(row, ("requested".to_string(), 0, None), "no ambiguous-send mark, so the booking is not blocked");
 }
