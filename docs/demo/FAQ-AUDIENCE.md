@@ -29,7 +29,7 @@ PortOne과 PG사 계약 조건에 따라 달라서 지금 숫자를 말씀드리
 최신 버전에는 파손·분실·불만·노쇼·안전·결제 분쟁을 기록하고 처리 기한을 관리하는 사건 관리 화면이 있어요 (오늘 시연 키트에는 없는 버전이에요). 환불은 콘솔에서 예약 취소·환불로 처리해요. 보상 기준과 보험은 사장님이 정하셔야 해요.
 
 **8. 오픈하려면 뭐가 필요한가요?**
-① 사업자등록증과 통신판매업 신고증 ② PortOne 가입과 PG사 심사(3~10일) ③ 문자 발신번호 등록(Solapi, 1~2일) ④ 서버와 도메인 ⑤ 앱 스토어 계정(구글 Play·애플·Microsoft, 사업자 명의). 선택으로 카카오 비즈니스 채널(알림톡), 카카오·네이버·구글·애플 로그인 개발자 계정이 있어요. 콘솔 [설정]에서 순서대로 넣고 [연결 테스트]로 확인해요.
+① 사업자등록증과 통신판매업 신고증 ② PortOne 가입과 PG사 심사(3~10일) ③ 문자 발신번호 등록(Solapi, 1~2일) ④ 서버와 도메인 ⑤ 앱 스토어 계정(구글 Play·애플·Microsoft, 사업자 명의). 선택으로 카카오 비즈니스 채널(알림톡), 카카오·네이버·구글·애플 로그인 개발자 계정이 있어요. 콘솔 [설정]에서 순서대로 넣고 [연결 확인]으로 확인해요.
 
 **9. 카카오톡 알림도 되나요?**
 문자 서비스(Solapi)에 카카오 채널과 승인된 알림톡 템플릿을 연결하면 보낼 수 있게 설정 칸이 있어요. 카카오 비즈니스 채널 개설과 템플릿 승인이 먼저 필요해요. 앱 푸시 알림은 Firebase 설정 후 동작해요.
@@ -78,7 +78,7 @@ Partners sign up with phone verification and receive no jobs until the owner app
 The newest build has a case screen for damage, loss, complaints, no-shows, safety and payment disputes with response deadlines (not in today's demo kit). Refunds are handled in the console via cancel/refund. Compensation rules and insurance are the owner's decision.
 
 **8. What is needed to launch?**
-(1) Business registration and mail-order sales report, (2) PortOne sign-up and PG review (3–10 days), (3) SMS sender-number registration (Solapi, 1–2 days), (4) a server and domain, (5) store accounts (Google Play, Apple, Microsoft) in the business's name. Optional: a Kakao business channel (AlimTalk) and Kakao/Naver/Google/Apple developer accounts for social login. Enter them in console [설정] and press Test connection.
+(1) Business registration and mail-order sales report, (2) PortOne sign-up and PG review (3–10 days), (3) SMS sender-number registration (Solapi, 1–2 days), (4) a server and domain, (5) store accounts (Google Play, Apple, Microsoft) in the business's name. Optional: a Kakao business channel (AlimTalk) and Kakao/Naver/Google/Apple developer accounts for social login. Enter them in console [설정] and press Check connection.
 
 **9. Can it send KakaoTalk messages?**
 Yes, once a Kakao channel and approved AlimTalk templates are connected through Solapi (fields exist in setup). The Kakao business channel and template approval come first. Push notifications work after Firebase setup.

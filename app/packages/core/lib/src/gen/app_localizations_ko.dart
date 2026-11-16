@@ -4404,7 +4404,7 @@ class TKo extends T {
 
   @override
   String get oActIntegration =>
-      '연동이 실패하고 있어요. 설정 화면에서 키를 다시 확인하고 [연결 테스트] 를 누르세요.';
+      '연동이 실패하고 있어요. 설정 화면에서 키를 다시 확인하고 [연결 확인] 을 누르세요.';
 
   @override
   String get oActNotSet => '아직 설정되지 않았어요. 설정 화면에서 키를 입력하세요.';
@@ -6528,6 +6528,9 @@ class TKo extends T {
 
   @override
   String get cSetupWebhook => '웹훅 주소 (PortOne 콘솔에 붙여넣기)';
+
+  @override
+  String get cSetupTossWebhook => '웹훅 주소 (토스페이먼츠 개발자센터에 붙여넣기)';
 
   @override
   String get cCopied => '복사했어요';

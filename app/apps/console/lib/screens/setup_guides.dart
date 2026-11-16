@@ -108,8 +108,8 @@ final guides = <String, Guide>{
         'Integration → Webhooks: paste the webhook URL below (version V2), then paste the whsec_ secret it shows.',
       ),
       Tr(
-        '저장한 뒤 [연결 테스트] 를 눌러 초록색이 나오면 끝!',
-        'Save, then press Test connection. Green means done!',
+        '저장한 뒤 [API 키 확인] 을 눌러 초록색이 나오면 끝!',
+        'Save, then press Check API key. Green means done!',
       ),
     ],
     devHelp: true,
@@ -170,8 +170,8 @@ final guides = <String, Guide>{
         'Choose how many days to keep backups (default 30). Older backup files are deleted automatically.',
       ),
       Tr(
-        '저장한 뒤 [연결 테스트] 를 눌러요. 작은 테스트 파일을 올렸다가 바로 지워요. 비용은 저장 용량에 따라 달라요 (백업 몇 개 분량이면 월 몇 천 원 수준이에요). 정확한 요금은 각 서비스의 요금표를 확인하세요.',
-        'Save, then press Test connection (it uploads and deletes a tiny test file). Cost depends on storage used; a few backups usually cost very little. Check each provider’s price page for exact rates.',
+        '저장한 뒤 [연결 확인] 을 눌러요. 작은 테스트 파일을 올렸다가 바로 지워요. 비용은 저장 용량에 따라 달라요 (백업 몇 개 분량이면 월 몇 천 원 수준이에요). 정확한 요금은 각 서비스의 요금표를 확인하세요.',
+        'Save, then press Check connection (it uploads and deletes a tiny test file). Cost depends on storage used; a few backups usually cost very little. Check each provider’s price page for exact rates.',
       ),
     ],
     fields: const {
@@ -217,8 +217,8 @@ final guides = <String, Guide>{
         '(Optional) KakaoTalk AlimTalk: link your Kakao channel, paste its pfId, and add approved template IDs per notification.',
       ),
       Tr(
-        '저장한 뒤 [연결 테스트] 를 눌러요. 문자는 보내지 않고 잔액만 확인해요.',
-        'Save and press Test connection (it only reads your balance, no message is sent).',
+        '저장한 뒤 [연결 확인] 을 눌러요. 문자는 보내지 않고 잔액만 확인해요.',
+        'Save and press Check connection (it only reads your balance, no message is sent).',
       ),
     ],
     fields: const {
@@ -251,7 +251,7 @@ final guides = <String, Guide>{
         '그 파일을 메모장으로 열어 내용 전체를 복사해 아래에 붙여넣어요.',
         'Open the file in a text editor, copy everything and paste it below.',
       ),
-      Tr('저장한 뒤 [연결 테스트] 를 눌러요.', 'Save and press Test connection.'),
+      Tr('저장한 뒤 [연결 확인] 을 눌러요.', 'Save and press Check connection.'),
     ],
     fields: const {
       'service_account': FieldGuide(
@@ -373,8 +373,8 @@ final guides = <String, Guide>{
         'Once approved, copy the confirm key (confmKey) and paste it in the box below.',
       ),
       Tr(
-        '저장한 뒤 [연결 테스트] 를 눌러 초록색이 나오면 끝! 키가 없으면 고객 앱은 주소를 직접 입력해요.',
-        'Save, then press Test connection. Green means done! Without a key the customer app takes typed addresses.',
+        '저장한 뒤 [연결 확인] 을 눌러 초록색이 나오면 끝! 키가 없으면 고객 앱은 주소를 직접 입력해요.',
+        'Save, then press Check connection. Green means done! Without a key the customer app takes typed addresses.',
       ),
     ],
     fields: const {
@@ -435,8 +435,8 @@ final guides = <String, Guide>{
         'Choose a mode: offline answers only when staff are away, always_first answers first every time. Empty means offline.',
       ),
       Tr(
-        '저장한 뒤 [연결 테스트] 를 눌러 초록색이 나오면 끝! 테스트는 토큰을 쓰지 않아요.',
-        'Save, then press Test connection. Green means done! The test spends no tokens.',
+        '저장한 뒤 [연결 확인] 을 눌러 초록색이 나오면 끝! 테스트는 토큰을 쓰지 않아요.',
+        'Save, then press Check connection. Green means done! The test spends no tokens.',
       ),
     ],
     fields: const {

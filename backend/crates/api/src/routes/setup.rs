@@ -886,11 +886,9 @@ async fn payout_test(s: &AppState) -> ApiResult<Value> {
 
 async fn test_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Path<String>) -> ApiResult<Json<Value>> {
     let sec = section(&code)?;
-    // The test records its result on the card, so it is a write: a locked card refuses it like a save.
+    // The test takes no values: it probes with what is saved and records only its result, so a locked card
+    // runs it without an unlock. An open unlock window still belongs to the owner who opened it.
     let lock = integrations::lock_state(&s.db, sec).await?;
-    if lock == LockState::Locked {
-        return Err(ApiError::Conflict("card_locked"));
-    }
     require_unlocker(&s, a, lock).await?;
     let record = if sec == Section::Payout {
         payout_test(&s).await?

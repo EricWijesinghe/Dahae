@@ -486,7 +486,10 @@ class _IntegrationCardState extends State<IntegrationCard> {
             if (_code == 'portone' && widget.webhookUrl != null)
               _CopyRow(label: t.cSetupWebhook, value: widget.webhookUrl!),
             if (_code == 'payout' && widget.tossWebhookUrl != null)
-              _CopyRow(label: t.cSetupWebhook, value: widget.tossWebhookUrl!),
+              _CopyRow(
+                label: t.cSetupTossWebhook,
+                value: widget.tossWebhookUrl!,
+              ),
             const SizedBox(height: Space.md),
             for (final f in _fields) _field(context, f),
             const SizedBox(height: Space.md),
@@ -501,7 +504,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
                 ),
                 if (configured)
                   OutlinedButton.icon(
-                    onPressed: _busy || _locked ? null : () => _run(_test),
+                    // The server tests the saved values and takes none, so a locked card can run it.
+                    onPressed: _busy ? null : () => _run(_test),
                     icon: const Icon(Icons.wifi_tethering_rounded),
                     label: Text(
                       _code == 'portone' ? t.cSetupTestApiKey : t.cSetupTest,

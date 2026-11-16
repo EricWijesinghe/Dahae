@@ -423,11 +423,42 @@ async fn owner_connection_test_runs_while_the_card_is_unlocked(db: PgPool) {
     assert_eq!(body["code"], "unreachable");
 }
 
+/// What a connection test must leave alone: the stored values, who saved them and the lock.
+async fn backup_row(db: &PgPool) -> (Option<String>, Option<String>, Option<String>, Option<String>) {
+    sqlx::query_as("SELECT secret::text, updated_at::text, updated_by::text, unlocked_until::text FROM integration_settings WHERE section = 'backup'")
+        .fetch_one(db)
+        .await
+        .expect("backup row")
+}
+
 #[sqlx::test(migrations = "../../migrations")]
-async fn connection_test_refuses_a_locked_card(db: PgPool) {
+async fn connection_test_runs_on_a_locked_card_with_the_saved_values_only(db: PgPool) {
     let app = common::app(db.clone());
     let (token, _) = enrolled_owner(&db).await;
-    save(&app, &token, SECRET).await;
-    let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/portone/test", &token, None, Value::Null).await;
+    let backup = |secret: &str| {
+        json!({
+            "endpoint": "https://backup.invalid", "region": "ap-northeast-2", "bucket": "malkkeum-backup",
+            "access_key": "AKIAEXAMPLE", "secret_key": secret
+        })
+    };
+    let (st, body) = common::call_owner(&app, "PUT", "/v1/admin/setup/backup", &token, None, backup("examplesecret")).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    let before = backup_row(&db).await;
+
+    // No body, no unlock, no owner code: the test probes with what is saved.
+    let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/backup/test", &token, None, Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(body["code"], "unreachable");
+    let (admin, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
+    let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/backup/test", &admin, None, Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "admins could test before, and still can: {body}");
+    assert_eq!(backup_row(&db).await, before, "no value, saver or lock changed");
+
+    let (consultant, _) = staff_token(&db, api::auth::Role::StaffConsultant).await;
+    let (st, _) = common::call_owner(&app, "POST", "/v1/admin/setup/backup/test", &consultant, None, Value::Null).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "still owner/admin only");
+    // New values still need the owner's unlock.
+    let (st, body) = common::call_owner(&app, "PUT", "/v1/admin/setup/backup", &token, None, backup("othersecret")).await;
     assert_eq!((st, body["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("card_locked")), "{body}");
+    assert_eq!(backup_row(&db).await, before);
 }

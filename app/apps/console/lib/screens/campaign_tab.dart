@@ -17,13 +17,22 @@ class CampaignTab extends StatelessWidget {
       children: [
         Expanded(
           child: CampaignBuilder(
-            preview: (audience) async => await api.post('/admin/campaigns/preview', {'audience': audience}) as Json,
-            submit: (body, at) async {
-              final c = await api.post('/admin/campaigns', body) as Json;
-              await api.post('/admin/campaigns/${c['id']}/schedule', {'at': at?.toIso8601String()});
-            },
+            preview: (audience) async =>
+                await api.post('/admin/campaigns/preview', {
+                      'audience': audience,
+                    })
+                    as Json,
+            // One call and one key for create + schedule: a retry after a lost reply replays the same campaign.
+            submit: (body, at) => api.postAction('/admin/campaigns', {
+              ...body,
+              'schedule': {'at': at?.toIso8601String()},
+            }),
             testSend: (phone, body, optout) async {
-              await api.post('/admin/campaigns/test', {'phone': phone, 'body': body, 'optout_number': optout});
+              await api.post('/admin/campaigns/test', {
+                'phone': phone,
+                'body': body,
+                'optout_number': optout,
+              });
             },
           ),
         ),
@@ -47,20 +56,32 @@ class CampaignLog extends StatelessWidget {
       builder: (context, snap) {
         if (snap.hasError) return Center(child: Text(t.error(snap.error!)));
         final rows = snap.data;
-        if (rows == null) return const Center(child: CircularProgressIndicator());
+        if (rows == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
         return ListView(
           children: [
-            Padding(padding: const EdgeInsets.all(12), child: Text(t.cmLog, style: Theme.of(context).textTheme.titleMedium)),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                t.cmLog,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
             for (final c in rows.cast<Json>())
               ListTile(
                 dense: true,
                 title: Text('${c['name']}'),
                 subtitle: Text('${c['channel']} · ${c['status']}'),
                 onTap: () async {
-                  final d = await api.get('/admin/campaigns/${c['id']}') as Json;
+                  final d =
+                      await api.get('/admin/campaigns/${c['id']}') as Json;
                   final s = (d['stats'] as Map?) ?? const {};
                   if (context.mounted) {
-                    showToast(context, '${t.cmStatSent('${s['sent'] ?? 0}')} · ${t.cmStatSkipped('${s['skipped_consent'] ?? 0}')} · ${t.cmStatFailed('${s['failed'] ?? 0}')}');
+                    showToast(
+                      context,
+                      '${t.cmStatSent('${s['sent'] ?? 0}')} · ${t.cmStatSkipped('${s['skipped_consent'] ?? 0}')} · ${t.cmStatFailed('${s['failed'] ?? 0}')}',
+                    );
                   }
                 },
               ),
@@ -79,8 +100,13 @@ class AnalyticsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final api = context.api;
     return AnalyticsView(
-      funnel: (days) async => await api.get('/admin/analytics/funnel', query: {'days': '$days'}) as Json,
-      cohorts: (weeks) async => (await api.get('/admin/analytics/cohorts', query: {'weeks': '$weeks'}) as List<dynamic>).cast<Json>(),
+      funnel: (days) async =>
+          await api.get('/admin/analytics/funnel', query: {'days': '$days'})
+              as Json,
+      cohorts: (weeks) async =>
+          (await api.get('/admin/analytics/cohorts', query: {'weeks': '$weeks'})
+                  as List<dynamic>)
+              .cast<Json>(),
     );
   }
 }

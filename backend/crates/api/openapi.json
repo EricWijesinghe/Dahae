@@ -5176,7 +5176,12 @@
         "tags": [
           "admin"
         ],
-        "summary": "Create a marketing campaign",
+        "summary": "Create a marketing campaign; with schedule {at} it is scheduled in the same call (idempotent)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
         },

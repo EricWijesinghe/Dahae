@@ -4521,7 +4521,7 @@ class TEn extends T {
 
   @override
   String get oActIntegration =>
-      'This connection is failing. Check the keys in Setup and press Test connection.';
+      'This connection is failing. Check the keys in Setup and press Check connection.';
 
   @override
   String get oActNotSet => 'Not set up yet. Enter the keys in Setup.';
@@ -6717,6 +6717,10 @@ class TEn extends T {
 
   @override
   String get cSetupWebhook => 'Webhook URL (paste into the PortOne console)';
+
+  @override
+  String get cSetupTossWebhook =>
+      'Webhook URL (paste into the Toss Payments developer center)';
 
   @override
   String get cCopied => 'Copied';

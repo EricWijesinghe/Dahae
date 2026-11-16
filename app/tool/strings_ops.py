@@ -36,7 +36,7 @@ S = {
   "oActErrors": ["서버 오류가 많아요. malkkeum logs 에서 error 줄을 확인하고, 반복되면 개발사에 전달하세요.", "Many server errors. Check the error lines in malkkeum logs and send them to your developer if they repeat."],
   "oActPayments": ["결제는 됐지만 자동 처리가 안 됐을 수 있어요. PortOne 관리자 화면에서 해당 결제를 확인하고 필요하면 직접 환불하세요.", "A payment may have gone through without being processed. Check it in the PortOne console and refund it yourself if needed."],
   "oActWebhook": ["결제 알림의 서명 검사가 실패했어요. 설정 > 결제(PortOne)에서 웹훅 시크릿을 다시 입력하세요.", "Payment webhook signature checks are failing. Re-enter the webhook secret under Setup > Payments (PortOne)."],
-  "oActIntegration": ["연동이 실패하고 있어요. 설정 화면에서 키를 다시 확인하고 [연결 테스트] 를 누르세요.", "This connection is failing. Check the keys in Setup and press Test connection."],
+  "oActIntegration": ["연동이 실패하고 있어요. 설정 화면에서 키를 다시 확인하고 [연결 확인] 을 누르세요.", "This connection is failing. Check the keys in Setup and press Check connection."],
   "oActNotSet": ["아직 설정되지 않았어요. 설정 화면에서 키를 입력하세요.", "Not set up yet. Enter the keys in Setup."],
   "oAlerts": ["알림 설정", "Alert settings"],
   "oAlertsHint": ["문제가 생기면 상담함과 사장님 휴대폰(문자)으로 알려 드려요. 같은 문제는 6시간에 한 번만 보내요.", "Problems show in the inbox and are texted to the owner's phone. The same problem is sent once every 6 hours."],
