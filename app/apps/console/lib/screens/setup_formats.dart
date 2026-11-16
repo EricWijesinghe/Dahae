@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Client-side format checks for payment keys. They mirror the server (`integrations::apply`), which stays
 /// authoritative. An empty value returns null: the server reports missing fields.
 ///
@@ -8,7 +10,7 @@ String? formatError(String card, String field, String value) {
   final ok = switch ((card, field)) {
     ('portone', 'store_id') => v.startsWith('store-') && !_space.hasMatch(v),
     ('portone', 'api_secret') => !_space.hasMatch(v) && v.length >= 16 && v.length <= 200,
-    ('portone', 'webhook_secret') => _webhook.hasMatch(v),
+    ('portone', 'webhook_secret') => _webhookOk(v),
     ('portone', 'channel_keys') => v.startsWith('channel-key-') && !_space.hasMatch(v),
     ('payout', 'secret_key') => _tossSecret.hasMatch(v),
     ('payout', 'security_key') => _hex64.hasMatch(v),
@@ -26,6 +28,15 @@ String? formatError(String card, String field, String value) {
 }
 
 final _space = RegExp(r'\s');
-final _webhook = RegExp(r'^whsec_[A-Za-z0-9+/]+={0,2}$');
+/// The server decodes the part after `whsec_` as padded base64, so the same check runs here.
+bool _webhookOk(String v) {
+  if (!v.startsWith('whsec_')) return false;
+  try {
+    base64.decode(v.substring('whsec_'.length));
+    return true;
+  } on FormatException {
+    return false;
+  }
+}
 final _tossSecret = RegExp(r'^(test|live)_sk_\S+$');
 final _hex64 = RegExp(r'^[0-9a-fA-F]{64}$');

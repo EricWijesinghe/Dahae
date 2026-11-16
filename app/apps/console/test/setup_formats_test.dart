@@ -21,7 +21,9 @@ void main() {
     ('payout', 'security_key', '0123456789abcdef', 'invalid_security_key'),
     ('payout', 'security_key', 'g' * 64, 'invalid_security_key'),
     ('portone', 'api_secret', '', null),
-    ('payout', 'mode', 'anything', null),
+    ('portone', 'webhook_secret', 'whsec_abc', 'invalid_webhook_secret'),
+    ('payout', 'mode', 'toss', null),
+    ('payout', 'mode', 'manual', null),
   ];
 
   for (final (card, field, value, expected) in cases) {

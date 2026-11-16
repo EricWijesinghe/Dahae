@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -3006,7 +3005,7 @@ class TEn extends T {
 
   @override
   String get err_invalid_security_key =>
-      'The security key is 64 hex characters.';
+      'The security key is 64 characters, each 0-9 or a-f. Copy it from the Toss developer center as is.';
 
   @override
   String get err_invalid_webhook_secret =>
@@ -5705,6 +5704,44 @@ class TEn extends T {
 
   @override
   String get cInvalidValue => 'Please check the highlighted value';
+
+  @override
+  String get cSetupNothingSaved =>
+      'Nothing is saved yet. Save first, then unlock';
+
+  @override
+  String cSetupUnlockLeft(String minutes) {
+    return 'Locks in $minutes min';
+  }
+
+  @override
+  String get cSetupTestApiKey => 'Check API key';
+
+  @override
+  String get cSetupNeedsKey => 'Add the channel key first';
+
+  @override
+  String get cSetupOtherMethods => 'Other payment methods';
+
+  @override
+  String get cSlotHintCard =>
+      'Copy the card payment channel key from the channel list in the PortOne console';
+
+  @override
+  String get cSlotHintBilling =>
+      'Channel key for recurring billing. Left blank, the card channel key is used';
+
+  @override
+  String get cSlotHintIdentity =>
+      'Identity verification channel key, used for identity sign-in';
+
+  @override
+  String get cSlotHintCashReceipt =>
+      'Cash receipt channel key. Used on the server only, never sent to the customer app';
+
+  @override
+  String get cSlotHintMethod =>
+      'Copy this payment method\'s channel key from the PortOne console';
 
   @override
   String get cStaffInvite => 'Invite staff';

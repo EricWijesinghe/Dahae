@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2938,7 +2937,8 @@ class TKo extends T {
   String get err_invalid_secret_key => '시크릿 키는 test_sk_ 또는 live_sk_로 시작해야 해요.';
 
   @override
-  String get err_invalid_security_key => '보안 키는 64자리 16진수예요.';
+  String get err_invalid_security_key =>
+      '보안 키는 0~9, a~f 글자 64개예요. 토스 개발자센터에서 그대로 복사해 붙여넣어 주세요.';
 
   @override
   String get err_invalid_webhook_secret => '웹훅 시크릿은 whsec_로 시작해야 해요.';
@@ -5553,6 +5553,38 @@ class TKo extends T {
 
   @override
   String get cInvalidValue => '입력값을 확인해 주세요';
+
+  @override
+  String get cSetupNothingSaved => '저장된 값이 없어요. 먼저 저장한 뒤 잠금을 풀어 주세요';
+
+  @override
+  String cSetupUnlockLeft(String minutes) {
+    return '$minutes분 후 잠겨요';
+  }
+
+  @override
+  String get cSetupTestApiKey => 'API 키 확인';
+
+  @override
+  String get cSetupNeedsKey => '채널 키를 먼저 넣어요';
+
+  @override
+  String get cSetupOtherMethods => '기타 결제수단';
+
+  @override
+  String get cSlotHintCard => 'PortOne 콘솔의 채널 목록에서 일반결제(카드) 채널 키를 복사하세요';
+
+  @override
+  String get cSlotHintBilling => '정기결제(빌링키) 채널 키예요. 비워 두면 카드 채널 키를 써요';
+
+  @override
+  String get cSlotHintIdentity => '본인인증 채널 키예요. 본인인증 로그인에 쓰여요';
+
+  @override
+  String get cSlotHintCashReceipt => '현금영수증 채널 키예요. 서버에서만 쓰고 고객 앱에는 보내지 않아요';
+
+  @override
+  String get cSlotHintMethod => '이 결제수단의 채널 키를 PortOne 콘솔에서 복사하세요';
 
   @override
   String get cStaffInvite => '직원 초대';

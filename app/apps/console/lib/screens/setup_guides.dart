@@ -58,6 +58,9 @@ const paymentMethodKeys = [
   'phone',
 ];
 
+/// Methods that PayPal-style wallets and bank transfers add to the card. The screen lists them under their own heading.
+const otherSlotKeys = {'payco', 'samsungpay', 'applepay', 'transfer', 'phone'};
+
 const slotLabels = <String, Tr>{
   'card': Tr('일반결제 (카드)', 'Card payment'),
   'card_billing': Tr('정기결제 (빌링키)', 'Recurring billing key'),
@@ -496,5 +499,10 @@ String setupMessage(T t, String code) => switch (code) {
   'unknown_channel_key' => t.err_unknown_channel_key,
   'invalid_secret_key' => t.err_invalid_secret_key,
   'invalid_security_key' => t.err_invalid_security_key,
+  'totp_invalid' => t.cOwnerCodeWrong,
+  'totp_reused' => t.err_totp_reused,
+  'totp_required' => t.err_totp_required,
+  'second_factor_required' => t.err_second_factor_required,
+  'nothing_saved' => t.cSetupNothingSaved,
   _ => t.cInvalidValue,
 };

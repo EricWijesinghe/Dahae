@@ -43,7 +43,7 @@ S = {
   "err_invalid_channel_key": ["채널 키는 channel-key-로 시작해야 해요.", "A channel key starts with channel-key-."],
   "err_unknown_channel_key": ["이 결제수단 칸은 알 수 없어요.", "This payment method slot is not known."],
   "err_invalid_secret_key": ["시크릿 키는 test_sk_ 또는 live_sk_로 시작해야 해요.", "The secret key starts with test_sk_ or live_sk_."],
-  "err_invalid_security_key": ["보안 키는 64자리 16진수예요.", "The security key is 64 hex characters."],
+  "err_invalid_security_key": ["보안 키는 0~9, a~f 글자 64개예요. 토스 개발자센터에서 그대로 복사해 붙여넣어 주세요.", "The security key is 64 characters, each 0-9 or a-f. Copy it from the Toss developer center as is."],
   "err_invalid_webhook_secret": ["웹훅 시크릿은 whsec_로 시작해야 해요.", "The webhook secret must start with whsec_."],
   "err_invalid_endpoint": ["엔드포인트는 https://로 시작해야 해요.", "The endpoint must start with https://."],
   "err_invalid_bucket": ["버킷 이름이 올바르지 않아요.", "The bucket name isn't valid."],

@@ -5650,7 +5650,7 @@ abstract class T {
   /// No description provided for @err_invalid_security_key.
   ///
   /// In ko, this message translates to:
-  /// **'보안 키는 64자리 16진수예요.'**
+  /// **'보안 키는 0~9, a~f 글자 64개예요. 토스 개발자센터에서 그대로 복사해 붙여넣어 주세요.'**
   String get err_invalid_security_key;
 
   /// No description provided for @err_invalid_webhook_secret.
@@ -10589,6 +10589,66 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'입력값을 확인해 주세요'**
   String get cInvalidValue;
+
+  /// No description provided for @cSetupNothingSaved.
+  ///
+  /// In ko, this message translates to:
+  /// **'저장된 값이 없어요. 먼저 저장한 뒤 잠금을 풀어 주세요'**
+  String get cSetupNothingSaved;
+
+  /// No description provided for @cSetupUnlockLeft.
+  ///
+  /// In ko, this message translates to:
+  /// **'{minutes}분 후 잠겨요'**
+  String cSetupUnlockLeft(String minutes);
+
+  /// No description provided for @cSetupTestApiKey.
+  ///
+  /// In ko, this message translates to:
+  /// **'API 키 확인'**
+  String get cSetupTestApiKey;
+
+  /// No description provided for @cSetupNeedsKey.
+  ///
+  /// In ko, this message translates to:
+  /// **'채널 키를 먼저 넣어요'**
+  String get cSetupNeedsKey;
+
+  /// No description provided for @cSetupOtherMethods.
+  ///
+  /// In ko, this message translates to:
+  /// **'기타 결제수단'**
+  String get cSetupOtherMethods;
+
+  /// No description provided for @cSlotHintCard.
+  ///
+  /// In ko, this message translates to:
+  /// **'PortOne 콘솔의 채널 목록에서 일반결제(카드) 채널 키를 복사하세요'**
+  String get cSlotHintCard;
+
+  /// No description provided for @cSlotHintBilling.
+  ///
+  /// In ko, this message translates to:
+  /// **'정기결제(빌링키) 채널 키예요. 비워 두면 카드 채널 키를 써요'**
+  String get cSlotHintBilling;
+
+  /// No description provided for @cSlotHintIdentity.
+  ///
+  /// In ko, this message translates to:
+  /// **'본인인증 채널 키예요. 본인인증 로그인에 쓰여요'**
+  String get cSlotHintIdentity;
+
+  /// No description provided for @cSlotHintCashReceipt.
+  ///
+  /// In ko, this message translates to:
+  /// **'현금영수증 채널 키예요. 서버에서만 쓰고 고객 앱에는 보내지 않아요'**
+  String get cSlotHintCashReceipt;
+
+  /// No description provided for @cSlotHintMethod.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 결제수단의 채널 키를 PortOne 콘솔에서 복사하세요'**
+  String get cSlotHintMethod;
 
   /// No description provided for @cStaffInvite.
   ///

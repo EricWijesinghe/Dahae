@@ -92,6 +92,7 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
               )
             else
               for (final m in methods)
+                // Without a channel key customers would not see the method, so it cannot be switched on yet.
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   secondary: PayBrandBadge(
@@ -99,8 +100,11 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
                     height: 32,
                   ),
                   title: Text(t.payMethod(m['code'] as String)),
+                  subtitle: m['has_key'] == true
+                      ? null
+                      : Text(t.cSetupNeedsKey),
                   value: m['enabled'] == true,
-                  onChanged: _busy
+                  onChanged: _busy || (m['has_key'] != true && m['enabled'] != true)
                       ? null
                       : (v) => _toggle(m['code'] as String, v),
                 ),
