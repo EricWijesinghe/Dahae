@@ -172,7 +172,8 @@ impl Providers {
         &self.http
     }
 
-    fn dev(&self) -> bool {
+    /// Dev mode: every provider call is answered by the in-process fake, so no PortOne keys are needed.
+    pub fn dev(&self) -> bool {
         self.cfg.dev_mode
     }
 

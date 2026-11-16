@@ -50,13 +50,15 @@ pub fn channel_key(channel_keys: &HashMap<String, String>, code: &str) -> Option
     channel_keys.get(code).map(|k| k.trim()).filter(|k| !k.is_empty()).map(str::to_string)
 }
 
-/// Methods offered to customers: switched on by an admin and given a PortOne channel key.
-pub async fn offered_codes(db: &PgPool, channel_keys: &HashMap<String, String>) -> ApiResult<Vec<String>> {
-    Ok(enabled_codes(db)
-        .await?
-        .into_iter()
-        .filter(|c| channel_key(channel_keys, c).is_some())
-        .collect())
+/// Methods offered to customers: switched on by an admin and, on the real PortOne gateway, given a channel key.
+/// The dev fake provider takes no keys, so every enabled method is offered there (a local demo can pay).
+pub async fn offered_codes(s: &AppState) -> ApiResult<Vec<String>> {
+    let on = enabled_codes(&s.db).await?;
+    if s.providers.dev() {
+        return Ok(on);
+    }
+    let integ = s.providers.integ();
+    Ok(on.into_iter().filter(|c| channel_key(&integ.portone.channel_keys, c).is_some()).collect())
 }
 
 /// Rejects unknown, switched-off or unconfigured methods before any intent is created.
@@ -64,8 +66,7 @@ pub async fn ensure_enabled(s: &AppState, code: &str) -> ApiResult<()> {
     if !METHODS.iter().any(|m| m.0 == code) {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
-    let integ = s.providers.integ();
-    if !offered_codes(&s.db, &integ.portone.channel_keys).await?.iter().any(|c| c == code) {
+    if !offered_codes(s).await?.iter().any(|c| c == code) {
         return Err(ApiError::BadRequest("payment_method_disabled"));
     }
     Ok(())
@@ -78,8 +79,7 @@ struct Method {
 }
 
 async fn enabled(State(s): State<AppState>) -> ApiResult<Json<Vec<Method>>> {
-    let integ = s.providers.integ();
-    let on = offered_codes(&s.db, &integ.portone.channel_keys).await?;
+    let on = offered_codes(&s).await?;
     Ok(Json(
         METHODS
             .iter()
@@ -101,6 +101,7 @@ struct AdminMethod {
 
 async fn admin_view(s: &AppState) -> ApiResult<Vec<AdminMethod>> {
     let on = enabled_codes(&s.db).await?;
+    let fake = s.providers.dev();
     let keys = &s.providers.integ().portone.channel_keys;
     Ok(METHODS
         .iter()
@@ -108,7 +109,7 @@ async fn admin_view(s: &AppState) -> ApiResult<Vec<AdminMethod>> {
             code,
             flow,
             enabled: on.iter().any(|c| c == code),
-            configured: channel_key(keys, code).is_some(),
+            configured: fake || channel_key(keys, code).is_some(),
         })
         .collect())
 }

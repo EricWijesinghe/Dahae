@@ -57,6 +57,10 @@ def phone():
     return f"010{random.randint(10000000, 99999999)}"
 
 
+def customer_consents():
+    return [{"kind": k, "granted": True, "version": CONSENT_VERSION} for k in ("terms", "privacy", "overseas_transfer")]
+
+
 def login(audience):
     p = phone()
     code = call("POST", "/v1/auth/otp", {"phone": p})["dev_code"]

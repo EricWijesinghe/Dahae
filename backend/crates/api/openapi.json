@@ -3872,6 +3872,59 @@
         }
       }
     },
+    "/v1/admin/setup/{section}/unlock": {
+      "post": {
+        "operationId": "adminUnlockSetupSection",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner unlock of a saved card for 5 minutes (the card relocks after a save or when the window passes)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Section"
+          },
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK, body holds unlocked_until"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/{section}/lock": {
+      "post": {
+        "operationId": "adminLockSetupSection",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Lock a card now (ends an owner unlock early)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Section"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/audit": {
       "get": {
         "operationId": "adminListAudit",

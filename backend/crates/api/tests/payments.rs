@@ -6,7 +6,7 @@ mod common;
 
 use api::{auth::Role, build_state, routes};
 use axum::{Router, http::StatusCode};
-use common::{Customer, app, app_with_channels, call, customer, seed_catalog, staff_token, test_config};
+use common::{Customer, app, app_real_gateway_with_channels, call, customer, seed_catalog, staff_token, test_config};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -42,9 +42,22 @@ fn checkout_body(c: &Customer, method: &str) -> Value {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn fake_provider_offers_every_enabled_method_without_keys(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let (token, _) = staff_token(&pool, Role::StaffAdmin).await;
+    let dev = app(pool.clone());
+    assert_eq!(offered(&dev).await.len(), 10, "dev fake takes no keys, so a local demo can pay");
+    let naver = admin_entry(&dev, &token, "naverpay").await;
+    assert_eq!(naver["configured"], true, "{naver}");
+    let c = customer(&dev, &pool, "010-7100-0010").await;
+    let (st, body) = call(&dev, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(checkout_body(&c, "naverpay"))).await;
+    assert_ne!(body["error"]["code"], "payment_method_disabled", "{st} {body}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn wallet_without_channel_key_is_not_offered(pool: PgPool) {
     seed_catalog(&pool).await;
-    let dev = app_with_channels(pool.clone(), &["card", "kakaopay"]);
+    let dev = app_real_gateway_with_channels(pool.clone(), &["card", "kakaopay"]);
     let codes = offered(&dev).await;
     assert!(codes.contains(&"card".to_string()), "{codes:?}");
     assert!(codes.contains(&"kakaopay".to_string()), "{codes:?}");
@@ -56,6 +69,9 @@ async fn wallet_without_channel_key_is_not_offered(pool: PgPool) {
 async fn blank_channel_key_is_not_offered(pool: PgPool) {
     seed_catalog(&pool).await;
     let mut cfg = test_config();
+    cfg.dev_mode = false;
+    cfg.portone.api_secret = Some("test-secret".into());
+    cfg.portone.store_id = Some("store-test".into());
     cfg.portone.channel_keys = HashMap::from([("card".to_string(), "ch-card".to_string()), ("naverpay".to_string(), "   ".to_string())]);
     let dev = routes::router(build_state(pool.clone(), cfg).expect("state"));
     let codes = offered(&dev).await;
@@ -66,7 +82,7 @@ async fn blank_channel_key_is_not_offered(pool: PgPool) {
 async fn admin_list_flags_a_switched_on_method_without_a_key(pool: PgPool) {
     seed_catalog(&pool).await;
     let (token, _) = staff_token(&pool, Role::StaffAdmin).await;
-    let dev = app_with_channels(pool.clone(), &["card"]);
+    let dev = app_real_gateway_with_channels(pool.clone(), &["card"]);
     let naver = admin_entry(&dev, &token, "naverpay").await;
     assert_eq!(naver["enabled"], true, "{naver}");
     assert_eq!(naver["configured"], false, "switched on but no key: {naver}");
@@ -77,9 +93,10 @@ async fn admin_list_flags_a_switched_on_method_without_a_key(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn checkout_for_unconfigured_method_is_refused_without_a_row(pool: PgPool) {
     seed_catalog(&pool).await;
-    let dev = app_with_channels(pool.clone(), &["card"]);
+    let dev = app(pool.clone());
     let c = customer(&dev, &pool, "010-7100-0009").await;
-    let (st, body) = call(&dev, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(checkout_body(&c, "naverpay"))).await;
+    let real = app_real_gateway_with_channels(pool.clone(), &["card"]);
+    let (st, body) = call(&real, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(checkout_body(&c, "naverpay"))).await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "{body}");
     assert_eq!(body["error"]["code"], "payment_method_disabled", "{body}");
     let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM checkouts").fetch_one(&pool).await.expect("count");

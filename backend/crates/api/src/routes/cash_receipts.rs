@@ -161,7 +161,12 @@ async fn issue_job(s: &AppState, id: Uuid) -> ApiResult<()> {
 }
 
 async fn attempt(s: &AppState, p: &PortOne, job: &Job) -> Result<Issued, String> {
-    let channel = p.channel_keys.get(&job.method).ok_or("no PortOne channel key for this payment method")?;
+    // Installs saved before the `cash_receipt` slot existed issued receipts through the payment method's channel.
+    let channel = p
+        .channel_keys
+        .get("cash_receipt")
+        .or_else(|| p.channel_keys.get(&job.method))
+        .ok_or("no PortOne channel key for cash receipts")?;
     let payment_id = job.provider_tx_id.as_deref().ok_or("payment has no provider transaction id")?;
     let identity = crypto::decrypt(&s.config.data_key, crypto::aad::RECEIPT_IDENTITY, &job.identity_enc).ok_or("cannot decrypt receipt identity")?;
     let body = pcr::issue_body(p.store_id.clone(), payment_id, channel, job.purpose == "CORPORATE", &identity, job.amount);

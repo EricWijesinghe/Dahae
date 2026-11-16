@@ -41,6 +41,12 @@ S = {
   "err_request_closed": ["이미 마감된 요청이에요.", "This request is closed."],
   "err_team_full": ["팀 인원이 가득 찼어요.", "Your team is full."],
   # owner console
+  "err_invalid_store_id": ["상점 아이디는 store-로 시작해야 해요.", "The store ID must start with store-."],
+  "err_invalid_api_secret": ["V2 API Secret 형식이 맞지 않아요. 공백 없이 전체를 붙여넣어 주세요.", "The V2 API secret does not look right. Paste the whole value with no spaces."],
+  "err_invalid_channel_key": ["채널 키는 channel-key-로 시작해야 해요.", "A channel key starts with channel-key-."],
+  "err_unknown_channel_key": ["이 결제수단 칸은 알 수 없어요.", "This payment method slot is not known."],
+  "err_invalid_secret_key": ["시크릿 키는 test_sk_ 또는 live_sk_로 시작해야 해요.", "The secret key starts with test_sk_ or live_sk_."],
+  "err_invalid_security_key": ["보안 키는 0~9, a~f 글자 64개예요. 토스 개발자센터에서 그대로 복사해 붙여넣어 주세요.", "The security key is 64 characters, each 0-9 or a-f. Copy it from the Toss developer center as is."],
   "err_invalid_webhook_secret": ["웹훅 시크릿은 whsec_로 시작해야 해요.", "The webhook secret must start with whsec_."],
   "err_invalid_endpoint": ["엔드포인트는 https://로 시작해야 해요.", "The endpoint must start with https://."],
   "err_invalid_bucket": ["버킷 이름이 올바르지 않아요.", "The bucket name isn't valid."],

@@ -12,6 +12,7 @@ use crate::{
     providers::fcm::ServiceAccount,
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
+use chrono::{DateTime, Utc};
 use serde_json::{Map, Value, json};
 use sqlx::PgPool;
 use std::{collections::HashMap, ops::RangeInclusive};
@@ -68,10 +69,10 @@ const PORTONE_CHANNEL_PREFIX: &str = "channel-key-";
 const TEST_SECRET_PREFIX: &str = "test_sk_";
 const LIVE_SECRET_PREFIX: &str = "live_sk_";
 
-/// Short, non-reversible id of a secret, stored with the test result so a changed key must be re-tested.
-pub fn key_fingerprint(secret: &str) -> String {
-    use sha2::{Digest, Sha256};
-    Sha256::digest(secret.as_bytes()).iter().take(8).map(|b| format!("{b:02x}")).collect()
+/// Keyed digest of a secret, stored with the test result so a changed key must be re-tested.
+/// Keyed with DATA_KEY: an unkeyed hash of a payment key could be checked against guesses offline.
+pub fn key_fingerprint(data_key: &[u8; 32], secret: &str) -> String {
+    crypto::secret_digest(data_key, secret)
 }
 
 /// The connection-test code a secret earns: `sandbox_connected` for a test key, `live_connected` for a live key.
@@ -98,11 +99,12 @@ pub fn toss_key_mode(secret: &str) -> Option<&'static str> {
 
 /// Toss payouts open only when the env switch is on AND the last connection test recorded success for this key,
 /// in the same mode the key is in (a test pass never unlocks a live key).
-pub fn toss_ready(env_enabled: bool, last_test: Option<&Value>, secret: &str) -> bool {
+pub fn toss_ready(env_enabled: bool, last_test: Option<&Value>, data_key: &[u8; 32], secret: &str) -> bool {
     let Some(code) = connected_code(secret) else {
         return false;
     };
-    env_enabled && last_test.is_some_and(|t| t["ok"] == json!(true) && t["code"] == json!(code) && t["key_fp"] == json!(key_fingerprint(secret)))
+    let fp = key_fingerprint(data_key, secret);
+    env_enabled && last_test.is_some_and(|t| t["ok"] == json!(true) && t["code"] == json!(code) && t["key_fp"] == json!(fp))
 }
 
 pub fn toss_env_enabled() -> bool {
@@ -367,6 +369,19 @@ fn digits(s: &str) -> String {
     s.chars().filter(char::is_ascii_digit).collect()
 }
 
+/// Channel slots the PortOne card takes: every checkout method, plus billing, identity and cash receipts.
+fn known_channel_slot(k: &str) -> bool {
+    matches!(k, "card_billing" | "identity" | "cash_receipt") || crate::routes::payments::METHODS.iter().any(|m| m.0 == k)
+}
+
+/// PortOne's secret format is not documented here, so only values that cannot be a key are refused.
+fn check_api_secret(s: &str) -> Result<(), Invalid> {
+    if s.chars().any(char::is_whitespace) || !(16..=200).contains(&s.chars().count()) {
+        return Err(Invalid("invalid_api_secret"));
+    }
+    Ok(())
+}
+
 fn check_webhook_secret(s: &str) -> Result<(), Invalid> {
     let raw = s.strip_prefix("whsec_").ok_or(Invalid("invalid_webhook_secret"))?;
     STANDARD.decode(raw).map(|_| ()).map_err(|_| Invalid("invalid_webhook_secret"))
@@ -490,11 +505,16 @@ pub fn apply(base: &Integrations, section: Section, v: &Map<String, Value>) -> R
                 return Err(Invalid("invalid_store_id"));
             }
             let channel_keys = string_map(v, "channel_keys")?;
+            if channel_keys.keys().any(|k| !known_channel_slot(k)) {
+                return Err(Invalid("unknown_channel_key"));
+            }
             if channel_keys.values().any(|k| !k.starts_with(PORTONE_CHANNEL_PREFIX)) {
                 return Err(Invalid("invalid_channel_key"));
             }
+            let api_secret = required(v, "api_secret")?;
+            check_api_secret(&api_secret)?;
             out.portone = PortOne {
-                api_secret: Some(required(v, "api_secret")?),
+                api_secret: Some(api_secret),
                 webhook_secret,
                 store_id: Some(store_id),
                 channel_keys,
@@ -572,6 +592,7 @@ pub fn merge(section: Section, current: &Map<String, Value>, incoming: &Map<Stri
     for field in section.fields() {
         let next = match incoming.get(field.name) {
             Some(Value::Null) => None,
+            Some(v) if field.kind == Kind::Map => merge_map(current.get(field.name), v),
             Some(Value::String(s)) if s.trim().is_empty() => current.get(field.name).cloned(),
             Some(v) => Some(v.clone()),
             None => current.get(field.name).cloned(),
@@ -583,16 +604,50 @@ pub fn merge(section: Section, current: &Map<String, Value>, incoming: &Map<Stri
     out
 }
 
+/// A map field's saved entries overlaid with the incoming ones, so saving one slot keeps the others.
+/// `null` removes an entry and a blank keeps it. A value that is not a map passes through for `apply` to refuse.
+fn merge_map(current: Option<&Value>, incoming: &Value) -> Option<Value> {
+    let Some(next) = map_entries(incoming) else { return Some(incoming.clone()) };
+    let mut out = current.and_then(map_entries).unwrap_or_default();
+    for (key, val) in next {
+        match val {
+            Value::Null => {
+                out.remove(&key);
+            }
+            Value::String(s) if s.trim().is_empty() => {}
+            val => {
+                out.insert(key, val);
+            }
+        }
+    }
+    (!out.is_empty()).then_some(Value::Object(out))
+}
+
+/// A map field as an object: a JSON object, or the same object as text (how the wizard sends channel slots).
+fn map_entries(v: &Value) -> Option<Map<String, Value>> {
+    match v {
+        Value::Object(o) => Some(o.clone()),
+        Value::String(s) if s.trim().is_empty() => Some(Map::new()),
+        Value::String(s) => serde_json::from_str::<Value>(s).ok()?.as_object().cloned(),
+        _ => None,
+    }
+}
+
 const MASK: &str = "••••";
 
-/// What the wizard shows for a saved value: secrets end in their last 4 characters only.
+/// What the wizard shows for a saved value. Secrets and map values (channel keys, template ids) show only the mask,
+/// so they cannot be read back. Identifiers and switches (store id, toss mode, sender) show in full, so the owner can
+/// check which account is connected.
 pub fn preview(kind: Kind, v: &Value) -> Value {
     match kind {
-        Kind::Secret => {
-            let s = v.as_str().unwrap_or_default();
-            let tail: String = s.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect();
-            json!(format!("{MASK}{tail}"))
-        }
+        Kind::Text | Kind::List if v.is_null() => Value::Null,
+        Kind::Text | Kind::List => v.clone(),
+        Kind::Secret if v.is_null() => Value::Null,
+        Kind::Secret => json!(MASK),
+        Kind::Map => match v {
+            Value::Object(o) => Value::Object(o.keys().map(|k| (k.clone(), json!(MASK))).collect()),
+            _ => v.clone(),
+        },
         Kind::File => {
             let email = match v {
                 Value::String(s) => serde_json::from_str::<Value>(s).ok().and_then(|j| j["client_email"].as_str().map(String::from)),
@@ -627,26 +682,45 @@ fn decode(key: &[u8; 32], enc: &str) -> Option<Map<String, Value>> {
     serde_json::from_str::<Value>(&plain).ok()?.as_object().cloned()
 }
 
-pub async fn save_section(db: &PgPool, key: &[u8; 32], section: Section, values: &Map<String, Value>, by: uuid::Uuid) -> Result<(), sqlx::Error> {
+/// Where a saved card stands: a saved card is locked unless an owner unlock is still inside its window.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LockState {
+    Unsaved,
+    Locked,
+    /// Open until the instant, for the owner with this staff id.
+    Unlocked(DateTime<Utc>, uuid::Uuid),
+}
+
+pub async fn lock_state(db: &PgPool, section: Section) -> Result<LockState, sqlx::Error> {
+    let row: Option<(Option<DateTime<Utc>>, Option<uuid::Uuid>)> =
+        sqlx::query_as("SELECT CASE WHEN unlocked_until > now() THEN unlocked_until END, unlocked_by FROM integration_settings WHERE section = $1")
+            .bind(section.code())
+            .fetch_optional(db)
+            .await?;
+    Ok(match row {
+        None => LockState::Unsaved,
+        Some((Some(until), Some(by))) => LockState::Unlocked(until, by),
+        // An open window with no owner recorded fails closed.
+        Some(_) => LockState::Locked,
+    })
+}
+
+/// Saves the card and locks it again. Returns false unless `by` holds an open unlock of the card: the condition
+/// is in the statement, so two saves racing inside one unlock window cannot both pass. An empty map clears the card.
+pub async fn save_section(db: &PgPool, key: &[u8; 32], section: Section, values: &Map<String, Value>, by: uuid::Uuid) -> Result<bool, sqlx::Error> {
     let enc = crypto::encrypt(key, crypto::aad::INTEGRATION, &Value::Object(values.clone()).to_string());
     sqlx::query(
         "INSERT INTO integration_settings (section, secret, updated_by) VALUES ($1, $2, $3)
-         ON CONFLICT (section) DO UPDATE SET secret = EXCLUDED.secret, updated_by = EXCLUDED.updated_by, updated_at = now(), last_test = NULL",
+         ON CONFLICT (section) DO UPDATE SET secret = EXCLUDED.secret, updated_by = EXCLUDED.updated_by, updated_at = now(), last_test = NULL,
+             unlocked_until = NULL, unlocked_by = NULL
+         WHERE integration_settings.unlocked_until > now() AND integration_settings.unlocked_by = EXCLUDED.updated_by",
     )
     .bind(section.code())
     .bind(enc)
     .bind(by)
     .execute(db)
     .await
-    .map(|_| ())
-}
-
-pub async fn delete_section(db: &PgPool, section: Section) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM integration_settings WHERE section = $1")
-        .bind(section.code())
-        .execute(db)
-        .await
-        .map(|_| ())
+    .map(|r| r.rows_affected() == 1)
 }
 
 /// Env keys overlaid with every saved console section. A section that no longer validates
@@ -662,9 +736,13 @@ pub async fn load(db: &PgPool, config: &Config) -> Result<Integrations, sqlx::Er
             tracing::warn!(section = code, "setup section cannot be decrypted; ignored");
             continue;
         };
+        // A cleared card keeps its row, locked, with no values: it counts as not saved.
+        if values.is_empty() {
+            continue;
+        }
         if section == Section::Payout {
             let secret = values.get("secret_key").and_then(Value::as_str).unwrap_or_default();
-            out.payout_toss_ready = toss_ready(toss_env_enabled(), last_test.as_ref(), secret);
+            out.payout_toss_ready = toss_ready(toss_env_enabled(), last_test.as_ref(), &config.data_key, secret);
         }
         match apply(&out, section, &values) {
             Ok(next) => out = next,
