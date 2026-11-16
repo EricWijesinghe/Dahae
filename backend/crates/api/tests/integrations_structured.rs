@@ -175,7 +175,8 @@ async fn backup_test_against_an_unreachable_endpoint_reports_unreachable(db: PgP
     });
     let (st, body) = call_with_totp(&app, "PUT", "/v1/admin/setup/backup", &token, None, cfg).await;
     assert_eq!(st, StatusCode::OK, "{body}");
-    // A saved card is locked: its connection test records a result on the card, so it waits for an unlock.
+    // A saved card is locked, but the test only reads the saved values, so it runs without an unlock.
     let (st, body) = call_with_totp(&app, "POST", "/v1/admin/setup/backup/test", &token, None, Value::Null).await;
-    assert_eq!((st, body["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("card_locked")), "{body}");
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(body["code"], "unreachable");
 }

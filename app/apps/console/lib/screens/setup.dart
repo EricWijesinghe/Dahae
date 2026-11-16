@@ -504,7 +504,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
                 ),
                 if (configured)
                   OutlinedButton.icon(
-                    onPressed: _busy || _locked ? null : () => _run(_test),
+                    // The server tests the saved values and takes none, so a locked card can run it.
+                    onPressed: _busy ? null : () => _run(_test),
                     icon: const Icon(Icons.wifi_tethering_rounded),
                     label: Text(
                       _code == 'portone' ? t.cSetupTestApiKey : t.cSetupTest,

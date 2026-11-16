@@ -227,6 +227,32 @@ void _lockedTests() {
     },
   );
 
+  testWidgets(
+    'a locked card still runs the connection test with no unlock, no owner code and no values',
+    (tester) async {
+      final api = FakeApi()
+        ..reply('POST', '/admin/setup/portone/test', {
+          'ok': true,
+          'code': 'connected',
+        });
+      await _pump(tester, _lockedPortone(), api: api, size: _fullCardSize);
+      await tester.tap(find.byType(ExpansionTile));
+      await settle(tester);
+
+      final check = find.widgetWithText(OutlinedButton, koT.cSetupTestApiKey);
+      expect(tester.widget<OutlinedButton>(check).onPressed, isNotNull);
+      await tester.tap(check);
+      await settle(tester);
+
+      expect(find.byType(AlertDialog), findsNothing, reason: 'no owner code');
+      final call = api.lastCall('POST', '/admin/setup/portone/test')!;
+      expect(call.body, isNull, reason: 'the server tests the saved values');
+      expect(call.headers.keys, isNot(contains('x-owner-totp')));
+      expect(api.callsTo('POST', '/admin/setup/portone/unlock'), isEmpty);
+      await unmount(tester);
+    },
+  );
+
   testWidgets('saved values are masked and never filled into the paste boxes', (
     tester,
   ) async {
