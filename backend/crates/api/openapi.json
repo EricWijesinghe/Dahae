@@ -2955,6 +2955,28 @@
         }
       }
     },
+    "/v1/admin/pros/{id}/payee-identifier/reveal": {
+      "post": {
+        "operationId": "revealPayeeIdentifier",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Show a partner's decrypted payee identifier once (admin with recent TOTP step-up, audited, not cached)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/settlements": {
       "get": {
         "operationId": "adminSettlements",
@@ -4288,6 +4310,23 @@
           "admin"
         ],
         "summary": "Export withholding summary (CSV)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/finance/export/payroll": {
+      "get": {
+        "operationId": "exportPayroll",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Export paid payouts per partner for payroll and withholding filing (CSV, admin only, audited)",
         "responses": {
           "200": {
             "description": "OK"
