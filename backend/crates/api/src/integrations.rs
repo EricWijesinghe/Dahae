@@ -491,7 +491,6 @@ fn service_account(v: &Map<String, Value>) -> Result<ServiceAccount, Invalid> {
     Ok(acc)
 }
 
-/// Overlays one console section onto `base`. Fails when a value is missing or malformed.
 /// True when the env, not the saved card, supplies this field. The card shows such a field as set.
 pub fn env_provides(base: &Integrations, section: Section, field: &str) -> bool {
     match (section, field) {
@@ -501,6 +500,7 @@ pub fn env_provides(base: &Integrations, section: Section, field: &str) -> bool 
     }
 }
 
+/// Overlays one console section onto `base`. Fails when a value is missing or malformed.
 pub fn apply(base: &Integrations, section: Section, v: &Map<String, Value>) -> Result<Integrations, Invalid> {
     let mut out = base.clone();
     match section {

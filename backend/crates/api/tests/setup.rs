@@ -392,3 +392,92 @@ async fn review_account_signs_in_with_the_owner_code_and_no_sms_code_is_echoed(p
     .await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "switched off: the fixed code no longer works");
 }
+
+/// Writes a saved card straight into the settings table (locked, as the console leaves it after a save).
+async fn save_card_row(db: &PgPool, section: &str, values: Value) {
+    let by: uuid::Uuid = sqlx::query_scalar("SELECT id FROM staff LIMIT 1").fetch_one(db).await.expect("owner");
+    let enc = api::crypto::encrypt(&common::test_config().data_key, api::crypto::aad::INTEGRATION, &values.to_string());
+    sqlx::query("INSERT INTO integration_settings (section, secret, updated_by) VALUES ($1, $2, $3)")
+        .bind(section)
+        .bind(enc)
+        .bind(by)
+        .execute(db)
+        .await
+        .expect("card");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn open_toss_transfer_refuses_manual_switch_and_card_clear_until_it_settles(pool: PgPool) {
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
+    let app = common::app(pool.clone());
+    create_owner(&app, "ABCD2345EFGH").await;
+    let (token, secret) = owner_session(&app, &pool).await;
+    let t = Some(token.as_str());
+    save_card_row(
+        &pool,
+        "payout",
+        json!({"mode": "toss", "secret_key": "live_sk_zz9876", "security_key": SECURITY_KEY}),
+    )
+    .await;
+    let pro: uuid::Uuid =
+        sqlx::query_scalar("INSERT INTO pros (phone, name, team_name, status) VALUES ('01073000101', 'pro', 'team', 'verified') RETURNING id")
+            .fetch_one(&pool)
+            .await
+            .expect("pro");
+    let batch: uuid::Uuid = sqlx::query_scalar(
+        "INSERT INTO payouts (pro_id, payout_date, amount, items, provider, state, bank, holder, account_enc, account_last4, provider_transfer_id, attempts)
+         VALUES ($1, '2026-11-10', 80000, 1, 'toss', 'sent', 'x', 'x', 'x', '0000', 'tp_open', 1) RETURNING id",
+    )
+    .bind(pro)
+    .fetch_one(&pool)
+    .await
+    .expect("batch");
+
+    unlock(&app, &pool, &token, &secret, "payout").await;
+    let (st, b) = call(&app, "PUT", "/v1/admin/setup/payout", t, Some(json!({"mode": "manual"}))).await;
+    assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("payout_in_transfer")), "{b}");
+    let (st, b) = call(&app, "DELETE", "/v1/admin/setup/payout", t, None).await;
+    assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("payout_in_transfer")), "{b}");
+    let saved: String = sqlx::query_scalar("SELECT secret FROM integration_settings WHERE section = 'payout'")
+        .fetch_one(&pool)
+        .await
+        .expect("row");
+    let saved = api::crypto::decrypt(&common::test_config().data_key, api::crypto::aad::INTEGRATION, &saved).expect("decrypt");
+    assert!(saved.contains("live_sk_zz9876"), "the card is unchanged while the transfer is open");
+
+    sqlx::query("UPDATE payouts SET state = 'paid', provider_transfer_id = 'tp_open' WHERE id = $1")
+        .bind(batch)
+        .execute(&pool)
+        .await
+        .expect("settle");
+    let (st, b) = call(&app, "PUT", "/v1/admin/setup/payout", t, Some(json!({"mode": "manual"}))).await;
+    assert_eq!(st, StatusCode::OK, "a settled transfer no longer blocks the switch: {b}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn env_webhook_secret_shows_as_set_on_the_saved_portone_card(pool: PgPool) {
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
+    let mut cfg = common::test_config();
+    cfg.portone.webhook_secret = Some("whsec_ZW52".into());
+    let app = api::routes::router(api::build_state(pool.clone(), cfg).expect("state"));
+    create_owner(&app, "ABCD2345EFGH").await;
+    let (token, _) = owner_session(&app, &pool).await;
+    // The card was saved without a webhook secret: the env one still supplies it.
+    save_card_row(&pool, "portone", json!({"store_id": "store-1"})).await;
+
+    let (_, all) = call(&app, "GET", "/v1/admin/setup", Some(token.as_str()), None).await;
+    let card = all["integrations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["code"] == "portone")
+        .expect("portone card");
+    let field = card["fields"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["name"] == "webhook_secret")
+        .expect("webhook field");
+    assert_eq!(field["set"], true, "{card}");
+    assert!(!card.to_string().contains("whsec_ZW52"), "the env secret is never shown");
+}
