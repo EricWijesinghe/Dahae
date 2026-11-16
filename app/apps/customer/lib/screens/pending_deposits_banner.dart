@@ -34,11 +34,7 @@ class PendingDepositsBanner extends StatelessWidget {
           child: AppCard(
             child: InkWell(
               borderRadius: BorderRadius.circular(Radii.card),
-              onTap: () => showVirtualAccount(
-                context,
-                first.account,
-                amount: first.amount,
-              ),
+              onTap: () => showVirtualAccount(context, first.account),
               child: Row(
                 children: [
                   Icon(

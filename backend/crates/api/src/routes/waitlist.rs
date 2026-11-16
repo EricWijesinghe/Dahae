@@ -146,6 +146,7 @@ async fn accept(State(s): State<AppState>, Customer(a): Customer, Path(id): Path
     let req = CreateBooking {
         body: booking_body,
         payment_method_id: body.and_then(|Json(b)| b.payment_method_id),
+        expected_total: None,
     };
     match bookings::create_core(&s, a.id, &req).await {
         Ok(booking) => Ok(Json(json!({ "booking_id": booking }))),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:core/auth_pay.dart';
@@ -16,6 +17,9 @@ import 'pay_method_picker.dart';
 import 'virtual_account.dart';
 
 const _actionShare = 0.35;
+const _priceChanged = 'price_changed';
+
+int _int(Object? v) => (v as num? ?? 0).toInt();
 
 /// Discount and payment (design p12): coupon, points, method, breakdown, agreement, pay.
 class CheckoutScreen extends StatefulWidget {
@@ -36,6 +40,33 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   /// "포인트 우선 사용": apply as many points as allowed. The server re-checks balance and cap.
   bool _usePoints = false;
+
+  /// POST /bookings/price for the draft as it is now (peak, coupon or welcome offer): every amount
+  /// shown and paid comes from it. Null while it loads; Pay waits for it.
+  Json? _price;
+  bool _priceFailed = false;
+
+  void _retryPrice() {
+    setState(() => _priceFailed = false);
+    _loadPrice();
+  }
+
+  /// Synchronous part sets no state: the first call runs inside build, right after the coupon pick.
+  Future<void> _loadPrice() async {
+    final coupon = d.couponId;
+    _price = null;
+    _priceFailed = false;
+    try {
+      final p =
+          await context.appRead.api.post('/bookings/price', _bookingBody())
+              as Json;
+      if (mounted && d.couponId == coupon) setState(() => _price = p);
+    } on Object catch (e) {
+      if (!mounted || d.couponId != coupon) return;
+      setState(() => _priceFailed = true);
+      showToast(context, context.t.payError(e));
+    }
+  }
 
   Future<void> _loadWallet() async {
     try {
@@ -66,6 +97,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   /// Saved method -> POST /bookings (one-tap). Checkout channel -> PG window, then confirm.
   /// Both reuse one Idempotency-Key per draft, so a retry after a lost reply never charges twice.
+  /// [total] is the server's price shown: if it changed since, the server refuses (`price_changed`).
   Future<void> _pay(int total, int points) async {
     final choice = _choice;
     if (choice == null || _busy) return;
@@ -78,11 +110,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         result = await payWithChannel(context, channel, {
           'kind': 'booking',
           'booking': _bookingBody(),
+          'expected_total': total,
           if (points > 0) 'points': points,
         });
       } else {
         final b = Booking.fromJson(
-          await app.api.postAction('/bookings', d.toJson()) as Json,
+          await app.api.postAction('/bookings', {
+                ...d.toJson(),
+                'expected_total': total,
+              })
+              as Json,
         );
         result = CheckoutPaid(b.id, b);
       }
@@ -109,22 +146,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           app.bookingsChanged();
           await Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute<void>(
-              builder: (_) =>
-                  VirtualAccountScreen(account: account, amount: total),
+              builder: (_) => VirtualAccountScreen(account: account),
             ),
             (r) => r.isFirst,
           );
         case CheckoutFailed(:final code):
-          showToast(context, context.t.checkoutFailure(code));
+          showToast(context, _failure(code));
+          if (code == _priceChanged) unawaited(_loadPrice());
         case CheckoutCancelled():
           break;
       }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      showToast(context, _failure(e.code));
+      if (e.code == _priceChanged) unawaited(_loadPrice());
     } catch (e) {
       if (mounted) showToast(context, context.t.payError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  String _failure(String code) => code == _priceChanged
+      ? context.t.checkoutPriceChanged
+      : context.t.checkoutFailure(code);
 
   void _choose(PayChoice c) => setState(() {
     _choice = c;
@@ -188,9 +233,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _choice = d.methodId == null ? null : SavedChoice(d.methodId!);
       _autoPicked = true;
       _loadWallet();
+      _loadPrice();
     }
-    final discount = _discount(app.coupons);
-    final total = d.listPrice - discount;
+    final price = _price;
+    // Until the server answers, the catalogue figures only hold the layout: Pay stays busy.
+    final peak = _int(price?['peak_surcharge']);
+    final base = price == null
+        ? d.listPrice
+        : _int(price['list_price']) - peak - _int(price['multi_discount']);
+    final discount = price == null
+        ? _discount(app.coupons)
+        : _int(price['discount']);
+    final welcome = price?['welcome'] == true;
+    final total = price == null ? d.listPrice - discount : _int(price['total']);
     // Points go through the payment window only; a saved card charges the full total in one tap.
     final viaWindow = _choice is ChannelChoice;
     final maxPoints = _maxPoints(total);
@@ -294,10 +349,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         children: [
                           InfoRow(
                             t.dfBaseAmount(t.duration(d.minutes)),
-                            context.won(d.listPrice),
+                            context.won(base),
                           ),
+                          if (peak > 0)
+                            InfoRow(t.qaPeak, '+${context.won(peak)}'),
                           InfoRow(
-                            t.dfCouponDiscount,
+                            welcome ? t.welcomeOfferTitle : t.dfCouponDiscount,
                             discount == 0
                                 ? context.won(0)
                                 : '−${context.won(discount)}',
@@ -349,11 +406,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       bottomNavigationBar: BottomActionBar(
         child: PrimaryButton(
           label: _choice == null ? t.needMethod : t.payAmount(context.won(due)),
-          busy: _busy,
+          busy: _busy || (_choice != null && price == null && !_priceFailed),
           // Maintenance pauses new bookings: the pay button stays off until the owner switches it off.
+          // Without the server's price, a tap asks for it again instead of paying.
           onPressed: _choice == null
               ? _pickMethod
-              : (paused ? null : () => _pay(due, points)),
+              : paused
+              ? null
+              : price == null
+              ? (_priceFailed ? _retryPrice : null)
+              : () => _pay(total, points),
         ),
       ),
     );
@@ -394,6 +456,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
     if (picked != null) {
       setState(() => d.couponId = picked.isEmpty ? null : picked);
+      unawaited(_loadPrice());
     }
   }
 }

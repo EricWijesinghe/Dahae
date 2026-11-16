@@ -913,6 +913,162 @@ abstract class T {
   /// **'간편결제 등록'**
   String get apPayManageTitle;
 
+  /// No description provided for @bankKdb.
+  ///
+  /// In ko, this message translates to:
+  /// **'산업은행'**
+  String get bankKdb;
+
+  /// No description provided for @bankIbk.
+  ///
+  /// In ko, this message translates to:
+  /// **'기업은행'**
+  String get bankIbk;
+
+  /// No description provided for @bankKookmin.
+  ///
+  /// In ko, this message translates to:
+  /// **'국민은행'**
+  String get bankKookmin;
+
+  /// No description provided for @bankSuhyup.
+  ///
+  /// In ko, this message translates to:
+  /// **'수협은행'**
+  String get bankSuhyup;
+
+  /// No description provided for @bankSuhyupFederation.
+  ///
+  /// In ko, this message translates to:
+  /// **'수협중앙회'**
+  String get bankSuhyupFederation;
+
+  /// No description provided for @bankNonghyup.
+  ///
+  /// In ko, this message translates to:
+  /// **'농협은행'**
+  String get bankNonghyup;
+
+  /// No description provided for @bankLocalNonghyup.
+  ///
+  /// In ko, this message translates to:
+  /// **'지역농축협'**
+  String get bankLocalNonghyup;
+
+  /// No description provided for @bankWoori.
+  ///
+  /// In ko, this message translates to:
+  /// **'우리은행'**
+  String get bankWoori;
+
+  /// No description provided for @bankStandardChartered.
+  ///
+  /// In ko, this message translates to:
+  /// **'SC제일은행'**
+  String get bankStandardChartered;
+
+  /// No description provided for @bankCiti.
+  ///
+  /// In ko, this message translates to:
+  /// **'한국씨티은행'**
+  String get bankCiti;
+
+  /// No description provided for @bankDaegu.
+  ///
+  /// In ko, this message translates to:
+  /// **'대구은행(iM뱅크)'**
+  String get bankDaegu;
+
+  /// No description provided for @bankBusan.
+  ///
+  /// In ko, this message translates to:
+  /// **'부산은행'**
+  String get bankBusan;
+
+  /// No description provided for @bankKwangju.
+  ///
+  /// In ko, this message translates to:
+  /// **'광주은행'**
+  String get bankKwangju;
+
+  /// No description provided for @bankJeju.
+  ///
+  /// In ko, this message translates to:
+  /// **'제주은행'**
+  String get bankJeju;
+
+  /// No description provided for @bankJeonbuk.
+  ///
+  /// In ko, this message translates to:
+  /// **'전북은행'**
+  String get bankJeonbuk;
+
+  /// No description provided for @bankKyongnam.
+  ///
+  /// In ko, this message translates to:
+  /// **'경남은행'**
+  String get bankKyongnam;
+
+  /// No description provided for @bankKfcc.
+  ///
+  /// In ko, this message translates to:
+  /// **'새마을금고'**
+  String get bankKfcc;
+
+  /// No description provided for @bankShinhyup.
+  ///
+  /// In ko, this message translates to:
+  /// **'신협'**
+  String get bankShinhyup;
+
+  /// No description provided for @bankSavingsBank.
+  ///
+  /// In ko, this message translates to:
+  /// **'저축은행'**
+  String get bankSavingsBank;
+
+  /// No description provided for @bankNfcf.
+  ///
+  /// In ko, this message translates to:
+  /// **'산림조합'**
+  String get bankNfcf;
+
+  /// No description provided for @bankPost.
+  ///
+  /// In ko, this message translates to:
+  /// **'우체국'**
+  String get bankPost;
+
+  /// No description provided for @bankHana.
+  ///
+  /// In ko, this message translates to:
+  /// **'하나은행'**
+  String get bankHana;
+
+  /// No description provided for @bankShinhan.
+  ///
+  /// In ko, this message translates to:
+  /// **'신한은행'**
+  String get bankShinhan;
+
+  /// No description provided for @bankKBank.
+  ///
+  /// In ko, this message translates to:
+  /// **'케이뱅크'**
+  String get bankKBank;
+
+  /// No description provided for @bankKakao.
+  ///
+  /// In ko, this message translates to:
+  /// **'카카오뱅크'**
+  String get bankKakao;
+
+  /// No description provided for @bankToss.
+  ///
+  /// In ko, this message translates to:
+  /// **'토스뱅크'**
+  String get bankToss;
+
   /// No description provided for @bizInfoTitle.
   ///
   /// In ko, this message translates to:
@@ -1632,6 +1788,12 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'저장하지 못했어요. 다시 확인해 주세요'**
   String get cgGroupErrUnknown;
+
+  /// No description provided for @checkoutPriceChanged.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제 금액이 바뀌었어요. 바뀐 금액을 확인하고 다시 결제해 주세요.'**
+  String get checkoutPriceChanged;
 
   /// No description provided for @cTitle.
   ///

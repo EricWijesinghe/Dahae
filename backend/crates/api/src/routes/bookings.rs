@@ -3,8 +3,8 @@
 use super::{
     audit,
     booking_core::{
-        BookingBody, Prepared, SeenQuote, after_booking_created, after_deposit, balance_due, checked_household, deposit_due, insert_paid, lock_slot,
-        next_number, prepare, price_for, record_payment, take_balance, take_deposit,
+        BookingBody, Prepared, SeenQuote, after_booking_created, after_deposit, balance_due, check_expected_total, checked_household, deposit_due, insert_paid,
+        lock_slot, next_number, prepare, price_for, price_preview, record_payment, take_balance, take_deposit,
     },
     catalog::{load_formula, load_peak_config},
     chat, growth, payouts,
@@ -46,6 +46,7 @@ const CANCEL_POLICY_KEY: &str = "cancel_policy";
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/bookings", crate::idempotency::replayable(get(list).post(create)))
+        .route("/bookings/price", post(price_preview))
         .route("/bookings/{id}", get(detail))
         .route("/bookings/{id}/cancel", crate::idempotency::replayable(post(cancel)))
         .route("/bookings/{id}/cancel-preview", get(cancel_preview))
@@ -133,6 +134,9 @@ pub(crate) struct CreateBooking {
     #[serde(flatten)]
     pub(crate) body: BookingBody,
     pub(crate) payment_method_id: Option<Uuid>,
+    /// The total the customer saw (POST /bookings/price); a different price is a 409 `price_changed`.
+    #[serde(default)]
+    pub(crate) expected_total: Option<i64>,
 }
 
 /// Charges a saved PortOne billing key and records the payment. Used inside a transaction.
@@ -287,6 +291,7 @@ async fn create_paid(s: &AppState, user: Uuid, req: &CreateBooking, prep: &Prepa
     let mut tx = s.db.begin().await?;
     lock_slot(&mut tx, req.body.visit_date, req.body.start_hour).await?;
     let price = price_for(&mut tx, user, prep, &req.body, true).await?;
+    check_expected_total(req.expected_total, &price)?;
     let id = Uuid::now_v7();
     let number = insert_paid(&mut tx, &s.config.data_key, id, user, prep, &req.body, &price).await?;
     let tx_id = if price.total.0 > 0 {

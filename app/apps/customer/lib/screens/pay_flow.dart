@@ -193,12 +193,9 @@ class _PaymentConfirmingScreenState extends State<PaymentConfirmingScreen> {
 }
 
 /// Shows the virtual-account details screen and returns when the customer leaves it.
-Future<void> showVirtualAccount(
-  BuildContext context,
-  VirtualAccount account, {
-  int? amount,
-}) => Navigator.of(context).push(
-  MaterialPageRoute<void>(
-    builder: (_) => VirtualAccountScreen(account: account, amount: amount),
-  ),
-);
+Future<void> showVirtualAccount(BuildContext context, VirtualAccount account) =>
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => VirtualAccountScreen(account: account),
+      ),
+    );

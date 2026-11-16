@@ -1,0 +1,31 @@
+# Bank names for PortOne V2 `Bank` codes, as shown on the virtual-account screen. Columns: ko (source), en.
+# Keys are bank + the code in camel case (see bankName in packages/core/lib/src/pay_i18n.dart).
+# Banks that issue deposit accounts only; securities firms and guarantee funds fall back to the raw code.
+S = {
+  "bankKdb": ["산업은행", "KDB Korea Development Bank"],
+  "bankIbk": ["기업은행", "IBK Industrial Bank of Korea"],
+  "bankKookmin": ["국민은행", "KB Kookmin Bank"],
+  "bankSuhyup": ["수협은행", "Suhyup Bank"],
+  "bankSuhyupFederation": ["수협중앙회", "Suhyup (National Federation)"],
+  "bankNonghyup": ["농협은행", "NH NongHyup Bank"],
+  "bankLocalNonghyup": ["지역농축협", "Local NongHyup cooperative"],
+  "bankWoori": ["우리은행", "Woori Bank"],
+  "bankStandardChartered": ["SC제일은행", "SC First Bank"],
+  "bankCiti": ["한국씨티은행", "Citibank Korea"],
+  "bankDaegu": ["대구은행(iM뱅크)", "iM Bank (Daegu)"],
+  "bankBusan": ["부산은행", "Busan Bank"],
+  "bankKwangju": ["광주은행", "Kwangju Bank"],
+  "bankJeju": ["제주은행", "Jeju Bank"],
+  "bankJeonbuk": ["전북은행", "Jeonbuk Bank"],
+  "bankKyongnam": ["경남은행", "Kyongnam Bank"],
+  "bankKfcc": ["새마을금고", "MG Saemaeul Geumgo"],
+  "bankShinhyup": ["신협", "Shinhyup credit union"],
+  "bankSavingsBank": ["저축은행", "Savings bank"],
+  "bankNfcf": ["산림조합", "Forestry cooperative (NFCF)"],
+  "bankPost": ["우체국", "Korea Post"],
+  "bankHana": ["하나은행", "Hana Bank"],
+  "bankShinhan": ["신한은행", "Shinhan Bank"],
+  "bankKBank": ["케이뱅크", "K Bank"],
+  "bankKakao": ["카카오뱅크", "KakaoBank"],
+  "bankToss": ["토스뱅크", "Toss Bank"],
+}

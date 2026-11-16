@@ -1466,7 +1466,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "The customer's checkouts, newest first (cursor-paginated, optional status filter)",
+        "summary": "The customer's checkouts, newest first (cursor-paginated, optional status filter); an awaiting_deposit item's `virtual_account` (see VirtualAccount) carries the amount to deposit, while the top-level `amount` is the total before points",
         "parameters": [
           {
             "$ref": "#/components/parameters/Limit"
@@ -1497,7 +1497,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "Start a payment checkout (idempotent). Optional `points` pays part with points: checked against balance and cap here, debited when the checkout settles; the response `amount` is what the PG charges (`total - points`)",
+        "summary": "Start a payment checkout (idempotent). Optional `points` pays part with points: checked against balance and cap here, debited when the checkout settles; the response `amount` is what the PG charges (`total - points`). Booking checkouts may send `expected_total` (the total from POST /v1/bookings/price): another server price is a 409 `price_changed` before any PG window",
         "parameters": [
           {
             "$ref": "#/components/parameters/IdempotencyKey"
@@ -1522,7 +1522,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "Confirm payment after the provider redirect (idempotent)",
+        "summary": "Confirm payment after the provider redirect (idempotent). An issued virtual account answers `status: awaiting_deposit` with `virtual_account` (see VirtualAccount), including the amount to deposit",
         "parameters": [
           {
             "$ref": "#/components/parameters/Id"
@@ -6605,6 +6605,41 @@
           }
         }
       }
+    },
+    "/v1/bookings/price": {
+      "post": {
+        "operationId": "priceBooking",
+        "tags": [
+          "customer"
+        ],
+        "summary": "What a fixed or unit booking would charge right now, by the same rules as createBooking and createCheckout (peak surcharge, coupon or first-booking offer). Read-only: nothing is held or charged. Quote services are refused (`quote_not_payable`).",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricePreview"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6813,6 +6848,13 @@
           },
           "visit_notes": {
             "type": "object"
+          },
+          "expected_total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "The total the customer was shown (POST /v1/bookings/price). When sent and the server's price differs, 409 `price_changed` and nothing is charged."
           }
         }
       },
@@ -6866,6 +6908,80 @@
               "integer",
               "null"
             ]
+          }
+        }
+      },
+      "PricePreview": {
+        "description": "Server price for a booking request. `total = list_price - multi_discount - discount`; points come off `total` at checkout.",
+        "type": "object",
+        "required": [
+          "list_price",
+          "peak_surcharge",
+          "multi_discount",
+          "discount",
+          "welcome",
+          "total"
+        ],
+        "properties": {
+          "list_price": {
+            "type": "integer",
+            "description": "Catalogue price plus peak_surcharge, before discounts"
+          },
+          "peak_surcharge": {
+            "type": "integer",
+            "description": "Weekend / holiday / evening surcharge for the slot (0 unless the owner applies peak to fixed visits)"
+          },
+          "multi_discount": {
+            "type": "integer"
+          },
+          "discount": {
+            "type": "integer",
+            "description": "Coupon discount, or the first-booking offer when welcome is true"
+          },
+          "welcome": {
+            "type": "boolean"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Charged before points; send back as expected_total"
+          }
+        }
+      },
+      "VirtualAccount": {
+        "description": "Virtual-account deposit details. `amount` is the exact sum to deposit (the checkout's charge: total after discounts, less points).",
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "bank": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "PortOne bank code"
+          },
+          "account_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "holder": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "amount": {
+            "type": "integer"
           }
         }
       }

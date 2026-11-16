@@ -442,6 +442,84 @@ class TEn extends T {
   String get apPayManageTitle => 'Register quick-pay';
 
   @override
+  String get bankKdb => 'KDB Korea Development Bank';
+
+  @override
+  String get bankIbk => 'IBK Industrial Bank of Korea';
+
+  @override
+  String get bankKookmin => 'KB Kookmin Bank';
+
+  @override
+  String get bankSuhyup => 'Suhyup Bank';
+
+  @override
+  String get bankSuhyupFederation => 'Suhyup (National Federation)';
+
+  @override
+  String get bankNonghyup => 'NH NongHyup Bank';
+
+  @override
+  String get bankLocalNonghyup => 'Local NongHyup cooperative';
+
+  @override
+  String get bankWoori => 'Woori Bank';
+
+  @override
+  String get bankStandardChartered => 'SC First Bank';
+
+  @override
+  String get bankCiti => 'Citibank Korea';
+
+  @override
+  String get bankDaegu => 'iM Bank (Daegu)';
+
+  @override
+  String get bankBusan => 'Busan Bank';
+
+  @override
+  String get bankKwangju => 'Kwangju Bank';
+
+  @override
+  String get bankJeju => 'Jeju Bank';
+
+  @override
+  String get bankJeonbuk => 'Jeonbuk Bank';
+
+  @override
+  String get bankKyongnam => 'Kyongnam Bank';
+
+  @override
+  String get bankKfcc => 'MG Saemaeul Geumgo';
+
+  @override
+  String get bankShinhyup => 'Shinhyup credit union';
+
+  @override
+  String get bankSavingsBank => 'Savings bank';
+
+  @override
+  String get bankNfcf => 'Forestry cooperative (NFCF)';
+
+  @override
+  String get bankPost => 'Korea Post';
+
+  @override
+  String get bankHana => 'Hana Bank';
+
+  @override
+  String get bankShinhan => 'Shinhan Bank';
+
+  @override
+  String get bankKBank => 'K Bank';
+
+  @override
+  String get bankKakao => 'KakaoBank';
+
+  @override
+  String get bankToss => 'Toss Bank';
+
+  @override
   String get bizInfoTitle => 'Business information';
 
   @override
@@ -831,6 +909,10 @@ class TEn extends T {
   @override
   String get cgGroupErrUnknown =>
       'Could not save. Check the details and try again';
+
+  @override
+  String get checkoutPriceChanged =>
+      'The amount to pay changed. Check the new amount and pay again.';
 
   @override
   String get cTitle => 'Operations console';
