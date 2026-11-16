@@ -763,8 +763,12 @@ cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔
   if [ "$new_api" != "$(docker image inspect -f '{{.Id}}' "$cur_api" 2>/dev/null || true)" ]; then
     env_set PREV_API_IMAGE "$cur_api"; env_set PREV_WEB_IMAGE "$cur_web"
   fi
+  # 새 버전을 띄운 뒤 응답 확인 전에 끊기면(시간 제한·서버 종료) 확인 안 된 새 버전이 남지 않게 이전 버전으로 되돌려요
+  # shellcheck disable=SC2064 # 지금의 이전 버전 값을 넣어 둬요
+  trap "set_images $(printf '%q %q' "$cur_api" "$cur_web") >/dev/null 2>&1; exit 143" TERM INT HUP
   set_images "$NEW_API" "$NEW_WEB"
   if wait_healthy; then
+    trap - TERM INT HUP
     env_set VERSION "$ver"
     record_version
     prune_keep_tags
@@ -1273,7 +1277,7 @@ Description=다해 서버 작업 실행기 (root)
 Type=oneshot
 User=root
 ExecStart=/bin/bash $DIR/agent.sh run
-TimeoutStartSec=7h
+TimeoutStartSec=13h
 ProtectSystem=full
 ReadWritePaths=$DIR /etc/cron.d /etc/logrotate.d /run
 PrivateTmp=true

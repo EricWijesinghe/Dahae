@@ -425,15 +425,17 @@ mkdir -p "$SB/units"; write_units "$SB/units"
 t  "unit: path watches the inbox"        grep -qF "PathExistsGlob=$SB/jobs/inbox/*.job" "$SB/units/dahae-agent.path"
 t  "unit: service runs the agent"        grep -qF "ExecStart=/bin/bash $SB/agent.sh run" "$SB/units/dahae-agent.service"
 t  "unit: service sandboxed"             grep -qF "ProtectSystem=full" "$SB/units/dahae-agent.service"
-t  "unit: service may run 7 hours"       grep -qF "TimeoutStartSec=7h" "$SB/units/dahae-agent.service"
 t  "unit: timer every minute"            grep -qF "OnCalendar=*-*-* *:*:00" "$SB/units/dahae-agent.timer"
 t  "unit: path also watches approvals"   grep -qF "PathExistsGlob=$SB/jobs/inbox/*.approve" "$SB/units/dahae-agent.path"
-# job limits: an update may run 6 h; a queued job waits for the lock at least that long; the unit limit covers the update
+# job limits: a long job may run 6 h; a queued job waits for the lock at least that long. One run = lock wait,
+# the host refresh (a normal job at most) and one job, so the unit limit must cover all three
 read -r run_t upd_t lock_w < <( (eval "$(grep -E '^(RUN_TIMEOUT|UPDATE_RUN_TIMEOUT|LOCK_WAIT)=' "$ROOT/deploy/agent.sh")"; echo "$RUN_TIMEOUT $UPDATE_RUN_TIMEOUT $LOCK_WAIT") )
+unit_h=$(sed -n 's/^TimeoutStartSec=\([0-9][0-9]*\)h$/\1/p' "$SB/units/dahae-agent.service")
 t  "agent: normal job keeps 30 minutes"  eq "$run_t" 1800
 t  "agent: update may run 6 hours"       eq "$upd_t" 21600
 t  "agent: lock wait covers the update"   [ "$lock_w" -ge "$upd_t" ]
-t  "agent: unit limit covers the update"  [ $((7 * 3600)) -ge "$upd_t" ]
+t  "unit: limit is set in hours"          [ -n "$unit_h" ]
+t  "unit: limit covers lock wait + refresh + longest job" [ $((${unit_h:-0} * 3600)) -ge $((lock_w + run_t + upd_t)) ]
 
 # server approval key: made once, private, and owner-reset removes it (the CLI runs in the sandbox)
 mkdir -p "$SB/host"
@@ -566,6 +568,20 @@ t  "...and it is tagged so prune keeps it"   grep -qF "tag sha256:abcdef01234567
 set_images_safe() { ( docker() { case "$*" in "image inspect"*|"pull "*) return 1 ;; esac; return 0; }; set_images "$@" ) >/dev/null 2>&1; }
 nt "missing image stops set_images"          set_images_safe repo/x:keep-1 repo/y
 t  ".env keeps the old image when pull fails" eq "$(env_get API_IMAGE)" old
+# an update stopped (time limit, shutdown) after the new images are up puts the old ones back; a finished one does not
+update_then_term() { # update_then_term during|after : TERM while waiting for health, or once the update is done
+  : > "$SB/set.log"
+  ( mode=$1; db_roles() { :; }; cmd_backup() { :; }; prune_keep_tags() { :; }; record_version() { :; }
+    # shellcheck disable=SC2034 # read by the sourced cmd_update
+    pull_images() { NEW_API=repo/api:new; NEW_WEB=repo/web:new; }
+    running_image() { echo "$2"; }; digest_ref() { echo "$1"; }; docker() { echo "id-$*"; }
+    set_images() { echo "$1 $2" >> "$SB/set.log"; }
+    wait_healthy() { [ "$mode" = after ] || kill -TERM "$BASHPID"; return 0; }
+    cmd_update; [ "$mode" = during ] || kill -TERM "$BASHPID" ) >/dev/null 2>&1
+  tail -n1 "$SB/set.log"
+}
+t  "update stopped before health check rolls back" eq "$(update_then_term during)" "old old"
+t  "finished update keeps the new images"   eq "$(update_then_term after)" "repo/api:new repo/web:new"
 backup_warn_after() { ( api_backup() { case "$*" in backup-seal*) [ -f "${2#/}" ] && printf 'MKB1' > "${3#/}"; return 0 ;; *"backup-upload /backups/uploads-"*) return 1 ;; *) return 0 ;; esac; }
   dc() { case "$1" in exec) printf 'dump' ;; run) printf 'tar' ;; esac; return 0; }
   cmd_backup >/dev/null 2>&1; printf '%s' "$BACKUP_WARN" ); }
