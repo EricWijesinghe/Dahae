@@ -256,6 +256,7 @@
  "cgGroupErrOtherGroup": "A service is already in another group. Remove it there first",
  "cgGroupErrIcon": "Pick the picture again",
  "cgGroupErrUnknown": "Could not save. Check the details and try again",
+ "checkoutPriceChanged": "The amount to pay changed. Check the new amount and pay again.",
  "cTitle": "Operations console",
  "cEmail": "Email",
  "cPassword": "Password",

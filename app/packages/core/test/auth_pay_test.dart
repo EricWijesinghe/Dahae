@@ -230,7 +230,7 @@ void main() {
         if (req.url.path == '/v1/checkouts') return _json(200, {..._intent, 'method': 'virtual_account'});
         return _json(200, {
           'status': 'awaiting_deposit',
-          'virtual_account': {'bank': '국민', 'account_number': '123-456', 'holder': '말끔', 'due': '2030-01-02T23:59:00Z'},
+          'virtual_account': {'bank': '국민', 'account_number': '123-456', 'holder': '말끔', 'due': '2030-01-02T23:59:00Z', 'amount': 41000},
         });
       });
       final ctx = await _context(tester);
@@ -239,6 +239,7 @@ void main() {
       final account = (result! as CheckoutAwaitingDeposit).account;
       expect(account.accountNumber, '123-456');
       expect(account.due, isNotNull);
+      expect(account.amount, 41000, reason: 'the deposit amount comes from the server');
     });
 
     testWidgets('closing the PG window cancels without confirming', (tester) async {
@@ -396,17 +397,20 @@ void main() {
       expect(channels.map((c) => (c.code, c.isBilling)).toList(), [('card', true), ('payco', false)]);
     });
 
-    test('pending deposits skip items without a virtual account', () async {
+    test('pending deposits skip items without a virtual account or its amount', () async {
       final api = _client((req) async {
         expect(req.url.queryParameters['status'], 'awaiting_deposit');
         return _json(200, [
-          {'id': 'co1', 'amount': 39000, 'booking_id': 'b1', 'virtual_account': {'bank': 'x', 'account_number': '1', 'holder': 'h', 'due': null}},
+          // 39,000 total, 4,000 of it in points: 35,000 is what the bank must receive.
+          {'id': 'co1', 'amount': 39000, 'booking_id': 'b1', 'virtual_account': {'bank': 'x', 'account_number': '1', 'holder': 'h', 'due': null, 'amount': 35000}},
           {'id': 'co2', 'amount': 1000},
+          {'id': 'co3', 'amount': 1000, 'virtual_account': {'bank': 'x', 'account_number': '2'}},
         ]);
       });
       final deposits = await fetchPendingDeposits(api);
       expect(deposits.map((d) => d.id), ['co1']);
       expect(deposits.single.account.due, isNull);
+      expect(deposits.single.amount, 35000, reason: 'the server amount, never the total before points');
     });
 
     test('failure codes map to friendly groups', () {

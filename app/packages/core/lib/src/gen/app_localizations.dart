@@ -1633,6 +1633,12 @@ abstract class T {
   /// **'저장하지 못했어요. 다시 확인해 주세요'**
   String get cgGroupErrUnknown;
 
+  /// No description provided for @checkoutPriceChanged.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제 금액이 바뀌었어요. 바뀐 금액을 확인하고 다시 결제해 주세요.'**
+  String get checkoutPriceChanged;
+
   /// No description provided for @cTitle.
   ///
   /// In ko, this message translates to:

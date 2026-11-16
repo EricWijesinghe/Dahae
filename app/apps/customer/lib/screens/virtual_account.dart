@@ -6,15 +6,16 @@ import 'package:ui/ui.dart';
 
 /// Bank details for a deposit that has not arrived yet. The booking confirms when it does.
 class VirtualAccountScreen extends StatelessWidget {
-  const VirtualAccountScreen({super.key, required this.account, this.amount});
+  const VirtualAccountScreen({super.key, required this.account});
 
+  /// Shown as the server sent it, amount included: the deposit must match it to the won.
   final VirtualAccount account;
-  final int? amount;
 
   @override
   Widget build(BuildContext context) {
     final t = context.t;
     final due = account.due;
+    final amount = account.amount;
     return Scaffold(
       appBar: AppBar(title: Text(t.apVaTitle)),
       body: ListView(
@@ -58,7 +59,7 @@ class VirtualAccountScreen extends StatelessWidget {
                 if (amount != null)
                   _Row(
                     label: t.apVaAmount,
-                    value: context.won(amount!),
+                    value: context.won(amount),
                     emphasis: true,
                   ),
               ],

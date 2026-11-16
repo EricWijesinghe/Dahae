@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -831,6 +832,10 @@ class TEn extends T {
   @override
   String get cgGroupErrUnknown =>
       'Could not save. Check the details and try again';
+
+  @override
+  String get checkoutPriceChanged =>
+      'The amount to pay changed. Check the new amount and pay again.';
 
   @override
   String get cTitle => 'Operations console';

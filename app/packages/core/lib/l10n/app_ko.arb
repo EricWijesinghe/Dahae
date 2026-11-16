@@ -352,6 +352,7 @@
  "cgGroupErrOtherGroup": "상품이 다른 묶음에 들어 있어요. 그 묶음에서 먼저 빼 주세요",
  "cgGroupErrIcon": "그림을 다시 골라 주세요",
  "cgGroupErrUnknown": "저장하지 못했어요. 다시 확인해 주세요",
+ "checkoutPriceChanged": "결제 금액이 바뀌었어요. 바뀐 금액을 확인하고 다시 결제해 주세요.",
  "cTitle": "운영 콘솔",
  "cEmail": "이메일",
  "cPassword": "비밀번호",

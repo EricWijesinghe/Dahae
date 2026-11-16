@@ -62,6 +62,7 @@ class VirtualAccount {
     required this.accountNumber,
     required this.holder,
     required this.due,
+    this.amount,
   });
 
   final String bank;
@@ -69,11 +70,16 @@ class VirtualAccount {
   final String holder;
   final DateTime? due;
 
+  /// The exact sum to deposit, from the server (the charge after points and discounts).
+  /// Null only when the server did not send one; the app never works it out itself.
+  final int? amount;
+
   factory VirtualAccount.fromJson(Json j) => VirtualAccount(
     bank: j['bank'] as String? ?? '',
     accountNumber: j['account_number'] as String? ?? '',
     holder: j['holder'] as String? ?? '',
     due: DateTime.tryParse(j['due'] as String? ?? '')?.toLocal(),
+    amount: (j['amount'] as num?)?.toInt(),
   );
 }
 
@@ -81,25 +87,26 @@ class VirtualAccount {
 class PendingDeposit {
   const PendingDeposit({
     required this.id,
-    required this.amount,
     required this.account,
     this.bookingId,
     this.orderName = '',
   });
 
   final String id;
-  final int amount;
   final VirtualAccount account;
   final String? bookingId;
   final String orderName;
 
-  /// Items without a virtual_account are skipped rather than failing the whole list.
+  /// What to deposit: the server's amount on the account (the checkout's own `amount` is the
+  /// total before points).
+  int get amount => account.amount!;
+
+  /// Items without a virtual_account or its amount are skipped rather than failing the whole list.
   static PendingDeposit? tryParse(Json j) {
     final va = j['virtual_account'] as Json?;
-    if (va == null || j['id'] == null) return null;
+    if (va == null || va['amount'] == null || j['id'] == null) return null;
     return PendingDeposit(
       id: j['id'] as String,
-      amount: (j['amount'] as num? ?? 0).toInt(),
       account: VirtualAccount.fromJson(va),
       bookingId: j['booking_id'] as String?,
       orderName: j['order_name'] as String? ?? '',

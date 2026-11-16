@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -803,6 +804,9 @@ class TKo extends T {
 
   @override
   String get cgGroupErrUnknown => '저장하지 못했어요. 다시 확인해 주세요';
+
+  @override
+  String get checkoutPriceChanged => '결제 금액이 바뀌었어요. 바뀐 금액을 확인하고 다시 결제해 주세요.';
 
   @override
   String get cTitle => '운영 콘솔';
