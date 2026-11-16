@@ -3940,6 +3940,9 @@ class TEn extends T {
   String get oRuleStuck => 'Payment not processed automatically';
 
   @override
+  String get oRuleMismatch => 'Payments differ from PortOne';
+
+  @override
   String get oRuleSocial => 'Social sign-in fails';
 
   @override

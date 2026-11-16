@@ -2010,6 +2010,7 @@
  "oRulePush": "앱 알림(푸시) 실패",
  "oRulePayment": "결제 연동 실패",
  "oRuleStuck": "결제 자동 처리 실패",
+ "oRuleMismatch": "PortOne 결제 내역 불일치",
  "oRuleSocial": "소셜 로그인 실패",
  "oRuleBackup": "자동 백업 누락",
  "oRuleDisk": "디스크 부족",

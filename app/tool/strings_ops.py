@@ -44,6 +44,7 @@ S = {
   "oRulePush": ["앱 알림(푸시) 실패", "Push notifications fail"],
   "oRulePayment": ["결제 연동 실패", "Payment connection fails"],
   "oRuleStuck": ["결제 자동 처리 실패", "Payment not processed automatically"],
+  "oRuleMismatch": ["PortOne 결제 내역 불일치", "Payments differ from PortOne"],
   "oRuleSocial": ["소셜 로그인 실패", "Social sign-in fails"],
   "oRuleBackup": ["자동 백업 누락", "Automatic backup missed"],
   "oRuleDisk": ["디스크 부족", "Disk nearly full"],

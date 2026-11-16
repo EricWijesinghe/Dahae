@@ -1200,6 +1200,7 @@
  "oRulePush": "Push notifications fail",
  "oRulePayment": "Payment connection fails",
  "oRuleStuck": "Payment not processed automatically",
+ "oRuleMismatch": "Payments differ from PortOne",
  "oRuleSocial": "Social sign-in fails",
  "oRuleBackup": "Automatic backup missed",
  "oRuleDisk": "Disk nearly full",

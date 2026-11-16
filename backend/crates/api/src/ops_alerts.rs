@@ -21,11 +21,12 @@ use std::{
 };
 use tokio::task::JoinHandle;
 
-pub const RULES: [&str; 8] = [
+pub const RULES: [&str; 9] = [
     "sms_failing",
     "push_failing",
     "payment_failing",
     "payment_stuck",
+    "payment_mismatch",
     "social_failing",
     "auth_suspicious",
     "backup_stale",
@@ -42,6 +43,8 @@ const PUSH_FAILURES: i64 = 5;
 const PAYMENT_WINDOW_MIN: i64 = 15;
 const PAYMENT_FAILURES: i64 = 3;
 const STUCK_WINDOW_MIN: i64 = 60;
+/// The daily PortOne diff logs its mismatches once a day; the alert reads the last day of them.
+const MISMATCH_WINDOW_MIN: i64 = 24 * 60;
 const DEAD_LETTER_WINDOW_MIN: i64 = 60;
 const SOCIAL_WINDOW_MIN: i64 = 30;
 const SOCIAL_FAILURES: i64 = 5;
@@ -183,6 +186,13 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
             rule: "sms_dead_letter",
             title: "문자 발송이 끝내 실패했어요",
             body: "고객에게 가지 못한 문자가 있어요. 설정 > 문자(Solapi)에서 키와 발신번호를 확인하고 연결 테스트를 해 주세요.",
+        });
+    }
+    if count(db, &["payment_mismatch"], MISMATCH_WINDOW_MIN).await? >= 1 {
+        out.push(Finding {
+            rule: "payment_mismatch",
+            title: "PG 결제 내역이 우리 기록과 달라요",
+            body: "PortOne 관리자 화면에서 어제 결제 목록을 확인하고, 예약·결제 내역과 금액이 맞지 않는 건을 직접 확인하세요.",
         });
     }
     if count(db, &SOCIAL_PROVIDERS, SOCIAL_WINDOW_MIN).await? >= SOCIAL_FAILURES {

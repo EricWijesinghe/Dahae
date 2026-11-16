@@ -3844,6 +3844,9 @@ class TKo extends T {
   String get oRuleStuck => '결제 자동 처리 실패';
 
   @override
+  String get oRuleMismatch => 'PortOne 결제 내역 불일치';
+
+  @override
   String get oRuleSocial => '소셜 로그인 실패';
 
   @override

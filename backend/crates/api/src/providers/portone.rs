@@ -82,6 +82,56 @@ pub async fn payment(p: &Providers, id: &str) -> Result<PaymentInfo, ProviderErr
     })
 }
 
+/// One payment from the daily list: what the reconciliation diff needs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProviderPayment {
+    pub id: String,
+    pub status: String,
+    pub total: i64,
+}
+
+fn listed(item: &Value) -> Result<ProviderPayment, ProviderError> {
+    let id = item["id"].as_str().ok_or_else(|| ProviderError::Upstream("payment without id".into()))?;
+    let total = item["amount"]["total"]
+        .as_i64()
+        .ok_or_else(|| ProviderError::Upstream("payment without amount".into()))?;
+    Ok(ProviderPayment {
+        id: id.to_string(),
+        status: text(&item["status"]),
+        total,
+    })
+}
+
+/// One page of the store's payments created in `[from, until)` (RFC 3339), with the total count.
+/// A missing or malformed field fails the page rather than dropping that payment from the diff.
+pub async fn list_payments(p: &Providers, from: &str, until: &str, page: u32, size: u32) -> Result<(Vec<ProviderPayment>, i64), ProviderError> {
+    let integ = p.integ();
+    let store = integ.portone.store_id.as_deref().ok_or(ProviderError::NotConfigured("portone"))?;
+    let (page, size) = (page.to_string(), size.to_string());
+    let resp = p
+        .http()
+        .get(format!("{}/payments", p.portone_api()))
+        .query(&[
+            ("storeId", store),
+            ("from", from),
+            ("until", until),
+            ("pageNumber", page.as_str()),
+            ("pageSize", size.as_str()),
+        ])
+        .header(AUTHORIZATION, auth(p)?)
+        .send()
+        .await
+        .map_err(upstream)?;
+    let body = read_json(resp).await?;
+    let items = body["items"]
+        .as_array()
+        .ok_or_else(|| ProviderError::Upstream("payment list without items".into()))?;
+    let total = body["page"]["totalCount"]
+        .as_i64()
+        .ok_or_else(|| ProviderError::Upstream("payment list without totalCount".into()))?;
+    Ok((items.iter().map(listed).collect::<Result<_, _>>()?, total))
+}
+
 /// Full or partial cancellation of a PAID payment (used for refunds). With `cancellable`, PortOne only
 /// cancels while the payment's cancellable balance equals it (`currentCancellableAmount`).
 /// PortOne V2 has no idempotency key on cancel, so this balance check is what makes a cancel happen once.
