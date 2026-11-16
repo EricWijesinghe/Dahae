@@ -10,6 +10,7 @@ use super::{
     chat, growth, partner_jobs, uploads,
 };
 use crate::{
+    auth::Customer,
     crypto,
     error::{ApiError, ApiResult},
     realtime::{Recipient, deliver, enqueue, notify},
@@ -17,6 +18,7 @@ use crate::{
     state::AppState,
     util::{KST_TODAY, best_effort, lock_and_count_slot, own_uploads, sanitize_notes, today_kst},
 };
+use axum::{Json, extract::State};
 use chrono::{DateTime, NaiveDate, Utc};
 use domain::{
     Won,
@@ -171,6 +173,49 @@ pub async fn price_for(conn: &mut PgConnection, user: Uuid, prep: &Prepared, b: 
         return Ok(price);
     }
     Ok(apply_welcome(price, &offer))
+}
+
+/// The total the customer was shown, when the app sent one: the server's price must still be it,
+/// else 409 `price_changed` before anything is charged (old apps send none).
+pub fn check_expected_total(expected: Option<i64>, price: &PriceBreakdown) -> ApiResult<()> {
+    match expected {
+        Some(shown) if shown != price.total.0 => Err(ApiError::Conflict("price_changed")),
+        _ => Ok(()),
+    }
+}
+
+/// POST /bookings/price: what pay-now and a checkout would charge for this request right now.
+#[derive(Serialize)]
+pub struct PricePreview {
+    /// Catalogue price plus `peak_surcharge`, before discounts.
+    list_price: i64,
+    peak_surcharge: i64,
+    multi_discount: i64,
+    /// The coupon's discount, or the first-booking offer when `welcome`.
+    discount: i64,
+    welcome: bool,
+    /// Charged before points; send it back as `expected_total` when paying.
+    total: i64,
+}
+
+/// Same rules as pay-now (`price_for`), read-only: nothing is held, stored or charged.
+pub async fn price_preview(State(s): State<AppState>, Customer(a): Customer, Json(body): Json<BookingBody>) -> ApiResult<Json<PricePreview>> {
+    let prep = prepare(&s.db, a.id, &body).await?;
+    if prep.service.is_quote() {
+        return Err(ApiError::BadRequest("quote_not_payable"));
+    }
+    let mut tx = s.db.begin().await?;
+    let price = price_for(&mut tx, a.id, &prep, &body, false).await?;
+    tx.rollback().await?;
+    let base = price_booking_with(&prep.service, body.unit_index, &body.counts, None, 0, Utc::now())?;
+    Ok(Json(PricePreview {
+        list_price: price.list_price.0,
+        peak_surcharge: price.list_price.0 - base.list_price.0,
+        multi_discount: price.multi_discount.0,
+        discount: price.discount.0,
+        welcome: body.coupon_id.is_none() && price.discount.0 > 0,
+        total: price.total.0,
+    }))
 }
 
 /// Takes the per-slot lock for the rest of the transaction and fails when the slot is full.

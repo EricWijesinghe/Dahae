@@ -9,8 +9,8 @@ use super::checkout_policy::{Action, Binding, Recovery, bind, decide, dev_lookup
 use super::checkout_recon::{admin_list, list};
 use super::{
     booking_core::{
-        BookingBody, Prepared, SeenQuote, after_booking_created, after_deposit, balance_due, check_seen_quote, deposit_due, insert_paid, lock_slot, prepare,
-        price_for, record_payment, take_balance, take_deposit,
+        BookingBody, Prepared, SeenQuote, after_booking_created, after_deposit, balance_due, check_expected_total, check_seen_quote, deposit_due, insert_paid,
+        lock_slot, prepare, price_for, record_payment, take_balance, take_deposit,
     },
     bookings::{BookingRow, load_booking, owned},
     catalog::load_service,
@@ -59,9 +59,12 @@ pub fn admin_routes() -> Router<AppState> {
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum CheckoutRequest {
+    /// `expected_total`: the total the customer saw (POST /bookings/price); another price is a 409.
     Booking {
         booking: BookingBody,
         method: String,
+        #[serde(default)]
+        expected_total: Option<i64>,
     },
     /// `expected_*`: the quote card the customer tapped (see `check_seen_quote`).
     Deposit {
@@ -175,6 +178,18 @@ fn order_name(kind: &str) -> &'static str {
     }
 }
 
+/// The virtual account as the apps show it: PortOne's method fields under the app's names, and
+/// `amount`, the exact sum the deposit must be (`charge()`, after points and discounts).
+pub(super) fn virtual_account_view(method: &Value, amount: i64) -> Value {
+    json!({
+        "bank": method["bank"],
+        "account_number": method["accountNumber"],
+        "holder": method["remitteeName"],
+        "due": method["expiredAt"],
+        "amount": amount,
+    })
+}
+
 /// Pure gate: PAID, in KRW, for exactly the checkout amount.
 pub fn amount_matches(expected: i64, info: &PaymentInfo) -> bool {
     info.status == "PAID" && info.currency == "KRW" && info.total == expected
@@ -200,7 +215,7 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         return Err(ApiError::Unavailable("maintenance"));
     }
     let intent = match &req {
-        CheckoutRequest::Booking { booking, .. } => booking_intent(&s, a.id, booking).await?,
+        CheckoutRequest::Booking { booking, expected_total, .. } => booking_intent(&s, a.id, booking, *expected_total).await?,
         CheckoutRequest::Deposit {
             booking_id,
             expected_deposit,
@@ -291,7 +306,7 @@ fn channel_key_for(channel_keys: &HashMap<String, String>, method: &str) -> ApiR
 }
 
 /// Validates a new booking exactly like pay-now, then freezes it as a draft.
-async fn booking_intent(s: &AppState, user: Uuid, body: &BookingBody) -> ApiResult<Intent> {
+async fn booking_intent(s: &AppState, user: Uuid, body: &BookingBody, expected_total: Option<i64>) -> ApiResult<Intent> {
     let prep = prepare(&s.db, user, body).await?;
     if prep.service.is_quote() {
         return Err(ApiError::BadRequest("quote_not_payable"));
@@ -301,6 +316,7 @@ async fn booking_intent(s: &AppState, user: Uuid, body: &BookingBody) -> ApiResu
     let price = price_for(&mut tx, user, &prep, body, false).await?;
     // Read-only so far: commit just releases the slot lock.
     tx.commit().await?;
+    check_expected_total(expected_total, &price)?;
     if price.total.0 <= 0 {
         return Err(ApiError::BadRequest("amount_required"));
     }
@@ -414,7 +430,7 @@ pub(super) async fn apply(s: &AppState, ck: &CheckoutRow, payment_id: &str, info
             Ok(ConfirmResult {
                 status: "awaiting_deposit",
                 booking_id: None,
-                virtual_account: Some(i.method.clone()),
+                virtual_account: Some(virtual_account_view(&i.method, ck.charge())),
             })
         }
         Action::MarkExpired => {

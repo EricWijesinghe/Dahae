@@ -1,7 +1,7 @@
 //! Checkout recovery and listing: the reconciler pass (unfinished checkouts and queued refunds)
 //! and the customer and console checkout lists. Settlement itself lives in `checkouts`.
 
-use super::checkouts::{CHECKOUT_COLS, CheckoutRow, apply, find_by_id, refund_late};
+use super::checkouts::{CHECKOUT_COLS, CheckoutRow, apply, find_by_id, refund_late, virtual_account_view};
 use crate::{
     auth::{Customer, Staff},
     contract::{cursor_part, decode_cursor, encode_cursor, page_limit, paged, ts_key},
@@ -366,6 +366,8 @@ struct CheckoutView {
     booking_id: Option<Uuid>,
     method: String,
     amount: i64,
+    #[serde(skip)]
+    points: i64,
     status: String,
     virtual_account: Option<Value>,
     result_booking_id: Option<Uuid>,
@@ -383,7 +385,7 @@ pub(super) async fn list(State(s): State<AppState>, Customer(a): Customer, Query
         .execute(&s.db)
         .await?;
     let rows: Vec<CheckoutView> = sqlx::query_as(
-        "SELECT id, kind, booking_id, method, amount, status, virtual_account, result_booking_id, expires_at, created_at
+        "SELECT id, kind, booking_id, method, amount, points, status, virtual_account, result_booking_id, expires_at, created_at
          FROM checkouts WHERE user_id = $1 AND ($2::text IS NULL OR status = $2)
            AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4)) ORDER BY created_at DESC, id DESC LIMIT $5",
     )
@@ -394,6 +396,14 @@ pub(super) async fn list(State(s): State<AppState>, Customer(a): Customer, Query
     .bind(limit)
     .fetch_all(&s.db)
     .await?;
+    // Stored as PortOne sent it; shown like the confirm answer, with what is left to deposit.
+    let rows: Vec<CheckoutView> = rows
+        .into_iter()
+        .map(|r| CheckoutView {
+            virtual_account: r.virtual_account.as_ref().map(|m| virtual_account_view(m, r.amount - r.points)),
+            ..r
+        })
+        .collect();
     Ok(paged(rows, limit, |r| encode_cursor(&[&ts_key(r.created_at), &r.id.to_string()])))
 }
 
