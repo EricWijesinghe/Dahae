@@ -5,7 +5,7 @@ members = ["crates/domain", "crates/api"]
 [workspace.package]
 edition = "2024"
 version = "0.1.0"
-license = "UNLICENSED"
+license = "LicenseRef-Proprietary"
 
 [workspace.dependencies]
 chrono = { version = "0.4", default-features = false, features = ["std", "clock", "serde"] }
