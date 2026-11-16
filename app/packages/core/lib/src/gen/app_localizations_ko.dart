@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2921,6 +2922,25 @@ class TKo extends T {
   String get err_team_full => '팀 인원이 가득 찼어요.';
 
   @override
+  String get err_invalid_store_id => '상점 아이디는 store-로 시작해야 해요.';
+
+  @override
+  String get err_invalid_api_secret =>
+      'V2 API Secret 형식이 맞지 않아요. 공백 없이 전체를 붙여넣어 주세요.';
+
+  @override
+  String get err_invalid_channel_key => '채널 키는 channel-key-로 시작해야 해요.';
+
+  @override
+  String get err_unknown_channel_key => '이 결제수단 칸은 알 수 없어요.';
+
+  @override
+  String get err_invalid_secret_key => '시크릿 키는 test_sk_ 또는 live_sk_로 시작해야 해요.';
+
+  @override
+  String get err_invalid_security_key => '보안 키는 64자리 16진수예요.';
+
+  @override
   String get err_invalid_webhook_secret => '웹훅 시크릿은 whsec_로 시작해야 해요.';
 
   @override
@@ -5390,7 +5410,25 @@ class TKo extends T {
   String get cSetupSaved => '저장했어요';
 
   @override
-  String get cSetupTest => '연결 테스트';
+  String get cSetupTest => '연결 확인';
+
+  @override
+  String get cSetupLockNow => '잠그기';
+
+  @override
+  String get cSetupShow => '보기';
+
+  @override
+  String get cSetupHide => '숨기기';
+
+  @override
+  String get cSetupUnlockedBadge => '잠금 해제됨';
+
+  @override
+  String get cSetupOwnerOnly => '소유자만 잠금을 풀 수 있어요';
+
+  @override
+  String get cPaymentsTitle => '결제 연결';
 
   @override
   String get cSetupClear => '연결 해제';
@@ -5427,6 +5465,18 @@ class TKo extends T {
 
   @override
   String get cCopied => '복사했어요';
+
+  @override
+  String get cCopy => '복사';
+
+  @override
+  String get cSetupLocked => '잠긴 카드예요. 소유자가 잠금을 풀어야 바꿀 수 있어요';
+
+  @override
+  String get cSetupLockedBadge => '잠김';
+
+  @override
+  String get cSetupUnlock => '잠금 해제 (소유자 코드)';
 
   @override
   String get cSetupDevMode => '테스트 모드예요. 실제 결제·문자는 나가지 않아요';

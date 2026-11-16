@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2985,6 +2986,29 @@ class TEn extends T {
   String get err_team_full => 'Your team is full.';
 
   @override
+  String get err_invalid_store_id => 'The store ID must start with store-.';
+
+  @override
+  String get err_invalid_api_secret =>
+      'The V2 API secret does not look right. Paste the whole value with no spaces.';
+
+  @override
+  String get err_invalid_channel_key =>
+      'A channel key starts with channel-key-.';
+
+  @override
+  String get err_unknown_channel_key =>
+      'This payment method slot is not known.';
+
+  @override
+  String get err_invalid_secret_key =>
+      'The secret key starts with test_sk_ or live_sk_.';
+
+  @override
+  String get err_invalid_security_key =>
+      'The security key is 64 hex characters.';
+
+  @override
   String get err_invalid_webhook_secret =>
       'The webhook secret must start with whsec_.';
 
@@ -5531,7 +5555,25 @@ class TEn extends T {
   String get cSetupSaved => 'Saved';
 
   @override
-  String get cSetupTest => 'Test connection';
+  String get cSetupTest => 'Check connection';
+
+  @override
+  String get cSetupLockNow => 'Lock now';
+
+  @override
+  String get cSetupShow => 'Show';
+
+  @override
+  String get cSetupHide => 'Hide';
+
+  @override
+  String get cSetupUnlockedBadge => 'Unlocked';
+
+  @override
+  String get cSetupOwnerOnly => 'Only the owner can unlock';
+
+  @override
+  String get cPaymentsTitle => 'Payments';
 
   @override
   String get cSetupClear => 'Disconnect';
@@ -5570,6 +5612,19 @@ class TEn extends T {
 
   @override
   String get cCopied => 'Copied';
+
+  @override
+  String get cCopy => 'Copy';
+
+  @override
+  String get cSetupLocked =>
+      'This card is locked. The owner must unlock it to change it';
+
+  @override
+  String get cSetupLockedBadge => 'Locked';
+
+  @override
+  String get cSetupUnlock => 'Unlock (owner code)';
 
   @override
   String get cSetupDevMode =>

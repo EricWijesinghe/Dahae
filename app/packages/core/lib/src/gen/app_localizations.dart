@@ -5617,6 +5617,42 @@ abstract class T {
   /// **'팀 인원이 가득 찼어요.'**
   String get err_team_full;
 
+  /// No description provided for @err_invalid_store_id.
+  ///
+  /// In ko, this message translates to:
+  /// **'상점 아이디는 store-로 시작해야 해요.'**
+  String get err_invalid_store_id;
+
+  /// No description provided for @err_invalid_api_secret.
+  ///
+  /// In ko, this message translates to:
+  /// **'V2 API Secret 형식이 맞지 않아요. 공백 없이 전체를 붙여넣어 주세요.'**
+  String get err_invalid_api_secret;
+
+  /// No description provided for @err_invalid_channel_key.
+  ///
+  /// In ko, this message translates to:
+  /// **'채널 키는 channel-key-로 시작해야 해요.'**
+  String get err_invalid_channel_key;
+
+  /// No description provided for @err_unknown_channel_key.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 결제수단 칸은 알 수 없어요.'**
+  String get err_unknown_channel_key;
+
+  /// No description provided for @err_invalid_secret_key.
+  ///
+  /// In ko, this message translates to:
+  /// **'시크릿 키는 test_sk_ 또는 live_sk_로 시작해야 해요.'**
+  String get err_invalid_secret_key;
+
+  /// No description provided for @err_invalid_security_key.
+  ///
+  /// In ko, this message translates to:
+  /// **'보안 키는 64자리 16진수예요.'**
+  String get err_invalid_security_key;
+
   /// No description provided for @err_invalid_webhook_secret.
   ///
   /// In ko, this message translates to:
@@ -10269,8 +10305,44 @@ abstract class T {
   /// No description provided for @cSetupTest.
   ///
   /// In ko, this message translates to:
-  /// **'연결 테스트'**
+  /// **'연결 확인'**
   String get cSetupTest;
+
+  /// No description provided for @cSetupLockNow.
+  ///
+  /// In ko, this message translates to:
+  /// **'잠그기'**
+  String get cSetupLockNow;
+
+  /// No description provided for @cSetupShow.
+  ///
+  /// In ko, this message translates to:
+  /// **'보기'**
+  String get cSetupShow;
+
+  /// No description provided for @cSetupHide.
+  ///
+  /// In ko, this message translates to:
+  /// **'숨기기'**
+  String get cSetupHide;
+
+  /// No description provided for @cSetupUnlockedBadge.
+  ///
+  /// In ko, this message translates to:
+  /// **'잠금 해제됨'**
+  String get cSetupUnlockedBadge;
+
+  /// No description provided for @cSetupOwnerOnly.
+  ///
+  /// In ko, this message translates to:
+  /// **'소유자만 잠금을 풀 수 있어요'**
+  String get cSetupOwnerOnly;
+
+  /// No description provided for @cPaymentsTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제 연결'**
+  String get cPaymentsTitle;
 
   /// No description provided for @cSetupClear.
   ///
@@ -10343,6 +10415,30 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'복사했어요'**
   String get cCopied;
+
+  /// No description provided for @cCopy.
+  ///
+  /// In ko, this message translates to:
+  /// **'복사'**
+  String get cCopy;
+
+  /// No description provided for @cSetupLocked.
+  ///
+  /// In ko, this message translates to:
+  /// **'잠긴 카드예요. 소유자가 잠금을 풀어야 바꿀 수 있어요'**
+  String get cSetupLocked;
+
+  /// No description provided for @cSetupLockedBadge.
+  ///
+  /// In ko, this message translates to:
+  /// **'잠김'**
+  String get cSetupLockedBadge;
+
+  /// No description provided for @cSetupUnlock.
+  ///
+  /// In ko, this message translates to:
+  /// **'잠금 해제 (소유자 코드)'**
+  String get cSetupUnlock;
 
   /// No description provided for @cSetupDevMode.
   ///
