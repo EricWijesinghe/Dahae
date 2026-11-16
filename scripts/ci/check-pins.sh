@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Pinned tool versions agree everywhere they are written. Raise each pin in all of its places together
 # (a Dependabot bump of one file fails here until the others follow). Usage: bash scripts/ci/check-pins.sh
 set -euo pipefail

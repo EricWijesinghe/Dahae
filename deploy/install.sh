@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # 다해 서버 설치 프로그램 (Ubuntu 22.04 / 24.04, Debian 12)
 #
 #   curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/malkkeum-install/v1.2.3/install.sh | sudo bash

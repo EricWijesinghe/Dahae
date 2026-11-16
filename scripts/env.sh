@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # shellcheck shell=bash
 # Source before any build. Machine-specific locations come from scripts/local.env (gitignored; see
 # scripts/local.env.example). Without it, the tools and caches already on PATH are used.

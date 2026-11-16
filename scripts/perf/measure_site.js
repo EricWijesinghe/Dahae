@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Headless Chromium measurement of the public website against a Lighthouse-style budget.
 // Usage: node scripts/perf/measure_site.js http://127.0.0.1:8099/ [out.json]
 // Playwright comes from SHOT_PLAYWRIGHT (default: the `playwright` package, as scripts/store/frame.js does).

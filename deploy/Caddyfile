@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # One domain for everything, HTTPS certificates issued and renewed automatically:
 #   https://DOMAIN/          website
 #   https://DOMAIN/app/      customer web app (PWA; every /app/* deep link serves index.html)

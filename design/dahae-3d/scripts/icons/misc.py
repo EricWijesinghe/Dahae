@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Wallet, More-menu, content and confirmation icons."""
 from lib import ball, box, circ, cyl, group, heart, house_pts, rnd, rrect, slab, sparkle, star, tube
 from registry import icon

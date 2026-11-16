@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Starts the Malkkeum demo emulator (malkkeum_avd, created on first run) and installs both demo apps.
 # It never boots any other emulator on this PC, so no other project's apps can show up in a demo.
 $ErrorActionPreference = 'Stop'

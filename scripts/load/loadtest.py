@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Load test for the Malkkeum API. Stdlib only (asyncio + raw HTTP/1.1 keep-alive).
 
 Usage:

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Golden (pixel) tests. Baselines are made on the CI runner only (Linux, Flutter pinned in
 # .github/actions/flutter-setup, fonts from test/support): local renders differ, so dart_test.yaml skips
 # the `golden` tag outside CI.

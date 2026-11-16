@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Writes docs/sample-data.md: every table, its columns, and one real example row.
 
 Run after `api demo load` against a scratch database, so the examples are realistic but fake:

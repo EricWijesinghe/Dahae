@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Tests for the release signing scripts. No network and no real cosign: a stub records its arguments.
 # Good input must pass and tampered input must fail. Usage: bash scripts/release/test-release-tools.sh
 set -euo pipefail

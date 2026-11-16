@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """The one source of store build numbers: Android versionCode, iOS CFBundleVersion, MSIX version.
 
 Prints whole minutes since 2026-01-01T00:00Z. It needs no stored counter, so the local release

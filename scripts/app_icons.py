@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Partner and console launcher icons from the Dahae logo (design/dahae-3d/out/appicon, see its render_all.py).
 
   python -I scripts/app_icons.py

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Logo and bottom-navigation icons."""
 from lib import IDLE, ball, box, rnd, slab
 from registry import icon

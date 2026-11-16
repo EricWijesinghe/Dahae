@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Service categories, studio scope, tools and air-conditioner types."""
 from lib import ball, box, cyl, group, rrect, slab, sparkle, tube
 from registry import icon

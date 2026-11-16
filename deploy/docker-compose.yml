@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Production stack on one server: Postgres + API + web (Caddy: website, console, automatic HTTPS).
 # Installed and managed by deploy/install.sh — nobody needs to edit this file.
 # Images are prebuilt by .github/workflows/release.yml; `dahae update` pulls new ones.

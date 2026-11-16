@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Backup and restore drill. Dumps a source database the way deploy/install.sh does (pg_dump --clean
 # --if-exists, gzip), seals the dump with the app's own offsite encryption (api backup-seal), opens it
 # again (api backup-open), restores into a fresh database and compares the row count of every public

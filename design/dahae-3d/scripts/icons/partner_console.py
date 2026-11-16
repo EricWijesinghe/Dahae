@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Partner app (p_*) and console rail (c_*) icons. Console ones are used at 24 dp: bold shapes only."""
 import math
 

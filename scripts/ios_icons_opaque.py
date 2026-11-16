@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """App Store rejects app icons with an alpha channel: flatten every iOS AppIcon PNG to RGB."""
 import pathlib
 from PIL import Image

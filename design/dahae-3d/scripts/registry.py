@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Icon registry. Adding an icon = one decorated builder function in scripts/icons/*.py.
 
 Options (all optional):

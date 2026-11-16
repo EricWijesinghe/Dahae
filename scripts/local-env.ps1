@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 # Dot-source to load scripts/local.env (gitignored, see local.env.example) into this process.
 # Same rules as scripts/env.sh: plain KEY=VALUE lines, no expansion, variables already set win.
 $localEnv = Join-Path $PSScriptRoot 'local.env'

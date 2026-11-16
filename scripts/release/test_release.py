@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Tests for the release checks: store listing lengths and workflow pins.
 
   python -I -m unittest scripts/release/test_release.py

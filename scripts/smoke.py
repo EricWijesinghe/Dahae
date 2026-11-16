@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """End-to-end smoke test against a running dev API (DEV_MODE=1).
 
 Covers the spec's milestone acceptance paths: sign-up + welcome coupons, studio

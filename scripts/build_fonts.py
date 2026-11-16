@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
 """Builds the website's self-hosted font: a subset of Pretendard renamed "Dahae Sans".
 
 Pretendard's OFL reserves the name "Pretendard" for unmodified fonts, so the subset gets its own family
