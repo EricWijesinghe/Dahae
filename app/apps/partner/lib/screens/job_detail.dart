@@ -30,7 +30,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   Future<Json> _load() async =>
       await context.api.get('/partner/jobs/${widget.id}') as Json;
 
+  /// One job action at a time: a second tap while one is in flight does nothing.
+  bool _busy = false;
+
   Future<void> _act(Future<void> Function() fn, String done) async {
+    if (_busy) return;
+    setState(() => _busy = true);
     try {
       await fn();
       if (!mounted) return;
@@ -41,6 +46,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     } catch (e) {
       if (mounted) showToast(context, context.t.error(e));
       await _view.currentState?.reload();
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -217,6 +224,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             PrimaryButton(
               label: t.pAccept,
               color: context.colors.fresh,
+              busy: _busy,
               onPressed: () => _accept(d),
             ),
           if (isQuote && status == 0)
@@ -265,7 +273,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 (d['assignee'] as Json?)?['name'] as String? ?? '-',
               ),
               trailing: TextButton(
-                onPressed: () => _assign(b),
+                onPressed: _busy ? null : () => _assign(b),
                 child: Text(t.change),
               ),
             ),
@@ -461,6 +469,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   Future<void> _accept(Json d) async {
+    if (_busy) return;
     final t = context.t;
     final ok = await showAppSheet<bool>(
       context,
