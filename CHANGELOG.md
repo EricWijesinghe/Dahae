@@ -27,6 +27,7 @@ from the release branches; no tags existed for them.
 - Public `GET /v1/public/offers`: welcome offer, sign-up coupons and referral amount for guests, cacheable for 5 minutes, no user data.
 
 ### Changed
+- Console payment cards lock after save: the owner unlocks with an authenticator code (5 minutes), the first save of the PortOne card needs that code, and saved secrets and channel keys show only a mask. Billing and cash receipts have their own channel slots (card billing, cash receipt). Existing installs keep working: billing falls back to the saved `card` channel key and cash receipts to the payment method's channel key until those slots are filled. Account deletion stops, with a retryable error, while a saved card cannot be revoked at PortOne because the API secret is missing.
 - Staff invites and password resets now use a one-time 6-digit code sent by SMS (or copied by the admin), valid 24 hours, single use, locked after five wrong tries; consultants can invite consultants only.
 - Customer app: guests see the quote price before the address step without signing up; sign-in is asked only when they book, and the service detail shows the price-first line.
 - Customer app: guests get the sign-in sheet with a reason for each protected action (chat, account, booking), member-only menu rows show a sign-in hint, the notifications screen shows only notices, and a nameless new account opens the name step after signing in from the sheet.
