@@ -36,7 +36,7 @@ Apple `account-delete` notifications (`POST /v1/auth/apple/notifications`) run t
 
 ## Export (`GET /v1/me/export`)
 
-JSON: profile, consent history, addresses, payment method labels (no keys), coupons, bookings, last 500 notifications. Gateway keys and tokens are never included.
+JSON: profile, consent history, addresses, payment method labels (no keys), coupons, bookings, last 500 notifications, subscriptions, waitlist places (with their request notes), the customer's reviews (text and photo references), chat messages the customer sent, upload records (size and date, not the files), points ledger, tips, cash receipts (last 4 digits only), tax invoice requests, and referrals (role and state, no phone numbers). Gateway keys, tokens and the encrypted cash receipt identity are never included.
 
 ## Staff-handled requests (console)
 
