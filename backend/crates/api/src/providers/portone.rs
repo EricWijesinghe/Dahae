@@ -161,9 +161,15 @@ fn custom_data_checkout_id(custom: &Value) -> Option<Uuid> {
     Uuid::parse_str(obj["checkoutId"].as_str()?).ok()
 }
 
-/// Billing (saved card) needs the API secret, the store and a card channel key.
+/// The channel saved cards bill through. Installs saved before the `card_billing` slot existed billed through
+/// `card`, so that key stands in while the slot is empty (the alias is read here, nothing is rewritten).
+pub fn billing_channel(p: &PortOne) -> Option<&String> {
+    p.channel_keys.get("card_billing").or_else(|| p.channel_keys.get("card"))
+}
+
+/// Billing (saved card) needs the API secret, the store and a billing channel key.
 pub fn billing_ready(p: &PortOne) -> bool {
-    p.api_secret.is_some() && p.store_id.is_some() && p.channel_keys.contains_key("card_billing")
+    p.api_secret.is_some() && p.store_id.is_some() && billing_channel(p).is_some()
 }
 
 /// Verifies a billing key the browser SDK issued before we store it. The key must be `ISSUED` and bound to
@@ -461,17 +467,21 @@ mod tests {
     }
 
     #[test]
-    fn billing_needs_secret_store_and_card_channel() {
+    fn billing_needs_secret_store_and_a_billing_channel() {
         let mut p = PortOne {
             api_secret: Some("s".into()),
             store_id: Some("st".into()),
             ..Default::default()
         };
         assert!(!billing_ready(&p));
-        p.channel_keys.insert("card".into(), "ch".into());
-        assert!(!billing_ready(&p));
+        p.channel_keys.insert("kakaopay".into(), "ch".into());
+        assert!(!billing_ready(&p), "another method's channel does not bill");
         p.channel_keys.insert("card_billing".into(), "ch".into());
         assert!(billing_ready(&p));
+        p.channel_keys.clear();
+        p.channel_keys.insert("card".into(), "legacy".into());
+        assert!(billing_ready(&p), "an install with only the old card channel keeps billing");
+        assert_eq!(billing_channel(&p).map(String::as_str), Some("legacy"));
         p.api_secret = None;
         assert!(!billing_ready(&p));
     }

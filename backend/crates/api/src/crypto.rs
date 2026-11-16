@@ -65,6 +65,16 @@ fn hmac_sha256(key: &[u8], msg: &[u8]) -> [u8; 32] {
     mac.finalize().into_bytes().into()
 }
 
+/// Derivation label for the payout key digest. Changing it (or DATA_KEY) makes stored digests stop matching.
+const SECRET_DIGEST_LABEL: &[u8] = b"malkkeum/secret-digest/v1";
+
+/// Keyed digest of a saved payment key (32 hex chars), kept with its test result to tell a changed key apart.
+/// Unlike a plain hash it cannot be checked against a guessed key without DATA_KEY.
+pub fn secret_digest(data_key: &[u8; 32], secret: &str) -> String {
+    let pepper = hmac_sha256(data_key, SECRET_DIGEST_LABEL);
+    hex::encode(&hmac_sha256(&pepper, secret.as_bytes())[..16])
+}
+
 /// Keyed, non-reversible stand-in for a phone kept after account deletion (`hmac:<hex>`). The pepper is
 /// derived from DATA_KEY and never stored, so the 10^8 Korean mobile numbers cannot be enumerated from the DB.
 pub fn phone_digest(data_key: &[u8; 32], phone: &str) -> String {

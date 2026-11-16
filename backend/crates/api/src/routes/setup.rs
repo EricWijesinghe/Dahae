@@ -617,16 +617,28 @@ async fn put_section(
     let incoming = input.as_object().ok_or(ApiError::BadRequest("invalid_input"))?;
     let current = integrations::load_section(&s.db, &s.config.data_key, sec).await?;
     let merged = integrations::merge(sec, &current, incoming);
-    // Turning Toss payouts on or off moves real money: the owner's code is needed. An unlock already checked it.
-    if sec == Section::Payout && lock == LockState::Unsaved && is_toss(&merged) {
-        owner::verify_owner(&s, a, &headers, Some(peer.ip()), true).await?;
-    }
+    // The first save of a card that moves money needs the owner's code: the PortOne card sets where checkout
+    // money goes, and Toss payouts move real money. An unlock already checked it. The code is checked now and
+    // spent only once the values validate, so a typo does not cost a code.
+    let money_card = match sec {
+        Section::Portone => true,
+        Section::Payout => is_toss(&merged),
+        _ => false,
+    };
+    let owner_step = if money_card && lock == LockState::Unsaved {
+        Some(owner::check_owner(&s, a, &headers, Some(peer.ip()), true).await?)
+    } else {
+        None
+    };
     // Validate against env-only keys so this section stands on its own.
     let mut base = integrations::Integrations::from_config(&s.config);
     if sec == Section::Payout {
         base.payout_toss_ready = payout_toss_ready(&s, &merged).await?;
     }
     integrations::apply(&base, sec, &merged).map_err(|Invalid(code)| ApiError::BadRequest(code))?;
+    if let Some(step) = owner_step {
+        owner::burn_totp(&s, a.id, owner::client_ip(&s, Some(peer.ip()), &headers), step).await?;
+    }
     if !integrations::save_section(&s.db, &s.config.data_key, sec, &merged, a.id).await? {
         return Err(ApiError::Conflict("card_locked"));
     }
@@ -683,7 +695,8 @@ async fn unlock_section(
     match try_unlock(&s, a, &headers, peer.ip(), sec).await {
         Ok(until) => Ok(Json(json!({ "unlocked_until": until.to_rfc3339() }))),
         Err(e) => {
-            audit(
+            // The caller gets the real reason even when this record cannot be written.
+            if let Err(audit_error) = audit(
                 &s.db,
                 a.role.as_str(),
                 Some(a.id),
@@ -691,7 +704,10 @@ async fn unlock_section(
                 sec.code(),
                 json!({ "reason": unlock_failure_reason(&e) }),
             )
-            .await?;
+            .await
+            {
+                tracing::error!(error = ?audit_error, "unlock failure not recorded");
+            }
             Err(e)
         }
     }
@@ -819,7 +835,12 @@ async fn payout_toss_ready(s: &AppState, values: &serde_json::Map<String, Value>
         .await?
         .flatten();
     let secret = values.get("secret_key").and_then(Value::as_str).unwrap_or_default();
-    Ok(integrations::toss_ready(integrations::toss_env_enabled(), last.as_ref(), secret))
+    Ok(integrations::toss_ready(
+        integrations::toss_env_enabled(),
+        last.as_ref(),
+        &s.config.data_key,
+        secret,
+    ))
 }
 
 /// Connection check for Toss payouts: `GET /v2/balances` (read-only) with the saved secret key. A `test_sk_` key
@@ -843,11 +864,17 @@ async fn payout_test(s: &AppState) -> ApiResult<Value> {
         (true, Some(connected)) => connected,
         _ => code,
     };
-    Ok(json!({ "ok": ok, "code": code, "key_fp": integrations::key_fingerprint(secret), "at": Utc::now() }))
+    Ok(json!({ "ok": ok, "code": code, "key_fp": integrations::key_fingerprint(&s.config.data_key, secret), "at": Utc::now() }))
 }
 
 async fn test_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Path<String>) -> ApiResult<Json<Value>> {
     let sec = section(&code)?;
+    // The test records its result on the card, so it is a write: a locked card refuses it like a save.
+    let lock = integrations::lock_state(&s.db, sec).await?;
+    if lock == LockState::Locked {
+        return Err(ApiError::Conflict("card_locked"));
+    }
+    require_unlocker(&s, a, lock).await?;
     let record = if sec == Section::Payout {
         payout_test(&s).await?
     } else {

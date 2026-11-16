@@ -6,8 +6,9 @@ use api::{
     auth::{self, Role},
     build_state,
     config::{Config, PortOne},
+    crypto,
     providers::Providers,
-    routes, seed,
+    routes, seed, totp,
 };
 use axum::{
     Router,
@@ -111,6 +112,17 @@ pub async fn staff_token(db: &PgPool, role: Role) -> (String, Uuid) {
         .await
         .expect("staff row");
     (auth::issue_access(SECRET, id, role).expect("token"), id)
+}
+
+/// Makes a staff row an owner with a confirmed second factor whose TOTP secret is `seed` (test seeds are fake).
+pub async fn enrol_owner(db: &PgPool, id: Uuid, seed: &[u8]) {
+    let enc = crypto::encrypt(&test_config().data_key, crypto::aad::STAFF_TOTP, &totp::encode_secret(seed));
+    sqlx::query("UPDATE staff SET totp_secret = $2, totp_enabled_at = now(), recovery_confirmed_at = now(), is_owner = true WHERE id = $1")
+        .bind(id)
+        .bind(enc)
+        .execute(db)
+        .await
+        .expect("owner enrolment");
 }
 
 /// Catalogue, quote formula, slot capacity and starter content (what first boot inserts).

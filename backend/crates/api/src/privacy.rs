@@ -198,12 +198,15 @@ async fn delete_billing_keys(s: &AppState, user: Uuid) -> ApiResult<()> {
         .bind(user)
         .fetch_all(&s.db)
         .await?;
-    if keys.is_empty() {
+    // Dev mode saves no gateway keys (the test cards are local rows), so there is nothing to revoke.
+    if keys.is_empty() || s.config.dev_mode {
         return Ok(());
     }
-    if !portone::billing_ready(&s.providers.integ().portone) {
-        tracing::warn!(%user, count = keys.len(), "billing keys cannot be deleted: gateway not configured");
-        return Ok(());
+    // Deleting a key needs only the API secret, so a store or channel that is off does not matter. Without a
+    // secret the key stays live at the gateway: refuse, so the account is not erased with a card still billable.
+    if s.providers.integ().portone.api_secret.is_none() {
+        tracing::warn!(%user, count = keys.len(), "billing keys cannot be deleted: PortOne API secret not configured");
+        return Err(ApiError::Unavailable("billing_key_delete_failed"));
     }
     for key in &keys {
         portone::delete_billing_key(&s.providers, key)

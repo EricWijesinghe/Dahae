@@ -13,7 +13,7 @@ use api::{
 };
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};
-use common::{SECRET, app, book, call, customer, seed_catalog, test_config};
+use common::{SECRET, app, book, call, customer, prod_app, seed_catalog, test_config};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -161,6 +161,28 @@ async fn deletion_anonymises_and_removes_devices_but_keeps_records(pool: PgPool)
     assert_eq!(kept, 1, "bookings kept for the 5-year record rule");
     let consents: i64 = sqlx::query_scalar("SELECT count(*) FROM user_consents WHERE user_id = $1").bind(c.user).fetch_one(&pool).await.expect("consent");
     assert_eq!(consents, 3, "consent evidence kept");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn account_is_not_erased_while_a_saved_card_cannot_be_revoked(pool: PgPool) {
+    let dev = app(pool.clone());
+    let c = customer(&dev, &pool, "010-7100-0300").await;
+    sqlx::query("UPDATE payment_methods SET billing_key = 'bk-fake-0000' WHERE id = $1")
+        .bind(c.card)
+        .execute(&pool)
+        .await
+        .expect("saved card key");
+
+    // The gateway is unreachable, so the key cannot be revoked: deletion must stop before anything is erased.
+    let prod = prod_app(pool.clone(), "http://127.0.0.1:9");
+    let (st, body) = call(&prod, "DELETE", "/v1/me", Some(c.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+    let phone: String = sqlx::query_scalar("SELECT phone FROM users WHERE id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("user");
+    assert!(!phone.starts_with("deleted:"), "nothing anonymised while the card is still billable");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

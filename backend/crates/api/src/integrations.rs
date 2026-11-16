@@ -69,10 +69,10 @@ const PORTONE_CHANNEL_PREFIX: &str = "channel-key-";
 const TEST_SECRET_PREFIX: &str = "test_sk_";
 const LIVE_SECRET_PREFIX: &str = "live_sk_";
 
-/// Short, non-reversible id of a secret, stored with the test result so a changed key must be re-tested.
-pub fn key_fingerprint(secret: &str) -> String {
-    use sha2::{Digest, Sha256};
-    Sha256::digest(secret.as_bytes()).iter().take(8).map(|b| format!("{b:02x}")).collect()
+/// Keyed digest of a secret, stored with the test result so a changed key must be re-tested.
+/// Keyed with DATA_KEY: an unkeyed hash of a payment key could be checked against guesses offline.
+pub fn key_fingerprint(data_key: &[u8; 32], secret: &str) -> String {
+    crypto::secret_digest(data_key, secret)
 }
 
 /// The connection-test code a secret earns: `sandbox_connected` for a test key, `live_connected` for a live key.
@@ -99,11 +99,12 @@ pub fn toss_key_mode(secret: &str) -> Option<&'static str> {
 
 /// Toss payouts open only when the env switch is on AND the last connection test recorded success for this key,
 /// in the same mode the key is in (a test pass never unlocks a live key).
-pub fn toss_ready(env_enabled: bool, last_test: Option<&Value>, secret: &str) -> bool {
+pub fn toss_ready(env_enabled: bool, last_test: Option<&Value>, data_key: &[u8; 32], secret: &str) -> bool {
     let Some(code) = connected_code(secret) else {
         return false;
     };
-    env_enabled && last_test.is_some_and(|t| t["ok"] == json!(true) && t["code"] == json!(code) && t["key_fp"] == json!(key_fingerprint(secret)))
+    let fp = key_fingerprint(data_key, secret);
+    env_enabled && last_test.is_some_and(|t| t["ok"] == json!(true) && t["code"] == json!(code) && t["key_fp"] == json!(fp))
 }
 
 pub fn toss_env_enabled() -> bool {
@@ -591,6 +592,7 @@ pub fn merge(section: Section, current: &Map<String, Value>, incoming: &Map<Stri
     for field in section.fields() {
         let next = match incoming.get(field.name) {
             Some(Value::Null) => None,
+            Some(v) if field.kind == Kind::Map => merge_map(current.get(field.name), v),
             Some(Value::String(s)) if s.trim().is_empty() => current.get(field.name).cloned(),
             Some(v) => Some(v.clone()),
             None => current.get(field.name).cloned(),
@@ -602,27 +604,48 @@ pub fn merge(section: Section, current: &Map<String, Value>, incoming: &Map<Stri
     out
 }
 
-const MASK: &str = "••••";
-/// Characters a preview shows of a secret, and the length a secret needs before any of them show.
-const PREVIEW_TAIL_LEN: usize = 4;
-const PREVIEW_MIN_LEN: usize = 8;
-
-/// A saved text shows its last 4 characters; short values would show in full, so they get the mask alone.
-fn masked(s: &str) -> Value {
-    if s.chars().count() <= PREVIEW_MIN_LEN {
-        return json!(MASK);
+/// A map field's saved entries overlaid with the incoming ones, so saving one slot keeps the others.
+/// `null` removes an entry and a blank keeps it. A value that is not a map passes through for `apply` to refuse.
+fn merge_map(current: Option<&Value>, incoming: &Value) -> Option<Value> {
+    let Some(next) = map_entries(incoming) else { return Some(incoming.clone()) };
+    let mut out = current.and_then(map_entries).unwrap_or_default();
+    for (key, val) in next {
+        match val {
+            Value::Null => {
+                out.remove(&key);
+            }
+            Value::String(s) if s.trim().is_empty() => {}
+            val => {
+                out.insert(key, val);
+            }
+        }
     }
-    let tail: String = s.chars().rev().take(PREVIEW_TAIL_LEN).collect::<Vec<_>>().into_iter().rev().collect();
-    json!(format!("{MASK}{tail}"))
+    (!out.is_empty()).then_some(Value::Object(out))
 }
 
-/// What the wizard shows for a saved value: every saved text is masked, so a locked value cannot be read back.
+/// A map field as an object: a JSON object, or the same object as text (how the wizard sends channel slots).
+fn map_entries(v: &Value) -> Option<Map<String, Value>> {
+    match v {
+        Value::Object(o) => Some(o.clone()),
+        Value::String(s) if s.trim().is_empty() => Some(Map::new()),
+        Value::String(s) => serde_json::from_str::<Value>(s).ok()?.as_object().cloned(),
+        _ => None,
+    }
+}
+
+const MASK: &str = "••••";
+
+/// What the wizard shows for a saved value. Secrets and map values (channel keys, template ids) show only the mask,
+/// so they cannot be read back. Identifiers and switches (store id, toss mode, sender) show in full, so the owner can
+/// check which account is connected.
 pub fn preview(kind: Kind, v: &Value) -> Value {
     match kind {
-        Kind::Text | Kind::List | Kind::Secret if v.is_null() => Value::Null,
-        Kind::Text | Kind::List | Kind::Secret => masked(v.as_str().unwrap_or_default()),
+        Kind::Text | Kind::List if v.is_null() => Value::Null,
+        Kind::Text | Kind::List => v.clone(),
+        Kind::Secret if v.is_null() => Value::Null,
+        Kind::Secret => json!(MASK),
         Kind::Map => match v {
-            Value::Object(o) => Value::Object(o.iter().map(|(k, val)| (k.clone(), masked(val.as_str().unwrap_or_default()))).collect()),
+            Value::Object(o) => Value::Object(o.keys().map(|k| (k.clone(), json!(MASK))).collect()),
             _ => v.clone(),
         },
         Kind::File => {
@@ -719,7 +742,7 @@ pub async fn load(db: &PgPool, config: &Config) -> Result<Integrations, sqlx::Er
         }
         if section == Section::Payout {
             let secret = values.get("secret_key").and_then(Value::as_str).unwrap_or_default();
-            out.payout_toss_ready = toss_ready(toss_env_enabled(), last_test.as_ref(), secret);
+            out.payout_toss_ready = toss_ready(toss_env_enabled(), last_test.as_ref(), &config.data_key, secret);
         }
         match apply(&out, section, &values) {
             Ok(next) => out = next,

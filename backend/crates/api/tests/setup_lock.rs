@@ -39,6 +39,11 @@ fn code_now() -> String {
     format!("{:06}", totp::code_at(TOTP_SEED, (Utc::now().timestamp() / totp::STEP_SECS) as u64))
 }
 
+/// The previous step's code: a first save spends its code, so the unlock that follows uses the current step.
+fn prev_code() -> String {
+    format!("{:06}", totp::code_at(TOTP_SEED, (Utc::now().timestamp() / totp::STEP_SECS - 1) as u64))
+}
+
 fn portone_card(all: &Value) -> Value {
     all["integrations"].as_array().unwrap().iter().find(|c| c["code"] == "portone").unwrap().clone()
 }
@@ -49,12 +54,16 @@ fn keys(secret: &str) -> Value {
 
 /// Saves the card once (a first save of an empty section is never locked out).
 async fn save(app: &Router, token: &str, secret: &str) {
-    let (st, body) = common::call_owner(app, "PUT", PORTONE, token, None, keys(secret)).await;
+    let (st, body) = common::call_owner(app, "PUT", PORTONE, token, Some(prev_code().as_str()), keys(secret)).await;
     assert_eq!(st, StatusCode::OK, "first save: {body}");
 }
 
 async fn unlock(app: &Router, token: &str, code: &str) -> (StatusCode, Value) {
-    common::call_owner(app, "POST", "/v1/admin/setup/portone/unlock", token, Some(code), Value::Null).await
+    unlock_section(app, token, "portone", code).await
+}
+
+async fn unlock_section(app: &Router, token: &str, section: &str, code: &str) -> (StatusCode, Value) {
+    common::call_owner(app, "POST", &format!("/v1/admin/setup/{section}/unlock"), token, Some(code), Value::Null).await
 }
 
 async fn actions(db: &PgPool) -> Vec<String> {
@@ -70,7 +79,7 @@ async fn save_is_refused_while_locked_and_the_stored_value_is_kept(db: PgPool) {
     let (token, _) = enrolled_owner(&db).await;
     save(&app, &token, SECRET).await;
 
-    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, None, keys("another-fake-secret-000000")).await;
+    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, Some(prev_code().as_str()), keys("another-fake-secret-000000")).await;
     assert_eq!((st, body["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("card_locked")), "{body}");
     let (st, body) = common::call_owner(&app, "DELETE", PORTONE, &token, None, Value::Null).await;
     assert_eq!((st, body["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("card_locked")), "{body}");
@@ -104,9 +113,9 @@ async fn owner_unlock_lets_one_save_through_then_relocks(db: PgPool) {
     assert_eq!(st, StatusCode::OK, "{body}");
     assert!(body["unlocked_until"].is_string(), "{body}");
 
-    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, None, keys("another-fake-secret-000000")).await;
+    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, Some(prev_code().as_str()), keys("another-fake-secret-000000")).await;
     assert_eq!(st, StatusCode::OK, "unlocked save: {body}");
-    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, None, keys("third-fake-secret-000000")).await;
+    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, Some(prev_code().as_str()), keys("third-fake-secret-000000")).await;
     assert_eq!(
         (st, body["error"]["code"].as_str()),
         (StatusCode::CONFLICT, Some("card_locked")),
@@ -166,7 +175,7 @@ async fn the_card_relocks_once_the_window_has_passed(db: PgPool) {
         .execute(&db)
         .await
         .expect("expire window");
-    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, None, keys("another-fake-secret-000000")).await;
+    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, Some(prev_code().as_str()), keys("another-fake-secret-000000")).await;
     assert_eq!((st, body["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("card_locked")), "{body}");
 }
 
@@ -221,7 +230,7 @@ async fn other_admins_cannot_change_or_clear_an_open_card(db: PgPool) {
     let (admin, aid) = staff_token(&db, api::auth::Role::StaffAdmin).await;
     enrol(&db, aid, false).await;
 
-    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &admin, None, keys("another-fake-secret-000000")).await;
+    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &admin, Some(prev_code().as_str()), keys("another-fake-secret-000000")).await;
     assert_eq!(st, StatusCode::FORBIDDEN, "{body}");
     let (st, body) = common::call_owner(&app, "DELETE", PORTONE, &admin, None, Value::Null).await;
     assert_eq!(st, StatusCode::FORBIDDEN, "{body}");
@@ -243,7 +252,7 @@ async fn clearing_keeps_the_card_locked(db: PgPool) {
     let (admin, aid) = staff_token(&db, api::auth::Role::StaffAdmin).await;
     enrol(&db, aid, false).await;
 
-    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &admin, None, keys("another-fake-secret-000000")).await;
+    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &admin, Some(prev_code().as_str()), keys("another-fake-secret-000000")).await;
     assert_eq!((st, body["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("card_locked")), "{body}");
     let (_, all) = common::call_owner(&app, "GET", "/v1/admin/setup", &admin, None, Value::Null).await;
     assert_eq!(portone_card(&all)["locked"], true);
@@ -253,7 +262,7 @@ async fn clearing_keeps_the_card_locked(db: PgPool) {
 async fn too_short_api_secret_is_refused_before_anything_is_saved(db: PgPool) {
     let app = common::app(db.clone());
     let (token, _) = enrolled_owner(&db).await;
-    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, None, keys("abc1")).await;
+    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &token, Some(prev_code().as_str()), keys("abc1")).await;
     assert_eq!(
         (st, body["error"]["code"].as_str()),
         (StatusCode::BAD_REQUEST, Some("invalid_api_secret")),
@@ -280,7 +289,8 @@ async fn secrets_never_come_back_in_any_response(db: PgPool) {
     let app = common::app(db.clone());
     let (token, _) = enrolled_owner(&db).await;
     let mut bodies = Vec::new();
-    bodies.push(common::call_owner(&app, "PUT", PORTONE, &token, None, keys(SECRET)).await.1);
+    let all_keys = json!({ "store_id": "store-00000000-0000-0000-0000-000000000000", "api_secret": SECRET, "webhook_secret": WEBHOOK_SECRET, "channel_keys": { "card": CHANNEL } });
+    bodies.push(common::call_owner(&app, "PUT", PORTONE, &token, Some(prev_code().as_str()), all_keys).await.1);
     bodies.push(common::call_owner(&app, "GET", "/v1/admin/setup", &token, None, Value::Null).await.1);
     bodies.push(unlock(&app, &token, &code_now()).await.1);
     bodies.push(
@@ -289,20 +299,24 @@ async fn secrets_never_come_back_in_any_response(db: PgPool) {
             .1,
     );
     for body in &bodies {
-        assert!(!body.to_string().contains(SECRET), "raw secret in response: {body}");
+        for raw in [SECRET, WEBHOOK_SECRET, CHANNEL] {
+            assert!(!body.to_string().contains(raw), "raw secret in response: {body}");
+        }
     }
     let card = &bodies[0];
     let field = card["fields"].as_array().unwrap().iter().find(|f| f["name"] == "api_secret").unwrap();
-    assert_eq!(field["preview"], "••••0000");
+    assert_eq!(field["preview"], "••••");
 }
 
 const CHANNEL: &str = "channel-key-00000000-0000-0000-0000-000000000000";
+const WEBHOOK_SECRET: &str = "whsec_ZmFrZS13ZWJob29rLWtleS0wMDAwMDA=";
 const BILLING_CHANNEL: &str = "channel-key-11111111-1111-1111-1111-111111111111";
+const IDENTITY_CHANNEL: &str = "channel-key-22222222-2222-2222-2222-222222222222";
 
 /// Saves the PortOne card with these channel keys as the owner (the card must be unlocked first if already saved).
 async fn save_channels(app: &Router, token: &str, channels: Value) {
     let body = json!({ "store_id": "store-00000000-0000-0000-0000-000000000000", "api_secret": SECRET, "channel_keys": channels });
-    let (st, body) = common::call_owner(app, "PUT", PORTONE, token, None, body).await;
+    let (st, body) = common::call_owner(app, "PUT", PORTONE, token, Some(prev_code().as_str()), body).await;
     assert_eq!(st, StatusCode::OK, "{body}");
 }
 
@@ -337,18 +351,83 @@ async fn admin_list_says_which_methods_have_a_key(db: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn billing_is_ready_only_with_its_own_channel_key(db: PgPool) {
+async fn billing_uses_its_own_channel_or_the_legacy_card_key(db: PgPool) {
     let app = common::prod_app(db.clone(), "http://127.0.0.1:9");
     let (token, _) = enrolled_owner(&db).await;
     save_channels(&app, &token, json!({ "card": CHANNEL })).await;
     let dev = common::app(db.clone());
     let c = common::customer(&dev, &db, "010-7100-0002").await;
     let (_, setup) = common::call(&app, "GET", "/v1/me/payment-methods/setup", Some(&c.token), None).await;
-    assert_eq!(setup["enabled"], false, "one-off card key does not enable billing");
+    assert_eq!(setup["enabled"], true, "an install saved before the billing slot keeps billing on its card key");
+    assert_eq!(setup["channels"]["card"], CHANNEL);
 
     assert_eq!(unlock(&app, &token, &code_now()).await.0, StatusCode::OK);
-    save_channels(&app, &token, json!({ "card": CHANNEL, "card_billing": BILLING_CHANNEL })).await;
+    save_channels(
+        &app,
+        &token,
+        json!({ "card": CHANNEL, "card_billing": BILLING_CHANNEL, "identity": IDENTITY_CHANNEL, "cash_receipt": CHANNEL }),
+    )
+    .await;
     let (_, setup) = common::call(&app, "GET", "/v1/me/payment-methods/setup", Some(&c.token), None).await;
     assert_eq!(setup["enabled"], true);
     assert_eq!(setup["channels"]["card"], BILLING_CHANNEL, "the app reads billing under card");
+    assert_eq!(setup["channels"]["identity"], IDENTITY_CHANNEL);
+    assert!(setup["channels"].get("cash_receipt").is_none(), "server-only channels are not sent to the app");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn saving_one_channel_slot_keeps_the_others(db: PgPool) {
+    let app = common::app(db.clone());
+    let (token, _) = enrolled_owner(&db).await;
+    save_channels(&app, &token, json!({ "card": CHANNEL, "identity": IDENTITY_CHANNEL })).await;
+    assert_eq!(unlock(&app, &token, &code_now()).await.0, StatusCode::OK);
+    save_channels(&app, &token, json!({ "payco": CHANNEL })).await;
+
+    let (st, all) = common::call_owner(&app, "GET", "/v1/admin/setup", &token, None, Value::Null).await;
+    assert_eq!(st, StatusCode::OK);
+    let slots = portone_card(&all)["fields"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["name"] == "channel_keys")
+        .unwrap()["preview"]
+        .clone();
+    assert_eq!(
+        slots,
+        json!({ "card": "••••", "identity": "••••", "payco": "••••" }),
+        "earlier slots survive a later save"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn first_portone_save_is_owner_only(db: PgPool) {
+    let app = common::app(db.clone());
+    let (admin, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
+    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &admin, Some(&code_now()), keys(SECRET)).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "a non-owner admin cannot point checkout at a merchant: {body}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn owner_connection_test_runs_while_the_card_is_unlocked(db: PgPool) {
+    let app = common::app(db.clone());
+    let (token, _) = enrolled_owner(&db).await;
+    let backup = json!({
+        "endpoint": "https://backup.invalid", "region": "ap-northeast-2", "bucket": "malkkeum-backup",
+        "access_key": "AKIAEXAMPLE", "secret_key": "examplesecret"
+    });
+    let (st, body) = common::call_owner(&app, "PUT", "/v1/admin/setup/backup", &token, None, backup).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(unlock_section(&app, &token, "backup", &code_now()).await.0, StatusCode::OK);
+    let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/backup/test", &token, None, Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(body["code"], "unreachable");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn connection_test_refuses_a_locked_card(db: PgPool) {
+    let app = common::app(db.clone());
+    let (token, _) = enrolled_owner(&db).await;
+    save(&app, &token, SECRET).await;
+    let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/portone/test", &token, None, Value::Null).await;
+    assert_eq!((st, body["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("card_locked")), "{body}");
 }

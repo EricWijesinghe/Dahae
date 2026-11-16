@@ -141,7 +141,9 @@ async fn keys_checkout_signed_webhook_partial_refund_and_repeat_webhook(pool: Pg
     let dev = common::app(pool.clone());
     let c = customer(&dev, &pool, "010-7100-0100").await;
     let prod = prod_app(pool.clone(), &base);
-    let (owner, _) = staff_token(&pool, Role::StaffAdmin).await;
+    let (owner, owner_id) = staff_token(&pool, Role::StaffAdmin).await;
+    let seed = b"12345678901234567890";
+    common::enrol_owner(&pool, owner_id, seed).await;
 
     // 1. The owner saves the PortOne keys and webhook secret; the live providers pick them up.
     let webhook_secret = format!("whsec_{}", STANDARD.encode(WEBHOOK_KEY));
@@ -151,7 +153,8 @@ async fn keys_checkout_signed_webhook_partial_refund_and_repeat_webhook(pool: Pg
         "channel_keys": { "card": "channel-key-e2e-card" },
         "webhook_secret": webhook_secret,
     });
-    let (st, saved) = call(&prod, "PUT", "/v1/admin/setup/portone", Some(owner.as_str()), Some(keys)).await;
+    let code = format!("{:06}", api::totp::code_at(seed, (chrono::Utc::now().timestamp() / api::totp::STEP_SECS) as u64));
+    let (st, saved) = common::call_owner(&prod, "PUT", "/v1/admin/setup/portone", &owner, Some(&code), keys).await;
     assert_eq!(st, StatusCode::OK, "{saved}");
 
     // 2. Checkout for a visit two days out, paid at PortOne, then confirmed with the PortOne payment id.

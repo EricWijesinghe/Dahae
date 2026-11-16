@@ -58,6 +58,15 @@ async fn owner_session(app: &axum::Router, db: &PgPool) -> (String, Vec<u8>) {
     (c["access_token"].as_str().expect("token").to_string(), secret)
 }
 
+/// The owner's current code, with the last step cleared: a step is single-use, and an earlier request may have spent it.
+async fn owner_code(db: &PgPool, secret: &[u8]) -> String {
+    sqlx::query("UPDATE staff SET totp_last_step = NULL").execute(db).await.expect("reset step");
+    format!(
+        "{:06}",
+        api::totp::code_at(secret, (chrono::Utc::now().timestamp() / api::totp::STEP_SECS) as u64)
+    )
+}
+
 /// Owner unlock of a saved card. A TOTP step is single-use, so the last step is cleared before each unlock.
 async fn unlock(app: &axum::Router, db: &PgPool, token: &str, secret: &[u8], section: &str) {
     sqlx::query("UPDATE staff SET totp_last_step = NULL").execute(db).await.expect("reset step");
@@ -132,14 +141,15 @@ async fn owner_saves_business_and_keys_secrets_come_back_masked(pool: PgPool) {
     assert_eq!(brand["primary_color"], "#3B5BFD");
     assert_eq!(brand["company"]["hosting_provider"], "예시호스팅(주)", "seller details are public");
 
-    let (st, b) = call(&app, "PUT", "/v1/admin/setup/portone", t, Some(json!({"store_id": "store-1"}))).await;
+    let code = owner_code(&pool, &secret).await;
+    let (st, b) = common::call_owner(&app, "PUT", "/v1/admin/setup/portone", &token, Some(&code), json!({"store_id": "store-1"})).await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "secret is required: {b}");
     let keys = json!({"store_id": "store-1", "api_secret": "secret-value-9876", "channel_keys": {"card": "channel-key-card"}});
-    let (st, card) = call(&app, "PUT", "/v1/admin/setup/portone", t, Some(keys)).await;
+    let (st, card) = common::call_owner(&app, "PUT", "/v1/admin/setup/portone", &token, Some(&code), keys).await;
     assert_eq!(st, StatusCode::OK, "{card}");
     assert_eq!(card["source"], "console");
     let api_secret = card["fields"].as_array().unwrap().iter().find(|f| f["name"] == "api_secret").unwrap();
-    assert_eq!(api_secret["preview"], "••••9876");
+    assert_eq!(api_secret["preview"], "••••", "a secret shows no part of its value");
     let raw: String = sqlx::query_scalar("SELECT secret FROM integration_settings WHERE section = 'portone'")
         .fetch_one(&pool)
         .await
@@ -159,7 +169,7 @@ async fn owner_saves_business_and_keys_secrets_come_back_masked(pool: PgPool) {
     assert_eq!(st, StatusCode::OK);
     let (_, all) = call(&app, "GET", "/v1/admin/setup", t, None).await;
     let portone = all["integrations"].as_array().unwrap().iter().find(|c| c["code"] == "portone").unwrap().clone();
-    assert_eq!(portone["fields"][0]["preview"], "••••");
+    assert_eq!(portone["fields"][0]["preview"], "store-2", "the store id is an identifier and shows in full");
     assert_eq!(portone["fields"][1]["set"], true);
 
     unlock(&app, &pool, &token, &secret, "portone").await;
@@ -191,7 +201,7 @@ async fn toss_key_prefix_sets_the_wizard_mode_and_the_key_stays_masked(pool: PgP
     assert_eq!(test["mode"], "test");
     assert!(!test.to_string().contains("test_sk_abcdef1234"), "the key itself is never returned");
     let preview = test["fields"].as_array().unwrap().iter().find(|f| f["name"] == "secret_key").unwrap()["preview"].clone();
-    assert_eq!(preview, "••••1234");
+    assert_eq!(preview, "••••");
 
     unlock(&app, &pool, &token, &secret, "payout").await;
     let (st, live) = call(&app, "PUT", "/v1/admin/setup/payout", t, Some(json!({"secret_key": "live_sk_zz9876"}))).await;

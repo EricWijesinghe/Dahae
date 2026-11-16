@@ -119,9 +119,10 @@ struct Job {
     identity_enc: String,
     provider_tx_id: Option<String>,
     amount: i64,
+    method: String,
 }
 
-const JOB_SQL: &str = "SELECT cr.purpose, cr.identity_enc, p.provider_tx_id, p.amount
+const JOB_SQL: &str = "SELECT cr.purpose, cr.identity_enc, p.provider_tx_id, p.amount, ck.method
     FROM cash_receipts cr
     JOIN payments p ON p.id = cr.payment_id
     JOIN checkouts ck ON ck.id = cr.checkout_id
@@ -156,7 +157,12 @@ async fn issue_job(s: &AppState, id: Uuid) -> ApiResult<()> {
 }
 
 async fn attempt(s: &AppState, p: &PortOne, job: &Job) -> Result<Issued, String> {
-    let channel = p.channel_keys.get("cash_receipt").ok_or("no PortOne channel key for cash receipts")?;
+    // Installs saved before the `cash_receipt` slot existed issued receipts through the payment method's channel.
+    let channel = p
+        .channel_keys
+        .get("cash_receipt")
+        .or_else(|| p.channel_keys.get(&job.method))
+        .ok_or("no PortOne channel key for cash receipts")?;
     let payment_id = job.provider_tx_id.as_deref().ok_or("payment has no provider transaction id")?;
     let identity = crypto::decrypt(&s.config.data_key, crypto::aad::RECEIPT_IDENTITY, &job.identity_enc).ok_or("cannot decrypt receipt identity")?;
     let body = pcr::issue_body(p.store_id.clone(), payment_id, channel, job.purpose == "CORPORATE", &identity, job.amount);

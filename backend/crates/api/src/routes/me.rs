@@ -380,10 +380,14 @@ async fn billing_setup(State(s): State<AppState>, Customer(a): Customer) -> ApiR
         .bind(a.id)
         .fetch_one(&s.db)
         .await?;
-    // The app reads the billing channel under "card"; the one-off card channel stays server-side.
-    let mut channels = p.channel_keys.clone();
-    if let Some(billing) = channels.get("card_billing").cloned() {
-        channels.insert("card".into(), billing);
+    // The app reads the billing channel under "card" and the identity channel under "identity". The one-off
+    // card, cash receipt and other method channels stay server-side.
+    let mut channels = serde_json::Map::new();
+    if let Some(billing) = portone::billing_channel(p) {
+        channels.insert("card".into(), json!(billing));
+    }
+    if let Some(identity) = p.channel_keys.get("identity") {
+        channels.insert("identity".into(), json!(identity));
     }
     Ok(Json(json!({
         "enabled": true,
