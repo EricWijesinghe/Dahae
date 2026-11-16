@@ -120,6 +120,7 @@ curl -fsSL <설치 주소> | sudo bash
 
 ### 예약
 - 서비스마다 정해진 가격과 카탈로그 기준 가격 계산
+- 개수로 고르는 서비스(에어컨·소파 등)는 옵션별 개수와 다중 할인으로 계산
 - 이사·입주 청소는 견적을 받고, 예약금(견적의 10%)을 먼저 받아요
 - 예약 일정 변경과 취소 (취소 정책에 따른 환불 계산)
 - 대기 명단, 정기 구독과 자동 갱신, 성수기 요금, 팁
@@ -327,7 +328,7 @@ Screenshots use demo data: sample shop news, bookings, names and dashboard figur
 
 The full list, with code locations and known limits, is in the [feature catalogue](docs/FEATURES.md).
 
-- **Booking:** fixed prices from the catalogue, quotes for move-in and move-out with a 10% deposit, rescheduling, cancellation with refunds under the cancellation policy, waitlist, subscriptions with renewals, peak pricing, tips.
+- **Booking:** fixed prices from the catalogue, per-option counts with a multi-item discount for appliance, window and disinfection services, quotes for move-in and move-out with a 10% deposit, rescheduling, cancellation with refunds under the cancellation policy, waitlist, subscriptions with renewals, peak pricing, tips.
 - **Payments and payouts:** PortOne V2 checkout (cards, easy-pay, bank transfer, virtual account; channels set per method), signed webhooks, payment reconciliation, cash receipts, tax invoices, points and coupons. Partner payouts are recorded manually by default, or sent automatically through Toss Payments payouts. VAT and withholding exports as CSV.
 - **Staff and quality:** staff accounts with two-factor sign-in (TOTP), lockout after repeated failures, partner team invites by phone, ratings and quality records, no-show tracking, audit log.
 - **Security and privacy:** encrypted storage of integration keys, rate limits and escalating lockouts on sign-in and codes, signature checks on webhooks, privacy requests, account deletion that also unlinks social sign-in, retention settings, a breached-password check.
