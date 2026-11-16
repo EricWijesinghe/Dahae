@@ -4,19 +4,22 @@
 
 이 라이선스의 영문 본문(아래)이 정본이며 법적 효력이 있습니다. 아래 요약은 이해를 돕기 위한 참고용이며 영문 본문과 다르면 영문 본문이 우선합니다.
 
+- 저작권 표시: Copyright (c) 2026 Eric Wijesinghe <EricWijesinghe@hotmail.com>. All rights reserved.
 - 이 소프트웨어는 저작권자 Eric Wijesinghe의 독점 소프트웨어이며, 모든 권리는 저작권자에게 있습니다.
+- 소프트웨어, 소스 코드, 디자인, 로고, 문서, 그리고 저작권자가 직접 또는 저작권자를 위해 만든 모든 개선물과 2차적 저작물의 권리는 저작권자에게 있습니다 (2조). 소프트웨어에 대한 피드백은 저작권자가 자유롭게 사용할 수 있습니다.
 - 이 파일만으로는 사용, 복제, 수정, 배포, 재배포, 재라이선스, 판매할 권리가 주어지지 않습니다. 권리는 저작권자와 맺은 서면 라이선스 계약으로만 부여됩니다.
 - 서면 라이선스 계약을 맺은 라이선시는 계약에서 정한 범위에서 자신의 사업을 위해 소프트웨어를 실행할 수 있습니다.
 - 라이선시의 최종 사용자와 파트너가 라이선시의 배포를 통해 얻은 클라이언트 앱을 라이선시의 사업을 위해 실행하는 것은 제4조(c)의 배포에 해당하지 않습니다.
 - 소스 코드와 비공개 기술 정보는 비밀로 다룹니다. 이 소프트웨어를 이용해 경쟁 제품을 만들 수 없습니다.
 - 제3자 구성요소는 각자의 라이선스를 따릅니다. 목록은 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 있습니다.
-- "Dahae" 및 "다해"라는 이름과 로고는 이 라이선스로 부여되지 않습니다.
+- "Dahae" 및 "다해"라는 이름과 다해 로고는 저작권자의 상표(™)이며, 이 라이선스로 사용 권한이 부여되지 않습니다 (7조).
+- 라이선스 문의와 사용 허가 요청: EricWijesinghe@hotmail.com (13조).
 - 소프트웨어는 보증 없이 "있는 그대로" 제공되며, 저작권자의 책임은 법이 허용하는 범위에서 제한됩니다.
 - 준거법과 관할은 서면 라이선스 계약에서 정합니다.
 
 ---
 
-Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+Copyright (c) 2026 Eric Wijesinghe <EricWijesinghe@hotmail.com>. All rights reserved.
 
 ## Dahae Proprietary Software License (English, governing text)
 
@@ -38,11 +41,15 @@ Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 
 1.8 **"Third-Party Components"** means the software, fonts and other materials identified in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) or otherwise identified as licensed by their own authors under their own licenses.
 
-1.9 **"Trademarks"** means the names "Dahae" and "다해" and the logos and brand identifiers of the Software.
+1.9 **"Trademarks"** means the names "Dahae" and "다해", the Dahae logo, and the other logos and brand identifiers of the Software.
 
 ### 2. Ownership
 
-The Software is licensed, not sold. The Licensor owns all right, title and interest in and to the Software, including all intellectual property rights in it. Nothing in this License transfers ownership to anyone.
+2.1 The Software is licensed, not sold. The Licensor owns all right, title and interest in and to the Software, including all intellectual property rights in it. Nothing in this License transfers ownership to anyone.
+
+2.2 The Licensor also owns all right, title and interest in the Source Code, the designs, logos and icons, the documentation, and every improvement, modification and Derivative Work of the Software that is made by or for the Licensor. To the extent that any Licensee or other person acquires a right in such a work, that person holds the right for the Licensor and assigns it to the Licensor, to the extent the law allows.
+
+2.3 Any suggestion, comment or idea that a person gives the Licensor about the Software ("Feedback") may be used by the Licensor freely, without obligation or compensation to that person.
 
 ### 3. Grant of License
 
@@ -96,6 +103,8 @@ Except as a Written License Agreement expressly permits, or where applicable law
 
 7.2 The Licensee shall not present any product or service as being made, endorsed or approved by the Licensor unless the Licensor has given prior written permission.
 
+7.3 The Trademarks are trademarks of the Licensor, marked "™". The Licensor makes no statement in this License that any Trademark is registered in any jurisdiction, and the Licensee shall not use the ® symbol with any Trademark without the Licensor's prior written permission.
+
 ### 8. Termination
 
 8.1 The Written License Agreement sets out its own termination terms. If it does not, the Licensor may terminate the rights granted to the Licensee by written notice if the Licensee materially breaches this License.
@@ -127,3 +136,7 @@ Governing law and venue are set in the Written License Agreement. This License d
 12.2 A failure or delay by the Licensor in enforcing any provision is not a waiver of that provision or of any other right.
 
 12.3 The Licensee shall not assign or transfer this License or any right under it, except as the Written License Agreement permits.
+
+### 13. Contact
+
+13.1 Licensing inquiries, requests for permission under this License and notices to the Licensor: Eric Wijesinghe, EricWijesinghe@hotmail.com.
