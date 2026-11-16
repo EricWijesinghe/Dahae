@@ -492,6 +492,15 @@ fn service_account(v: &Map<String, Value>) -> Result<ServiceAccount, Invalid> {
 }
 
 /// Overlays one console section onto `base`. Fails when a value is missing or malformed.
+/// True when the env, not the saved card, supplies this field. The card shows such a field as set.
+pub fn env_provides(base: &Integrations, section: Section, field: &str) -> bool {
+    match (section, field) {
+        (Section::Portone, "webhook_secret") => base.portone.webhook_secret.is_some(),
+        (Section::Portone, "channel_keys") => !base.portone.channel_keys.is_empty(),
+        _ => false,
+    }
+}
+
 pub fn apply(base: &Integrations, section: Section, v: &Map<String, Value>) -> Result<Integrations, Invalid> {
     let mut out = base.clone();
     match section {
@@ -504,18 +513,21 @@ pub fn apply(base: &Integrations, section: Section, v: &Map<String, Value>) -> R
             if !store_id.starts_with(PORTONE_STORE_PREFIX) {
                 return Err(Invalid("invalid_store_id"));
             }
-            let channel_keys = string_map(v, "channel_keys")?;
-            if channel_keys.keys().any(|k| !known_channel_slot(k)) {
+            let section_keys = string_map(v, "channel_keys")?;
+            if section_keys.keys().any(|k| !known_channel_slot(k)) {
                 return Err(Invalid("unknown_channel_key"));
             }
-            if channel_keys.values().any(|k| !k.starts_with(PORTONE_CHANNEL_PREFIX)) {
+            if section_keys.values().any(|k| !k.starts_with(PORTONE_CHANNEL_PREFIX)) {
                 return Err(Invalid("invalid_channel_key"));
             }
+            // Keys the card does not set (env-provided) stay; the card's own keys win.
+            let mut channel_keys = base.portone.channel_keys.clone();
+            channel_keys.extend(section_keys);
             let api_secret = required(v, "api_secret")?;
             check_api_secret(&api_secret)?;
             out.portone = PortOne {
                 api_secret: Some(api_secret),
-                webhook_secret,
+                webhook_secret: webhook_secret.or_else(|| base.portone.webhook_secret.clone()),
                 store_id: Some(store_id),
                 channel_keys,
                 cash_receipts: toggle(v, "cash_receipts")?.unwrap_or(base.portone.cash_receipts),
