@@ -3361,6 +3361,9 @@ class TKo extends T {
   String get err_settlement_in_transfer => '이 예약의 정산이 송금 중이라 취소할 수 없어요.';
 
   @override
+  String get err_checkout_not_open => '결제가 이미 진행되었거나 끝나서 지금은 바꿀 수 없어요.';
+
+  @override
   String get err_unsupported_bank => '이 은행은 지급을 지원하지 않아요.';
 
   @override

@@ -3450,6 +3450,10 @@ class TEn extends T {
       'This booking\'s payout is already with the bank, so it can\'t be cancelled.';
 
   @override
+  String get err_checkout_not_open =>
+      'This payment has already been processed or closed, so it can\'t be changed now.';
+
+  @override
   String get err_unsupported_bank => 'This bank isn\'t supported for payouts.';
 
   @override

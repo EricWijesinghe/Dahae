@@ -3289,6 +3289,9 @@
           "200": {
             "description": "OK"
           },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
           "default": {
             "$ref": "#/components/responses/Error"
           }
@@ -3829,6 +3832,9 @@
           "200": {
             "description": "OK"
           },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
           "default": {
             "$ref": "#/components/responses/Error"
           }
@@ -3843,6 +3849,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }
@@ -4801,6 +4810,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
           },
           "default": {
             "$ref": "#/components/responses/Error"

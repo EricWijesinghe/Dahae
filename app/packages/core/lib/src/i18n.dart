@@ -106,6 +106,7 @@ extension Labels on T {
     'payout_provider' => err_payout_provider,
     'payout_in_transfer' => err_payout_in_transfer,
     'settlement_in_transfer' => err_settlement_in_transfer,
+    'checkout_not_open' => err_checkout_not_open,
     'unsupported_bank' => err_unsupported_bank,
     'seller_declined' => err_seller_declined,
     'payout_account_unverified' => err_payout_account_unverified,

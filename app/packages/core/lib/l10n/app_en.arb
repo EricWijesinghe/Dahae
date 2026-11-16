@@ -1059,6 +1059,7 @@
  "err_payout_provider": "This payout method isn't available right now.",
  "err_payout_in_transfer": "This payout may already be with the bank, so it can't be changed right now. Check its status.",
  "err_settlement_in_transfer": "This booking's payout is already with the bank, so it can't be cancelled.",
+ "err_checkout_not_open": "This payment has already been processed or closed, so it can't be changed now.",
  "err_unsupported_bank": "This bank isn't supported for payouts.",
  "err_toss_unverified": "Toss payouts aren't available yet. Use manual transfer.",
  "err_invalid_cap": "Enter a number within the allowed range.",

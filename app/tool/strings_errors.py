@@ -65,6 +65,7 @@ S = {
   "err_payout_provider": ["이 지급 방식은 지금 쓸 수 없어요.", "This payout method isn't available right now."],
   "err_payout_in_transfer": ["이 정산은 이미 송금되었을 수 있어 지금 바꿀 수 없어요. 상태를 확인해 주세요.", "This payout may already be with the bank, so it can't be changed right now. Check its status."],
   "err_settlement_in_transfer": ["이 예약의 정산이 송금 중이라 취소할 수 없어요.", "This booking's payout is already with the bank, so it can't be cancelled."],
+  "err_checkout_not_open": ["결제가 이미 진행되었거나 끝나서 지금은 바꿀 수 없어요.", "This payment has already been processed or closed, so it can't be changed now."],
   "err_unsupported_bank": ["이 은행은 지급을 지원하지 않아요.", "This bank isn't supported for payouts."],
   "err_toss_unverified": ["토스 지급대행은 아직 연결할 수 없어요. 직접 이체를 써 주세요.", "Toss payouts aren't available yet. Use manual transfer."],
   "err_invalid_cap": ["한도는 정해진 범위 안의 숫자로 입력해 주세요.", "Enter a number within the allowed range."],

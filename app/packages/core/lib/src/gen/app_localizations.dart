@@ -6451,6 +6451,12 @@ abstract class T {
   /// **'이 예약의 정산이 송금 중이라 취소할 수 없어요.'**
   String get err_settlement_in_transfer;
 
+  /// No description provided for @err_checkout_not_open.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제가 이미 진행되었거나 끝나서 지금은 바꿀 수 없어요.'**
+  String get err_checkout_not_open;
+
   /// No description provided for @err_unsupported_bank.
   ///
   /// In ko, this message translates to:
