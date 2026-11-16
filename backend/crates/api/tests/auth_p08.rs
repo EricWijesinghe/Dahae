@@ -59,7 +59,7 @@ async fn exports_need_a_live_admin_and_a_fresh_step_up(db: PgPool) {
         .expect("demote");
     for uri in &uris {
         let (st, b) = call(&app, "GET", uri, Some(token.as_str()), None).await;
-        assert_eq!(st, StatusCode::FORBIDDEN, "{uri}: {b}");
+        assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::FORBIDDEN, Some("forbidden")), "{uri}: {b}");
     }
 }
 
@@ -81,8 +81,14 @@ async fn sms_reset_with_an_admin_supplied_phone_is_refused_for_an_account_with_n
     let (admin, _) = staff_token(&db, Role::StaffAdmin).await;
     let target = plain_staff(&db, "consultant", None).await;
     let uri = format!("/v1/admin/staff/{target}/password-reset");
-    let (st, b): (StatusCode, Value) =
-        call(&app, "POST", &uri, Some(admin.as_str()), Some(json!({ "channel": "sms", "phone": "010-1234-5678" }))).await;
+    let (st, b): (StatusCode, Value) = call(
+        &app,
+        "POST",
+        &uri,
+        Some(admin.as_str()),
+        Some(json!({ "channel": "sms", "phone": "010-1234-5678" })),
+    )
+    .await;
     assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::BAD_REQUEST, Some("sms_required")), "{b}");
     let stored: Option<String> = sqlx::query_scalar("SELECT phone FROM staff WHERE id = $1")
         .bind(target)
