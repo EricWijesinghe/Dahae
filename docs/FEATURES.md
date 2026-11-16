@@ -309,12 +309,18 @@ flowchart LR
 
 | 기능 | 한 줄 설명 | 사용자 | 주요 파일 |
 |---|---|---|---|
-| 홈 | 서비스 목록과 홈 섹션을 보여 줘요. | 고객 | [`app/apps/customer/lib/screens/home.dart`](../app/apps/customer/lib/screens/home.dart), [`home_sections.dart`](../app/apps/customer/lib/screens/home_sections.dart) |
+| 홈 | 서비스를 4개 묶음으로 보여 줘요: 이사·입주 청소, 거주 청소, 가전·가구 청소, 방역·소독. 묶음 목록은 `GET /v1/service-groups`로 받고, 비어 있거나 읽지 못하면 앱에 든 기본 묶음을 써요. 묶음 칸에는 안에 든 서비스의 N·HOT 표시를 붙이고, HOT이 우선이에요. 스튜디오는 홈에서 숨기고 기존 예약용으로 남겨 둬요. | 고객 | [`home.dart`](../app/apps/customer/lib/screens/home.dart), [`home_sections.dart`](../app/apps/customer/lib/screens/home_sections.dart), `app/apps/customer/lib/screens/service_groups.dart`, `app/packages/core/lib/src/service_groups.dart` |
+| 개수로 고르는 서비스 | 에어컨·소파처럼 개수를 고르는 서비스는 옵션마다 −/+로 개수를 정해요. 두 개 이상 고르면 다중 할인을 적용해요. 옵션마다 상한이 있고(기본 20개), 소요 시간은 최소 60분이에요. 방역·소독처럼 한 번만 고르는 옵션은 탭해서 켜고 꺼요. | 고객 | `app/apps/customer/lib/screens/service_counts.dart`, [`catalog.rs`](../backend/crates/domain/src/catalog.rs) (`Pricing::Counts`) |
+| 이사·입주 견적 | 이사·입주 청소를 고르면 먼저 신축인지 구축인지 물어요. 신축은 입주 청소, 구축은 이사 청소로 이어져요. 집 유형(원룸·투룸, 아파트, 빌라·주택)을 고르고 집 구조와 짐 상태를 답하면 예상 견적을 보여 줘요. 최종 가격은 상담에서 정하고, 예약금(기본 견적의 10%)으로 확정해요. | 고객 | `app/apps/customer/lib/screens/move_chooser.dart`, [`quote_flow.dart`](../app/apps/customer/lib/screens/quote_flow.dart), [`quote_review.dart`](../app/apps/customer/lib/screens/quote_review.dart) |
+| 거주 청소 | 욕실과 주방은 기존 가격 방식 그대로예요. 창문은 작은 창·큰 창을 개수로 고르고, 집 전체는 집 유형과 집 구조를 물어 견적을 내요. | 고객 | `app/apps/customer/lib/screens/service_groups.dart`, [`quote_flow.dart`](../app/apps/customer/lib/screens/quote_flow.dart) |
+| 서비스 범위 | 평면도와 구역 탭으로 서비스가 닿는 곳을 보여 줘요. | 고객 | [`service_scope.dart`](../app/apps/customer/lib/screens/service_scope.dart) |
 | 예약 흐름 | 서비스, 주소, 날짜·시간, 결제까지 단계별로 진행해요. | 고객 | [`booking_flow.dart`](../app/apps/customer/lib/screens/booking_flow.dart), [`pay_flow.dart`](../app/apps/customer/lib/screens/pay_flow.dart) |
-| 예약 상세 | 예약 상태를 보고 취소와 일정 변경을 요청해요. | 고객 | [`booking_detail.dart`](../app/apps/customer/lib/screens/booking_detail.dart) |
+| 예약 상세 | 예약 상태를 보고 취소와 일정 변경을 요청해요. 취소 화면은 서버가 계산한 위약금과 환불액을 보여 줘요. | 고객 | [`booking_detail.dart`](../app/apps/customer/lib/screens/booking_detail.dart), `app/apps/customer/lib/screens/cancel_booking_sheet.dart` |
+| 공지 | 홈 소식 줄에서 공지를 맨 위에 두고 게시일을 보여 줘요. | 고객 | [`content_rail.dart`](../app/apps/customer/lib/screens/content_rail.dart) |
+| 후기 | 별점은 아이콘으로 보여 주고, 후기 전체를 보는 화면이 있어요. 신고는 후기마다 더보기 메뉴에서 해요. | 고객 | `app/apps/customer/lib/screens/reviews.dart`, `app/apps/customer/lib/screens/review_carousel.dart` |
 | 구독 | 정기 구독을 만들고 관리해요. | 고객 | [`subscribe.dart`](../app/apps/customer/lib/screens/subscribe.dart), [`subscriptions.dart`](../app/apps/customer/lib/screens/subscriptions.dart) |
 | 지갑 | 지갑 화면이에요. | 고객 | [`wallet.dart`](../app/apps/customer/lib/screens/wallet.dart), [`payments.dart`](../app/apps/customer/lib/screens/payments.dart) |
-| 더보기 | 메뉴 화면이에요. 개인정보 화면과 사업자 정보 화면으로 이어져요. | 고객 | [`more.dart`](../app/apps/customer/lib/screens/more.dart), [`privacy.dart`](../app/apps/customer/lib/screens/privacy.dart) |
+| 더보기 | 결제수단·결제 내역·정기 구독을 위에 묶고, 테마 선택과 버전 정보·법적 고지를 아래에 둬요. 개인정보 화면과 사업자 정보 화면으로 이어져요. | 고객 | [`more.dart`](../app/apps/customer/lib/screens/more.dart), [`privacy.dart`](../app/apps/customer/lib/screens/privacy.dart) |
 
 ### 18. 파트너 앱 화면
 
@@ -350,13 +356,15 @@ flowchart LR
 
 ## 최근 반영 중인 고객 화면 (feat/ntd-redesign)
 
-아래 항목은 `feat/ntd-redesign` 브랜치에서 병합 중인 작업이에요. 이 문서가 기준으로 삼는 `docs/industry-docs` 브랜치에는 아직 없어서 **상대 링크를 걸지 않았어요**. 병합 후 경로를 다시 확인하세요.
+아래 항목은 `feat/ntd-redesign` 브랜치에서 병합 중인 작업이에요. 위 17번 표의 해당 행이 이 작업을 설명해요. 이 문서가 있는 develop 브랜치에는 아직 없어서 **상대 링크를 걸지 않았어요**. 병합 후 경로를 다시 확인하세요.
 
 | 기능 | 한 줄 설명 | 파일 (브랜치 기준) |
 |---|---|---|
-| 홈 4개 서비스 그룹 | moving, living, appliance, disinfection 4개 그룹으로 홈을 나눠요. 그룹 목록은 공개 API `/v1/service-groups`로 받고, 사장님이 편집해요. | `app/apps/customer/lib/screens/service_groups.dart`, `backend/crates/api/src/routes/service_groups.rs`, `backend/crates/domain/src/service_group.rs` |
-| 개수형 가격 | 옵션별 개수를 고르고(−/+), 2개 이상이면 다중 할인을 적용해요. 옵션 상한과 최소 60분을 지켜요. | `app/apps/customer/lib/screens/service_counts.dart`, `backend/crates/domain/src/catalog.rs` (`Pricing::Counts`) |
-| 이사·입주 견적 흐름 | 신축은 입주, 구축은 이사 청소로 나눠 질문하고, 집 유형을 골라 예상 견적을 보여 줘요. 최종 가격은 직원과 상담으로 확정하고 예약금(10%)으로 확정해요. | `app/apps/customer/lib/screens/move_chooser.dart`, `quote_flow.dart`, `quote_review.dart` |
+| 홈 4개 서비스 묶음 | 홈을 이사·입주 청소, 거주 청소, 가전·가구 청소, 방역·소독 4개로 나눠요. 제목·순서·아이콘·구성 서비스·표시 여부는 사장님이 콘솔 [카탈로그 · 상품 묶음]에서 바꿔요. | `app/apps/customer/lib/screens/service_groups.dart`, `backend/crates/api/src/routes/service_groups.rs`, `backend/crates/domain/src/service_group.rs`, `backend/migrations/0234_service_groups.sql` |
+| 개수형 가격 | 옵션별 개수를 고르고(−/+), 2개 이상이면 다중 할인을 적용해요. 옵션 상한과 최소 60분을 지켜요. | `app/apps/customer/lib/screens/service_counts.dart`, `backend/crates/domain/src/catalog.rs` (`Pricing::Counts`), `backend/crates/domain/src/pricing.rs` (`price_booking_with`) |
+| 이사·입주 견적 흐름 | 신축은 입주, 구축은 이사 청소로 나눠 질문하고, 집 유형을 골라 예상 견적을 보여 줘요. 최종 가격은 상담으로 정하고 예약금(기본 10%)으로 확정해요. | `app/apps/customer/lib/screens/move_chooser.dart`, `quote_flow.dart`, `quote_review.dart`, `backend/crates/domain/src/quote.rs` |
+| 콘솔 묶음·개수 편집 | 카탈로그 가격 탭에서 개수형 서비스의 옵션 이름·가격·소요 시간·최대 개수·할인율(콘솔 입력은 0–50%)을 고쳐요. 상품 묶음 탭에서 묶음을 고쳐요. 예약 상세에 개수를 보여 줘요. | `app/apps/console/lib/screens/catalog_counts.dart`, `app/apps/console/lib/screens/catalog_groups.dart`, `app/apps/console/lib/booking_labels.dart` |
+| 파트너 앱 개수 표시 | 일감 목록과 일감 상세에 개수를 보여 줘요. | `app/apps/partner/lib/job_labels.dart`, `app/apps/partner/lib/screens/job_detail.dart`, `app/apps/partner/lib/screens/jobs.dart` |
 
 ## 확인이 필요한 점
 
@@ -374,6 +382,7 @@ flowchart LR
 10. **엣지 요청 제한 없음.** `/v1/auth/*`에는 Caddy 단계 요청 제한이 없어요. 그래서 [11. 보안](#11-보안)의 "요청 제한"은 앱 안의 제한만 말해요 ([`deploy/Caddyfile`](../deploy/Caddyfile) 30행).
 11. **2027–2028 휴일 표.** 이 두 해의 공휴일은 법령과 음력 달력을 보고 손으로 계산했고, 한국천문연구원 공개 표와는 아직 대조하지 않았어요 ([`domain/src/peak.rs`](../backend/crates/domain/src/peak.rs) 29행).
 12. **부가세 납부 기한.** 모든 사업자에게 법인 분기 달을 쓰고 있어요. 코드 주석은 개인 사업자는 1·7월에만 신고한다고 하며, 그 달을 설정으로 바꾸라고 적어 두었어요 ([`ops_alerts.rs`](../backend/crates/api/src/ops_alerts.rs) 254–255행).
+13. **개편 전 화면 사진.** README 홈 사진(`docs/assets/readme/customer-home.webp`)과 스토어 사진(`docs/store/screenshots/`)은 개편 전 홈을 보여 줘요. 스토어 사진은 `scripts/store/generate.sh`로 다시 만들어요.
 
 ## 의도적으로 뺀 것
 
@@ -677,12 +686,18 @@ Every key is entered in the console wizard. Values are encrypted with AES-GCM in
 
 | Capability | One line | Users | Main file |
 |---|---|---|---|
-| Home | Service list and home sections. | Customer | [`home.dart`](../app/apps/customer/lib/screens/home.dart), [`home_sections.dart`](../app/apps/customer/lib/screens/home_sections.dart) |
+| Home | Services in four groups: move-in and move-out cleaning, home cleaning, appliance and furniture cleaning, disinfection. The group list comes from `GET /v1/service-groups`; if it is empty or unreadable, the app uses its built-in groups. Each group tile shows the N or HOT badge of its members (HOT wins). Studio is hidden from home and kept for existing bookings. | Customer | [`home.dart`](../app/apps/customer/lib/screens/home.dart), [`home_sections.dart`](../app/apps/customer/lib/screens/home_sections.dart), `app/apps/customer/lib/screens/service_groups.dart`, `app/packages/core/lib/src/service_groups.dart` |
+| Counted services | Appliance services such as air-conditioner and sofa take a count per option with −/+ steppers. Two or more items get a multi-item discount. Each option has a cap (20 by default) and a booking takes at least 60 minutes. Disinfection options that can be taken once toggle on and off. | Customer | `app/apps/customer/lib/screens/service_counts.dart`, [`catalog.rs`](../backend/crates/domain/src/catalog.rs) (`Pricing::Counts`) |
+| Move-in and move-out quote | Choosing move-in or move-out cleaning asks first whether the home is new or older: new means move-in cleaning, older means move-out cleaning. Pick a home type (one- or two-room, apartment, villa or house), answer the layout and luggage questions, and see an estimate. The final price is agreed in chat, and a deposit (10% by default) confirms it. | Customer | `app/apps/customer/lib/screens/move_chooser.dart`, [`quote_flow.dart`](../app/apps/customer/lib/screens/quote_flow.dart), [`quote_review.dart`](../app/apps/customer/lib/screens/quote_review.dart) |
+| Home cleaning | Bathroom and kitchen keep their existing pricing. Windows are chosen by count (small and large). Whole-home cleaning asks the home type and layout, then gives a quote. | Customer | `app/apps/customer/lib/screens/service_groups.dart`, [`quote_flow.dart`](../app/apps/customer/lib/screens/quote_flow.dart) |
+| Service scope | Floor plan and area tabs show where the service reaches. | Customer | [`service_scope.dart`](../app/apps/customer/lib/screens/service_scope.dart) |
 | Booking flow | Service, address, date and time, payment, step by step. | Customer | [`booking_flow.dart`](../app/apps/customer/lib/screens/booking_flow.dart), [`pay_flow.dart`](../app/apps/customer/lib/screens/pay_flow.dart) |
-| Booking detail | Booking status, with cancel and reschedule requests. | Customer | [`booking_detail.dart`](../app/apps/customer/lib/screens/booking_detail.dart) |
+| Booking detail | Booking status, with cancel and reschedule requests. The cancel sheet shows the fee and refund the server calculates. | Customer | [`booking_detail.dart`](../app/apps/customer/lib/screens/booking_detail.dart), `app/apps/customer/lib/screens/cancel_booking_sheet.dart` |
+| Notices | The notice goes first in the home news list, with its posting date. | Customer | [`content_rail.dart`](../app/apps/customer/lib/screens/content_rail.dart) |
+| Reviews | Star ratings are icons. A full review list screen exists. Reports go through each review's overflow menu. | Customer | `app/apps/customer/lib/screens/reviews.dart`, `app/apps/customer/lib/screens/review_carousel.dart` |
 | Subscriptions | Create and manage regular subscriptions. | Customer | [`subscribe.dart`](../app/apps/customer/lib/screens/subscribe.dart), [`subscriptions.dart`](../app/apps/customer/lib/screens/subscriptions.dart) |
 | Wallet | Wallet screen. | Customer | [`wallet.dart`](../app/apps/customer/lib/screens/wallet.dart), [`payments.dart`](../app/apps/customer/lib/screens/payments.dart) |
-| More | Menu screen; leads to the privacy and business information screens. | Customer | [`more.dart`](../app/apps/customer/lib/screens/more.dart), [`privacy.dart`](../app/apps/customer/lib/screens/privacy.dart) |
+| More | Payment methods, payment history and subscriptions at the top; theme choice, version and legal notices at the bottom. Leads to the privacy and business information screens. | Customer | [`more.dart`](../app/apps/customer/lib/screens/more.dart), [`privacy.dart`](../app/apps/customer/lib/screens/privacy.dart) |
 
 ### 18. Partner app screens
 
@@ -718,13 +733,15 @@ Every key is entered in the console wizard. Values are encrypted with AES-GCM in
 
 ## Customer flow changes in review (feat/ntd-redesign)
 
-These are being merged from the `feat/ntd-redesign` branch. The base branch `docs/industry-docs` does not contain them yet, so **no relative links are used**. Re-check the paths after the merge.
+These are being merged from the `feat/ntd-redesign` branch. The develop branch does not contain the new files yet, so the paths in the table are plain code, **not relative links**. Re-check the paths after the merge.
 
 | Capability | One line | File (on the branch) |
 |---|---|---|
-| Four service-group home | Home split into four groups: moving, living, appliance, disinfection; read from public `/v1/service-groups`; owner-editable. | `app/apps/customer/lib/screens/service_groups.dart`, `backend/crates/api/src/routes/service_groups.rs`, `backend/crates/domain/src/service_group.rs` |
-| Counts pricing | Per-option counts (stepper); two or more items take a multi-item discount; option cap and 60-minute minimum apply. | `app/apps/customer/lib/screens/service_counts.dart`, `backend/crates/domain/src/catalog.rs` (`Pricing::Counts`) |
-| Move-in and move-out quote flow | New-build homes get move-in, older homes move-out; home type chosen; estimate shown; final price agreed with staff and confirmed by a 10% deposit. | `app/apps/customer/lib/screens/move_chooser.dart`, `quote_flow.dart`, `quote_review.dart` |
+| Four service-group home | Home split into four groups: moving, living, appliance, disinfection; read from public `/v1/service-groups`; the owner edits titles, order, icons, members and shown flag in the console under Catalogue > Service groups. | `app/apps/customer/lib/screens/service_groups.dart`, `backend/crates/api/src/routes/service_groups.rs`, `backend/crates/domain/src/service_group.rs`, `backend/migrations/0234_service_groups.sql` |
+| Counts pricing | Per-option counts (stepper); two or more items take a multi-item discount; option cap and 60-minute minimum apply. The owner edits options, prices, minutes, caps and discount in the console. | `app/apps/customer/lib/screens/service_counts.dart`, `backend/crates/domain/src/catalog.rs` (`Pricing::Counts`), `backend/crates/domain/src/pricing.rs` (`price_booking_with`) |
+| Move-in and move-out quote flow | New-build homes get move-in, older homes move-out; home type chosen; estimate shown; final price agreed in chat and confirmed by a deposit (10% by default). | `app/apps/customer/lib/screens/move_chooser.dart`, `quote_flow.dart`, `quote_review.dart`, `backend/crates/domain/src/quote.rs` |
+| Console group and counts editor | Catalogue > Pricing edits counts services; Catalogue > Service groups edits the home groups. Booking detail shows the counts line. | `app/apps/console/lib/screens/catalog_counts.dart`, `app/apps/console/lib/screens/catalog_groups.dart`, `app/apps/console/lib/booking_labels.dart` |
+| Partner counts line | Job list and job detail show the counts line. | `app/apps/partner/lib/job_labels.dart`, `app/apps/partner/lib/screens/job_detail.dart`, `app/apps/partner/lib/screens/jobs.dart` |
 
 ## Known limits
 
@@ -742,6 +759,7 @@ Items where code and documents disagree, or where behaviour is not yet verified.
 10. **No edge rate limit on `/v1/auth/*`.** The stock Caddy image has no rate-limit module, so [11. Security](#11-security) "Request rate limits" covers app-level limits only ([`deploy/Caddyfile`](../deploy/Caddyfile) line 30).
 11. **2027–2028 holiday table.** These two years are hand-derived from the statute and the lunar calendar and are not yet checked against the KASI published table ([`domain/src/peak.rs`](../backend/crates/domain/src/peak.rs) line 29).
 12. **VAT due dates.** Everyone gets the corporate quarter months. The code comment says individual taxpayers file in January and July only, and that the months should become a setting; until then they are fixed ([`ops_alerts.rs`](../backend/crates/api/src/ops_alerts.rs) lines 254–255).
+13. **Pre-redesign screenshots.** The README home image (`docs/assets/readme/customer-home.webp`) and the store screenshots (`docs/store/screenshots/`) show the old home. Regenerate the store set with `scripts/store/generate.sh`.
 
 ## Left out on purpose
 

@@ -13,7 +13,7 @@
 - **백업**: 매일 03:30 DB와 사진을 덤프해 같은 키에서 파생한 키로 봉인(MKB1)합니다. 봉인이 끝나면 평문은 지웁니다. 외부 S3 호환 저장소 업로드는 선택 사항입니다.
 - **업데이트**: 이미지는 cosign으로 서명되어 있고, 설치·업데이트 때 서명을 확인합니다. DB 백업이 실패하면 업데이트를 시작하지 않고, 새 버전이 응답하지 않으면 직전 버전으로 되돌립니다.
 - **고객 상담 도우미**: 외부 API(Anthropic Messages API)를 호출하는 상담 응답 기능이 있습니다. 전화번호와 이메일은 전송 전에 가리고, 국외 이전 필수 동의가 가입 때 받아집니다. 상세는 [§5.1](#51-backend-crates-backendcrates)의 `ai.rs`를 보세요.
-- **진행 중 (feat/ntd-redesign, 병합 중)**: 홈 4개 서비스 그룹, 개수(counts) 가격, 이사·입주 견적 흐름, 그룹 관리 API가 feat/ntd-redesign 브랜치에 있습니다 (병합 중). 본 문서는 이를 시스템의 일부로 기술합니다. 해당 파일은 병합 후 링크가 연결됩니다.
+- **진행 중 (feat/ntd-redesign, 병합 중)**: 홈 4개 서비스 묶음, 개수(counts) 가격, 이사·입주 견적 흐름, 묶음 관리 API와 콘솔 편집이 feat/ntd-redesign 브랜치에 있습니다 (병합 중). 본 문서는 이를 시스템의 일부로 기술합니다. 해당 파일은 병합 후 링크가 연결됩니다.
 
 ---
 
@@ -29,7 +29,7 @@
 | PITR (pgBackRest WAL archive) | Optional, off by default | [`deploy/wal`](../deploy/wal), [`CHANGELOG.md`](../CHANGELOG.md) (Unreleased) |
 | Installer, `dahae` CLI, signed images, rollback | Built | [`deploy/install.sh`](../deploy/install.sh) |
 | Customer support helper | Built, optional, needs the owner's API key | [`backend/crates/api/src/ai.rs`](../backend/crates/api/src/ai.rs) |
-| Home groups, counts pricing, move-in/out quote | On `feat/ntd-redesign`, being merged | see [§5.3](#53-the-ntd-redesign-branch-featntd-redesign) |
+| Home groups, counts pricing, move-in/out quote, console group and counts editor | On `feat/ntd-redesign`, being merged | see [§5.3](#53-the-ntd-redesign-branch-featntd-redesign) |
 
 ---
 
@@ -491,11 +491,13 @@ Build rules: web builds use `--wasm --no-web-resources-cdn` and `flutter pub get
 
 ### 5.3 The NTD redesign branch (`feat/ntd-redesign`)
 
-Being merged. Read from that branch; the files are not on this branch yet, so the paths below are not links.
+Being merged. Read from that branch; the files are not on develop yet, so the paths below are not links.
 
-- **Home groups.** Four service groups: `moving`, `living`, `appliance`, `disinfection`, each with a chooser (`move`, `list` or `direct`). Public `GET /v1/service-groups`; owner `PUT /v1/admin/service-groups/{code}`. Files: `backend/crates/domain/src/service_group.rs`, `backend/crates/api/src/routes/service_groups.rs`, migration `0234_service_groups.sql`. Customer side: `app/apps/customer/lib/screens/service_groups.dart`.
-- **Counts pricing.** A `Counts` pricing type: one count per option, with a multi-item discount in basis points. Booking column `unit_counts` (migration `0230`). Files: `backend/crates/domain/src/catalog.rs`, `app/apps/customer/lib/screens/service_counts.dart`, migrations `0230` to `0233`.
-- **Move-in and move-out quote.** Layout and cleaning type drive an estimate (`POST /v1/quote/estimate`, `backend/crates/domain/src/quote.rs`). The chooser is `move_chooser.dart`; the estimate is shown before the booking step. Pyeong ranges per layout are a stated shortcut (`quote_size_note.dart`), not yet confirmed by the owner.
+- **Home groups.** Four service groups: `moving`, `living`, `appliance`, `disinfection`, each with a chooser (`move`, `list` or `direct`). Public `GET /v1/service-groups` lists the active groups and their members; owner `GET` and `PUT /v1/admin/service-groups/{code}` read and edit them; the PUT writes an audit row. The `move` chooser's config maps a new build to `move_in`, an older one to `move_out`, and lists the allowed home types. Studio is left out of the home list (`content.hidden_from_home`) but stays in the catalogue for existing bookings. The tile badge is HOT over N (`derive_badge`). The customer app falls back to built-in groups when the list is empty or unreadable. Files: `backend/crates/domain/src/service_group.rs`, `backend/crates/api/src/routes/service_groups.rs`, migrations `0234_service_groups.sql` and `0236_counts_service_groups.sql`. Customer side: `app/apps/customer/lib/screens/service_groups.dart`, `app/packages/core/lib/src/service_groups.dart`.
+- **Counts pricing.** A `Counts` pricing type: one count per option, a per-option cap (`max_each`, default 20), a multi-item discount in basis points that applies from two items, and a 60-minute minimum. Booking column `unit_counts` (migration `0230`); catalogue prices and counts for subscriptions and mattress in `0231` to `0233`. Files: `backend/crates/domain/src/catalog.rs`, `backend/crates/domain/src/pricing.rs` (`price_booking_with`), `app/apps/customer/lib/screens/service_counts.dart`.
+- **Move-in and move-out quote.** Layout and cleaning type drive an estimate (`POST /v1/quote/estimate`, `backend/crates/domain/src/quote.rs`). The home type is stored with the quote answers (`HomeType`). The chooser is `move_chooser.dart`; the estimate is shown before the booking step. Pyeong ranges per layout are a stated shortcut (`quote_size_note.dart`), not yet confirmed by the owner.
+- **Owner console.** The catalogue's service groups tab edits the four groups (`catalog_groups.dart`), and the counts dialog edits counts pricing (`catalog_counts.dart`). The booking detail shows the counts line (`booking_labels.dart`).
+- **Partner app.** The job list and job detail show counts from `unit_counts` (`app/apps/partner/lib/job_labels.dart`). Older aircon jobs without `unit_counts` read the old answers (a stated shortcut in that file).
 - **Peak surcharge on fixed and subscription visits** (CHANGELOG Unreleased, `apply_to_fixed`, default off) is on the develop branch already.
 
 ---

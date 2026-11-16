@@ -69,9 +69,9 @@ Columns: method, path, summary (from the spec; the two support helper rows diffe
 The role shown is the tag's role. For `admin` operations the route file decides between the `Admin` extractor
 (`StaffAdmin` only) and the `Staff` extractor (admin or consultant); check the route before relying on it.
 
-### Public and discovery (24)
+### Public and discovery (26)
 
-No login. Catalog, prices, slots, content, brand and feature flags, setup, app links, uploaded photos.
+No login. Catalog, prices, home groups, slots, content, reviews, brand and feature flags, setup, app links, uploaded photos.
 
 | Method | Path | Summary | Auth | Flags |
 |---|---|---|---|---|
@@ -99,6 +99,8 @@ No login. Catalog, prices, slots, content, brand and feature flags, setup, app l
 | POST | `/v1/client-errors` | Report an app error | bearer |  |
 | POST | `/v1/events` | Send analytics events | bearer |  |
 | GET | `/v1/public/offers` | Welcome offer, sign-up coupons and referral amount for guests | none |  |
+| GET | `/v1/service-groups` | Home groups in order, with member services, chooser and derived badge (HOT over N); inactive groups and hidden members (studio) left out | none |  |
+| GET | `/v1/public/reviews` | Public review list (rating, body, name, booking_id), cursor-paged | none | paged |
 
 ### Sign-in and tokens (15)
 
@@ -248,7 +250,7 @@ A team member sees only jobs assigned to them.
 | GET | `/v1/member/jobs/{id}` | One assigned job | bearer: member |  |
 | POST | `/v1/member/jobs/{id}/complete` | Mark an assigned job complete | bearer: member |  |
 
-### Staff console (156)
+### Staff console (159)
 
 Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see note).
 
@@ -262,6 +264,7 @@ Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see 
 | POST | `/v1/admin/bookings/{id}/cancel` | Cancel with optional partial refund (idempotent) | bearer: staff | idem |
 | GET | `/v1/admin/bookings/{id}/quotes` | Pro quotes for a booking | bearer: staff |  |
 | POST | `/v1/admin/bookings/{id}/send-quote` | Send the final price to the customer | bearer: staff |  |
+| POST | `/v1/admin/bookings/{id}/resend-quote` | Re-send the last quote card unchanged (409 when no quote was sent yet) | bearer: staff |  |
 | GET | `/v1/admin/threads` | Staff inbox (capped at 200) | bearer: staff |  |
 | GET | `/v1/admin/threads/{id}/messages` | Thread messages (same paging as customer) | bearer: staff |  |
 | POST | `/v1/admin/threads/{id}/messages` | Send a staff message | bearer: staff |  |
@@ -271,6 +274,8 @@ Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see 
 | GET | `/v1/admin/services` | All services including inactive | bearer: staff |  |
 | POST | `/v1/admin/services` | Add a service (code, name, fixed price or quote) | bearer: staff |  |
 | PUT | `/v1/admin/services/{code}` | Update a service's pricing and content | bearer: staff |  |
+| GET | `/v1/admin/service-groups` | All home groups, including inactive groups and services | bearer: staff |  |
+| PUT | `/v1/admin/service-groups/{code}` | Update a group's titles (ko/en), order, shown flag, icon, member services and chooser config (audited) | bearer: staff |  |
 | GET | `/v1/admin/slot-capacity` | Capacity per start hour | bearer: staff |  |
 | PUT | `/v1/admin/slot-capacity` | Set capacity per start hour | bearer: staff |  |
 | GET | `/v1/admin/quote-formula` | Quote formula | bearer: staff |  |
