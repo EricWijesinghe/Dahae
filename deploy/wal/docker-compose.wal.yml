@@ -1,0 +1,25 @@
+# Optional override for WAL archiving. Adds the pgBackRest image and its S3 settings (read from .env).
+# Engineer path only: copy deploy/wal to /opt/malkkeum/wal, then see docs/DEPLOY.md, "WAL archiving".
+#   docker compose -f docker-compose.yml -f wal/docker-compose.wal.yml --env-file .env up -d --build db
+services:
+  db:
+    image: malkkeum-db-wal:17
+    build: { context: ./wal, dockerfile: Dockerfile }
+    environment:
+      PGBACKREST_STANZA: malkkeum
+      PGBACKREST_PG1_PATH: /var/lib/postgresql/data
+      PGBACKREST_PG1_USER: app
+      PGBACKREST_REPO1_TYPE: s3
+      PGBACKREST_REPO1_PATH: /malkkeum
+      PGBACKREST_REPO1_S3_BUCKET: ${WAL_S3_BUCKET:-}
+      PGBACKREST_REPO1_S3_ENDPOINT: ${WAL_S3_ENDPOINT:-}
+      PGBACKREST_REPO1_S3_REGION: ${WAL_S3_REGION:-auto}
+      PGBACKREST_REPO1_S3_URI_STYLE: path
+      PGBACKREST_REPO1_S3_KEY: ${WAL_S3_KEY:-}
+      PGBACKREST_REPO1_S3_KEY_SECRET: ${WAL_S3_SECRET:-}
+      PGBACKREST_REPO1_CIPHER_TYPE: aes-256-cbc
+      PGBACKREST_REPO1_CIPHER_PASS: ${WAL_CIPHER_PASS:-}
+      PGBACKREST_REPO1_RETENTION_FULL: "2"
+      PGBACKREST_LOG_PATH: /tmp/pgbackrest-log
+      PGBACKREST_LOCK_PATH: /tmp/pgbackrest-lock
+      PGBACKREST_SPOOL_PATH: /tmp/pgbackrest-spool

@@ -18,7 +18,13 @@ Json _brand({String? min, String? latest}) => {
   },
 };
 
-Widget _host(ApiClient api, {required String current, Widget? child}) => MaterialApp(
+Widget _host(
+  ApiClient api, {
+  required String current,
+  Widget? child,
+  ThemeData? theme,
+}) => MaterialApp(
+  theme: theme,
   locale: const Locale('ko'),
   supportedLocales: const [Locale('ko'), Locale('en')],
   localizationsDelegates: const [
@@ -40,7 +46,11 @@ ApiClient _api(Json? brand, {bool offline = false}) => ApiClient(
   session: Session(namespace: 'update-test'),
   client: MockClient((request) async {
     if (offline) throw http.ClientException('offline');
-    return http.Response(jsonEncode(brand), 200, headers: {'content-type': 'application/json'});
+    return http.Response(
+      jsonEncode(brand),
+      200,
+      headers: {'content-type': 'application/json'},
+    );
   }),
 );
 
@@ -59,30 +69,57 @@ void main() {
 
   group('AppVersionPolicy.from', () {
     test('picks the store link for the app and platform', () {
-      final customerIos = AppVersionPolicy.from(_brand(), 'customer', platform: TargetPlatform.iOS);
-      final customerAndroid = AppVersionPolicy.from(_brand(), 'customer', platform: TargetPlatform.android);
-      final partnerAndroid = AppVersionPolicy.from(_brand(), 'partner', platform: TargetPlatform.android);
+      final customerIos = AppVersionPolicy.from(
+        _brand(),
+        'customer',
+        platform: TargetPlatform.iOS,
+      );
+      final customerAndroid = AppVersionPolicy.from(
+        _brand(),
+        'customer',
+        platform: TargetPlatform.android,
+      );
+      final partnerAndroid = AppVersionPolicy.from(
+        _brand(),
+        'partner',
+        platform: TargetPlatform.android,
+      );
       expect(customerIos.storeUrl, 'https://apps.apple.com/kr/app/customer');
-      expect(customerAndroid.storeUrl, 'https://play.google.com/store/apps/details?id=customer');
-      expect(partnerAndroid.storeUrl, isNull, reason: 'http links are never opened');
+      expect(
+        customerAndroid.storeUrl,
+        'https://play.google.com/store/apps/details?id=customer',
+      );
+      expect(
+        partnerAndroid.storeUrl,
+        isNull,
+        reason: 'http links are never opened',
+      );
     });
 
     test('malformed versions mean no rule', () {
-      final p = AppVersionPolicy.from(_brand(min: '1.0', latest: 'abc'), 'customer');
+      final p = AppVersionPolicy.from(
+        _brand(min: '1.0', latest: 'abc'),
+        'customer',
+      );
       expect(p.min, isNull);
       expect(p.latest, isNull);
     });
   });
 
-  testWidgets('blocks with a full-screen update page below the minimum version', (tester) async {
-    final api = _api(_brand(min: '1.1.0', latest: '1.2.0'));
-    await tester.pumpWidget(_host(api, current: '1.0.0'));
-    await tester.pumpAndSettle();
-    expect(find.text('새 버전이 필요해요'), findsOneWidget);
-    expect(find.text('홈 화면'), findsNothing);
-  });
+  testWidgets(
+    'blocks with a full-screen update page below the minimum version',
+    (tester) async {
+      final api = _api(_brand(min: '1.1.0', latest: '1.2.0'));
+      await tester.pumpWidget(_host(api, current: '1.0.0'));
+      await tester.pumpAndSettle();
+      expect(find.text('새 버전이 필요해요'), findsOneWidget);
+      expect(find.text('홈 화면'), findsNothing);
+    },
+  );
 
-  testWidgets('shows a dismissible banner below the latest version', (tester) async {
+  testWidgets('shows a dismissible banner below the latest version', (
+    tester,
+  ) async {
     final api = _api(_brand(min: '1.0.0', latest: '1.2.0'));
     await tester.pumpWidget(_host(api, current: '1.0.0'));
     await tester.pumpAndSettle();
@@ -93,8 +130,31 @@ void main() {
     expect(find.text('새 버전 1.2.0이 나왔어요'), findsNothing);
   });
 
+  testWidgets(
+    'the banner lays out under the full-width filled button theme of the apps',
+    (tester) async {
+      // The brand theme gives filled buttons Size.fromHeight(56), which cannot lay out inside the banner's Row.
+      final theme = ThemeData(
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+        ),
+      );
+      final api = _api(_brand(min: '1.0.0', latest: '1.2.0'));
+      await tester.pumpWidget(_host(api, current: '1.0.0', theme: theme));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('업데이트'), findsOneWidget);
+      expect(tester.getSize(find.text('업데이트')).width, greaterThan(0));
+    },
+  );
+
   testWidgets('stays silent when up to date or offline', (tester) async {
-    await tester.pumpWidget(_host(_api(_brand(min: '1.0.0', latest: '1.2.0')), current: '1.2.0'));
+    await tester.pumpWidget(
+      _host(
+        _api(_brand(min: '1.0.0', latest: '1.2.0')),
+        current: '1.2.0',
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.textContaining('나왔어요'), findsNothing);
     expect(find.text('홈 화면'), findsOneWidget);

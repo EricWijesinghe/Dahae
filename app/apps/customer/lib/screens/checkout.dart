@@ -265,8 +265,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           FlowSection(
             children: [
               Theme(
-                data: Theme.of(context)
-                    .copyWith(dividerColor: Colors.transparent),
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
                   initiallyExpanded: true,
                   tilePadding: EdgeInsets.zero,

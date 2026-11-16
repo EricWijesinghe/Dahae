@@ -52,7 +52,14 @@ say()  { printf '\n\033[1;34m▶ %s\033[0m\n' "$*"; }
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m✘ %s\033[0m\n' "$*" >&2; exit 1; }
-dc()   { docker compose --env-file .env "$@"; }
+dc() { # WAL 보관이 켜져 있으면 pgBackRest 이미지 설정(wal/)을 항상 같이 써요: 기본 이미지에는 pgbackrest 가 없어서 아카이브가 실패해요
+  local -a compose_files=(-f docker-compose.yml)
+  if [ "$(env_get WAL_ARCHIVE_MODE)" = on ]; then
+    [ -f wal/docker-compose.wal.yml ] || { echo "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." >&2; return 1; }
+    compose_files+=(-f wal/docker-compose.wal.yml)
+  fi
+  docker compose "${compose_files[@]}" --env-file .env "$@"
+}
 has_tty() { (: </dev/tty) 2>/dev/null; }
 env_get() { { grep -E "^$1=" .env 2>/dev/null || true; } | tail -n1 | cut -d= -f2-; }
 
@@ -166,6 +173,70 @@ install_cosign() { # 서명 확인 도구를 $DIR/bin/cosign 에 둬요. 지문(
 }
 
 # ---- 서버 점검 ----
+# ---- 호스트 보안 (SEC-9): 자동 보안 업데이트, 침입 차단, 방화벽, SSH 키 로그인 ----
+password_login_on() { printf '%s\n' "$1" | grep -qi '^passwordauthentication yes$'; } # $1: sshd -T 출력
+has_key() { local f; for f in "$@"; do [ -s "$f" ] && return 0; done; return 1; } # 키 파일 하나라도 내용이 있으면 통과
+write_auto_upgrades() { printf 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' > "$1"; }
+write_f2b_jail() { # 비밀번호 무차별 대입을 막아요: 5분 안에 5번 틀리면 1시간 차단
+  printf '[sshd]\nenabled = true\nmaxretry = 5\nfindtime = 10m\nbantime = 1h\n' > "$1"
+}
+write_keyonly_dropin() { # 00 으로 시작해야 클라우드 기본 설정보다 먼저 읽혀요 (sshd 는 먼저 나온 값을 써요)
+  printf '# 다해: 비밀번호 로그인을 끄고 SSH 키로만 접속해요 (install.sh 가 만들었어요)\nPasswordAuthentication no\n' > "$1"
+}
+KEYONLY_CONF=/etc/ssh/sshd_config.d/00-dahae-keyonly.conf
+firewall_wanted() { # 방화벽을 켤지 물어요. MALKKEUM_FIREWALL=on|off 로 묻지 않고 정할 수 있어요
+  local a
+  case "${MALKKEUM_FIREWALL:-}" in on) return 0 ;; off) return 1 ;; esac
+  a=$(ask "방화벽(ufw)을 켜고 22(SSH)·80·443 포트만 열까요? (y/N)" n)
+  case "$a" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
+}
+ufw_allow_web() { ufw allow 22/tcp >/dev/null && ufw allow 80/tcp >/dev/null && ufw allow 443/tcp >/dev/null; }
+firewall_setup() { # 이미 켜져 있으면 규칙만 맞추고, 꺼져 있으면 확인을 받은 뒤에만 켜요 (SSH 규칙을 먼저 넣어요)
+  command -v ufw >/dev/null || { warn "ufw 가 없어 방화벽을 설정하지 못했어요"; return 0; }
+  if ufw status | grep -q '^Status: active'; then
+    ufw_allow_web || warn "방화벽 규칙을 넣지 못했어요"
+  elif firewall_wanted; then
+    if ! { ufw_allow_web && ufw default deny incoming >/dev/null && ufw default allow outgoing >/dev/null \
+      && ufw --force enable >/dev/null; }; then die "방화벽을 켜지 못했어요. 'sudo ufw status' 를 확인하세요."; fi
+    ok "방화벽을 켰어요 (22·80·443 만 열려 있어요)"
+  else
+    warn "방화벽을 켜지 않았어요. 클라우드 콘솔 방화벽에서 22·80·443 만 열어 두세요 (나중에 'sudo ufw enable' 로 켤 수 있어요)"
+  fi
+}
+operator_account() { # 이 설치를 맡은 계정: sudo 로 실행했으면 그 계정, 아니면 root
+  if [ -n "${SUDO_USER:-}" ]; then printf '%s' "$SUDO_USER"; else printf root; fi
+}
+login_key_file() { # login_key_file 계정 : 그 계정의 SSH 공개 키 파일 경로 (계정 이름이 이상하면 실패해요)
+  local u="$1" h
+  printf '%s' "$u" | grep -Eq '^[a-z_][a-z0-9_-]{0,31}$' || return 1
+  [ "$u" = root ] && { printf '%s' /root/.ssh/authorized_keys; return 0; }
+  h=$(getent passwd "$u" | cut -d: -f6) || return 1
+  printf '%s/.ssh/authorized_keys' "$h"
+}
+ssh_keyonly_check() { # 비밀번호 로그인이 켜져 있으면 알려요. 이 계정에 SSH 키가 있을 때만, 확인을 받고 끌어요 (키 없이 끄면 접속을 잃어요)
+  local cfg acct keyf
+  command -v sshd >/dev/null || return 0
+  cfg=$(sshd -T 2>/dev/null) || { warn "SSH 설정을 읽지 못해 비밀번호 로그인 여부를 확인하지 못했어요"; return 0; }
+  password_login_on "$cfg" || { ok "SSH 는 키로만 접속할 수 있어요"; return 0; }
+  warn "SSH 비밀번호 로그인이 켜져 있어요. 무차별 대입 공격을 받기 쉬워요."
+  acct=$(operator_account)
+  keyf=$(login_key_file "$acct") || { warn "계정 '$acct' 의 홈 폴더를 찾지 못해 SSH 키를 확인하지 못했어요"; return 0; }
+  has_key "$keyf" || { warn "계정 '$acct' 에 SSH 공개 키가 아직 없어요. 키를 등록한 뒤 다시 실행하면 비밀번호 로그인을 끌 수 있어요."; return 0; }
+  [ "$(ask "SSH 비밀번호 로그인을 끌까요? 끄면 '$acct' 계정은 SSH 키로만 접속해요. (y/N)" n)" = y ] || { warn "비밀번호 로그인을 그대로 두었어요"; return 0; }
+  write_keyonly_dropin "$KEYONLY_CONF"
+  if sshd -t 2>/dev/null; then
+    { systemctl reload ssh || systemctl reload sshd; } >/dev/null 2>&1 && ok "SSH 비밀번호 로그인을 껐어요" && return 0
+  fi
+  rm -f "$KEYONLY_CONF"; warn "SSH 설정을 바꾸지 못해 되돌렸어요"
+}
+harden_host() { # 자동 보안 업데이트 · fail2ban(SSH 감옥) · 방화벽 · SSH 키 로그인 점검
+  write_auto_upgrades /etc/apt/apt.conf.d/20auto-upgrades
+  write_f2b_jail /etc/fail2ban/jail.d/dahae-sshd.local
+  systemctl enable fail2ban >/dev/null 2>&1; systemctl restart fail2ban >/dev/null 2>&1 || warn "fail2ban 을 켜지 못했어요"
+  firewall_setup
+  ssh_keyonly_check
+}
+
 preflight() {
   local arch mem swap need p free busy
   arch=$(uname -m)
@@ -242,7 +313,8 @@ write_compose() {
   cat > docker-compose.yml <<'EOF'
 # Managed by install.sh — re-run the installer or `dahae update` instead of editing.
 # Same as deploy/docker-compose.yml in the source repo except the image lines (installer-selftest checks).
-x-logging: &log { driver: json-file, options: { max-size: 10m, max-file: "3" } }
+# Container logs: 10 MB per file, 14 files kept per container (about 140 MB each at most; days kept depend on traffic).
+x-logging: &log { driver: json-file, options: { max-size: 10m, max-file: "14" } }
 # Every container: no privilege gain through setuid binaries or file capabilities, no Linux capability
 # unless listed under cap_add, a read-only root filesystem (writes go to volumes and tmpfs only), and
 # memory and process caps sized for a 2 GB VPS. No CPU caps: `cpus` above the host's core count stops
@@ -269,7 +341,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
     # Sized for a 2 GB VPS (API pool 10 + headroom). Autovacuum is tuned for churn; see docs/DEPLOY.md.
     command: >-
-      postgres -c shared_buffers=256MB -c effective_cache_size=1GB -c work_mem=8MB -c maintenance_work_mem=128MB -c max_connections=50 -c wal_compression=on -c max_wal_size=1GB -c min_wal_size=256MB -c checkpoint_completion_target=0.9 -c random_page_cost=1.1 -c password_encryption=scram-sha-256 -c autovacuum_max_workers=2 -c autovacuum_naptime=30s -c autovacuum_vacuum_scale_factor=0.05 -c autovacuum_analyze_scale_factor=0.02 -c autovacuum_vacuum_cost_limit=1000 -c log_min_duration_statement=500 -c log_lock_waits=on -c log_temp_files=10MB -c log_checkpoints=on
+      postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=top -c archive_mode=${WAL_ARCHIVE_MODE:-off} -c "archive_command=pgbackrest archive-push %p" -c archive_timeout=300 -c shared_buffers=256MB -c effective_cache_size=1GB -c work_mem=8MB -c maintenance_work_mem=128MB -c max_connections=50 -c wal_compression=on -c max_wal_size=1GB -c min_wal_size=256MB -c checkpoint_completion_target=0.9 -c random_page_cost=1.1 -c password_encryption=scram-sha-256 -c autovacuum_max_workers=2 -c autovacuum_naptime=30s -c autovacuum_vacuum_scale_factor=0.05 -c autovacuum_analyze_scale_factor=0.02 -c autovacuum_vacuum_cost_limit=1000 -c log_min_duration_statement=500 -c log_lock_waits=on -c log_temp_files=10MB -c log_checkpoints=on
     shm_size: 256mb
     volumes: [dbdata:/var/lib/postgresql/data]
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U app -d cleaning"], interval: 5s, retries: 20 }
@@ -324,10 +396,22 @@ services:
       DOMAIN: ${DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL:-}
       TLS_MODE: ${TLS_MODE:-}
-    volumes: [caddydata:/data, caddyconfig:/config, /opt/malkkeum/jobs/public:/srv/ops-progress:ro]
+    volumes: [caddydata:/data, caddyconfig:/config, caddylogs:/var/log/caddy, /opt/malkkeum/jobs/public:/srv/ops-progress:ro]
     healthcheck: { test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"], interval: 30s, retries: 5 }
 
-volumes: { dbdata: {}, uploads: {}, caddydata: {}, caddyconfig: {} }
+  # Optional uptime monitor (Uptime Kuma). Not started by default: enable with COMPOSE_PROFILES=monitoring in the
+  # install folder's .env, then `docker compose up -d`. Bound to loopback only; never routed by Caddy.
+  uptime-kuma:
+    <<: *hardened
+    profiles: [monitoring]
+    image: louislam/uptime-kuma:2.1.1
+    tmpfs: [/tmp]
+    mem_limit: 320m
+    pids_limit: 128
+    ports: ["127.0.0.1:3001:3001"]
+    volumes: [kumadata:/app/data]
+
+volumes: { dbdata: {}, uploads: {}, caddydata: {}, caddyconfig: {}, caddylogs: {}, kumadata: {} }
 EOF
 }
 
@@ -367,9 +451,16 @@ USAGE='사용법: dahae <명령>
   uninstall --purge [--confirm 도메인]  데이터와 백업까지 삭제 (도메인을 입력해 확인. --yes 로는 넘어가지 않아요)
   keys-backup                 비밀 키 사본을 비밀번호로 잠가 만들기 (서버 밖에 보관: 외부 백업을 풀 때 필요)
   keys-restore 파일 [--yes]   새 서버에 예전 비밀 키 넣기 (restore-offsite 전에)
-  alert update|backup         자동 작업 실패를 외부 가동 확인 주소로 알리기 (예약 작업용)'
+  alert update|backup|ssh     자동 작업 실패·SSH 차단 증가를 외부 가동 확인 주소로 알리기 (예약 작업·서버 점검용)'
 
-dc() { docker compose --env-file .env "$@"; }
+dc() { # WAL 보관이 켜져 있으면 pgBackRest 이미지 설정(wal/)을 항상 같이 써요: 기본 이미지에는 pgbackrest 가 없어서 아카이브가 실패해요
+  local -a compose_files=(-f docker-compose.yml)
+  if [ "$(env_get WAL_ARCHIVE_MODE)" = on ]; then
+    [ -f wal/docker-compose.wal.yml ] || { echo "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." >&2; return 1; }
+    compose_files+=(-f wal/docker-compose.wal.yml)
+  fi
+  docker compose "${compose_files[@]}" --env-file .env "$@"
+}
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m! %s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m✘ %s\033[0m\n' "$*" >&2; exit 1; }
@@ -393,7 +484,24 @@ confirm() { # confirm "질문" 기대값 : 터미널에서 기대값을 입력�
   IFS= read -r a </dev/tty || true
   [ "$a" = "$2" ] || die "취소했어요."
 }
-uploads_for() { local b; b=$(basename "$1"); b=${b#db-}; printf '%s/uploads-%s.tar.gz' "$(dirname "$1")" "${b%.sql.gz}"; }
+uploads_for() { local b; b=$(basename "$1"); b=${b#db-}; b=${b%.enc}; printf '%s/uploads-%s.tar.gz' "$(dirname "$1")" "${b%.sql.gz}"; }
+# 봉인된 백업(.enc)은 같은 폴더에 풀어요. 풀린 평문은 SCRATCH 에 넣어 두었다가 명령이 끝나면 지워요.
+open_backup() { # open_backup 파일 : .enc 면 ${파일%.enc} 로 풀고, 평문 파일이면 아무 일도 안 해요
+  case "$1" in
+    *.enc) api_backup backup-open "/$1" "/${1%.enc}" >/dev/null || return 1; SCRATCH+=("${1%.enc}") ;;
+  esac
+}
+# 평문 덤프를 MKB1 로 봉인하고 평문을 지워요. 외부 백업은 평문으로 올린 뒤에 봉인해요.
+seal_local() { # seal_local 파일 : 봉인된 .enc 를 확인한 뒤에만 평문을 지워요. 실패하면 평문은 남기고 경고해요 (롤백 사본이 사라지지 않게)
+  local f="$1"
+  # Already sealed (the plaintext went with an earlier seal): keep that copy, never delete it below.
+  if [ ! -e "$f" ] && [ -s "$f.enc" ]; then return 0; fi
+  if api_backup backup-seal "/$f" "/$f.enc" >> backups/backup.log 2>&1 && [ -s "$f.enc" ]; then rm -f -- "$f"; return 0; fi
+  rm -f -- "$f.enc"; BACKUP_WARN=1; warn "백업 봉인에 실패했어요. 평문 사본은 그대로 남겨 두었어요: $f"; return 1
+}
+# 복원·업데이트·되돌리기 전에 쓰는 백업 파일은 backups/ 안의 상대 경로만 받아요 (컨테이너는 그 폴더만 보여요)
+backup_rel() { printf '%s' "${1#"$DIR"/}"; } # 'dahae backup' 이 보여 주는 전체 경로도 backups/... 로 받아요
+backup_path_ok() { case "$1" in backups/*) ;; *) return 1 ;; esac; case "$1" in *..*) return 1 ;; esac; }
 # api 이미지의 백업 명령(backup-upload, -fetch, -list). backups/ 는 root 전용(700)이라 컨테이너 안에서도 root 로
 # 실행해요. 권한(capability)은 모두 빠진 채라 이 폴더와 앱 볼륨에만 닿아요. 임시 파일은 메모리(/tmp) 대신 backups/ 에.
 api_backup() { dc run --rm --no-deps -T --user 0 -e TMPDIR=/backups -v "$DIR/backups:/backups" api api "$@"; }
@@ -581,12 +689,26 @@ cmd_backup() { # BACKUP_WARN=1 이면 DB 는 백업됐지만 사진 파일이나
   if ! dc run --rm --no-deps -T --entrypoint tar api czf - -C /data uploads > "$up"; then
     rm -f "$up"; BACKUP_WARN=1; warn "사진 파일 백업에 실패했어요 (DB 백업은 됐어요). 'dahae logs api' 로 확인하세요."
   fi
-  [ "$prune" = noprune ] || find backups \( -name 'db-*.sql.gz' -o -name 'uploads-*.tar.gz' \) -mtime +"$BACKUP_KEEP_DAYS" -delete
   # Offsite copy (콘솔: 설정 > 외부 백업). The local backup stays good if this fails or isn't set up.
   if [ -f "$up" ]; then api_backup backup-upload "/$up" >> backups/backup.log 2>&1 || true; fi
   api_backup backup-upload "/$db" >> backups/backup.log 2>&1 \
     || warn "외부 백업 실패 또는 미설정 — 콘솔 [설정 > 외부 백업]을 확인하세요"
-  ok "백업 완료: $DIR/$db"
+  # 서버 디스크에 남는 로컬 사본은 봉인해요: 평문 덤프(고객 정보)가 그대로 남지 않아요.
+  # 예전 설치가 남긴 평문 사본도 이때 함께 봉인해요 (업그레이드 뒤 첫 백업).
+  seal_local "$db" || true
+  if [ -f "$up" ]; then seal_local "$up" || true; fi
+  seal_leftover_plaintext
+  [ "$prune" = noprune ] || find backups \( -name 'db-*.sql.gz' -o -name 'db-*.sql.gz.enc' -o -name 'uploads-*.tar.gz' -o -name 'uploads-*.tar.gz.enc' \) -mtime +"$BACKUP_KEEP_DAYS" -delete
+  if [ -f "$db.enc" ]; then ok "백업 완료: $DIR/$db.enc"; return 0; fi
+  BACKUP_WARN=1; warn "로컬 백업을 봉인하지 못했어요. 업데이트·복원·되돌리기를 멈춰요. 'dahae logs' 로 확인하세요."
+  return 1
+}
+seal_leftover_plaintext() { # 봉인되지 않은 평문 db-*.sql.gz · uploads-*.tar.gz 를 .enc 로 바꿔요 (예전 설치에서 남은 것)
+  local f
+  for f in backups/db-*.sql.gz backups/uploads-*.tar.gz; do
+    [ -f "$f" ] && [ ! -f "$f.enc" ] || continue
+    seal_local "$f" || true
+  done
 }
 
 cmd_load() { # 미리 받아 둔 이미지 묶음(.tar)을 불러와요. 인터넷 없이 업데이트할 때 써요.
@@ -618,7 +740,7 @@ cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔
   local repo ver cur_api cur_web new_api
   printf '\n▶ 업데이트를 시작합니다 (먼저 백업해요)\n'
   db_roles # 백업의 외부 업로드도 앱 계정으로 접속해요: 예전 설치를 처음 올릴 때 계정부터 만들어요
-  cmd_backup
+  cmd_backup || die "백업을 끝내지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
   repo=$(env_get IMAGE_REPO); ver=${1:-$(env_get VERSION)}
   pull_images "$repo" "$ver"
   cur_api=$(digest_ref "$(running_image api "$(env_get API_IMAGE)")" "$repo/malkkeum-api")
@@ -658,7 +780,7 @@ cmd_rollback() {
   if [ -z "$prev_api" ] || [ "$prev_api" = "$(env_get API_IMAGE)" ]; then
     die "되돌릴 이전 버전 기록이 없어요. 업데이트를 한 번 한 뒤에 쓸 수 있어요."
   fi
-  cmd_backup
+  cmd_backup || die "백업을 끝내지 못해서 되돌리기를 멈췄어요. 지금 버전 그대로예요."
   cur_api=$(digest_ref "$(running_image api "$(env_get API_IMAGE)")" "$repo/malkkeum-api")
   cur_web=$(digest_ref "$(running_image web "$(env_get WEB_IMAGE)")" "$repo/malkkeum-web")
   env_set PREV_API_IMAGE "$cur_api"; env_set PREV_WEB_IMAGE "$cur_web"
@@ -698,8 +820,10 @@ cmd_status() {
   # 로컬 백업은 DB 와 같은 디스크에 있어요: 외부 백업이 없으면 디스크 하나를 잃을 때 전부 잃어요.
   if tail -n 40 backups/backup.log 2>/dev/null | grep -q 'offsite backup uploaded'; then ok "외부 백업 정상"
   else warn "최근 외부 백업이 없어요 — 서버 디스크를 잃으면 데이터도 모두 잃어요. 콘솔 [설정 > 외부 백업]에서 켜세요"; fi
-  if compgen -G 'backups/keys-*.env.enc' >/dev/null; then ok "비밀 키 사본 있음 (서버 밖에도 보관했는지 확인하세요)"
+  if compgen -G 'backups/keys-*.env.enc' >/dev/null; then ok "비밀 키 사본 있음"
   else warn "비밀 키 사본이 없어요 — 'dahae keys-backup' 으로 만들어 서버 밖에 보관하세요. 없으면 외부 백업을 풀 수 없어요"; fi
+  if [ -n "$(env_get KEY_ESCROW_AT)" ]; then ok "비밀 키 사본을 서버 밖에 보관했다고 확인했어요"
+  else warn "비밀 키 사본을 서버 밖에 보관했다는 확인이 없어요 — 'dahae keys-backup' 을 다시 실행해 확인하세요"; fi
 }
 
 cmd_keys_backup() { # dahae keys-backup : 외부 백업은 DATA_KEY 로 잠겨요. 서버를 잃어도 풀 수 있게 .env 를 비밀번호로 잠근 사본을 만들어요
@@ -716,6 +840,19 @@ cmd_keys_backup() { # dahae keys-backup : 외부 백업은 DATA_KEY 로 잠겨�
   ok "비밀 키 사본: $DIR/$out"
   echo "  이 파일과 비밀번호를 서버 밖(USB, 비밀번호 관리자 등)에 따로 보관하세요. 서버를 잃으면:"
   echo "  새 서버에 설치 → dahae keys-restore <이 파일> → 콘솔에서 외부 백업 연결 → dahae restore-offsite"
+  key_escrow_confirm
+}
+
+# 사본을 서버 밖에 보관했는지 사장님(관리자)이 직접 확인해요. 확인 기록은 .env 의 KEY_ESCROW_AT 에 남아요.
+# --yes 로는 확인하지 않아요: 사람이 터미널에서 직접 입력해야만 기록돼요.
+key_escrow_confirm() {
+  local a=""
+  if has_tty; then
+    printf '서버 밖에 보관했어요? 보관했다면 "보관했어요" 를 입력하세요 (나중에 하려면 Enter): ' >/dev/tty
+    IFS= read -r a </dev/tty || true
+  fi
+  if [ "$a" = "보관했어요" ]; then env_set KEY_ESCROW_AT "$(date +%s)"; ok "비밀 키 사본 보관을 확인했어요"
+  else warn "비밀 키 사본 보관은 아직 확인되지 않았어요 (dahae status 에서 다시 확인해요)"; fi
 }
 
 keys_field() { sed -n "s/^$1=\([0-9a-f]\{32,\}\)\$/\1/p" | tail -n1; } # keys_field 이름 < 내용 : 16진수 값만
@@ -741,29 +878,36 @@ cmd_keys_restore() { # dahae keys-restore 파일 [--yes] : 잠근 사본의 DATA
   ok "예전 비밀 키를 넣었어요. 이제 콘솔에서 외부 백업을 연결하고 'dahae restore-offsite' 로 되돌리세요."
 }
 
-cmd_alert() { # dahae alert update|backup : 예약 작업(cron)이 실패하면 외부 가동 확인 주소로 실패 신호와 로그 끝부분을 보내요
-  local what="${1:-}" url
-  case "$what" in update|backup) ;; *) die "사용법: dahae alert update|backup" ;; esac
+cmd_alert() { # dahae alert update|backup|ssh [차단 주소 수] : 예약 작업 실패나 SSH 차단 증가를 외부 가동 확인 주소로 알려요
+  local what="${1:-}" n="${2:-}" url payload
+  case "$what" in update|backup) ;; ssh) printf '%s' "$n" | grep -Eq '^[0-9]{1,6}$' || die "사용법: dahae alert ssh <차단 주소 수>" ;; *) die "사용법: dahae alert update|backup|ssh" ;; esac
   url=$(env_get HEARTBEAT_URL)
-  [ -n "$url" ] || { warn "외부 가동 확인 주소가 없어 실패를 알리지 못했어요 ('dahae heartbeat <주소>' 로 켜세요)"; return 1; }
-  tail -n 30 "backups/$what.log" 2>/dev/null | curl -fsS --max-time 15 -o /dev/null --data-binary @- "$(fail_url "$url")" \
-    || { warn "실패 알림을 보내지 못했어요"; return 1; }
-  ok "자동 $what 실패를 알렸어요"
+  [ -n "$url" ] || { warn "외부 가동 확인 주소가 없어 알리지 못했어요 ('dahae heartbeat <주소>' 로 켜세요)"; return 1; }
+  if [ "$what" = ssh ]; then payload="SSH 로그인 실패가 늘어 $n 개 주소를 차단했어요 (fail2ban). 'sudo fail2ban-client status sshd' 로 확인하세요."
+  else payload=$(tail -n 30 "backups/$what.log" 2>/dev/null); fi
+  printf '%s' "$payload" | curl -fsS --max-time 15 -o /dev/null --data-binary @- "$(fail_url "$url")"     || { warn "알림을 보내지 못했어요"; return 1; }
+  ok "$what 알림을 보냈어요"
 }
 
 cmd_restore() { # dahae restore 파일 [--yes]
   local f="" up a
   for a in "$@"; do case "$a" in --yes|-y) YES=1 ;; *) f="$a" ;; esac; done
-  [ -n "$f" ] || die "복원할 백업 파일을 지정하세요. 예: dahae restore backups/db-20261110-033000.sql.gz"
+  [ -n "$f" ] || die "복원할 백업 파일을 지정하세요. 예: dahae restore backups/db-20261110-033000.sql.gz.enc"
+  f=$(backup_rel "$f")
+  backup_path_ok "$f" || die "백업 파일은 backups/ 폴더 안의 파일만 쓸 수 있어요 (예: backups/db-20261110-033000.sql.gz.enc): $f"
   [ -f "$f" ] || die "백업 파일을 찾을 수 없어요: $f"
-  gzip -t "$f" 2>/dev/null || die "백업 파일이 손상됐어요: $f"
+  confirm "현재 데이터를 ${f%.enc} 로 되돌릴까요? 지금 데이터는 먼저 따로 백업해 둬요." yes
+  # 확인을 받은 뒤에만 평문을 풀어요
+  open_backup "$f" || die "백업을 풀지 못했어요. 봉인 키(DATA_KEY)가 맞는지 확인하세요: $f"
+  f="${f%.enc}"
   up=$(uploads_for "$f")
+  if [ -f "$up.enc" ]; then open_backup "$up.enc" || die "사진 파일 백업을 풀지 못했어요: $up.enc"; fi
+  gzip -t "$f" 2>/dev/null || die "백업 파일이 손상됐어요: $f"
   if [ -f "$up" ] && ! uploads_tar_ok "$up"; then
     die "사진 파일 백업이 손상됐거나 허용되지 않는 항목(절대 경로, .., 링크)이 있어서 복원을 멈췄어요. 아무것도 바뀌지 않았어요: $up"
   fi
-  confirm "현재 데이터를 $f 로 되돌릴까요? 지금 데이터는 먼저 따로 백업해 둬요." yes
   printf '\n▶ 복원 전에 지금 상태를 백업해요\n'
-  cmd_backup noprune
+  cmd_backup noprune || die "복원 전 백업을 끝내지 못해서 복원을 멈췄어요. 아무것도 바뀌지 않았어요."
   db_roles
   dc stop api >/dev/null
   # 한 트랜잭션으로 적용해요: 오류가 하나라도 나면 아무것도 바뀌지 않아요.
@@ -784,15 +928,17 @@ cmd_restore() { # dahae restore 파일 [--yes]
 }
 
 cmd_restore_offsite() { # dahae restore-offsite [이름] [--yes]
-  local name="" a up_name
+  local name="" a db up
   for a in "$@"; do case "$a" in --yes|-y) YES=1 ;; *) name="$a" ;; esac; done
   if [ -z "$name" ]; then api_backup backup-list; return 0; fi
   valid_backup_name "$name" || die "외부 백업 이름이 아니에요 (예: db-20261110-033000.sql.gz.enc): $name"
-  api_backup backup-fetch "$name" "/backups/${name%.enc}" || die "외부 백업을 내려받지 못했어요"
-  up_name=$(basename "$(uploads_for "${name%.enc}")")
-  api_backup backup-fetch "$up_name.enc" "/backups/$up_name" >/dev/null 2>&1 \
+  db="backups/${name%.enc}"; up=$(uploads_for "$db")
+  confirm "외부 백업 $name 으로 되돌릴까요? 지금 데이터는 먼저 따로 백업해 둬요." yes
+  SCRATCH+=("$db" "$up")   # 내려받은 평문은 복원이 끝나면 지워요
+  api_backup backup-fetch "$name" "/$db" || die "외부 백업을 내려받지 못했어요"
+  api_backup backup-fetch "$(basename "$up").enc" "/$up" >/dev/null 2>&1 \
     || warn "외부 백업에 같은 시각의 사진 파일이 없어요"
-  cmd_restore "backups/${name%.enc}"
+  YES=1 cmd_restore "$db" # 위에서 이미 확인했어요: 평문은 확인 뒤에만 내려받아요
 }
 
 cmd_heartbeat() { # dahae heartbeat <https 주소>|off
@@ -897,6 +1043,10 @@ cmd_write_cron() { # 예약 작업표(/etc/cron.d/malkkeum)를 다시 써요: �
       echo "$((10#$mm)) $((10#$hh)) * * $dow root flock -n -E 0 /run/dahae.lock $BIN/dahae auto-update >> $DIR/backups/update.log 2>&1 || $BIN/dahae alert update >> $DIR/backups/update.log 2>&1"
     fi
     echo "*/5 * * * * root $BIN/malkkeum-heartbeat >> $DIR/backups/heartbeat.log 2>&1"
+    # WAL 보관을 켰으면 주 1회 전체 백업 (일요일 02:15). 설정이 없으면 줄을 쓰지 않아요.
+    if [ "$(cd "$DIR" && env_get WAL_ARCHIVE_MODE)" = on ] && [ -f "$DIR/wal/base-backup.sh" ]; then
+      echo "15 2 * * 0 root cd $DIR && flock -w 3600 /run/dahae.lock bash wal/base-backup.sh >> $DIR/backups/wal.log 2>&1 || $BIN/dahae alert backup >> $DIR/backups/wal.log 2>&1"
+    fi
   } > "$tmp"
   chmod 644 "$tmp"
   mv -f "$tmp" /etc/cron.d/malkkeum   # cron 은 점(.)이 든 파일 이름을 무시하므로 임시 파일은 설치 폴더에 둬요
@@ -973,6 +1123,8 @@ main() {
   chmod 700 backups 2>/dev/null || true
   chmod 600 .env 2>/dev/null || true
   YES=${DAHAE_YES:-0}
+  # 복원 중 풀린 평문 백업은 명령이 어떻게 끝나든 지워요 (실패하거나 취소해도 디스크에 남지 않아요).
+  SCRATCH=(); trap 'rm -f -- ${SCRATCH[@]+"${SCRATCH[@]}"}' EXIT
   case "${1:-status}" in
     status) cmd_status ;;
     update) shift; cmd_update "$@" ;;
@@ -1236,7 +1388,7 @@ main() {
 
   say "필수 프로그램 설치 (새 서버면 자동 업데이트가 끝날 때까지 최대 10분 기다려요)"
   apt_retry update -qq || die "패키지 목록을 받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요."
-  apt_retry install -y -qq ca-certificates curl openssl gzip cron dnsutils logrotate iproute2 >/dev/null \
+  apt_retry install -y -qq ca-certificates curl openssl gzip cron dnsutils logrotate iproute2 ufw fail2ban unattended-upgrades >/dev/null \
     || die "필수 프로그램을 설치하지 못했어요. 잠시 뒤 다시 실행하세요."
   if ! command -v docker >/dev/null; then
     curl -fsSL https://get.docker.com | sh >/dev/null || die "Docker 를 설치하지 못했어요. 잠시 뒤 다시 실행하세요."
@@ -1284,9 +1436,7 @@ EOF
   write_schedules
   install_agent   # 새 설치와 업데이트 모두: 작업 실행기는 dahae update 가 쓰는 작업 폴더를 쓰므로 compose 를 띄우기 전에 둬요
 
-  if command -v ufw >/dev/null && ufw status | grep -q active; then
-    ufw allow 22/tcp >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443 >/dev/null
-  fi
+  harden_host
 
   if [ "$IMAGE_SOURCE" = local ]; then
     :

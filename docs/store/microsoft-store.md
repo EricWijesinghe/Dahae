@@ -4,7 +4,7 @@
 Two apps (customer, partner). Each is a **separate app** in Partner Center.
 
 **사장님용 관리 화면(콘솔)은 스토어 앱이 아니에요.** 웹 브라우저에서 `https://도메인/admin/` 으로 접속해요. Microsoft Store 에 올리지 않고, 이름 예약도 하지 않아요.
-**The owner console is web-only** at `https://DOMAIN/admin/`. It is not submitted to the Microsoft Store and needs no name reservation.
+**The owner console is web-only** at `https://DOMAIN/admin/`. It is not submitted to the Microsoft Store and needs no name reservation. Install steps and the offline test list are in `docs/store/console-pwa.md`.
 
 설명 문구는 `docs/store/listing-ko.md`, `listing-en.md`를 그대로 써요 (한국어·영어만 출시, 나머지 언어는 `archive/i18n-extra-languages`에 보관). 글자 수는 `python -I docs/store/check_listings.py`로 확인해요.
 Listing text: copy from `listing-ko.md` and `listing-en.md` (Korean and English only; other languages are archived in `archive/i18n-extra-languages`). Check lengths with `python -I docs/store/check_listings.py`.

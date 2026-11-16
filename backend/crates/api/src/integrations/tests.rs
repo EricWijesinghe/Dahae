@@ -8,15 +8,19 @@ fn obj(v: Value) -> Map<String, Value> {
 fn portone_requires_store_and_secret_and_checks_webhook_format() {
     let base = Integrations::default();
     assert_eq!(
-        apply(&base, Section::Portone, &obj(json!({"store_id": "s"}))).unwrap_err(),
+        apply(&base, Section::Portone, &obj(json!({"api_secret": "k"}))).unwrap_err(),
         Invalid("missing_field")
     );
-    let bad = json!({"store_id": "s", "api_secret": "k", "webhook_secret": "nope"});
+    let bad = json!({"store_id": "store-1", "api_secret": "k", "webhook_secret": "nope"});
     assert_eq!(apply(&base, Section::Portone, &obj(bad)).unwrap_err(), Invalid("invalid_webhook_secret"));
-    let ok = json!({"store_id": "store-1", "api_secret": "k", "webhook_secret": "whsec_aGVsbG8=", "channel_keys": "{\"card\":\"ch-1\"}"});
+    let ok = json!({"store_id": "store-1", "api_secret": "k", "webhook_secret": "whsec_aGVsbG8=", "channel_keys": "{\"card\":\"channel-key-1\"}"});
     let out = apply(&base, Section::Portone, &obj(ok)).unwrap();
     assert_eq!(out.portone.store_id.as_deref(), Some("store-1"));
-    assert_eq!(out.portone.channel_keys.get("card").map(String::as_str), Some("ch-1"));
+    assert_eq!(out.portone.channel_keys.get("card").map(String::as_str), Some("channel-key-1"));
+    let bad_store = json!({"store_id": "s", "api_secret": "k"});
+    assert_eq!(apply(&base, Section::Portone, &obj(bad_store)).unwrap_err(), Invalid("invalid_store_id"));
+    let bad_channel = json!({"store_id": "store-1", "api_secret": "k", "channel_keys": "{\"card\":\"ch-1\"}"});
+    assert_eq!(apply(&base, Section::Portone, &obj(bad_channel)).unwrap_err(), Invalid("invalid_channel_key"));
     assert!(out.has(Section::Portone));
 }
 
@@ -250,6 +254,34 @@ fn payout_defaults_to_manual_and_toss_is_refused() {
 }
 
 #[test]
+fn toss_gate_accepts_live_keys_only_with_a_live_pass() {
+    let live_ok = json!({"ok": true, "code": "live_connected", "key_fp": key_fingerprint("live_sk_a")});
+    assert!(toss_ready(true, Some(&live_ok), "live_sk_a"), "live key passed in live mode");
+    assert!(!toss_ready(true, Some(&live_ok), "live_sk_b"), "other live key");
+    let sandbox_ok = json!({"ok": true, "code": "sandbox_connected", "key_fp": key_fingerprint("live_sk_a")});
+    assert!(!toss_ready(true, Some(&sandbox_ok), "live_sk_a"), "a test pass never unlocks a live key");
+    let live_pass_for_test_key = json!({"ok": true, "code": "live_connected", "key_fp": key_fingerprint("test_sk_a")});
+    assert!(
+        !toss_ready(true, Some(&live_pass_for_test_key), "test_sk_a"),
+        "live pass never unlocks a test key"
+    );
+    assert!(!toss_ready(true, Some(&live_ok), "sk_unknown"), "unknown prefix never ready");
+}
+
+#[test]
+fn toss_secret_must_carry_a_known_prefix() {
+    let base = Integrations::default();
+    let keys = json!({"mode": "toss", "secret_key": "sk_plain", "security_key": "0123456789abcdef".repeat(4)});
+    assert_eq!(apply(&base, Section::Payout, &obj(keys)).unwrap_err(), Invalid("invalid_secret_key"));
+    assert_eq!(connected_code("live_sk_x"), Some("live_connected"));
+    assert_eq!(connected_code("test_sk_x"), Some("sandbox_connected"));
+    assert_eq!(connected_code("abc"), None);
+    assert_eq!(toss_key_mode("live_sk_x"), Some("live"));
+    assert_eq!(toss_key_mode("test_sk_x"), Some("test"));
+    assert_eq!(toss_key_mode("abc"), None);
+}
+
+#[test]
 fn toss_gate_needs_env_and_a_passing_test_for_this_key() {
     let ok = json!({"ok": true, "code": "sandbox_connected", "key_fp": key_fingerprint("test_sk_a")});
     assert!(toss_ready(true, Some(&ok), "test_sk_a"));
@@ -281,13 +313,13 @@ fn every_section_code_round_trips() {
 #[test]
 fn cash_receipt_switch_takes_a_bool_and_defaults_to_env() {
     let base = Integrations::default();
-    let on = json!({"store_id": "s", "api_secret": "k", "cash_receipts": true});
+    let on = json!({"store_id": "store-1", "api_secret": "k", "cash_receipts": true});
     assert!(apply(&base, Section::Portone, &obj(on)).unwrap().portone.cash_receipts);
-    let text = json!({"store_id": "s", "api_secret": "k", "cash_receipts": "on"});
+    let text = json!({"store_id": "store-1", "api_secret": "k", "cash_receipts": "on"});
     assert_eq!(apply(&base, Section::Portone, &obj(text)).unwrap_err(), Invalid("invalid_toggle"));
     let mut env = Integrations::default();
     env.portone.cash_receipts = true;
-    let unset = json!({"store_id": "s", "api_secret": "k"});
+    let unset = json!({"store_id": "store-1", "api_secret": "k"});
     assert!(apply(&env, Section::Portone, &obj(unset)).unwrap().portone.cash_receipts);
     assert!(toggle_default(&env, Section::Portone, "cash_receipts"));
     assert!(!toggle_default(&base, Section::Portone, "cash_receipts"));
@@ -296,8 +328,8 @@ fn cash_receipt_switch_takes_a_bool_and_defaults_to_env() {
 #[test]
 fn saved_console_value_beats_env_value() {
     let mut env = Integrations::default();
-    env.portone.store_id = Some("env-store".into());
-    let saved = json!({"store_id": "db-store", "api_secret": "k"});
+    env.portone.store_id = Some("store-env".into());
+    let saved = json!({"store_id": "store-db", "api_secret": "k"});
     let out = apply(&env, Section::Portone, &obj(saved)).unwrap();
-    assert_eq!(out.portone.store_id.as_deref(), Some("db-store"));
+    assert_eq!(out.portone.store_id.as_deref(), Some("store-db"));
 }

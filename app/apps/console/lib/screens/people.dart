@@ -9,8 +9,11 @@ import 'finance_tax.dart';
 import 'confirm_action.dart';
 import 'payout_seller_dialog.dart';
 import 'staff_reset.dart';
+import 'stepup.dart';
+import 'people_profile.dart';
 import 'points_ledger.dart';
 import 'staff_invite.dart';
+import 'member_approvals.dart';
 
 Future<void> _act(
   BuildContext context,
@@ -25,6 +28,15 @@ Future<void> _act(
     if (context.mounted) showToast(context, context.t.error(e));
   }
 }
+
+/// Owner-facing word for a partner's quality status; null means no score yet.
+String qualityStatusLabel(T t, String? status) => switch (status) {
+  'ok' => t.cQualityOk,
+  'warning' => t.cQualityWarning,
+  'paused' => t.cQualityPaused,
+  'overridden_by_owner' => t.cQualityOverridden,
+  _ => t.cQualityNone,
+};
 
 class PartnersScreen extends StatelessWidget {
   const PartnersScreen({super.key});
@@ -43,7 +55,7 @@ class PartnersScreen extends StatelessWidget {
       'suspended' => StatusHues.cancelled,
       _ => StatusHues.consultation,
     };
-    return AsyncView<List<Json>>(
+    final list = AsyncView<List<Json>>(
       load: () async =>
           (await context.api.get('/admin/pros') as List).cast<Json>(),
       builder: (context, rows, reload) => rows.isEmpty
@@ -70,21 +82,26 @@ class PartnersScreen extends StatelessWidget {
                         ],
                       ),
                       subtitle: Text(
-                        '${formatKoreanPhone('${p['phone']}')} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100}',
+                        '${formatKoreanPhone('${p['phone']}')} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100} · ${t.cQualityScore} ${p['quality_score'] ?? '-'} (${qualityStatusLabel(t, p['quality_status'] as String?)})',
                       ),
                       trailing: !admin
                           ? null
                           : Wrap(
                               spacing: 4,
                               children: [
+                                OutlinedButton(
+                                  onPressed: () => showProProfile(
+                                    context,
+                                    '${p['id']}',
+                                    reload,
+                                  ),
+                                  child: Text(t.cPfTabProfile),
+                                ),
                                 if (p['status'] != 'verified')
                                   FilledButton.tonal(
-                                    onPressed: () => _act(
+                                    onPressed: () => showProProfile(
                                       context,
-                                      () => context.api.post(
-                                        '/admin/pros/${p['id']}/status',
-                                        {'status': 'verified'},
-                                      ),
+                                      '${p['id']}',
                                       reload,
                                     ),
                                     child: Text(t.cVerify),
@@ -116,6 +133,12 @@ class PartnersScreen extends StatelessWidget {
                   ),
               ],
             ),
+    );
+    return Column(
+      children: [
+        if (admin) const MemberApprovals(),
+        Expanded(child: list),
+      ],
     );
   }
 }
@@ -150,9 +173,12 @@ class _SettlementsState extends State<SettlementsScreen> {
     if (date == null || !mounted) return;
     try {
       final rows =
-          (await context.api.post('/admin/settlements/run-payouts', {
-                    'date': DateFormat('yyyy-MM-dd').format(date),
-                  })
+          (await withStepUp(
+                    context,
+                    () => context.api.post('/admin/settlements/run-payouts', {
+                      'date': DateFormat('yyyy-MM-dd').format(date),
+                    }),
+                  )
                   as List)
               .cast<Json>();
       if (!mounted) return;
@@ -205,10 +231,13 @@ class _SettlementsState extends State<SettlementsScreen> {
         : '\n${p['failure_reason']}';
     Future<void> post(String path) => _act(
       context,
-      () => context.api.post(
-        '/admin/settlements/payouts/$id/$path',
-        {},
-        ApiClient.newIdempotencyKey(),
+      () => withStepUp(
+        context,
+        () => context.api.post(
+          '/admin/settlements/payouts/$id/$path',
+          {},
+          ApiClient.newIdempotencyKey(),
+        ),
       ),
       reload,
     );
@@ -312,7 +341,10 @@ class _SettlementsState extends State<SettlementsScreen> {
     final t = context.t;
     try {
       final a =
-          (await context.api.get('/admin/settlements/payouts/$id/account'))
+          (await withStepUp(
+                context,
+                () => context.api.get('/admin/settlements/payouts/$id/account'),
+              ))
               as Json;
       if (!context.mounted) return;
       await showDialog<void>(
@@ -383,9 +415,12 @@ class _SettlementsState extends State<SettlementsScreen> {
     }
     await _act(
       context,
-      () => context.api.post('/admin/settlements/payouts/$id/fail', {
-        'reason': reason,
-      }, ApiClient.newIdempotencyKey()),
+      () => withStepUp(
+        context,
+        () => context.api.post('/admin/settlements/payouts/$id/fail', {
+          'reason': reason,
+        }, ApiClient.newIdempotencyKey()),
+      ),
       reload,
     );
   }

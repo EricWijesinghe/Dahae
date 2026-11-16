@@ -176,6 +176,9 @@ void main() {
       wallet: _wallet(enabled: false),
       methods: [paymentMethodJson()],
       config: const RemoteConfig(maintenance: true),
+      routes: (f) => f.reply('GET', '/config', {
+        'maintenance': {'on': true},
+      }),
     );
     final label = koT.payAmount(formatWon(45000, 'ko'));
     final pay = tester.widget<PrimaryButton>(

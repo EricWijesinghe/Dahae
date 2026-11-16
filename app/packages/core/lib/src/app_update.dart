@@ -244,6 +244,8 @@ class _UpdateBanner extends StatelessWidget {
               ),
               TextButton(onPressed: onLater, child: Text(t.uUpdateLater)),
               FilledButton.tonal(
+                // The theme's full-width minimum cannot lay out inside a Row.
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
                 onPressed: storeUrl == null ? null : () => _openStore(storeUrl),
                 child: Text(t.uUpdateNow),
               ),

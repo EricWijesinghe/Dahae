@@ -7,6 +7,7 @@ import 'package:ui/ui.dart';
 import '../state.dart';
 import 'chat.dart';
 import 'earnings.dart';
+import 'quality_card.dart';
 
 part 'more_account.dart';
 
@@ -74,6 +75,11 @@ class MoreTab extends StatelessWidget {
                   title: Text(t.pReviews),
                   trailing: Text(rating == null ? '-' : '$rating'),
                   onTap: () => _go(context, const ReviewsScreen()),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.insights_rounded),
+                  title: Text(t.pQualityScore),
+                  onTap: () => _go(context, const QualityCardScreen()),
                 ),
                 ListTile(
                   leading: const Icon(Icons.map_rounded),

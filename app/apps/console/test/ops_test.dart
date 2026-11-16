@@ -148,21 +148,22 @@ void main() {
       await settle(tester);
 
       final sms = find.widgetWithText(SwitchListTile, koT.oRuleSms);
-      await tester.scrollUntilVisible(
-        sms,
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
+      // The page's own scrollable: Scrollable.first is the sidebar, and the alert rows are built lazily.
+      final page = find
+          .descendant(
+            of: find.byType(OpsScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.scrollUntilVisible(sms, 200, scrollable: page);
+      await settle(tester);
       await tester.tap(sms);
       await settle(tester, duration: const Duration(milliseconds: 200));
 
       // The alerts card comes first; the flags card has its own save button further down.
       final save = find.widgetWithText(PrimaryButton, koT.oSave).first;
-      await tester.scrollUntilVisible(
-        save,
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
+      await tester.scrollUntilVisible(save, 200, scrollable: page);
+      await settle(tester);
       await tester.tap(save);
       await settle(tester);
 

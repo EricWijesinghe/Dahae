@@ -5,7 +5,7 @@
 
 use super::{
     audit,
-    booking_core::{BookingBody, prepare},
+    booking_core::{BookingBody, fixed_peak_bps, prepare},
     bookings::cancel_owned,
     catalog::load_service,
     subscription_engine::plan_subscription,
@@ -211,7 +211,8 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(req): Jso
     if prep.service.is_quote() || matches!(prep.service.pricing, Pricing::Counts { .. }) {
         return Err(ApiError::BadRequest("subscription_not_supported"));
     }
-    price_booking(&prep.service, req.unit_index, None, Utc::now())?;
+    let peak = fixed_peak_bps(&s.db, body.visit_date, body.start_hour).await?;
+    price_booking(&prep.service, req.unit_index, None, peak, Utc::now())?;
     check_card(&s.db, a.id, req.payment_method_id).await?;
     if let Some(pro) = req.preferred_pro_id {
         let exists: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM pros WHERE id = $1)")
@@ -243,7 +244,7 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(req): Jso
     .bind(i16::from(policy.discount_percent))
     .execute(&s.db)
     .await?;
-    plan_subscription(&s.db, id).await?;
+    plan_subscription(&s, id).await?;
     audit(
         &s.db,
         "customer",
@@ -552,7 +553,7 @@ async fn admin_edit(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<U
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
-    plan_subscription(&s.db, id).await?;
+    plan_subscription(&s, id).await?;
     let after = fetch(&s.db, id).await?;
     audit(
         &s.db,
@@ -637,7 +638,7 @@ pub async fn recurring_metrics(db: &PgPool, from: NaiveDate, to: NaiveDate) -> A
     for r in &rows {
         let service = load_service(db, &r.service_code).await?;
         let counts = super::booking_core::counts_from_row(r.unit_counts.clone());
-        let base = price_booking_with(&service, r.unit_index.map(|u| u as usize), &counts, None, Utc::now())?.total;
+        let base = price_booking_with(&service, r.unit_index.map(|u| u as usize), &counts, None, 0, Utc::now())?.total;
         let total = visit_price(base.0, u8::try_from(r.discount_percent).unwrap_or(0))?.total;
         let monthly = monthly_equivalent(total, Cadence::from_weeks(i64::from(r.cadence_weeks))?);
         recognized += prorate(monthly, active_days(r.started, r.ended, from, to), period_days);

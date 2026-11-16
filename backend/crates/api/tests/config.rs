@@ -4,7 +4,7 @@ mod common;
 
 use api::routes::setup::ensure_setup_code;
 use axum::http::StatusCode;
-use common::{call, customer, seed_catalog};
+use common::{app_with_channels, call, customer, seed_catalog};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 
@@ -69,7 +69,7 @@ async fn owner_verify(app: &axum::Router, recovery: &str) -> String {
 #[sqlx::test(migrations = "../../migrations")]
 async fn owner_signs_in_during_maintenance_and_switches_it_off(pool: PgPool) {
     ensure_setup_code(&pool, Some(CODE), None).await.expect("code");
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let (st, b) = call(
         &app,
         "POST",
@@ -120,7 +120,7 @@ async fn owner_signs_in_during_maintenance_and_switches_it_off(pool: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn config_endpoint_is_public_and_hides_business_fields(pool: PgPool) {
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let (st, b) = call(&app, "GET", "/v1/config", None, None).await;
     assert_eq!(st, StatusCode::OK);
     assert_eq!(b["maintenance"]["on"], json!(false));
@@ -146,7 +146,7 @@ async fn owner_token(app: &axum::Router, pool: &PgPool) -> String {
 #[sqlx::test(migrations = "../../migrations")]
 async fn maintenance_refuses_booking_checkouts_confirmations_and_subscriptions(pool: PgPool) {
     seed_catalog(&pool).await;
-    let app = common::app(pool.clone());
+    let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-7300-0001").await;
     let visit = api::util::today_kst() + chrono::Duration::days(12);
     let checkout = json!({

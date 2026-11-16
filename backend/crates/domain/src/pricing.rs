@@ -6,9 +6,11 @@ use crate::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+const FULL_BPS: i64 = 10_000;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PriceBreakdown {
-    /// Catalogue sum before any discount.
+    /// Catalogue sum plus any peak surcharge, before discounts.
     pub list_price: Won,
     /// Multi-item discount for counts services (zero otherwise).
     pub multi_discount: Won,
@@ -27,8 +29,16 @@ impl PriceBreakdown {
 }
 
 /// Server-authoritative price for a fixed / unit booking (paid in full).
-pub fn price_booking(service: &Service, unit_index: Option<usize>, coupon: Option<&Coupon>, now: DateTime<Utc>) -> Result<PriceBreakdown, DomainError> {
-    price_booking_with(service, unit_index, &[], coupon, now)
+/// `peak_bps` is the slot's surcharge rate (0 when peak does not apply). The surcharge is folded into
+/// `list_price` so that `list_price - multi_discount - discount == total` holds for every stored booking.
+pub fn price_booking(
+    service: &Service,
+    unit_index: Option<usize>,
+    coupon: Option<&Coupon>,
+    peak_bps: i64,
+    now: DateTime<Utc>,
+) -> Result<PriceBreakdown, DomainError> {
+    price_booking_with(service, unit_index, &[], coupon, peak_bps, now)
 }
 
 /// Like `price_booking`, with one count per option for counts services (`counts` wins over `unit_index`).
@@ -37,9 +47,13 @@ pub fn price_booking_with(
     unit_index: Option<usize>,
     counts: &[u8],
     coupon: Option<&Coupon>,
+    peak_bps: i64,
     now: DateTime<Utc>,
 ) -> Result<PriceBreakdown, DomainError> {
-    let (list_price, multi_discount, minutes) = match &service.pricing {
+    if !(0..=FULL_BPS).contains(&peak_bps) {
+        return Err(DomainError::OutOfRange("peak_bps"));
+    }
+    let (base, multi_discount, minutes) = match &service.pricing {
         Pricing::Counts { .. } => {
             let c = service.count_price(&service.counts_for(unit_index, counts)?)?;
             (c.list, c.multi_discount, c.minutes)
@@ -50,6 +64,7 @@ pub fn price_booking_with(
         }
         _ => return Err(DomainError::InvalidUnit),
     };
+    let list_price = base + base.times_bps(peak_bps).round100();
     let after_multi = list_price.saturating_sub(multi_discount);
     let discount = match coupon {
         Some(c) => c.discount_for(after_multi, &service.code, now)?,
@@ -70,18 +85,6 @@ mod tests {
     use crate::catalog::default_catalog;
     use chrono::TimeZone;
 
-    #[test]
-    fn bathroom_with_welcome_coupon() {
-        let now = Utc.with_ymd_and_hms(2026, 11, 10, 0, 0, 0).unwrap();
-        let bath = default_catalog().into_iter().find(|s| s.code == "bathroom").unwrap();
-        let c = Coupon::issue(Won(5_000), None, now);
-        let p = price_booking(&bath, Some(1), Some(&c), now).unwrap();
-        assert_eq!(
-            (p.list_price, p.multi_discount, p.discount, p.total, p.minutes),
-            (Won(52_000), Won(0), Won(5_000), Won(47_000), 120)
-        );
-    }
-
     fn by_code(code: &str) -> Service {
         default_catalog().into_iter().find(|s| s.code == code).unwrap()
     }
@@ -91,8 +94,46 @@ mod tests {
     }
 
     #[test]
+    fn bathroom_with_welcome_coupon() {
+        let c = Coupon::issue(Won(5_000), None, now());
+        let p = price_booking(&by_code("bathroom"), Some(1), Some(&c), 0, now()).unwrap();
+        assert_eq!(
+            (p.list_price, p.multi_discount, p.discount, p.total, p.minutes),
+            (Won(52_000), Won(0), Won(5_000), Won(47_000), 120)
+        );
+    }
+
+    #[test]
+    fn peak_surcharge_is_added_to_the_list_price_before_the_coupon() {
+        // 20% of 52,000 = 10,400 (already a multiple of 100); the 5,000 coupon applies to the surcharged price.
+        let c = Coupon::issue(Won(5_000), None, now());
+        let p = price_booking(&by_code("bathroom"), Some(1), Some(&c), 2_000, now()).unwrap();
+        assert_eq!((p.list_price, p.discount, p.total), (Won(62_400), Won(5_000), Won(57_400)));
+        assert_eq!(p.list_price - p.discount, p.total);
+    }
+
+    #[test]
+    fn peak_surcharge_rounds_to_the_hundred_won_like_quotes() {
+        // 11% of 52,000 = 5,720, rounded half-up to the hundred: 5,700.
+        let p = price_booking(&by_code("bathroom"), Some(1), None, 1_100, now()).unwrap();
+        assert_eq!(p.list_price, Won(57_700));
+    }
+
+    #[test]
+    fn out_of_range_peak_is_rejected() {
+        assert_eq!(
+            price_booking(&by_code("bathroom"), Some(1), None, 10_001, now()),
+            Err(DomainError::OutOfRange("peak_bps"))
+        );
+        assert_eq!(
+            price_booking(&by_code("bathroom"), Some(1), None, -1, now()),
+            Err(DomainError::OutOfRange("peak_bps"))
+        );
+    }
+
+    #[test]
     fn counts_example_aircon_total_and_minutes() {
-        let p = price_booking_with(&by_code("aircon"), None, &[0, 2, 1, 0], None, now()).unwrap();
+        let p = price_booking_with(&by_code("aircon"), None, &[0, 2, 1, 0], None, 0, now()).unwrap();
         // 2 stand + 1 two_in_one is 417,000 before the discount; 10% off = 41,700, total 375,300.
         assert_eq!(
             (p.list_price, p.multi_discount, p.total, p.minutes),
@@ -102,7 +143,7 @@ mod tests {
 
     #[test]
     fn counts_example_stand_two_wall_one() {
-        let p = price_booking_with(&by_code("aircon"), None, &[1, 2, 0, 0], None, now()).unwrap();
+        let p = price_booking_with(&by_code("aircon"), None, &[1, 2, 0, 0], None, 0, now()).unwrap();
         assert_eq!(
             (p.list_price, p.multi_discount, p.total, p.minutes),
             (Won(317_000), Won(31_700), Won(285_300), 330)
@@ -111,35 +152,35 @@ mod tests {
 
     #[test]
     fn counts_example_window_three_small_two_large() {
-        let p = price_booking_with(&by_code("window"), None, &[3, 2], None, now()).unwrap();
+        let p = price_booking_with(&by_code("window"), None, &[3, 2], None, 0, now()).unwrap();
         assert_eq!((p.list_price, p.minutes), (Won(57_000), 95));
     }
 
     #[test]
     fn counts_example_disinfection_pest_and_sanitize() {
-        let p = price_booking_with(&by_code("disinfection"), None, &[1, 0, 1, 0], None, now()).unwrap();
+        let p = price_booking_with(&by_code("disinfection"), None, &[1, 0, 1, 0], None, 0, now()).unwrap();
         assert_eq!((p.list_price, p.multi_discount, p.total), (Won(180_000), Won(18_000), Won(162_000)));
         assert_eq!(p.total_discount(), Won(18_000));
     }
 
     #[test]
     fn legacy_mattress_unit_index_prices_one_mattress() {
-        let p = price_booking(&by_code("mattress"), Some(0), None, now()).unwrap();
+        let p = price_booking(&by_code("mattress"), Some(0), None, 0, now()).unwrap();
         assert_eq!((p.list_price, p.minutes), (Won(59_000), 60));
-        assert_eq!(price_booking(&by_code("mattress"), Some(1), None, now()), Err(DomainError::InvalidUnit));
+        assert_eq!(price_booking(&by_code("mattress"), Some(1), None, 0, now()), Err(DomainError::InvalidUnit));
     }
 
     #[test]
     fn counts_mattress_two_pieces_take_fifteen_percent_off() {
         // 2 x 59,000 = 118,000, -15% = 100,300 (rounded to 100 won).
-        let p = price_booking_with(&by_code("mattress"), None, &[2], None, now()).unwrap();
+        let p = price_booking_with(&by_code("mattress"), None, &[2], None, 0, now()).unwrap();
         assert_eq!((p.list_price, p.multi_discount, p.total), (Won(118_000), Won(17_700), Won(100_300)));
     }
 
     #[test]
     fn counts_rejected_on_a_unit_service() {
         assert_eq!(
-            price_booking_with(&by_code("bathroom"), Some(0), &[1, 0, 0, 0], None, now()),
+            price_booking_with(&by_code("bathroom"), Some(0), &[1, 0, 0, 0], None, 0, now()),
             Err(DomainError::InvalidUnit)
         );
     }

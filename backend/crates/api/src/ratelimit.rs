@@ -1,4 +1,6 @@
-//! Per-IP request limits. Three buckets: auth (`/v1/auth/*`), uploads (`/v1/uploads`) and everything else.
+//! Per-IP request limits. Auth (`/v1/auth/*`) and uploads (`/v1/uploads`) have their own buckets, as do the
+//! public write routes that anonymous clients can hit freely (error reports, analytics batches, the Toss webhook)
+//! and address search. Everything else shares the general bucket.
 //! Every bucket has an in-memory sliding window (fast path, per process); auth and upload also keep a
 //! fixed-window counter in Postgres so a restart or a second replica cannot reset the budget. Also hosts
 //! the small quota helper used by per-user daily caps.
@@ -23,11 +25,20 @@ use uuid::Uuid;
 const WINDOW: Duration = Duration::from_secs(60);
 const SWEEP_EVERY: Duration = Duration::from_secs(60);
 const FORWARDED_FOR: &str = "x-forwarded-for";
+/// Error reports and analytics batches: anonymous, so only a per-IP cap stops them being used as a write flood.
+const INGEST_PER_MIN: usize = 120;
+/// Address search per IP. The per-user cap in routes/address.rs stops one account; this stops many accounts from one IP.
+const ADDRESS_SEARCH_PER_MIN: usize = 120;
+/// Toss webhooks come from a few provider addresses; tighter than the general bucket.
+const WEBHOOK_PER_MIN: usize = 120;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Bucket {
     Auth,
     Upload,
+    Ingest,
+    AddressSearch,
+    Webhook,
     General,
 }
 
@@ -36,19 +47,28 @@ impl Bucket {
         match self {
             Self::Auth => "auth",
             Self::Upload => "upload",
+            Self::Ingest => "ingest",
+            Self::AddressSearch => "address_search",
+            Self::Webhook => "webhook",
             Self::General => "general",
         }
+    }
+
+    /// Auth and upload budgets are also counted in Postgres, so a restart or another replica cannot reset them.
+    fn is_durable(self) -> bool {
+        matches!(self, Self::Auth | Self::Upload)
     }
 }
 
 /// Which bucket a request path counts against.
 pub fn bucket_for(path: &str) -> Bucket {
-    if path == "/v1/auth" || path.starts_with("/v1/auth/") {
-        Bucket::Auth
-    } else if path == "/v1/uploads" {
-        Bucket::Upload
-    } else {
-        Bucket::General
+    match path {
+        "/v1/uploads" => Bucket::Upload,
+        "/v1/client-errors" | "/v1/events" => Bucket::Ingest,
+        "/v1/address/search" => Bucket::AddressSearch,
+        "/v1/webhooks/toss" => Bucket::Webhook,
+        _ if path == "/v1/auth" || path.starts_with("/v1/auth/") => Bucket::Auth,
+        _ => Bucket::General,
     }
 }
 
@@ -57,6 +77,9 @@ pub fn bucket_for(path: &str) -> Bucket {
 pub struct Limits {
     pub auth: usize,
     pub upload: usize,
+    pub ingest: usize,
+    pub address_search: usize,
+    pub webhook: usize,
     pub general: usize,
 }
 
@@ -65,6 +88,9 @@ impl Limits {
         match bucket {
             Bucket::Auth => self.auth,
             Bucket::Upload => self.upload,
+            Bucket::Ingest => self.ingest,
+            Bucket::AddressSearch => self.address_search,
+            Bucket::Webhook => self.webhook,
             Bucket::General => self.general,
         }
     }
@@ -180,6 +206,9 @@ impl Gate {
         let limits = Limits {
             auth: usize::try_from(cfg.rate_auth_per_min).unwrap_or(usize::MAX),
             upload: usize::try_from(cfg.rate_upload_per_min).unwrap_or(usize::MAX),
+            ingest: INGEST_PER_MIN,
+            address_search: ADDRESS_SEARCH_PER_MIN,
+            webhook: WEBHOOK_PER_MIN,
             general: usize::try_from(cfg.rate_general_per_min).unwrap_or(usize::MAX),
         };
         Self {
@@ -247,7 +276,7 @@ pub async fn limit(State(gate): State<Arc<Gate>>, req: Request, next: Next) -> R
     // A poisoned lock only means another request panicked mid-update: keep limiting.
     let mut allowed = gate.limiter.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).check(bucket, ip, now);
     // Auth and uploads are the abuse targets: their budget is also counted durably across restarts and replicas.
-    if allowed && bucket != Bucket::General {
+    if allowed && bucket.is_durable() {
         gate.sweep_shared(now).await;
         allowed = gate.shared_admit(bucket, ip).await;
     }
@@ -270,7 +299,20 @@ mod tests {
 
     fn limiter(auth: usize) -> (Limiter, Instant) {
         let now = Instant::now();
-        (Limiter::new(Limits { auth, upload: 2, general: 3 }, now), now)
+        (
+            Limiter::new(
+                Limits {
+                    auth,
+                    upload: 2,
+                    ingest: 2,
+                    address_search: 2,
+                    webhook: 2,
+                    general: 3,
+                },
+                now,
+            ),
+            now,
+        )
     }
 
     #[test]
@@ -324,6 +366,34 @@ mod tests {
         assert_eq!(bucket_for("/v1/uploads/extra"), Bucket::General);
         assert_eq!(bucket_for("/v1/bookings"), Bucket::General);
         assert_eq!(bucket_for("/health"), Bucket::General);
+    }
+
+    #[test]
+    fn public_write_routes_have_their_own_buckets() {
+        assert_eq!(bucket_for("/v1/client-errors"), Bucket::Ingest);
+        assert_eq!(bucket_for("/v1/events"), Bucket::Ingest);
+        assert_eq!(bucket_for("/v1/address/search"), Bucket::AddressSearch);
+        assert_eq!(bucket_for("/v1/webhooks/toss"), Bucket::Webhook);
+        assert_eq!(bucket_for("/v1/webhooks/portone"), Bucket::General, "only the Toss hook is tightened");
+        assert_eq!(bucket_for("/v1/events/extra"), Bucket::General);
+    }
+
+    #[test]
+    fn a_public_route_has_its_own_budget_separate_from_general() {
+        let (mut l, now) = limiter(5);
+        assert!(l.check(Bucket::Ingest, ip(1), now));
+        assert!(l.check(Bucket::Ingest, ip(1), now));
+        assert!(!l.check(Bucket::Ingest, ip(1), now), "ingest budget of 2 is spent");
+        assert!(l.check(Bucket::General, ip(1), now), "general budget is untouched");
+        assert!(l.check(Bucket::Webhook, ip(1), now), "webhook budget is separate");
+    }
+
+    #[test]
+    fn only_auth_and_upload_keep_a_durable_counter() {
+        assert!(Bucket::Auth.is_durable() && Bucket::Upload.is_durable());
+        for b in [Bucket::Ingest, Bucket::AddressSearch, Bucket::Webhook, Bucket::General] {
+            assert!(!b.is_durable(), "{b:?} stays in memory");
+        }
     }
 
     #[test]

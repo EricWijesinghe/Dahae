@@ -122,6 +122,8 @@ class _AppLinksFormState extends State<_AppLinksForm> {
               OutlinedButton(onPressed: _check, child: Text(t.cAppLinkCheck)),
               const SizedBox(width: Space.sm),
               FilledButton(
+                // The theme's full-width minimum cannot lay out inside a Row.
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
                 onPressed: !context.console.isAdmin ? null : _save,
                 child: Text(t.save),
               ),

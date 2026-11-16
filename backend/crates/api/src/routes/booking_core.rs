@@ -3,7 +3,12 @@
 //! and balance steps. Nothing there decides money; callers own the transaction.
 //! Also the one job completion (`complete_job`) behind the owner's and the team member's handler.
 
-use super::{bookings::BookingRow, catalog::load_service, chat, growth, partner_jobs, uploads};
+use super::{
+    audit,
+    bookings::BookingRow,
+    catalog::{load_peak_config, load_service},
+    chat, growth, partner_jobs, uploads,
+};
 use crate::{
     crypto,
     error::{ApiError, ApiResult},
@@ -130,13 +135,25 @@ pub async fn load_coupon(conn: &mut PgConnection, user: Uuid, id: Uuid, lock: bo
     })
 }
 
+/// Peak surcharge rate for a fixed or subscription visit at `date` and `start_hour` (KST).
+/// Zero when the owner has turned peak off for these visits; quotes apply peak on their own path.
+pub async fn fixed_peak_bps(db: impl sqlx::PgExecutor<'_>, date: NaiveDate, start_hour: u8) -> ApiResult<i64> {
+    let config = load_peak_config(db).await?;
+    if !config.apply_to_fixed {
+        return Ok(0);
+    }
+    let start = domain::peak::kst_to_utc(date, u32::from(start_hour)).ok_or(ApiError::BadRequest("invalid_slot"))?;
+    Ok(domain::peak::peak_surcharge(&config, start).bps)
+}
+
 /// Server-side price for the chosen unit, optional coupon, and the first-booking welcome offer.
 pub async fn price_for(conn: &mut PgConnection, user: Uuid, prep: &Prepared, b: &BookingBody, lock: bool) -> ApiResult<PriceBreakdown> {
     let coupon = match b.coupon_id {
         Some(id) => Some(load_coupon(conn, user, id, lock).await?),
         None => None,
     };
-    let price = price_booking_with(&prep.service, b.unit_index, &b.counts, coupon.as_ref(), Utc::now())?;
+    let peak = fixed_peak_bps(&mut *conn, b.visit_date, b.start_hour).await?;
+    let price = price_booking_with(&prep.service, b.unit_index, &b.counts, coupon.as_ref(), peak, Utc::now())?;
     let offer = growth::load_welcome(conn).await?;
     if !offer.enabled || coupon.is_some() {
         return Ok(price);
@@ -432,6 +449,7 @@ pub async fn after_booking_created(s: &AppState, id: Uuid, number: &str) {
 
 const CHECKLIST_ITEMS: usize = 4;
 const MAX_REPORT_PHOTOS: usize = 20;
+const MAX_OVERRIDE_REASON_CHARS: usize = 200;
 
 /// Completion report as both partner apps send it.
 #[derive(Deserialize)]
@@ -439,6 +457,25 @@ pub struct CompletionBody {
     before_photos: Vec<String>,
     after_photos: Vec<String>,
     checklist: Vec<bool>,
+    /// Owner only: why the job is completed without a recorded arrival. Audited. Ignored for team members.
+    #[serde(default)]
+    check_in_override: Option<String>,
+}
+
+/// A job completes only after its arrival is recorded. The owner may override with a reason, which is
+/// returned for the audit row; a team member has no override.
+fn check_in_gate(b: &BookingRow, member: Option<Uuid>, c: &CompletionBody) -> ApiResult<Option<String>> {
+    if b.checked_in_at.is_some() {
+        return Ok(None);
+    }
+    let reason = match (member, c.check_in_override.as_deref().map(str::trim)) {
+        (None, Some(r)) if !r.is_empty() => r,
+        _ => return Err(ApiError::Conflict("not_checked_in")),
+    };
+    if reason.chars().count() > MAX_OVERRIDE_REASON_CHARS {
+        return Err(ApiError::BadRequest("override_reason_too_long"));
+    }
+    Ok(Some(reason.to_owned()))
 }
 
 /// What a completion settled: the team's net, and when it is paid out (None while a quote's balance is open).
@@ -486,6 +523,7 @@ pub async fn complete_job(s: &AppState, b: &BookingRow, pro: Uuid, member: Optio
     if b.visit_date > today {
         return Err(ApiError::Conflict("job_not_started"));
     }
+    let override_reason = check_in_gate(b, member, c)?;
     let gross = b.final_price.or(b.list_price).ok_or(ApiError::Conflict("job_unpriced"))?;
     let fee_bps: i32 = sqlx::query_scalar("SELECT fee_bps FROM pros WHERE id = $1").bind(pro).fetch_one(&s.db).await?;
     let p = payout(Won(gross), i64::from(fee_bps));
@@ -507,6 +545,9 @@ pub async fn complete_job(s: &AppState, b: &BookingRow, pro: Uuid, member: Optio
     .await?;
     if moved.rows_affected() == 0 {
         return Err(ApiError::Conflict("job_not_active"));
+    }
+    if let Some(reason) = &override_reason {
+        audit(&mut *tx, "pro", Some(pro), "check_in.override", &b.id.to_string(), json!({ "reason": reason })).await?;
     }
     sqlx::query("INSERT INTO completion_reports (booking_id, before_photos, after_photos, checklist, submitted_by) VALUES ($1,$2,$3,$4,$5)")
         .bind(b.id)
@@ -542,7 +583,7 @@ pub async fn complete_job(s: &AppState, b: &BookingRow, pro: Uuid, member: Optio
     if let Some(t) = b.thread_id {
         best_effort("chat", chat::post_system(s, t, "job_completed", json!({}))).await;
     }
-    deliver(s, notice).await;
+    deliver(s, notice, Utc::now()).await;
     Ok(Completed {
         net: p.net.0,
         payout_date: payout_on,

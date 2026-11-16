@@ -2,9 +2,9 @@
 //! [`crate::payout`]; every change runs in one transaction on a locked row, so a payout can be paid
 //! at most once and a settlement is marked paid only together with its payout.
 
-use super::audit;
+use super::{audit, staff_mfa::require_recent_stepup};
 use crate::{
-    auth::{Admin, Role, live_staff_role},
+    auth::{Admin, live_admin},
     contract::{json_row_cursor, page_limit, paged, ts_id_cursor},
     crypto,
     error::{ApiError, ApiResult},
@@ -176,6 +176,7 @@ pub async fn set_tax_type(AxState(s): AxState<AppState>, Admin(a): Admin, Path(p
 /// Creates one requested payout per pro for everything due by the date. Future dates are refused.
 pub async fn run_payouts(AxState(s): AxState<AppState>, Admin(a): Admin, Json(r): Json<RunPayouts>) -> ApiResult<Json<Value>> {
     live_admin(&s, a.id).await?;
+    require_recent_stepup(&s, a.id).await?;
     if r.date > today_kst() {
         return Err(ApiError::BadRequest("future_date"));
     }
@@ -199,25 +200,20 @@ pub async fn run_payouts(AxState(s): AxState<AppState>, Admin(a): Admin, Json(r)
     Ok(Json(rows(&s.db, None, Some(&ids), (None, None), BY_IDS_LIMIT).await?))
 }
 
-/// Money actions check the role stored now: a demoted or deactivated owner's token lives on for its TTL.
-async fn live_admin(s: &AppState, id: Uuid) -> ApiResult<()> {
-    if live_staff_role(&s.db, id).await? == Role::StaffAdmin {
-        Ok(())
-    } else {
-        Err(ApiError::Forbidden)
-    }
-}
-
 /// Bank details for a manual transfer. Owner only; every reveal is audit-logged and never cached.
 pub async fn reveal_account(AxState(s): AxState<AppState>, Admin(a): Admin, Path(id): Path<Uuid>) -> ApiResult<Response> {
     live_admin(&s, a.id).await?;
+    require_recent_stepup(&s, a.id).await?;
+    // The read and its audit row share one transaction: no row is released unless the reveal is recorded.
+    let mut tx = s.db.begin().await?;
     let (bank, holder, enc, gross, tax_type): (String, String, String, i64, String) =
         sqlx::query_as("SELECT bank, holder, account_enc, amount, tax_type FROM payouts WHERE id = $1")
             .bind(id)
-            .fetch_one(&s.db)
+            .fetch_one(&mut *tx)
             .await?;
     let account = crypto::decrypt(&s.config.data_key, crypto::aad::PAYOUT_ACCOUNT, &enc).ok_or(ApiError::Internal("cannot decrypt payout account".into()))?;
-    audit(&s.db, "staff", Some(a.id), "payout.reveal", &id.to_string(), json!({})).await?;
+    audit(&mut *tx, "staff", Some(a.id), "payout.reveal", &id.to_string(), json!({})).await?;
+    tx.commit().await?;
     // `amount` is what to transfer (net of withholding); `gross` and the taxes are shown for the record.
     let split = domain::tax::payout_withholding(&tax_type, domain::Won(gross));
     let body = Json(json!({
@@ -240,6 +236,7 @@ pub async fn act(
     Json(b): Json<ActionBody>,
 ) -> ApiResult<Json<Value>> {
     live_admin(&s, a.id).await?;
+    require_recent_stepup(&s, a.id).await?;
     let outcome = match action.as_str() {
         "send" => send(&s, id).await?,
         "confirm" => step(&s, id, Owner::Confirm).await?,

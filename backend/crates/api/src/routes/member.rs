@@ -1,9 +1,10 @@
-//! Team member (partner app login): assigned jobs only, with full address, and completion.
+//! Team member (partner app login): assigned jobs only, with full address once the owner approved them, and completion.
 //! Members never see payouts; settlement is written to the owner (`pro_id`) like owner completions.
 
 use super::{
     booking_core::{CompletionBody, complete_job},
     bookings::{BOOKING_COLS, BookingRow, load_booking},
+    site,
 };
 use crate::{
     auth::{Member, mask_name},
@@ -28,11 +29,25 @@ pub fn routes() -> Router<AppState> {
         .route("/jobs", get(jobs))
         .route("/jobs/{id}", get(job))
         .route("/jobs/{id}/complete", post(complete))
+        .route("/jobs/{id}/check-in", post(check_in))
+        .route("/jobs/{id}/check-out", post(check_out))
+}
+
+/// The member's arrival on their own assigned job; the rules are `site::check_in_job`, shared with the owner's.
+async fn check_in(State(s): State<AppState>, Member(a): Member, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
+    let (b, _) = assigned(&s, a.id, id).await?;
+    site::check_in_job(&s, &b).await
+}
+
+/// The member's departure from their own assigned job; the rules are `site::check_out_job`.
+async fn check_out(State(s): State<AppState>, Member(a): Member, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
+    let (b, _) = assigned(&s, a.id, id).await?;
+    site::check_out_job(&s, &b).await
 }
 
 async fn me(State(s): State<AppState>, Member(a): Member) -> ApiResult<Json<Value>> {
     let v: Value = sqlx::query_scalar(
-        "SELECT jsonb_build_object('id', m.id, 'name', m.name, 'team_id', p.id, 'team_name', p.team_name)
+        "SELECT jsonb_build_object('id', m.id, 'name', m.name, 'team_id', p.id, 'team_name', p.team_name, 'approved', m.invite_status = 'active')
          FROM team_members m JOIN pros p ON p.id = m.pro_id WHERE m.id = $1 AND m.invite_status <> 'removed'",
     )
     .bind(a.id)
@@ -52,6 +67,9 @@ async fn jobs(State(s): State<AppState>, Member(a): Member, Query(r): Query<Rang
     if (r.to - r.from).num_days() > MAX_RANGE_DAYS {
         return Err(ApiError::BadRequest("range_too_large"));
     }
+    if !approved(&s, a.id).await? {
+        return Ok(Json(Vec::new()));
+    }
     let rows = sqlx::query_as(&format!(
         "SELECT {BOOKING_COLS} FROM bookings b WHERE b.assignee_id = $1 AND b.visit_date BETWEEN $2 AND $3 ORDER BY b.visit_date, b.start_hour"
     ))
@@ -63,8 +81,21 @@ async fn jobs(State(s): State<AppState>, Member(a): Member, Query(r): Query<Rang
     Ok(Json(rows))
 }
 
+/// Only a member the platform owner approved sees addresses and works jobs (`member_approval`).
+async fn approved(s: &AppState, member: Uuid) -> ApiResult<bool> {
+    // A member removed or deleted between the session check and here is simply not approved.
+    let approved: Option<bool> = sqlx::query_scalar("SELECT invite_status = 'active' FROM team_members WHERE id = $1")
+        .bind(member)
+        .fetch_optional(&s.db)
+        .await?;
+    Ok(approved.unwrap_or(false))
+}
+
 /// The member's own job with its team memo, or 404: other jobs are invisible, not forbidden.
 async fn assigned(s: &AppState, member: Uuid, booking: Uuid) -> ApiResult<(BookingRow, Option<String>)> {
+    if !approved(s, member).await? {
+        return Err(ApiError::Forbidden);
+    }
     let b = load_booking(&s.db, booking).await?;
     let (assignee, memo): (Option<Uuid>, Option<String>) = sqlx::query_as("SELECT assignee_id, team_memo FROM bookings WHERE id = $1")
         .bind(booking)

@@ -64,10 +64,12 @@ pub async fn alert_counts(db: &PgPool) -> Result<(i64, i64), sqlx::Error> {
     sqlx::query_as(ALERT_SQL).bind(ALERT_AFTER_HOURS).fetch_one(db).await
 }
 
-/// Webhook kicks start a pass at most this often, however many arrive: `/webhooks/toss` is unauthenticated.
+/// Webhook kicks start a pass at most this often, however many arrive: `/webhooks/toss` is signed, but a flood of valid calls must still stay cheap.
 const KICK_MIN_INTERVAL: Duration = Duration::from_secs(30);
 
 static PASS_RUNNING: AtomicBool = AtomicBool::new(false);
+/// Number of `kick` calls since start (observed by tests).
+pub static KICK_CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 static LAST_KICK: Mutex<Option<Instant>> = Mutex::new(None);
 
 /// Clears the running flag when dropped, so a pass that panics cannot leave kicks disabled for good.
@@ -92,6 +94,8 @@ fn kick_due(last: &Mutex<Option<Instant>>, now: Instant) -> bool {
 /// Runs one pass in the background unless one is already running or one started recently
 /// (webhook bursts coalesce into one pass).
 pub fn kick(state: AppState) {
+    // Counts every call, dev mode included, so the webhook tests can check the Toss route kicks once.
+    KICK_CALLS.fetch_add(1, Ordering::SeqCst);
     if state.config.dev_mode || PASS_RUNNING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
         return;
     }

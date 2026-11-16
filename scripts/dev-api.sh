@@ -31,4 +31,6 @@ if [ "${1:-}" = demo ]; then cd "$ROOT/backend" && exec cargo run -q -p api -- "
 export RATE_LIMIT_AUTH_PER_MIN="${RATE_LIMIT_AUTH_PER_MIN:-1000}"
 # The seeded local admin signs in with its password (smoke, console dev); production keeps TOTP enrolment on.
 export STAFF_MFA_REQUIRED="${STAFF_MFA_REQUIRED:-0}"
+# Dev channel keys for the methods smoke checks out with; a method without a key is not offered (fake values).
+if [ -z "${PORTONE_CHANNEL_KEYS:-}" ]; then export PORTONE_CHANNEL_KEYS='{"card":"dev-channel-card","kakaopay":"dev-channel-kakaopay","virtual_account":"dev-channel-virtual-account","phone":"dev-channel-phone"}'; fi
 cd "$ROOT/backend" && exec cargo run -q -p api

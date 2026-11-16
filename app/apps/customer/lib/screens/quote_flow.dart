@@ -223,11 +223,12 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
   /// Without it (the early preview) the server adds no peak surcharge.
   Future<Json> _fetchEstimate({bool withSlot = true}) async =>
       await context.api.post('/quote/estimate', {
-        ...a.toJson(),
-        'service_code': widget.service.code,
-        if (withSlot && d.date != null) 'visit_date': isoDate(d.date!),
-        if (withSlot) 'start_hour': ?d.hour,
-      }) as Json;
+            ...a.toJson(),
+            'service_code': widget.service.code,
+            if (withSlot && d.date != null) 'visit_date': isoDate(d.date!),
+            if (withSlot) 'start_hour': ?d.hour,
+          })
+          as Json;
 
   /// Guests answer the questions first; signing in is asked only when they book.
   Future<void> _bookAsGuest() async {

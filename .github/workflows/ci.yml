@@ -6,7 +6,7 @@ name: ci
 # self-hosted runner to a job of this repository.
 on:
   push:
-    branches: [master]
+    branches: [master, develop]
   pull_request:
   schedule:
     - cron: "17 3 * * 1"
@@ -17,7 +17,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/develop' }}
 
 jobs:
   # Pull requests skip the heavy jobs their files cannot affect (a skipped job counts as passed for
@@ -81,6 +81,8 @@ jobs:
           RATE_LIMIT_AUTH_PER_MIN: "1000"
           # The seeded admin signs in with a password only; production keeps TOTP enrolment on.
           STAFF_MFA_REQUIRED: "0"
+          # Dev-only channel keys so smoke can offer and start the methods it checkouts with (fake values, never sent to PortOne).
+          PORTONE_CHANNEL_KEYS: '{"card":"dev-channel-card","kakaopay":"dev-channel-kakaopay","virtual_account":"dev-channel-virtual-account","phone":"dev-channel-phone"}'
           SEED_ADMIN_EMAIL: admin@local.test
           SEED_ADMIN_PASSWORD: change-me-now-please
           PSQL: psql
@@ -138,10 +140,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with: { persist-credentials: false }
+        with: { fetch-depth: 0, persist-credentials: false }
       - uses: ./.github/actions/flutter-setup
       - run: dart analyze --fatal-infos
         working-directory: app
+      # Most of the Dart tree predates formatting in CI: files are checked when a pull request changes them.
+      - name: Formatting of the Dart files this pull request changes
+        if: github.event_name == 'pull_request'
+        env: { BASE: "${{ github.base_ref }}" }
+        # gen/ holds gen-l10n output, which is not dart-formatted and is regenerated on every build.
+        run: git diff --name-only --diff-filter=ACMR "origin/$BASE...HEAD" -- 'app/*.dart' | { grep -v '/lib/src/gen/' || true; } | xargs -r dart format --output=none --set-exit-if-changed
 
   app-test:
     needs: changes

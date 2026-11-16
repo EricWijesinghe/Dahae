@@ -11,6 +11,7 @@ import 'package:ui/ui.dart';
 
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
+import 'support/signup_consent.dart';
 
 /// Pages stay in the tree while they slide, so "Next" can match twice; the bar is the last.
 Finder _next() => find.widgetWithText(PrimaryButton, koT.next).last;
@@ -203,6 +204,7 @@ void main() {
       await _tap(tester, find.text(koT.guestBookWithQuote));
       await tester.enterText(find.byType(TextField).last, '01012345678');
       await settle(tester, duration: const Duration(milliseconds: 300));
+      await agreeSignupConsents(tester);
       await tester.tap(find.text(koT.loginSendCode));
       await settle(tester);
       await tester.enterText(find.byType(TextField).last, '123456');

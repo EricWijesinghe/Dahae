@@ -108,6 +108,14 @@ pub struct PeakConfig {
     pub evening_end_hour: u32,
     /// Hard cap on the total surcharge.
     pub max_bps: i64,
+    /// Whether fixed-price and subscription visits pay the surcharge too. Quotes always show it.
+    /// Off by default: live prices change only when the owner turns it on.
+    #[serde(default = "apply_to_fixed_default")]
+    pub apply_to_fixed: bool,
+}
+
+fn apply_to_fixed_default() -> bool {
+    false
 }
 
 impl Default for PeakConfig {
@@ -121,6 +129,7 @@ impl Default for PeakConfig {
             evening_start_hour: 18,
             evening_end_hour: 22,
             max_bps: 5_000,
+            apply_to_fixed: false,
         }
     }
 }
@@ -291,6 +300,16 @@ mod tests {
         let d = NaiveDate::from_ymd_opt(2026, 11, 11).unwrap();
         assert_eq!(kst_to_utc(d, 10), Some(Utc.with_ymd_and_hms(2026, 11, 11, 1, 0, 0).unwrap()));
         assert_eq!(kst_to_utc(d, 24), None);
+    }
+
+    #[test]
+    fn saved_config_without_the_fixed_scope_keeps_peak_off_for_fixed_visits() {
+        // Settings saved before the owner scope existed: fixed visits stay at base price, as before.
+        let legacy = r#"{"weekend_bps":1000,"public_holiday_bps":2000,"lunar_period_bps":3000,"evening_bps":1000,
+            "evening_start_hour":18,"evening_end_hour":22,"max_bps":5000}"#;
+        let c: PeakConfig = serde_json::from_str(legacy).unwrap();
+        assert!(!c.apply_to_fixed);
+        assert_eq!(c, PeakConfig::default());
     }
 
     #[test]

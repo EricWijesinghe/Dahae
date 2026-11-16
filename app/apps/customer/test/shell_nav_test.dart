@@ -29,58 +29,57 @@ Future<TestEnv> _env() async {
 }
 
 void main() {
-  testWidgets(
-    'bottom nav: 4 Dahae tabs with 3D icons, the selected one active',
-    (tester) async {
-      setViewport(tester, phoneSize);
-      final env = await _env();
-      await pumpCustomerApp(tester, env);
-      await pumpUntilFound(tester, find.text(koT.tabHome));
-      await settle(tester);
+  testWidgets('bottom nav: 4 Dahae tabs with 3D icons, the selected one active', (
+    tester,
+  ) async {
+    setViewport(tester, phoneSize);
+    final env = await _env();
+    await pumpCustomerApp(tester, env);
+    await pumpUntilFound(tester, find.text(koT.tabHome));
+    await settle(tester);
 
-      expect(koT.tabBookings, '내 예약');
-      for (final label in [
-        koT.tabHome,
-        koT.tabBookings,
-        koT.tabChat,
-        koT.tabMore,
-      ]) {
-        expect(
-          find.descendant(
-            of: find.byType(NavigationBar),
-            matching: find.text(label),
-          ),
-          findsOneWidget,
-        );
-      }
-      expect(_active(tester), [true, false, false, false]);
-
-      await tester.tap(find.text(koT.tabBookings).last);
-      await tester.pump(const Duration(milliseconds: 32));
-      // The new tab pops (spring running); settle brings it to rest at the active scale.
-      expect(tester.hasRunningAnimations, isTrue);
-      await settle(tester);
-      expect(_active(tester), [false, true, false, false]);
-      // Hidden tabs keep their state but their tickers pause (idle icons, staggers).
-      final home = find.byType(HomeTab, skipOffstage: false);
-      expect(TickerMode.valuesOf(tester.element(home)).enabled, isFalse);
-
-      await tester.tap(find.text(koT.tabMore).last);
-      await settle(tester);
-      expect(_active(tester), [false, false, false, true]);
-
-      // Unread chats keep their badge on the 3D chat icon.
+    expect(koT.tabBookings, '내 예약');
+    for (final label in [
+      koT.tabHome,
+      koT.tabBookings,
+      koT.tabChat,
+      koT.tabMore,
+    ]) {
       expect(
-        find.ancestor(
-          of: find.byWidgetPredicate((w) => w is Icon3D && w.id == 'nav_chat'),
-          matching: find.byType(Badge),
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text(label),
         ),
         findsOneWidget,
       );
-      expect(tester.takeException(), isNull);
-      await unmount(tester);
-    },
-  );
+    }
+    expect(_active(tester), [true, false, false, false]);
+
+    await tester.tap(find.text(koT.tabBookings).last);
+    await tester.pump(const Duration(milliseconds: 32));
+    // The new tab pops (spring running); settle brings it to rest at the active scale.
+    expect(tester.hasRunningAnimations, isTrue);
+    await settle(tester);
+    expect(_active(tester), [false, true, false, false]);
+    // Hidden tabs keep their state but their tickers pause (idle icons, staggers).
+    final home = find.byType(HomeTab, skipOffstage: false);
+    expect(TickerMode.valuesOf(tester.element(home)).enabled, isFalse);
+
+    await tester.tap(find.text(koT.tabMore).last);
+    await settle(tester);
+    expect(_active(tester), [false, false, false, true]);
+
+    // Unread chats keep their badge on the 3D chat icon.
+    expect(
+      find.ancestor(
+        of: find.byWidgetPredicate((w) => w is Icon3D && w.id == 'nav_chat'),
+        matching: find.byType(Badge),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    await unmount(tester);
+  });
 
   testWidgets(
     'bottom nav under reduced motion switches tabs without any animation',

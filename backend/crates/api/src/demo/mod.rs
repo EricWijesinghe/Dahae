@@ -159,6 +159,16 @@ async fn lock(tx: &mut Transaction<'_, Postgres>) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
+/// Demo clear deletes demo audit rows and demo users (whose consents cascade). The append-only guards
+/// (migration 0320) stand down only inside the clear transaction; both are back on before it commits.
+async fn set_append_only_guards(tx: &mut Transaction<'_, Postgres>, on: bool) -> Result<(), sqlx::Error> {
+    let verb = if on { "ENABLE" } else { "DISABLE" };
+    for table in ["audit_log", "user_consents"] {
+        sqlx::query(&format!("ALTER TABLE {table} {verb} TRIGGER USER")).execute(&mut **tx).await?;
+    }
+    Ok(())
+}
+
 /// Writes the demo dataset in one transaction. Refuses to run over real bookings or payments
 /// unless `force` is set, and never twice.
 pub async fn load(db: &PgPool, config: &Config, force: bool) -> Result<Report, DemoError> {
@@ -210,6 +220,7 @@ pub async fn clear(db: &PgPool, config: &Config) -> Result<Report, DemoError> {
             "demo_rows lists table `{unknown}` that clear does not know; add it to CLEAR_ORDER"
         )));
     }
+    set_append_only_guards(&mut tx, false).await?;
     let mut report = Vec::new();
     for (tbl, pk) in CLEAR_ORDER {
         // Table and column names come from the constant list above, never from input.
@@ -227,6 +238,7 @@ pub async fn clear(db: &PgPool, config: &Config) -> Result<Report, DemoError> {
     sqlx::query("DELETE FROM settings WHERE key = 'business' AND value->>'demo' = 'true'")
         .execute(&mut *tx)
         .await?;
+    set_append_only_guards(&mut tx, true).await?;
     tx.commit().await?;
     match tokio::fs::remove_file(placeholder_path(config)).await {
         Ok(()) => {}

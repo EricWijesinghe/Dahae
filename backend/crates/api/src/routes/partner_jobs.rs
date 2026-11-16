@@ -10,6 +10,7 @@ use crate::{
     contract::{PageQuery, json_row_cursor, page_limit, paged, ts_id_cursor},
     error::{ApiError, ApiResult},
     realtime::{Recipient, deliver, enqueue, notify},
+    schedule::{clash, lock_schedule, schedule_clash},
     state::AppState,
     util::{KST_TODAY, best_effort, today_kst},
 };
@@ -24,7 +25,7 @@ use domain::booking::BookingStatus;
 use domain::{Won, partner::payout};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use sqlx::PgPool;
+use sqlx::{PgConnection, PgPool};
 use std::time::Duration;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
@@ -152,8 +153,9 @@ async fn job(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) -> Ap
     let b = load_booking(&s.db, id).await?;
     let fee_bps: i32 = sqlx::query_scalar("SELECT fee_bps FROM pros WHERE id = $1").bind(a.id).fetch_one(&s.db).await?;
     let committed = b.pro_id == Some(a.id);
-    // Pros see a job only if it matches their prefs (same rule as the feed) or it is theirs.
-    if !committed && !visible_to(&s, id, a.id).await? {
+    // Pros see a job only if it is theirs, or still open and matches their prefs (same rule as the feed).
+    let open_to_claim = b.pro_id.is_none() && visible_to(&s, id, a.id).await?;
+    if !committed && !open_to_claim {
         return Err(ApiError::NotFound);
     }
     let pay = gross(&b).map(|g| payout(Won(g), i64::from(fee_bps)));
@@ -225,25 +227,57 @@ pub(crate) async fn require_phone(s: &AppState, pro: Uuid) -> ApiResult<()> {
     if has_phone { Ok(()) } else { Err(ApiError::Conflict("phone_required")) }
 }
 
+/// Whether the job can still be claimed: confirmed, unassigned, and not waiting for a quote.
+async fn claimable(conn: &mut PgConnection, job: Uuid) -> ApiResult<bool> {
+    let confirmed = BookingStatus::Confirmed.as_i16();
+    Ok(sqlx::query_scalar(&format!(
+        "SELECT EXISTS (SELECT 1 FROM bookings WHERE id = $1 AND pro_id IS NULL AND team_name IS NULL AND status = {confirmed} AND answers IS NULL)"
+    ))
+    .bind(job)
+    .fetch_one(conn)
+    .await?)
+}
+
+/// Whether the job is held by this pro in the team-assigned state and the member is on the pro's team.
+async fn assignable(conn: &mut PgConnection, job: Uuid, pro: Uuid, member: Uuid) -> ApiResult<bool> {
+    let assigned = BookingStatus::TeamAssigned.as_i16();
+    Ok(sqlx::query_scalar(&format!(
+        "SELECT EXISTS (SELECT 1 FROM bookings b JOIN team_members m ON m.pro_id = b.pro_id
+           WHERE b.id = $1 AND b.pro_id = $2 AND b.status = {assigned} AND m.id = $3 AND m.invite_status = 'active')"
+    ))
+    .bind(job)
+    .bind(pro)
+    .bind(member)
+    .fetch_one(conn)
+    .await?)
+}
+
 async fn accept(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
     require_phone(&s, a.id).await?;
-    crate::quality::check_offer_gate(&s.db, a.id).await?;
+    crate::quality::check_offer_gate(&s, a.id).await?;
     if !visible_to(&s, id, a.id).await? {
         return Err(ApiError::NotFound);
     }
     // Claim and default assignee in one statement: no half-accepted jobs.
     let mut tx = s.db.begin().await?;
+    lock_schedule(&mut tx, a.id).await?;
     let (assigned, confirmed) = (BookingStatus::TeamAssigned.as_i16(), BookingStatus::Confirmed.as_i16());
+    let clash_sql = clash("bookings");
     let won: Option<(Uuid, String)> = sqlx::query_as(&format!(
         "UPDATE bookings SET pro_id = $2, status = {assigned}, accepted_at = now(), updated_at = now(),
            assignee_id = (SELECT id FROM team_members WHERE pro_id = $2 AND role = 'owner')
-         WHERE id = $1 AND pro_id IS NULL AND team_name IS NULL AND status = {confirmed} AND answers IS NULL RETURNING user_id, number"
+         WHERE id = $1 AND pro_id IS NULL AND team_name IS NULL AND status = {confirmed} AND answers IS NULL
+           AND NOT EXISTS (SELECT 1 FROM bookings o WHERE o.pro_id = $2 AND {clash_sql})
+         RETURNING user_id, number"
     ))
     .bind(id)
     .bind(a.id)
     .fetch_optional(&mut *tx)
     .await?;
-    let (user, number) = won.ok_or(ApiError::Conflict("already_taken"))?;
+    let Some((user, number)) = won else {
+        let overlaps = claimable(&mut tx, id).await? && schedule_clash(&mut tx, id, "pro_id", a.id).await?;
+        return Err(ApiError::Conflict(if overlaps { "schedule_overlap" } else { "already_taken" }));
+    };
     // Queued with the claim. After the commit nothing can fail the request: a 5xx here would make the
     // app retry and get `already_taken` for a job it won.
     let notice = enqueue(
@@ -256,7 +290,7 @@ async fn accept(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) ->
     )
     .await?;
     tx.commit().await?;
-    deliver(&s, notice).await;
+    deliver(&s, notice, chrono::Utc::now()).await;
     s.hub.send(Recipient::Staff, "booking.updated", json!({ "booking_id": id }));
     Ok(Json(json!({ "ok": true, "booking_id": id })))
 }
@@ -410,18 +444,27 @@ struct Assign {
 
 async fn assign(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>, Json(x): Json<Assign>) -> ApiResult<Json<Value>> {
     let assigned = BookingStatus::TeamAssigned.as_i16();
+    let mut tx = s.db.begin().await?;
+    lock_schedule(&mut tx, a.id).await?;
+    let clash_sql = clash("bookings");
     let r = sqlx::query(&format!(
         "UPDATE bookings SET assignee_id = $3, updated_at = now() WHERE id = $1 AND pro_id = $2 AND status = {assigned}
-           AND EXISTS (SELECT 1 FROM team_members m WHERE m.id = $3 AND m.pro_id = $2 AND m.invite_status <> 'removed')"
+           AND EXISTS (SELECT 1 FROM team_members m WHERE m.id = $3 AND m.pro_id = $2 AND m.invite_status = 'active')
+           AND NOT EXISTS (SELECT 1 FROM bookings o WHERE o.assignee_id = $3 AND {clash_sql})"
     ))
     .bind(id)
     .bind(a.id)
     .bind(x.member_id)
-    .execute(&s.db)
+    .execute(&mut *tx)
     .await?;
     if r.rows_affected() == 0 {
+        let overlaps = assignable(&mut tx, id, a.id, x.member_id).await? && schedule_clash(&mut tx, id, "assignee_id", x.member_id).await?;
+        if overlaps {
+            return Err(ApiError::Conflict("schedule_overlap"));
+        }
         return Err(ApiError::NotFound);
     }
+    tx.commit().await?;
     let phone: String = sqlx::query_scalar("SELECT phone FROM team_members WHERE id = $1")
         .bind(x.member_id)
         .fetch_one(&s.db)

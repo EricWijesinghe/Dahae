@@ -11,6 +11,7 @@ services:
       DEV_MODE: "1"
       PUBLIC_BASE_URL: http://localhost
       STAFF_MFA_REQUIRED: "0"
+      PORTONE_CHANNEL_KEYS: '{"card":"dev-channel-card","kakaopay":"dev-channel-kakaopay","virtual_account":"dev-channel-virtual-account","phone":"dev-channel-phone"}'
       SEED_ADMIN_EMAIL: admin@local.test
       SEED_ADMIN_PASSWORD: change-me-now-please
       RATE_LIMIT_AUTH_PER_MIN: "1000"

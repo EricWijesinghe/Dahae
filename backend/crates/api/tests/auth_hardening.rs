@@ -13,7 +13,8 @@ async fn sign_in(app: &axum::Router, phone: &str) -> Value {
     let (st, sent) = call(app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": phone }))).await;
     assert_eq!(st, StatusCode::OK, "{sent}");
     let code = sent["dev_code"].as_str().expect("dev code").to_string();
-    let (st, tokens) = call(app, "POST", "/v1/auth/verify", None, Some(json!({ "phone": phone, "code": code, "audience": "customer" }))).await;
+    let body = json!({ "phone": phone, "code": code, "audience": "customer", "consents": common::required_consents() });
+    let (st, tokens) = call(app, "POST", "/v1/auth/verify", None, Some(body)).await;
     assert_eq!(st, StatusCode::OK, "{tokens}");
     tokens
 }

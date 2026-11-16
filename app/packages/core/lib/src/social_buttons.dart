@@ -140,12 +140,14 @@ class SocialSignInRow extends StatelessWidget {
     required this.onSelected,
     this.busyProvider,
     this.devMode = false,
+    this.enabled = true,
   });
 
   final List<SocialSignIn> providers;
   final ValueChanged<SocialSignIn> onSelected;
   final String? busyProvider;
   final bool devMode;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +180,9 @@ class SocialSignInRow extends StatelessWidget {
             child: SocialSignInButton(
               provider: p.provider,
               busy: busyProvider == p.provider,
-              onPressed: busyProvider == null ? () => onSelected(p) : null,
+              onPressed: busyProvider == null && enabled
+                  ? () => onSelected(p)
+                  : null,
             ),
           ),
         if (devMode)

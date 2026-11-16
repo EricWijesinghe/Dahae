@@ -8,6 +8,7 @@ pub mod analytics;
 pub mod app_links;
 pub mod auth;
 pub mod backup;
+pub mod billing_keys;
 pub mod client_errors;
 pub mod config;
 pub mod contract;
@@ -47,6 +48,7 @@ pub mod renewals;
 pub mod retention;
 pub mod routes;
 pub mod safety;
+pub mod schedule;
 pub mod seed;
 pub mod seo;
 pub mod settings_registry;
@@ -94,6 +96,10 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     let moved = safety::encrypt_legacy_codes(&db, &config.data_key).await?;
     if moved > 0 {
         tracing::warn!(moved, "entry codes moved into encrypted storage");
+    }
+    let sealed = billing_keys::seal_stored(&db, &config.data_key).await?;
+    if sealed > 0 {
+        tracing::warn!(sealed, "saved-card billing keys moved into encrypted storage");
     }
     routes::setup::ensure_setup_code(&db, config.setup_code.as_deref(), config.setup_code_at).await?;
     tokio::fs::create_dir_all(&config.upload_dir).await?;

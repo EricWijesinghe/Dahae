@@ -1,22 +1,52 @@
-# 다해 안내서
+# 다해 안내서 · Dahae guides
 
-처음이라면 **0번 한 장**만 따라 하면 설치가 끝나요.
+[English](#english) · 한국어
 
-| 번호 | 안내서 | 누가 | 언제 |
-|---|---|---|---|
-| 0 | [한 번에 설치하기](00-한번에-설치.md) | 사장님 또는 설치 담당 | 처음 한 번 (약 30분) |
-| 1 | [서버 설치 (자세히)](01-서버-설치.md) | 설치 담당 | 0번에서 막혔을 때, 체험용 데이터 |
-| 2 | [설정 마법사](02-설정-마법사.md) | 설치 담당 + 사장님 | 설치 직후 (결제·문자·로그인 연결) |
-| 3 | [앱 출시](03-앱-출시.md) | 설치 담당 → 개발자 | 스토어에 앱을 올릴 때 |
-| 4 | [사장님 가이드](04-사장님-가이드.md) | 사장님 | 매일 5분 |
-| 5 | [체험용 설치](05-demo-install.md) | 개발자 | 인터넷 없이 시연할 때 |
-| 6 | [알림톡 템플릿 등록](06-알림톡-템플릿-등록.md) | 설치 담당 | 카카오 알림톡을 쓸 때 |
-| 7 | [운영 명령어](07-운영-명령어.md) | 설치 담당 | 백업, 업데이트, 문제 확인 |
+처음이라면 **0번 한 장**만 따라 하면 설치가 끝나요. Start with guide 0 if this is your first setup.
 
-## 급할 때
-| 상황 | 볼 곳 |
+| 번호 | 안내서 · Guide | 한 줄 설명 · What it covers | 누가 · Who | 언제 · When |
+|---|---|---|---|---|
+| 0 | [한 번에 설치하기](00-한번에-설치.md) · *Install in one go* | 서버 빌리기, 도메인 연결, 설치 명령 한 줄, 사장님 계정까지 | 사장님 또는 설치 담당 | 처음 한 번 (약 30분) |
+| 1 | [서버 설치 (자세히)](01-서버-설치.md) · *Server setup in detail* | 서버 사양, 방화벽, 설치가 막힐 때의 자세한 순서 | 설치 담당 | 0번에서 막혔을 때 |
+| 2 | [설정 마법사](02-설정-마법사.md) · *Setup wizard* | 사업장 정보, 결제, 문자, 간편 로그인, 외부 백업 연결 | 설치 담당 + 사장님 | 설치 직후 |
+| 3 | [앱 출시](03-앱-출시.md) · *App store release* | App Store, Google Play에 고객·파트너 앱을 올리는 순서 | 설치 담당 → 개발자 | 스토어에 앱을 올릴 때 |
+| 4 | [사장님 가이드](04-사장님-가이드.md) · *Owner's daily guide* | 콘솔 하루 사용법: 견적, 파트너, 직원, 개인정보 요청 | 사장님 | 매일 5분 |
+| 5 | [체험용 설치](05-demo-install.md) · *Demo install* | 인터넷 없이 이미지 파일로 체험 서버 만들기 | 개발자 | 시연할 때 |
+| 6 | [알림톡 템플릿 등록](06-알림톡-템플릿-등록.md) · *KakaoTalk AlimTalk templates* | 카카오 알림톡 템플릿 7종 등록과 설정 칸 입력 | 설치 담당 | 알림톡을 쓸 때 |
+| 7 | [운영 명령어](07-운영-명령어.md) · *Operations commands* | `dahae` 명령: 상태, 로그, 백업, 복구, 업데이트, 되돌리기 | 설치 담당 | 백업, 업데이트, 문제 확인 |
+| - | [결제 연동 설정](payments-setup.md) · *Payment setup (PortOne · Toss Payments)* | 결제와 지급대행 키 발급 순서, 웹훅 점검, 테스트 결제 | 설치 담당 | 결제 카드를 채울 때 |
+| - | [결제 연동 참고](payments-reference.md) · *Payment integration reference* | 결제·지급대행 API 연동 사양과 확인 필요 항목 | 개발자 | 결제 로직을 점검할 때 |
+
+## 급할 때 · When something is wrong
+
+| 상황 · Situation | 볼 곳 · Where to look |
 |---|---|
-| 사이트가 안 열려요 | [7. 운영 명령어](07-운영-명령어.md) 1번 `status`, 2번 `logs` |
-| 업데이트 뒤에 이상해요 | [7. 운영 명령어](07-운영-명령어.md) 6번 `rollback` |
-| 데이터를 되살려야 해요 | [7. 운영 명령어](07-운영-명령어.md) 4번 `restore` |
-| 설치 코드를 잃어버렸어요 | 서버에서 `sudo dahae setup-code` |
+| 사이트가 안 열려요 · The site does not open | [7. 운영 명령어](07-운영-명령어.md) 1번 `status`, 2번 `logs` |
+| 업데이트 뒤에 이상해요 · Something broke after an update | [7. 운영 명령어](07-운영-명령어.md) 6번 `rollback` |
+| 데이터를 되살려야 해요 · Restore data from a backup | [7. 운영 명령어](07-운영-명령어.md) 4번 `restore` |
+| 설치 코드를 잃어버렸어요 · Lost the setup code | 서버에서 `sudo dahae setup-code` · run on the server |
+| 결제 키 값이 맞는지 모르겠어요 · Not sure the payment keys are right | [결제 연동 설정](payments-setup.md) 3번 웹훅 점검 · section 3, webhook check |
+
+---
+
+<a id="english"></a>
+
+## English
+
+Guides are written in Korean for the business owner. The two payment guides are bilingual.
+Start with **guide 0** (install in one go), then **guide 2** (setup wizard) and **guide 4** (daily console use).
+
+| No. | Guide | What it covers | Who | When |
+|---|---|---|---|---|
+| 0 | [Install in one go](00-한번에-설치.md) (Korean) | Renting a server, connecting a domain, the one-line install command, creating the owner account | Owner or installer | Once, about 30 minutes |
+| 1 | [Server setup in detail](01-서버-설치.md) (Korean) | Server size, firewall, step-by-step fallback when guide 0 gets stuck | Installer | When guide 0 is blocked |
+| 2 | [Setup wizard](02-설정-마법사.md) (Korean) | Business details, payments, SMS, social sign-in, offsite backup | Installer and owner | Right after install |
+| 3 | [App store release](03-앱-출시.md) (Korean) | Publishing the customer and partner apps to the App Store and Google Play | Installer, then developer | When the apps go to the stores |
+| 4 | [Owner's daily guide](04-사장님-가이드.md) (Korean) | Daily console use: quotes, partners, staff, privacy requests | Owner | Five minutes a day |
+| 5 | [Demo install](05-demo-install.md) (Korean) | Building a demo server from an image file, without GitHub | Developer | Offline demos |
+| 6 | [KakaoTalk AlimTalk templates](06-알림톡-템플릿-등록.md) (Korean) | Registering the seven AlimTalk templates and entering them in the wizard | Installer | When AlimTalk is used |
+| 7 | [Operations commands](07-운영-명령어.md) (Korean) | The `dahae` command: status, logs, backup, restore, update, rollback | Installer | Backups, updates, troubleshooting |
+| - | [Payment setup (PortOne · Toss Payments)](payments-setup.md) (bilingual) | Key order, webhook check, test payments | Installer | When filling the payment card |
+| - | [Payment integration reference](payments-reference.md) (bilingual) | PortOne V2 and Toss payout API notes, items still to confirm in a sandbox | Developer | When reviewing payment code |
+
+[한국어로 돌아가기](#다해-안내서--dahae-guides)

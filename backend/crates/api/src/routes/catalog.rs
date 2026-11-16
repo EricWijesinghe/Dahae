@@ -71,7 +71,7 @@ pub async fn load_formula(db: &sqlx::PgPool) -> ApiResult<QuoteFormula> {
 }
 
 /// Owner peak-pricing config (settings key `peak_pricing`); defaults apply until the owner saves one.
-pub async fn load_peak_config(db: &sqlx::PgPool) -> ApiResult<PeakConfig> {
+pub async fn load_peak_config(db: impl sqlx::PgExecutor<'_>) -> ApiResult<PeakConfig> {
     let v: Option<sqlx::types::Json<PeakConfig>> = sqlx::query_scalar("SELECT value FROM settings WHERE key = 'peak_pricing'")
         .fetch_optional(db)
         .await?;

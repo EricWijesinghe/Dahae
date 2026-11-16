@@ -14,6 +14,7 @@ S = {
   "err_already_paid": ["이미 결제가 끝났어요.", "This is already paid."],
   "err_quote_not_payable": ["아직 결제할 수 없는 견적이에요. 상담팀에 확인해 주세요.", "This quote can't be paid yet. Check with our team."],
   "err_payment_method_disabled": ["지금은 이 결제수단을 쓸 수 없어요.", "This payment method isn't available right now."],
+  "err_payment_methods_empty": ["결제 수단을 하나 이상 켜 주세요. 모두 끄면 고객이 결제할 수 없어요.", "Keep at least one payment method on. With none on, customers can't pay."],
   "err_invalid_payment_method": ["선택한 결제수단을 쓸 수 없어요. 다른 방법을 골라 주세요.", "That payment method can't be used. Choose another."],
   "err_balance_not_due": ["잔금은 아직 결제할 시기가 아니에요.", "The balance isn't due yet."],
   "err_invalid_slot": ["이 서비스에서는 고를 수 없는 시간이에요.", "That time isn't offered for this service."],
@@ -33,6 +34,8 @@ S = {
   "err_invalid_transition": ["지금은 이 상태로 바꿀 수 없어요.", "The status can't be changed that way right now."],
   # partner
   "err_job_not_started": ["먼저 작업을 시작해 주세요.", "Start the job first."],
+  "err_not_checked_in": ["도착 기록이 없어요. 먼저 도착을 기록하거나 사유를 적어 주세요.", "The arrival isn't recorded. Check in first, or give a reason."],
+  "err_override_reason_too_long": ["사유는 200자 이하로 적어 주세요.", "Keep the reason to 200 characters or fewer."],
   "err_job_not_active": ["지금은 진행할 수 없는 작업이에요.", "This job isn't active."],
   "err_quote_locked": ["확정된 견적이라 수정할 수 없어요.", "This quote is locked and can't be edited."],
   "err_request_closed": ["이미 마감된 요청이에요.", "This request is closed."],

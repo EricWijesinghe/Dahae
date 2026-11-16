@@ -20,6 +20,7 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
   List<ChatThread> _threads = [];
   String? _selected;
   String? _aiLine;
+  bool _aiOutage = false;
   bool _loading = true;
 
   @override
@@ -56,14 +57,22 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
       final r = await context.api.get('/admin/ai/usage') as Json;
       if (!mounted) return;
       final t = context.t;
-      final calls = ((r['month'] as Json)['calls'] as num).toInt();
-      setState(
-        () => _aiLine = r['configured'] == true
+      final month = r['month'] as Json;
+      final calls = (month['calls'] as num).toInt();
+      final failing = ((month['errors_last_hour'] as num?) ?? 0) > 0;
+      setState(() {
+        _aiLine = r['configured'] == true
             ? t.aiUsageMonth('$calls')
-            : t.aiNotConfigured,
-      );
+            : t.aiNotConfigured;
+        _aiOutage = failing;
+      });
     } catch (_) {
-      if (mounted) setState(() => _aiLine = null);
+      if (mounted) {
+        setState(() {
+          _aiLine = null;
+          _aiOutage = false;
+        });
+      }
     }
   }
 
@@ -99,6 +108,16 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
     final t = context.t;
     final list = Column(
       children: [
+        if (_aiOutage)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.md, 0),
+            child: Text(
+              t.aiOutageBanner,
+              style: context.text.labelSmall?.copyWith(
+                color: context.colors.danger,
+              ),
+            ),
+          ),
         if (_aiLine != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.md, 0),

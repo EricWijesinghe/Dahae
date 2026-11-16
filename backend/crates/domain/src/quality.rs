@@ -167,7 +167,6 @@ pub enum QualityTip {
 }
 
 /// Up to three tips, weakest component first, for components below 0.9.
-/// Dispatch: order candidates by `score` descending, after dropping `can_receive_offers == false`.
 pub fn tips(c: &QualityComponents) -> Vec<QualityTip> {
     let mut ranked = [
         (c.rating, QualityTip::ImproveRating),

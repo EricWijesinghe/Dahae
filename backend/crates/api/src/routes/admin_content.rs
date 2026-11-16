@@ -1,6 +1,10 @@
 //! Console: catalogue, pricing settings, coupons, content, pros, settlements, staff, customers.
 
-use super::{audit, uploads};
+use super::{
+    audit,
+    pro_verification::{Checklist, checklist_complete, record_checklist, validate_checklist},
+    uploads,
+};
 use crate::{
     auth::{Admin, Staff, hash_password, normalize_phone},
     contract,
@@ -44,6 +48,12 @@ pub fn routes() -> Router<AppState> {
         .route("/customers", get(customers))
         .route("/pros", get(list_pros))
         .route("/pros/{id}/status", post(set_pro_status))
+        .route("/pros/{id}/quality", get(pro_quality))
+        .route(
+            "/pros/{id}/profile",
+            get(super::pro_verification::get_profile).put(super::pro_verification::put_profile),
+        )
+        .route("/pros/{id}/payee-identifier/reveal", post(super::pro_verification::reveal_payee_identifier))
         .route("/settlements", get(list_settlements))
         .route("/settlements/payouts", get(super::payouts::list_payouts))
         .route("/settlements/run-payouts", post(super::payouts::run_payouts))
@@ -215,7 +225,12 @@ async fn get_peak_pricing(State(s): State<AppState>, _st: Staff) -> ApiResult<Js
 }
 
 /// Owner-only. Validated before it replaces the built-in default; applies to new quotes and bookings.
-async fn put_peak_pricing(State(s): State<AppState>, Admin(a): Admin, Json(p): Json<domain::peak::PeakConfig>) -> ApiResult<Json<Value>> {
+/// `apply_to_fixed` must be sent explicitly: a client that omits it would otherwise flip the owner's scope silently.
+async fn put_peak_pricing(State(s): State<AppState>, Admin(a): Admin, Json(body): Json<Value>) -> ApiResult<Json<Value>> {
+    if body.get("apply_to_fixed").and_then(Value::as_bool).is_none() {
+        return Err(ApiError::BadRequest("apply_to_fixed_required"));
+    }
+    let p: domain::peak::PeakConfig = serde_json::from_value(body).map_err(|_| ApiError::BadRequest("invalid_peak_config"))?;
     p.validate()?;
     sqlx::query("INSERT INTO settings (key, value) VALUES ('peak_pricing', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = now()")
         .bind(sqlx::types::Json(&p))
@@ -401,7 +416,7 @@ struct Search {
     q: Option<String>,
 }
 
-async fn customers(State(s): State<AppState>, Staff(st): Staff, Query(q): Query<Search>) -> ApiResult<Json<Value>> {
+async fn customers(State(s): State<AppState>, Admin(st): Admin, Query(q): Query<Search>) -> ApiResult<Json<Value>> {
     let like = q.q.map(|x| format!("%{}%", x.replace(['%', '_'], "")));
     audit(&s.db, "staff", Some(st.id), "customer.pii_list", "users", json!({ "searched": like.is_some() })).await?;
     let v: Value = sqlx::query_scalar(
@@ -420,7 +435,9 @@ async fn list_pros(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Valu
         "SELECT COALESCE(jsonb_agg(x), '[]') FROM (SELECT p.id, p.name, p.team_name, p.phone, p.status, p.fee_bps, p.created_at,
            (SELECT count(*) FROM bookings b WHERE b.pro_id = p.id AND b.status = 3) AS completed,
            (SELECT count(*) FROM bookings b WHERE b.pro_id = p.id AND b.status = -1) AS cancelled,
-           (SELECT round(avg(rating)::numeric, 2) FROM reviews r WHERE r.pro_id = p.id AND NOT r.hidden) AS rating
+           (SELECT round(avg(rating)::numeric, 2) FROM reviews r WHERE r.pro_id = p.id AND NOT r.hidden) AS rating,
+           (SELECT q.score FROM partner_quality q WHERE q.pro_id = p.id) AS quality_score,
+           (SELECT q.status FROM partner_quality q WHERE q.pro_id = p.id) AS quality_status
          FROM pros p ORDER BY p.status, p.created_at DESC LIMIT $1) x",
     )
     .bind(LIST_LIMIT)
@@ -429,32 +446,54 @@ async fn list_pros(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Valu
     Ok(Json(v))
 }
 
+/// Score, status, components and tips for one partner. Read-only for staff.
+async fn pro_quality(State(s): State<AppState>, _st: Staff, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
+    Ok(Json(crate::quality::read(&s.db, id).await?))
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ProStatus {
     status: String,
     fee_bps: Option<i32>,
+    checklist: Option<Checklist>,
 }
 
+/// Verifying needs every checklist item ticked. The checklist, the status and the audit row commit together.
 async fn set_pro_status(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<Uuid>, Json(p): Json<ProStatus>) -> ApiResult<Json<Value>> {
     if !matches!(p.status.as_str(), "pending" | "verified" | "suspended") || p.fee_bps.is_some_and(|f| !(0..=5_000).contains(&f)) {
         return Err(ApiError::BadRequest("invalid_status"));
     }
-    sqlx::query("UPDATE pros SET status = $2, fee_bps = COALESCE($3, fee_bps) WHERE id = $1")
+    if let Some(list) = &p.checklist {
+        validate_checklist(list)?;
+    }
+    if p.status == "verified" && !p.checklist.as_ref().is_some_and(checklist_complete) {
+        return Err(ApiError::BadRequest("checklist_incomplete"));
+    }
+    let mut tx = s.db.begin().await?;
+    let updated = sqlx::query("UPDATE pros SET status = $2, fee_bps = COALESCE($3, fee_bps) WHERE id = $1")
         .bind(id)
         .bind(&p.status)
         .bind(p.fee_bps)
-        .execute(&s.db)
+        .execute(&mut *tx)
         .await?;
+    if updated.rows_affected() == 0 {
+        return Err(ApiError::NotFound);
+    }
+    if let Some(list) = &p.checklist {
+        record_checklist(&mut *tx, id, a.id, list).await?;
+    }
+    let checklist = p.checklist.as_ref().map_or(Value::Null, |c| json!(c));
     audit(
-        &s.db,
+        &mut *tx,
         "staff",
         Some(a.id),
         "pro.status",
         &id.to_string(),
-        json!({ "status": p.status, "fee_bps": p.fee_bps }),
+        json!({ "status": p.status, "fee_bps": p.fee_bps, "checklist": checklist }),
     )
     .await?;
+    tx.commit().await?;
     notify(&s, Recipient::Pro(id), "pro.status", "계정 상태", &p.status, json!({ "status": p.status })).await?;
     Ok(Json(json!({ "ok": true })))
 }
@@ -464,7 +503,7 @@ struct SettlementFilter {
     state: Option<String>,
 }
 
-async fn list_settlements(State(s): State<AppState>, _st: Staff, Query(f): Query<SettlementFilter>) -> ApiResult<Json<Value>> {
+async fn list_settlements(State(s): State<AppState>, _a: Admin, Query(f): Query<SettlementFilter>) -> ApiResult<Json<Value>> {
     let v: Value = sqlx::query_scalar(
         "SELECT COALESCE(jsonb_agg(x), '[]') FROM (SELECT st.*, p.name AS pro_name, p.team_name, b.number FROM settlements st JOIN pros p ON p.id = st.pro_id JOIN bookings b ON b.id = st.booking_id
          WHERE $1::text IS NULL OR st.state = $1 ORDER BY st.payout_date NULLS LAST, st.created_at LIMIT $2) x",

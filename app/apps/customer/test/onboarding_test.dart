@@ -6,6 +6,7 @@ import 'package:ui/ui.dart';
 import 'support/customer_host.dart';
 import 'support/customer_routes.dart';
 import 'support/home_groups.dart';
+import 'support/signup_consent.dart';
 
 /// Guests browse freely; the phone sign-in opens from the first protected action (booking).
 Future<void> openSignInFromBooking(WidgetTester tester) async {
@@ -45,6 +46,7 @@ void main() {
               .text,
           '010-1234-5678',
         );
+        await agreeSignupConsents(tester);
         await tester.tap(find.text(koT.loginSendCode));
         await settle(tester);
         expect(
@@ -95,6 +97,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField).last, '01012345678');
       await settle(tester, duration: const Duration(milliseconds: 300));
+      await agreeSignupConsents(tester);
       expect(
         tester.widget<PrimaryButton>(find.byType(PrimaryButton).last).onPressed,
         isNotNull,
@@ -119,6 +122,7 @@ void main() {
       await openSignInFromBooking(tester);
       await tester.enterText(find.byType(TextField).last, '01012345678');
       await settle(tester, duration: const Duration(milliseconds: 300));
+      await agreeSignupConsents(tester);
       await tester.tap(find.text(koT.loginSendCode));
       await settle(tester);
 

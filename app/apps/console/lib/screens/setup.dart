@@ -69,6 +69,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     key: ValueKey(c['code']),
                     card: c,
                     webhookUrl: data['webhook_url'] as String?,
+                    tossWebhookUrl: data['toss_webhook_url'] as String?,
                     onChanged: _reload,
                   ),
                 ],
@@ -166,10 +167,12 @@ class IntegrationCard extends StatefulWidget {
     required this.card,
     required this.onChanged,
     this.webhookUrl,
+    this.tossWebhookUrl,
   });
   final Json card;
   final VoidCallback onChanged;
   final String? webhookUrl;
+  final String? tossWebhookUrl;
 
   @override
   State<IntegrationCard> createState() => _IntegrationCardState();
@@ -312,6 +315,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
   Widget build(BuildContext context) {
     final t = context.t;
     final configured = widget.card['configured'] == true;
+    // Test or live from the saved Toss key prefix (server-side); null when there is none.
+    final mode = widget.card['mode'] as String?;
     final ok = _result?['ok'] == true;
     final status = !configured
         ? Tag(label: t.cSetupNotConnected, hue: StatusHues.consultation)
@@ -349,12 +354,27 @@ class _IntegrationCardState extends State<IntegrationCard> {
           title: Text(_guide.title(t), style: context.text.titleMedium),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Align(alignment: Alignment.centerLeft, child: status),
+            child: Wrap(
+              spacing: Space.xs,
+              runSpacing: Space.xs,
+              children: [
+                status,
+                if (mode != null)
+                  Tag(
+                    label: mode == 'live' ? t.cSetupModeLive : t.cSetupModeTest,
+                    hue: mode == 'live'
+                        ? StatusHues.assigned
+                        : StatusHues.consultation,
+                  ),
+              ],
+            ),
           ),
           children: [
             _Steps(guide: _guide),
             if (_code == 'portone' && widget.webhookUrl != null)
               _CopyRow(label: t.cSetupWebhook, value: widget.webhookUrl!),
+            if (_code == 'payout' && widget.tossWebhookUrl != null)
+              _CopyRow(label: t.cSetupWebhook, value: widget.tossWebhookUrl!),
             const SizedBox(height: Space.md),
             for (final f in _fields) _field(context, f),
             const SizedBox(height: Space.md),

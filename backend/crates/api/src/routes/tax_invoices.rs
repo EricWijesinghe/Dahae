@@ -4,6 +4,7 @@
 
 use super::{
     audit,
+    bookings::Actor,
     checkouts::load_owned,
     finance::{PeriodQuery, csv_response, resolve},
 };
@@ -26,7 +27,7 @@ use domain::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::{FromRow, PgPool};
+use sqlx::{FromRow, PgConnection, PgExecutor, PgPool};
 use uuid::Uuid;
 
 /// Line item name on the invoice. ACCOUNTANT: confirm the 품목 wording for cleaning services.
@@ -128,15 +129,20 @@ async fn request(State(s): State<AppState>, Customer(a): Customer, Path(checkout
     Ok(Json(view(&s.db, id).await?))
 }
 
-/// Called after a checkout settles: links the pending request to the payment and queues it for the owner.
-pub async fn on_settled(s: &AppState, checkout: Uuid, provider_tx_id: &str) {
+/// Called after a checkout settles: links the pending request to the payment and queues it for the owner. A payment
+/// already refunded in full by the time the link lands is cancelled instead, never queued.
+pub async fn on_settled(db: &PgPool, checkout: Uuid, provider_tx_id: &str) {
     let linked = sqlx::query(
-        "UPDATE tax_invoice_requests SET payment_id = (SELECT id FROM payments WHERE provider = 'portone' AND provider_tx_id = $2 LIMIT 1),
-         state = 'requested', updated_at = now() WHERE checkout_id = $1 AND state = 'pending'",
+        "UPDATE tax_invoice_requests SET
+           payment_id = (SELECT id FROM payments WHERE provider = 'portone' AND provider_tx_id = $2 LIMIT 1),
+           state = CASE WHEN (SELECT status FROM payments WHERE provider = 'portone' AND provider_tx_id = $2 LIMIT 1) = 'refunded'
+                        THEN 'cancelled' ELSE 'requested' END,
+           updated_at = now()
+         WHERE checkout_id = $1 AND state = 'pending'",
     )
     .bind(checkout)
     .bind(provider_tx_id)
-    .execute(&s.db)
+    .execute(db)
     .await;
     if let Err(e) = linked {
         tracing::error!(error = %e, checkout = %checkout, "tax invoice link failed");
@@ -172,20 +178,32 @@ struct ExportRow {
     amount: i64,
 }
 
-/// CSV for the 홈택스 upload: queued requests (state 'requested') in the range. Marks them exported.
-async fn export(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Response> {
-    let (from, to) = resolve(&q)?;
-    let rows: Vec<ExportRow> = sqlx::query_as(
+/// Which queued rows a read returns: only those not exported yet (export), or only those already handed out (re-export).
+#[derive(Clone, Copy)]
+enum Queue {
+    Unexported,
+    Exported,
+}
+
+/// Queued requests (state 'requested') in the range. An export locks the rows it reads (SKIP LOCKED), so two
+/// concurrent exports cannot both take the same request.
+async fn queued_rows(db: impl PgExecutor<'_>, from: NaiveDate, to: NaiveDate, queue: Queue) -> ApiResult<Vec<ExportRow>> {
+    let (fresh, lock) = match queue {
+        Queue::Unexported => ("AND t.exported_at IS NULL", "FOR UPDATE OF t SKIP LOCKED"),
+        Queue::Exported => ("AND t.exported_at IS NOT NULL", ""),
+    };
+    let sql = format!(
         "SELECT t.id, (t.created_at AT TIME ZONE 'Asia/Seoul')::date AS day, t.business_number, t.company_name, t.representative,
            t.business_type, t.business_item, t.address, t.email, p.amount
          FROM tax_invoice_requests t JOIN payments p ON p.id = t.payment_id
-         WHERE t.state = 'requested' AND (t.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
-         ORDER BY t.created_at, t.id",
-    )
-    .bind(from)
-    .bind(to)
-    .fetch_all(&s.db)
-    .await?;
+         WHERE t.state = 'requested' {fresh} AND (t.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+         ORDER BY t.created_at, t.id {lock}"
+    );
+    Ok(sqlx::query_as(&sql).bind(from).bind(to).fetch_all(db).await?)
+}
+
+/// The 홈택스 CSV response for these rows.
+fn invoice_csv(rows: &[ExportRow], from: NaiveDate, to: NaiveDate) -> ApiResult<Response> {
     let invoice_rows: Vec<InvoiceRow> = rows
         .iter()
         .map(|r| InvoiceRow {
@@ -201,13 +219,23 @@ async fn export(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<Peri
             total: r.amount,
         })
         .collect();
+    let name = format!("malkkeum-tax-invoices-{from}_{to}");
+    csv_response(&name, finance::csv_document(&tax::tax_invoice_document(&invoice_rows)))
+}
+
+/// CSV for the 홈택스 upload: queued requests not exported yet, in the range. Marks them exported and writes the
+/// audit row in the same transaction, so a failed write hands out no file and marks nothing.
+async fn export(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Response> {
+    let (from, to) = resolve(&q)?;
+    let mut tx = s.db.begin().await?;
+    let rows = queued_rows(&mut *tx, from, to, Queue::Unexported).await?;
     let ids: Vec<Uuid> = rows.iter().map(|r| r.id).collect();
     sqlx::query("UPDATE tax_invoice_requests SET exported_at = now(), updated_at = now() WHERE id = ANY($1)")
         .bind(&ids)
-        .execute(&s.db)
+        .execute(&mut *tx)
         .await?;
     audit(
-        &s.db,
+        &mut *tx,
         "staff",
         Some(a.id),
         "finance.export",
@@ -215,8 +243,45 @@ async fn export(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<Peri
         json!({ "from": from, "to": to, "rows": ids.len() }),
     )
     .await?;
-    let name = format!("malkkeum-tax-invoices-{from}_{to}");
-    csv_response(&name, finance::csv_document(&tax::tax_invoice_document(&invoice_rows)))
+    tx.commit().await?;
+    invoice_csv(&rows, from, to)
+}
+
+#[derive(Deserialize)]
+struct ReExportQuery {
+    period: Option<String>,
+    anchor: Option<NaiveDate>,
+    from: Option<NaiveDate>,
+    to: Option<NaiveDate>,
+    #[serde(default)]
+    confirm: bool,
+}
+
+/// `POST /finance/export/tax-invoices/re-export?confirm=true`: sends the same queued rows again, for a lost or
+/// damaged file. Only repeats rows already exported (a never-exported row is not handed out here). Leaves
+/// exported_at as it is. Needs the explicit confirm flag and writes an audit row.
+async fn re_export(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<ReExportQuery>) -> ApiResult<Response> {
+    if !q.confirm {
+        return Err(ApiError::BadRequest("confirm_required"));
+    }
+    let period = PeriodQuery {
+        period: q.period,
+        anchor: q.anchor,
+        from: q.from,
+        to: q.to,
+    };
+    let (from, to) = resolve(&period)?;
+    let rows = queued_rows(&s.db, from, to, Queue::Exported).await?;
+    audit(
+        &s.db,
+        "staff",
+        Some(a.id),
+        "tax_invoice.re_export",
+        "tax_invoices",
+        json!({ "from": from, "to": to, "rows": rows.len() }),
+    )
+    .await?;
+    invoice_csv(&rows, from, to)
 }
 
 #[derive(Deserialize)]
@@ -247,6 +312,38 @@ async fn mark_issued(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<
     Ok(Json(view(&s.db, id).await?))
 }
 
+/// Runs inside the refund transaction when a payment is refunded in full. An open request (pending, or queued and not
+/// exported) is cancelled, including one not yet linked to the payment when its checkout paid it. A request already
+/// exported or issued stays (the owner has it): an audit row raises it so it is cancelled on 홈택스.
+pub async fn cancel_for_refunded_payment(conn: &mut PgConnection, payment: Uuid, actor: Actor<'_>) -> ApiResult<()> {
+    sqlx::query(
+        "UPDATE tax_invoice_requests SET state = 'cancelled', updated_at = now()
+         WHERE state IN ('pending', 'requested') AND exported_at IS NULL AND (payment_id = $1 OR (payment_id IS NULL AND checkout_id IN (
+           SELECT id FROM checkouts WHERE provider_payment_id = (SELECT provider_tx_id FROM payments WHERE id = $1))))",
+    )
+    .bind(payment)
+    .execute(&mut *conn)
+    .await?;
+    let kept: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM tax_invoice_requests WHERE payment_id = $1 AND (state = 'issued' OR (state = 'requested' AND exported_at IS NOT NULL))",
+    )
+    .bind(payment)
+    .fetch_all(&mut *conn)
+    .await?;
+    if !kept.is_empty() {
+        audit(
+            &mut *conn,
+            actor.role,
+            actor.id,
+            "tax_invoice.refund_needs_cancel",
+            "tax_invoices",
+            json!({ "payment": payment, "requests": kept }),
+        )
+        .await?;
+    }
+    Ok(())
+}
+
 /// Customer routes, merged at the top level like the checkout routes.
 pub fn routes() -> Router<AppState> {
     Router::new().route("/checkouts/{id}/tax-invoice", put(request))
@@ -257,5 +354,6 @@ pub fn admin_routes() -> Router<AppState> {
     Router::new()
         .route("/finance/tax-invoices", get(list))
         .route("/finance/export/tax-invoices", get(export))
+        .route("/finance/export/tax-invoices/re-export", post(re_export))
         .route("/finance/tax-invoices/{id}/issued", post(mark_issued))
 }
