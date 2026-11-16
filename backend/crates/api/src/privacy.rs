@@ -84,7 +84,8 @@ pub struct ConsentItem {
 pub struct ConsentState {
     version: &'static str,
     items: Vec<ConsentItem>,
-    /// True while a required consent is missing or was given for an older policy version.
+    /// True while a required consent is missing or was given for an older policy version, or the overseas
+    /// transfer grant is for an older version (a withdrawal is never asked again).
     reconsent_required: bool,
 }
 
@@ -98,7 +99,10 @@ fn state_of(rows: &[Latest]) -> ConsentState {
             granted_at: rows.iter().find(|r| r.kind == kind).map(|r| r.created_at),
         })
         .collect();
-    let reconsent_required = items.iter().any(|i| i.required && !i.granted);
+    // Overseas transfer is withdrawable, but a grant for an older policy text is asked again rather than lapsing:
+    // otherwise push and the AI chat would switch off without the customer ever being told.
+    let stale_overseas = rows.iter().any(|r| r.kind == "overseas_transfer" && r.granted && r.version != CONSENT_VERSION);
+    let reconsent_required = stale_overseas || items.iter().any(|i| i.required && !i.granted);
     ConsentState {
         version: CONSENT_VERSION,
         items,
@@ -605,6 +609,35 @@ mod tests {
             Err(_) => Some("other"),
             Ok(()) => None,
         }
+    }
+
+    fn row(kind: &str, granted: bool, version: &str) -> Latest {
+        Latest {
+            kind: kind.into(),
+            version: version.into(),
+            granted,
+            created_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn overseas_grant_for_an_older_policy_text_asks_again() {
+        let current = |overseas: Latest| vec![row("terms", true, CONSENT_VERSION), row("privacy", true, CONSENT_VERSION), overseas];
+        let stale = state_of(&current(row("overseas_transfer", true, "2000-01-01")));
+        assert!(stale.reconsent_required, "push and AI must not switch off silently after a policy change");
+        assert!(
+            !stale.items.iter().any(|i| i.kind == "overseas_transfer" && i.granted),
+            "an old grant does not count"
+        );
+        assert!(!state_of(&current(row("overseas_transfer", true, CONSENT_VERSION))).reconsent_required);
+        assert!(
+            !state_of(&current(row("overseas_transfer", false, "2000-01-01"))).reconsent_required,
+            "a withdrawal is never asked again"
+        );
+        assert!(
+            !state_of(&current(row("marketing", true, "2000-01-01"))).reconsent_required,
+            "an old marketing grant simply lapses"
+        );
     }
 
     #[test]
