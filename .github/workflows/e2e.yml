@@ -21,7 +21,7 @@ on:
       - scripts/smoke.py
       - .github/workflows/e2e.yml
   push:
-    branches: [master]
+    branches: [master, develop]
   workflow_call:
   workflow_dispatch:
 
@@ -30,7 +30,7 @@ permissions:
 
 concurrency:
   group: e2e-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/develop' }}
 
 jobs:
   install:

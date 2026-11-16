@@ -1,7 +1,7 @@
 //! PortOne V2 현금영수증 calls. Shapes follow `@portone/server-sdk` 0.19.0 (`IssueCashReceiptBody`,
 //! `IssueCashReceiptCustomerInput`, `CashReceiptClient.cancelCashReceiptByPaymentId`).
-//! SANDBOX-VERIFY: the success envelope (`cashReceipt.status == "ISSUED"`) and the error bodies are taken from
-//! the typings, not from a live store. Gated by `PORTONE_CASH_RECEIPTS` (off by default).
+//! Success is read from `cashReceipt.issueNumber` (PortOne openapi `CashReceiptSummary`, no status field).
+//! SANDBOX-VERIFY: confirm one test-store issue returns that envelope. Gated by `PORTONE_CASH_RECEIPTS` (off by default).
 
 use super::ProviderError;
 use reqwest::{StatusCode, header::AUTHORIZATION};
@@ -66,24 +66,29 @@ pub fn issue_body(store_id: Option<String>, payment_id: &str, channel_key: &str,
     }
 }
 
-/// Reads `cashReceipt` from an issue response. Anything but `ISSUED` is a decline. Pure.
+/// Reads `cashReceipt` from an issue response (`CashReceiptSummary`, which has no `status`). Pure.
 pub fn parse_issue(body: &Value) -> Result<Issued, ProviderError> {
     let receipt = body
         .get("cashReceipt")
         .ok_or_else(|| ProviderError::Upstream("cash receipt response without cashReceipt".into()))?;
-    match receipt.get("status").and_then(Value::as_str) {
-        Some("ISSUED") => {
-            let issue_number = receipt
-                .get("issueNumber")
-                .and_then(Value::as_str)
-                .ok_or_else(|| ProviderError::Upstream("issued cash receipt without issueNumber".into()))?;
-            Ok(Issued {
-                issue_number: issue_number.to_string(),
-                url: receipt.get("url").and_then(Value::as_str).map(str::to_string),
-            })
-        }
-        other => Err(ProviderError::Declined(format!("cash receipt status {}", other.unwrap_or("unknown")))),
+    parse_receipt(receipt)
+}
+
+/// A receipt is issued when it carries `issueNumber`. The GET union has a `status`: `CANCELLED` or `FAILED` there
+/// is a decline. Source: PortOne openapi, CashReceiptSummary and IssuedCashReceipt. Pure.
+pub fn parse_receipt(receipt: &Value) -> Result<Issued, ProviderError> {
+    if let Some(s @ ("CANCELLED" | "FAILED")) = receipt.get("status").and_then(Value::as_str) {
+        return Err(ProviderError::Declined(format!("cash receipt status {s}")));
     }
+    let issue_number = receipt
+        .get("issueNumber")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| ProviderError::Upstream("issued cash receipt without issueNumber".into()))?;
+    Ok(Issued {
+        issue_number: issue_number.to_string(),
+        url: receipt.get("url").and_then(Value::as_str).map(str::to_string),
+    })
 }
 
 /// Payment ids go into URL paths: plain tokens only.
@@ -101,6 +106,10 @@ async fn read(resp: reqwest::Response) -> Result<Value, ProviderError> {
     if status == StatusCode::NOT_FOUND {
         return Err(ProviderError::NotFound);
     }
+    // UnauthorizedError: the API secret is wrong or missing, a configuration problem.
+    if status == StatusCode::UNAUTHORIZED {
+        return Err(ProviderError::NotConfigured("portone"));
+    }
     if !status.is_success() {
         return Err(ProviderError::Upstream(format!("status {status}")));
     }
@@ -108,6 +117,8 @@ async fn read(resp: reqwest::Response) -> Result<Value, ProviderError> {
 }
 
 /// `POST {base}/cash-receipts`. `base` is `https://api.portone.io` in production; tests pass a loopback mock.
+/// 409 CashReceiptAlreadyIssuedError: the receipt exists, so it is read back rather than issued again.
+/// 404 ChannelNotFoundError: the channel key is wrong, a configuration error (not a missing payment).
 pub async fn issue(http: &reqwest::Client, base: &str, secret: &str, body: &IssueBody) -> Result<Issued, ProviderError> {
     let resp = http
         .post(format!("{base}/cash-receipts"))
@@ -116,7 +127,23 @@ pub async fn issue(http: &reqwest::Client, base: &str, secret: &str, body: &Issu
         .send()
         .await
         .map_err(upstream)?;
-    parse_issue(&read(resp).await?)
+    match resp.status() {
+        StatusCode::NOT_FOUND => Err(ProviderError::NotConfigured("portone_channel")),
+        StatusCode::CONFLICT => lookup(http, base, secret, &body.payment_id).await,
+        _ => parse_issue(&read(resp).await?),
+    }
+}
+
+/// `GET {base}/payments/{paymentId}/cash-receipt`: the receipt already issued for a payment.
+pub async fn lookup(http: &reqwest::Client, base: &str, secret: &str, payment_id: &str) -> Result<Issued, ProviderError> {
+    check_id(payment_id)?;
+    let resp = http
+        .get(format!("{base}/payments/{payment_id}/cash-receipt"))
+        .header(AUTHORIZATION, format!("PortOne {secret}"))
+        .send()
+        .await
+        .map_err(upstream)?;
+    parse_receipt(&read(resp).await?)
 }
 
 /// `POST {base}/payments/{paymentId}/cash-receipt/cancel`. Cancels the whole receipt; no request body.
@@ -211,6 +238,52 @@ mod tests {
         let err = parse_issue(&json!({ "cashReceipt": { "status": "FAILED" } })).unwrap_err();
         assert!(matches!(err, ProviderError::Declined(_)));
         assert!(parse_issue(&json!({})).is_err());
+    }
+
+    /// Loopback router for status-specific replies: POST /cash-receipts answers `issue_status`, and
+    /// GET /payments/{id}/cash-receipt answers `lookup_body`.
+    async fn serve_status(issue_status: StatusCode, issue_body: Value, lookup_body: Value) -> String {
+        use axum::routing::{get, post};
+        let issue_reply = move || {
+            let (s, b) = (issue_status, issue_body.clone());
+            async move { (s, axum::Json(b)) }
+        };
+        let lookup_reply = move || {
+            let b = lookup_body.clone();
+            async move { axum::Json(b) }
+        };
+        let app = Router::new()
+            .route("/cash-receipts", post(issue_reply))
+            .route("/payments/{id}/cash-receipt", get(lookup_reply));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        format!("http://{addr}")
+    }
+
+    #[test]
+    fn spec_issue_envelope_without_status_is_issued() {
+        let body = json!({ "cashReceipt": { "issueNumber": "123", "url": "https://x", "pgReceiptId": "pg-1" } });
+        assert_eq!(parse_issue(&body).unwrap().issue_number, "123");
+        let cancelled = json!({ "status": "CANCELLED", "issueNumber": "123" });
+        assert!(matches!(parse_receipt(&cancelled), Err(ProviderError::Declined(_))));
+    }
+
+    #[tokio::test]
+    async fn already_issued_is_read_back_not_retried() {
+        let lookup = json!({ "status": "ISSUED", "issueNumber": "77", "url": "https://x" });
+        let base = serve_status(StatusCode::CONFLICT, json!({ "type": "CashReceiptAlreadyIssuedError" }), lookup).await;
+        let body = issue_body(None, "pay_9", "ch", false, "01012345678", 1_000);
+        let issued = issue(&reqwest::Client::new(), &base, "s", &body).await.unwrap();
+        assert_eq!(issued.issue_number, "77");
+    }
+
+    #[tokio::test]
+    async fn channel_not_found_is_a_configuration_error() {
+        let base = serve_status(StatusCode::NOT_FOUND, json!({ "type": "ChannelNotFoundError" }), Value::Null).await;
+        let body = issue_body(None, "pay_8", "bad-ch", false, "01012345678", 1_000);
+        let err = issue(&reqwest::Client::new(), &base, "s", &body).await.unwrap_err();
+        assert!(matches!(err, ProviderError::NotConfigured(_)));
     }
 
     #[test]

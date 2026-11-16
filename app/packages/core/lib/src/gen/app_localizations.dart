@@ -10944,6 +10944,18 @@ abstract class T {
   /// **'선택'**
   String get cSetupOptional;
 
+  /// No description provided for @cSetupModeTest.
+  ///
+  /// In ko, this message translates to:
+  /// **'테스트'**
+  String get cSetupModeTest;
+
+  /// No description provided for @cSetupModeLive.
+  ///
+  /// In ko, this message translates to:
+  /// **'실거래'**
+  String get cSetupModeLive;
+
   /// No description provided for @cOwnerCodeTitle.
   ///
   /// In ko, this message translates to:

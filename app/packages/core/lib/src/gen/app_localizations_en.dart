@@ -5913,6 +5913,12 @@ class TEn extends T {
   String get cSetupOptional => 'Optional';
 
   @override
+  String get cSetupModeTest => 'Test';
+
+  @override
+  String get cSetupModeLive => 'Live';
+
+  @override
   String get cOwnerCodeTitle => 'Owner authenticator code';
 
   @override

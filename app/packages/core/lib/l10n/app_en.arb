@@ -1807,6 +1807,8 @@
  "cCopied": "Copied",
  "cSetupDevMode": "Test mode: no real payments or messages are sent",
  "cSetupOptional": "Optional",
+ "cSetupModeTest": "Test",
+ "cSetupModeLive": "Live",
  "cOwnerCodeTitle": "Owner authenticator code",
  "cOwnerCodeBody": "To change Toss payouts, enter the 6-digit code from your authenticator app.",
  "cOwnerCodeField": "6-digit code",

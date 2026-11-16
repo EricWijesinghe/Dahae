@@ -3,10 +3,18 @@
 mod common;
 
 use api::routes::setup::ensure_setup_code;
-use axum::http::StatusCode;
+use axum::{
+    body::Body,
+    extract::ConnectInfo,
+    http::{Request, StatusCode},
+};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use common::call;
+use hmac::{Hmac, Mac};
 use serde_json::{Value, json};
 use sqlx::PgPool;
+use std::net::SocketAddr;
+use tower::ServiceExt;
 
 /// Owner sign-in: password, then the admin's first-time TOTP enrolment (admins must have a second factor).
 async fn owner_token(app: &axum::Router) -> String {
@@ -105,7 +113,7 @@ async fn owner_saves_business_and_keys_secrets_come_back_masked(pool: PgPool) {
 
     let (st, b) = call(&app, "PUT", "/v1/admin/setup/portone", t, Some(json!({"store_id": "store-1"}))).await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "secret is required: {b}");
-    let keys = json!({"store_id": "store-1", "api_secret": "secret-value-9876", "channel_keys": {"card": "ch-card"}});
+    let keys = json!({"store_id": "store-1", "api_secret": "secret-value-9876", "channel_keys": {"card": "channel-key-card"}});
     let (st, card) = call(&app, "PUT", "/v1/admin/setup/portone", t, Some(keys)).await;
     assert_eq!(st, StatusCode::OK, "{card}");
     assert_eq!(card["source"], "console");
@@ -137,6 +145,129 @@ async fn owner_saves_business_and_keys_secrets_come_back_masked(pool: PgPool) {
     let (_, all) = call(&app, "GET", "/v1/admin/setup", t, None).await;
     let portone = all["integrations"].as_array().unwrap().iter().find(|c| c["code"] == "portone").unwrap().clone();
     assert_eq!(portone["source"], "none");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn toss_key_prefix_sets_the_wizard_mode_and_the_key_stays_masked(pool: PgPool) {
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
+    let app = common::app(pool.clone());
+    create_owner(&app, "ABCD2345EFGH").await;
+    let t = owner_token(&app).await;
+    let t = Some(t.as_str());
+
+    // Manual payouts leave Toss off, so no owner code is asked for here.
+    let (st, test) = call(
+        &app,
+        "PUT",
+        "/v1/admin/setup/payout",
+        t,
+        Some(json!({"mode": "manual", "secret_key": "test_sk_abcdef1234"})),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{test}");
+    assert_eq!(test["mode"], "test");
+    assert!(!test.to_string().contains("test_sk_abcdef1234"), "the key itself is never returned");
+    let preview = test["fields"].as_array().unwrap().iter().find(|f| f["name"] == "secret_key").unwrap()["preview"].clone();
+    assert_eq!(preview, "••••1234");
+
+    let (st, live) = call(&app, "PUT", "/v1/admin/setup/payout", t, Some(json!({"secret_key": "live_sk_zz9876"}))).await;
+    assert_eq!(st, StatusCode::OK, "{live}");
+    assert_eq!(live["mode"], "live");
+
+    let (st, b) = call(&app, "PUT", "/v1/admin/setup/payout", t, Some(json!({"secret_key": "sk_plain_no_mode"}))).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert_eq!(b["mode"], Value::Null, "an unknown prefix has no mode");
+
+    let (_, all) = call(&app, "GET", "/v1/admin/setup", t, None).await;
+    let portone = all["integrations"].as_array().unwrap().iter().find(|c| c["code"] == "portone").unwrap();
+    assert_eq!(portone["mode"], Value::Null, "PortOne ids carry no test or live mode");
+}
+
+/// 64 hex characters, the shape of a Toss 보안 키. Only ever a test value.
+const SECURITY_KEY: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+const TOSS_BODY: &str = r#"{"eventType":"payout.changed","entityBody":{"id":"p1"}}"#;
+
+/// `tosspayments-webhook-signature` as Toss sends it: HMAC-SHA256 over `{body}:{transmission-time}`.
+fn toss_signature(key: &str, time: &str, body: &str) -> String {
+    let mut mac = Hmac::<sha2::Sha256>::new_from_slice(key.as_bytes()).expect("key");
+    mac.update(body.as_bytes());
+    mac.update(b":");
+    mac.update(time.as_bytes());
+    format!("v1:{}", STANDARD.encode(mac.finalize().into_bytes()))
+}
+
+/// POSTs a raw Toss webhook through the router and returns only the status.
+async fn toss_hook(app: &axum::Router, time: &str, signature: &str, body: &str) -> StatusCode {
+    let mut req = Request::builder()
+        .method("POST")
+        .uri("/v1/webhooks/toss")
+        .header("content-type", "application/json")
+        .header("tosspayments-webhook-transmission-time", time)
+        .header("tosspayments-webhook-signature", signature)
+        .body(Body::from(body.to_string()))
+        .expect("request");
+    req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40_000))));
+    app.clone().oneshot(req).await.expect("router is infallible").status()
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn toss_webhook_checks_the_signature_once_a_security_key_is_saved(pool: PgPool) {
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
+    let app = common::app(pool.clone());
+    let time = "1800000000";
+    assert_eq!(
+        toss_hook(&app, time, "", TOSS_BODY).await,
+        StatusCode::OK,
+        "dev mode without a key accepts unsigned smoke events"
+    );
+
+    create_owner(&app, "ABCD2345EFGH").await;
+    let t = owner_token(&app).await;
+    let (st, b) = call(
+        &app,
+        "PUT",
+        "/v1/admin/setup/payout",
+        Some(t.as_str()),
+        Some(json!({"mode": "manual", "security_key": SECURITY_KEY})),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+
+    assert_eq!(
+        toss_hook(&app, time, "", TOSS_BODY).await,
+        StatusCode::UNAUTHORIZED,
+        "unsigned event refused once a key exists"
+    );
+    assert_eq!(toss_hook(&app, time, "v1:AAAA", TOSS_BODY).await, StatusCode::UNAUTHORIZED, "made-up signature");
+    let wrong_key = toss_signature("not-the-security-key", time, TOSS_BODY);
+    assert_eq!(
+        toss_hook(&app, time, &wrong_key, TOSS_BODY).await,
+        StatusCode::UNAUTHORIZED,
+        "signed with another key"
+    );
+    let signed = toss_signature(SECURITY_KEY, time, TOSS_BODY);
+    assert_eq!(
+        toss_hook(&app, time, &signed, r#"{"eventType":"payout.changed"}"#).await,
+        StatusCode::UNAUTHORIZED,
+        "body changed after signing"
+    );
+    assert_eq!(
+        toss_hook(&app, "1800000001", &signed, TOSS_BODY).await,
+        StatusCode::UNAUTHORIZED,
+        "transmission time changed"
+    );
+    assert_eq!(
+        toss_hook(&app, time, &signed, TOSS_BODY).await,
+        StatusCode::OK,
+        "a correct signature is accepted"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn toss_webhook_is_unavailable_outside_dev_mode_without_a_key(pool: PgPool) {
+    let app = common::prod_app(pool.clone(), "http://127.0.0.1:9");
+    let signed = toss_signature(SECURITY_KEY, "1800000000", TOSS_BODY);
+    assert_eq!(toss_hook(&app, "1800000000", &signed, TOSS_BODY).await, StatusCode::SERVICE_UNAVAILABLE);
 }
 
 #[sqlx::test(migrations = "../../migrations")]

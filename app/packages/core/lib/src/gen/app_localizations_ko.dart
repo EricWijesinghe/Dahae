@@ -5746,6 +5746,12 @@ class TKo extends T {
   String get cSetupOptional => '선택';
 
   @override
+  String get cSetupModeTest => '테스트';
+
+  @override
+  String get cSetupModeLive => '실거래';
+
+  @override
   String get cOwnerCodeTitle => '사장님 인증 코드';
 
   @override
