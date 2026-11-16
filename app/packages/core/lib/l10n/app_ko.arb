@@ -2687,6 +2687,8 @@
  "cCopied": "복사했어요",
  "cSetupDevMode": "테스트 모드예요. 실제 결제·문자는 나가지 않아요",
  "cSetupOptional": "선택",
+ "cSetupModeTest": "테스트",
+ "cSetupModeLive": "실거래",
  "cOwnerCodeTitle": "사장님 인증 코드",
  "cOwnerCodeBody": "토스 지급 설정을 바꾸려면 인증 앱에 나온 6자리 코드를 입력하세요.",
  "cOwnerCodeField": "6자리 인증 코드",

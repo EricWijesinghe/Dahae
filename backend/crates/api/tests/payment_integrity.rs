@@ -23,7 +23,14 @@ async fn new_checkout(app: &Router, c: &Customer, days: i64) -> Uuid {
 }
 
 async fn confirm(app: &Router, c: &Customer, checkout: Uuid, payment_id: &str) -> (StatusCode, Value) {
-    call(app, "POST", &format!("/v1/checkouts/{checkout}/confirm"), Some(c.token.as_str()), Some(json!({ "payment_id": payment_id }))).await
+    call(
+        app,
+        "POST",
+        &format!("/v1/checkouts/{checkout}/confirm"),
+        Some(c.token.as_str()),
+        Some(json!({ "payment_id": payment_id })),
+    )
+    .await
 }
 
 fn code(b: &Value) -> &str {
@@ -31,11 +38,18 @@ fn code(b: &Value) -> &str {
 }
 
 async fn checkout_status(pool: &PgPool, id: Uuid) -> String {
-    sqlx::query_scalar("SELECT status FROM checkouts WHERE id = $1").bind(id).fetch_one(pool).await.expect("checkout")
+    sqlx::query_scalar("SELECT status FROM checkouts WHERE id = $1")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .expect("checkout")
 }
 
 async fn refunds(pool: &PgPool) -> i64 {
-    sqlx::query_scalar("SELECT count(*) FROM refund_queue").fetch_one(pool).await.expect("refund queue")
+    sqlx::query_scalar("SELECT count(*) FROM refund_queue")
+        .fetch_one(pool)
+        .await
+        .expect("refund queue")
 }
 
 async fn notices(pool: &PgPool, user: Uuid, kind: &str) -> i64 {
@@ -65,7 +79,11 @@ async fn assert_a_untouched(pool: &PgPool, a: Uuid, booking: Uuid, user: Uuid) {
         .await
         .expect("payment A");
     assert_eq!((status.as_str(), refunded), ("paid", 0), "A's payment is not refunded");
-    let bookings: i64 = sqlx::query_scalar("SELECT count(*) FROM bookings WHERE user_id = $1").bind(user).fetch_one(pool).await.expect("bookings");
+    let bookings: i64 = sqlx::query_scalar("SELECT count(*) FROM bookings WHERE user_id = $1")
+        .bind(user)
+        .fetch_one(pool)
+        .await
+        .expect("bookings");
     assert_eq!(bookings, 1, "no second booking");
     assert_eq!(refunds(pool).await, 0, "no provider refund was attempted");
 }
@@ -78,7 +96,11 @@ async fn a_foreign_payment_with_another_amount_is_refused_without_refunding_it(p
     let (a, booking) = paid_checkout(&app, &pool, &c).await;
     let b = new_checkout(&app, &c, 12).await;
     // B is for a different amount, so the old code took the mismatch branch and refunded A's payment.
-    sqlx::query("UPDATE checkouts SET amount = amount + 1000 WHERE id = $1").bind(b).execute(&pool).await.expect("amount");
+    sqlx::query("UPDATE checkouts SET amount = amount + 1000 WHERE id = $1")
+        .bind(b)
+        .execute(&pool)
+        .await
+        .expect("amount");
 
     let (st, body) = confirm(&app, &c, b, &a.to_string()).await;
     assert_eq!((st, code(&body)), (StatusCode::BAD_REQUEST, "payment_not_for_checkout"), "{body}");
@@ -142,10 +164,52 @@ async fn one_portone_payment_cannot_be_recorded_twice(pool: PgPool) {
     assert_eq!(err.as_database_error().and_then(|e| e.code()).as_deref(), Some("23505"), "{err}");
 }
 
+/// PortOne reports a partial cancel for a checkout we already settled: the webhook only re-confirms the
+/// payment, so the refund already booked on our side is neither doubled nor reset.
+#[sqlx::test(migrations = "../../migrations")]
+async fn partial_cancel_webhook_leaves_the_refunded_amount_alone(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-7100-0005").await;
+    let (a, booking) = paid_checkout(&app, &pool, &c).await;
+    sqlx::query("UPDATE payments SET refunded_amount = 1000, status = 'partially_refunded' WHERE booking_id = $1")
+        .bind(booking)
+        .execute(&pool)
+        .await
+        .expect("book a partial refund");
+
+    let body = json!({
+        "type": "Transaction.PartialCancelled",
+        "timestamp": "2026-11-16T00:00:00Z",
+        "data": { "storeId": "store-test", "paymentId": a.to_string(), "transactionId": "tx-partial-1" }
+    });
+    let (st, first) = call(&app, "POST", "/v1/webhooks/portone", None, Some(body.clone())).await;
+    assert_eq!(st, StatusCode::OK, "{first}");
+    let (st, again) = call(&app, "POST", "/v1/webhooks/portone", None, Some(body)).await;
+    assert_eq!(st, StatusCode::OK, "{again}");
+
+    let (status, refunded): (String, i64) = sqlx::query_as("SELECT status, refunded_amount FROM payments WHERE booking_id = $1")
+        .bind(booking)
+        .fetch_one(&pool)
+        .await
+        .expect("payment");
+    assert_eq!(
+        (status.as_str(), refunded),
+        ("partially_refunded", 1000),
+        "a repeated partial-cancel event moves no money"
+    );
+    assert_eq!(checkout_status(&pool, a).await, "paid");
+    assert_eq!(refunds(&pool).await, 0, "no compensating refund was queued");
+}
+
 /// A late payment whose slot is gone: the compensating refund path (`apply` -> FulfilLate).
 async fn late_payment_on_full_slot(pool: &PgPool, app: &Router, c: &Customer) -> Uuid {
     let ck = new_checkout(app, c, 10).await;
-    sqlx::query("UPDATE checkouts SET expires_at = now() - interval '1 minute' WHERE id = $1").bind(ck).execute(pool).await.expect("expire");
+    sqlx::query("UPDATE checkouts SET expires_at = now() - interval '1 minute' WHERE id = $1")
+        .bind(ck)
+        .execute(pool)
+        .await
+        .expect("expire");
     sqlx::query("INSERT INTO slot_capacity (start_hour, capacity) VALUES (9, 0) ON CONFLICT (start_hour) DO UPDATE SET capacity = 0")
         .execute(pool)
         .await
@@ -164,7 +228,11 @@ async fn a_failed_compensating_refund_is_pending_then_retried_until_refunded(poo
 
     let (st, body) = confirm(&app, &c, ck, &ck.to_string()).await;
     assert_eq!((st, code(&body)), (StatusCode::CONFLICT, "checkout_refund_pending"), "{body}");
-    assert_eq!(checkout_status(&pool, ck).await, "refund_pending", "never 'refunded' before the money went back");
+    assert_eq!(
+        checkout_status(&pool, ck).await,
+        "refund_pending",
+        "never 'refunded' before the money went back"
+    );
     assert_eq!(notices(&pool, c.user, "payment.refunded").await, 0, "no 'refunded' push");
     assert_eq!(notices(&pool, c.user, "payment.refund_pending").await, 1, "told the refund is in progress");
     assert_eq!(refunds(&pool).await, 1, "one queued refund");
@@ -179,19 +247,33 @@ async fn a_failed_compensating_refund_is_pending_then_retried_until_refunded(poo
     assert_eq!(api::routes::checkout_recon::drain_refunds(&state).await.expect("drain"), 0);
     due().await.expect("due");
     assert_eq!(api::routes::checkout_recon::drain_refunds(&state).await.expect("drain"), 1, "second failure");
-    let (attempts, done): (i32, bool) = sqlx::query_as("SELECT attempts, done_at IS NOT NULL FROM refund_queue").fetch_one(&pool).await.expect("row");
+    let (attempts, done): (i32, bool) = sqlx::query_as("SELECT attempts, done_at IS NOT NULL FROM refund_queue")
+        .fetch_one(&pool)
+        .await
+        .expect("row");
     assert_eq!((attempts, done), (2, false));
     assert_eq!(checkout_status(&pool, ck).await, "refund_pending");
 
     due().await.expect("due");
-    assert_eq!(api::routes::checkout_recon::drain_refunds(&state).await.expect("drain"), 1, "provider recovered");
-    let (attempts, done): (i32, bool) = sqlx::query_as("SELECT attempts, done_at IS NOT NULL FROM refund_queue").fetch_one(&pool).await.expect("row");
+    assert_eq!(
+        api::routes::checkout_recon::drain_refunds(&state).await.expect("drain"),
+        1,
+        "provider recovered"
+    );
+    let (attempts, done): (i32, bool) = sqlx::query_as("SELECT attempts, done_at IS NOT NULL FROM refund_queue")
+        .fetch_one(&pool)
+        .await
+        .expect("row");
     assert_eq!((attempts, done), (3, true));
     assert_eq!(checkout_status(&pool, ck).await, "refunded");
     assert_eq!(notices(&pool, c.user, "payment.refunded").await, 1, "told once when it landed");
 
     due().await.expect("due");
-    assert_eq!(api::routes::checkout_recon::drain_refunds(&state).await.expect("drain"), 0, "done rows are never retried");
+    assert_eq!(
+        api::routes::checkout_recon::drain_refunds(&state).await.expect("drain"),
+        0,
+        "done rows are never retried"
+    );
     assert_eq!(notices(&pool, c.user, "payment.refunded").await, 1);
 }
 
@@ -206,7 +288,10 @@ async fn a_compensating_refund_that_lands_is_refunded_at_once(pool: PgPool) {
     assert_eq!((st, code(&body)), (StatusCode::CONFLICT, "checkout_refunded"), "{body}");
     assert_eq!(checkout_status(&pool, ck).await, "refunded");
     assert_eq!(notices(&pool, c.user, "payment.refunded").await, 1);
-    let done: bool = sqlx::query_scalar("SELECT done_at IS NOT NULL FROM refund_queue").fetch_one(&pool).await.expect("row");
+    let done: bool = sqlx::query_scalar("SELECT done_at IS NOT NULL FROM refund_queue")
+        .fetch_one(&pool)
+        .await
+        .expect("row");
     assert!(done, "the refund is recorded as done");
     // A replay refunds nothing again.
     let (st, _) = confirm(&app, &c, ck, &ck.to_string()).await;

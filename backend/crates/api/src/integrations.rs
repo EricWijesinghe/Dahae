@@ -61,8 +61,12 @@ pub struct PayoutSettings {
 
 /// Env switch that must be on before Toss payouts can be enabled from the console.
 pub const TOSS_ENV: &str = "TOSS_PAYOUTS_ENABLED";
-/// Only Toss sandbox keys can pass the connection test that unlocks Toss payouts.
-const SANDBOX_KEY_PREFIX: &str = "test_sk_";
+/// PortOne ids as the console issues them: store ids and channel keys carry these prefixes.
+const PORTONE_STORE_PREFIX: &str = "store-";
+const PORTONE_CHANNEL_PREFIX: &str = "channel-key-";
+/// Toss secret key prefixes. Only these two kinds can pass the connection test that unlocks Toss payouts.
+const TEST_SECRET_PREFIX: &str = "test_sk_";
+const LIVE_SECRET_PREFIX: &str = "live_sk_";
 
 /// Short, non-reversible id of a secret, stored with the test result so a changed key must be re-tested.
 pub fn key_fingerprint(secret: &str) -> String {
@@ -70,18 +74,39 @@ pub fn key_fingerprint(secret: &str) -> String {
     Sha256::digest(secret.as_bytes()).iter().take(8).map(|b| format!("{b:02x}")).collect()
 }
 
-/// Toss payouts open only when the env switch is on AND the last sandbox test recorded success for this key.
+/// The connection-test code a secret earns: `sandbox_connected` for a test key, `live_connected` for a live key.
+pub fn connected_code(secret: &str) -> Option<&'static str> {
+    if secret.starts_with(TEST_SECRET_PREFIX) {
+        Some("sandbox_connected")
+    } else if secret.starts_with(LIVE_SECRET_PREFIX) {
+        Some("live_connected")
+    } else {
+        None
+    }
+}
+
+/// `test` or `live` from the Toss secret key prefix, for the wizard badge. Never returns the key itself.
+pub fn toss_key_mode(secret: &str) -> Option<&'static str> {
+    if secret.starts_with(TEST_SECRET_PREFIX) {
+        Some("test")
+    } else if secret.starts_with(LIVE_SECRET_PREFIX) {
+        Some("live")
+    } else {
+        None
+    }
+}
+
+/// Toss payouts open only when the env switch is on AND the last connection test recorded success for this key,
+/// in the same mode the key is in (a test pass never unlocks a live key).
 pub fn toss_ready(env_enabled: bool, last_test: Option<&Value>, secret: &str) -> bool {
-    env_enabled && last_test.is_some_and(|t| t["ok"] == json!(true) && t["code"] == json!("sandbox_connected") && t["key_fp"] == json!(key_fingerprint(secret)))
+    let Some(code) = connected_code(secret) else {
+        return false;
+    };
+    env_enabled && last_test.is_some_and(|t| t["ok"] == json!(true) && t["code"] == json!(code) && t["key_fp"] == json!(key_fingerprint(secret)))
 }
 
 pub fn toss_env_enabled() -> bool {
     std::env::var(TOSS_ENV).is_ok_and(|v| v == "1")
-}
-
-/// Whether a payout secret is a sandbox key (the only kind the connection test accepts).
-pub fn is_sandbox_key(secret: &str) -> bool {
-    secret.starts_with(SANDBOX_KEY_PREFIX)
 }
 
 /// S3-compatible offsite backup target (AWS S3, Cloudflare R2, Naver Cloud Object Storage, Backblaze B2).
@@ -411,9 +436,12 @@ fn payout_settings(v: &Map<String, Value>, toss_ready: bool) -> Result<PayoutSet
     let secret_key = text(v, "secret_key");
     let security_key = text(v, "security_key");
     if mode == PayoutMode::Toss {
-        let (Some(_), Some(security)) = (&secret_key, &security_key) else {
+        let (Some(secret), Some(security)) = (&secret_key, &security_key) else {
             return Err(Invalid("missing_field"));
         };
+        if connected_code(secret).is_none() {
+            return Err(Invalid("invalid_secret_key"));
+        }
         crate::providers::toss_jwe::key_bytes(security).map_err(|_| Invalid("invalid_security_key"))?;
         if !toss_ready {
             return Err(Invalid("toss_unverified"));
@@ -457,11 +485,19 @@ pub fn apply(base: &Integrations, section: Section, v: &Map<String, Value>) -> R
             if let Some(w) = &webhook_secret {
                 check_webhook_secret(w)?;
             }
+            let store_id = required(v, "store_id")?;
+            if !store_id.starts_with(PORTONE_STORE_PREFIX) {
+                return Err(Invalid("invalid_store_id"));
+            }
+            let channel_keys = string_map(v, "channel_keys")?;
+            if channel_keys.values().any(|k| !k.starts_with(PORTONE_CHANNEL_PREFIX)) {
+                return Err(Invalid("invalid_channel_key"));
+            }
             out.portone = PortOne {
                 api_secret: Some(required(v, "api_secret")?),
                 webhook_secret,
-                store_id: Some(required(v, "store_id")?),
-                channel_keys: string_map(v, "channel_keys")?,
+                store_id: Some(store_id),
+                channel_keys,
                 cash_receipts: toggle(v, "cash_receipts")?.unwrap_or(base.portone.cash_receipts),
             };
         }

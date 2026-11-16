@@ -58,6 +58,8 @@ S = {
   "cCopied": ["복사했어요", "Copied"],
   "cSetupDevMode": ["테스트 모드예요. 실제 결제·문자는 나가지 않아요", "Test mode: no real payments or messages are sent"],
   "cSetupOptional": ["선택", "Optional"],
+  "cSetupModeTest": ["테스트", "Test"],
+  "cSetupModeLive": ["실거래", "Live"],
   "cOwnerCodeTitle": ["사장님 인증 코드", "Owner authenticator code"],
   "cOwnerCodeBody": ["토스 지급 설정을 바꾸려면 인증 앱에 나온 6자리 코드를 입력하세요.", "To change Toss payouts, enter the 6-digit code from your authenticator app."],
   "cOwnerCodeField": ["6자리 인증 코드", "6-digit code"],
