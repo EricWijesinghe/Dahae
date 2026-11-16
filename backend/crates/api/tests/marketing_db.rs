@@ -7,7 +7,7 @@ mod common;
 use api::{auth, marketing, privacy::CONSENT_VERSION, realtime::Recipient, settings_registry, state::AppState};
 use axum::http::StatusCode;
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use common::{SECRET, app, book, call, customer, login, seed_catalog};
+use common::{SECRET, app, book, call, call_keyed, customer, login, seed_catalog};
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -156,6 +156,25 @@ async fn campaigns_are_admin_only_and_tests_go_to_the_owner_phone_only(pool: PgP
     assert_eq!(st, StatusCode::BAD_REQUEST, "someone else's number is refused");
     let (st, b) = call(&app, "POST", "/v1/admin/campaigns/test", Some(&admin), Some(body("010-1234-5678"))).await;
     assert_eq!(st, StatusCode::OK, "the owner's own phone gets the test: {b}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_retried_send_replays_one_scheduled_campaign(pool: PgPool) {
+    let app = app(pool.clone());
+    let admin = staff_token();
+    let body = json!({
+        "name": "주말 할인", "channel": "push", "title": "주말 할인", "body": "이번 주말 10% 할인",
+        "audience": [], "schedule": { "at": null },
+    });
+    let (st, first) = call_keyed(&app, "POST", "/v1/admin/campaigns", Some(&admin), Some(body.clone()), Some("cm-send-1")).await;
+    assert_eq!(st, StatusCode::OK, "{first}");
+    assert_eq!(first["status"], "scheduled", "create and schedule are one call");
+    // The reply was lost; the console sends the same action again with the same key.
+    let (st, again) = call_keyed(&app, "POST", "/v1/admin/campaigns", Some(&admin), Some(body), Some("cm-send-1")).await;
+    assert_eq!(st, StatusCode::OK, "{again}");
+    assert_eq!(again["id"], first["id"], "the retry replays the first campaign");
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM campaigns").fetch_one(&pool).await.expect("count");
+    assert_eq!(n, 1, "no second campaign to send twice");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

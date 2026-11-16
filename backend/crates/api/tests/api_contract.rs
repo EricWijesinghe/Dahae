@@ -12,7 +12,7 @@ const METHODS: [&str; 5] = ["get", "put", "post", "delete", "patch"];
 /// Where a route file's paths get mounted: root, `/v1`, or a nest under `/v1`.
 const PREFIXES: [&str; 5] = ["", "/v1", "/v1/admin", "/v1/partner", "/v1/member"];
 /// Operations that must accept `Idempotency-Key`: every money-moving or duplicate-prone POST.
-const IDEMPOTENT_OPS: [&str; 9] = [
+const IDEMPOTENT_OPS: [&str; 10] = [
     "createBooking",
     "cancelBooking",
     "payDeposit",
@@ -22,6 +22,7 @@ const IDEMPOTENT_OPS: [&str; 9] = [
     "confirmCheckout",
     "adminCancelBooking",
     "adminPayoutAction",
+    "adminCreateCampaign",
 ];
 /// Operations that page with `limit`/`cursor` and advertise `X-Next-Cursor`.
 const PAGED_OPS: [&str; 12] = [
@@ -185,7 +186,7 @@ fn idempotent_and_paged_operations_say_so() {
             );
         }
     }
-    assert_eq!(IDEMPOTENT_OPS.len(), 9);
+    assert_eq!(IDEMPOTENT_OPS.len(), 10);
 }
 
 /// Dart call sites: `api.get('/x')`, `api.post(\n '/x', ...)`, `_uri('/x')`. Returns (method or `*`, path).

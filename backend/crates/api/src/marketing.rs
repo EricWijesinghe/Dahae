@@ -533,6 +533,9 @@ pub struct NewCampaign {
     #[serde(default)]
     audience: Vec<Segment>,
     optout_number: Option<String>,
+    /// Present: schedule in the same call, so one Idempotency-Key covers create and schedule.
+    #[serde(default)]
+    schedule: Option<ScheduleBody>,
 }
 
 fn validate(c: &NewCampaign) -> ApiResult<()> {
@@ -556,7 +559,7 @@ fn validate(c: &NewCampaign) -> ApiResult<()> {
 
 pub fn admin_routes() -> Router<AppState> {
     Router::new()
-        .route("/campaigns", get(list).post(create))
+        .route("/campaigns", crate::idempotency::replayable(get(list).post(create)))
         .route("/campaigns/preview", post(preview))
         .route("/campaigns/test", post(test_send))
         .route("/campaigns/{id}", get(detail))
@@ -574,8 +577,9 @@ async fn list(State(s): State<AppState>, _st: Admin) -> ApiResult<Json<Vec<Campa
 async fn create(State(s): State<AppState>, Admin(st): Admin, Json(c): Json<NewCampaign>) -> ApiResult<Json<CampaignRow>> {
     validate(&c)?;
     let audience = serde_json::to_value(&c.audience).map_err(|_| ApiError::BadRequest("audience"))?;
+    let at = c.schedule.as_ref().map(send_at);
     let row: CampaignRow = sqlx::query_as(&format!(
-        "INSERT INTO campaigns (name, channel, title, body, audience, optout_number, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING {CAMPAIGN_COLS}"
+        "INSERT INTO campaigns (name, channel, title, body, audience, optout_number, created_by, status, scheduled_at)          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING {CAMPAIGN_COLS}"
     ))
     .bind(c.name.trim())
     .bind(&c.channel)
@@ -584,6 +588,8 @@ async fn create(State(s): State<AppState>, Admin(st): Admin, Json(c): Json<NewCa
     .bind(audience)
     .bind(c.optout_number.as_deref())
     .bind(st.id)
+    .bind(if at.is_some() { "scheduled" } else { "draft" })
+    .bind(at)
     .fetch_one(&s.db)
     .await?;
     audit(
@@ -592,7 +598,7 @@ async fn create(State(s): State<AppState>, Admin(st): Admin, Json(c): Json<NewCa
         Some(st.id),
         "campaign.create",
         &row.id.to_string(),
-        json!({ "channel": row.channel }),
+        json!({ "channel": row.channel, "at": at }),
     )
     .await?;
     Ok(Json(row))
@@ -618,8 +624,12 @@ pub struct ScheduleBody {
     at: Option<DateTime<Utc>>,
 }
 
+fn send_at(b: &ScheduleBody) -> DateTime<Utc> {
+    b.at.unwrap_or_else(Utc::now).max(Utc::now())
+}
+
 async fn schedule(State(s): State<AppState>, Admin(st): Admin, Path(id): Path<Uuid>, Json(b): Json<ScheduleBody>) -> ApiResult<Json<CampaignRow>> {
-    let at = b.at.unwrap_or_else(Utc::now).max(Utc::now());
+    let at = send_at(&b);
     let row: Option<CampaignRow> = sqlx::query_as(&format!(
         "UPDATE campaigns SET status = 'scheduled', scheduled_at = $2 WHERE id = $1 AND status IN ('draft', 'scheduled') RETURNING {CAMPAIGN_COLS}"
     ))
