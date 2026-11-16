@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -2915,6 +2914,10 @@ class TEn extends T {
       'This payment method isn\'t available right now.';
 
   @override
+  String get err_payment_methods_empty =>
+      'Keep at least one payment method on. With none on, customers can\'t pay.';
+
+  @override
   String get err_invalid_payment_method =>
       'That payment method can\'t be used. Choose another.';
 
@@ -3940,6 +3943,9 @@ class TEn extends T {
   String get oRuleStuck => 'Payment not processed automatically';
 
   @override
+  String get oRuleMismatch => 'Payments differ from PortOne';
+
+  @override
   String get oRuleSocial => 'Social sign-in fails';
 
   @override
@@ -4927,6 +4933,14 @@ class TEn extends T {
   }
 
   @override
+  String get cgPeakFixedScope =>
+      'Apply surcharge to fixed-price and subscription visits';
+
+  @override
+  String get cgPeakFixedScopeHint =>
+      'When off, fixed-price and subscription visits are booked at the base price. Quotes always show the surcharge';
+
+  @override
   String get oFlags => 'Feature switches';
 
   @override
@@ -5158,6 +5172,32 @@ class TEn extends T {
 
   @override
   String get cPfNoDate => 'Not set';
+
+  @override
+  String get cPfPayee => 'Resident or business registration number';
+
+  @override
+  String get cPfPayeeHelp =>
+      'Used only for the 지급명세서 (payment statement). Stored encrypted. Enter it only after the partner consents. Every view is logged.';
+
+  @override
+  String cPfPayeeSaved(String masked) {
+    return 'On file: $masked';
+  }
+
+  @override
+  String get cPfPayeeReveal => 'Show full number (needs verification)';
+
+  @override
+  String get cPfPayeeRevealTitle => 'Identifier';
+
+  @override
+  String get cPfPayeeRevealBody =>
+      'This view is logged. It cannot be shown again after you close this.';
+
+  @override
+  String get err_invalid_payee_identifier =>
+      'Check the resident number (13 digits) or business number (10 digits).';
 
   @override
   String get cPfSaveProfile => 'Save profile';
@@ -5750,6 +5790,10 @@ class TEn extends T {
   @override
   String get cSetupPayMethodsHint =>
       'Turn the methods customers see on or off. Applies instantly.';
+
+  @override
+  String get cPayMethodNoKey =>
+      'This payment channel is not connected yet, so customers can\'t see it. Ask whoever manages your setup.';
 
   @override
   String get cReviewTitle => 'Store review demo account';
