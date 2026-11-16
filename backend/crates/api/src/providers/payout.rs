@@ -246,9 +246,14 @@ pub fn read_body(text: &str, key: Option<&[u8; 32]>) -> Result<Value, ProviderEr
 /// Maps a provider error response. Only explicit business rejections count as declines (the
 /// transfer definitely did not happen). Anything ambiguous (5xx, timeouts, 409 idempotency
 /// conflicts, 429) stays an upstream error so the caller never rotates the idempotency key.
+/// 401 and 403 mean our key is wrong, not that the transfer was refused.
 pub fn classify(status: StatusCode, body: &Value) -> ProviderError {
     let message = body["message"].as_str().unwrap_or("transfer rejected").to_string();
-    let definite = status.is_client_error() && !matches!(status, StatusCode::CONFLICT | StatusCode::TOO_MANY_REQUESTS | StatusCode::REQUEST_TIMEOUT);
+    let not_a_decline = matches!(
+        status,
+        StatusCode::CONFLICT | StatusCode::TOO_MANY_REQUESTS | StatusCode::REQUEST_TIMEOUT | StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+    );
+    let definite = status.is_client_error() && !not_a_decline;
     if definite {
         ProviderError::Declined(message)
     } else {
@@ -473,6 +478,9 @@ mod tests {
         assert!(matches!(classify(StatusCode::CONFLICT, &json!({})), ProviderError::Upstream(_)));
         assert!(matches!(classify(StatusCode::TOO_MANY_REQUESTS, &json!({})), ProviderError::Upstream(_)));
         assert!(matches!(classify(StatusCode::INTERNAL_SERVER_ERROR, &json!({})), ProviderError::Upstream(_)));
+        // A wrong or revoked secret key says nothing about the transfer: never a decline that rotates the key.
+        assert!(matches!(classify(StatusCode::UNAUTHORIZED, &json!({})), ProviderError::Upstream(_)));
+        assert!(matches!(classify(StatusCode::FORBIDDEN, &json!({})), ProviderError::Upstream(_)));
     }
 
     #[test]
