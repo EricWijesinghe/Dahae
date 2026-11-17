@@ -192,8 +192,10 @@ connected to the **private** repo:
    Keep a copy offline — losing it blocks Play updates (recoverable only via Play support).
 3. Env group `malkkeum`: `API_BASE=https://<client domain>`, `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS`
    (service account created in the client's Play Console, *Release* permission, secure).
-4. Create the two apps in App Store Connect / Play Console (bundle ids `com.malkkeum.customer`,
-   `com.malkkeum.partner`), run the four workflows in `codemagic.yaml`.
+4. Create the two apps in App Store Connect / Play Console (bundle ids `kr.co.dahae.customer`,
+   `kr.co.dahae.partner`), run the four workflows in `codemagic.yaml`.
+   Firebase: the client's Firebase apps must use the same ids (Android package `kr.co.dahae.customer` / `kr.co.dahae.partner`,
+   iOS bundle ids). The google-services plugin fails the build when `google-services.json` has no client for the applicationId.
 5. Store listing text: `docs/store/listing-{ko,en,ja,zh,vi}.md` (check lengths with
    `python -I docs/store/check_listings.py`); data safety: `docs/store/data-safety.md` (Google) and
    `docs/store/app-privacy.md` (Apple); demo login from the client's console (guide 03 D).
@@ -234,13 +236,13 @@ against `/.well-known/apple-app-site-association` (both sections are served). iO
    win over the server settings as a set, so after a console save a later `dahae applinks` changes nothing
    until the console values are cleared. The card says which source is in use.
 2. Naver Developers app: add the callback URL `https://<APP_LINK_DOMAIN>/auth/naver/callback`.
-3. Apple Developer portal: enable **Associated Domains** on both bundle ids (`com.malkkeum.customer`,
-   `com.malkkeum.partner`) so the entitlement can be signed. Codemagic signing fails without it.
+3. Apple Developer portal: enable **Associated Domains** on both bundle ids (`kr.co.dahae.customer`,
+   `kr.co.dahae.partner`) so the entitlement can be signed. Codemagic signing fails without it.
 4. Check: `curl -s https://<DOMAIN>/.well-known/assetlinks.json` and `…/apple-app-site-association` return JSON.
-   On Android, `adb shell pm get-app-links com.malkkeum.customer` must show `verified`.
+   On Android, `adb shell pm get-app-links kr.co.dahae.customer` must show `verified`.
 
 **Residual risk (iOS below 17.4).** `ASWebAuthenticationSession` cannot finish an https callback there, so the
-app keeps `malkkeumnaver://naverlogin` on those devices. Another app can register that scheme, and Naver has no
+app keeps `dahaenaver://naverlogin` on those devices. Another app can register that scheme, and Naver has no
 PKCE. Remove the scheme (`Info.plist` URL type, `social_native_io.dart::_naverLegacyScheme`) when the minimum iOS is 17.4.
 
 iOS, once per bundle id in the Apple Developer portal: enable **Sign in with Apple** and **Push
@@ -287,7 +289,7 @@ To wire each provider:
 | Provider | Add to `app/apps/customer/pubspec.yaml` and `app/apps/partner/pubspec.yaml` | Native setup | Then |
 |---|---|---|---|
 | Kakao | `kakao_flutter_sdk_user` | Android: `<meta-data android:name="com.kakao.sdk.AppKey" .../>` and the `kakao{NATIVE_APP_KEY}` intent-filter in `AndroidManifest.xml`. Register the Android key hash (debug and release) in the Kakao console. iOS: `KAKAO_NATIVE_APP_KEY` in `Info.plist` plus a `kakao{key}` URL scheme and `LSApplicationQueriesSchemes` (`kakaokompassauth`, `kakaolink`). | `UserApi.instance.loginWithKakaoTalk()` (fallback `loginWithKakaoAccount()`), return `token.accessToken` |
-| Naver | `flutter_web_auth_2` | Client id (`NAVER_CLIENT_ID`) + `APP_LINK_DOMAIN`. Android: `CallbackActivity` `autoVerify` https intent filter (`${appLinkHost}`). iOS: `applinks:$(APP_LINK_HOST)` entitlement; `malkkeumnaver` URL type only for iOS < 17.4. Browser login returns `code` + `state`; app sends `code:state` | `social_native_io.dart::NaverSocialSignIn` |
+| Naver | `flutter_web_auth_2` | Client id (`NAVER_CLIENT_ID`) + `APP_LINK_DOMAIN`. Android: `CallbackActivity` `autoVerify` https intent filter (`${appLinkHost}`). iOS: `applinks:$(APP_LINK_HOST)` entitlement; `dahaenaver` URL type only for iOS < 17.4. Browser login returns `code` + `state`; app sends `code:state` | `social_native_io.dart::NaverSocialSignIn` |
 | Google | `google_sign_in` | Android: OAuth client per package and SHA-1 (debug and release). iOS: reversed client id URL scheme and `GIDClientID` | `GoogleSignIn().signIn()`, return the access token the backend expects |
 | Apple | `sign_in_with_apple` | Xcode: enable the *Sign in with Apple* capability; Apple developer console: App ID capability and a Services ID for web/Android | `SignInWithApple.getAppleIDCredential()`, return `identityToken` |
 | PortOne payments | `portone_flutter_v2` (or a WebView) | Store id and channel keys from the PortOne console per method; add the app return scheme | Implement `PortOneLauncher.pay`: return `PaymentApproved(paymentId)` from the callback |

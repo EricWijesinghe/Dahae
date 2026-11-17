@@ -1,6 +1,6 @@
 # Google Play 앱 콘텐츠 신고 답안 (App content declarations)
 
-Play Console → 앱 → [정책] → [앱 콘텐츠] 화면의 항목을 위에서부터 채우는 답안이에요. 고객 앱(`com.malkkeum.customer`)과 파트너 앱(`com.malkkeum.partner`)에 **각각** 입력해요. 따로 적지 않은 줄은 두 앱의 답이 같아요.
+Play Console → 앱 → [정책] → [앱 콘텐츠] 화면의 항목을 위에서부터 채우는 답안이에요. 고객 앱(`kr.co.dahae.customer`)과 파트너 앱(`kr.co.dahae.partner`)에 **각각** 입력해요. 따로 적지 않은 줄은 두 앱의 답이 같아요.
 
 - 데이터 보안(Data safety) 표는 길어서 `data-safety.md` 에 따로 있어요.
 - 심사팀에 줄 로그인 정보와 메모는 `review-notes.md` 에 있어요.

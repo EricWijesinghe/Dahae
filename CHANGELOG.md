@@ -9,6 +9,7 @@ from the release branches; no tags existed for them.
 ## [1.5.0] - 2026-11-17
 
 ### Before going live
+- Store app IDs are now `kr.co.dahae.customer`, `kr.co.dahae.partner`, and `kr.co.dahae.console` (were `com.malkkeum.*`), and the Naver iOS legacy callback scheme is `dahaenaver` (was `malkkeumnaver`). Set before the first store upload: the store app ID cannot change afterwards. DODA's Firebase apps must be registered with the new IDs.
 - In the Toss sandbox, check that an EXPRESS payout comes back with `payoutDate` set to the day it was requested, and that Toss refuses a reused `refPayoutId` (the retry after a failed transfer relies on it).
 - In the Toss sandbox, check the error Toss returns for a reused `refPayoutId` and for an `Idempotency-Key` replayed with a different body (neither code is in the docs; both are kept as "maybe sent", never as a decline, after a send without an answer), and whether `GET /v2/payouts/{id}` answers inside `entityBody` (both shapes are read). Also send one payout to a sandbox seller: the create body is now a list, as in the docs.
 - After the first customer build that sends consents is published, set the customer `min_app_version` in the console business profile to that build.

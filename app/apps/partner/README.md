@@ -95,5 +95,5 @@ The full steps are in `docs/store/microsoft-store.md`. In short:
 3. 스토어 문구와 스크린샷은 `docs/store/` 에서 관리해요. 예전 이름이 남아 있으면 안 돼요.
    Store copy and screenshots are kept in `docs/store/`.
 
-앱 ID(`com.malkkeum.partner`)와 Windows 게시자 값은 사장님 확인 후 정해요. 자세한 내용은 `docs/REBRAND-CHECKLIST.md` 3번.
-The app ID (`com.malkkeum.partner`) and the Windows publisher are owner decisions; see section 3 of `docs/REBRAND-CHECKLIST.md`.
+앱 ID(`kr.co.dahae.partner`)와 Windows 게시자 값은 사장님 확인 후 정해요. 자세한 내용은 `docs/REBRAND-CHECKLIST.md` 3번.
+The app ID (`kr.co.dahae.partner`) and the Windows publisher are owner decisions; see section 3 of `docs/REBRAND-CHECKLIST.md`.

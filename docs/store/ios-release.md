@@ -1,6 +1,6 @@
 # iOS 출시 순서 (App Store · TestFlight) / iOS release steps
 
-고객 앱 `com.malkkeum.customer`(다해)와 파트너 앱 `com.malkkeum.partner`(다해 파트너)를 Codemagic 에서 빌드해 소유자의 Apple 개발자 계정으로 올려요. Mac 은 필요 없어요. 개인정보 라벨·수출 규정 답은 `app-privacy.md`, 심사 메모는 `review-notes.md`, 키 목록은 `docs/DEPLOY.md` §3 예요.
+고객 앱 `kr.co.dahae.customer`(다해)와 파트너 앱 `kr.co.dahae.partner`(다해 파트너)를 Codemagic 에서 빌드해 소유자의 Apple 개발자 계정으로 올려요. Mac 은 필요 없어요. 개인정보 라벨·수출 규정 답은 `app-privacy.md`, 심사 메모는 `review-notes.md`, 키 목록은 `docs/DEPLOY.md` §3 예요.
 Both apps are built on Codemagic and uploaded to the owner's Apple developer account. No Mac needed. Privacy label and export answers: `app-privacy.md`; review notes: `review-notes.md`; key list: `docs/DEPLOY.md` §3.
 
 ## 1. 소유자가 준비할 것 / What the owner provides
@@ -8,7 +8,7 @@ Both apps are built on Codemagic and uploaded to the owner's Apple developer acc
 | # | 준비물 / Item | 어디서 / Where | 비고 / Note |
 |---|---|---|---|
 | 1 | Apple Developer Program 가입 (연 99 USD, 법인은 D-U-N-S 번호) | developer.apple.com/programs | 개인 계정이면 판매자 이름이 개인 이름으로 보여요. Individual accounts show a personal seller name |
-| 2 | App ID 2개 등록: `com.malkkeum.customer`, `com.malkkeum.partner` | Certificates, Identifiers & Profiles → Identifiers | 둘 다 **Push Notifications**, **Sign in with Apple**, **Associated Domains** 켜기. 하나라도 빠지면 Codemagic 서명이 실패해요. Enable all three on both IDs, or signing fails |
+| 2 | App ID 2개 등록: `kr.co.dahae.customer`, `kr.co.dahae.partner` | Certificates, Identifiers & Profiles → Identifiers | 둘 다 **Push Notifications**, **Sign in with Apple**, **Associated Domains** 켜기. 하나라도 빠지면 Codemagic 서명이 실패해요. Enable all three on both IDs, or signing fails |
 | 3 | App Store Connect 앱 2개 만들기 (언어 한국어, 번들 ID 위 2개, SKU 자유) | appstoreconnect.apple.com → Apps → + | 앱을 먼저 만들어야 TestFlight 업로드가 돼요. The app record must exist before the first upload |
 | 4 | App Store Connect API 키 (역할 **App Manager**) | Users and Access → Integrations → App Store Connect API → Team Keys | `.p8`(한 번만 내려받기), Key ID, Issuer ID 3가지 |
 | 5 | Codemagic 에 연결 | Teams → Integrations → App Store Connect → 이름 **`malkkeum_asc`** | 위 3가지 입력. Enter the three values. `codemagic.yaml` 이 이 이름을 써요 |
@@ -53,5 +53,5 @@ Windows 에서는 Xcode 가 없어서 아래는 첫 Codemagic 빌드와 TestFlig
 
 - SwiftPM 플러그인 해석 (Firebase 등을 GitHub 에서 받아요), 서명, 용량.
 - iOS 에서 카드 앱(ISP, KB, 토스 등) 호출과 복귀: 호스팅 결제 페이지(`website/pay/index.html`)는 `redirectUrl` 만 써요. PortOne/PG 가 iOS 에서 앱 복귀용 `appScheme` 을 요구하면 앱 URL 스킴 추가와 페이지 수정이 필요해요. TestFlight 에서 카드 결제를 꼭 한 번 해 보세요.
-- 네이버 로그인 (iOS 17.4+ https 콜백): AASA + `webcredentials` 가 Apple 쪽에서 확인되어야 해요. 17.4 미만은 `malkkeumnaver://` 스킴을 써요.
+- 네이버 로그인 (iOS 17.4+ https 콜백): AASA + `webcredentials` 가 Apple 쪽에서 확인되어야 해요. 17.4 미만은 `dahaenaver://` 스킴을 써요.
 - `GoogleService-Info.plist` 없이 빌드하면 푸시는 꺼져요. 푸시를 쓰려면 7번을 먼저 하세요.
