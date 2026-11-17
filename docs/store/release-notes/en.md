@@ -1,10 +1,9 @@
-# Release notes template (English) · under 500 characters
+Dahae 1.5.0 what's new
 
-Version {VERSION} ({BUILD})
-
-- Smoother booking and payment screens.
-- More reliable before-and-after photo uploads.
-- Faster notifications and chat replies.
-- Bug fixes and stability improvements.
-
-Support: More → Customer support in the app.
+- See how booking works, the FAQ and the terms before you sign in, and check estimated prices.
+- Aircon, sofa, mattress, window and disinfection: pick the number of units to see the price.
+- Move-in and move-out estimates use the home type and size.
+- Before you cancel, see the cancellation fee and refund.
+- PICK tab: popular services and the newest reviews.
+- Light, dark or system theme.
+- Partners cannot accept a job that overlaps another of their jobs.
