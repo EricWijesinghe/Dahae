@@ -95,6 +95,7 @@ publish() { # publish 브랜치 채널
   sed -e "s|INSTALL_URL|$RAW/$ref/install.sh|g" -e "s|SUMS_URL|$RAW/$ref/SHA256SUMS|g" \
       -e "s|BRANCH_URL|$RAW/$branch/install.sh|g" \
       "$src/docs/delivery-README.md" > README.md
+  [ "$branch" = "$tag_branch" ] || sed -i '/dahae-install-page\.html/d' README.md # only the tagged branch ships the page
   if [ "$branch" = "$tag_branch" ]; then # the page pins this install.sh by hash and names the tag's URL, so only the tagged branch gets one
     bash "$src/scripts/release/build-install-page.sh" install.sh "$RAW/$VER/install.sh" "$work/page"
     cp "$work/page/index.html" dahae-install-page.html
