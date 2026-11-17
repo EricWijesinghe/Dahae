@@ -20,17 +20,17 @@ App IDs: customer `kr.co.dahae.customer`, partner `kr.co.dahae.partner`, console
 - 개발팀은 DODA 의 도메인을 받은 날 `API_BASE=https://<도메인>` 을 넣어 AAB 를 빌드해요 (`codemagic.yaml` 의 `customer-android`, `partner-android`). 빌드 자체는 서버가 떠 있지 않아도 돼요.
 - 1차 AAB 는 카카오·네이버·구글·Firebase 키 없이 빌드해요. 해당 로그인 버튼은 숨겨지고 푸시는 꺼져요. 내부 테스트에는 충분해요.
 - DODA 가 키를 보내면 다시 빌드해요 (약 1시간). 키 목록은 [DEPLOY.md](DEPLOY.md) §3 표.
-- 심사 제출 전에는 서버가 반드시 떠 있어야 해요. 심사원은 데모 계정으로 로그인해요 (아래 §4-6).
+- 심사 제출 전에는 서버가 반드시 떠 있어야 해요. 심사원은 데모 계정으로 로그인해요 (아래 §4-7).
 
 **Play Console 계정 (DODA)**
-1. play.google.com/console 에서 **조직(Organization)** 계정으로 가입해요. D-U-N-S 번호가 필요해요. 개인 계정은 새로 만들면 테스터 12명·14일 비공개 테스트를 거친 뒤에야 정식 출시할 수 있어요 ([03 앱 출시](guide/03-앱-출시.md) B).
+1. play.google.com/console 에서 **조직(Organization)** 계정으로 가입해요. D-U-N-S 번호가 필요해요. 개인 계정은 새로 만들면 테스터 12명·14일 비공개 테스트를 거친 뒤에야 정식 출시할 수 있어요 ([03 앱 출시](guide/03-앱-출시.md) 준비물 표).
 2. 개발자 이메일을 [사용자 및 권한]에 초대해요. 권한: **앱 출시**, **앱 정보 관리**.
 3. 앱 두 개를 만들어요 (`kr.co.dahae.customer`, `kr.co.dahae.partner`).
 
 **업로드와 서명**
-- 업로드 키는 이미 있어요. 키는 개발자가 오프라인 백업으로 보관해요 ([DEPLOY.md](DEPLOY.md) §3 항목 2).
+- 업로드 키는 개발자가 만들고 오프라인 백업으로 보관해요 ([DEPLOY.md](DEPLOY.md) §3 항목 2).
 - DODA 는 앱을 만들 때 **Play 앱 서명(Play App Signing)** 을 켜 두세요 (기본값).
-- 첫 AAB 는 DODA 가 Play Console 내부 테스트 트랙에 직접 올려요. 나중에 원하면 개발팀이 서비스 계정으로 자동 업로드하도록 바꿀 수 있어요 (선택).
+- 빌드가 끝나면 Codemagic 이 AAB 를 Play 내부 테스트 트랙에 **초안(draft)** 으로 올려요. 올리려면 DODA 가 만든 Play 서비스 계정 키 (권한 **출시 관리자**, 키는 1:1 로 전달) 가 필요해요. DODA 는 Play Console 에서 초안을 확인하고 출시(승격)해요.
 - 카카오·구글 로그인에는 **Play 앱 서명 키**의 SHA-1 이 필요해요. 첫 업로드 뒤 DODA 가 Play Console → 앱 무결성(App integrity) 에서 복사해 카카오·구글 콘솔에 등록해요. 업로드 키의 지문은 개발팀이 알려 줘요.
 
 **업데이트**
@@ -59,8 +59,8 @@ App IDs: customer `kr.co.dahae.customer`, partner `kr.co.dahae.partner`, console
 DODA 가 고르는 방식이에요. 아래는 권장안이에요.
 
 1. **서버 1대 (VM)**: Ubuntu 24.04 LTS, 한국 **서울** 리전. 권장 2 vCPU / 메모리 4 GB / 디스크 50 GB (최소 메모리 1 GB, 디스크 여유 5 GB). 고정 IP 를 연결해요. 제공사 예: 네이버 클라우드 서버, AWS Lightsail (서울) 등 ([guide 08](guide/08-클라우드-배포.md) §2~3). 가격은 제공사 요금표를 따르고, 관리형 DB 는 쓰지 않아요 (DB 는 서버 안 컨테이너).
-2. **방화벽**: 22 (SSH, 가능하면 개발팀 IP 만), 80, 443 만 열어요. 클라우드 방화벽 규칙도 함께 설정해요 ([DEPLOY.md](DEPLOY.md) §1 목록 2).
-3. **도메인**: DODA 가 소유한 도메인 (국내 등록업체에서 구입 가능). 루트 도메인의 A 레코드를 서버 IP 로 연결해요 ([guide 08](guide/08-클라우드-배포.md) §4). 클라우드플레어를 쓴다면 프록시(주황색 구름)는 꺼요.
+2. **방화벽**: 22 (SSH, 가능하면 개발팀 IP 만), 80, 443 만 열어요. 클라우드 방화벽 규칙도 함께 설정해요 ([DEPLOY.md](DEPLOY.md) §1 "서버 밖" 항목 2).
+3. **도메인**: DODA 가 소유한 도메인 (국내 등록업체에서 구입 가능). 루트 도메인과 `www` 의 A 레코드 두 개를 서버 IP 로 연결해요 ([guide 08](guide/08-클라우드-배포.md) §4). 클라우드플레어를 쓴다면 프록시(주황색 구름)는 꺼요.
 4. **설치 명령 한 줄**: 서버 SSH 에서 설치 명령을 실행해요 ([guide 08](guide/08-클라우드-배포.md) §5, [guide 01](guide/01-서버-설치.md)). 설치 프로그램이 서명된 이미지를 내려받고, PostgreSQL, Caddy(자동 HTTPS), 방화벽, 자동 백업을 설정해요.
 5. **설정 마법사**: 사장님 계정을 만들고 콘솔 [설정]에서 결제(PortOne), 문자(Solapi), 푸시(Firebase), 간편 로그인 키를 직접 넣어요 ([guide 02](guide/02-설정-마법사.md)). **키는 개발팀에 보내지 않아요.**
 6. **백업과 키 사본**: 외부 백업은 S3 호환 저장소를 권장해요 ([guide 02](guide/02-설정-마법사.md) §6). `dahae keys-backup` 으로 만든 키 사본을 서버 밖(USB·비밀번호 관리자)에 보관해요 ([guide 08](guide/08-클라우드-배포.md) §6-5). 키를 잃으면 외부 백업을 열 수 없어요.
@@ -83,7 +83,7 @@ DODA 가 고르는 방식이에요. 아래는 권장안이에요.
 | Day 0 | 개발팀 | 도메인을 받으면 AAB 2개 빌드 (`API_BASE`) |
 | Day 0–1 | 개발팀 + DODA | 서버 설치 (§4), 설정 마법사, 사장님 계정 |
 | Day 1 | 개발팀 | App ID, App Store Connect 앱, API 키, APNs 키, Codemagic 연결, 첫 TestFlight 빌드 (Apple 처리 10–30분) |
-| Day 1 | DODA | AAB 를 Play 내부 테스트 트랙에 업로드, Play 앱 서명 SHA-1 등록 |
+| Day 1 | DODA | Codemagic 이 올린 AAB 초안을 Play 내부 테스트 트랙에서 확인·출시, Play 앱 서명 SHA-1 등록 |
 | Day 1–3 | DODA 직원 | 안드로이드·iOS 실기기 테스트 (로그인, 사진, 결제 창, 푸시, 위치) |
 | 심사 제출 시 | DODA + 개발팀 | 데모 계정 켜기, 심사 메모, 개인정보처리방침·계정 삭제 주소 확인, 제출 |
 | 심사 기간 | 스토어 | Google 은 보통 며칠, Apple 은 보통 1–3일 (일반적인 기간이며 보장되지 않아요) |
@@ -94,6 +94,7 @@ DODA 가 고르는 방식이에요. 아래는 권장안이에요.
 - [ ] 서버 SSH 접속 권한, 또는 설치 날 통화 가능 시간
 - [ ] Apple 관리자 초대 (개발자 Apple ID 에 Admin)
 - [ ] Play Console 개발자 초대 (앱 출시, 앱 정보 관리)
+- [ ] Play 서비스 계정 키 (JSON, 권한 **출시 관리자**): Codemagic 의 Play 자동 업로드에 필요해요. 1:1 로 전달해요
 - [ ] 키 (선택, 있을 때만): 카카오 네이티브 키, 네이버 클라이언트 ID·시크릿, 구글 OAuth 클라이언트 ID (웹·iOS), Firebase 설정 파일 (고객·파트너, Android·iOS)
 - 키 파일과 비밀번호는 카카오톡 단체방이 아니라 1:1 로 보내요 ([guide 03](guide/03-앱-출시.md) 전달 방법).
 
@@ -127,7 +128,7 @@ Audience: DODA (operator of the Dahae service) and the developer team. Step-by-s
 - **First build without keys.** Kakao, Naver, Google sign-in buttons stay hidden and push stays off. This is enough for internal testing. When DODA sends the keys, we rebuild (about 1 hour). Key list: [DEPLOY.md](DEPLOY.md) §3.
 - **Server before review.** The server must be running before DODA submits for Play review, because reviewers log in with the demo account (section 4, item 7).
 - **Play Console account (DODA).** Register as an **Organization** (a D-U-N-S number is needed). A new personal account must run a closed test with 12 testers for 14 days before production. Invite the developer under Users and permissions: App release and App information management.
-- **Upload and signing.** The upload key already exists and stays with the developer as an offline backup. DODA keeps **Play App Signing** on (the default). DODA uploads the first AAB to the internal testing track. Later the developer can automate uploads with a Play service account (optional).
+- **Upload and signing.** The developer creates the upload key and keeps an offline backup ([DEPLOY.md](DEPLOY.md) §3 item 2). DODA keeps **Play App Signing** on (the default). Codemagic uploads each AAB to the internal testing track as a draft, using a Play service account key from DODA (role **Release manager**). DODA checks the draft and promotes it.
 - **Sign-in SHA-1.** Kakao and Google sign-in need the **Play app-signing key** SHA-1. After the first upload, DODA copies it from Play Console → App integrity and registers it in the Kakao and Google consoles. The developer provides the upload key fingerprint.
 - **Updates.** Each new version is a new AAB with a higher build number. DODA uploads it the same way. Build numbers are set by the build script, never by hand.
 
@@ -148,8 +149,8 @@ Audience: DODA (operator of the Dahae service) and the developer team. Step-by-s
 DODA chooses what it is comfortable with. This is the recommended plan.
 
 1. **One VM.** Ubuntu 24.04 LTS in the **Seoul** region. Recommended 2 vCPU / 4 GB RAM / 50 GB disk (minimum 1 GB RAM, 5 GB free disk). Attach a static IP. Examples: Naver Cloud Server, AWS Lightsail (Seoul) ([guide 08](guide/08-클라우드-배포.md) §2–3). Prices follow the provider's price list. No managed database: PostgreSQL runs in a container on the same server.
-2. **Firewall.** Open only 22 (SSH, ideally from the developer's IP), 80 and 443, in the cloud firewall as well ([DEPLOY.md](DEPLOY.md) §1, item 2).
-3. **Domain.** A domain DODA owns. Add an A record for the bare domain pointing at the server IP ([guide 08](guide/08-클라우드-배포.md) §4). If Cloudflare is used, turn off the orange-cloud proxy.
+2. **Firewall.** Open only 22 (SSH, ideally from the developer's IP), 80 and 443, in the cloud firewall as well ([DEPLOY.md](DEPLOY.md) §1, "Outside the server", item 2).
+3. **Domain.** A domain DODA owns. Add two A records, one for the bare domain and one for `www`, pointing at the server IP ([guide 08](guide/08-클라우드-배포.md) §4). If Cloudflare is used, turn off the orange-cloud proxy.
 4. **One install command.** Run the install line over SSH ([guide 08](guide/08-클라우드-배포.md) §5, [guide 01](guide/01-서버-설치.md)). The installer pulls signed images and sets up PostgreSQL, Caddy with automatic HTTPS, the firewall and automatic backups.
 5. **Setup wizard.** The owner creates the owner account and enters PortOne, Solapi, Firebase and sign-in keys in the console ([guide 02](guide/02-설정-마법사.md)). **Keys are never sent to the developer.**
 6. **Backups and key copy.** Offsite backup to an S3-compatible bucket is recommended ([guide 02](guide/02-설정-마법사.md) §6). Save the key copy from `dahae keys-backup` outside the server ([guide 08](guide/08-클라우드-배포.md) §6-5). Without the key copy, offsite backups cannot be opened.
@@ -167,7 +168,7 @@ DODA chooses what it is comfortable with. This is the recommended plan.
 | Day 0 | Developer | Build both AABs once the domain is known |
 | Day 0–1 | Developer + DODA | Server install (section 4), setup wizard, owner account |
 | Day 1 | Developer | App IDs, App Store Connect apps, API key, APNs key, Codemagic link, first TestFlight build (Apple processing 10–30 min) |
-| Day 1 | DODA | Upload AAB to the Play internal track; register the Play app-signing SHA-1 |
+| Day 1 | DODA | Check and promote the Codemagic AAB draft on the Play internal track; register the Play app-signing SHA-1 |
 | Day 1–3 | DODA staff | Test on real Android and iPhone devices (sign-in, photos, payment window, push, location) |
 | At submission | DODA + developer | Turn on demo account, review notes, confirm privacy and account-deletion URLs, submit |
 | Review | Stores | Google usually takes a few days; Apple usually 1–3 days. Typical, not guaranteed. |
@@ -178,6 +179,7 @@ DODA chooses what it is comfortable with. This is the recommended plan.
 - [ ] SSH access to the server, or a time slot for a call on install day
 - [ ] Apple Admin invite for the developer's Apple ID
 - [ ] Play Console developer invite (App release, App information management)
+- [ ] Play service account key (JSON, role **Release manager**): needed for Codemagic's automatic Play upload; sent one-to-one
 - [ ] Keys, if available: Kakao native key, Naver client ID and secret, Google OAuth client IDs (web and iOS), Firebase config files (customer and partner, Android and iOS)
 - Send keys and passwords one-to-one, never in a group chat ([guide 03](guide/03-앱-출시.md)).
 
