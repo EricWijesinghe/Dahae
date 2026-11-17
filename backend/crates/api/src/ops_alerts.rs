@@ -9,6 +9,7 @@
 use crate::{
     config::Config,
     error::{ApiError, ApiResult},
+    integrations::Section,
     lifecycle::next_tick,
     metrics::job_pass,
     ops::{self, Level},
@@ -26,7 +27,7 @@ use std::{
 };
 use tokio::task::JoinHandle;
 
-pub const RULES: [&str; 16] = [
+pub const RULES: [&str; 17] = [
     "sms_failing",
     "push_failing",
     "payment_failing",
@@ -37,6 +38,7 @@ pub const RULES: [&str; 16] = [
     "otp_volume",
     "backup_stale",
     "backup_offsite_failing",
+    "backup_offsite_not_configured",
     "backup_uploads_failing",
     "disk_low",
     "unassigned_stale",
@@ -45,6 +47,8 @@ pub const RULES: [&str; 16] = [
     "payout_unconfirmed",
 ];
 pub const COOLDOWN_HOURS: i64 = 6;
+/// Local backups running with offsite never set up for this long raise the owner alert.
+const OFFSITE_UNSET_ALERT_HOURS: f64 = 48.0;
 /// Hourly sign-in code sends (all numbers) that raise the owner's `otp_volume` alert. Nothing is refused at this level.
 pub const OTP_GLOBAL_WARN_PER_HOUR: i64 = 3_000;
 /// Hard stop on hourly sign-in code sends (all numbers): 10x the warn level, far above normal peaks, so spend is bounded.
@@ -251,7 +255,8 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
             body: "서버에서 malkkeum backup 을 실행하고, backups 폴더의 backup.log 를 확인하세요.",
         });
     }
-    out.extend(offsite_backup_findings(db).await?);
+    let configured = s.providers.integ().has(Section::Backup);
+    out.extend(offsite_backup_findings(db, configured).await?);
     let disk = ops::disk_usage(s.config.upload_dir.clone()).await;
     if disk.is_some_and(|d| ops::disk_level(d.free_pct(), &t) == Level::Red) {
         out.push(Finding {
@@ -294,8 +299,17 @@ async fn business_findings_or_skip(db: &PgPool, cfg: &Config) -> Vec<Finding> {
 }
 
 /// Both offsite uploads (database dump and photo archive): each rule is the status page's red rule as an owner alert.
-pub async fn offsite_backup_findings(db: &PgPool) -> ApiResult<Vec<Finding>> {
+/// Offsite never set up while local backups run is its own rule.
+pub async fn offsite_backup_findings(db: &PgPool, backup_configured: bool) -> ApiResult<Vec<Finding>> {
     let mut out = Vec::new();
+    let status = ops::backup_status(db).await?;
+    if !backup_configured && ops::offsite_unset_hours(status.as_ref(), Utc::now()).is_some_and(|h| h > OFFSITE_UNSET_ALERT_HOURS) {
+        out.push(Finding {
+            rule: "backup_offsite_not_configured",
+            title: "외부 백업을 아직 설정하지 않았어요",
+            body: "설정 > 외부 백업 (S3 호환) 에서 저장소를 연결하고 연결 테스트를 해 주세요. 지금은 백업이 서버 안에만 있어요.",
+        });
+    }
     out.extend(
         offsite_failure(
             db,

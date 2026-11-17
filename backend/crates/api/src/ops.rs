@@ -285,6 +285,25 @@ pub fn backup_age_hours(status: Option<&Value>, now: DateTime<Utc>) -> Option<f6
     Some((now - at).num_minutes() as f64 / 60.0)
 }
 
+/// Offsite setup state for the status the upload step writes: the first time it was seen unset is kept
+/// while it stays unset, and null once it is set up.
+pub fn offsite_unset_since(prior: Option<&Value>, unset: bool, now: DateTime<Utc>) -> Value {
+    if !unset {
+        return Value::Null;
+    }
+    prior
+        .and_then(|s| s.get("offsite_unset_since"))
+        .filter(|v| v.is_string())
+        .cloned()
+        .unwrap_or_else(|| json!(now))
+}
+
+/// Hours since offsite was first seen unset. None when the status does not say it is unset.
+pub fn offsite_unset_hours(status: Option<&Value>, now: DateTime<Utc>) -> Option<f64> {
+    let since: DateTime<Utc> = status?.get("offsite_unset_since")?.as_str()?.parse().ok()?;
+    Some((now - since).num_minutes() as f64 / 60.0)
+}
+
 /// Everything the status page shows, in one call. Database errors are reported in the payload, not as a failure.
 pub async fn status(s: &AppState) -> ApiResult<Value> {
     let now = Utc::now();
@@ -591,5 +610,22 @@ mod tests {
         let status = json!({ "at": "2026-11-10T18:30:00Z" });
         assert_eq!(backup_age_hours(Some(&status), at(12)), Some(17.5));
         assert_eq!(backup_age_hours(None, at(12)), None);
+    }
+
+    #[test]
+    fn offsite_unset_since_keeps_the_first_day_seen_unset() {
+        let first = json!("2026-11-10T18:30:00Z");
+        let prior = json!({ "offsite_unset_since": first });
+        assert_eq!(offsite_unset_since(Some(&prior), true, at(12)), first);
+        assert_eq!(offsite_unset_since(None, true, at(12)), json!(at(12)));
+        assert_eq!(offsite_unset_since(Some(&prior), false, at(12)), Value::Null, "set up clears it");
+    }
+
+    #[test]
+    fn offsite_unset_hours_counts_from_the_first_day_seen_unset() {
+        let status = json!({ "offsite_unset_since": "2026-11-10T18:30:00Z" });
+        assert_eq!(offsite_unset_hours(Some(&status), at(12)), Some(17.5));
+        assert_eq!(offsite_unset_hours(Some(&json!({ "at": "2026-11-10T18:30:00Z" })), at(12)), None);
+        assert_eq!(offsite_unset_hours(None, at(12)), None);
     }
 }

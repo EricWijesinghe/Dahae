@@ -623,7 +623,19 @@ async fn upload_cmd(config: &Config, file: &str) -> i32 {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or(file);
     // The photo tar is recorded under its own key: its failure must not be overwritten by the database upload.
     let photos = offsite_integration(name) == ops::PHOTOS_INTEGRATION;
-    let mut status = json!({ "at": Utc::now(), "file": name, "size_bytes": meta.len(), "offsite": null });
+    let prior = match ops::backup_status(&db).await {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("status: {e}");
+            return 1;
+        }
+    };
+    let now = Utc::now();
+    let unset = integ.backup.is_none();
+    let mut status = json!({
+        "at": now, "file": name, "size_bytes": meta.len(), "offsite": null,
+        "offsite_unset_since": ops::offsite_unset_since(prior.as_ref(), unset, now),
+    });
     if !photos && let Err(e) = store_status(&db, &status).await {
         eprintln!("status: {e}");
         return 1;
