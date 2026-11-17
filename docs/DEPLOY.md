@@ -1,14 +1,14 @@
 # Delivery runbook (developer; §3 is run by the client)
 
 The source repo (github.com/EricWijesinghe/Dahae) is public but proprietary: reading it grants no right to use it (LICENSE §1.4, §3.1); a client uses it under a signed licence agreement. Servers install from the **public delivery repo** (installer + Korean guides),
-public server images, and store apps that the client builds on its own Codemagic and uploads to its own
-store accounts (guide 11; the developer does it only if the client asks).
+public server images, and store apps that the developer builds with GitHub Actions and uploads to the client's own
+store accounts (guide 11).
 
 | Piece | Built by | Client receives |
 |---|---|---|
 | API image, web image (website + console at `/admin/`) | `release.yml` → GHCR | `docker pull` via install.sh |
 | install.sh + `SHA256SUMS` + `guide/` + `store/` | `release.yml` → `DIST_REPO` (branches `main` = stable, `beta`; annotated tag `v<VER>` on the release's channel commit) | one `curl … \| sudo bash` line |
-| Customer / partner apps | Codemagic on the client's fork ([guide 11](guide/11-앱-직접-빌드.md)) | TestFlight / Play internal test, then stores |
+| Customer / partner apps | GitHub Actions `store-apps` in the public repository ([guide 11](guide/11-앱-직접-빌드.md)) | TestFlight / Play internal test, then stores |
 
 ## 0. Release gate
 
@@ -189,16 +189,20 @@ The release also uploads `dahae-aws.yaml` (CloudFormation, pinned to the same `i
 
 ## 3. Store apps (per client)
 
-The client builds the store apps itself, on its own fork of the repo and its own Codemagic account, and
-uploads them to its own store accounts. Follow [guide 11](guide/11-앱-직접-빌드.md). The developer runs these
-steps only if the client asks. The client does:
-1. Integrations → App Store Connect: the client's API key, name `malkkeum_asc`.
-2. Code signing → Android keystores: generate upload keystore, reference `malkkeum_upload`.
-   Keep a copy offline — losing it blocks Play updates (recoverable only via Play support).
-3. Env group `malkkeum`: `API_BASE=https://<client domain>`, `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS`
-   (service account created in the client's Play Console, *Release* permission, secure).
+The developer builds the store apps with GitHub Actions in the public repository (workflow `store-apps`, manual
+run, GitHub-hosted runners incl. macOS, free for public repos). The apps are uploaded to DODA's own store accounts
+(DODA owns the Apple organization and the Play organization and grants the developer admin access). Follow
+[guide 11](guide/11-앱-직접-빌드.md). Setup, in the repository:
+1. Settings → Environments → `store`: deployment branch `master`; required reviewers optional.
+2. Environment `store` → Variables: `API_BASE=https://<client domain>`, `APPLE_TEAM_ID` (10 characters),
+   `APP_LINK_DOMAIN` (optional, bare host).
+3. Environment `store` → Secrets: `ANDROID_KEYSTORE_B64` (base64 of the upload keystore), `ANDROID_KEYSTORE_PASSWORD`,
+   `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`; `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_B64` (App Store Connect key,
+   role App Manager, base64 of the .p8); optional `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (Play API, *Release* permission).
+   Keep an offline copy of the keystore: losing it blocks Play updates (recoverable only via Play support).
 4. Create the two apps in App Store Connect / Play Console (bundle ids `kr.co.dahae.customer`,
-   `kr.co.dahae.partner`), run the four workflows in `codemagic.yaml`.
+   `kr.co.dahae.partner`). The very first Android upload is made by hand in Play Console (the API cannot create it);
+   the first iOS build appears in App Store Connect after the first `store-apps` run with `upload` on.
    Firebase: the client's Firebase apps must use the same ids (Android package `kr.co.dahae.customer` / `kr.co.dahae.partner`,
    iOS bundle ids). The google-services plugin fails the build when `google-services.json` has no client for the applicationId.
 5. Store listing text: `docs/store/listing-{ko,en,ja,zh,vi}.md` (check lengths with
@@ -212,16 +216,16 @@ steps only if the client asks. The client does:
 
 Apps bake in `API_BASE` at build time, so a domain change means a rebuild.
 
-### Native keys (Codemagic env group `malkkeum`)
+### Native keys (environment `store`, see `.github/workflows/store-apps.yml`)
 `scripts/ci/native-keys.sh <app>` turns these into `keys.json` (dart-defines), `ios/Flutter/Keys.xcconfig`
 and the Firebase files. All optional except `API_BASE`; a missing key hides that button / disables push.
 
 | Var | Where to get it |
 |---|---|
-| `API_BASE` | `https://<client domain>` |
+| `API_BASE` (variable) | `https://<client domain>` |
 | `KAKAO_NATIVE_KEY` | developers.kakao.com → app → 앱 키 → 네이티브 앱 키. Register Android key hash (Play App Signing SHA-1 → base64) and iOS bundle id under 플랫폼 |
 | `NAVER_CLIENT_ID` | developers.naver.com → 애플리케이션 → 네아로. Callback URL: `https://<APP_LINK_DOMAIN>/auth/naver/callback` (see Naver App Link below). The secret stays on the server |
-| `APP_LINK_DOMAIN` | bare server host, same as the server `DOMAIN` (e.g. `myshop.co.kr`). Android App Link host and iOS `applinks:` domain. Naver is hidden without it |
+| `APP_LINK_DOMAIN` (variable) | bare server host, same as the server `DOMAIN` (e.g. `myshop.co.kr`). Android App Link host and iOS `applinks:` domain. Naver is hidden without it |
 | `GOOGLE_SERVER_CLIENT_ID` | Google Cloud console → Credentials → *Web* OAuth client id (also put it in the console wizard Google card) |
 | `GOOGLE_IOS_CLIENT_ID` | Google Cloud console → *iOS* OAuth client for each bundle id (the reversed id is derived) |
 | `GOOGLE_SERVICES_JSON_B64`, `GOOGLE_SERVICE_INFO_PLIST_B64` | Firebase project → customer Android/iOS app config files, `base64 -w0` |
@@ -242,7 +246,7 @@ against `/.well-known/apple-app-site-association` (both sections are served). iO
    until the console values are cleared. The card says which source is in use.
 2. Naver Developers app: add the callback URL `https://<APP_LINK_DOMAIN>/auth/naver/callback`.
 3. Apple Developer portal: enable **Associated Domains** on both bundle ids (`kr.co.dahae.customer`,
-   `kr.co.dahae.partner`) so the entitlement can be signed. Codemagic signing fails without it.
+   `kr.co.dahae.partner`) so the entitlement can be signed. The iOS build fails without it.
 4. Check: `curl -s https://<DOMAIN>/.well-known/assetlinks.json` and `…/apple-app-site-association` return JSON.
    On Android, `adb shell pm get-app-links kr.co.dahae.customer` must show `verified`.
 
@@ -252,7 +256,7 @@ PKCE. The Naver Developers app must list `dahaenaver` as its iOS URL scheme or t
 
 iOS, once per bundle id in the Apple Developer portal: enable **Sign in with Apple** and **Push
 Notifications**, upload an APNs key (.p8) to Firebase → Cloud Messaging. In Xcode the Runner target
-needs both capabilities (Codemagic automatic signing picks them up from the App ID).
+needs both capabilities (automatic signing picks them up from the App ID).
 Server side (console wizard): Firebase service-account key (Push card), Kakao REST key, Naver client id + secret,
 Google + Apple client ids — these verify the tokens the apps send.
 
@@ -280,9 +284,9 @@ The code has an adapter point for each. Dev mode uses safe fakes until then.
 
 Legal: publish a privacy policy and terms (PIPA). Add them in the console under Coupons & content → Legal (slugs `privacy` and `terms`). The apps show them automatically.
 
-### Sign-in and push SDKs (wired; keys via Codemagic, see §3)
+### Sign-in and push SDKs (wired; keys via the store environment, see §3)
 
-The SDKs are wired in code; each one switches on when its key is supplied at build time (Codemagic env, §3) or in the setup wizard. Without a key the feature hides itself.
+The SDKs are wired in code; each one switches on when its key is supplied at build time (store environment, §3) or in the setup wizard. Without a key the feature hides itself.
 
 How it works today:
 - Social sign-in: `packages/core/lib/src/social_native_io.dart` (Kakao, Naver via https App Link, Google, Apple). A provider is offered only when its build keys are set (`SOCIAL_PROVIDERS` narrows the list). Dev API hosts get `DevSocialSignIn`.
