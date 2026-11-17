@@ -4,6 +4,7 @@
 """Tests for check-notices.py. Run: python3 -I -m unittest discover -s scripts/ci -p 'test_*.py'"""
 
 import importlib.util
+import json
 import pathlib
 import unittest
 
@@ -65,6 +66,37 @@ class PubHosted(unittest.TestCase):
 
     def test_hosted_packages_only(self):
         self.assertEqual(cn.pub_hosted(self.LOCK), {("args", "2.7.0")})
+
+
+class DartShipped(unittest.TestCase):
+    """pub deps --json shape: an app lists its dev dependencies in both lists; a path package lists its own."""
+    DEPS = {"packages": [
+        {"name": "customer", "source": "root", "version": "1.0.0", "dependencies": ["flutter", "ui", "lints"],
+         "devDependencies": ["lints"]},
+        {"name": "partner", "source": "root", "version": "1.0.0", "dependencies": ["flutter"], "devDependencies": []},
+        {"name": "console", "source": "root", "version": "1.0.0", "dependencies": [], "devDependencies": []},
+        {"name": "ui", "source": "root", "version": "0.1.0", "dependencies": ["http", "mockito"],
+         "devDependencies": ["mockito"]},
+        {"name": "http", "source": "hosted", "version": "1.6.0", "dependencies": ["meta"], "devDependencies": []},
+        {"name": "meta", "source": "hosted", "version": "1.19.0", "dependencies": [], "devDependencies": []},
+        {"name": "mockito", "source": "hosted", "version": "5.0.0", "dependencies": [], "devDependencies": []},
+        {"name": "lints", "source": "hosted", "version": "6.1.0", "dependencies": [], "devDependencies": []},
+        {"name": "flutter", "source": "sdk", "version": "0.0.0", "dependencies": [], "devDependencies": []},
+    ]}
+
+    def test_reachable_hosted_packages_through_path_packages(self):
+        got = cn.dart_shipped(json.dumps(self.DEPS))
+        self.assertEqual(got, {("http", "1.6.0"), ("meta", "1.19.0")})
+
+    def test_dev_only_packages_are_left_out(self):
+        names = {name for name, _ in cn.dart_shipped(json.dumps(self.DEPS))}
+        self.assertNotIn("mockito", names)
+        self.assertNotIn("lints", names)
+
+    def test_missing_app_is_refused(self):
+        deps = {"packages": [p for p in self.DEPS["packages"] if p["name"] != "console"]}
+        with self.assertRaises(ValueError):
+            cn.dart_shipped(json.dumps(deps))
 
 
 if __name__ == "__main__":
