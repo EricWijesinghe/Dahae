@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 domain = { path = "../domain" }
-aes-gcm = "0.10"
+aes-gcm = "0.11"
 argon2 = { version = "0.5", features = ["std"] }
 axum = { version = "0.8", features = ["ws", "multipart", "macros"] }
 base64 = "0.22"
