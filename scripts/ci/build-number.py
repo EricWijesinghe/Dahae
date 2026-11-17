@@ -5,7 +5,7 @@
 """The one source of store build numbers: Android versionCode, iOS CFBundleVersion, MSIX version.
 
 Prints whole minutes since 2026-01-01T00:00Z. It needs no stored counter, so the local release
-script and Codemagic can never hand out the same number twice for one app, and a later build is
+script and store-apps can never hand out the same number twice for one app, and a later build is
 always higher (Play, App Store Connect and Partner Center all reject a reused or lower number).
 
   python -I scripts/ci/build-number.py   ->   454321

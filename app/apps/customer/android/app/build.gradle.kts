@@ -7,7 +7,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Release signing: CI secrets (Codemagic CM_KEYSTORE_*) or android/key.properties.
+// Release signing: CI secrets (UPLOAD_KEYSTORE_* from CI secrets) or android/key.properties.
 // Without either, release builds fall back to debug keys so `flutter run --release` still works.
 val keyProps = Properties().apply {
     val f = rootProject.file("key.properties")
@@ -27,7 +27,7 @@ val dartDefines: Map<String, String> =
 // Firebase (push) needs google-services.json, written by CI from a secret. Without it the plugin stays off.
 val hasFirebaseConfig = file("google-services.json").exists()
 if (hasFirebaseConfig) apply(plugin = "com.google.gms.google-services")
-val releaseStore = signingValue("CM_KEYSTORE_PATH", "storeFile")
+val releaseStore = signingValue("UPLOAD_KEYSTORE_PATH", "storeFile")
 
 
 android {
@@ -65,17 +65,17 @@ android {
         if (releaseStore != null) {
             create("release") {
                 storeFile = file(releaseStore)
-                storePassword = signingValue("CM_KEYSTORE_PASSWORD", "storePassword")
-                keyAlias = signingValue("CM_KEY_ALIAS", "keyAlias")
-                keyPassword = signingValue("CM_KEY_PASSWORD", "keyPassword")
+                storePassword = signingValue("UPLOAD_KEYSTORE_PASSWORD", "storePassword")
+                keyAlias = signingValue("UPLOAD_KEY_ALIAS", "keyAlias")
+                keyPassword = signingValue("UPLOAD_KEY_PASSWORD", "keyPassword")
             }
         }
     }
 
     buildTypes {
         release {
-            // Codemagic sets CM_BUILD_ID: a release bundle there must never fall back to the debug key.
-            check(releaseStore != null || System.getenv("CM_BUILD_ID") == null) { "CM_KEYSTORE_PATH is unset on Codemagic" }
+            // GitHub Actions sets GITHUB_ACTIONS=true: a release bundle there must never fall back to the debug key.
+            check(releaseStore != null || System.getenv("GITHUB_ACTIONS") == null) { "UPLOAD_KEYSTORE_PATH is unset in CI" }
             signingConfig = if (releaseStore != null) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
             // Native debug symbols go into the bundle so Play Console can symbolicate native crashes and ANRs.
             ndk { debugSymbolLevel = "FULL" }

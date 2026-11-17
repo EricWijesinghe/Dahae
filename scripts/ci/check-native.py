@@ -5,7 +5,7 @@
 
   python -I scripts/ci/check-native.py     # exit 1 on any failed check
   python -I scripts/ci/check-native.py --aab <app.aab|app.apk> --manifest <merged AndroidManifest.xml>
-  python -I scripts/ci/check-native.py --ipa <Runner.ipa>      # after flutter build ipa (Codemagic)
+  python -I scripts/ci/check-native.py --ipa <Runner.ipa>      # after the xcodebuild export (store-apps.yml)
 
 Console ships only as web (website image), so it has no native store build to check.
 """
@@ -289,7 +289,7 @@ def check_android(app):
     m = re.search(r"targetSdk = (\d+)", gradle)
     check(m is not None and int(m.group(1)) >= 36, f"{app} build.gradle.kts: targetSdk must be >= 36 (Play rule)")
     check('manifestPlaceholders["appLinkHost"]' in gradle, f"{app} build.gradle.kts: appLinkHost placeholder")
-    for env in ["CM_KEYSTORE_PATH", "CM_KEYSTORE_PASSWORD", "CM_KEY_ALIAS", "CM_KEY_PASSWORD"]:
+    for env in ["UPLOAD_KEYSTORE_PATH", "UPLOAD_KEYSTORE_PASSWORD", "UPLOAD_KEY_ALIAS", "UPLOAD_KEY_PASSWORD"]:
         check(f'"{env}"' in gradle, f"{app} build.gradle.kts: release signing does not read {env}")
     check(not re.search(r'(storePassword|keyPassword|keyAlias)\s*=\s*"', gradle), f"{app} build.gradle.kts: literal signing secret")
     check('getByName("debug")' in gradle, f"{app} build.gradle.kts: debug-signing fallback removed")
@@ -505,10 +505,11 @@ def check_merged_manifest(path):
 
 
 def check_store_docs():
-    cm = (REPO / "codemagic.yaml").read_text(encoding="utf-8")
-    builds = [ln for ln in cm.splitlines() if "flutter build " in ln]
-    check(len(builds) == 4 and all("FCI_TAG" in ln for ln in builds),
-          "codemagic.yaml: all four flutter build lines must take the version name from the tag (FCI_TAG)")
+    wf = (REPO / ".github" / "workflows" / "store-apps.yml").read_text(encoding="utf-8")
+    joined = wf.replace("\\\n", " ").splitlines()  # join shell line continuations
+    builds = [ln for ln in joined if "flutter build " in ln]
+    check(len(builds) == 2 and all("--obfuscate" in ln and "--dart-define-from-file=keys.json" in ln for ln in builds),
+          "store-apps.yml: both flutter build lines must obfuscate and read keys.json")
     # i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)
     for lang in ["ko", "en"]:
         check((REPO / "docs" / "store" / "release-notes" / f"{lang}.md").exists(), f"release notes template missing: {lang}")
@@ -545,7 +546,7 @@ def check_web():
           "backend app_links.rs: both well-known routes must exist")
     # Web builds self-host CanvasKit/skwasm, so the site CSP can stay free of Google hosts.
     files = [p for d in ["deploy", "scripts", ".github"] for p in (REPO / d).rglob("*") if p.is_file() and p != Path(__file__).resolve()]
-    builds = [(p, ln) for p in files + [REPO / "codemagic.yaml"] for ln in p.read_text(encoding="utf-8", errors="ignore").splitlines()
+    builds = [(p, ln) for p in files + [REPO / ".github" / "workflows" / "store-apps.yml"] for ln in p.read_text(encoding="utf-8", errors="ignore").splitlines()
               if re.search(r"flutter(\.bat)? build web", ln)]
     check(len(builds) >= 2, "no `flutter build web` line found (deploy/web.Dockerfile moved?)")
     for p, ln in builds:
@@ -621,29 +622,27 @@ def check_seller_include(caddy):
               f"{rel}: seller details must be included server-side ({{{{httpInclude \"/v1/public/seller-info\"}}}})")
 
 
-def check_codemagic_ios(cm):
-    """Each iOS workflow signs and builds only its own app (the repo holds three Runner.xcodeproj)."""
-    check(re.search(r"^\s+xcode: \d+\.\d+", cm, re.M) is not None, "codemagic.yaml: pin an Xcode version")
+def check_store_ios(wf):
+    """Each iOS job signs and builds only its own app (the repo holds three Runner.xcodeproj)."""
+    check('xcode-version: "26.6"' in wf, "store-apps.yml: pin Xcode 26.6 for the iOS job")
+    check("-allowProvisioningUpdates" in wf and "-authenticationKeyPath" in wf,
+          "store-apps.yml: xcodebuild must sign with the App Store Connect key (automatic signing)")
+    check("-scheme Runner" in wf and "Runner.xcworkspace" in wf, "store-apps.yml: archive the Runner scheme of the workspace")
+    check("--config-only" in wf and "--obfuscate" in wf, "store-apps.yml: the iOS config must be generated with the same flags as the build")
+    check("check-native.py --ipa" in wf.split("-exportArchive")[-1], "store-apps.yml: check the exported ipa")
     for app in NATIVE_APPS:
-        m = re.search(rf"^  {app}-ios:\n(.*?)(?=^  [\w-]+:\s*$|\Z)", cm, re.S | re.M)
-        check(m is not None, f"codemagic.yaml: {app}-ios workflow missing")
-        wf = m.group(1) if m else ""
-        check(f"bundle_identifier: kr.co.dahae.{app}" in wf, f"codemagic.yaml {app}-ios: ios_signing bundle_identifier")
-        check("app_store_connect: malkkeum_asc" in wf, f"codemagic.yaml {app}-ios: App Store Connect integration malkkeum_asc")
-        check(f"working_directory: app/apps/{app}\n        script: xcode-project use-profiles --project ios/Runner.xcodeproj" in wf,
-              f"codemagic.yaml {app}-ios: use-profiles must target ios/Runner.xcodeproj of this app")
-        check("--export-options-plist=/Users/builder/export_options.plist" in wf, f"codemagic.yaml {app}-ios: export options plist")
-        check("check-native.py --ipa" in wf.split("flutter build ipa")[-1], f"codemagic.yaml {app}-ios: check the built ipa")
-        check(("BYPASS_PERMISSION_LOCATION_ALWAYS" in wf) == (app in LOCATION_APPS),
-              f"codemagic.yaml {app}-ios: BYPASS_PERMISSION_LOCATION_ALWAYS belongs to the geolocator app only")
-        check("submit_to_app_store: false" in wf, f"codemagic.yaml {app}-ios: nothing goes to App Review automatically")
+        check(f"kr.co.dahae.{app}" in wf, f"store-apps.yml: {app} bundle identifier missing")
+    bypass = re.search(r"matrix\.app == 'customer'[\s\S]*?BYPASS_PERMISSION_LOCATION_ALWAYS=1", wf)
+    check(bypass is not None and wf.count("BYPASS_PERMISSION_LOCATION_ALWAYS") == 1,
+          "store-apps.yml: BYPASS_PERMISSION_LOCATION_ALWAYS belongs to the customer (geolocator) app only")
+    check("submit_to_app_store" not in wf and "--upload-app" in wf, "store-apps.yml: TestFlight only, nothing goes to App Review")
 
 
 def check_ci():
-    cm = (REPO / "codemagic.yaml").read_text(encoding="utf-8")
-    first_build = cm.find("flutter build")
-    check(0 <= cm.find("check-native.py") < first_build, "codemagic.yaml: check-native.py must run before flutter build")
-    check_codemagic_ios(cm)
+    wf = (REPO / ".github" / "workflows" / "store-apps.yml").read_text(encoding="utf-8")
+    first_build = wf.find("flutter build")
+    check(0 <= wf.find("check-native.py") < first_build, "store-apps.yml: check-native.py must run before flutter build")
+    check_store_ios(wf)
     ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     m = re.search(r"^  native:\n(.*?)(?=^  [\w-]+:\s*$|\Z)", ci, re.S | re.M)
     check(m is not None, "ci.yml: native job missing")

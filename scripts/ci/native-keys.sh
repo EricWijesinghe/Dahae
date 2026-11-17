@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-Proprietary
 
-# Writes per-build native key files from CI env vars (Codemagic group "malkkeum"). Never commit outputs.
+# Writes per-build native key files from CI env vars (the store environment in store-apps.yml). Never commit outputs.
 #   scripts/ci/native-keys.sh customer|partner
 # APP_LINK_DOMAIN = the server DOMAIN (Naver https App Link host). Optional: no host, no Naver button.
 # Outputs:

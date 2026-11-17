@@ -18,10 +18,9 @@ same() { # same 무엇 기준값 값... : 모든 값이 기준값과 같아야 �
 same "Rust: backend/rust-toolchain.toml vs backend/Dockerfile" \
   "$(sed -n 's/^channel = "\(.*\)"$/\1/p' backend/rust-toolchain.toml)" \
   "$(sed -n 's/^FROM rust:\([0-9.]*\)-.*/\1/p' backend/Dockerfile)"
-same "Flutter: .github/actions/flutter-setup vs deploy/web.Dockerfile vs codemagic.yaml" \
+same "Flutter: .github/actions/flutter-setup vs deploy/web.Dockerfile" \
   "$(sed -n 's/.*flutter-version: \([0-9.]*\),.*/\1/p' .github/actions/flutter-setup/action.yml)" \
-  "$(sed -n 's/^ARG FLUTTER_VERSION=//p' deploy/web.Dockerfile)" \
-  "$(sed -n 's/^    flutter: //p' codemagic.yaml)"
+  "$(sed -n 's/^ARG FLUTTER_VERSION=//p' deploy/web.Dockerfile)"
 # shellcheck disable=SC2046 # one word per cosign-release line
 same "cosign: deploy/install.sh vs .github/workflows/release.yml" \
   "$(sed -n 's/^COSIGN_VERSION=//p' deploy/install.sh)" \

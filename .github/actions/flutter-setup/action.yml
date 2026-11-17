@@ -1,6 +1,6 @@
 name: Flutter setup
 description: >-
-  Pinned Flutter (the same version as deploy/web.Dockerfile and codemagic.yaml; scripts/ci/check-pins.sh),
+  Pinned Flutter (the same version as deploy/web.Dockerfile; scripts/ci/check-pins.sh),
   packages exactly as app/pubspec.lock says, generated strings. Run after actions/checkout.
 runs:
   using: composite

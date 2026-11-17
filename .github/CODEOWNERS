@@ -7,7 +7,7 @@
 /deploy/                            @EricWijesinghe
 /.github/                           @EricWijesinghe
 /scripts/ci/                        @EricWijesinghe
-/codemagic.yaml                     @EricWijesinghe
+/.github/workflows/store-apps.yml   @EricWijesinghe
 
 # Legal pages and their generator (전자상거래법, 개인정보 보호법 text)
 /scripts/build_legal.py             @EricWijesinghe

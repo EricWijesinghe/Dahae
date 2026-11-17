@@ -11,7 +11,7 @@ This folder is the **complete hand-over package** for Dahae (Korean home-cleanin
 | **2-Install-Server** | 실서버 설치 (Ubuntu/Debian VPS): install.sh, 이미지 묶음(.tar), 설치 가이드 01-05, VPS 설치 한 페이지. / Production server install: installer, offline image bundle, guides 01-05, one-page VPS guide. |
 | **3-Store-Android** | 구글 플레이용 AAB 와 범용 APK (고객·파트너), 업로드 키 (signing/), 스토어 문안·데이터 안전성·심사 메모. / Google Play AAB + universal APK (customer, partner), upload key, store texts. |
 | **4-Store-Microsoft** | Windows MSIX (고객·파트너; 콘솔은 웹 전용): 로컬 설치용 테스트 서명과 Partner Center 제출용 미서명 패키지, 스토어 안내. / Windows MSIX packages (customer, partner; the console is web-only): test-signed and Partner Center store-mode. |
-| **5-Store-Apple** | iOS 빌드 안내 (Windows 에서는 .ipa 를 만들 수 없어요: Codemagic 사용), App Store Connect 체크리스트, 앱 개인정보 답변. / iOS: Codemagic steps (no .ipa can be built on Windows), App Store Connect checklist. |
+| **5-Store-Apple** | iOS 빌드 안내 (Windows 에서는 .ipa 를 만들 수 없어요: GitHub Actions macOS 러너 사용), App Store Connect 체크리스트, 앱 개인정보 답변. / iOS: GitHub Actions macOS runner (no .ipa can be built on Windows), App Store Connect checklist. |
 | **7-Console-Android** | 사장님 폰에 직접 설치하는 관리자 앱 APK (Dahae-Console.apk) 와 설치 안내. 스토어에는 올리지 않아요. / Owner console APK to sideload on your own Android phone (not on any store). |
 | **6-Docs** | 사장님 가이드, 재무·세무 안내, 개인정보 보관 정책, 배포 runbook (DEPLOY.md). / Owner guide, finance and tax, privacy and retention, deploy runbook. |
 

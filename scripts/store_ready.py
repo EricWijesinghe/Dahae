@@ -5,7 +5,7 @@
 
   python -I scripts/store_ready.py
 
-- Android: release signing from CI secrets (Codemagic's CM_KEYSTORE_* variables) or
+- Android: release signing from CI secrets (UPLOAD_KEYSTORE_* variables from CI secrets) or
   android/key.properties; debug keys only when neither exists, so local release builds still run.
 - Android: INTERNET + notification permissions in the main manifest (Flutter's template only
   declares INTERNET for debug builds, so a release build would have no network), app label.
@@ -23,14 +23,14 @@ APPS = {
 PHOTO = "청소 전후 사진과 상담 사진을 올리기 위해 사진 보관함에 접근해요."
 CAMERA = "청소 전후 사진을 바로 찍어 올리기 위해 카메라를 사용해요."
 
-SIGNING = '''// Release signing: CI secrets (Codemagic CM_KEYSTORE_*) or android/key.properties.
+SIGNING = '''// Release signing: CI secrets (UPLOAD_KEYSTORE_* from CI secrets) or android/key.properties.
 // Without either, release builds fall back to debug keys so `flutter run --release` still works.
 val keyProps = java.util.Properties().apply {
     val f = rootProject.file("key.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
 fun signingValue(env: String, prop: String): String? = System.getenv(env) ?: keyProps.getProperty(prop)
-val releaseStore = signingValue("CM_KEYSTORE_PATH", "storeFile")
+val releaseStore = signingValue("UPLOAD_KEYSTORE_PATH", "storeFile")
 
 '''
 
@@ -46,9 +46,9 @@ RELEASE_BLOCK_NEW = '''    signingConfigs {
         if (releaseStore != null) {
             create("release") {
                 storeFile = file(releaseStore)
-                storePassword = signingValue("CM_KEYSTORE_PASSWORD", "storePassword")
-                keyAlias = signingValue("CM_KEY_ALIAS", "keyAlias")
-                keyPassword = signingValue("CM_KEY_PASSWORD", "keyPassword")
+                storePassword = signingValue("UPLOAD_KEYSTORE_PASSWORD", "storePassword")
+                keyAlias = signingValue("UPLOAD_KEY_ALIAS", "keyAlias")
+                keyPassword = signingValue("UPLOAD_KEY_PASSWORD", "keyPassword")
             }
         }
     }

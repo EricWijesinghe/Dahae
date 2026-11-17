@@ -16,7 +16,7 @@
   file afterwards: demo builds need a private LAN IPv4, store builds need https://<domain>.
 
   Store builds (AAB, APK, MSIX) all take their build number from scripts/ci/build-number.py, the same
-  source Codemagic uses: it only rises, so a second upload is never rejected for a reused number.
+  source the store-apps workflow uses: it only rises, so a second upload is never rejected for a reused number.
   Android store builds are obfuscated; their Dart symbol files go to <targets>\release-symbols
   (kept on this PC to read crash reports with "flutter symbolize", never staged or shipped).
   The console is web-only: MSIX packages are built for the customer and partner apps.
@@ -170,7 +170,7 @@ function Get-StoreApiBase {
   throw 'MALKKEUM_API_BASE is not set. Set it to https://<domain> (or pass -StoreApiBase), or pass -AllowPlaceholder to build test binaries that cannot reach a server.'
 }
 
-# versionCode / MSIX version for this run. One number per run, from the same script Codemagic calls.
+# versionCode / MSIX version for this run. One number per run, from the same script the store-apps workflow calls.
 function Get-BuildNumber {
   if (-not $script:BuildNumber) {
     $n = [int](& python -I (Join-Path $root 'scripts\ci\build-number.py'))
@@ -212,7 +212,7 @@ function Assert-BakedBase([string]$File, [string]$Expect) {
   Log "   baked API address ok: $leaf$(if ($Expect) { " -> $Expect" })"
 }
 
-# Flutter prep that codemagic and web.Dockerfile also run before building.
+# Flutter prep that store-apps.yml and web.Dockerfile also run before building.
 function Prep-Flutter {
   Push-Location (Join-Path $root 'app')
   try { Run 'python' @('-I', 'tool/gen_arb.py'); Run 'flutter' @('pub', 'get') } finally { Pop-Location }
@@ -236,7 +236,7 @@ function With-UploadKey([scriptblock]$Body) {
   $p12 = Join-Path $KeyDir 'malkkeum-upload.p12'
   if (-not $DryRun -and -not (Test-Path -LiteralPath $p12)) { throw "Missing upload key $p12. Run -Only keystore first." }
   $pw = Get-KeyPassword
-  $names = 'CM_KEYSTORE_PATH', 'CM_KEYSTORE_PASSWORD', 'CM_KEY_ALIAS', 'CM_KEY_PASSWORD'
+  $names = 'UPLOAD_KEYSTORE_PATH', 'UPLOAD_KEYSTORE_PASSWORD', 'UPLOAD_KEY_ALIAS', 'UPLOAD_KEY_PASSWORD'
   $values = $p12.Replace('\', '/'), $pw, 'upload', $pw
   for ($i = 0; $i -lt 4; $i++) { Set-Item -Path "env:$($names[$i])" -Value $values[$i] }
   try { & $Body } finally { foreach ($n in $names) { Remove-Item -Path "env:$n" -EA SilentlyContinue } }
@@ -503,7 +503,7 @@ function Step-Docs {
 
 function Step-StoreDocs {
   $store = Join-Path $root 'docs\store'
-  Act "copy store listings, data-safety, review notes, READMEs and codemagic.yaml from $store and scripts\release\kit -> $Android, $Msix, $Apple" {
+  Act "copy store listings, data-safety, review notes and READMEs from $store and scripts\release\kit -> $Android, $Msix, $Apple" {
     Get-ChildItem $store -Filter 'listing-*.md' | ForEach-Object { Copy-Item $_.FullName $Android -Force }
     Copy-Item "$store\data-safety.md", "$store\review-notes.md" $Android -Force
     Copy-Item (Join-Path $root 'scripts\release\kit\store-android-README.md') "$Android\README.md" -Force
@@ -513,7 +513,6 @@ function Step-StoreDocs {
     }
     Copy-Item "$store\microsoft-store.md" $Msix -Force
     Copy-Item (Join-Path $root 'scripts\release\kit\store-microsoft-README.md') "$Msix\README.md" -Force
-    Copy-Item (Join-Path $root 'codemagic.yaml') $Apple -Force
     Copy-Item "$store\app-privacy.md", "$store\review-notes.md" $Apple -Force
     Copy-Item (Join-Path $root 'scripts\release\kit\store-apple-README.md') "$Apple\README.md" -Force
   }

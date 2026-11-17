@@ -11,7 +11,7 @@
 ARG BUILDPLATFORM
 FROM --platform=$BUILDPLATFORM ghcr.io/cirruslabs/flutter:stable@sha256:46691e311715845de03a3ba4753a475476936805b29431b1f00f1816981033f8 AS console
 # The :stable image can lag the Flutter/Dart SDK that app/pubspec.lock needs (Dart >= 3.13), so pin the SDK here.
-# Same version as CI and codemagic.yaml (scripts/ci/check-pins.sh).
+# Same version as CI and the store builds (scripts/ci/check-pins.sh).
 ARG FLUTTER_VERSION=3.47.9
 RUN cd /sdks/flutter && git fetch -q --depth 1 origin "refs/tags/${FLUTTER_VERSION}:refs/tags/${FLUTTER_VERSION}" && git checkout -q "${FLUTTER_VERSION}" && flutter --version
 # Mirror the engine's fallback fonts (Roboto + Noto, URL list read from the pinned SDK) so browsers never call

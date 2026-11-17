@@ -6,14 +6,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Release signing: CI secrets (Codemagic CM_KEYSTORE_*) or android/key.properties.
+// Release signing: CI secrets (UPLOAD_KEYSTORE_* from CI secrets) or android/key.properties.
 // Without either, release builds fall back to debug keys so `flutter run --release` still works.
 val keyProps = Properties().apply {
     val f = rootProject.file("key.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
 fun signingValue(env: String, prop: String): String? = System.getenv(env) ?: keyProps.getProperty(prop)
-val releaseStore = signingValue("CM_KEYSTORE_PATH", "storeFile")
+val releaseStore = signingValue("UPLOAD_KEYSTORE_PATH", "storeFile")
 
 
 android {
@@ -47,9 +47,9 @@ android {
         if (releaseStore != null) {
             create("release") {
                 storeFile = file(releaseStore)
-                storePassword = signingValue("CM_KEYSTORE_PASSWORD", "storePassword")
-                keyAlias = signingValue("CM_KEY_ALIAS", "keyAlias")
-                keyPassword = signingValue("CM_KEY_PASSWORD", "keyPassword")
+                storePassword = signingValue("UPLOAD_KEYSTORE_PASSWORD", "storePassword")
+                keyAlias = signingValue("UPLOAD_KEY_ALIAS", "keyAlias")
+                keyPassword = signingValue("UPLOAD_KEY_PASSWORD", "keyPassword")
             }
         }
     }
@@ -58,7 +58,7 @@ android {
         release {
             signingConfig = if (releaseStore != null) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
             // Sideloaded owner app: no Play bundle, but a CI build must still never ship debug-signed.
-            check(releaseStore != null || System.getenv("CM_BUILD_ID") == null) { "CM_KEYSTORE_PATH is unset on Codemagic" }
+            check(releaseStore != null || System.getenv("GITHUB_ACTIONS") == null) { "UPLOAD_KEYSTORE_PATH is unset in CI" }
         }
     }
 }

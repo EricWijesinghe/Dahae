@@ -1,0 +1,325 @@
+# Store builds for the customer (kr.co.dahae.customer) and partner (kr.co.dahae.partner) apps, on GitHub-hosted
+# runners. Run by hand from Actions → store-apps → Run workflow.
+#
+#   app       customer | partner | both
+#   platform  android | ios | both
+#   upload    false: build, check and keep the artifacts only.
+#             true : Android draft to the Play internal track (only if GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is set),
+#                    iOS build to TestFlight (App Store Connect, after Apple's processing: 10-30 min).
+#
+# Nothing is sent to App Review from here: in App Store Connect add the build to the version, attach
+# docs/store/review-notes.md and press "Submit for Review". Promote a Play draft in Play Console.
+#
+# Environment "store" (create it in Settings → Environments, add required reviewers and deployment branches = master).
+# Every job here runs inside it, so its secrets and variables are the only ones the build can read.
+#   Variables: API_BASE (https://<client domain>), APP_LINK_DOMAIN (bare host, optional),
+#              APPLE_TEAM_ID (the Apple Developer team ID, 10 characters).
+#   Secrets:   ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD,
+#              ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_B64,
+#              KAKAO_NATIVE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_NAME, GOOGLE_SERVER_CLIENT_ID, GOOGLE_IOS_CLIENT_ID,
+#              SOCIAL_PROVIDERS, GOOGLE_SERVICES_JSON_B64, GOOGLE_SERVICE_INFO_PLIST_B64,
+#              PARTNER_GOOGLE_SERVICES_JSON_B64, PARTNER_GOOGLE_SERVICE_INFO_PLIST_B64,
+#              GOOGLE_PLAY_SERVICE_ACCOUNT_JSON (optional; only the upload needs it).
+#   NAVER_CLIENT_SECRET is never passed here: it would end up inside the app. Keep it on the server only.
+# Full list and where each value comes from: docs/DEPLOY.md §3 and docs/guide/11-앱-직접-빌드.md.
+#
+# Builds are obfuscated. Dart symbols (build/symbols) and iOS dSYMs are artifacts only, never inside the app.
+# Build numbers come from scripts/ci/build-number.py (the same source as the PC release script): one number per run.
+# Build name: the newest v<X.Y.Z> tag (no tag: the pubspec version).
+#
+# Pins: Flutter comes from .github/actions/flutter-setup (scripts/ci/check-pins.sh). Xcode 26.6 is pinned below.
+# Every third-party action is pinned to a full commit SHA (scripts/release/check_workflows.py).
+
+name: store-apps
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: Which app to build
+        type: choice
+        options: [customer, partner, both]
+        default: both
+      platform:
+        description: Which store
+        type: choice
+        options: [android, ios, both]
+        default: both
+      upload:
+        description: Upload (Play internal draft, TestFlight). Off = build and keep artifacts only
+        type: boolean
+        default: false
+
+permissions: {}
+
+# One store build at a time: two runs must never race for the same build number or upload.
+concurrency:
+  group: store-apps
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: { contents: read }
+    outputs:
+      android: ${{ steps.plan.outputs.android }}
+      ios: ${{ steps.plan.outputs.ios }}
+      build_name: ${{ steps.plan.outputs.build_name }}
+      build_number: ${{ steps.plan.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false, fetch-depth: 0 }
+      - name: Matrix and version
+        id: plan
+        env:
+          APP: ${{ inputs.app }}
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          set -euo pipefail
+          # The newest plain release tag (v1.2.3). No tag yet: empty, and the build keeps the pubspec version name.
+          tag=$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+          number=$(python3 -I scripts/ci/build-number.py)
+          python3 -I - "$tag" "$number" >> "$GITHUB_OUTPUT" <<'PY'
+          import json, os, sys
+          tag, number = sys.argv[1], sys.argv[2]
+          app, platform = os.environ["APP"], os.environ["PLATFORM"]
+          rows = [{"app": n} for n in ("customer", "partner") if app in (n, "both")]
+          print("android=" + json.dumps(rows if platform in ("android", "both") else []))
+          print("ios=" + json.dumps(rows if platform in ("ios", "both") else []))
+          print("build_name=" + tag.removeprefix("v"))
+          print("build_number=" + number)
+          PY
+
+  android:
+    needs: plan
+    if: needs.plan.outputs.android != '[]'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.android) }}
+    name: Android · ${{ matrix.app }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: store
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      # Same gate as ci.yml: a store build never ships code CI would reject.
+      - name: Native checks (before any build)
+        run: python3 -I scripts/ci/check-native.py
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with: { distribution: temurin, java-version: '21' }
+      - uses: ./.github/actions/flutter-setup
+      - name: Analyze
+        working-directory: app
+        run: dart analyze --fatal-infos
+      - name: Firebase files and dart-define keys
+        env:
+          APP: ${{ matrix.app }}
+          API_BASE: ${{ vars.API_BASE }}
+          APP_LINK_DOMAIN: ${{ vars.APP_LINK_DOMAIN }}
+          KAKAO_NATIVE_KEY: ${{ secrets.KAKAO_NATIVE_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_NAME: ${{ secrets.NAVER_CLIENT_NAME }}
+          GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
+          GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
+          SOCIAL_PROVIDERS: ${{ secrets.SOCIAL_PROVIDERS }}
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+          GOOGLE_SERVICE_INFO_PLIST_B64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
+          PARTNER_GOOGLE_SERVICES_JSON_B64: ${{ secrets.PARTNER_GOOGLE_SERVICES_JSON_B64 }}
+          PARTNER_GOOGLE_SERVICE_INFO_PLIST_B64: ${{ secrets.PARTNER_GOOGLE_SERVICE_INFO_PLIST_B64 }}
+        run: scripts/ci/native-keys.sh "$APP"
+      - name: Upload keystore (runner temp only, never in the repo)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${KEYSTORE_B64:?set the secret ANDROID_KEYSTORE_B64}"
+          : "${KEYSTORE_PASSWORD:?set ANDROID_KEYSTORE_PASSWORD}"
+          : "${KEY_ALIAS:?set ANDROID_KEY_ALIAS}"
+          : "${KEY_PASSWORD:?set ANDROID_KEY_PASSWORD}"
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          # android/app/build.gradle.kts reads these four names for release signing.
+          {
+            echo "UPLOAD_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks"
+            echo "UPLOAD_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "UPLOAD_KEY_ALIAS=$KEY_ALIAS"
+            echo "UPLOAD_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+      - name: Build app bundle
+        working-directory: app/apps/${{ matrix.app }}
+        env:
+          BUILD_NAME: ${{ needs.plan.outputs.build_name }}
+          BUILD_NUMBER: ${{ needs.plan.outputs.build_number }}
+        run: |
+          set -euo pipefail
+          name_arg=()
+          if [ -n "$BUILD_NAME" ]; then name_arg=(--build-name="$BUILD_NAME"); fi
+          flutter build appbundle --release --build-number="$BUILD_NUMBER" "${name_arg[@]}" \
+            --obfuscate --split-debug-info=build/symbols --dart-define-from-file=keys.json
+          # The bundle (16 KB alignment) and the manifest Gradle merged from every plugin (permissions, FGS types).
+          aab=build/app/outputs/bundle/release/app-release.aab
+          manifest=build/app/intermediates/merged_manifests/release/processReleaseManifest/AndroidManifest.xml
+          python3 -I ../../../scripts/ci/check-native.py --aab "$aab" --manifest "$manifest"
+      - name: Keep artifacts (30 days)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-${{ matrix.app }}-${{ github.run_number }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            app/apps/${{ matrix.app }}/build/app/outputs/bundle/release/*.aab
+            app/apps/${{ matrix.app }}/build/app/outputs/mapping/release/mapping.txt
+            app/apps/${{ matrix.app }}/build/symbols/*.symbols
+      - name: Google Play credential present?
+        id: play_cred
+        env:
+          PLAY_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: echo "present=$([ -n "$PLAY_JSON" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      # Draft only: the first upload of a new app must be made by hand in Play Console (the API cannot create it).
+      - name: Upload to Play internal track as draft
+        if: inputs.upload && steps.play_cred.outputs.present == 'true'
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: kr.co.dahae.${{ matrix.app }}
+          releaseFiles: app/apps/${{ matrix.app }}/build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: draft
+
+  ios:
+    needs: plan
+    if: needs.plan.outputs.ios != '[]'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.ios) }}
+    name: iOS · ${{ matrix.app }}
+    # macOS-26 image: the runner that carries Xcode 26.6 (setup-xcode below selects it). Unverified until the first run.
+    runs-on: macos-26
+    timeout-minutes: 90
+    environment: store
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - name: Native checks (before any build)
+        run: python3 -I scripts/ci/check-native.py
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with: { xcode-version: "26.6" }
+      - uses: ./.github/actions/flutter-setup
+      - name: Analyze
+        working-directory: app
+        run: dart analyze --fatal-infos
+      - name: Firebase files and dart-define keys
+        env:
+          APP: ${{ matrix.app }}
+          API_BASE: ${{ vars.API_BASE }}
+          APP_LINK_DOMAIN: ${{ vars.APP_LINK_DOMAIN }}
+          KAKAO_NATIVE_KEY: ${{ secrets.KAKAO_NATIVE_KEY }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_NAME: ${{ secrets.NAVER_CLIENT_NAME }}
+          GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
+          GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
+          SOCIAL_PROVIDERS: ${{ secrets.SOCIAL_PROVIDERS }}
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+          GOOGLE_SERVICE_INFO_PLIST_B64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
+          PARTNER_GOOGLE_SERVICES_JSON_B64: ${{ secrets.PARTNER_GOOGLE_SERVICES_JSON_B64 }}
+          PARTNER_GOOGLE_SERVICE_INFO_PLIST_B64: ${{ secrets.PARTNER_GOOGLE_SERVICE_INFO_PLIST_B64 }}
+        run: scripts/ci/native-keys.sh "$APP"
+      # Only the customer app needs Always-location text off (geolocator_apple, ITMS-90683); read by its Package.swift.
+      - name: Location bypass (customer only)
+        if: matrix.app == 'customer'
+        run: echo "BYPASS_PERMISSION_LOCATION_ALWAYS=1" >> "$GITHUB_ENV"
+      # App Store Connect key (role App Manager). Automatic signing: Xcode creates and fetches certificates and
+      # profiles with this key; no manual certificates and no match repository.
+      - name: App Store Connect key (runner temp only)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+        run: |
+          set -euo pipefail
+          : "${ASC_KEY_ID:?set ASC_KEY_ID}"
+          : "${ASC_ISSUER_ID:?set ASC_ISSUER_ID}"
+          : "${ASC_KEY_P8_B64:?set ASC_KEY_P8_B64}"
+          # altool and xcodebuild both look for the key in this folder by its key ID.
+          keydir="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$keydir"
+          umask 077
+          printf '%s' "$ASC_KEY_P8_B64" | base64 --decode > "$keydir/AuthKey_${ASC_KEY_ID}.p8"
+          {
+            echo "ASC_KEY_PATH=$keydir/AuthKey_${ASC_KEY_ID}.p8"
+            echo "ASC_KEY_ID=$ASC_KEY_ID"
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID"
+          } >> "$GITHUB_ENV"
+      - name: Export options (automatic signing, App Store Connect)
+        env:
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          : "${APPLE_TEAM_ID:?set the variable APPLE_TEAM_ID}"
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          EOF
+      - name: Generate the iOS configuration (same flags as the build)
+        working-directory: app/apps/${{ matrix.app }}
+        env:
+          BUILD_NAME: ${{ needs.plan.outputs.build_name }}
+          BUILD_NUMBER: ${{ needs.plan.outputs.build_number }}
+        run: |
+          set -euo pipefail
+          name_arg=()
+          if [ -n "$BUILD_NAME" ]; then name_arg=(--build-name="$BUILD_NAME"); fi
+          # Writes ios/Flutter/Generated.xcconfig (version, obfuscation, dart-defines); xcodebuild then archives it.
+          flutter build ios --config-only --release --build-number="$BUILD_NUMBER" "${name_arg[@]}" \
+            --obfuscate --split-debug-info=build/symbols --dart-define-from-file=keys.json
+      - name: Archive and export the ipa
+        working-directory: app/apps/${{ matrix.app }}
+        env:
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          # -allowProvisioningUpdates + the API key: Xcode creates the profiles (push, Sign in with Apple, associated domains).
+          # Flutter's own build ipa does not take these flags, so the archive and export run here instead.
+          auth=(-allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/ios/archive/Runner.xcarchive \
+            "${auth[@]}" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic archive
+          xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive -exportPath build/ios/ipa \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" "${auth[@]}"
+          ipa=$(ls build/ios/ipa/*.ipa | head -n 1)
+          python3 -I ../../../scripts/ci/check-native.py --ipa "$ipa"
+      - name: Keep artifacts (30 days)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ios-${{ matrix.app }}-${{ github.run_number }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            app/apps/${{ matrix.app }}/build/ios/ipa/*.ipa
+            app/apps/${{ matrix.app }}/build/ios/archive/**/*.dSYM
+            app/apps/${{ matrix.app }}/build/symbols/*.symbols
+      # altool is Apple's uploader for App Store Connect (xcrun altool --upload-app). Not verified without the DODA account.
+      - name: Upload to TestFlight
+        if: inputs.upload
+        working-directory: app/apps/${{ matrix.app }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          ipa=$(ls build/ios/ipa/*.ipa | head -n 1)
+          xcrun altool --upload-app --type ios --file "$ipa" --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
