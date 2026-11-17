@@ -50,7 +50,12 @@ case "$1" in
   ahostsv6) if [ -e "$(dirname "$0")/stray-aaaa" ]; then echo "2001:db8::99  STREAM myshop.co.kr"; else echo "2001:db8::1  STREAM myshop.co.kr"; fi ;;
 esac
 EOF
-chmod +x "$SB/bin/curl" "$SB/bin/getent"
+# fake timeout: records the limit it was given, then runs the command
+cat > "$SB/bin/timeout" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$1" >> "$SB/timeout.log"; shift; exec "\$@"
+EOF
+chmod +x "$SB/bin/curl" "$SB/bin/getent" "$SB/bin/timeout"
 export PATH="$SB/bin:$PATH"
 
 # shellcheck source=deploy/agent.sh
@@ -343,6 +348,16 @@ t  "approved rollback runs rollback"      argv_has "rollback YES=1"
 t  "approved rollback ends ok"            eq "$(state "$id4")" ok
 t  "rollback result shown publicly"      grep -q '"state":"ok"' "$DAHAE_JOBS/public/$TOK4.json"
 
+# D2: one job per run, approvals first: the approved job runs and a queued job waits for the next run
+printf '0\n' > "$HOST_DIR/approval.last-step"
+idQ=$(uuid7); submit "$idQ" "id=$idQ\nkind=rollback\ntoken=$TOK5\n"
+idR=$(uuid7); printf 'id=%s\nkind=backup-now\n' "$idR" > "$DAHAE_JOBS/inbox/$idR.job"
+ap "$idQ" "$(totp_at "$SECRET" "$(date +%s)")"
+t  "approval runs before a queued job"     eq "$(state "$idQ")" ok
+t  "...and the queued job waits"           test -e "$DAHAE_JOBS/inbox/$idR.job"
+intake_all
+t  "the next run starts the queued job"    eq "$(state "$idR")" ok
+
 # E: ten wrong codes within an hour lock approval: the right code is refused, a new high-impact job is refused
 rm -f "$HOST_DIR/approval.fails"
 idE=$(uuid7); submit "$idE" "id=$idE\nkind=rollback\ntoken=$TOK1\n"
@@ -470,6 +485,23 @@ while read -r file want rest <&3; do
     t  "fixture $file runs: $rest" eq "$(tail -n1 "$SB/argv.log")" "$rest"
   fi
 done 3< "$FIX/cases.txt"
+
+# ---- one job per run: a second queued job waits in the inbox for the next run ----
+a=$(uuid7); b=$(uuid7)
+printf 'id=%s\nkind=backup-now\n' "$a" > "$DAHAE_JOBS/inbox/$a.job"
+printf 'id=%s\nkind=schedule\narg=off\n' "$b" > "$DAHAE_JOBS/inbox/$b.job"
+before=$(argv_lines); intake_all
+t  "one run starts one job"               eq "$(argv_lines)" $((before + 1))
+intake_all
+t  "the next run starts the other"        eq "$(argv_lines)" $((before + 2))
+t  "...and both end ok"                   eq "$(state "$a")$(state "$b")" okok
+
+# ---- time limits: every job that backs up the photos first gets the long limit (last: update-tag writes history) ----
+limit_of() { JOB_KIND=$1; JOB_ARG=${2:-}; dispatch >/dev/null 2>&1; tail -n1 "$SB/timeout.log"; }
+for k in update backup-now rollback; do t "$k gets the long limit" eq "$(limit_of "$k")" "$UPDATE_RUN_TIMEOUT"; done
+t  "channel gets the long limit"          eq "$(limit_of channel beta)" "$UPDATE_RUN_TIMEOUT"
+t  "update-tag gets the long limit"       eq "$(limit_of update-tag v9.9.9)" "$UPDATE_RUN_TIMEOUT"
+t  "schedule keeps the normal limit"      eq "$(limit_of schedule off)" "$RUN_TIMEOUT"
 
 echo "agent self-test: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ]

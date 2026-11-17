@@ -766,8 +766,12 @@ cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔
   if [ "$new_api" != "$(docker image inspect -f '{{.Id}}' "$cur_api" 2>/dev/null || true)" ]; then
     env_set PREV_API_IMAGE "$cur_api"; env_set PREV_WEB_IMAGE "$cur_web"
   fi
+  # 새 버전을 띄운 뒤 응답 확인 전에 끊기면(시간 제한·서버 종료) 확인 안 된 새 버전이 남지 않게 이전 버전으로 되돌려요
+  # shellcheck disable=SC2064 # 지금의 이전 버전 값을 넣어 둬요
+  trap "set_images $(printf '%q %q' "$cur_api" "$cur_web") >/dev/null 2>&1; exit 143" TERM INT HUP
   set_images "$NEW_API" "$NEW_WEB"
   if wait_healthy; then
+    trap - TERM INT HUP
     env_set VERSION "$ver"
     record_version
     prune_keep_tags
@@ -1276,7 +1280,7 @@ Description=다해 서버 작업 실행기 (root)
 Type=oneshot
 User=root
 ExecStart=/bin/bash $DIR/agent.sh run
-TimeoutStartSec=7h
+TimeoutStartSec=13h
 ProtectSystem=full
 ReadWritePaths=$DIR /etc/cron.d /etc/logrotate.d /run
 PrivateTmp=true
@@ -1345,7 +1349,8 @@ final_banner() { # final_banner https정상(1/0)
 }
 
 install_mode() { # install_mode FRESH : 설치된 적이 있으면(0) DB 가 꺼져 있어도 업데이트로 가요 (백업 → 새 버전 → 되돌리기)
-  if [ "$1" = 0 ]; then printf update; else printf fresh; fi
+  # 첫 설치가 이미지 준비(prepare) 전에 멈췄으면 .env 에 API_IMAGE 가 없어요: compose 가 뜰 수 없으니 처음 설치를 다시 해요
+  if [ "$1" = 0 ] && [ -n "$(env_get API_IMAGE)" ]; then printf update; else printf fresh; fi
 }
 main() {
   local k a m
@@ -1365,7 +1370,8 @@ main() {
   cd "$DIR"
 
   if [ -f .env ]; then
-    ok "기존 설치를 찾았어요. 설정과 데이터는 그대로 두고 최신 버전으로 업데이트합니다."
+    if [ -n "$(env_get API_IMAGE)" ]; then ok "기존 설치를 찾았어요. 설정과 데이터는 그대로 두고 최신 버전으로 업데이트합니다."
+    else ok "지난 설치가 끝나지 않았어요. 저장된 설정으로 설치를 이어서 합니다."; fi
     FRESH=0
   else
     FRESH=1
