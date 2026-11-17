@@ -12,8 +12,8 @@ use super::checkout_policy::{Action, Binding, Recovery, bind, decide, dev_lookup
 use super::checkout_recon::{admin_list, list};
 use super::{
     booking_core::{
-        BookingBody, Prepared, SeenQuote, after_booking_created, after_deposit, balance_due, check_expected_total, check_seen_quote, deposit_due, insert_paid,
-        lock_slot, prepare, price_for, record_payment, take_balance, take_deposit,
+        BookingBody, Prepared, SeenQuote, after_booking_created, after_deposit, balance_due, check_deposit_pro, check_expected_total, check_seen_quote,
+        deposit_due, insert_paid, lock_slot, prepare, price_for, record_payment, take_balance, take_deposit,
     },
     bookings::{BookingRow, load_booking, owned},
     catalog::load_service,
@@ -238,6 +238,7 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
             // client's when it sent one), so settlement binds create->settle for every client.
             let card = check_seen_quote(&mut *s.db.acquire().await?, b.id, &seen).await?;
             let amount = card.expected_deposit.ok_or(ApiError::Conflict("quote_not_sent"))?;
+            check_deposit_pro(&s, b.id).await?;
             Intent {
                 kind: "deposit",
                 booking_id: Some(b.id),

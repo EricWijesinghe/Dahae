@@ -195,6 +195,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             t.payDeposit,
             () => _pay(b, 'deposit'),
           ),
+        if (b.reschedule case final r? when b.isActive)
+          _info(
+            Icons.event_repeat_rounded,
+            t.reschedulePending,
+            _requestedSlot(b, r),
+            hue,
+          ),
         if (b.balanceDue)
           _actionCard(
             t.balanceDue(context.won(b.finalPrice! - b.deposit!)),
@@ -364,6 +371,16 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     );
   }
 
+  /// The slot a pending request asks for; null on a request from before requests carried it.
+  String? _requestedSlot(Booking b, Json r) {
+    final day = r['to_date'] as String?;
+    final hour = r['to_hour'] as num?;
+    if (day == null || hour == null) return null;
+    final when =
+        '${dateLabel(DateTime.parse(day), context.lang)} ${slotTime(context, b.isQuote, hour.toInt())}';
+    return context.t.reschedulePendingTo(when);
+  }
+
   Widget _info(IconData icon, String title, String? body, ServiceHue hue) =>
       Padding(
         padding: const EdgeInsets.only(bottom: Space.sm),
@@ -524,13 +541,21 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           draft: draft,
           onDone: (ctx) async {
             final nav = Navigator.of(ctx);
-            await _act(
-              () => context.api.post('/bookings/${b.id}/reschedule', {
-                'visit_date': isoDate(draft.date!),
-                'start_hour': draft.hour,
-              }),
-              context.t.rescheduled,
-            );
+            final t = context.t;
+            String? done;
+            await _act(() async {
+              final after =
+                  await context.api.post('/bookings/${b.id}/reschedule', {
+                        'visit_date': isoDate(draft.date!),
+                        'start_hour': draft.hour,
+                      })
+                      as Json;
+              // With a pro assigned the visit moves only once the pro confirms.
+              done = after['reschedule'] == null
+                  ? t.rescheduled
+                  : t.rescheduleRequested;
+            });
+            if (mounted && done != null) showToast(context, done!);
             nav.pop();
           },
         ),

@@ -385,6 +385,23 @@ pub fn deposit_due(b: &BookingRow) -> ApiResult<i64> {
     Ok(deposit)
 }
 
+/// `take_deposit`'s pro checks (offer gate, schedule clash) read without locks, so a PG deposit window never opens for a
+/// pro who is paused or already booked then. `take_deposit` runs them again under lock when the payment settles.
+pub async fn check_deposit_pro(s: &AppState, id: Uuid) -> ApiResult<()> {
+    let pro: Option<Uuid> = sqlx::query_scalar("SELECT pro_id FROM quotes WHERE booking_id = $1 AND state = 'selected'")
+        .bind(id)
+        .fetch_optional(&s.db)
+        .await?;
+    let Some(pro) = pro else {
+        return Ok(());
+    };
+    check_offer_gate(s, pro).await?;
+    if schedule_clash(&mut *s.db.acquire().await?, id, "pro_id", pro).await? {
+        return Err(ApiError::Conflict("schedule_overlap"));
+    }
+    Ok(())
+}
+
 /// Confirms a quoted booking on deposit: attaches the chosen pro and rejects the other quotes.
 /// `seen` is re-checked under the booking row lock, so a re-quote racing the payment never confirms.
 pub async fn take_deposit(s: &AppState, conn: &mut PgConnection, id: Uuid, deposit: i64, seen: &SeenQuote) -> ApiResult<()> {

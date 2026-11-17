@@ -74,6 +74,8 @@ extension Labels on T {
     'booking_changed' => err_booking_changed,
     'booking_closed' => err_booking_closed,
     'reschedule_closed' => err_reschedule_closed,
+    'reschedule_changed' => err_reschedule_changed,
+    'reschedule_expired' => err_reschedule_expired,
     'too_many_open_requests' => err_too_many_open_requests,
     'already_reviewed' => err_already_reviewed,
     'identity_not_verified' => err_identity_not_verified,

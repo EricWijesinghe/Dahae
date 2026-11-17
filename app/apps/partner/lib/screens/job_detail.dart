@@ -444,7 +444,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     onPressed: () => _act(
                       () => context.api.post(
                         '/partner/jobs/${b['id']}/reschedule',
-                        {'accept': false},
+                        {'accept': false, 'requested_at': r['requested_at']},
                       ),
                       t.pSaved,
                     ),
@@ -457,7 +457,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     onPressed: () => _act(
                       () => context.api.post(
                         '/partner/jobs/${b['id']}/reschedule',
-                        {'accept': true},
+                        {'accept': true, 'requested_at': r['requested_at']},
                       ),
                       t.pSaved,
                     ),
