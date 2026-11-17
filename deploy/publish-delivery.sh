@@ -89,6 +89,7 @@ publish() { # publish 브랜치 채널
   sed -i -e "/^| *[0-9][0-9]* *| *\[[^]]*\]($DEV_ONLY_GUIDE)/d" -e "s| *(\[[^]]*\]($DEV_ONLY_GUIDE))||g" -e "s|\[\([^]]*\)\]($DEV_ONLY_GUIDE)|\1|g" guide/*.md
   if grep -rq 'raw.githubusercontent.com/[^ )]*/install\.sh' guide; then echo "::error::guide/ has a literal install.sh URL; use $URL_TOKEN" >&2; exit 1; fi
   if grep -rqF '[화면:' guide; then echo "::error::guide/ still has a [화면: …] placeholder; the owner would read it" >&2; exit 1; fi
+  [ "$branch" = "$tag_branch" ] || sed -i 's|(`dahae-install-page\.html`)||' guide/00-한번에-설치.md # the page ships only with the tag
   local guide_url="$RAW/$ref/install.sh" # beta copies follow beta; the tagged branch's copies follow the tag
   sed -i "s|$URL_TOKEN|$guide_url|g" guide/*.md
   if grep -rqF "$URL_TOKEN" guide; then echo "::error::unreplaced $URL_TOKEN in guide/" >&2; exit 1; fi

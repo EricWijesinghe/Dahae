@@ -100,6 +100,10 @@ valid_domain() {
 }
 valid_email() { [ -z "$1" ] || printf '%s' "$1" | grep -Eq '^[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; }
 valid_setup_code() { printf '%s' "$1" | grep -Eq '^[2-9A-HJKMNP-Z]{12}$'; } # setup_code 와 같은 글자만 (0 O 1 I L 제외)
+check_setup_code_env() { # MALKKEUM_SETUP_CODE 가 있으면 형식을 검사해요 (틀리면 아무것도 바꾸기 전에 멈춰요)
+  [ -z "${MALKKEUM_SETUP_CODE:-}" ] || valid_setup_code "$MALKKEUM_SETUP_CODE" || { printf '%s
+' "설치 코드는 12자리 영문 대문자·숫자예요 (0 O 1 I L 은 없어요)." >&2; return 1; }
+}
 valid_hb_url() { printf '%s' "$1" | grep -Eq "$HB_URL_RE"; }
 ver_ge() { [ "$(printf '%s\n%s\n' "${2#v}" "${1#v}" | sort -V | head -n1)" = "${2#v}" ]; } # ver_ge 2.29.1 2.20
 mem_kb() { awk -v k="$1:" '$1 == k { print $2; f=1 } END { if (!f) print 0 }' "${2:-/proc/meminfo}"; }
@@ -1382,6 +1386,18 @@ install_mode() { # install_mode FRESH : 설치된 적이 있으면(0) DB 가 꺼
   # 첫 설치가 이미지 준비(prepare) 전에 멈췄으면 .env 에 API_IMAGE 가 없어요: compose 가 뜰 수 없으니 처음 설치를 다시 해요
   if [ "$1" = 0 ] && [ -n "$(env_get API_IMAGE)" ]; then printf update; else printf fresh; fi
 }
+# write_fresh_env : 처음 설치할 때 .env 를 만들어요. MALKKEUM_SETUP_CODE 가 있으면 페이지가 만든 설치 코드를 그대로 써요
+write_fresh_env() {
+  cat > .env <<EOF
+# 다해 서버 설정 — install.sh 가 만들었어요. 이 파일을 안전한 곳에 따로 보관하세요.
+# DATA_KEY 를 잃어버리면 저장된 결제·연동 키와 계좌 정보를 복구할 수 없어요.
+DB_PASSWORD=$(rand_hex 24)
+JWT_SECRET=$(rand_hex 32)
+DATA_KEY=$(rand_hex 32)
+SETUP_CODE=${MALKKEUM_SETUP_CODE:-$(setup_code)}
+SETUP_CODE_AT=$(date +%s)
+EOF
+}
 main() {
   local k a m
   for k in DOMAIN EMAIL IMAGES IMAGES_TAR CHANNEL VERSION TLS SKIP_DNS_CHECK HEALTH_WAIT HEARTBEAT_URL NOTIFY_URL SETUP_CODE SIGNER SKIP_SIGNATURE; do
@@ -1394,7 +1410,7 @@ main() {
 
   [ "$(id -u)" -eq 0 ] || die "관리자 권한이 필요해요. 명령 앞에 sudo 를 붙여 다시 실행해 주세요."
   command -v apt-get >/dev/null || die "Ubuntu 또는 Debian 서버에서 실행해 주세요."
-  if [ -n "${MALKKEUM_SETUP_CODE:-}" ]; then valid_setup_code "$MALKKEUM_SETUP_CODE" || die "설치 코드는 12자리 영문 대문자·숫자예요 (0 O 1 I L 은 없어요)."; fi
+  check_setup_code_env || exit 1
   if [ -n "${MALKKEUM_NOTIFY_URL:-}" ]; then valid_hb_url "$MALKKEUM_NOTIFY_URL" || die "MALKKEUM_NOTIFY_URL 은 https:// 주소여야 해요 (& 나 공백은 안 돼요)."; fi
 
   say "다해 서버 설치를 시작합니다"
@@ -1463,15 +1479,7 @@ main() {
 
   if [ "$FRESH" = 1 ]; then
     umask 077
-    cat > .env <<EOF
-# 다해 서버 설정 — install.sh 가 만들었어요. 이 파일을 안전한 곳에 따로 보관하세요.
-# DATA_KEY 를 잃어버리면 저장된 결제·연동 키와 계좌 정보를 복구할 수 없어요.
-DB_PASSWORD=$(rand_hex 24)
-JWT_SECRET=$(rand_hex 32)
-DATA_KEY=$(rand_hex 32)
-SETUP_CODE=${MALKKEUM_SETUP_CODE:-$(setup_code)}
-SETUP_CODE_AT=$(date +%s)
-EOF
+    write_fresh_env
     umask 022
     ok "보안 키를 새로 만들었어요"
   fi
