@@ -12,6 +12,7 @@ import 'guest_tabs.dart';
 import 'home.dart';
 import 'more.dart';
 import 'pay_flow.dart' show resumePendingPayment;
+import 'privacy.dart';
 import 'web_return.dart';
 
 /// 3D art ids of the four tabs, in tab order (DAHAE-PLAN §4).
@@ -96,7 +97,24 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
       if (launch != null) _openPush(launch);
       // A payment approved last time whose confirm never got an answer.
       resumePendingPayment(context);
+      _askReconsent();
     });
+  }
+
+  /// After a policy change the customer agrees again: the consent screen opens once per account start.
+  Future<void> _askReconsent() async {
+    final nav = Navigator.of(context);
+    final Json s;
+    try {
+      s = await context.appRead.api.get('/me/consents') as Json;
+    } on ApiException {
+      // Still reachable from More; the next start asks again.
+      return;
+    }
+    if (!mounted || s['reconsent_required'] != true) return;
+    await nav.push(
+      MaterialPageRoute<void>(builder: (_) => const ConsentScreen()),
+    );
   }
 
   /// Sign-out or another account: the last account's data, taps and tab position go.

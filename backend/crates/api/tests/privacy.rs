@@ -557,6 +557,38 @@ async fn partner_export_omits_account_number_and_delete_clears_notifications(poo
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn regranting_at_the_new_policy_version_clears_reconsent(pool: PgPool) {
+    let app = app(pool.clone());
+    let c = customer(&app, &pool, "010-8100-0006").await;
+    // What a version bump leaves behind: the newest grant of each kind names the old text (the log is append-only).
+    sqlx::query(
+        "INSERT INTO user_consents (user_id, kind, version, granted)
+         SELECT $1, kind, '2000-01-01', true FROM unnest(ARRAY['terms', 'privacy', 'overseas_transfer']) AS kind",
+    )
+    .bind(c.user)
+    .execute(&pool)
+    .await
+    .expect("old-version grants");
+    let (_, s) = call(&app, "GET", "/v1/me/consents", Some(c.token.as_str()), None).await;
+    assert_eq!(s["reconsent_required"], true, "{s}");
+    assert!(!privacy::overseas_allowed(&pool, c.user).await.expect("overseas"));
+
+    // The app sends every item, as the consent screen does after the customer ticks the required ones.
+    let mut all = all_required_consents();
+    for kind in ["marketing", "location"] {
+        all.as_array_mut()
+            .expect("list")
+            .push(json!({ "kind": kind, "granted": false, "version": CONSENT_VERSION }));
+    }
+    let (st, body) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(json!({ "consents": all }))).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(body["reconsent_required"], false, "{body}");
+    let (_, s) = call(&app, "GET", "/v1/me/consents", Some(c.token.as_str()), None).await;
+    assert_eq!(s["reconsent_required"], false, "{s}");
+    assert!(privacy::overseas_allowed(&pool, c.user).await.expect("overseas"), "push and AI chat are back");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn overseas_transfer_consent_can_be_withdrawn_and_stays_off(pool: PgPool) {
     let app = app(pool.clone());
     let c = customer(&app, &pool, "010-8100-0005").await;
