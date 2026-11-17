@@ -109,11 +109,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
     return _load();
   }
 
-  Future<void> _export(String kind) => _exportAt(
-    '/admin/finance/export/$kind',
-    _periodQuery,
-    'malkkeum-$kind.csv',
-  );
+  Future<void> _export(String kind) =>
+      _exportAt('/admin/finance/export/$kind', _periodQuery, 'dahae-$kind.csv');
 
   Future<void> _exportAt(
     String path,
@@ -188,7 +185,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               onReExport: () => _exportAt(
                 '/admin/finance/export/tax-invoices/re-export',
                 {..._periodQuery, 'confirm': 'true'},
-                'malkkeum-tax-invoices-again.csv',
+                'dahae-tax-invoices-again.csv',
                 post: true,
               ),
             ),
@@ -738,9 +735,8 @@ class _ServiceCard extends StatelessWidget {
                           value: _n(s, 'gross') / max,
                           minHeight: 14,
                           backgroundColor: context.colors.line,
-                          color: ServiceHues.of(
-                            s['service_code'] as String,
-                          ).tone,
+                          color: ServiceHues.of(s['service_code'] as String)
+                              .tone,
                         ),
                       ),
                     ),

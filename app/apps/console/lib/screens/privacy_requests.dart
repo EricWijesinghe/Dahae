@@ -63,13 +63,10 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
   }
 
   Future<void> _find() => _run(() async {
-    final rows =
-        (await context.api.get(
-                  '/admin/privacy/customers',
-                  query: {'phone': _phone.text.trim()},
-                )
-                as List)
-            .cast<Json>();
+    final rows = (await context.api.get(
+      '/admin/privacy/customers',
+      query: {'phone': _phone.text.trim()},
+    ) as List).cast<Json>();
     if (mounted) setState(() => _found = rows);
   });
 
@@ -81,7 +78,7 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
         query: {'format': 'csv'},
       ),
     );
-    final saved = await saveCsv(bytes, 'malkkeum-customer-$id.csv');
+    final saved = await saveCsv(bytes, 'dahae-customer-$id.csv');
     if (mounted) {
       showToast(
         context,
