@@ -283,11 +283,13 @@ async fn otp_volume_alert_fires_at_the_warn_level_only(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn otp_volume_alert_says_new_sign_ins_are_refused_at_the_ceiling(pool: PgPool) {
+async fn otp_volume_alert_says_codes_are_paused_for_everyone_until_the_hour_rolls_over(pool: PgPool) {
     seed_otp(&pool, ops_alerts::OTP_GLOBAL_CEILING_PER_HOUR).await;
     let found = ops_alerts::otp_volume(&pool).await.expect("rule");
     assert_eq!(found.len(), 1);
-    assert!(found[0].body.contains("새로 가입") && found[0].body.contains("막고"), "{}", found[0].body);
+    let body = &found[0].body;
+    assert!(body.contains("모든 번호") && body.contains("한 시간이 지나"), "{body}");
+    assert!(!body.contains("계속 로그인할 수 있어요"), "existing accounts are paused too: {body}");
 }
 
 /// A Toss batch whose send ended with no answer `minutes` ago.

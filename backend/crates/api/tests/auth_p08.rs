@@ -148,7 +148,8 @@ async fn otp_sends_stop_at_the_hard_ceiling(db: PgPool) {
     let app = common::app(db.clone());
     let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": "010-5555-0102" }))).await;
     assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::TOO_MANY_REQUESTS, Some("rate_limited")), "{b}");
-    // Numbers that already have an account keep signing in: the ceiling stops new sign-ups, not the service.
+    // Past the ceiling every number gets the same refusal: an account neither earns a code (spend stays bounded)
+    // nor changes the answer (no way to learn which numbers have one).
     sqlx::query("INSERT INTO users (phone, name) VALUES ('01055550103', 'c')")
         .execute(&db)
         .await
@@ -158,9 +159,14 @@ async fn otp_sends_stop_at_the_hard_ceiling(db: PgPool) {
         .await
         .expect("pro");
     for phone in ["010-5555-0103", "010-5555-0104"] {
-        let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": phone }))).await;
-        assert_eq!(st, StatusCode::OK, "{phone}: {b}");
+        let (st2, b2) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": phone }))).await;
+        assert_eq!((st2, &b2["error"]["code"]), (st, &b["error"]["code"]), "{phone}: {b2}");
     }
+    let sent: i64 = sqlx::query_scalar("SELECT count(*) FROM otp_codes WHERE phone LIKE '0105555%'")
+        .fetch_one(&db)
+        .await
+        .expect("count");
+    assert_eq!(sent, 0, "no code goes out past the ceiling");
 }
 
 /// Sets the hourly sign-in code counter of `key` (an address or a network) as if `hits` codes had gone out.
@@ -186,7 +192,7 @@ async fn otp_sends_are_capped_per_address_and_per_network(db: PgPool) {
 
     // Other addresses in the same /24 spent the network's hour.
     sqlx::query("DELETE FROM rate_limits").execute(&db).await.expect("reset");
-    spend_otp_window(&db, "otp_net:127.0.0.0/24", api::ops_alerts::OTP_MAX_PER_NETWORK_PER_HOUR).await;
+    spend_otp_window(&db, "otp_net:127.0.0.0/24", api::ops_alerts::OTP_MAX_PER_IPV4_NET_PER_HOUR).await;
     let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": "010-5555-0202" }))).await;
     assert_eq!(st, StatusCode::TOO_MANY_REQUESTS, "{b}");
 
@@ -194,4 +200,13 @@ async fn otp_sends_are_capped_per_address_and_per_network(db: PgPool) {
     spend_otp_window(&db, "otp_ip:127.0.0.1", api::ops_alerts::OTP_MAX_PER_IP_PER_HOUR).await;
     let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": "010-5555-0203" }))).await;
     assert_eq!(st, StatusCode::TOO_MANY_REQUESTS, "{b}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_carrier_nat_ipv4_network_is_not_cut_off_at_a_few_hundred_codes(db: PgPool) {
+    // Korean carriers put many customers behind one shared /24: 300 codes in an hour is a normal evening there.
+    let app = common::app(db.clone());
+    spend_otp_window(&db, "otp_net:127.0.0.0/24", 300).await;
+    let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": "010-5555-0204" }))).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
 }
