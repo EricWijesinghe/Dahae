@@ -86,7 +86,7 @@ owner and extension lines of older dumps are dropped on the way in.
 The owner never edits a file on the server. Everything after the install line is either the console
 wizard or a `dahae` command (`guide/07-운영-명령어.md`); `/opt/malkkeum/.env` is only copied somewhere
 safe. Brand: the user-visible name is 다해 / Dahae and the CLI is `dahae` (`malkkeum` stays as a
-symlink). Internal ids keep the old name: `/opt/malkkeum`, image names, bundle ids, the
+symlink). Internal ids keep the old name: `/opt/malkkeum`, image names, the
 `malkkeum-install` repo, `MALKKEUM_*` installer variables (`DAHAE_*` is accepted too).
 
 ### Server sizing (what the guides tell the owner)
@@ -243,7 +243,7 @@ against `/.well-known/apple-app-site-association` (both sections are served). iO
 
 **Residual risk (iOS below 17.4).** `ASWebAuthenticationSession` cannot finish an https callback there, so the
 app keeps `dahaenaver://naverlogin` on those devices. Another app can register that scheme, and Naver has no
-PKCE. Remove the scheme (`Info.plist` URL type, `social_native_io.dart::_naverLegacyScheme`) when the minimum iOS is 17.4.
+PKCE. The Naver Developers app must list `dahaenaver` as its iOS URL scheme or that path fails. Remove the scheme (`Info.plist` URL type, `social_native_io.dart::_naverLegacyScheme`) when the minimum iOS is 17.4.
 
 iOS, once per bundle id in the Apple Developer portal: enable **Sign in with Apple** and **Push
 Notifications**, upload an APNs key (.p8) to Firebase → Cloud Messaging. In Xcode the Runner target
