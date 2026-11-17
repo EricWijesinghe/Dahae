@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Marketing > growth: signups and bookings by first-touch source (UTM / referral), last 30 days.
 // Read-only; the server computes the table (GET /admin/acquisition).
 

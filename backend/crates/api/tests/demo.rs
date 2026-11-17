@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Demo sample data over a migrated Postgres (sqlx::test makes one database per test).
 //! Load fills every table it writes, clear returns each table to its pre-load count, real rows survive
 //! both, and load refuses over real bookings unless forced.

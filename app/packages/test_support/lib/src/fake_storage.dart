@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// In-memory stand-in for the OS keystore. Inspect [data] directly in assertions.

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:console/screens/bookings.dart';
 import 'package:console/screens/catalog.dart';
 import 'package:console/screens/dashboard.dart';

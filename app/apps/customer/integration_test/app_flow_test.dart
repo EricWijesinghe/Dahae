@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // End-to-end golden path against a real dev API.
 //
 // Skipped unless E2E=true. Run from apps/customer:

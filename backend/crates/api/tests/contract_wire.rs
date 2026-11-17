@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Wire behaviour against the real router: idempotency replay, error envelope, paging limits, spec access.
 
 mod common;

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'dart:io';
 
 /// Desktop: writes into the user's Downloads folder. False when no such folder exists.

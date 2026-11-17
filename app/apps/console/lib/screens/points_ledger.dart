@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // One customer's points ledger, with the admin-only manual adjustment. Every number comes from
 // the server (GET /admin/growth/points/{id}); an adjustment needs a reason and is audit-logged there.
 

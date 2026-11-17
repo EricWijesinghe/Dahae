@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Contact-number masking shared by public review text and stored client error reports.
 
 /// Full-width ASCII (U+FF01..U+FF5E) and the ideographic space read as their ASCII forms, as NFKC folds

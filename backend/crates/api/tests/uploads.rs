@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Uploads over the real router: photos are reachable only through signed `/v1/files` links, and every
 //! stored upload path leaves the API as a fresh signed URL. Needs DATABASE_URL (sqlx::test).
 

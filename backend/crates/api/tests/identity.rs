@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! PASS identity flow over the real router (dev provider) and a migrated database: a verification id is
 //! issued per customer, checked once, and burnt on use. Needs DATABASE_URL (sqlx::test).
 

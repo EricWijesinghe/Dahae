@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:console/screens/platform.dart';
 import 'package:console/screens/setup.dart';
 import 'package:flutter/material.dart';

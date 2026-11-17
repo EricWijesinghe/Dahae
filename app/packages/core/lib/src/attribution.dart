@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 /// First-touch campaign params from the URL the app was opened with (site links carry utm_* and ref).
 /// Read once per app launch and sent with signup; the server stores the first value it receives and never
 /// overwrites it. Nothing is written to cookies or storage.

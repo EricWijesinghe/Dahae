@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 //! Operations plumbing over the real router and a migrated database: cross-node realtime through
 //! Postgres LISTEN/NOTIFY, request ids, readiness, and the metrics endpoint.
 

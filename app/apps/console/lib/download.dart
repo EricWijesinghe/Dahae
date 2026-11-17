@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 // Saves a CSV the owner downloaded. Web triggers a browser download; desktop writes to Downloads.
 export 'download_stub.dart'
     if (dart.library.io) 'download_io.dart'

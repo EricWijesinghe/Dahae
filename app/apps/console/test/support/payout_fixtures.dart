@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
 import 'package:core/core.dart';
 
 /// Payout rows as `GET /admin/settlements/payouts` sends them, one per state the payouts tab shows.
