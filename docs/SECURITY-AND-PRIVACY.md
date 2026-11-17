@@ -440,7 +440,7 @@ Each item states what the code does. None is fixed in this document.
 11. **Store-review account** can be set to a fixed phone and code for up to 30 days ([routes/setup.rs](../backend/crates/api/src/routes/setup.rs)). It is audited and needs the owner's code, and the fixed code signs in only the review customer account, but it is a deliberate bypass of SMS for a named phone; close it after review.
 12. **Image tags not digest-pinned in Compose.** `postgres:17` and `louislam/uptime-kuma:2.1.1` are tags ([deploy/docker-compose.yml](../deploy/docker-compose.yml)).
 13. **Manifest consumer lives outside this repository.** [scripts/release/verify-manifest.sh](../scripts/release/verify-manifest.sh) is in this repository, but the desktop helper that holds the public key and runs the check is not, and [deploy/install.sh](../deploy/install.sh) runs no manifest check. See section 10.
-14. **`CONSENT_VERSION` is `2026-11-19`** ([privacy.rs](../backend/crates/api/src/privacy.rs) line 20). That date is after today's date (2026-11-16). Confirm it is the intended policy version before release, because every stored consent with another version stops counting.
+14. **`CONSENT_VERSION` is `2026-11-17`** ([privacy.rs](../backend/crates/api/src/privacy.rs) line 23), the 시행일 of the published privacy, terms and location terms pages. Bump it with any text change, because every stored consent with another version stops counting.
 15. **Health endpoint is public.** `/health` is proxied to the API. `/ready` and `/metrics` are not ([deploy/Caddyfile](../deploy/Caddyfile) lines 82-87).
 16. **Order of work pending.** The 34 hardening work-package list referred to in the review brief was not found in this worktree, so this document does not cite it.
 
