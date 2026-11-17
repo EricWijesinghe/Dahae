@@ -6515,6 +6515,9 @@ class TKo extends T {
   String get cSetupOwnerOnly => '소유자만 잠금을 풀 수 있어요';
 
   @override
+  String get cSetupLastPassKept => '이전에 통과한 확인을 계속 쓰고 있어요';
+
+  @override
   String get cPaymentsTitle => '결제 연결';
 
   @override

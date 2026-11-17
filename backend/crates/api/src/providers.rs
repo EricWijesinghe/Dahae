@@ -381,7 +381,7 @@ impl Providers {
 
     /// Harmless read used by the console's sandbox connection test: `GET /v2/balances` with the given key.
     pub async fn payout_balance_check(&self, secret: &str) -> Result<StatusCode, ProviderError> {
-        let req = payout::balance_request(&self.http, secret)?;
+        let req = self.toss_target(payout::balance_request(&self.http, secret)?)?;
         let resp = self.http.execute(req).await.map_err(|e| ProviderError::Upstream(e.to_string()))?;
         Ok(resp.status())
     }
@@ -395,11 +395,17 @@ impl Providers {
         Ok((secret, key))
     }
 
-    async fn payout_call(&self, mut req: Request, key: Option<&[u8; 32]>) -> Result<serde_json::Value, ProviderError> {
+    /// Sends a Toss request to the base set by `with_toss_api` (a test mock), else leaves it on Toss.
+    fn toss_target(&self, mut req: Request) -> Result<Request, ProviderError> {
         if let Some(base) = &self.toss_api {
             let tail = req.url().as_str().strip_prefix(payout::TOSS_API).unwrap_or_default();
             *req.url_mut() = reqwest::Url::parse(&format!("{base}{tail}")).map_err(|e| ProviderError::Upstream(e.to_string()))?;
         }
+        Ok(req)
+    }
+
+    async fn payout_call(&self, req: Request, key: Option<&[u8; 32]>) -> Result<serde_json::Value, ProviderError> {
+        let req = self.toss_target(req)?;
         let resp = self.http.execute(req).await.map_err(|e| ProviderError::Upstream(e.to_string()))?;
         let status = resp.status();
         let text = resp.text().await.map_err(|e| ProviderError::Upstream(e.to_string()))?;

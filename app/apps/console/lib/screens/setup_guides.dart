@@ -481,7 +481,8 @@ class LocalField {
 
 /// Plain-language message for a setup error or test result code from the server.
 String setupMessage(T t, String code) => switch (code) {
-  'connected' => t.cSetupConnected,
+  // A Toss check records its key mode; the card's mode badge already says test or live.
+  'connected' || 'sandbox_connected' || 'live_connected' => t.cSetupConnected,
   'saved_check_in_app' => t.cSetupCheckInApp,
   'invalid_key' => t.cSetupInvalidKey,
   'unreachable' || 'provider_error' => t.cSetupUnreachable,

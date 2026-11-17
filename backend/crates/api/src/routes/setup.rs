@@ -611,15 +611,27 @@ fn heartbeat_configured() -> bool {
 
 /// Everything the wizard and the status page need in one call.
 async fn overview(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<Value>> {
-    let tests: Vec<(String, Option<Value>)> = sqlx::query_as("SELECT section, last_test FROM integration_settings").fetch_all(&s.db).await?;
+    let tests: Vec<(String, Option<Value>, Option<Value>)> = sqlx::query_as("SELECT section, last_test, last_check FROM integration_settings")
+        .fetch_all(&s.db)
+        .await?;
     let viewer_is_owner = owner::is_owner(&s.db, a.id).await?;
     let mut cards = Vec::new();
     for sec in Section::ALL {
-        let last = tests.iter().find(|(c, _)| c == sec.code()).and_then(|(_, t)| t.clone());
-        let mut c = card(&s, sec, last).await?;
-        // Only the owner sees when an unlock window closes; anyone else would learn when the owner is editing.
-        if !viewer_is_owner && let Some(fields) = c.as_object_mut() {
-            fields.remove("unlock_expires_at");
+        let (last, check) = tests
+            .iter()
+            .find(|(c, _, _)| c == sec.code())
+            .map(|(_, t, c)| (t.clone(), c.clone()))
+            .unwrap_or_default();
+        let lock = integrations::lock_state(&s.db, sec).await?;
+        let mut c = card(&s, sec, last.clone()).await?;
+        if let Some(fields) = c.as_object_mut() {
+            // The latest check, passed or failed; rows from before last_check existed only have last_test.
+            fields.insert("last_check".into(), check.or(last).unwrap_or(Value::Null));
+            fields.insert("can_test".into(), json!(may_test(lock, a.id, viewer_is_owner)));
+            // Only the owner sees when an unlock window closes; anyone else would learn when the owner is editing.
+            if !viewer_is_owner {
+                fields.remove("unlock_expires_at");
+            }
         }
         cards.push(c);
     }
@@ -930,15 +942,23 @@ async fn payout_test(s: &AppState) -> ApiResult<Value> {
     Ok(json!({ "ok": ok, "code": code, "key_fp": integrations::key_fingerprint(&s.config.data_key, secret), "at": Utc::now() }))
 }
 
+/// Who may run a card's connection test. It takes no values: it probes with what is saved and records only its
+/// result, so the owner runs it on a locked card without an unlock. An open unlock window belongs to the owner
+/// who opened it. Anyone may test a card that was never saved.
+fn may_test(lock: LockState, viewer: Uuid, viewer_is_owner: bool) -> bool {
+    match lock {
+        LockState::Unsaved => true,
+        LockState::Locked => viewer_is_owner,
+        LockState::Unlocked(_, by) => viewer_is_owner && by == viewer,
+    }
+}
+
 async fn test_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Path<String>) -> ApiResult<Json<Value>> {
     let sec = section(&code)?;
-    // The test takes no values: it probes with what is saved and records only its result, so a locked card
-    // runs it without an unlock, but only for the owner. An open unlock window belongs to the owner who opened it.
     let lock = integrations::lock_state(&s.db, sec).await?;
-    if lock == LockState::Locked && !owner::is_owner(&s.db, a.id).await? {
+    if !may_test(lock, a.id, owner::is_owner(&s.db, a.id).await?) {
         return Err(ApiError::Forbidden);
     }
-    require_unlocker(&s, a, lock).await?;
     let record = if sec == Section::Payout {
         payout_test(&s).await?
     } else {
@@ -947,21 +967,39 @@ async fn test_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Pa
     };
     // The saved payout pass is what opens Toss (`toss_ready`): a failed check, say a short Toss outage, must not
     // replace it, or the loader would drop the saved Toss settings and stop the sync of open transfers. The
-    // failure is still answered and audited.
-    if sec != Section::Payout || record["ok"] == json!(true) {
-        sqlx::query("UPDATE integration_settings SET last_test = $2 WHERE section = $1")
-            .bind(sec.code())
-            .bind(&record)
-            .execute(&s.db)
-            .await?;
-    }
+    // failure is still answered, audited and kept as last_check, so the card shows it.
+    let keeps_pass = sec == Section::Payout && record["ok"] != json!(true);
+    let stored: Option<Value> = sqlx::query_scalar(
+        "UPDATE integration_settings SET last_check = $2, last_test = CASE WHEN $3 THEN last_test ELSE $2 END
+         WHERE section = $1 RETURNING last_test",
+    )
+    .bind(sec.code())
+    .bind(&record)
+    .bind(keeps_pass)
+    .fetch_optional(&s.db)
+    .await?
+    .flatten();
     audit(&s.db, a.role.as_str(), Some(a.id), "setup.test", sec.code(), record.clone()).await?;
-    Ok(Json(record))
+    let mut body = record;
+    body["last_test"] = stored.unwrap_or(Value::Null);
+    Ok(Json(body))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_the_owner_tests_a_locked_or_open_card() {
+        let (me, other) = (Uuid::now_v7(), Uuid::now_v7());
+        let open = |by| LockState::Unlocked(Utc::now(), by);
+        assert!(may_test(LockState::Unsaved, me, false), "a card never saved");
+        assert!(may_test(LockState::Locked, me, true));
+        assert!(!may_test(LockState::Locked, me, false));
+        assert!(may_test(open(me), me, true));
+        assert!(!may_test(open(other), me, true), "another owner's window");
+        assert!(!may_test(open(me), me, false));
+    }
 
     #[test]
     fn setup_code_uses_unambiguous_characters() {

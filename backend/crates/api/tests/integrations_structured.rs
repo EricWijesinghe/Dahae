@@ -168,7 +168,8 @@ async fn saved_console_value_beats_the_env_key_after_load(db: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn backup_test_against_an_unreachable_endpoint_reports_unreachable(db: PgPool) {
     let app = common::app(db.clone());
-    let (token, _) = staff_token(&db, Role::StaffAdmin).await;
+    let (token, owner) = staff_token(&db, Role::StaffAdmin).await;
+    common::enrol_owner(&db, owner, b"backup-owner-seed-0001").await;
     let cfg = json!({
         "endpoint": "https://backup.invalid",
         "region": "ap-northeast-2",
@@ -178,8 +179,12 @@ async fn backup_test_against_an_unreachable_endpoint_reports_unreachable(db: PgP
     });
     let (st, body) = call_with_totp(&app, "PUT", "/v1/admin/setup/backup", &token, None, cfg).await;
     assert_eq!(st, StatusCode::OK, "{body}");
-    // A saved card is locked, but the test only reads the saved values, so it runs without an unlock.
+    // A saved card is locked, but the test only reads the saved values, so the owner runs it without an unlock.
     let (st, body) = call_with_totp(&app, "POST", "/v1/admin/setup/backup/test", &token, None, Value::Null).await;
     assert_eq!(st, StatusCode::OK, "{body}");
     assert_eq!(body["code"], "unreachable");
+
+    let (admin, _) = staff_token(&db, Role::StaffAdmin).await;
+    let (st, body) = call_with_totp(&app, "POST", "/v1/admin/setup/backup/test", &admin, None, Value::Null).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "only the owner tests a locked card: {body}");
 }

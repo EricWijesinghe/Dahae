@@ -12408,6 +12408,12 @@ abstract class T {
   /// **'소유자만 잠금을 풀 수 있어요'**
   String get cSetupOwnerOnly;
 
+  /// No description provided for @cSetupLastPassKept.
+  ///
+  /// In ko, this message translates to:
+  /// **'이전에 통과한 확인을 계속 쓰고 있어요'**
+  String get cSetupLastPassKept;
+
   /// No description provided for @cPaymentsTitle.
   ///
   /// In ko, this message translates to:

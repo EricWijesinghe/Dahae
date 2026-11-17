@@ -3805,7 +3805,7 @@
         "summary": "Setup checklist and state",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK. Each integrations[] card carries last_test (the stored passing check, the Toss gate record), last_check (the latest check, passed or failed) and can_test (whether this viewer may run the connection test: the owner only on a locked card)"
           }
         }
       }
@@ -3962,7 +3962,7 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "The check record (ok, code, at) plus last_test, the stored passing check still in use"
           },
           "default": {
             "$ref": "#/components/responses/Error"

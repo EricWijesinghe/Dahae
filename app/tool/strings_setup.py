@@ -54,6 +54,7 @@ S = {
   "cSetupHide": ["숨기기", "Hide"],
   "cSetupUnlockedBadge": ["잠금 해제됨", "Unlocked"],
   "cSetupOwnerOnly": ["소유자만 잠금을 풀 수 있어요", "Only the owner can unlock"],
+  "cSetupLastPassKept": ["이전에 통과한 확인을 계속 쓰고 있어요", "The earlier passing check is still in use"],
   "cPaymentsTitle": ["결제 연결", "Payments"],
   "cSetupClear": ["연결 해제", "Disconnect"],
   "cSetupConnected": ["연결됨", "Connected"],

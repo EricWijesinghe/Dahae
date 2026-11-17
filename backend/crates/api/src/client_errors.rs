@@ -15,7 +15,7 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use domain::redact::mask_digit_runs;
+use domain::redact::{mask_digit_runs, mask_words};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::PgPool;
@@ -61,19 +61,13 @@ pub struct Row {
     stack: String,
 }
 
-/// Blanks out e-mail addresses and phone-like digit runs (9+ digits, groups joined by a space, dash, dot or
-/// parens, full-width digits too). Unseparated hex words (a release stack trace's addresses, which
-/// `flutter symbolize` needs) are kept. Lines and spacing are kept. Addresses (street names) cannot be
-/// detected reliably: the apps must not send them.
+/// Blanks out e-mail addresses (full-width `＠` and `．` too) and phone-like digit runs (9+ digits, groups joined
+/// by a space, dash, dot, slash or parens, full-width digits too). Dates, times and booking numbers are kept, and
+/// so are whole hex tokens (a release stack trace's addresses, which `flutter symbolize` needs). Lines and spacing
+/// are kept. Addresses (street names) cannot be detected reliably: the apps must not send them.
 pub fn scrub(text: &str) -> String {
-    let words: Vec<&str> = text
-        .split(' ')
-        .map(|w| {
-            let email = w.split_once('@').is_some_and(|(local, domain)| !local.is_empty() && domain.contains('.'));
-            if email { "[redacted]" } else { w }
-        })
-        .collect();
-    mask_digit_runs(&words.join(" "), 9, "[redacted]", true)
+    let is_email = |w: &str| w.split_once('@').is_some_and(|(local, domain)| !local.is_empty() && domain.contains('.'));
+    mask_digit_runs(&mask_words(text, "[redacted]", is_email), 9, "[redacted]", true)
 }
 
 fn cap(s: &str, max: usize) -> String {
@@ -175,41 +169,148 @@ mod tests {
     }
 
     #[test]
-    fn scrub_keeps_stack_hex_addresses() {
-        let frame = "#00 abs 0000007a1c3d4e5f virt 00000000001b2c3d _kDartIsolateSnapshotInstructions+0x1a2b3c";
-        assert_eq!(scrub(frame), frame);
-        assert_eq!(scrub("01012345678"), "[redacted]");
-    }
-
-    #[test]
     fn empty_message_is_rejected() {
         assert!(clean(report("web", "   ")).is_err());
     }
 
-    #[test]
-    fn scrub_removes_phone_numbers_written_with_spaces() {
-        assert_eq!(scrub("연락처 010 1234 5678"), "연락처 [redacted]");
-        assert_eq!(scrub("연락처 010 12 34 56 78"), "연락처 [redacted]");
-        assert_eq!(scrub("연락처 010-1234 5678"), "연락처 [redacted]");
-        assert_eq!(scrub("연락처 010 1234-5678"), "연락처 [redacted]");
-        assert_eq!(scrub("step 2 of 3"), "step 2 of 3");
+    /// Each case is (input, scrubbed). Kept cases have input == output.
+    fn check(cases: &[(&str, &str)]) {
+        for (input, want) in cases {
+            assert_eq!(scrub(input), *want, "{input:?}");
+        }
     }
 
     #[test]
-    fn scrub_removes_phone_numbers_next_to_punctuation_particles_and_full_width_digits() {
-        assert_eq!(scrub("연락처: 010 1234 5678."), "연락처: [redacted].");
-        assert_eq!(scrub("010 1234 5678입니다"), "[redacted]입니다");
-        assert_eq!(scrub("(010) 1234-5678"), "([redacted]");
-        assert_eq!(scrub("010 1234.5678"), "[redacted]");
-        assert_eq!(scrub("０１０-１２３４-５６７８"), "[redacted]");
-        assert_eq!(scrub("번호는 ０１０１２３４５６７８ 입니다"), "번호는 [redacted] 입니다");
-        assert_eq!(scrub("retry 3 of 5 (code 42)"), "retry 3 of 5 (code 42)");
+    fn scrub_masks_phone_numbers_with_any_common_separator() {
+        check(&[
+            ("01012345678", "[redacted]"),
+            ("연락처 010 1234 5678", "연락처 [redacted]"),
+            ("연락처 010 12 34 56 78", "연락처 [redacted]"),
+            ("연락처 010-1234 5678", "연락처 [redacted]"),
+            ("연락처 010 1234-5678", "연락처 [redacted]"),
+            ("연락처: 010 1234 5678.", "연락처: [redacted]."),
+            ("010 1234 5678입니다", "[redacted]입니다"),
+            ("(010) 1234-5678", "([redacted]"),
+            ("010 1234.5678", "[redacted]"),
+            ("010/1234/5678", "[redacted]"),
+            ("010 - 1234 - 5678", "[redacted]"),
+            ("010\u{2013}1234\u{2013}5678", "[redacted]"),
+            ("010\u{2014}1234\u{2014}5678", "[redacted]"),
+            ("010\u{2212}1234\u{2212}5678", "[redacted]"),
+            ("010\u{b7}1234\u{b7}5678", "[redacted]"),
+            ("010\u{a0}1234\u{a0}5678", "[redacted]"),
+            ("010  1234 5678", "[redacted]"),
+            ("+82 10 1234 5678", "+[redacted]"),
+        ]);
     }
 
     #[test]
-    fn scrub_removes_phone_and_email_but_keeps_layout() {
-        let out = scrub("call 010-1234-5678 or a@b.co now\n  at foo.js:12");
-        assert_eq!(out, "call [redacted] or [redacted] now\n  at foo.js:12");
+    fn scrub_masks_full_width_phone_numbers() {
+        check(&[
+            ("０１０-１２３４-５６７８", "[redacted]"),
+            ("번호는 ０１０１２３４５６７８ 입니다", "번호는 [redacted] 입니다"),
+            ("０１０　１２３４　５６７８", "[redacted]"),
+        ]);
+    }
+
+    #[test]
+    fn scrub_keeps_short_numbers() {
+        check(&[
+            ("step 2 of 3", "step 2 of 3"),
+            ("retry 3 of 5 (code 42)", "retry 3 of 5 (code 42)"),
+            ("page 1/2", "page 1/2"),
+            ("v1.5.0 - build 120", "v1.5.0 - build 120"),
+            ("at foo.js:1234:56", "at foo.js:1234:56"),
+        ]);
+    }
+
+    #[test]
+    fn scrub_keeps_dates_and_times() {
+        check(&[
+            ("2026-11-17 09:34:51", "2026-11-17 09:34:51"),
+            ("at 2026-11-17 09:34:51 KST", "at 2026-11-17 09:34:51 KST"),
+            ("2026-11-17T09:34:51.123Z", "2026-11-17T09:34:51.123Z"),
+            ("2026/11/17 09:34", "2026/11/17 09:34"),
+            ("2026.11.17 9:05", "2026.11.17 9:05"),
+            ("2026. 11. 17. 09:34", "2026. 11. 17. 09:34"),
+            ("09:34:51 2026-11-17", "09:34:51 2026-11-17"),
+            ("2026-11-17 12345", "2026-11-17 12345"),
+        ]);
+    }
+
+    #[test]
+    fn scrub_masks_phone_numbers_next_to_dates_and_times() {
+        check(&[
+            ("2026-11-17 010 1234 5678", "2026-11-17 [redacted]"),
+            ("09:34 010 1234 5678", "09:34 [redacted]"),
+            ("010 1990-12-31", "[redacted]"),
+            ("1:010 1234 5678", "1:[redacted]"),
+        ]);
+    }
+
+    #[test]
+    fn scrub_keeps_booking_numbers() {
+        check(&[("BK2611-00012", "BK2611-00012"), ("booking BK2611-00012 failed", "booking BK2611-00012 failed")]);
+    }
+
+    #[test]
+    fn scrub_masks_phone_numbers_next_to_booking_numbers_and_unprefixed_ones() {
+        check(&[
+            ("BK2611-00012 010 1234 5678", "BK2611-00012 [redacted]"),
+            ("2611-00012", "[redacted]"),
+            ("XK2611-00012", "XK[redacted]"),
+        ]);
+    }
+
+    #[test]
+    fn scrub_keeps_whole_hex_tokens() {
+        check(&[(
+            "#00 abs 0000007a1c3d4e5f virt 00000000001b2c3d _kDartIsolateSnapshotInstructions+0x1a2b3c",
+            "#00 abs 0000007a1c3d4e5f virt 00000000001b2c3d _kDartIsolateSnapshotInstructions+0x1a2b3c",
+        )]);
+    }
+
+    #[test]
+    fn scrub_masks_phone_numbers_glued_to_hex_letters_inside_a_longer_token() {
+        check(&[
+            ("tel:a01012345678", "tel:a[redacted]"),
+            ("id=b01012345678", "id=b[redacted]"),
+            ("a010-1234-5678", "a[redacted]"),
+        ]);
+    }
+
+    #[test]
+    fn scrub_masks_emails_including_full_width_signs() {
+        check(&[
+            ("call a@b.co now", "call [redacted] now"),
+            ("kim＠mail.com", "[redacted]"),
+            ("mail kim＠mail．com please", "mail [redacted] please"),
+        ]);
+    }
+
+    #[test]
+    fn scrub_keeps_at_signs_that_are_not_emails() {
+        check(&[
+            ("@user", "@user"),
+            ("＠home", "＠home"),
+            ("x@localhost", "x@localhost"),
+            ("Instance of 'A'", "Instance of 'A'"),
+        ]);
+    }
+
+    #[test]
+    fn scrub_keeps_lines_and_spacing() {
+        check(&[
+            (
+                "call 010-1234-5678 or a@b.co now\n  at foo.js:12",
+                "call [redacted] or [redacted] now\n  at foo.js:12",
+            ),
+            ("x\na@b.co\nnext", "x\n[redacted]\nnext"),
+            ("Error: x\na@b.co", "Error: x\n[redacted]"),
+            ("a@b.co\n  at foo", "[redacted]\n  at foo"),
+            ("a@b.co\tx", "[redacted]\tx"),
+            ("010-1234-5678\n010-1234-5678", "[redacted]\n[redacted]"),
+        ]);
     }
 
     #[test]

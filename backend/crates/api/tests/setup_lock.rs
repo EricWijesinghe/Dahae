@@ -466,36 +466,105 @@ async fn connection_test_runs_on_a_locked_card_with_the_saved_values_only(db: Pg
     assert_eq!(backup_row(&db).await, before);
 }
 
-#[sqlx::test(migrations = "../../migrations")]
-async fn a_failed_payout_test_keeps_the_saved_pass_and_the_toss_settings(db: PgPool) {
-    let app = common::app(db.clone());
-    let (token, owner) = enrolled_owner(&db).await;
-    let key = test_config().data_key;
-    let secret = "test_sk_fakefakefakefake";
-    let values = json!({ "mode": "toss", "secret_key": secret, "security_key": SECURITY_KEY });
-    let pass = json!({ "ok": true, "code": "sandbox_connected", "key_fp": api::integrations::key_fingerprint(&key, secret), "at": Utc::now() });
+/// A Toss stub answering `GET /v2/balances` with `status`. Returns its base URL.
+async fn toss_stub(status: StatusCode) -> String {
+    let router = Router::new().route("/v2/balances", axum::routing::get(move || async move { (status, "{}") }));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind toss stub");
+    let addr = listener.local_addr().expect("addr");
+    tokio::spawn(async move { axum::serve(listener, router).await.expect("stub serves") });
+    format!("http://{addr}")
+}
+
+/// The test router with its Toss calls sent to `toss_base`, so no check leaves the machine.
+fn app_with_toss(db: &PgPool, toss_base: &str) -> Router {
+    let cfg = test_config();
+    let state = api::build_state(db.clone(), cfg.clone()).expect("state");
+    let providers = api::providers::Providers::new(cfg, db.clone()).expect("providers").with_toss_api(toss_base);
+    api::routes::router(api::state::AppState {
+        providers: std::sync::Arc::new(providers),
+        ..state
+    })
+}
+
+const TOSS_TEST_SECRET: &str = "test_sk_fakefakefakefake";
+
+/// Saves a locked Toss payout card whose stored check is `last_test`.
+async fn saved_toss_card(db: &PgPool, owner: Uuid, last_test: Option<&Value>) {
+    let values = json!({ "mode": "toss", "secret_key": TOSS_TEST_SECRET, "security_key": SECURITY_KEY });
     sqlx::query("INSERT INTO integration_settings (section, secret, updated_by, last_test) VALUES ('payout', $1, $2, $3)")
-        .bind(crypto::encrypt(&key, crypto::aad::INTEGRATION, &values.to_string()))
+        .bind(crypto::encrypt(&test_config().data_key, crypto::aad::INTEGRATION, &values.to_string()))
         .bind(owner)
-        .bind(&pass)
-        .execute(&db)
+        .bind(last_test)
+        .execute(db)
         .await
         .expect("saved toss card");
+}
 
-    // Toss cannot be reached from the test server: the check fails.
+async fn payout_last_test(db: &PgPool) -> Value {
+    sqlx::query_scalar::<_, Option<Value>>("SELECT last_test FROM integration_settings WHERE section = 'payout'")
+        .fetch_one(db)
+        .await
+        .expect("last test")
+        .unwrap_or(Value::Null)
+}
+
+async fn payout_card(app: &Router, token: &str) -> Value {
+    let (st, all) = common::call_owner(app, "GET", "/v1/admin/setup", token, None, Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "{all}");
+    all["integrations"].as_array().unwrap().iter().find(|c| c["code"] == "payout").unwrap().clone()
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_failed_payout_test_keeps_the_saved_pass_and_the_toss_settings(db: PgPool) {
+    let app = app_with_toss(&db, &toss_stub(StatusCode::INTERNAL_SERVER_ERROR).await);
+    let (token, owner) = enrolled_owner(&db).await;
+    let key = test_config().data_key;
+    let pass = json!({ "ok": true, "code": "sandbox_connected", "key_fp": api::integrations::key_fingerprint(&key, TOSS_TEST_SECRET), "at": Utc::now() });
+    saved_toss_card(&db, owner, Some(&pass)).await;
+
+    // The Toss stub answers 500: the check fails.
     let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/payout/test", &token, None, Value::Null).await;
     assert_eq!((st, body["ok"].as_bool()), (StatusCode::OK, Some(false)), "{body}");
-    let last: Value = sqlx::query_scalar("SELECT last_test FROM integration_settings WHERE section = 'payout'")
-        .fetch_one(&db)
-        .await
-        .expect("last test");
+    assert_eq!(body["last_test"], pass, "the answer names the pass still in use: {body}");
+    let last = payout_last_test(&db).await;
     assert_eq!(last, pass, "a failed check never replaces the recorded pass");
     assert!(
-        api::integrations::toss_ready(true, Some(&last), &key, secret),
+        api::integrations::toss_ready(true, Some(&last), &key, TOSS_TEST_SECRET),
         "the saved Toss settings still load"
     );
+
+    // A reopened card shows the failed check as the latest one, the pass separately.
+    let card = payout_card(&app, &token).await;
+    assert_eq!(card["last_check"]["ok"], false, "{card}");
+    assert_eq!(card["last_check"]["code"], body["code"], "{card}");
+    assert_eq!(card["last_test"], pass, "{card}");
+    assert_eq!(card["can_test"], true, "the owner may test the locked card: {card}");
 
     let (admin, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
     let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/payout/test", &admin, None, Value::Null).await;
     assert_eq!(st, StatusCode::FORBIDDEN, "only the owner tests the locked payout card: {body}");
+    assert_eq!(payout_card(&app, &admin).await["can_test"], false, "a non-owner gets no test button");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_passing_payout_test_records_the_pass_and_opens_toss(db: PgPool) {
+    let app = app_with_toss(&db, &toss_stub(StatusCode::OK).await);
+    let (token, owner) = enrolled_owner(&db).await;
+    saved_toss_card(&db, owner, None).await;
+
+    let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/payout/test", &token, None, Value::Null).await;
+    assert_eq!(
+        (st, body["ok"].as_bool(), body["code"].as_str()),
+        (StatusCode::OK, Some(true), Some("sandbox_connected")),
+        "{body}"
+    );
+    let last = payout_last_test(&db).await;
+    assert_eq!(last["ok"], true, "{last}");
+    assert_eq!(body["last_test"], last, "{body}");
+    assert!(
+        api::integrations::toss_ready(true, Some(&last), &test_config().data_key, TOSS_TEST_SECRET),
+        "the pass opens Toss for this key"
+    );
+    let card = payout_card(&app, &token).await;
+    assert_eq!((card["last_check"].clone(), card["last_test"].clone()), (last.clone(), last), "{card}");
 }

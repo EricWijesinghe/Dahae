@@ -187,10 +187,13 @@ pub fn mask_name(name: &str) -> String {
 }
 
 /// Public review text without contact details: runs of 4+ digits (phone numbers, unit numbers, also written
-/// with spaces, dots, dashes or full-width digits) and anything shaped like an e-mail address become `***`.
+/// with spaces, dots, dashes, slashes or full-width digits) and any word with an `@` and a dot (full-width too)
+/// become `***`. Deliberately broad, phones first: a lone 4-digit group may be the end of a phone number, so it
+/// is masked. Kept, as no phone has their shape: year-first dates ("2026-11-17"), a year before 년 ("2026년"),
+/// a price under 9 digits before 원 ("60000원"; "60000 원" with a space is masked) and booking numbers.
 pub fn redact_contacts(text: &str) -> String {
-    let words: Vec<&str> = text.split(' ').map(|w| if w.contains('@') && w.contains('.') { "***" } else { w }).collect();
-    crate::redact::mask_digit_runs(&words.join(" "), 4, "***", false)
+    let no_emails = crate::redact::mask_words(text, "***", |w| w.contains('@') && w.contains('.'));
+    crate::redact::mask_digit_runs(&no_emails, 4, "***", false)
 }
 
 /// Refund, discount and compensation words. A reply may use one only when the facts use it too.
@@ -458,26 +461,76 @@ mod tests {
         assert_eq!(mask_name("Anna Lee"), "A******e");
     }
 
-    #[test]
-    fn public_reviews_hide_phone_numbers_and_emails() {
-        assert_eq!(redact_contacts("친절해요 010-1234-5678 연락주세요"), "친절해요 *** 연락주세요");
-        assert_eq!(redact_contacts("문의 kim@mail.com 으로"), "문의 *** 으로");
-        assert_eq!(redact_contacts("3시간 걸렸고 2번 와주셨어요"), "3시간 걸렸고 2번 와주셨어요");
-        assert_eq!(redact_contacts("101동 1203호"), "101동 ***호");
+    /// Each case is (review text, public text). Kept cases have input == output.
+    fn check_review(cases: &[(&str, &str)]) {
+        for (input, want) in cases {
+            assert_eq!(redact_contacts(input), *want, "{input:?}");
+        }
     }
 
     #[test]
-    fn public_reviews_hide_phone_numbers_written_with_spaces() {
-        assert_eq!(redact_contacts("연락처 010 12 34 56 78"), "연락처 ***");
-        assert_eq!(redact_contacts("010 1234 5678"), "***");
-        assert_eq!(redact_contacts("2 3 번 와주셨어요"), "2 3 번 와주셨어요");
+    fn public_reviews_hide_phone_numbers() {
+        check_review(&[
+            ("친절해요 010-1234-5678 연락주세요", "친절해요 *** 연락주세요"),
+            ("연락처 010 12 34 56 78", "연락처 ***"),
+            ("010 1234 5678", "***"),
+            ("연락처 ０１０-１２３４-５６７８ 주세요", "연락처 *** 주세요"),
+            ("(010) 1234-5678로 연락", "(***로 연락"),
+            ("010/1234/5678", "***"),
+            ("010 - 1234 - 5678", "***"),
+            ("010\u{2013}1234\u{2013}5678", "***"),
+            ("010\u{2212}1234\u{2212}5678", "***"),
+            ("010\u{b7}1234\u{b7}5678", "***"),
+            ("010\u{a0}1234\u{a0}5678", "***"),
+            ("010  1234 5678", "***"),
+            ("+82 10 1234 5678", "+***"),
+            ("01012345678원", "***원"),
+            ("010-1234-5678원", "***원"),
+            ("1012345678원", "***원"),
+            ("010 2026-11-17", "***"),
+        ]);
     }
 
     #[test]
-    fn public_reviews_hide_full_width_and_punctuated_phone_numbers() {
-        assert_eq!(redact_contacts("연락처 ０１０-１２３４-５６７８ 주세요"), "연락처 *** 주세요");
-        assert_eq!(redact_contacts("(010) 1234-5678로 연락"), "(***로 연락");
-        assert_eq!(redact_contacts("101동　１２０３호"), "101동　***호");
+    fn public_reviews_hide_unit_and_partial_numbers() {
+        check_review(&[
+            ("101동 1203호", "101동 ***호"),
+            ("101동　１２０３호", "101동　***호"),
+            ("끝번호 5678", "끝번호 ***"),
+            ("1234 5678원", "***원"),
+            ("0101년", "***년"),
+            ("1203 원룸", "*** 원룸"),
+            ("60000 원", "*** 원"),
+        ]);
+    }
+
+    #[test]
+    fn public_reviews_keep_dates_years_prices_and_small_numbers() {
+        check_review(&[
+            ("3시간 걸렸고 2번 와주셨어요", "3시간 걸렸고 2번 와주셨어요"),
+            ("2 3 번 와주셨어요", "2 3 번 와주셨어요"),
+            ("2026-11-17에 받았어요", "2026-11-17에 받았어요"),
+            ("2026.11.17 방문", "2026.11.17 방문"),
+            ("2026년 11월에 이사", "2026년 11월에 이사"),
+            ("60000원 냈어요", "60000원 냈어요"),
+            ("150,000원", "150,000원"),
+            ("예약 BK2611-00012", "예약 BK2611-00012"),
+        ]);
+    }
+
+    #[test]
+    fn public_reviews_hide_emails_including_full_width_signs() {
+        check_review(&[
+            ("문의 kim@mail.com 으로", "문의 *** 으로"),
+            ("문의 kim＠mail.com 으로", "문의 *** 으로"),
+            ("문의 kim＠mail．com", "문의 ***"),
+            ("좋아요\nkim@mail.com\n감사", "좋아요\n***\n감사"),
+        ]);
+    }
+
+    #[test]
+    fn public_reviews_keep_at_signs_that_are_not_emails() {
+        check_review(&[("@김사장님 감사해요", "@김사장님 감사해요"), ("최고＠", "최고＠")]);
     }
 
     #[test]
