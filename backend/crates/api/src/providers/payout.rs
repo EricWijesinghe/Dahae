@@ -7,11 +7,14 @@
 //! (seller create `POST /v2/sellers`, payout create `POST /v2/payouts`, lookups `GET /v2/payouts`, `GET /v2/payouts/{id}` and
 //! `GET /v2/sellers/{id}`, balance `GET /v2/balances`, cancel `POST /v2/payouts/{id}/cancel`).
 //!
-//! shortcut: not verified against a live sandbox. Unverified in the docs: the `amount` sub-fields on the
-//! request (sent as `{currency, value}`, the shape of the Payout object), the idempotency header name
-//! (`Idempotency-Key`), the content type of an encrypted body (`text/plain`), the seller response's
-//! `status` field, the webhook signature scheme (none documented, so webhooks only trigger a poll), and that an
-//! EXPRESS payout's `payoutDate` is its request day (the list lookup filters on it).
+//! Confirmed in the docs: the create body is a list of `{refPayoutId, destination, scheduleType, amount: {currency,
+//! value}, transactionDescription}`, the encrypted body goes as `text/plain`, `Idempotency-Key` works on every POST
+//! (kept 15 days, the first answer is replayed), answers come wrapped in `entityBody`, and the list takes `limit`
+//! (at most 10000), `startingAfter`, `payoutDateGte` and `payoutDateLte`.
+//! shortcut: not verified against a live sandbox. Unverified in the docs: the error code for a reused
+//! `refPayoutId` or a key replayed with another body, whether `GET /v2/payouts/{id}` is wrapped (both shapes are
+//! read), the webhook signature scheme (none documented, so webhooks only trigger a poll), and that an EXPRESS
+//! payout's `payoutDate` is its request day (the list lookup filters on it).
 //! Upgrade when a sandbox seller registration and payout round-trip succeed (see docs/DEPLOY.md section 7).
 
 use super::{ProviderError, toss_jwe};
@@ -160,16 +163,17 @@ pub fn seller_body(d: &SellerDraft) -> Value {
 }
 
 /// Body fields Toss documents for a payout (reference/additional). `scheduleType` is EXPRESS (same-day, business
-/// hours); SCHEDULED would also need `payoutDate`.
+/// hours); SCHEDULED would also need `payoutDate`. The body is a list of up to 100 transfers (guides/v2/payouts,
+/// 지급대행 요청하기); we send one per request, so a failure of the list is a failure of this transfer.
 fn payout_body(ref_id: &str, seller_id: &str, t: &Transfer) -> Value {
     let description: String = t.memo.chars().take(TOSS_DESCRIPTION_MAX).collect();
-    json!({
+    json!([{
         "refPayoutId": ref_id,
         "destination": seller_id,
         "scheduleType": "EXPRESS",
         "amount": { "currency": "KRW", "value": t.amount },
         "transactionDescription": description,
-    })
+    }])
 }
 
 /// `POST` with a JWE body, the encryption header, and optional idempotency key.
@@ -234,7 +238,7 @@ pub fn list_request(http: &Client, secret: &str, since: &str) -> Result<Request,
 /// Every payout in a list response whose refPayoutId is `ref_id`, as (Toss id, status). An error when the
 /// list is cut short (`hasMore` not false), so a payout is never judged missing from a partial page.
 pub fn find_in_list(body: &Value, ref_id: &str) -> Result<Vec<(String, TransferStatus)>, ProviderError> {
-    let list = body.get("entityBody").unwrap_or(body);
+    let list = entity(body);
     let items = list["items"]
         .as_array()
         .ok_or_else(|| ProviderError::Upstream("unreadable payout list".into()))?;
@@ -310,8 +314,15 @@ pub fn parse_sent(body: &Value) -> Result<String, ProviderError> {
         .ok_or_else(|| ProviderError::Upstream("missing payout id".into()))
 }
 
+/// The object of a v2 answer: v2 wraps it as `{version, traceId, entityType, entityBody}` (guides/v2/payouts:
+/// seller, balance and payout-list examples). A bare object is read as it is.
+fn entity(body: &Value) -> &Value {
+    body.get("entityBody").unwrap_or(body)
+}
+
 /// Reads a seller's Toss id and status (`APPROVAL_REQUIRED`, `PARTIALLY_APPROVED`, `KYC_REQUIRED`, `APPROVED`).
 pub fn parse_seller(body: &Value) -> Result<(String, String), ProviderError> {
+    let body = entity(body);
     let id = body["id"]
         .as_str()
         .filter(|s| !s.is_empty())
@@ -323,6 +334,7 @@ pub fn parse_seller(body: &Value) -> Result<(String, String), ProviderError> {
 /// Payout `status` enum from the guide: REQUESTED, IN_PROGRESS, COMPLETED, FAILED, CANCELED, DELETED, REJECTED.
 /// REJECTED is delivered as FAILED on webhooks, so both count as failed. `error` holds the reason.
 pub fn parse_status(body: &Value) -> TransferStatus {
+    let body = entity(body);
     let reason = || {
         body["error"]["message"]
             .as_str()
@@ -371,7 +383,10 @@ mod tests {
         assert_eq!(req.headers()[SECURITY_MODE], "ENCRYPTION");
         assert_eq!(req.headers()["Idempotency-Key"], "idem-1");
         assert_eq!(req.headers()[AUTHORIZATION], format!("Basic {}", STANDARD.encode("test_sk_abc:")));
-        let sent = open(&key(), &body_text(&req)).unwrap();
+        let body = open(&key(), &body_text(&req)).unwrap();
+        // The create call takes a list of up to 100 transfers (guides/v2/payouts, 지급대행 요청하기).
+        assert_eq!(body.as_array().map(Vec::len), Some(1), "{body}");
+        let sent = &body[0];
         assert_eq!(sent["refPayoutId"], "payout-1");
         assert_eq!(sent["destination"], "seller-7");
         assert_eq!(sent["scheduleType"], "EXPRESS");
@@ -553,9 +568,22 @@ mod tests {
     }
 
     #[test]
+    fn status_and_seller_lookups_read_the_wrapped_object() {
+        // API v2 answers inside an envelope: {version, traceId, entityType, entityBody} (guides/v2/payouts examples).
+        let wrapped = |object: Value| json!({"version": "2024-06-01", "entityType": "payout", "entityBody": object});
+        assert_eq!(parse_status(&wrapped(json!({"status": "COMPLETED"}))), TransferStatus::Paid);
+        assert_eq!(
+            parse_status(&wrapped(json!({"status": "FAILED", "error": {"message": "잔액 부족"}}))),
+            TransferStatus::Failed("잔액 부족".into())
+        );
+        let seller = json!({"entityType": "seller", "entityBody": {"id": "seller-1", "status": "APPROVAL_REQUIRED"}});
+        assert_eq!(parse_seller(&seller).unwrap(), ("seller-1".into(), "APPROVAL_REQUIRED".into()));
+    }
+
+    #[test]
     fn description_is_seven_chars() {
         let mut t = transfer();
         t.memo = "다해청소정산서비스".into();
-        assert_eq!(payout_body("payout-1", "s", &t)["transactionDescription"], "다해청소정산서");
+        assert_eq!(payout_body("payout-1", "s", &t)[0]["transactionDescription"], "다해청소정산서");
     }
 }
