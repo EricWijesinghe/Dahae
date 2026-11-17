@@ -2282,6 +2282,7 @@
  "oRuleBackup": "자동 백업 누락",
  "oRuleBackupPhotos": "사진 외부 백업 실패",
  "oRuleBackupOffsite": "데이터베이스 외부 백업 실패",
+ "oRuleBackupOffsiteNotConfigured": "외부 백업 미설정",
  "oRuleDisk": "디스크 부족",
  "oRuleOtp": "인증 번호 발송이 평소보다 많음(문자 비용)",
  "oRuleAuth": "계정 보안 이상(로그인 잠금 등)",

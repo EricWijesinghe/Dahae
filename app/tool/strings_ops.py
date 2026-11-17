@@ -52,6 +52,7 @@ S = {
   "oRuleBackup": ["자동 백업 누락", "Automatic backup missed"],
   "oRuleBackupPhotos": ["사진 외부 백업 실패", "Offsite photo backup failed"],
   "oRuleBackupOffsite": ["데이터베이스 외부 백업 실패", "Offsite database backup failed"],
+  "oRuleBackupOffsiteNotConfigured": ["외부 백업 미설정", "Offsite backup not set up"],
   "oRuleDisk": ["디스크 부족", "Disk nearly full"],
   "oRuleOtp": ["인증 번호 발송이 평소보다 많음(문자 비용)", "Sign-in code sends are unusually high (SMS cost)"],
   "oRuleAuth": ["계정 보안 이상(로그인 잠금 등)", "Suspicious sign-in activity"],

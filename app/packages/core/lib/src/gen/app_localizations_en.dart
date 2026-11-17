@@ -4580,6 +4580,9 @@ class TEn extends T {
   String get oRuleBackupOffsite => 'Offsite database backup failed';
 
   @override
+  String get oRuleBackupOffsiteNotConfigured => 'Offsite backup not set up';
+
+  @override
   String get oRuleDisk => 'Disk nearly full';
 
   @override
