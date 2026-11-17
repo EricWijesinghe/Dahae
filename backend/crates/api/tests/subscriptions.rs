@@ -342,6 +342,9 @@ async fn booking_that_fails_after_the_charge_is_refunded(pool: PgPool) {
         .await
         .expect("refund queue");
     assert_eq!((queued, done), (1, true), "the charge is refunded and the refund is recorded");
+    // The card was charged, so the customer is told the money comes back, not only that a retry will follow.
+    assert_eq!(count_notices(&pool, "subscription.slot_full_refunded", Some(c.user)).await, 1);
+    assert_eq!(count_notices(&pool, "subscription.slot_full", Some(c.user)).await, 0);
 }
 
 #[sqlx::test(migrations = "../../migrations")]

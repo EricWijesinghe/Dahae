@@ -263,6 +263,13 @@ pub const EVENTS: &[Event] = &[
         vars: &[],
     },
     Event {
+        kind: "subscription.slot_full_refunded",
+        label: "정기 청소 시간 마감, 결제 환불 (고객)",
+        title: "정기 청소 시간이 가득 찼어요",
+        body: "결제된 금액은 환불해 드려요. 빈자리가 생기면 다시 예약을 시도할게요",
+        vars: &[],
+    },
+    Event {
         kind: "subscription.price_changed",
         label: "정기 청소 금액 변경 (고객)",
         title: "정기 청소 금액이 바뀌었어요",
