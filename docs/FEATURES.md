@@ -264,7 +264,7 @@ flowchart LR
 | 자동 HTTPS | Caddy가 인증서를 받고 갱신해요. 내부 인증서는 테스트용이에요. | 시스템 | [`deploy/Caddyfile`](../deploy/Caddyfile) |
 | 서버 보안 기본값 | 자동 보안 업데이트, fail2ban, 방화벽, SSH 키 로그인 확인을 설정할 수 있어요. 비밀번호 로그인을 끄기 전에 키가 있는지 확인해요. | 사장님 | [`deploy/install.sh`](../deploy/install.sh) (`harden_host`, `firewall_setup`, `ssh_keyonly_check`) |
 | `dahae` 명령 | 상태, 업데이트, 백업, 복원, 되돌리기, 로그, 채널, 알림 설정을 한 명령으로 해요. | 사장님 | [`deploy/install.sh`](../deploy/install.sh) (`write_cli`) |
-| 처음 설정 코드 | 설치 때 12자리 코드를 보여 줘요. 2시간 안에 사장님 계정을 만들 때 써요. 다시 만들 수 있어요. | 사장님 | [`deploy/install.sh`](../deploy/install.sh) (`setup_code`), [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) |
+| 처음 설정 코드 | 설치 때 12자리 코드를 보여 줘요. 7일 안에 사장님 계정을 만들 때 써요. 다시 만들 수 있어요. | 사장님 | [`deploy/install.sh`](../deploy/install.sh) (`setup_code`), [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) |
 | 처음 관리자 만들기 | 설치 코드를 넣고 첫 관리자(사장님) 계정을 만들어요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/admin`) |
 | 설정 마법사 | 연동 카드 11개(결제, 문자, 푸시, 카카오, 네이버, 구글, 애플, 도우미, 백업, 지급, 주소)를 콘솔에서 입력해요. 키 파일도 올려요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs), [`integrations.rs`](../backend/crates/api/src/integrations.rs) (`Section::ALL`), [`app/apps/console/lib/screens/setup.dart`](../app/apps/console/lib/screens/setup.dart) |
 | 연결 테스트 | 카드마다 [연결 확인] (PortOne 은 [API 키 확인]) 을 눌러 연결을 확인해요. 잠긴 카드도 저장된 값으로 확인할 수 있어요. 결과는 저장돼요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/{section}/test`) |
@@ -641,7 +641,7 @@ This is Dahae's **customer support helper**. The owner turns it on in the setup 
 | Automatic HTTPS | Caddy obtains and renews certificates; an internal certificate option exists for testing. | System | [`deploy/Caddyfile`](../deploy/Caddyfile) |
 | Host hardening defaults | Automatic security updates, fail2ban, firewall, SSH key-login check before password login is turned off. | Owner | [`deploy/install.sh`](../deploy/install.sh) (`harden_host`, `firewall_setup`, `ssh_keyonly_check`) |
 | `dahae` command | Status, update, backup, restore, rollback, logs, channel, alert settings. | Owner | [`deploy/install.sh`](../deploy/install.sh) (`write_cli`) |
-| First setup code | A 12-character code shown at install, valid two hours for creating the owner account; can be renewed. | Owner | [`deploy/install.sh`](../deploy/install.sh) (`setup_code`), [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) |
+| First setup code | A 12-character code shown at install, valid seven days for creating the owner account; can be renewed. | Owner | [`deploy/install.sh`](../deploy/install.sh) (`setup_code`), [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) |
 | First admin | Create the first admin (owner) account with the setup code. | Owner | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/admin`) |
 | Setup wizard | Eleven integration cards (payments, SMS, push, Kakao, Naver, Google, Apple, helper, backup, payouts, address); key files can be uploaded. | Owner | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs), [`integrations.rs`](../backend/crates/api/src/integrations.rs) (`Section::ALL`), [`setup.dart`](../app/apps/console/lib/screens/setup.dart) |
 | Connection test | Each card has a test button; the result is saved. | Owner | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/{section}/test`) |
