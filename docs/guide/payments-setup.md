@@ -22,11 +22,7 @@
 |---|---|---|
 | PortOne 상점 아이디 | 대기 | `<STORE_ID>` |
 | PortOne 테스트 API Secret | 대기 | `<PORTONE_TEST_API_SECRET>` (서버 전용) |
-| PortOne 채널 키 · 카드 | 대기 | `<CHANNEL_KEY_CARD>` |
-| PortOne 채널 키 · 간편결제 | 대기 | `<CHANNEL_KEY_EASY_PAY>` |
-| PortOne 채널 키 · 자동결제(빌링키) | 대기 | `<CHANNEL_KEY_BILLING>` |
-| PortOne 채널 키 · 본인인증 | 대기 | `<CHANNEL_KEY_IDENTITY>` |
-| PortOne 채널 키 · 현금영수증 | 대기 | `<CHANNEL_KEY_CASH_RECEIPT>` (서버 전용) |
+| PortOne 채널 키 (결제수단마다 1개: card, card_billing, kakaopay, naverpay, tosspay, transfer, virtual_account, identity, cash_receipt 중 쓰는 것) | 대기 | `<CHANNEL_KEYS>` (cash_receipt 는 서버 전용) |
 | PortOne 웹훅 시크릿 | 대기 | `<PORTONE_WEBHOOK_SECRET>` (서버 전용) |
 | 토스 테스트 시크릿 키 | 대기 | `<TOSS_TEST_SECRET_KEY>` (서버 전용) |
 | 토스 보안 키 | 대기 | `<TOSS_SECURITY_KEY>` (서버 전용) |
@@ -38,7 +34,7 @@
 콘솔 **설정 › 결제 연결** 에서 카드별로 값을 붙여넣어요. 칸 오른쪽의 눈 아이콘으로 입력 중인 값을 가리거나 보여줄 수 있어요.
 
 1. **PortOne** 카드: 상점 아이디, V2 API Secret, 웹훅 시크릿, 그리고 결제수단별 채널 키 칸을 채우고 **저장**.
-   - 채널 키 칸: 일반결제(카드), 정기결제(빌링키), 카카오페이, 네이버페이, 토스페이, 가상계좌, 본인인증, 현금영수증. 쓰지 않는 칸은 비워 두세요. 채널 키가 없는 결제수단은 고객 앱에 보이지 않아요 (개발 모드 제외).
+   - 채널 키 칸: 일반결제(카드), 정기결제(빌링키), 카카오페이, 네이버페이, 토스페이, 가상계좌, 본인인증, 현금영수증, 계좌이체(transfer). 콘솔에는 페이코·삼성페이·애플페이·휴대폰 칸도 있어요. 쓰지 않는 칸은 비워 두세요. 채널 키가 없는 결제수단은 고객 앱에 보이지 않아요 (개발 모드 제외).
    - 각 칸 아래 한 줄 설명이 값을 어디서 복사하는지 알려줘요. 형식이 맞지 않으면 저장 전에 칸 아래에 문구가 떠요.
    - 카드를 처음 저장하는 것은 소유자 인증 코드가 필요해요. 결제 금액이 가는 곳을 정하기 때문이에요.
    - [API 키 확인]은 API Secret만 확인해요. 상점 아이디나 채널 키가 틀린 것은 첫 결제 시도 때 드러날 수 있어요.
@@ -46,7 +42,7 @@
    - PortOne 콘솔(V2 웹훅)에 카드 옆 복사 버튼의 **웹훅 주소** `<PUBLIC_BASE_URL>/v1/webhooks/portone` 을 등록해요.
 2. **지급대행 (토스)** 카드: 시크릿 키(`test_sk_` 또는 `live_sk_`)와 보안 키(64자리)를 붙여넣고 **저장** → [연결 확인] → 성공 후 지급 방식을 `toss` 로 바꿔요.
    - 카드의 **테스트** / **실거래** 표시는 시크릿 키 종류에서 와요. 테스트 통과가 실서비스 키를 열어주지 않아요.
-   - 저장하면 카드가 잠기고 [연결 확인]도 잠금 해제 중에만 할 수 있어요. 연결 확인은 기록을 남기므로 잠긴 카드에서는 막아요.
+   - 저장하면 카드가 잠겨요. [연결 확인]은 사장님(소유자) 계정이 잠긴 카드에서 바로 할 수 있어요 (잠금 해제 필요 없음).
    - 토스 개발자센터 웹훅 주소: `<PUBLIC_BASE_URL>/v1/webhooks/toss` (`payout.changed`, `seller.changed`). 요청에는 `tosspayments-webhook-signature` 헤더가 있어야 하고, 서명이 틀리면 401 이에요.
 3. **잠금**: 저장하면 카드가 **잠김** 상태가 돼요. 비밀 값(API Secret, 시크릿 키, 웹훅 시크릿, 보안 키, 채널 키)은 `••••` 로만 보이고 일부도 보이지 않아요. 상점 아이디와 지급 방식처럼 식별용 값만 그대로 보여요.
    - 값을 바꾸려면 **잠금 해제**를 눌러요. 소유자 계정만 가능하고, 소유자 인증 앱의 6자리 코드가 필요해요. 새 값을 붙여넣고 **저장**하면 다시 잠겨요.
@@ -87,9 +83,9 @@ This is a **fill-in template**. Enter the real values only in the console (Setti
 - PortOne API Secret, PortOne webhook secret (`whsec_…`), Toss secret key (`test_sk_` / `live_sk_`) and Toss security key are **server-only**.
 - Never mix `test_` and `live_` keys. Changing a key requires a new connection test.
 
-Console order (Settings › Payments): (1) PortOne card: store id, V2 API secret, webhook secret and the channel key slots (card, card billing, KakaoPay, NaverPay, TossPay, virtual account, identity, cash receipt), then Save (the first save needs the owner's code) and, while unlocked, Check API key. Installs that only had the card channel key keep billing and cash receipts on it. (2) Toss payout card: secret key and security key, Save, Check connection, then mode `toss`.
+Console order (Settings › Payments): (1) PortOne card: store id, V2 API secret, webhook secret and the channel key slots (card, card billing, KakaoPay, NaverPay, TossPay, virtual account, identity, cash receipt, bank transfer; also PAYCO, Samsung Pay, Apple Pay and phone), then Save (the first save needs the owner's code), then the owner presses Check API key. Installs that only had the card channel key keep billing and cash receipts on it. (2) Toss payout card: secret key and security key, Save, Check connection, then mode `toss`.
 
-Each card locks after it is saved. Secrets and channel keys show only a mask and cannot be read back; identifiers such as the store id and the Toss mode show in full. To replace a value, press Unlock (owner only, 6-digit authenticator code), paste the new value and Save. An unlock ends after 5 minutes (the card shows the minutes left), or sooner with Lock now. Connection checks run only while a card is unlocked. Lock, unlock, save and failed unlock attempts are written to the audit log without the values.
+Each card locks after it is saved. Secrets and channel keys show only a mask and cannot be read back; identifiers such as the store id and the Toss mode show in full. To replace a value, press Unlock (owner only, 6-digit authenticator code), paste the new value and Save. An unlock ends after 5 minutes (the card shows the minutes left), or sooner with Lock now. The owner can run a connection check on a locked card; no unlock is needed. Lock, unlock, save and failed unlock attempts are written to the audit log without the values.
 
 Webhook URLs (set in each provider's dashboard):
 - PortOne: `<PUBLIC_BASE_URL>/v1/webhooks/portone`
@@ -99,4 +95,4 @@ Webhooks never move money by themselves: the server re-reads the payment from th
 
 Items still to confirm in a test store: PortOne decline codes, cash receipt response shape, Toss webhook signature against one live test webhook, Toss payout create response wrapper.
 
-Fill-in values to provide: store id, PortOne test API secret, channel keys (card, easy pay, billing, identity, cash receipt), PortOne webhook secret, Toss test secret key, Toss security key, test account notes, public base URL.
+Fill-in values to provide: store id, PortOne test API secret, one channel key per method used (card, card_billing, kakaopay, naverpay, tosspay, transfer, virtual_account, identity, cash_receipt), PortOne webhook secret, Toss test secret key, Toss security key, test account notes, public base URL.

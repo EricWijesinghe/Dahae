@@ -206,8 +206,7 @@ flowchart TD
   before the first tag. Details: [docs/DEPLOY.md](DEPLOY.md#2-releases-and-channels).
 - **Install-time verification.** `install.sh` and `dahae update` refuse an image without a valid cosign signature
   (`verify_image` in [`deploy/install.sh`](../deploy/install.sh); cosign version pinned to match the workflow).
-- **Not in this workflow yet.** The Android store build is still signed locally by
-  [`scripts/release/build-all.ps1`](../scripts/release/build-all.ps1). The workflow comment lists it as planned.
+- **Store apps.** Android and iOS store builds run in [store-apps.yml](../.github/workflows/store-apps.yml) (manual, [guide 11](guide/11-앱-직접-빌드.md)).
 
 ## Pull request checks
 

@@ -595,7 +595,7 @@ Each item is stated as the code and documents state it, with the owner-facing ac
 | 9 | Partner app does not show verification status or checklist | CHANGELOG Added | Open |
 | 10 | Partner training gate is off by default: partners have no way yet to publish or complete training | CHANGELOG Unreleased | Owner setting, off |
 | 11 | Point-in-time recovery needs `WAL_ARCHIVE_MODE` and an S3 bucket; the restore step is not in the setup wizard | [`deploy/wal`](../deploy/wal), CHANGELOG Unreleased | Optional, engineer path |
-| 12 | Android store build is still signed locally; the release workflow does not do it yet | [`release.yml`](../.github/workflows/release.yml) header | Open |
+| 12 | Store apps build and sign on GitHub Actions (store-apps.yml) | [guide 11](guide/11-앱-직접-빌드.md) | Closed |
 | 13 | NTD branch: its migrations (`0230` to `0237`) sort below migrations already on master (`0240` to `0375`). Confirm the migrator applies out-of-order versions on a database that has already run `0375` before merging | `feat/ntd-redesign` `backend/migrations/` | Check before merge |
 | 14 | Consent policy version is `2026-11-17`, matching the policy texts' 시행일 ([`privacy.rs`](../backend/crates/api/src/privacy.rs) `CONSENT_VERSION`). Bump it with any text change | [`privacy.rs`](../backend/crates/api/src/privacy.rs) | Done |
 

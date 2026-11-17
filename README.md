@@ -17,6 +17,8 @@
 
 <p align="center"><b>예약, 결제, 파트너 정산, 백업까지. 집청소 회사를 운영하는 사장님이 자기 서버에 직접 설치하는 집청소 플랫폼이에요.</b></p>
 
+<p align="center">DODA 담당자께: 역할 분담과 출시 순서는 <a href="docs/LAUNCH-PLAN.md">출시 계획</a>에 있어요. 서버 설치, 앱 빌드, 배포는 개발자가 해요.</p>
+
 ---
 
 ## 누구를 위한 프로그램인가요
@@ -69,7 +71,7 @@ curl -fsSL <설치 주소> | sudo bash
 4. **로그인과 앱 푸시**: 카카오, 네이버, 구글, 애플, Firebase (쓰는 것만)
 5. **백업**: 외부 저장소를 연결하면 매일 암호화된 백업을 한 부 더 보관해요. 안 해도 서버 안 백업(14일)은 계속돼요.
 
-저장하면 카드마다 **연결 확인**이 자동으로 돌아서, 초록색 "연결됨"이 나오면 끝이에요.
+저장한 뒤 카드의 **연결 확인**을 눌러 초록색 "연결됨"이 나오면 끝이에요 (저장한 카드는 사장님 계정만 확인할 수 있어요).
 
 <p align="center"><img src="docs/assets/readme/console-payments.webp" alt="결제 연동 카드를 펼친 화면. 상점 아이디, 시크릿, 웹훅 주소 입력칸이 보여요" width="520"><br><sub>결제 연동 카드 (데모 데이터)</sub></p>
 
@@ -310,6 +312,8 @@ cd apps/customer && flutter run --dart-define=API_BASE=http://localhost:8080
 
 **Bookings, payments, partner payouts and backups for a home-cleaning business. Each owner runs it on their own server.**
 
+DODA: roles and launch steps are in the [launch plan](docs/LAUNCH-PLAN.md). The developer installs, builds and deploys.
+
 Dahae is a home-services platform for the Korean market. It has a customer app, a partner (cleaner) app, a web owner console and a Rust API. A business installs it on its own Linux server with one command, then fills in its payment and messaging keys in a setup wizard.
 
 Screenshots use demo data: sample shop news, bookings, names and dashboard figures.
@@ -326,7 +330,7 @@ Screenshots use demo data: sample shop news, bookings, names and dashboard figur
 
 1. **Rent a server and a domain.** Ubuntu 24.04 (22.04 and Debian 12 also work) with 2 vCPU and 4 GB RAM recommended; the installer needs at least 1 GB. Prices vary by provider. Open ports 22, 80 and 443. See [guide 0](docs/guide/00-한번에-설치.md) (Korean).
 2. **Run the installer.** Paste one command on the server, `curl -fsSL <install address> | sudo bash`, where the install address comes from the developer, then enter your domain and an email. If a black terminal is hard to use, the developer can give you an install page that builds the same setup for pasting into the server's "user data" box when you create it (see the "other way" section of [guide 0](docs/guide/00-한번에-설치.md)). Open `https://your-domain/admin/` and create the owner account with the setup code the installer prints. See [guide 0](docs/guide/00-한번에-설치.md) and [guide 1](docs/guide/01-서버-설치.md) (Korean).
-3. **Use the setup wizard.** In the console, open **[Settings]** and fill in business details, PortOne payments (paste the keys and save; they are stored encrypted), Solapi SMS, social sign-in, Firebase push and an optional offsite backup. Each card runs a connection test when you save. See [the setup wizard guide](docs/guide/02-설정-마법사.md) (Korean) and [payment setup](docs/guide/payments-setup.md) (bilingual).
+3. **Use the setup wizard.** In the console, open **[Settings]** and fill in business details, PortOne payments (paste the keys and save; they are stored encrypted), Solapi SMS, social sign-in, Firebase push and an optional offsite backup. After saving, the owner presses each card's connection test. See [the setup wizard guide](docs/guide/02-설정-마법사.md) (Korean) and [payment setup](docs/guide/payments-setup.md) (bilingual).
 
 ## Features
 

@@ -299,11 +299,16 @@ final guides = <String, Guide>{
         'developers.naver.com → Application → Register, choose Naver Login.',
       ),
       Tr(
-        '등록 후 나오는 Client ID 를 붙여넣어요. Client Secret 은 앱 빌드 담당자에게 전달해요.',
-        'Paste the Client ID. Send the Client Secret to whoever builds the apps.',
+        '등록 후 나오는 Client ID 와 Client Secret 을 붙여넣어요. 앱 빌드 담당자에게는 Client ID 만 전달해요.',
+        'Paste the Client ID and Client Secret. Send only the Client ID to whoever builds the apps.',
       ),
     ],
-    fields: const {'client_id': FieldGuide(Tr('Client ID', 'Client ID'))},
+    fields: const {
+      'client_id': FieldGuide(Tr('Client ID', 'Client ID')),
+      'client_secret': FieldGuide(
+        Tr('Client Secret (서버에만 보관)', 'Client Secret (server only)'),
+      ),
+    },
   ),
   'google': Guide(
     title: (t) => t.cIntGoogle,

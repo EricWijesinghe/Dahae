@@ -1,21 +1,21 @@
 # iOS 출시 순서 (App Store · TestFlight) / iOS release steps
 
-고객 앱 `kr.co.dahae.customer`(다해)와 파트너 앱 `kr.co.dahae.partner`(다해 파트너)를 개발자가 GitHub Actions (`store-apps`, macOS 러너) 로 빌드하고 DODA 의 Apple 개발자 계정으로 올려요 ([guide 11](../guide/11-앱-직접-빌드.md)). 개발사는 관여하지 않아요. Mac 은 필요 없어요. 개인정보 라벨·수출 규정 답은 `app-privacy.md`, 심사 메모는 `review-notes.md`, 키 목록은 `docs/DEPLOY.md` §3 예요.
+고객 앱 `kr.co.dahae.customer`(다해)와 파트너 앱 `kr.co.dahae.partner`(다해 파트너)를 개발자가 GitHub Actions (`store-apps`, macOS 러너) 로 빌드하고 DODA 의 Apple 개발자 계정으로 올려요 ([guide 11](../guide/11-앱-직접-빌드.md)). Mac 은 필요 없어요. 개인정보 라벨·수출 규정 답은 `app-privacy.md`, 심사 메모는 `review-notes.md`, 키 목록은 `docs/DEPLOY.md` §3 예요.
 The developer builds both apps with GitHub Actions (`store-apps`, macOS runner) and uploads them to DODA's own Apple developer account ([guide 11](../guide/11-앱-직접-빌드.md)). No Mac needed. Privacy label and export answers: `app-privacy.md`; review notes: `review-notes.md`; key list: `docs/DEPLOY.md` §3.
 
-## 1. 소유자가 준비할 것 / What the owner provides
+## 1. 준비할 것 (1번은 DODA, 2–11번은 개발자) / What to prepare (item 1 DODA, items 2–11 the developer)
 
 | # | 준비물 / Item | 어디서 / Where | 비고 / Note |
 |---|---|---|---|
 | 1 | Apple Developer Program 가입 (연 99 USD, 법인은 D-U-N-S 번호) | developer.apple.com/programs | 개인 계정이면 판매자 이름이 개인 이름으로 보여요. Individual accounts show a personal seller name |
 | 2 | App ID 2개 등록: `kr.co.dahae.customer`, `kr.co.dahae.partner` | Certificates, Identifiers & Profiles → Identifiers | 둘 다 **Push Notifications**, **Sign in with Apple**, **Associated Domains** 켜기. 하나라도 빠지면 서명이 실패해요. Enable all three on both IDs, or signing fails |
 | 3 | App Store Connect 앱 2개 만들기 (언어 한국어, 번들 ID 위 2개, SKU 자유) | appstoreconnect.apple.com → Apps → + | 앱을 먼저 만들어야 TestFlight 업로드가 돼요. The app record must exist before the first upload |
-| 4 | App Store Connect API 키 (역할 **App Manager**) | Users and Access → Integrations → App Store Connect API → Team Keys | `.p8`(한 번만 내려받기), Key ID, Issuer ID 3가지 |
+| 4 | App Store Connect API 키 (역할 **Admin**. App Manager 키는 자동 서명 내보내기에서 "Cloud signing permission error" 로 실패해요. Role **Admin**: cloud signing needs it) | Users and Access → Integrations → App Store Connect API → Team Keys | `.p8`(한 번만 내려받기), Key ID, Issuer ID 3가지. 먼저 DODA 계정 소유자가 이 화면에서 API 액세스를 요청해야 해요. The Account Holder requests API access first |
 | 5 | GitHub 저장소에 넣기 | 저장소 Settings → Environments → `store` → Secrets | `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_B64` (.p8 을 base64 로). 값은 저장소에 올리지 않아요. Enter the three values; never commit them |
 | 6 | APNs 인증 키 (`.p8`) | Apple Developer → Keys → Apple Push Notifications service | Firebase 콘솔 → 프로젝트 설정 → Cloud Messaging → Apple 앱 구성에 앱마다 업로드. Upload per iOS app in Firebase |
 | 7 | Firebase iOS 앱 2개 (번들 ID 동일) → `GoogleService-Info.plist` | Firebase 콘솔 | `base64 -w0` 로 바꿔 `store` 환경의 secret `GOOGLE_SERVICE_INFO_PLIST_B64`(고객), `PARTNER_GOOGLE_SERVICE_INFO_PLIST_B64`(파트너). 없으면 푸시만 꺼진 채로 빌드돼요. Without it the build works, push is off |
 | 8 | 로그인 키 | `docs/DEPLOY.md` §3 표 | `GOOGLE_IOS_CLIENT_ID`(번들 ID마다 iOS OAuth 클라이언트), `KAKAO_NATIVE_KEY`(카카오 개발자 콘솔 → 플랫폼 → iOS 번들 ID 등록), 네이버 개발자센터에서 iOS 번들 ID 등록 |
-| 9 | `APP_LINK_DOMAIN` (서버 도메인) + 서버 콘솔 **설정 → 앱 링크** 카드의 Apple Team ID | Apple Developer 우측 상단 Membership → Team ID ([guide 11](../guide/11-앱-직접-빌드.md) 4-8) | 서버가 `/.well-known/apple-app-site-association` 을 내줘야 네이버 로그인이 iOS 17.4+ 에서 돼요. 아래 4항 확인 |
+| 9 | `APP_LINK_DOMAIN` (서버 도메인) + 서버 콘솔 **설정 → 앱 링크** 카드의 Apple Team ID | Apple Developer 우측 상단 Membership → Team ID ([guide 11](../guide/11-앱-직접-빌드.md) 6번 6항) | 서버가 `/.well-known/apple-app-site-association` 을 내줘야 네이버 로그인이 iOS 17.4+ 에서 돼요. 아래 4항 확인 |
 | 10 | Apple 로그인 서버 키 (`.p8`) | 콘솔 Apple 카드, `review-notes.md` §3 | 탈퇴 때 Apple 토큰 해지에 쓰여요 |
 | 11 | 스크린샷, 설명, 개인정보처리방침 URL | App Store Connect 앱 페이지 | 아이폰 6.9인치 스크린샷 필수 (`docs/store/screenshots`, 문구 `listing-*.md`). 아이패드용은 필요 없어요 (앱이 아이폰 전용) |
 
@@ -23,7 +23,7 @@ The developer builds both apps with GitHub Actions (`store-apps`, macOS runner) 
 
 ## 2. 첫 빌드 / First build
 
-1. 저장소에서 버전 태그를 만들고 (예: `v1.5.1`, [guide 11](../guide/11-앱-직접-빌드.md) 1-4) Actions → `store-apps` → Run workflow 에서 `app` = customer 또는 both, `platform` = ios 또는 both, `upload` = true 로 실행해요 (태그가 없으면 pubspec 의 버전을 써요). 실행은 `store` 환경 승인자가 확인해요. Run it; a `store` reviewer approves.
+1. 저장소에서 버전 태그를 만들고 (예: `v1.5.1`, [guide 11](../guide/11-앱-직접-빌드.md) 8번) Actions → `store-apps` → Run workflow 에서 `app` = customer 또는 both, `platform` = ios 또는 both, `upload` = true 로 실행해요 (태그가 없으면 pubspec 의 버전을 써요). store 환경에 승인자를 넣었다면 승인 뒤 실행돼요. If the store environment has reviewers, one approves the run.
 2. 워크플로가 하는 일 / The workflow does: `check-native.py`(Info.plist·권한·개인정보 매니페스트 검사) → `flutter build ios --config-only`(난독화, 빌드 번호는 `scripts/ci/build-number.py`) → `xcodebuild archive` 와 `-exportArchive`(자동 서명, App Store Connect 키로 프로필 생성, `-allowProvisioningUpdates`) → `check-native.py --ipa`(서명된 ipa 검사) → `upload` 가 켜져 있으면 `xcrun altool --upload-app` 로 TestFlight 업로드.
 3. 빌드 번호는 시간(분) 기준 증가 값이라 같은 번호가 두 번 나오지 않아요. 직접 올리지 마세요. Build numbers rise by the minute; never set one by hand.
 4. 업로드 후 Apple 처리에 10~30분. TestFlight 내부 테스터로 먼저 실기기 확인: 로그인(전화, 카카오, 네이버, 구글, Apple), 사진 고르기, 결제창(PortOne, 카드 앱 호출), 푸시, 위치.

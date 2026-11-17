@@ -1,4 +1,4 @@
-# Delivery runbook (developer; §3 is run by the client)
+# Delivery runbook (developer)
 
 The source repo (github.com/EricWijesinghe/Dahae) is public but proprietary: reading it grants no right to use it (LICENSE §1.4, §3.1); a client uses it under a signed licence agreement. Servers install from the **public delivery repo** (installer + Korean guides),
 public server images, and store apps that the developer builds with GitHub Actions and uploads to the client's own
@@ -197,7 +197,7 @@ run, GitHub-hosted runners incl. macOS, free for public repos). The apps are upl
    `APP_LINK_DOMAIN` (optional, bare host).
 3. Environment `store` → Secrets: `ANDROID_KEYSTORE_B64` (base64 of the upload keystore), `ANDROID_KEYSTORE_PASSWORD`,
    `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`; `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_B64` (App Store Connect key,
-   role App Manager, base64 of the .p8); optional `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (Play API, *Release* permission).
+   role **Admin** (cloud signing needs it), base64 of the .p8); optional `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (Play API, *Release* permission).
    Keep an offline copy of the keystore: losing it blocks Play updates (recoverable only via Play support).
 4. Create the two apps in App Store Connect / Play Console (bundle ids `kr.co.dahae.customer`,
    `kr.co.dahae.partner`). The very first Android upload is made by hand in Play Console (the API cannot create it);
@@ -278,7 +278,7 @@ The code has an adapter point for each. Dev mode uses safe fakes until then.
 | AlimTalk (optional) | KakaoTalk booking notices | Kakao business channel | alongside push in `realtime::notify` |
 | Solapi SMS + AlimTalk (adapter built) | SMS fallback and AlimTalk for customer booking events | Solapi: `SOLAPI_API_KEY`, `SOLAPI_API_SECRET`, `SMS_SENDER`, `ALIMTALK_PF_ID`, `ALIMTALK_TEMPLATES` (kind → approved template id). Env vars in `deploy/.env.example` | `providers/sms.rs`, `Providers::send_sms` / `send_customer_message` |
 | FCM push (adapter built) | Push to customer, pro and team-member devices | Firebase project; service-account key as `FCM_SERVICE_ACCOUNT` (path or JSON). Dead device tokens are pruned on UNREGISTERED | `providers/fcm.rs`, `Providers::push_collect`, `realtime::notify` |
-| Partner payouts (built; default manual) | Weekly pro payouts go requested → sent → paid, or failed (retryable). Default `manual`: owner transfers from the bank app and confirms; no contract needed. Optional `toss`: Toss Payments 지급대행, set in the setup wizard "payout" card (mode `toss` + test or live secret key). **Toss mode is NOT usable yet; keep `manual`.** Verified against https://docs.tosspayments.com/guides/v2/payouts and /reference/additional: endpoints (`POST /v2/payouts`, `GET /v2/payouts/{id}` by Toss id), status enum, bank codes. Still missing: (1) seller registration `POST /v2/sellers` per pro, since each payout needs a `destination` seller id and the account lives on the seller; (2) JWE body encryption (`TossPayments-api-security-mode: ENCRYPTION`, A256GCM with the secret key), both requests and responses; (3) create-payout body schema (amount shape, scheduleType/payoutDate); (4) `payout.changed` webhook signature scheme (not on the guide page; polling stays). Toss also gates payouts behind a contract/application, so check before enabling | `providers/payout.rs`, `routes/payouts.rs`, `payout.rs` (state machine), migration `0014`; owner guide `guide/02` §7 |
+| Partner payouts (built; default manual) | Weekly pro payouts go requested → sent → paid, or failed (retryable). Default `manual`: owner transfers from the bank app and confirms; no contract needed. Optional `toss`: Toss Payments 지급대행, set in the setup wizard "payout" card (mode `toss` + test or live secret key). Toss mode is built (seller registration, JWE bodies, payouts, status polling) but not yet run against a live sandbox: keep `manual` until the §7 sandbox round-trip passes. Toss also gates payouts behind a contract/application, so check before enabling | `providers/payout.rs`, `routes/payouts.rs`, `payout.rs` (state machine), migration `0014`; owner guide `guide/02` §7 |
 | Team-member login (built) | Team members sign in on the partner app with their invited phone; they see only assigned jobs and never payouts | No external account. Owner invites by phone (`POST /v1/partner/team`) | `routes/member.rs`, `routes/auth.rs::verify_otp`, migration `0006` |
 
 Legal: publish a privacy policy and terms (PIPA). Add them in the console under Coupons & content → Legal (slugs `privacy` and `terms`). The apps show them automatically.
