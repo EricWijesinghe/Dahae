@@ -125,11 +125,14 @@ else
   echo "tag $VER: $commit, install.sh sha256 $(cut -d' ' -f1 SHA256SUMS)"
 fi
 
-if [ "${SIGN_RELEASE:-0}" = 1 ]; then # the release assets: the tagged installer, its signed files and the install page
+if [ "${SIGN_RELEASE:-0}" = 1 ]; then # the release assets: the tagged installer, its signed files, the install page and the AWS template
   : "${ASSET_DIR:?set ASSET_DIR for the release assets}"
   mkdir -p "$ASSET_DIR"
   cp install.sh SHA256SUMS SHA256SUMS.bundle installer_manifest.json installer_manifest.json.sig "$ASSET_DIR/"
   bash "$src/scripts/release/build-install-page.sh" install.sh "$RAW/$VER/install.sh" "$work/page"
   cp "$work/page/index.html" "$ASSET_DIR/dahae-install-page.html"
   bash "$src/scripts/release/sign-blob.sh" "$ASSET_DIR/dahae-install-page.html"
+  bash "$src/scripts/release/build-aws-template.sh" install.sh "$RAW/$VER/install.sh" "$work/aws"
+  cp "$work/aws/dahae-aws.yaml" "$ASSET_DIR/dahae-aws.yaml"
+  bash "$src/scripts/release/sign-blob.sh" "$ASSET_DIR/dahae-aws.yaml"
 fi

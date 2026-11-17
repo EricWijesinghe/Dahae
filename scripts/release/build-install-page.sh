@@ -13,12 +13,10 @@ out=${3:?usage: build-install-page.sh <install.sh> <url> <out dir>}
 root=$(cd "$(dirname "$0")/../.." && pwd)
 src="$root/deploy/install-page/index.html"
 
-[[ $url =~ ^https://raw\.githubusercontent\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/v[0-9][A-Za-z0-9._+-]*/install\.sh$ ]] \
-  || { echo "::error::install URL must be a pinned tag URL on raw.githubusercontent.com: $url" >&2; exit 1; }
-[ -f "$install" ] || { echo "::error::$install missing" >&2; exit 1; }
+# shellcheck source=installer-pin.sh
+. "$root/scripts/release/installer-pin.sh"
+hash=$(installer_pin "$install" "$url") || exit 1
 [ -f "$src" ] || { echo "::error::$src missing" >&2; exit 1; }
-hash=$(sha256sum "$install" | cut -d' ' -f1)
-[[ $hash =~ ^[0-9a-f]{64}$ ]] || { echo "::error::could not hash $install" >&2; exit 1; }
 
 mkdir -p "$out"
 sed -e "s|__INSTALL_SH_SHA256__|$hash|g" -e "s|__INSTALL_URL__|$url|g" "$src" > "$out/index.html"
