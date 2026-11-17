@@ -40,7 +40,7 @@ jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 360 # GitHub's maximum for a job; the server update may run up to the SSM limit below
     environment: ${{ vars.DEPLOY_AWS_ENVIRONMENT || 'doda-aws' }}
     permissions:
       contents: read
@@ -107,10 +107,10 @@ jobs:
           run_on_server() { # run_on_server <command> : prints its output, returns 1 unless it succeeded
             local id status=Pending out
             id=$(aws ssm send-command --instance-ids "$AWS_INSTANCE_ID" --document-name AWS-RunShellScript \
-              --comment "GitHub run $GITHUB_RUN_ID" --timeout-seconds 1800 \
+              --comment "GitHub run $GITHUB_RUN_ID" --timeout-seconds 21600 \
               --parameters "$(jq -cn --arg c "$1" '{commands: [$c]}')" \
               --query 'Command.CommandId' --output text)
-            for _ in $(seq 1 120); do # 120 x 15 s = 30 minutes
+            for _ in $(seq 1 1400); do # 1400 x 15 s = 350 minutes; the update runs up to 21600 s (deploy/agent.sh UPDATE_RUN_TIMEOUT)
               status=$(aws ssm get-command-invocation --command-id "$id" --instance-id "$AWS_INSTANCE_ID" \
                 --query Status --output text 2>/dev/null || echo Pending)
               case "$status" in Pending|InProgress|Delayed) sleep 15 ;; *) break ;; esac
@@ -126,8 +126,9 @@ jobs:
           run_on_server "$COMMAND"
           if [ "$UPDATE" = true ]; then
             ver_out=$(run_on_server "dahae version")
-            grep -qF "$VERSION" <<< "$ver_out" \
-              || { echo "::error::the server does not report version $VERSION"; exit 1; }
+            running=$(sed -n 's/^실행 중인 버전: //p' <<< "$ver_out" | tr -d '\r')
+            [ "$running" = "$VERSION" ] \
+              || { echo "::error::the server reports '${running:-nothing}', expected $VERSION"; exit 1; }
           fi
 
       - name: Health check
