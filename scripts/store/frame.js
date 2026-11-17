@@ -69,8 +69,8 @@ body{font-family:${STACK};background:linear-gradient(120deg,${colors.a},${colors
 .txt{position:absolute;left:64px;top:0;bottom:0;width:520px;display:flex;flex-direction:column;justify-content:center}
 .title{font-size:104px;font-weight:800;letter-spacing:-.03em;line-height:1}
 .tag{font-size:36px;font-weight:600;margin-top:24px;opacity:.95;line-height:1.3}
-.phone{position:absolute;right:90px;top:50px;height:400px;width:${Math.round((400 * imgRatio.w) / imgRatio.h)}px;padding:12px;background:#0B1022;border-radius:44px;box-shadow:0 30px 60px rgba(6,10,30,.45)}
-.phone img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:34px}
+.phone{position:absolute;right:90px;top:50px;height:400px;width:${Math.round((376 * imgRatio.w) / imgRatio.h) + 24}px;padding:12px;background:#0B1022;border-radius:30px;box-shadow:0 30px 60px rgba(6,10,30,.45)}
+.phone img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:20px}
 </style></head><body><div class="glow"></div>
 <div class="txt"><div class="title">${title}</div><div class="tag">${tagline}</div></div>
 <div class="phone"><img src="${imgUrl}"></div>
