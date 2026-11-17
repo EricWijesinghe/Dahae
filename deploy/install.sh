@@ -630,12 +630,16 @@ verify_image() { # verify_image 저장소/이름:태그 -> 서명이 확인된 �
   printf '%s@%s' "${ref%:*}" "$digest"
 }
 pull_images() { # pull_images 저장소 태그 : 띄울 이미지를 NEW_API / NEW_WEB 에 정해요 (서명 확인 → 그 다이제스트로 내려받기)
-  local repo="$1" ver="$2" rver="${2#v}" # 레지스트리 태그는 release.yml 이 올린 대로 v 없이(1.5.0). 설치 기록(VERSION)은 v 를 그대로 둬요
+  local repo="$1" ver="$2" rver="${2#v}" local_tag c # 레지스트리 태그는 release.yml 이 올린 대로 v 없이(1.5.0). 설치 기록(VERSION)은 v 를 그대로 둬요
   if [ "$(env_get IMAGE_SOURCE)" = local ]; then
-    docker image inspect "$repo/malkkeum-api:$ver" "$repo/malkkeum-web:$ver" >/dev/null 2>&1 \
-      || die "이미지 $ver 이 없어요. 먼저 'dahae load 파일.tar' 를 실행하세요."
+    # 불러온 tar 의 태그는 release.yml 대로(1.5.0) 또는 설치 때의 이름(v1.5.0) 둘 중 하나예요
+    local_tag=""
+    for c in "$ver" "$rver"; do
+      if docker image inspect "$repo/malkkeum-api:$c" "$repo/malkkeum-web:$c" >/dev/null 2>&1; then local_tag=$c; break; fi
+    done
+    [ -n "$local_tag" ] || die "이미지 $ver 이 없어요. 먼저 'dahae load 파일.tar' 를 실행하세요."
     warn "직접 불러온 이미지 파일(.tar)이라 서명 확인 없이 써요."
-    NEW_API=$repo/malkkeum-api:$ver; NEW_WEB=$repo/malkkeum-web:$ver
+    NEW_API=$repo/malkkeum-api:$local_tag; NEW_WEB=$repo/malkkeum-web:$local_tag
     return 0
   fi
   if [ "$(env_get IMAGE_VERIFY)" = off ]; then

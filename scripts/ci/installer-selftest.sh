@@ -208,6 +208,7 @@ t  "pull: bare tag unchanged"                  eq "$(pull_tag ghcr.io/o 1.5.0)" 
 t  "pull: channel name unchanged"              eq "$(pull_tag ghcr.io/o stable)" ghcr.io/o/malkkeum-api:stable
 t  "pull: unsigned-test registry gets the bare tag too" eq "$( ( env_set IMAGE_VERIFY off; docker() { return 0; }; pull_images ghcr.io/o v1.5.0; echo "$NEW_API" ) | tail -n1)" ghcr.io/o/malkkeum-api:1.5.0
 t  "pull: local tar keeps the tag it was loaded with" eq "$( ( env_set IMAGE_SOURCE local; docker() { return 0; }; pull_images ghcr.io/o v1.5.0; echo "$NEW_API" ) | tail -n1)" ghcr.io/o/malkkeum-api:v1.5.0
+t  "pull: local tar loaded with the bare tag is found for v1.5.0" eq "$( ( env_set IMAGE_SOURCE local; docker() { case "$*" in *:1.5.0*) return 0 ;; *) return 1 ;; esac; }; pull_images ghcr.io/o v1.5.0; echo "$NEW_API" ) | tail -n1)" ghcr.io/o/malkkeum-api:1.5.0
 env_set IMAGE_SOURCE remote; env_set IMAGE_VERIFY on
 
 # ---- app DB role: not a superuser; restores drop owner/extension lines ----
