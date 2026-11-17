@@ -12,7 +12,7 @@ App IDs: customer `kr.co.dahae.customer`, partner `kr.co.dahae.partner`, console
 |---|---|
 | 안드로이드 AAB 는 언제? | DODA 가 도메인 이름을 알려 주는 **그날** 보내요 (앱 두 개, AAB 파일 두 개). When DODA gives the domain: the same day. |
 | iOS 는 어떻게? | 맥이 필요 없어요. 개발자가 Codemagic 클라우드 맥에서 빌드해 TestFlight 로 올려요. DODA 는 Apple 계정에 **관리자(Admin)** 로 개발자를 초대해 주세요. No Mac needed; DODA invites the developer as Admin. |
-| 서버는 어떻게 배포? | 서울 리전 Ubuntu 서버 1대 + 도메인 + 설치 명령 한 줄. 키는 DODA 가 콘솔 설정 마법사에 직접 넣어요. One Seoul VM, one domain, one install command. |
+| 서버는 어떻게 배포? | AWS 서울 리전에 CloudFormation 템플릿으로 서버 1대를 만들고, 새 버전은 GitHub Actions 가 승인 후 배포해요 (CD). 키는 DODA 가 콘솔 설정 마법사에 직접 넣어요. AWS Seoul via one CloudFormation template; GitHub Actions deploys each release after approval. |
 
 ## 2. 안드로이드 (Google Play) / Android
 
@@ -56,32 +56,34 @@ App IDs: customer `kr.co.dahae.customer`, partner `kr.co.dahae.partner`, console
 
 ## 4. 백엔드 서버 배포 / How we plan to deploy the backend server
 
-DODA 가 고르는 방식이에요. 아래는 권장안이에요.
+DODA 의 서비스가 모두 AWS 에 있으니 **AWS 서울 리전(ap-northeast-2)** 에 올려요. 클릭 순서 전체는 [guide 10](guide/10-AWS-배포.md) 에 있어요.
 
-1. **서버 1대 (VM)**: Ubuntu 24.04 LTS, 한국 **서울** 리전. 권장 2 vCPU / 메모리 4 GB / 디스크 50 GB (최소 메모리 1 GB, 디스크 여유 5 GB). 고정 IP 를 연결해요. 제공사 예: 네이버 클라우드 서버, AWS Lightsail (서울) 등 ([guide 08](guide/08-클라우드-배포.md) §2~3). 가격은 제공사 요금표를 따르고, 관리형 DB 는 쓰지 않아요 (DB 는 서버 안 컨테이너).
-2. **방화벽**: 22 (SSH, 가능하면 개발팀 IP 만), 80, 443 만 열어요. 클라우드 방화벽 규칙도 함께 설정해요 ([DEPLOY.md](DEPLOY.md) §1 "서버 밖" 항목 2).
-3. **도메인**: DODA 가 소유한 도메인 (국내 등록업체에서 구입 가능). 루트 도메인과 `www` 의 A 레코드 두 개를 서버 IP 로 연결해요 ([guide 08](guide/08-클라우드-배포.md) §4). 클라우드플레어를 쓴다면 프록시(주황색 구름)는 꺼요.
-4. **설치 명령 한 줄**: 서버 SSH 에서 설치 명령을 실행해요 ([guide 08](guide/08-클라우드-배포.md) §5, [guide 01](guide/01-서버-설치.md)). 설치 프로그램이 서명된 이미지를 내려받고, PostgreSQL, Caddy(자동 HTTPS), 방화벽, 자동 백업을 설정해요.
-5. **설정 마법사**: 사장님 계정을 만들고 콘솔 [설정]에서 결제(PortOne), 문자(Solapi), 푸시(Firebase), 간편 로그인 키를 직접 넣어요 ([guide 02](guide/02-설정-마법사.md)). **키는 개발팀에 보내지 않아요.**
-6. **백업과 키 사본**: 외부 백업은 S3 호환 저장소를 권장해요 ([guide 02](guide/02-설정-마법사.md) §6). `dahae keys-backup` 으로 만든 키 사본을 서버 밖(USB·비밀번호 관리자)에 보관해요 ([guide 08](guide/08-클라우드-배포.md) §6-5). 키를 잃으면 외부 백업을 열 수 없어요.
-7. **데모 계정**: 심사원은 한국 문자를 받을 수 없어요. 심사를 제출하기 직전에 콘솔 [설정] → [스토어 심사용 데모 계정]을 켜고, 번호와 코드를 개발팀에 알려 줘요. 14일 뒤 자동으로 꺼져요 ([guide 03](guide/03-앱-출시.md) D).
+1. **DODA: 배포용 IAM 사용자 만들기.** 관리자 권한 대신 [`deploy/aws/deployer-iam-policy.json`](../deploy/aws/deployer-iam-policy.json) 정책만 붙이고 MFA 를 켜요. 로그인 주소와 사용자 이름은 비밀번호와 따로, 1:1 로 보내요.
+2. **개발팀: CloudFormation 템플릿 한 번 실행.** 릴리스마다 함께 나오는 `dahae-aws.yaml` 을 CloudFormation 에 올리고 도메인·이메일·VPC·서브넷을 고르면 만들어져요:
+   - Ubuntu 24.04 서버 1대 (기본 t3.medium, 디스크 50 GB 암호화), 고정 IP (Elastic IP), 80/443 만 열린 보안 그룹 (SSH 22 는 기본으로 닫혀 있고, 접속은 브라우저의 Session Manager 로 해요)
+   - 설치 프로그램 자동 실행 (SHA-256 로 확인한 install.sh): PostgreSQL, Caddy(자동 HTTPS), 방화벽, 자동 백업
+   - 매일 디스크 스냅샷 (7일 보관), AWS 하드웨어 고장 시 자동 복구, 실수로 지우지 못하게 종료 보호
+   - Route 53 을 쓰면 도메인 A 레코드까지 자동. 다른 등록업체면 출력된 IP 로 A 레코드 두 개 (`@`, `www`)
+   - 관리형 DB(RDS)는 쓰지 않아요. DB 는 서버 안 컨테이너예요.
+3. **설정 마법사.** 사장님 계정을 만들고 콘솔 [설정]에서 결제(PortOne), 문자(Solapi), 푸시(Firebase), 간편 로그인 키를 직접 넣어요 ([guide 02](guide/02-설정-마법사.md)). **키는 개발팀에 보내지 않아요.**
+4. **CD (GitHub Actions).** 새 버전이 릴리스되면 `deploy-aws.yml` 이 AWS Systems Manager 로 서버에 `dahae update <버전>` 을 보내고, 끝나면 `https://<도메인>/health` 로 확인해요.
+   - GitHub 환경 `doda-aws` 의 **승인자(required reviewers)** 가 승인해야만 배포돼요. 버전 지정 배포와 되돌리기도 Actions 화면 버튼으로 해요.
+   - AWS 접속은 GitHub OIDC 역할로 해요. GitHub 에 AWS 키나 비밀번호를 저장하지 않아요. 역할은 이 서버에 명령을 보내는 일만 할 수 있어요.
+   - CD 로 보낸 업데이트는 콘솔의 인증 앱 승인 대신 GitHub 승인자가 승인해요.
+5. **백업과 키 사본.** 외부 백업은 S3 버킷을 권장해요 ([guide 02](guide/02-설정-마법사.md) §6). 키 사본을 서버 밖에 꼭 보관해요 ([guide 08](guide/08-클라우드-배포.md) §6-5). 키를 잃으면 외부 백업을 열 수 없어요.
+6. **데모 계정.** 심사원은 한국 문자를 받을 수 없어요. 심사 제출 직전에 콘솔 [설정] → [스토어 심사용 데모 계정]을 켜고 번호와 코드를 개발팀에 알려 줘요. 14일 뒤 자동으로 꺼져요 ([guide 03](guide/03-앱-출시.md) D).
 
-**누가 설치하나**
-- DODA 관리자가 직접 하거나, DODA 가 허락하면 개발팀이 SSH 로 설치해요.
-- 권장: 첫 설치는 개발팀과 DODA 담당자가 통화하면서 함께 해요.
+**확인되지 않은 것.** 템플릿과 CD 는 AWS 검사 도구(cfn-lint, actionlint)를 통과했지만 실제 AWS 계정에서는 아직 띄워 보지 않았어요. 첫 배포는 개발팀과 DODA 담당자가 통화하면서 함께 해요.
 
-**업데이트**
-- 같은 도메인에서 설치 명령을 다시 실행하면 데이터를 그대로 두고 최신 버전으로 올라가요. 실패하면 이전 버전으로 되돌려요 ([guide 08](guide/08-클라우드-배포.md) §8-1).
-- 자동 업데이트 요일·시각은 `sudo dahae update-schedule` 로 정해요. 운영 명령은 [guide 07](guide/07-운영-명령어.md).
-- 서버를 옮길 때는 옛 서버에서 백업과 키 사본을 만들어 새 서버로 옮겨요 ([guide 08](guide/08-클라우드-배포.md) §8-2, 약 1시간).
+**AWS 가 아닌 곳에 올릴 때**는 [guide 09](guide/09-클라우드별-설치.md) (클라우드별 설치) 와 [guide 08](guide/08-클라우드-배포.md) 을 봐요.
 
 ## 5. 일정 / Timeline
 
 | 날 · Day | 누가 · Who | 할 일 · Task |
 |---|---|---|
-| Day 0 | DODA | 도메인 정하기, 서울 서버 만들기 (고정 IP, 22/80/443), Play 조직 계정 가입, Apple 조직 가입, Apple 관리자 초대 |
+| Day 0 | DODA | 도메인 정하기, AWS 배포용 IAM 사용자 만들기, Play 조직 계정 가입, Apple 조직 가입, Apple 관리자 초대 |
 | Day 0 | 개발팀 | 도메인을 받으면 AAB 2개 빌드 (`API_BASE`) |
-| Day 0–1 | 개발팀 + DODA | 서버 설치 (§4), 설정 마법사, 사장님 계정 |
+| Day 0–1 | 개발팀 + DODA | CloudFormation 으로 서버 만들기 (§4), 설정 마법사, 사장님 계정, GitHub CD 연결 |
 | Day 1 | 개발팀 | App ID, App Store Connect 앱, API 키, APNs 키, Codemagic 연결, 첫 TestFlight 빌드 (Apple 처리 10–30분) |
 | Day 1 | DODA | Codemagic 이 올린 AAB 초안을 Play 내부 테스트 트랙에서 확인·출시, Play 앱 서명 SHA-1 등록 |
 | Day 1–3 | DODA 직원 | 안드로이드·iOS 실기기 테스트 (로그인, 사진, 결제 창, 푸시, 위치) |
@@ -91,7 +93,8 @@ DODA 가 고르는 방식이에요. 아래는 권장안이에요.
 ## 6. DODA 가 보내 줄 것 / What DODA sends us
 
 - [ ] 도메인 이름 (예: `myshop.co.kr`)
-- [ ] 서버 SSH 접속 권한, 또는 설치 날 통화 가능 시간
+- [ ] AWS 배포용 IAM 사용자 (정책 `deploy/aws/deployer-iam-policy.json`, MFA 켜기), 설치 날 통화 가능 시간
+- [ ] GitHub 승인자로 지정할 DODA 담당자의 GitHub 계정
 - [ ] Apple 관리자 초대 (개발자 Apple ID 에 Admin)
 - [ ] Play Console 개발자 초대 (앱 출시, 앱 정보 관리)
 - [ ] Play 서비스 계정 키 (JSON, 권한 **출시 관리자**): Codemagic 의 Play 자동 업로드에 필요해요. 1:1 로 전달해요
@@ -120,7 +123,7 @@ Audience: DODA (operator of the Dahae service) and the developer team. Step-by-s
 |---|---|
 | When is the Android AAB ready? | The same day DODA gives us the domain name. Two files: customer and partner. |
 | How does iOS work? | No Mac needed. The developer builds on Codemagic cloud Macs and uploads to TestFlight. DODA invites the developer as Admin in App Store Connect; no password or 2FA code is shared. |
-| How is the server deployed? | One Ubuntu 24.04 VM in Seoul, one domain, one install command. DODA enters its own payment and messaging keys in the console setup wizard. |
+| How is the server deployed? | One server in AWS Seoul from a CloudFormation template; GitHub Actions deploys each new release after a DODA reviewer approves (CD). DODA enters its own payment and messaging keys in the console setup wizard. |
 
 ### 2. Android (Google Play)
 
@@ -146,27 +149,34 @@ Audience: DODA (operator of the Dahae service) and the developer team. Step-by-s
 
 ### 4. Backend server: deployment plan
 
-DODA chooses what it is comfortable with. This is the recommended plan.
+All of DODA's services run on AWS, so the server goes to **AWS Seoul (ap-northeast-2)**. Full click path: [guide 10](guide/10-AWS-배포.md).
 
-1. **One VM.** Ubuntu 24.04 LTS in the **Seoul** region. Recommended 2 vCPU / 4 GB RAM / 50 GB disk (minimum 1 GB RAM, 5 GB free disk). Attach a static IP. Examples: Naver Cloud Server, AWS Lightsail (Seoul) ([guide 08](guide/08-클라우드-배포.md) §2–3). Prices follow the provider's price list. No managed database: PostgreSQL runs in a container on the same server.
-2. **Firewall.** Open only 22 (SSH, ideally from the developer's IP), 80 and 443, in the cloud firewall as well ([DEPLOY.md](DEPLOY.md) §1, "Outside the server", item 2).
-3. **Domain.** A domain DODA owns. Add two A records, one for the bare domain and one for `www`, pointing at the server IP ([guide 08](guide/08-클라우드-배포.md) §4). If Cloudflare is used, turn off the orange-cloud proxy.
-4. **One install command.** Run the install line over SSH ([guide 08](guide/08-클라우드-배포.md) §5, [guide 01](guide/01-서버-설치.md)). The installer pulls signed images and sets up PostgreSQL, Caddy with automatic HTTPS, the firewall and automatic backups.
-5. **Setup wizard.** The owner creates the owner account and enters PortOne, Solapi, Firebase and sign-in keys in the console ([guide 02](guide/02-설정-마법사.md)). **Keys are never sent to the developer.**
-6. **Backups and key copy.** Offsite backup to an S3-compatible bucket is recommended ([guide 02](guide/02-설정-마법사.md) §6). Save the key copy from `dahae keys-backup` outside the server ([guide 08](guide/08-클라우드-배포.md) §6-5). Without the key copy, offsite backups cannot be opened.
-7. **Demo account.** Reviewers cannot receive Korean SMS. Turn on the review demo account in the console just before submitting, and send the number and code to the developer. It turns off automatically after 14 days ([guide 03](guide/03-앱-출시.md) D).
+1. **DODA: create a deployer IAM user.** Attach only [`deploy/aws/deployer-iam-policy.json`](../deploy/aws/deployer-iam-policy.json) (no administrator access) and turn on MFA. Send the sign-in URL and user name one-to-one, separately from the password.
+2. **Developer: run the CloudFormation template once.** Each release ships `dahae-aws.yaml`. Upload it to CloudFormation, pick domain, email, VPC and subnet. It creates:
+   - One Ubuntu 24.04 server (default t3.medium, 50 GB encrypted disk), an Elastic IP, a security group open only on 80/443 (SSH 22 closed by default; shell access through Session Manager in the browser)
+   - The installer, run automatically and checked by SHA-256: PostgreSQL, Caddy with automatic HTTPS, firewall, automatic backups
+   - Daily disk snapshots kept 7 days, auto-recovery on AWS hardware failure, termination protection
+   - The domain A record when Route 53 is used; otherwise two A records (`@`, `www`) at the registrar to the output IP
+   - No RDS: PostgreSQL runs in a container on the server.
+3. **Setup wizard.** The owner creates the owner account and enters PortOne, Solapi, Firebase and sign-in keys in the console ([guide 02](guide/02-설정-마법사.md)). **Keys are never sent to the developer.**
+4. **CD with GitHub Actions.** On each release, `deploy-aws.yml` sends `dahae update <version>` to the server through AWS Systems Manager, then checks `https://<domain>/health`.
+   - It deploys only after a **required reviewer** of the GitHub environment `doda-aws` approves. Deploying a chosen version and rolling back are buttons in the Actions tab.
+   - AWS access uses a GitHub OIDC role: no AWS keys or passwords are stored in GitHub, and the role can only send commands to this one server.
+   - An update sent by CD is approved by the GitHub reviewer instead of the console's authenticator code.
+5. **Backups and key copy.** Offsite backup to an S3 bucket is recommended ([guide 02](guide/02-설정-마법사.md) §6). Keep the key copy outside the server ([guide 08](guide/08-클라우드-배포.md) §6-5); without it, offsite backups cannot be opened.
+6. **Demo account.** Reviewers cannot receive Korean SMS. Turn on the review demo account in the console just before submitting and send the number and code to the developer. It turns off after 14 days ([guide 03](guide/03-앱-출시.md) D).
 
-**Who runs the install.** DODA's administrator, or the developer over SSH with DODA's permission. Recommended: the first install is done together on a call with the developer and a DODA contact.
+**Not yet verified.** The template and CD pass the AWS linters (cfn-lint, actionlint) but have not been launched on a real AWS account. The first deploy is done together on a call with a DODA contact.
 
-**Updates.** Re-running the install line on the same domain keeps data and moves to the latest version; a failed update rolls back ([guide 08](guide/08-클라우드-배포.md) §8-1). Schedule with `sudo dahae update-schedule`; commands in [guide 07](guide/07-운영-명령어.md). Moving to a new server: back up on the old one, copy the key file, restore on the new one, about 1 hour ([guide 08](guide/08-클라우드-배포.md) §8-2).
+**Other clouds:** [guide 09](guide/09-클라우드별-설치.md) and [guide 08](guide/08-클라우드-배포.md).
 
 ### 5. Timeline
 
 | Day | Who | Task |
 |---|---|---|
-| Day 0 | DODA | Pick domain, create Seoul server (static IP, ports 22/80/443), register Play organization account, enrol in Apple Developer Program, invite developer as Apple Admin |
+| Day 0 | DODA | Pick domain, create the AWS deployer IAM user, register Play organization account, enrol in Apple Developer Program, invite developer as Apple Admin |
 | Day 0 | Developer | Build both AABs once the domain is known |
-| Day 0–1 | Developer + DODA | Server install (section 4), setup wizard, owner account |
+| Day 0–1 | Developer + DODA | Create the server with CloudFormation (section 4), setup wizard, owner account, connect GitHub CD |
 | Day 1 | Developer | App IDs, App Store Connect apps, API key, APNs key, Codemagic link, first TestFlight build (Apple processing 10–30 min) |
 | Day 1 | DODA | Check and promote the Codemagic AAB draft on the Play internal track; register the Play app-signing SHA-1 |
 | Day 1–3 | DODA staff | Test on real Android and iPhone devices (sign-in, photos, payment window, push, location) |
@@ -176,7 +186,8 @@ DODA chooses what it is comfortable with. This is the recommended plan.
 ### 6. What DODA sends us
 
 - [ ] Domain name (e.g. `myshop.co.kr`)
-- [ ] SSH access to the server, or a time slot for a call on install day
+- [ ] A deployer IAM user (policy `deploy/aws/deployer-iam-policy.json`, MFA on) and a time slot for a call on install day
+- [ ] The GitHub account of the DODA person who approves deploys
 - [ ] Apple Admin invite for the developer's Apple ID
 - [ ] Play Console developer invite (App release, App information management)
 - [ ] Play service account key (JSON, role **Release manager**): needed for Codemagic's automatic Play upload; sent one-to-one
