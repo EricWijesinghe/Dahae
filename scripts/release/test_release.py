@@ -25,6 +25,7 @@ def _load(name, path):
 
 LISTINGS = _load("check_listings", ROOT / "docs" / "store" / "check_listings.py")
 WORKFLOWS = _load("check_workflows", HERE / "check_workflows.py")
+NOTES = _load("changelog_notes", HERE / "changelog-notes.py")
 
 
 class ListingLengthTests(unittest.TestCase):
@@ -36,6 +37,35 @@ class ListingLengthTests(unittest.TestCase):
         for path in sorted((ROOT / "docs" / "store").glob("listing-*.md")):
             with self.subTest(file=path.name):
                 self.assertEqual(LISTINGS.check_file(path), [])
+
+
+class ChangelogNotesTests(unittest.TestCase):
+    CHANGELOG = (
+        "# Changelog\n\n## [1.5.0] - 2026-11-17\n\n### Added\n- New thing.\n\n"
+        "## [1.4.0] - 2026-11-13\n\n### Fixed\n- Old thing.\n"
+    )
+
+    def test_section_for_tag_without_v(self):
+        self.assertEqual(NOTES.section(self.CHANGELOG, "v1.5.0"), "### Added\n- New thing.\n")
+
+    def test_section_stops_at_next_version(self):
+        self.assertNotIn("Old thing", NOTES.section(self.CHANGELOG, "v1.5.0"))
+
+    def test_prerelease_section(self):
+        text = self.CHANGELOG.replace("## [1.5.0]", "## [1.5.0-beta.1]")
+        self.assertEqual(NOTES.section(text, "v1.5.0-beta.1"), "### Added\n- New thing.\n")
+
+    def test_missing_section_fails(self):
+        with self.assertRaises(ValueError):
+            NOTES.section(self.CHANGELOG, "v9.9.9")
+
+    def test_empty_section_fails(self):
+        with self.assertRaises(ValueError):
+            NOTES.section("## [1.5.0] - 2026-11-17\n\n## [1.4.0]\n- x\n", "v1.5.0")
+
+    def test_real_changelog_has_1_5_0(self):
+        text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("### Added", NOTES.section(text, "v1.5.0"))
 
 
 class WorkflowRuleTests(unittest.TestCase):

@@ -237,9 +237,11 @@ jobs:
       - name: Release notes and assets in this repo
         env: { GH_TOKEN: "${{ github.token }}", VER: "${{ github.ref_name }}", ASSET_DIR: "${{ runner.temp }}/assets" }
         run: |
+          # The body is this version's CHANGELOG.md section; a missing section fails the release here.
+          python3 -I scripts/release/changelog-notes.py "$VER" > "$RUNNER_TEMP/release-notes.md"
           flags=()
           case "$VER" in *-*) flags+=(--prerelease) ;; esac
-          gh release create "$VER" --repo "$GITHUB_REPOSITORY" --title "$VER" --generate-notes "${flags[@]}" "$ASSET_DIR"/*
+          gh release create "$VER" --repo "$GITHUB_REPOSITORY" --title "$VER" --notes-file "$RUNNER_TEMP/release-notes.md" "${flags[@]}" "$ASSET_DIR"/*
       - name: Remove deploy and manifest keys
         if: always()
         run: rm -rf "$RUNNER_TEMP/ssh" "$RUNNER_TEMP/sign"
