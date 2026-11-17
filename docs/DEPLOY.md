@@ -183,6 +183,10 @@ process holds port 80 or 443.
 - Apps bake in the API version floor: set `min_app_version` / `latest_app_version` per app in the
   console (사업장 정보). Below the minimum the app shows a blocking update screen.
 
+### AWS server and GitHub deploys (per client)
+
+The release also uploads `dahae-aws.yaml` (CloudFormation, pinned to the same `install.sh`) as a release asset, signed like the install page. The client launches it from the AWS console; [`.github/workflows/deploy-aws.yml`](../.github/workflows/deploy-aws.yml) then runs `dahae update <tag>` (or `dahae rollback`) on that server through SSM, after approval in the `doda-aws` GitHub environment. The client-facing steps are in [guide 10](guide/10-AWS-배포.md); the IAM policy is [deploy/aws/deployer-iam-policy.json](../deploy/aws/deployer-iam-policy.json).
+
 ## 3. Store apps (per client)
 
 The client creates the store accounts and invites the developer (guide 03). Then in Codemagic,
