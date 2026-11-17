@@ -1,4 +1,4 @@
-package com.malkkeum.customer
+package kr.co.dahae.partner
 
 import io.flutter.embedding.android.FlutterActivity
 

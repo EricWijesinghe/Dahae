@@ -17,7 +17,7 @@ val releaseStore = signingValue("CM_KEYSTORE_PATH", "storeFile")
 
 
 android {
-    namespace = "com.malkkeum.console"
+    namespace = "kr.co.dahae.console"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -29,7 +29,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.malkkeum.console"
+        applicationId = "kr.co.dahae.console"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

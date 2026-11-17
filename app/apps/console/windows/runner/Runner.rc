@@ -89,7 +89,7 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.malkkeum" "\0"
+            VALUE "CompanyName", "kr.co.dahae" "\0"
             VALUE "FileDescription", "console" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "console" "\0"
