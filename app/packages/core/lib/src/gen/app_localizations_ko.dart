@@ -4462,6 +4462,9 @@ class TKo extends T {
   String get oRuleBackupOffsite => '데이터베이스 외부 백업 실패';
 
   @override
+  String get oRuleBackupOffsiteNotConfigured => '외부 백업 미설정';
+
+  @override
   String get oRuleDisk => '디스크 부족';
 
   @override

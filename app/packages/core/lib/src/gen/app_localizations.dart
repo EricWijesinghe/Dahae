@@ -8479,6 +8479,12 @@ abstract class T {
   /// **'데이터베이스 외부 백업 실패'**
   String get oRuleBackupOffsite;
 
+  /// No description provided for @oRuleBackupOffsiteNotConfigured.
+  ///
+  /// In ko, this message translates to:
+  /// **'외부 백업 미설정'**
+  String get oRuleBackupOffsiteNotConfigured;
+
   /// No description provided for @oRuleDisk.
   ///
   /// In ko, this message translates to:

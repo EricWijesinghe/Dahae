@@ -536,7 +536,7 @@ pub(super) fn csv_response(name: &str, body: String) -> ApiResult<Response> {
 }
 
 pub(super) fn export_name(kind: &str, from: NaiveDate, to: NaiveDate) -> String {
-    format!("malkkeum-{kind}-{from}_{to}")
+    format!("dahae-{kind}-{from}_{to}")
 }
 
 #[derive(FromRow)]
@@ -774,4 +774,19 @@ async fn export_vat(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<
     audit(&mut *tx, "staff", Some(a.id), "finance.export", "vat", json!({ "from": from, "to": to })).await?;
     tx.commit().await?;
     csv_response(&export_name("vat", from, to), finance::csv_document(&tax::vat_document(&input)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::export_name;
+    use chrono::NaiveDate;
+
+    #[test]
+    fn export_files_carry_the_brand_prefix() {
+        let day = |s| NaiveDate::parse_from_str(s, "%Y-%m-%d").expect("date");
+        assert_eq!(
+            export_name("ledger", day("2026-11-01"), day("2026-11-30")),
+            "dahae-ledger-2026-11-01_2026-11-30"
+        );
+    }
 }

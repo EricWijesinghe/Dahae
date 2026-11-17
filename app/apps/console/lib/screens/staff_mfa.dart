@@ -132,7 +132,7 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
     final t = context.t;
     final ok = await saveCsv(
       utf8.encode('${_codes!.join('\n')}\n'),
-      'malkkeum-recovery-codes.txt',
+      'dahae-recovery-codes.txt',
     );
     if (mounted) showToast(context, ok ? t.cDone : t.cMfaSaveFailed);
   }

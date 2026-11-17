@@ -156,7 +156,12 @@ Set<String> providersForKeys({
       SocialProviders.google,
     SocialProviders.apple,
   };
-  return wanted.intersection(available);
+  final picked = wanted.intersection(available);
+  // App Store guideline 4.8: an app offering other third-party sign-in must offer Sign in with Apple too.
+  final othersLeft = picked.any((p) => p != SocialProviders.apple);
+  return appleAvailable() && othersLeft
+      ? {...picked, SocialProviders.apple}
+      : picked;
 }
 
 /// The providers this build offers. Web and Windows have no native SDK here, so they offer none.

@@ -7,7 +7,7 @@ import 'package:ui/ui.dart';
 
 /// Policy version the signup consents name. Must match backend privacy::CONSENT_VERSION: the server
 /// refuses any other version, so bump both together.
-const String signupConsentVersion = '2026-11-19';
+const String signupConsentVersion = '2026-11-17';
 
 /// Kinds asked at signup, in display order. The first three are required to open an account.
 const List<String> signupConsentKinds = [

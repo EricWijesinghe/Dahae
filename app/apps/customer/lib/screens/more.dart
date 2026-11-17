@@ -188,13 +188,20 @@ class MoreTab extends StatelessWidget {
           t.morePrivacy,
           () => _push(
             context,
-            LegalScreen(slug: 'privacy', title: t.morePrivacy),
+            LegalScreen(
+              api: context.api,
+              slug: 'privacy',
+              title: t.morePrivacy,
+            ),
           ),
         ),
         row(
           'menu_terms',
           t.moreTerms,
-          () => _push(context, LegalScreen(slug: 'terms', title: t.moreTerms)),
+          () => _push(
+            context,
+            LegalScreen(api: context.api, slug: 'terms', title: t.moreTerms),
+          ),
         ),
         row('menu_licenses', t.moreLicenses, () async {
           final version = await _buildVersion();
@@ -714,37 +721,6 @@ class ContentDetailScreen extends StatelessWidget {
         ],
         SelectableText(item.text(context.lang), style: context.text.bodyLarge),
       ],
-    ),
-  );
-}
-
-class LegalScreen extends StatelessWidget {
-  const LegalScreen({super.key, required this.slug, required this.title});
-  final String slug;
-  final String title;
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(title)),
-    body: AsyncView<List<ContentItem>>(
-      load: () async =>
-          (await context.api.get('/content', query: {'kind': 'legal'}) as List)
-              .map((e) => ContentItem(e as Json))
-              .where((c) => c.j['slug'] == slug)
-              .toList(),
-      builder: (context, items, _) => items.isEmpty
-          ? EmptyState(
-              icon: Icons.description_rounded,
-              title: context.t.noContent,
-            )
-          : ListView(
-              padding: const EdgeInsets.all(Space.gutter),
-              children: [
-                SelectableText(
-                  items.first.text(context.lang),
-                  style: context.text.bodyMedium,
-                ),
-              ],
-            ),
     ),
   );
 }

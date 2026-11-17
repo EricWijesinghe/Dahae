@@ -9,8 +9,9 @@ mod common;
 
 use api::{ops, ops_alerts, settings_registry};
 use axum::http::StatusCode;
+use chrono::{Duration, Utc};
 use common::{call, seed_catalog, staff_token, test_config};
-use serde_json::Value;
+use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -226,9 +227,12 @@ async fn owner_alert_thresholds_have_safe_defaults(pool: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn failed_photo_offsite_backup_alerts_until_a_later_upload_succeeds(pool: PgPool) {
-    assert!(ops_alerts::offsite_backup_findings(&pool).await.expect("findings").is_empty(), "no upload yet");
+    assert!(
+        ops_alerts::offsite_backup_findings(&pool, true).await.expect("findings").is_empty(),
+        "no upload yet"
+    );
     ops::write_outcome(&pool, "backup", Err("unreachable")).await.expect("database upload failed");
-    let db_only = ops_alerts::offsite_backup_findings(&pool).await.expect("findings");
+    let db_only = ops_alerts::offsite_backup_findings(&pool, true).await.expect("findings");
     assert!(
         !fired(&db_only, "backup_uploads_failing"),
         "a database upload failure does not fire the photo rule"
@@ -236,27 +240,58 @@ async fn failed_photo_offsite_backup_alerts_until_a_later_upload_succeeds(pool: 
     ops::write_outcome(&pool, ops::PHOTOS_INTEGRATION, Err("unreachable"))
         .await
         .expect("record failure");
-    let findings = ops_alerts::offsite_backup_findings(&pool).await.expect("findings");
+    let findings = ops_alerts::offsite_backup_findings(&pool, true).await.expect("findings");
     assert!(fired(&findings, "backup_uploads_failing"), "photo failure fires the owner alert");
     assert!(ops_alerts::Prefs::default().enabled("backup_uploads_failing"), "on by default");
     ops::write_outcome(&pool, ops::PHOTOS_INTEGRATION, Ok(())).await.expect("record success");
-    let after = ops_alerts::offsite_backup_findings(&pool).await.expect("findings");
+    let after = ops_alerts::offsite_backup_findings(&pool, true).await.expect("findings");
     assert!(!fired(&after, "backup_uploads_failing"), "a later photo success clears the photo rule");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn failed_database_offsite_backup_alerts_until_a_later_upload_succeeds(pool: PgPool) {
-    assert!(ops_alerts::offsite_backup_findings(&pool).await.expect("findings").is_empty(), "no upload yet");
+    assert!(
+        ops_alerts::offsite_backup_findings(&pool, true).await.expect("findings").is_empty(),
+        "no upload yet"
+    );
     ops::write_outcome(&pool, "backup", Err("unreachable")).await.expect("record failure");
-    let findings = ops_alerts::offsite_backup_findings(&pool).await.expect("findings");
+    let findings = ops_alerts::offsite_backup_findings(&pool, true).await.expect("findings");
     assert!(fired(&findings, "backup_offsite_failing"), "database upload failure fires the owner alert");
     assert!(!fired(&findings, "backup_uploads_failing"), "the photo rule is separate");
     assert!(ops_alerts::Prefs::default().enabled("backup_offsite_failing"), "on by default");
     ops::write_outcome(&pool, "backup", Ok(())).await.expect("record success");
     assert!(
-        ops_alerts::offsite_backup_findings(&pool).await.expect("findings").is_empty(),
+        ops_alerts::offsite_backup_findings(&pool, true).await.expect("findings").is_empty(),
         "a later success clears it"
     );
+}
+
+/// Stores the backup status the upload step writes, with offsite unset for `unset_hours` (None when set up).
+async fn store_backup_status(db: &PgPool, unset_hours: Option<i64>) {
+    let since = unset_hours.map(|h| Utc::now() - Duration::hours(h));
+    let status = json!({ "at": Utc::now(), "file": "db.sql.gz.enc", "offsite": null, "offsite_unset_since": since });
+    sqlx::query("INSERT INTO settings (key, value) VALUES ('backup_status', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value")
+        .bind(status)
+        .execute(db)
+        .await
+        .expect("store status");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn offsite_never_set_up_alerts_after_two_days_of_local_backups(pool: PgPool) {
+    assert!(
+        ops_alerts::offsite_backup_findings(&pool, false).await.expect("findings").is_empty(),
+        "no backup run yet"
+    );
+    store_backup_status(&pool, Some(72)).await;
+    let findings = ops_alerts::offsite_backup_findings(&pool, false).await.expect("findings");
+    assert!(fired(&findings, "backup_offsite_not_configured"), "unset for three days fires the owner alert");
+    assert!(ops_alerts::Prefs::default().enabled("backup_offsite_not_configured"), "on by default");
+    let configured = ops_alerts::offsite_backup_findings(&pool, true).await.expect("findings");
+    assert!(!fired(&configured, "backup_offsite_not_configured"), "a configured offsite never fires it");
+    store_backup_status(&pool, Some(24)).await;
+    let recent = ops_alerts::offsite_backup_findings(&pool, false).await.expect("findings");
+    assert!(!fired(&recent, "backup_offsite_not_configured"), "a day unset is not yet an alert");
 }
 
 /// Inserts `n` sign-in codes for made-up numbers sent now.

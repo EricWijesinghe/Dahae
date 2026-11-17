@@ -1397,6 +1397,7 @@
  "oRuleBackup": "Automatic backup missed",
  "oRuleBackupPhotos": "Offsite photo backup failed",
  "oRuleBackupOffsite": "Offsite database backup failed",
+ "oRuleBackupOffsiteNotConfigured": "Offsite backup not set up",
  "oRuleDisk": "Disk nearly full",
  "oRuleOtp": "Sign-in code sends are unusually high (SMS cost)",
  "oRuleAuth": "Suspicious sign-in activity",

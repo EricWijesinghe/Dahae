@@ -20,7 +20,7 @@ import urllib.error
 import urllib.request
 
 # Must match backend/crates/api/src/privacy.rs CONSENT_VERSION.
-CONSENT_VERSION = "2026-11-19"
+CONSENT_VERSION = "2026-11-17"
 from datetime import date, timedelta
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8080"

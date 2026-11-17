@@ -169,6 +169,34 @@ class MoreTab extends StatelessWidget {
                   ),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.privacy_tip_rounded),
+                  title: Text(t.morePrivacy),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => LegalScreen(
+                        api: context.api,
+                        slug: 'privacy',
+                        title: t.morePrivacy,
+                      ),
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.gavel_rounded),
+                  title: Text(t.moreTerms),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => LegalScreen(
+                        api: context.api,
+                        slug: 'terms',
+                        title: t.moreTerms,
+                      ),
+                    ),
+                  ),
+                ),
+                ListTile(
                   leading: const Icon(Icons.article_rounded),
                   title: Text(t.moreLicenses),
                   trailing: const Icon(Icons.chevron_right_rounded),
