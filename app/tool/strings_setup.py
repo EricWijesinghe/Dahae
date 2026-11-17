@@ -31,6 +31,7 @@ S = {
   "cReviewCode": ["고정 인증 코드 (숫자 6자리)", "Fixed sign-in code (6 digits)"],
   "cReviewActiveUntil": ["{date}까지 사용 가능", "Active until {date}"],
   "cReviewEnable": ["켜기 (14일)", "Turn on (14 days)"],
+  "cReviewPhoneInUse": ["이미 고객, 파트너 또는 직원이 쓰는 번호예요. 아무도 쓰지 않는 번호를 넣어 주세요.", "A customer, partner or staff member already uses this number. Enter a number nobody uses."],
   "pDeleteAccountBody": ["팀과 개인정보가 삭제되고 되돌릴 수 없어요. 배정된 작업이 있거나 정산이 남아 있으면 먼저 마무리해 주세요.", "Your team and personal data will be erased. This can't be undone. Finish assigned jobs and pending payouts first."],
   "err_has_active_jobs": ["배정된 작업이 있어요. 작업을 마치거나 상담원에게 이관을 요청해 주세요.", "You still have assigned jobs. Finish them or ask support to reassign."],
   "err_pending_payouts": ["아직 정산이 남아 있어요. 지급이 끝난 뒤 탈퇴할 수 있어요.", "A payout is still pending. You can delete the account after it is paid."],

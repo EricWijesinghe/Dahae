@@ -3833,7 +3833,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Store the app-review test account",
+        "summary": "Store the app-review test account (owner code required)",
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
         },
@@ -3846,23 +3846,51 @@
           },
           "403": {
             "description": "owner only (is_owner)"
+          },
+          "409": {
+            "description": "phone_in_use: a customer, partner or staff member already holds this phone"
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       },
       "delete": {
         "operationId": "adminClearReviewAccount",
         "tags": [
           "admin"
         ],
-        "summary": "Remove the app-review test account",
+        "summary": "Remove the app-review test account (owner code required)",
         "responses": {
           "200": {
             "description": "OK"
           },
           "403": {
             "description": "owner only (is_owner)"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     },
     "/v1/admin/setup/{section}": {

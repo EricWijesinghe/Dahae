@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/owner_totp_dialog.dart';
 
 /// Store-review demo login: one phone number with a fixed 6-digit code for App Review and
 /// Google Play reviewers, who cannot receive Korean SMS. Turns itself off after 14 days.
@@ -34,18 +35,24 @@ class _ReviewAccountCardState extends State<ReviewAccountCard> {
     super.dispose();
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  /// Switching the fixed-code login on or off needs the owner's authenticator code.
+  Future<void> _run(
+    Future<void> Function(Map<String, String> headers) action,
+  ) async {
+    final code = await askOwnerTotp(context);
+    if (code == null || !mounted) return;
     setState(() => _busy = true);
     try {
-      await action();
+      await action(ownerHeaders(code));
       if (mounted) showToast(context, context.t.cSetupSaved);
       widget.onChanged();
     } on ApiException catch (e) {
       if (mounted) {
-        showToast(
-          context,
-          e.status == 400 ? context.t.cInvalidValue : context.t.error(e),
-        );
+        showToast(context, switch (e.code) {
+          'phone_in_use' => context.t.cReviewPhoneInUse,
+          'invalid_phone' || 'invalid_code' => context.t.cInvalidValue,
+          _ => context.t.error(e),
+        });
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -120,11 +127,11 @@ class _ReviewAccountCardState extends State<ReviewAccountCard> {
                   onPressed: _busy
                       ? null
                       : () => _run(
-                          () => context.api.put('/admin/setup/review', {
+                          (headers) => context.api.put('/admin/setup/review', {
                             'phone': _phone.text,
                             'code': _code.text,
                             'days': 14,
-                          }),
+                          }, headers),
                         ),
                   icon: const Icon(Icons.play_arrow_rounded),
                   label: Text(t.cReviewEnable),
@@ -134,7 +141,11 @@ class _ReviewAccountCardState extends State<ReviewAccountCard> {
                     onPressed: _busy
                         ? null
                         : () => _run(
-                            () => context.api.delete('/admin/setup/review'),
+                            (headers) => context.api.delete(
+                              '/admin/setup/review',
+                              null,
+                              headers,
+                            ),
                           ),
                     child: Text(t.cSetupClear),
                   ),

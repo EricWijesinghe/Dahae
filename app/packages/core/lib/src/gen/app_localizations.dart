@@ -12258,6 +12258,12 @@ abstract class T {
   /// **'켜기 (14일)'**
   String get cReviewEnable;
 
+  /// No description provided for @cReviewPhoneInUse.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 고객, 파트너 또는 직원이 쓰는 번호예요. 아무도 쓰지 않는 번호를 넣어 주세요.'**
+  String get cReviewPhoneInUse;
+
   /// No description provided for @pDeleteAccountBody.
   ///
   /// In ko, this message translates to:
