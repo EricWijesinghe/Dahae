@@ -8,6 +8,7 @@
 
 import importlib.util
 import pathlib
+import re
 import tempfile
 import unittest
 
@@ -63,9 +64,10 @@ class ChangelogNotesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             NOTES.section("## [1.5.0] - 2026-11-17\n\n## [1.4.0]\n- x\n", "v1.5.0")
 
-    def test_real_changelog_has_1_5_0(self):
+    def test_real_changelog_has_the_cargo_version(self):
         text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-        self.assertIn("### Added", NOTES.section(text, "v1.5.0"))
+        ver = re.search(r'^version = "([^"]+)"', (ROOT / "backend" / "Cargo.toml").read_text(encoding="utf-8"), re.M).group(1)
+        self.assertIn("### Added", NOTES.section(text, "v" + ver))
 
 
 class WorkflowRuleTests(unittest.TestCase):

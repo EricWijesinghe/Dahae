@@ -1,4 +1,4 @@
-Dahae 1.5.0 what's new
+Dahae 1.5.1 what's new
 
 - See how booking works, the FAQ and the terms before you sign in, and check estimated prices.
 - Aircon, sofa, mattress, window and disinfection: pick the number of units to see the price.

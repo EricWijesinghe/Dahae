@@ -1,7 +1,7 @@
 # App Store 답안: 개인정보 라벨 · 연령 등급 · 수출 규정
 
 App Store Connect 에 입력할 답을 한곳에 모았어요. 고객 앱(다해)과 파트너 앱(다해 파트너)은 **따로** 입력해요.
-Google Play 쪽 같은 내용은 `data-safety.md` 예요. 한쪽을 고치면 다른 쪽도 고치세요. 두 문서 모두 v1.5.0 출시 빌드 기준이에요.
+Google Play 쪽 같은 내용은 `data-safety.md` 예요. 한쪽을 고치면 다른 쪽도 고치세요. 두 문서 모두 v1.5.1 출시 빌드 기준이에요.
 
 근거: 서버 `backend/migrations/`, `backend/crates/api/src/`, 앱 `app/packages/core/lib/src/`, iOS `app/apps/*/ios/Runner/PrivacyInfo.xcprivacy`, `Info.plist`.
 

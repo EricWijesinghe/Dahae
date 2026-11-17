@@ -11,7 +11,7 @@
 목록은 커서 방식이며 `X-Next-Cursor` 헤더를 다음 요청의 `cursor`로 되돌려 보냅니다. 돈이 움직이는 POST는
 `Idempotency-Key`를 받습니다. 표의 작업 수와 경로 수는 이 문서를 쓸 때 스펙에서 센 값입니다.
 
-Spec: 312 operations on 267 paths, version `1.5.0` (`info.version`). The spec itself is served only to
+Spec: 312 operations on 267 paths, version `1.5.1` (`info.version`). The spec itself is served only to
 staff admins at `GET /v1/openapi.json` (`Admin` extractor) ([`backend/crates/api/src/openapi.rs`](../../backend/crates/api/src/openapi.rs)).
 Deprecated operations in this spec: 0.
 
