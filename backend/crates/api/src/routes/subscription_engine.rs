@@ -71,8 +71,10 @@ struct SubRow {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Failure {
     Declined(String),
-    /// The slot filled after the charge was sent. Not a card problem: it is refunded, retried, and never pauses.
+    /// The slot was full before the card was charged. Not a card problem: retried, and never pauses.
     Full,
+    /// The slot filled after the charge went through: the charge is refunded, then retried like `Full`.
+    FullRefunded,
     /// PortOne captured another amount than today's price. Refunded and retried; not a card problem either.
     Repriced,
     Blocked,
@@ -95,6 +97,11 @@ impl Failure {
                 "subscription.slot_full",
                 "정기 청소 시간이 가득 찼어요",
                 "빈자리가 생기면 다시 예약을 시도할게요",
+            ),
+            Failure::FullRefunded => (
+                "subscription.slot_full_refunded",
+                "정기 청소 시간이 가득 찼어요",
+                "결제된 금액은 환불해 드려요. 빈자리가 생기면 다시 예약을 시도할게요",
             ),
             Failure::Repriced => ("subscription.price_changed", "정기 청소 금액이 바뀌었어요", "먼저 결제된 금액은 환불해 드려요"),
             Failure::Blocked => (
@@ -496,12 +503,18 @@ async fn charge_once(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attem
 /// Books the visit once the money is settled. The charge already happened, so any outcome other than a booking refunds it.
 async fn finalize(s: &AppState, c: &Charge<'_>, paid: Option<(&str, &str)>) -> ApiResult<Attempt> {
     let outcome = book_visit(s, c, paid).await;
-    if !matches!(outcome, Ok(Attempt::Booked(_)))
-        && let Some((_, tx)) = paid
-    {
-        refund_or_alert(s, "portone", tx, c.price.total.0).await;
+    let Some((_, tx)) = paid else {
+        return outcome;
+    };
+    if matches!(outcome, Ok(Attempt::Booked(_))) {
+        return outcome;
     }
-    outcome
+    refund_or_alert(s, "portone", tx, c.price.total.0).await;
+    // The customer saw the charge, so a full slot now says the money comes back.
+    match outcome {
+        Ok(Attempt::Failed(Failure::Full)) => Ok(Attempt::Failed(Failure::FullRefunded)),
+        other => other,
+    }
 }
 
 /// One transaction: lock the subscription, take the slot, insert the paid booking and its payment, then commit.
@@ -642,7 +655,7 @@ async fn already_told(s: &AppState, user: Uuid, kind: &str, data: &Value) -> Api
 async fn pause(s: &AppState, d: &Due, failure: &Failure) -> ApiResult<()> {
     let reason = match failure {
         Failure::Declined(_) => "payment",
-        Failure::Full | Failure::Repriced | Failure::Blocked | Failure::Refunded => "booking",
+        Failure::Full | Failure::FullRefunded | Failure::Repriced | Failure::Blocked | Failure::Refunded => "booking",
     };
     let paused = sqlx::query("UPDATE subscriptions SET status = 'paused', paused_reason = $2, updated_at = now() WHERE id = $1 AND status = 'active'")
         .bind(d.sub_id)
@@ -785,11 +798,11 @@ mod tests {
     fn only_a_card_or_booking_refusal_counts_and_each_failure_says_its_reason() {
         let declined = Failure::Declined("card_declined".into());
         assert!(declined.counts() && Failure::Blocked.counts());
-        assert!(!Failure::Repriced.counts() && !Failure::Full.counts() && !Failure::Refunded.counts());
+        assert!(!Failure::Repriced.counts() && !Failure::Full.counts() && !Failure::FullRefunded.counts() && !Failure::Refunded.counts());
         let card = declined.notice().expect("decline notice");
         assert_eq!(card.0, "subscription.payment_failed");
         assert_eq!(Failure::Refunded.notice(), None, "the engine's own refund sends no notice");
-        for f in [Failure::Repriced, Failure::Full, Failure::Blocked] {
+        for f in [Failure::Repriced, Failure::Full, Failure::FullRefunded, Failure::Blocked] {
             let (kind, title, body) = f.notice().expect("notice");
             assert_ne!(kind, "subscription.payment_failed", "{f:?}");
             assert_ne!(body, card.2, "{f:?}");

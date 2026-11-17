@@ -767,8 +767,13 @@ cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔
     env_set PREV_API_IMAGE "$cur_api"; env_set PREV_WEB_IMAGE "$cur_web"
   fi
   # 새 버전을 띄운 뒤 응답 확인 전에 끊기면(시간 제한·서버 종료) 확인 안 된 새 버전이 남지 않게 이전 버전으로 되돌려요
-  # shellcheck disable=SC2064 # 지금의 이전 버전 값을 넣어 둬요
-  trap "set_images $(printf '%q %q' "$cur_api" "$cur_web") >/dev/null 2>&1; exit 143" TERM INT HUP
+  # 이전 이미지를 모르면(앱이 멈춰 있고 .env 에도 없음) .env 를 비우지 않게 되돌리지 않고 멈추기만 해요
+  if [ -n "$cur_api" ] && [ -n "$cur_web" ]; then
+    # shellcheck disable=SC2064 # 지금의 이전 버전 값을 넣어 둬요
+    trap "set_images $(printf '%q %q' "$cur_api" "$cur_web") >/dev/null 2>&1; exit 143" TERM INT HUP
+  else
+    trap "exit 143" TERM INT HUP
+  fi
   set_images "$NEW_API" "$NEW_WEB"
   if wait_healthy; then
     trap - TERM INT HUP
@@ -794,6 +799,19 @@ cmd_prepare() { # 설치 프로그램이 처음 띄우기 전에 불러요: 이�
   db_roles
 }
 
+# 1.5 의 정산 상태(토스 응답 없음, 주인의 '안 보냄' 확인)를 이전 버전은 몰라서, 되돌리면 같은 정산을 두 번 보낼 수 있어요.
+# owner_not_sent_at 은 1.5 에서 생긴 열이라 to_jsonb 로 읽어요: 열이 없는 DB 에서도 같은 질의가 돌아요.
+PAYOUTS_IN_DOUBT_SQL="SELECT count(*) FROM payouts WHERE provider = 'toss' AND ((state IN ('requested', 'sent') AND failure_reason IS NOT NULL) OR to_jsonb(payouts) ->> 'owner_not_sent_at' IS NOT NULL)"
+payouts_settled_for_rollback() { # 토스에서 결과를 기다리는 정산이 없으면 성공. 확인하지 못해도 멈춰요
+  local n
+  n=$(dc exec -T db psql -X -U app -d cleaning -tAc "$PAYOUTS_IN_DOUBT_SQL" 2>/dev/null | tr -d '[:space:]') || n=
+  case "$n" in
+    0) return 0 ;;
+    ''|*[!0-9]*) die "정산 상태를 확인하지 못해서 되돌리지 않았어요. 'dahae logs db' 로 확인하세요." ;;
+    *) die "토스 결과를 기다리는 정산이 ${n}건 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요." ;;
+  esac
+}
+
 cmd_rollback() {
   local prev_api prev_web cur_api cur_web repo
   prev_api=$(env_get PREV_API_IMAGE); prev_web=$(env_get PREV_WEB_IMAGE); repo=$(env_get IMAGE_REPO)
@@ -801,6 +819,7 @@ cmd_rollback() {
     die "되돌릴 이전 버전 기록이 없어요. 업데이트를 한 번 한 뒤에 쓸 수 있어요."
   fi
   cmd_backup || die "백업을 끝내지 못해서 되돌리기를 멈췄어요. 지금 버전 그대로예요."
+  payouts_settled_for_rollback
   cur_api=$(digest_ref "$(running_image api "$(env_get API_IMAGE)")" "$repo/malkkeum-api")
   cur_web=$(digest_ref "$(running_image web "$(env_get WEB_IMAGE)")" "$repo/malkkeum-web")
   env_set PREV_API_IMAGE "$cur_api"; env_set PREV_WEB_IMAGE "$cur_web"

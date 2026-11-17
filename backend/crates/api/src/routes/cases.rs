@@ -359,6 +359,15 @@ async fn update(State(s): State<AppState>, Staff(st): Staff, Path(id): Path<Uuid
         .await
         {
             Ok(total) => total,
+            // Refused before any money moved: release the claim so staff can refund once Toss settles the batch.
+            Err(e @ ApiError::Conflict("settlement_in_transfer")) => {
+                sqlx::query("UPDATE cases SET outcome = outcome - 'refund', updated_at = now() WHERE id = $1 AND outcome->'refund'->>'key' = $2")
+                    .bind(id)
+                    .bind(key.to_string())
+                    .execute(&s.db)
+                    .await?;
+                return Err(e);
+            }
             Err(e) => {
                 audit(
                     &s.db,
