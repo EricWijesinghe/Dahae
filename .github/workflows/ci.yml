@@ -146,6 +146,11 @@ jobs:
       - uses: ./.github/actions/flutter-setup
       - run: dart analyze --fatal-infos
         working-directory: app
+      - name: Every Dart package the apps ship is in THIRD_PARTY_NOTICES.md
+        working-directory: app
+        run: |
+          flutter pub deps --json > "$RUNNER_TEMP/pub-deps.json"
+          python3 -I ../scripts/ci/check-notices.py --pub-deps "$RUNNER_TEMP/pub-deps.json" --dart-only
       # Most of the Dart tree predates formatting in CI: files are checked when a pull request changes them.
       - name: Formatting of the Dart files this pull request changes
         if: github.event_name == 'pull_request'
