@@ -201,6 +201,14 @@ FAKE_COSIGN=ok; env_set SIGNER_REPO 'bad repo'
 nt "bad signer refused"    sub verify_image ghcr.io/o/malkkeum-api:stable
 env_set SIGNER_REPO EricWijesinghe/Dahae; rm -f "$SB/bin/cosign"
 nt "missing cosign refused (no silent skip)" sub verify_image ghcr.io/o/malkkeum-api:stable
+# release.yml publishes the image tag without the v (1.5.0); an update given v1.5.0 must pull that tag
+pull_tag() { ( verify_image() { echo "$1"; }; docker() { return 0; }; env_set IMAGE_SOURCE remote; env_set IMAGE_VERIFY on; pull_images "$1" "$2"; echo "$NEW_API" ); }
+t  "pull: v-form tag pulls the bare image tag" eq "$(pull_tag ghcr.io/o v1.5.0)" ghcr.io/o/malkkeum-api:1.5.0
+t  "pull: bare tag unchanged"                  eq "$(pull_tag ghcr.io/o 1.5.0)" ghcr.io/o/malkkeum-api:1.5.0
+t  "pull: channel name unchanged"              eq "$(pull_tag ghcr.io/o stable)" ghcr.io/o/malkkeum-api:stable
+t  "pull: unsigned-test registry gets the bare tag too" eq "$( ( env_set IMAGE_VERIFY off; docker() { return 0; }; pull_images ghcr.io/o v1.5.0; echo "$NEW_API" ) | tail -n1)" ghcr.io/o/malkkeum-api:1.5.0
+t  "pull: local tar keeps the tag it was loaded with" eq "$( ( env_set IMAGE_SOURCE local; docker() { return 0; }; pull_images ghcr.io/o v1.5.0; echo "$NEW_API" ) | tail -n1)" ghcr.io/o/malkkeum-api:v1.5.0
+env_set IMAGE_SOURCE remote; env_set IMAGE_VERIFY on
 
 # ---- app DB role: not a superuser; restores drop owner/extension lines ----
 SQL=$(db_roles_sql 0123456789abcdef0123456789abcdef)
