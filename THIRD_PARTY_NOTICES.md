@@ -52,9 +52,9 @@ The website is served by the web image (`COPY website/ /srv/website/`, [deploy/w
 
 ## Rust crates (backend API binary)
 
-Rust crates: 245 (api binary, normal dependencies; union of x86_64 and aarch64 Linux). Groups sorted by count.
+Rust crates: 259 (api binary, normal dependencies; union of x86_64 and aarch64 Linux). Groups sorted by count.
 
-### MIT OR Apache-2.0 (122)
+### MIT OR Apache-2.0 (133)
 
 | Crate | Version | License | Source |
 |---|---|---|---|
@@ -67,18 +67,23 @@ Rust crates: 245 (api binary, normal dependencies; union of x86_64 and aarch64 L
 | bitflags | 2.13.2 | MIT OR Apache-2.0 | https://crates.io/crates/bitflags/2.13.2 |
 | blake2 | 0.10.6 | MIT OR Apache-2.0 | https://crates.io/crates/blake2/0.10.6 |
 | block-buffer | 0.10.4 | MIT OR Apache-2.0 | https://crates.io/crates/block-buffer/0.10.4 |
+| block-buffer | 0.12.1 | MIT OR Apache-2.0 | https://crates.io/crates/block-buffer/0.12.1 |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 | https://crates.io/crates/cfg-if/1.0.5 |
+| chacha20 | 0.10.2 | MIT OR Apache-2.0 | https://crates.io/crates/chacha20/0.10.2 |
 | chrono | 0.4.45 | MIT OR Apache-2.0 | https://crates.io/crates/chrono/0.4.45 |
 | cipher | 0.4.4 | MIT OR Apache-2.0 | https://crates.io/crates/cipher/0.4.4 |
 | cpufeatures | 0.2.17 | MIT OR Apache-2.0 | https://crates.io/crates/cpufeatures/0.2.17 |
+| cpufeatures | 0.3.1 | MIT OR Apache-2.0 | https://crates.io/crates/cpufeatures/0.3.1 |
 | crc | 3.4.0 | MIT OR Apache-2.0 | https://crates.io/crates/crc/3.4.0 |
 | crc-catalog | 2.5.0 | MIT OR Apache-2.0 | https://crates.io/crates/crc-catalog/2.5.0 |
 | crossbeam-queue | 0.3.14 | MIT OR Apache-2.0 | https://crates.io/crates/crossbeam-queue/0.3.14 |
 | crossbeam-utils | 0.8.23 | MIT OR Apache-2.0 | https://crates.io/crates/crossbeam-utils/0.8.23 |
 | crypto-common | 0.1.7 | MIT OR Apache-2.0 | https://crates.io/crates/crypto-common/0.1.7 |
+| crypto-common | 0.2.2 | MIT OR Apache-2.0 | https://crates.io/crates/crypto-common/0.2.2 |
 | ctr | 0.9.2 | MIT OR Apache-2.0 | https://crates.io/crates/ctr/0.9.2 |
 | deranged | 0.5.9 | MIT OR Apache-2.0 | https://crates.io/crates/deranged/0.5.9 |
 | digest | 0.10.7 | MIT OR Apache-2.0 | https://crates.io/crates/digest/0.10.7 |
+| digest | 0.11.3 | MIT OR Apache-2.0 | https://crates.io/crates/digest/0.11.3 |
 | displaydoc | 0.2.7 | MIT OR Apache-2.0 | https://crates.io/crates/displaydoc/0.2.7 |
 | either | 1.19.0 | MIT OR Apache-2.0 | https://crates.io/crates/either/1.19.0 |
 | errno | 0.3.14 | MIT OR Apache-2.0 | https://crates.io/crates/errno/0.3.14 |
@@ -102,10 +107,12 @@ Rust crates: 245 (api binary, normal dependencies; union of x86_64 and aarch64 L
 | hex | 0.4.3 | MIT OR Apache-2.0 | https://crates.io/crates/hex/0.4.3 |
 | hkdf | 0.12.4 | MIT OR Apache-2.0 | https://crates.io/crates/hkdf/0.12.4 |
 | hmac | 0.12.1 | MIT OR Apache-2.0 | https://crates.io/crates/hmac/0.12.1 |
+| hmac | 0.13.0 | MIT OR Apache-2.0 | https://crates.io/crates/hmac/0.13.0 |
 | home | 0.5.12 | MIT OR Apache-2.0 | https://crates.io/crates/home/0.5.12 |
 | http | 1.5.0 | MIT OR Apache-2.0 | https://crates.io/crates/http/1.5.0 |
 | httparse | 1.10.1 | MIT OR Apache-2.0 | https://crates.io/crates/httparse/1.10.1 |
 | httpdate | 1.0.3 | MIT OR Apache-2.0 | https://crates.io/crates/httpdate/1.0.3 |
+| hybrid-array | 0.4.15 | MIT OR Apache-2.0 | https://crates.io/crates/hybrid-array/0.4.15 |
 | iana-time-zone | 0.1.65 | MIT OR Apache-2.0 | https://crates.io/crates/iana-time-zone/0.1.65 |
 | idna | 1.1.0 | MIT OR Apache-2.0 | https://crates.io/crates/idna/1.1.0 |
 | inout | 0.1.4 | MIT OR Apache-2.0 | https://crates.io/crates/inout/0.1.4 |
@@ -134,10 +141,12 @@ Rust crates: 245 (api binary, normal dependencies; union of x86_64 and aarch64 L
 | quote | 1.0.47 | MIT OR Apache-2.0 | https://crates.io/crates/quote/1.0.47 |
 | rand | 0.8.8 | MIT OR Apache-2.0 | https://crates.io/crates/rand/0.8.8 |
 | rand | 0.9.5 | MIT OR Apache-2.0 | https://crates.io/crates/rand/0.9.5 |
+| rand | 0.10.3 | MIT OR Apache-2.0 | https://crates.io/crates/rand/0.10.3 |
 | rand_chacha | 0.3.1 | MIT OR Apache-2.0 | https://crates.io/crates/rand_chacha/0.3.1 |
 | rand_chacha | 0.9.0 | MIT OR Apache-2.0 | https://crates.io/crates/rand_chacha/0.9.0 |
 | rand_core | 0.6.4 | MIT OR Apache-2.0 | https://crates.io/crates/rand_core/0.6.4 |
 | rand_core | 0.9.5 | MIT OR Apache-2.0 | https://crates.io/crates/rand_core/0.9.5 |
+| rand_core | 0.10.1 | MIT OR Apache-2.0 | https://crates.io/crates/rand_core/0.10.1 |
 | regex-automata | 0.4.18 | MIT OR Apache-2.0 | https://crates.io/crates/regex-automata/0.4.18 |
 | regex-syntax | 0.8.11 | MIT OR Apache-2.0 | https://crates.io/crates/regex-syntax/0.8.11 |
 | reqwest | 0.12.28 | MIT OR Apache-2.0 | https://crates.io/crates/reqwest/0.12.28 |
@@ -150,7 +159,9 @@ Rust crates: 245 (api binary, normal dependencies; union of x86_64 and aarch64 L
 | serde_json | 1.0.154 | MIT OR Apache-2.0 | https://crates.io/crates/serde_json/1.0.154 |
 | serde_path_to_error | 0.1.20 | MIT OR Apache-2.0 | https://crates.io/crates/serde_path_to_error/0.1.20 |
 | sha1 | 0.10.7 | MIT OR Apache-2.0 | https://crates.io/crates/sha1/0.10.7 |
+| sha1 | 0.11.0 | MIT OR Apache-2.0 | https://crates.io/crates/sha1/0.11.0 |
 | sha2 | 0.10.9 | MIT OR Apache-2.0 | https://crates.io/crates/sha2/0.10.9 |
+| sha2 | 0.11.1 | MIT OR Apache-2.0 | https://crates.io/crates/sha2/0.11.1 |
 | signal-hook-registry | 1.4.8 | MIT OR Apache-2.0 | https://crates.io/crates/signal-hook-registry/1.4.8 |
 | simdutf8 | 0.1.5 | MIT OR Apache-2.0 | https://crates.io/crates/simdutf8/0.1.5 |
 | smallvec | 1.16.5 | MIT OR Apache-2.0 | https://crates.io/crates/smallvec/1.16.5 |
@@ -227,7 +238,7 @@ Rust crates: 245 (api binary, normal dependencies; union of x86_64 and aarch64 L
 | want | 0.3.2 | MIT | https://crates.io/crates/want/0.3.2 |
 | zmij | 1.0.23 | MIT | https://crates.io/crates/zmij/1.0.23 |
 
-### Apache-2.0 OR MIT (34)
+### Apache-2.0 OR MIT (37)
 
 | Crate | Version | License | Source |
 |---|---|---|---|
@@ -235,8 +246,11 @@ Rust crates: 245 (api binary, normal dependencies; union of x86_64 and aarch64 L
 | atomic-waker | 1.1.2 | Apache-2.0 OR MIT | https://crates.io/crates/atomic-waker/1.1.2 |
 | base16ct | 0.2.0 | Apache-2.0 OR MIT | https://crates.io/crates/base16ct/0.2.0 |
 | base64ct | 1.8.3 | Apache-2.0 OR MIT | https://crates.io/crates/base64ct/1.8.3 |
+| cmov | 0.5.4 | Apache-2.0 OR MIT | https://crates.io/crates/cmov/0.5.4 |
 | const-oid | 0.9.6 | Apache-2.0 OR MIT | https://crates.io/crates/const-oid/0.9.6 |
+| const-oid | 0.10.3 | Apache-2.0 OR MIT | https://crates.io/crates/const-oid/0.10.3 |
 | crypto-bigint | 0.5.5 | Apache-2.0 OR MIT | https://crates.io/crates/crypto-bigint/0.5.5 |
+| ctutils | 0.4.8 | Apache-2.0 OR MIT | https://crates.io/crates/ctutils/0.4.8 |
 | der | 0.7.10 | Apache-2.0 OR MIT | https://crates.io/crates/der/0.7.10 |
 | ecdsa | 0.16.9 | Apache-2.0 OR MIT | https://crates.io/crates/ecdsa/0.16.9 |
 | ed25519 | 2.2.3 | Apache-2.0 OR MIT | https://crates.io/crates/ed25519/2.2.3 |
