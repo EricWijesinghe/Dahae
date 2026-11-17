@@ -210,3 +210,21 @@ async fn a_carrier_nat_ipv4_network_is_not_cut_off_at_a_few_hundred_codes(db: Pg
     let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": "010-5555-0204" }))).await;
     assert_eq!(st, StatusCode::OK, "{b}");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn staff_logout_all_ends_the_access_token_and_its_socket_tickets(db: PgPool) {
+    let (token, id) = staff_token(&db, Role::StaffAdmin).await;
+    let app = common::app(db.clone());
+    let (st, b) = call(&app, "POST", "/v1/realtime/ticket", Some(token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let (st, b) = call(&app, "POST", "/v1/auth/logout-all", Some(token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let (st, b) = call(&app, "POST", "/v1/realtime/ticket", Some(token.as_str()), None).await;
+    assert_eq!(st, StatusCode::UNAUTHORIZED, "the signed-out access token is dead at once: {b}");
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM realtime_tickets WHERE subject = $1")
+        .bind(id)
+        .fetch_one(&db)
+        .await
+        .expect("count");
+    assert_eq!(left, 0, "unspent socket tickets go with the sessions");
+}

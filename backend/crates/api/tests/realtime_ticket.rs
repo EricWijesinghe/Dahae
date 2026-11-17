@@ -198,3 +198,37 @@ async fn staff_ticket_dies_with_the_session_it_was_issued_in(db: PgPool) {
     let ticket = issue(&app, &token).await;
     assert_eq!(consume_ticket(&db, &ticket).await.expect("current session").id, id);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn customer_ticket_dies_with_sign_out_everywhere(db: PgPool) {
+    let app = common::app(db.clone());
+    let (token, _) = login(&app, "010-7000-0011", "customer").await;
+    let ticket = issue(&app, &token).await;
+    let (st, b) = call(&app, "POST", "/v1/auth/logout-all", Some(token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert!(
+        matches!(consume_ticket(&db, &ticket).await, Err(ApiError::Unauthorized)),
+        "signed-out customer's ticket"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn removed_member_ticket_is_refused(db: PgPool) {
+    let app = common::app(db.clone());
+    let (pro, pro_id) = common::verified_pro(&app, &db, "010-7000-0012").await;
+    let member: Uuid = sqlx::query_scalar(
+        "INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1, 'M', '01070000013', 'member', 'active') RETURNING id",
+    )
+    .bind(pro_id)
+    .fetch_one(&db)
+    .await
+    .expect("member");
+    let (token, _) = login(&app, "010-7000-0013", "partner").await;
+    let ticket = issue(&app, &token).await;
+    let (st, b) = call(&app, "DELETE", &format!("/v1/partner/team/{member}"), Some(pro.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert!(
+        matches!(consume_ticket(&db, &ticket).await, Err(ApiError::Unauthorized)),
+        "removed member's ticket"
+    );
+}

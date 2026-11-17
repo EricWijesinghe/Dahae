@@ -446,12 +446,19 @@ async fn logout(State(s): State<AppState>, Json(req): Json<RefreshRequest>) -> A
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 
-/// Signs out every device of the caller. Access tokens already issued last at most ACCESS_TTL_MIN.
+/// Signs out every device of the caller. Staff also move their session epoch, so their access tokens and socket
+/// tickets die at once; other roles' access tokens last at most ACCESS_TTL_MIN and their sockets close at the next check.
 async fn logout_all(State(s): State<AppState>, a: Auth) -> ApiResult<Json<serde_json::Value>> {
-    sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1 AND revoked_at IS NULL")
-        .bind(a.id)
-        .execute(&s.db)
-        .await?;
+    let mut tx = s.db.begin().await?;
+    if a.role.is_staff() {
+        crate::owner::end_sessions_tx(&mut tx, a.id).await?;
+    } else {
+        sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1 AND revoked_at IS NULL")
+            .bind(a.id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await?;
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 
