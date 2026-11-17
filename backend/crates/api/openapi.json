@@ -1295,7 +1295,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "Move a booking to another slot",
+        "summary": "Move a booking to another slot. With a pro assigned the visit keeps its slot and the answer carries the pending `reschedule` request until the pro confirms",
         "parameters": [
           {
             "$ref": "#/components/parameters/Id"
@@ -1497,7 +1497,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "Start a payment checkout (idempotent). Optional `points` pays part with points: checked against balance and cap here, debited when the checkout settles; the response `amount` is what the PG charges (`total - points`). Booking checkouts may send `expected_total` (the total from POST /v1/bookings/price): another server price is a 409 `price_changed` before any PG window",
+        "summary": "Start a payment checkout (idempotent). Optional `points` pays part with points: checked against balance and cap here, debited when the checkout settles; the response `amount` is what the PG charges (`total - points`). Booking checkouts may send `expected_total` (the total from POST /v1/bookings/price): another server price is a 409 `price_changed` before any PG window.",
         "parameters": [
           {
             "$ref": "#/components/parameters/IdempotencyKey"
@@ -2080,7 +2080,7 @@
         "tags": [
           "pro"
         ],
-        "summary": "Accept or decline a reschedule request (409 booking_closed once the booking is cancelled or completed; schedule_overlap, booking_changed or slot_full when the slot can no longer be taken)",
+        "summary": "Accept or decline a reschedule request. Body: `accept` and `requested_at`, the `reschedule.requested_at` of the request the job detail showed (409 reschedule_changed when the customer has asked again since; reschedule_expired when the requested day is no longer bookable; booking_closed once the booking is cancelled or completed; schedule_overlap, booking_changed or slot_full when the slot can no longer be taken)",
         "parameters": [
           {
             "$ref": "#/components/parameters/Id"

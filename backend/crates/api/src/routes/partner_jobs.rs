@@ -533,18 +533,30 @@ async fn complete(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>, 
 #[derive(Deserialize)]
 struct RescheduleReply {
     accept: bool,
+    /// `reschedule.requested_at` of the request the pro's screen showed; a newer request is a 409.
+    #[serde(default)]
+    requested_at: Option<String>,
+}
+
+/// The request's `requested_at`, as the job detail sent it to the pro (none on requests from before it was stored).
+fn requested_at(reschedule: &Value) -> Option<&str> {
+    reschedule["requested_at"].as_str()
 }
 
 async fn reply_reschedule(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>, Json(r): Json<RescheduleReply>) -> ApiResult<Json<Value>> {
     let b = load_booking(&s.db, id).await?;
-    if b.pro_id != Some(a.id) || b.reschedule.is_none() {
+    let Some(pending) = b.reschedule.as_ref().filter(|_| b.pro_id == Some(a.id)) else {
         return Err(ApiError::NotFound);
-    }
+    };
     if !(0..=2).contains(&b.status) {
         return Err(ApiError::Conflict("booking_closed"));
     }
+    if requested_at(pending) != r.requested_at.as_deref() {
+        return Err(ApiError::Conflict("reschedule_changed"));
+    }
+    let thread = b.thread_id;
     if r.accept {
-        confirm_reschedule(&s, &b, a.id).await?;
+        let (date, hour) = confirm_reschedule(&s, &b, a.id, pending).await?;
         notify(
             &s,
             Recipient::User(b.user_id),
@@ -554,17 +566,31 @@ async fn reply_reschedule(State(s): State<AppState>, Pro(a): Pro, Path(id): Path
             json!({ "booking_id": id }),
         )
         .await?;
+        if let Some(t) = thread {
+            best_effort(
+                "chat",
+                chat::post_system(&s, t, "rescheduled", json!({ "visit_date": date, "start_hour": hour })),
+            )
+            .await;
+        }
     } else {
-        // The job never left its slot, so declining only closes the request.
-        sqlx::query("UPDATE bookings SET reschedule = NULL WHERE id = $1")
+        // The job never left its slot, so declining only closes the request the pro saw.
+        let closed = sqlx::query("UPDATE bookings SET reschedule = NULL WHERE id = $1 AND reschedule->>'requested_at' IS NOT DISTINCT FROM $2")
             .bind(id)
+            .bind(r.requested_at.as_deref())
             .execute(&s.db)
             .await?;
+        if closed.rows_affected() == 0 {
+            return Err(ApiError::Conflict("reschedule_changed"));
+        }
         let mut conn = s.db.acquire().await?;
-        let thread = chat::booking_thread(&mut conn, "partner", a.id, id, &b.service_code).await?;
-        let msg = chat::insert_message(&mut conn, thread, "partner", Some(a.id), "system", json!({ "code": "reschedule_declined" })).await?;
+        let ops = chat::booking_thread(&mut conn, "partner", a.id, id, &b.service_code).await?;
+        let msg = chat::insert_message(&mut conn, ops, "partner", Some(a.id), "system", json!({ "code": "reschedule_declined" })).await?;
         drop(conn);
         chat::broadcast_message(&s, &msg).await?;
+        if let Some(t) = thread {
+            best_effort("chat", chat::post_system(&s, t, "reschedule_declined", json!({}))).await;
+        }
     }
     Ok(Json(json!({ "ok": true })))
 }
@@ -576,30 +602,46 @@ fn requested_slot(reschedule: &Value) -> Option<(NaiveDate, u8)> {
     Some((date, hour))
 }
 
-/// Moves the job to the requested slot once the pro confirms. Capacity and the pro's clash check run under the
-/// pro's schedule lock; a refusal drops the transaction, so the job stays in its slot.
-async fn confirm_reschedule(s: &AppState, b: &BookingRow, pro: Uuid) -> ApiResult<()> {
+/// Moves the job to `seen`, the request the pro confirmed, and returns the slot it now has. Locks in the order of the
+/// booking paths (slot, then the pro's schedule, then the row), so a subscription booking racing it never deadlocks.
+/// Any refusal drops the transaction, so the job stays in its slot.
+async fn confirm_reschedule(s: &AppState, b: &BookingRow, pro: Uuid, seen: &Value) -> ApiResult<(NaiveDate, i16)> {
     let mut tx = s.db.begin().await?;
+    let slot = requested_slot(seen);
+    let count = match slot {
+        Some((date, hour)) => Some(lock_and_count_slot(&mut tx, date, hour, Some(b.id)).await?),
+        None => None,
+    };
     lock_schedule(&mut tx, pro).await?;
-    if let Some((date, hour)) = b.reschedule.as_ref().and_then(requested_slot) {
-        let (used, cap) = lock_and_count_slot(&mut tx, date, hour, Some(b.id)).await?;
+    let live: Option<Option<Value>> = sqlx::query_scalar("SELECT reschedule FROM bookings WHERE id = $1 AND pro_id = $2 AND status BETWEEN 0 AND 2 FOR UPDATE")
+        .bind(b.id)
+        .bind(pro)
+        .fetch_optional(&mut *tx)
+        .await?;
+    let Some(live) = live else {
+        return Err(ApiError::Conflict("booking_changed"));
+    };
+    if live.as_ref().map(requested_at) != Some(requested_at(seen)) {
+        return Err(ApiError::Conflict("reschedule_changed"));
+    }
+    if let Some((date, _)) = slot {
+        domain::schedule::check_date(today_kst(), date).map_err(|_| ApiError::Conflict("reschedule_expired"))?;
+    }
+    // Counted under the slot lock, which is still held, so the count stands for the request just matched.
+    if let Some((used, cap)) = count {
         domain::schedule::check_capacity(used, cap)?;
     }
-    let moved = sqlx::query(
+    let (date, hour): (NaiveDate, i16) = sqlx::query_as(
         "UPDATE bookings SET visit_date = COALESCE((reschedule->>'to_date')::date, visit_date),
            start_hour = COALESCE((reschedule->>'to_hour')::smallint, start_hour), reschedule = NULL, updated_at = now()
-         WHERE id = $1 AND pro_id = $2 AND reschedule IS NOT NULL AND status BETWEEN 0 AND 2",
+         WHERE id = $1 RETURNING visit_date, start_hour",
     )
     .bind(b.id)
-    .bind(pro)
-    .execute(&mut *tx)
+    .fetch_one(&mut *tx)
     .await?;
-    if moved.rows_affected() == 0 {
-        return Err(ApiError::Conflict("booking_changed"));
-    }
     if schedule_clash(&mut tx, b.id, "pro_id", pro).await? {
         return Err(ApiError::Conflict("schedule_overlap"));
     }
     tx.commit().await?;
-    Ok(())
+    Ok((date, hour))
 }

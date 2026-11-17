@@ -742,7 +742,8 @@ struct Reschedule {
     start_hour: u8,
 }
 
-/// Free while outside the 2-day window; an assigned pro must confirm the new slot.
+/// Free while outside the 2-day window; an assigned pro must confirm the new slot, so with one the answer carries the
+/// pending `reschedule` and the visit's slot is unchanged.
 async fn reschedule(State(s): State<AppState>, Customer(a): Customer, Path(id): Path<Uuid>, Json(r): Json<Reschedule>) -> ApiResult<Json<BookingRow>> {
     let b = owned(&s, a.id, id).await?;
     let status = b.status()?;
@@ -801,7 +802,8 @@ async fn reschedule(State(s): State<AppState>, Customer(a): Customer, Path(id): 
         )
         .await;
     }
-    if let Some(t) = b.thread_id {
+    // A pending request has not moved the visit: the chat says so only once the pro confirms (partner reply).
+    if let Some(t) = b.thread_id.filter(|_| b.pro_id.is_none()) {
         best_effort(
             "chat",
             chat::post_system(&s, t, "rescheduled", json!({ "visit_date": r.visit_date, "start_hour": r.start_hour })),
