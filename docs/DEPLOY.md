@@ -23,12 +23,12 @@ requests that touch the installer or the server build; `ci.yml` runs on every pu
 ## 1. One-time setup (developer)
 
 1. Source repo `EricWijesinghe/Dahae` is public (proprietary licence) and already exists; push `master` only.
-2. Public delivery repo: `gh repo create malkkeum-install --public --add-readme`; make sure it has a
+2. Public delivery repo: `gh repo create Dahae-install --public --add-readme`; make sure it has a
    `main` branch (the default branch of the new repo).
 3. Deploy key: `ssh-keygen -t ed25519 -N '' -f malkkeum-dist` → add `malkkeum-dist.pub` to
-   `malkkeum-install` under *Settings → Deploy keys* with **Allow write access** ticked.
+   `Dahae-install` under *Settings → Deploy keys* with **Allow write access** ticked.
    In the private repo: secret `DIST_DEPLOY_KEY` = contents of `malkkeum-dist` (then delete the local
-   files). Variable `DIST_REPO=<owner>/malkkeum-install`.
+   files). Variable `DIST_REPO=<owner>/Dahae-install`.
 4. Release: `git tag v1.0.0 && git push --tags`.
 5. **GHCR packages Public (developer, one time; never the owner).** A package pushed under a user
    account starts private, and the installer pulls without logging in. Until both packages are
@@ -49,9 +49,9 @@ requests that touch the installer or the server build; `ci.yml` runs on every pu
    Check: a `v*` tag run waits at both jobs for approval. The store builds run in environment `store` (§3) and `deploy-aws` in `doda-aws` (guide 10 C-1).
 
 Send the client the delivery repo link. Guides 00 (one page) and 01 contain the exact install line
-(`https://raw.githubusercontent.com/<owner>/malkkeum-install/main/install.sh`, the stable channel's
+(`https://raw.githubusercontent.com/<owner>/Dahae-install/main/install.sh`, the stable channel's
 latest). In the delivery repo the copies on the release's own branch carry the pinned line instead,
-`…/malkkeum-install/v<VER>/install.sh`: `publish-delivery.sh` commits `install.sh` + `SHA256SUMS` and
+`…/Dahae-install/v<VER>/install.sh`: `publish-delivery.sh` commits `install.sh` + `SHA256SUMS` and
 pushes an annotated tag `v<VER>` with the same deploy key (no token). Tags are never moved: a re-run on
 the same commit is a no-op, anything else fails the job. Branches keep moving as the channels.
 
@@ -86,7 +86,7 @@ The owner never edits a file on the server. Everything after the install line is
 wizard or a `dahae` command (`guide/07-운영-명령어.md`); `/opt/malkkeum/.env` is only copied somewhere
 safe. Brand: the user-visible name is 다해 / Dahae and the CLI is `dahae` (`malkkeum` stays as a
 symlink). Internal ids keep the old name: `/opt/malkkeum`, image names, the
-`malkkeum-install` repo, `MALKKEUM_*` installer variables (`DAHAE_*` is accepted too).
+`Dahae-install` repo, `MALKKEUM_*` installer variables (`DAHAE_*` is accepted too).
 
 ### Server sizing (what the guides tell the owner)
 

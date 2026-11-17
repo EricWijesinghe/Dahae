@@ -18,7 +18,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
  && mkdir -p /data/uploads && chown app /data/uploads
 COPY --from=build /src/target/release/api /usr/local/bin/api
 ARG APP_VERSION=dev
-LABEL org.opencontainers.image.source=https://github.com/EricWijesinghe/malkkeum-install org.opencontainers.image.version=$APP_VERSION
+LABEL org.opencontainers.image.source=https://github.com/EricWijesinghe/Dahae-install org.opencontainers.image.version=$APP_VERSION
 USER app
 ENV BIND_ADDR=0.0.0.0:8080 UPLOAD_DIR=/data/uploads
 EXPOSE 8080

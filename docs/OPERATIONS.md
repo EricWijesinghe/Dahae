@@ -70,12 +70,12 @@ flowchart LR
 
 ```bash
 # 안정 채널 (기본) — 손님을 받는 서버는 이것
-curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/malkkeum-install/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/main/install.sh | sudo bash
 # 베타 채널 — 먼저 써 보는 버전
-curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/malkkeum-install/beta/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/beta/install.sh | sudo bash
 ```
 
-설치 파일은 배포 저장소 `EricWijesinghe/malkkeum-install` 에 올라가요. 배포 과정은 [.github/workflows/release.yml](../.github/workflows/release.yml) 이 맡아요.
+설치 파일은 배포 저장소 `EricWijesinghe/Dahae-install` 에 올라가요. 배포 과정은 [.github/workflows/release.yml](../.github/workflows/release.yml) 이 맡아요.
 질문은 두 개뿐이에요: 도메인(예: `myshop.co.kr`), 인증서 안내를 받을 이메일(없으면 Enter).
 
 ### 설치가 하는 일
@@ -378,7 +378,7 @@ Secrets live in `/opt/malkkeum/.env` (mode 600). Integration keys are entered in
 ## 2. Install
 - Supported: Ubuntu 22.04 / 24.04, Debian 12; x86_64 or arm64. Recommended 2 vCPU and 4 GB RAM; minimum 1 GB for the installer (it stops below about 1 GB). Below 2 GB RAM with no swap, it creates a 2 GB swap file (skipped if the disk is short or `/swapfile` exists).
   Needs 5 GB free disk on a first install (2 GB on a re-run). Ports 22, 80, 443 must be reachable; a domain A record must point at the server.
-- Stable: `curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/malkkeum-install/main/install.sh | sudo bash`; beta uses the `beta` branch in place of `main`.
+- Stable: `curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/main/install.sh | sudo bash`; beta uses the `beta` branch in place of `main`.
 - The installer asks for the domain and an optional e-mail, creates keys, installs Docker, hardens the host (unattended upgrades, fail2ban: 1-hour ban after 5 failed SSH logins in 10 minutes, ufw only after confirmation), verifies the cosign signature of the images, installs the `dahae` command and the schedules, and starts the stack.
 - Re-running the installer is an update: backup, new images, health check, automatic rollback on failure. Data and settings are kept.
 - After install: open `https://DOMAIN/admin/`, enter the setup code (created at install, valid 7 days from then; `sudo dahae setup-code --renew` for a new one), fill the setup wizard, run `sudo dahae keys-backup` and store the copy off the server, connect offsite backup, and set a heartbeat.
