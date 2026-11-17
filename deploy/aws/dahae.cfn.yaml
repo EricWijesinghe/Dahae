@@ -254,6 +254,8 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
                 token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubRepo}:environment:${GitHubEnvironment}"
+                # Only deploy-aws.yml on master may use this role: a branch cannot edit the workflow and reach the server.
+                token.actions.githubusercontent.com:job_workflow_ref: !Sub "${GitHubRepo}/.github/workflows/deploy-aws.yml@refs/heads/master"
       Policies:
         - PolicyName: deploy-to-this-server
           PolicyDocument:
