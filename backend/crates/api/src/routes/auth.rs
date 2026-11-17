@@ -121,7 +121,7 @@ async fn request_otp(
         return Err(ApiError::RateLimited);
     }
     // Store-review demo number: the owner's fixed code, no SMS (reviewers are abroad).
-    let review = super::setup::review_code_hash(&s.db, &phone).await?;
+    let review = super::setup::review_code_for_request(&s.db, &phone).await?;
     let code = auth::otp_code();
     let code_hash = review.clone().unwrap_or_else(|| auth::otp_hash(s.config.otp_key(), &phone, &code));
     sqlx::query("INSERT INTO otp_codes (phone, code_hash, expires_at) VALUES ($1, $2, $3)")
@@ -201,7 +201,12 @@ async fn verify_otp(
     let keys = lockout::keys("otp", lockout::ip_of(&s, peer, &headers), &phone);
     s.lockout.delay(&keys).await?;
     s.lockout.check(&keys).await?;
-    match consume_otp(&s, &phone, &req.code).await {
+    // The store-review fixed code signs in only the review customer account, never a partner or member on that number.
+    let checked = match burn_code(&s, &phone, &req.code).await {
+        Ok(true) if req.audience != Audience::Customer => Err(ApiError::BadRequest("otp_invalid")),
+        other => other.map(|_| ()),
+    };
+    match checked {
         Ok(()) => s.lockout.success(&keys).await?,
         Err(e @ ApiError::BadRequest(_)) => {
             if s.lockout.failure(&keys).await? {
@@ -317,8 +322,17 @@ pub struct PhoneBind {
     pub code: String,
 }
 
-/// Checks a login code and burns it: attempts are counted before comparing, and a code works once.
+/// Checks a login code and burns it, for binding a phone: the store-review fixed code proves nothing about who holds the number.
 pub async fn consume_otp(s: &AppState, phone: &str, code: &str) -> ApiResult<()> {
+    if burn_code(s, phone, code).await? {
+        return Err(ApiError::BadRequest("otp_invalid"));
+    }
+    Ok(())
+}
+
+/// Checks a login code and burns it: attempts are counted before comparing, and a code works once.
+/// Returns whether it was the store-review fixed code.
+async fn burn_code(s: &AppState, phone: &str, code: &str) -> ApiResult<bool> {
     // Count the attempt *before* comparing, atomically: parallel guesses can't share one budget.
     let row: Option<String> = sqlx::query_scalar(
         "UPDATE otp_codes SET attempts = attempts + 1
@@ -348,8 +362,7 @@ pub async fn consume_otp(s: &AppState, phone: &str, code: &str) -> ApiResult<()>
     if consumed.rows_affected() == 0 {
         return Err(ApiError::BadRequest("otp_expired"));
     }
-
-    Ok(())
+    Ok(super::setup::is_review_code(&s.db, phone, &stored).await?)
 }
 
 #[derive(Deserialize)]

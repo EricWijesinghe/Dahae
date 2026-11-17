@@ -524,3 +524,49 @@ async fn env_webhook_secret_shows_as_set_on_the_saved_portone_card(pool: PgPool)
     assert_eq!(field["set"], true, "{card}");
     assert!(!card.to_string().contains("whsec_ZW52"), "the env secret is never shown");
 }
+
+/// One verify call on the review number with the fixed code.
+async fn verify_fixed(app: &axum::Router, phone: &str, audience: &str) -> (StatusCode, Value) {
+    let body = json!({"phone": phone, "code": "123456", "audience": audience, "consents": common::required_consents()});
+    call(app, "POST", "/v1/auth/verify", None, Some(body)).await
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn review_code_signs_in_only_the_review_customer_never_a_later_account(pool: PgPool) {
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
+    let app = common::app(pool.clone());
+    create_owner(&app, "ABCD2345EFGH").await;
+    let (t, secret) = owner_session(&app, &pool).await;
+    let phone = "010-9999-0002";
+    let (st, b) = put_review(&app, &pool, &t, &secret, json!({"phone": phone, "code": "123456"})).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let clear_codes = || async { sqlx::query("DELETE FROM otp_codes").execute(&pool).await.expect("clear") };
+
+    call(&app, "POST", "/v1/auth/otp", None, Some(json!({"phone": phone}))).await;
+    let (st, b) = verify_fixed(&app, phone, "customer").await;
+    assert_eq!(st, StatusCode::OK, "the review customer signs in: {b}");
+
+    call(&app, "POST", "/v1/auth/otp", None, Some(json!({"phone": phone}))).await;
+    let (st, b) = verify_fixed(&app, phone, "partner").await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "the fixed code opens no partner account: {b}");
+    clear_codes().await;
+
+    // A team member added on the number after the review login was set, while a fixed code is outstanding.
+    call(&app, "POST", "/v1/auth/otp", None, Some(json!({"phone": phone}))).await;
+    let (_, pro) = common::verified_pro(&app, &pool, "010-5000-0911").await;
+    sqlx::query("INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1, 'Member', '01099990002', 'member', 'active')")
+        .bind(pro)
+        .execute(&pool)
+        .await
+        .expect("member");
+    let (st, b) = verify_fixed(&app, phone, "partner").await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "the fixed code never signs in the new member: {b}");
+    clear_codes().await;
+
+    // From now on the number gets a real code, like any other.
+    let (st, sent) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({"phone": phone}))).await;
+    assert_eq!(st, StatusCode::OK, "{sent}");
+    assert!(sent["dev_code"].is_string(), "a real holder gets a real code: {sent}");
+    let (st, b) = verify_fixed(&app, phone, "partner").await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "{b}");
+}
