@@ -89,7 +89,7 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "kr.co.dahae" "\0"
+            VALUE "CompanyName", "Dahae" "\0"
             VALUE "FileDescription", "다해" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "customer" "\0"
