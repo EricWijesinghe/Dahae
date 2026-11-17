@@ -1,6 +1,6 @@
 # 보안과 개인정보 / Security and privacy model
 
-Status: describes the code on branch `docs/industry-docs` (the current develop line) as read on 2026-11-16. Every claim links to the file that implements it. Where the code and a product statement disagree, the disagreement is listed in [Known gaps](#known-gaps-and-open-items) instead of being smoothed over.
+Status: describes the code on `master` (the current line) as read on 2026-11-16. Every claim links to the file that implements it. Where the code and a product statement disagree, the disagreement is listed in [Known gaps](#known-gaps-and-open-items) instead of being smoothed over.
 
 Related: [root SECURITY.md](../SECURITY.md) (how to report a vulnerability), [privacy-retention.md](privacy-retention.md) (retention and deletion tables), [store/data-safety.md](store/data-safety.md), [store/app-privacy.md](store/app-privacy.md), [website/privacy.html](../website/privacy.html) (customer-facing notice).
 

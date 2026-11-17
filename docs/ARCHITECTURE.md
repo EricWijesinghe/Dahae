@@ -491,14 +491,14 @@ Build rules: web builds use `--wasm --no-web-resources-cdn` and `flutter pub get
 
 ### 5.3 The NTD redesign branch (`feat/ntd-redesign`)
 
-Being merged. Read from that branch; the files are not on develop yet, so the paths below are not links.
+Being merged. Read from that branch; the files are not on master yet, so the paths below are not links.
 
 - **Home groups.** Four service groups: `moving`, `living`, `appliance`, `disinfection`, each with a chooser (`move`, `list` or `direct`). Public `GET /v1/service-groups` lists the active groups and their members; owner `GET` and `PUT /v1/admin/service-groups/{code}` read and edit them; the PUT writes an audit row. The `move` chooser's config maps a new build to `move_in`, an older one to `move_out`, and lists the allowed home types. Studio is left out of the home list (`content.hidden_from_home`) but stays in the catalogue for existing bookings. The tile badge is HOT over N (`derive_badge`). The customer app falls back to built-in groups when the list is empty or unreadable. Files: `backend/crates/domain/src/service_group.rs`, `backend/crates/api/src/routes/service_groups.rs`, migrations `0234_service_groups.sql` and `0236_counts_service_groups.sql`. Customer side: `app/apps/customer/lib/screens/service_groups.dart`, `app/packages/core/lib/src/service_groups.dart`.
 - **Counts pricing.** A `Counts` pricing type: one count per option, a per-option cap (`max_each`, default 20), a multi-item discount in basis points that applies from two items, and a 60-minute minimum. Booking column `unit_counts` (migration `0230`); catalogue prices and counts for subscriptions and mattress in `0231` to `0233`. Files: `backend/crates/domain/src/catalog.rs`, `backend/crates/domain/src/pricing.rs` (`price_booking_with`), `app/apps/customer/lib/screens/service_counts.dart`.
 - **Move-in and move-out quote.** Layout and cleaning type drive an estimate (`POST /v1/quote/estimate`, `backend/crates/domain/src/quote.rs`). The home type is stored with the quote answers (`HomeType`). The chooser is `move_chooser.dart`; the estimate is shown before the booking step. Pyeong ranges per layout are a stated shortcut (`quote_size_note.dart`), not yet confirmed by the owner.
 - **Owner console.** The catalogue's service groups tab edits the four groups (`catalog_groups.dart`), and the counts dialog edits counts pricing (`catalog_counts.dart`). The booking detail shows the counts line (`booking_labels.dart`).
 - **Partner app.** The job list and job detail show counts from `unit_counts` (`app/apps/partner/lib/job_labels.dart`). Older aircon jobs without `unit_counts` read the old answers (a stated shortcut in that file).
-- **Peak surcharge on fixed and subscription visits** (CHANGELOG Unreleased, `apply_to_fixed`, default off) is on the develop branch already.
+- **Peak surcharge on fixed and subscription visits** (CHANGELOG Unreleased, `apply_to_fixed`, default off) is on master already.
 
 ---
 
@@ -596,7 +596,7 @@ Each item is stated as the code and documents state it, with the owner-facing ac
 | 10 | Partner training gate is off by default: partners have no way yet to publish or complete training | CHANGELOG Unreleased | Owner setting, off |
 | 11 | Point-in-time recovery needs `WAL_ARCHIVE_MODE` and an S3 bucket; the restore step is not in the setup wizard | [`deploy/wal`](../deploy/wal), CHANGELOG Unreleased | Optional, engineer path |
 | 12 | Android store build is still signed locally; the release workflow does not do it yet | [`release.yml`](../.github/workflows/release.yml) header | Open |
-| 13 | NTD branch: its migrations (`0230` to `0237`) sort below migrations already on develop (`0240` to `0375`). Confirm the migrator applies out-of-order versions on a database that has already run `0375` before merging | `feat/ntd-redesign` `backend/migrations/` | Check before merge |
+| 13 | NTD branch: its migrations (`0230` to `0237`) sort below migrations already on master (`0240` to `0375`). Confirm the migrator applies out-of-order versions on a database that has already run `0375` before merging | `feat/ntd-redesign` `backend/migrations/` | Check before merge |
 | 14 | Consent policy version is `2026-11-17`, matching the policy texts' 시행일 ([`privacy.rs`](../backend/crates/api/src/privacy.rs) `CONSENT_VERSION`). Bump it with any text change | [`privacy.rs`](../backend/crates/api/src/privacy.rs) | Done |
 
 ---

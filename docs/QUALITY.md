@@ -63,7 +63,7 @@ Load testing is a separate tool, [`scripts/load/loadtest.py`](../scripts/load/lo
 
 ## Test inventory
 
-Counts at this revision (`master`/`develop` tree in this worktree, branch `docs/industry-docs`).
+Counts at this revision (`master` tree).
 
 | Suite | Count | Where |
 |---|---|---|

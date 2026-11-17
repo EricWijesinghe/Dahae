@@ -23,8 +23,8 @@
 |---|---|---|
 | AWS 계정 (결제 수단 등록 완료) | DODA | 회사 이름으로 만드세요 |
 | IAM 사용자 1명 (담당 계정) | DODA 가 만들어요 (개발자에게 보내지 않아요 (배포는 GitHub 로 해요)) | 아래 A 단계 |
-| 도메인 (예: `app.example.co.kr`) | DODA | 고객이 들어갈 주소 |
-| 도메인 DNS 관리 권한 또는 Route 53 호스팅 영역 | DODA | 있으면 자동 연결, 없으면 A 레코드 한 줄 |
+| 도메인 (예: `app.example.co.kr`) | 개발자 (Cloudflare 계정으로 구매) | 고객이 들어갈 주소. DODA 와 정해요 |
+| 도메인 DNS (A 레코드) | 개발자 (Cloudflare) | Route 53 을 쓰면 자동 연결, 아니면 A 레코드 한 줄 (Cloudflare 는 회색 구름) |
 | GitHub 저장소 `EricWijesinghe/Dahae` | 개발자 | 개발자가 관리해요. DODA 가 배포 승인자를 원하면 그 사람도 이 저장소 접근 권한이 있어야 해요 |
 | 인증 앱 (Google Authenticator 등) | 사장님 | 사장님 계정 로그인과 승인 코드에 써요 |
 | 비밀번호 관리 앱 | DODA | 계정 정보는 채팅에 쓰지 마세요 |
@@ -163,7 +163,7 @@ sudo dahae setup-code
 
 1. 개발자가 안정 버전 태그
 2. **deploy-aws** 작업이 자동으로 시작해요. `doda-aws` 환경에 승인자가 있으면 승인을 기다리고 (없으면 바로 배포돼요)
-3. 승인자가 **Review deployments > doda-aws > Approve and deploy** 를 누르면 서버에서 `dahae update v1.5.0` 이 실행됩니다.
+3. 승인자가 **Review deployments > doda-aws > Approve and deploy** 를 누르면 서버에서 `dahae update v1.5.1` 이 실행됩니다.
 4. 서버는 백업을 먼저 하고, 새 버전을 받고, 응답을 확인합니다. 새 버전이 응답하지 않으면 **이전 버전으로 자동으로 되돌립니다.**
 5. 마지막으로 `https://<도메인>/health` 와 서버가 보고하는 버전을 확인합니다. 모두 통과하면 작업이 초록색이 됩니다.
 

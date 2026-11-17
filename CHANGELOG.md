@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 (see [docs/DEPLOY.md](docs/DEPLOY.md#2-releases-and-channels)). Entries up to 1.4.0 were reconstructed
 from the release branches; no tags existed for them.
 
+## [Unreleased]
+
+### Changed
+- Store app builds run on GitHub Actions (`store-apps`, manual: Android AAB on Linux, iOS IPA on macOS) instead of Codemagic; `codemagic.yaml` is removed. Setup: [guide 11](docs/guide/11-앱-직접-빌드.md).
+
 ## [1.5.1] - 2026-11-17
 
 First published 1.5 release. The `v1.5.0` tag on the same code was never released (the release run stopped on a shell lint warning, fixed here); it contains everything below.

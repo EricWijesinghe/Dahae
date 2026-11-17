@@ -356,7 +356,7 @@ flowchart LR
 
 ## 최근 반영 중인 고객 화면 (feat/ntd-redesign)
 
-아래 항목은 `feat/ntd-redesign` 브랜치에서 병합 중인 작업이에요. 위 17번 표의 해당 행이 이 작업을 설명해요. 이 문서가 있는 develop 브랜치에는 아직 없어서 **상대 링크를 걸지 않았어요**. 병합 후 경로를 다시 확인하세요.
+아래 항목은 `feat/ntd-redesign` 브랜치에서 병합 중인 작업이에요. 위 17번 표의 해당 행이 이 작업을 설명해요. 이 문서가 있는 master 브랜치에는 아직 없어서 **상대 링크를 걸지 않았어요**. 병합 후 경로를 다시 확인하세요.
 
 | 기능 | 한 줄 설명 | 파일 (브랜치 기준) |
 |---|---|---|
@@ -733,7 +733,7 @@ Every key is entered in the console wizard. Values are encrypted with AES-GCM in
 
 ## Customer flow changes in review (feat/ntd-redesign)
 
-These are being merged from the `feat/ntd-redesign` branch. The develop branch does not contain the new files yet, so the paths in the table are plain code, **not relative links**. Re-check the paths after the merge.
+These are being merged from the `feat/ntd-redesign` branch. The master branch does not contain the new files yet, so the paths in the table are plain code, **not relative links**. Re-check the paths after the merge.
 
 | Capability | One line | File (on the branch) |
 |---|---|---|

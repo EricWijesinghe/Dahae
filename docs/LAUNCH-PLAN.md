@@ -103,7 +103,7 @@ DODA 는 빌드, 서명, 배포 같은 기술 작업을 하지 않아요. 아래
 | Apple Developer Program (조직) | 조직 가입, D-U-N-S, 계약 동의, 개발자 Apple ID 를 Admin 으로 초대 | 개발자는 D-2 비자라 사업자 계정을 소유할 수 없어요 |
 | Google Play Console (조직) | 조직 가입, 개발자 Google 계정을 관리자로 초대 | 같은 이유 |
 | AWS 계정 | 계정 개설 (결제 수단 등록), 배포용 IAM 사용자 1명 (정책만, MFA) | 서버 비용과 데이터가 DODA 명의에 있어요 |
-| 도메인 | 고객 주소로 쓸 도메인 정하기 | 고객이 들어갈 주소예요. 등록은 개발자의 Cloudflare 계정으로 해도 돼요 |
+| 도메인 | 고객 주소로 쓸 도메인 정하기 | 고객이 들어갈 주소예요. 등록은 개발자의 Cloudflare 계정으로 해요 |
 | 결제 (PortOne, PG, 토스 지급대행) 계약 | 계약, 키를 콘솔 설정 마법사에 입력 (또는 개발자가 접근 권한으로 입력) | 정산 명의는 DODA 예요 |
 | 문자 (Solapi) 발신번호와 계정 | 계정과 발신번호 등록, 키 입력 | 발신번호는 사업자 명의가 필요해요 |
 | 카카오 비즈니스 채널 (알림톡), 카카오·네이버·구글 개발자 앱 | 등록, 키 발급 권한 | 사업자 명의 등록이 필요한 곳이 있어요 |
@@ -199,7 +199,7 @@ DODA does no build, signing or deployment work. It creates the accounts and cont
 | Apple Developer Program (organization) | Enroll, D-U-N-S, agreements, invite the developer's Apple ID as Admin | The developer cannot own business accounts (D-2 visa) |
 | Google Play Console (organization) | Register, invite the developer's Google account as administrator | Same reason |
 | AWS account | Open it with a payment method; create one deployer IAM user (policy only, MFA) | Server cost and data stay in DODA's name |
-| Domain | Choose the customer-facing domain. Registration may go through the developer's Cloudflare account | It is the customer address |
+| Domain | Choose the customer-facing domain. Registration is through the developer's Cloudflare account | It is the customer address |
 | Payments (PortOne, PG, Toss payout) contracts | Sign the contracts; keys entered in the setup wizard by DODA or the developer with access | Settlement is in DODA's name |
 | Solapi SMS account and sender number | Register the account and sender number; enter keys | Sender numbers need a business registration |
 | Kakao business channel, Kakao, Naver and Google developer apps | Register; issue keys | Some need business registration |

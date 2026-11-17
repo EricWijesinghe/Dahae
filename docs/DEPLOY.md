@@ -22,7 +22,7 @@ requests that touch the installer or the server build; `ci.yml` runs on every pu
 
 ## 1. One-time setup (developer)
 
-1. Private repo: `gh repo create malkkeum --private --source . --push`
+1. Source repo `EricWijesinghe/Dahae` is public (proprietary licence) and already exists; push `master` only.
 2. Public delivery repo: `gh repo create malkkeum-install --public --add-readme`; make sure it has a
    `main` branch (the default branch of the new repo).
 3. Deploy key: `ssh-keygen -t ed25519 -N '' -f malkkeum-dist` → add `malkkeum-dist.pub` to
@@ -40,14 +40,13 @@ requests that touch the installer or the server build; `ci.yml` runs on every pu
    Images contain compiled binaries and minified web assets only.
 6. Check from a logged-out machine (`docker logout ghcr.io` first):
    `docker pull ghcr.io/<owner>/malkkeum-api:stable` and `…/malkkeum-web:stable`.
-7. **Release environments (private repo, before the first tag; GitHub makes a missing environment with no
+7. **Release environments (before the first tag; GitHub makes a missing environment with no
    rules, so a release would run unprotected).** Settings → Environments, create each one with
    *Required reviewers* (the owner) and *Deployment branches and tags* → *Selected* → tag `v*`:
    - `release-cosign`: the image push and signing job. No secrets.
    - `release-delivery`: the publish job. Move `DIST_DEPLOY_KEY` and `DAHAE_MANIFEST_KEY` here (remove the
      repo-level copies). Keep `DIST_REPO` as a repository variable.
-   Check: a `v*` tag run waits at both jobs for approval. The Android store build has no such environment yet
-   (`scripts/release/build-all.ps1`, deferred).
+   Check: a `v*` tag run waits at both jobs for approval. The store builds run in environment `store` (§3) and `deploy-aws` in `doda-aws` (guide 10 C-1).
 
 Send the client the delivery repo link. Guides 00 (one page) and 01 contain the exact install line
 (`https://raw.githubusercontent.com/<owner>/malkkeum-install/main/install.sh`, the stable channel's
@@ -205,7 +204,7 @@ run, GitHub-hosted runners incl. macOS, free for public repos). The apps are upl
    the first iOS build appears in App Store Connect after the first `store-apps` run with `upload` on.
    Firebase: the client's Firebase apps must use the same ids (Android package `kr.co.dahae.customer` / `kr.co.dahae.partner`,
    iOS bundle ids). The google-services plugin fails the build when `google-services.json` has no client for the applicationId.
-5. Store listing text: `docs/store/listing-{ko,en,ja,zh,vi}.md` (check lengths with
+5. Store listing text: `docs/store/listing-{ko,en}.md` (check lengths with
    `python -I docs/store/check_listings.py`); data safety: `docs/store/data-safety.md` (Google) and
    `docs/store/app-privacy.md` (Apple); demo login from the client's console (guide 03 D).
 6. Store images are generated, not hand-made: `scripts/store/generate.sh` renders both apps at the store
