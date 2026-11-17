@@ -212,7 +212,8 @@ pub async fn put_consents(
 }
 
 /// 열람 요구: everything the service holds about the customer, without credentials, gateway keys or other customers' data.
-/// Shared by the customer's own download and by staff handling a request for that customer.
+/// Shared by the customer's own download and by staff handling a request for that customer. Every section is scoped to
+/// `$1` directly or through the customer's own bookings, checkouts or chat threads; replies keep no staff identity.
 pub async fn export_doc(db: &PgPool, user: Uuid) -> ApiResult<Value> {
     let doc: Value = sqlx::query_scalar(
         "SELECT jsonb_build_object(
@@ -233,7 +234,13 @@ pub async fn export_doc(db: &PgPool, user: Uuid) -> ApiResult<Value> {
           'tips', (SELECT COALESCE(jsonb_agg(jsonb_build_object('booking_id', t.booking_id, 'amount', t.amount, 'created_at', t.created_at) ORDER BY t.created_at), '[]'::jsonb) FROM booking_tips t WHERE t.user_id = $1),
           'cash_receipts', (SELECT COALESCE(jsonb_agg(jsonb_build_object('purpose', c.purpose, 'identity_type', c.identity_type, 'identity_last4', c.identity_last4, 'state', c.state, 'issue_number', c.issue_number, 'receipt_url', c.receipt_url, 'created_at', c.created_at) ORDER BY c.created_at), '[]'::jsonb) FROM cash_receipts c JOIN checkouts k ON k.id = c.checkout_id WHERE k.user_id = $1),
           'tax_invoice_requests', (SELECT COALESCE(jsonb_agg(jsonb_build_object('business_number', t.business_number, 'company_name', t.company_name, 'representative', t.representative, 'business_type', t.business_type, 'business_item', t.business_item, 'address', t.address, 'email', t.email, 'state', t.state, 'issued_on', t.issued_on, 'created_at', t.created_at) ORDER BY t.created_at), '[]'::jsonb) FROM tax_invoice_requests t JOIN checkouts k ON k.id = t.checkout_id WHERE k.user_id = $1),
-          'referrals', (SELECT COALESCE(jsonb_agg(jsonb_build_object('role', r.role, 'state', r.state, 'created_at', r.created_at, 'rewarded_at', r.rewarded_at) ORDER BY r.created_at), '[]'::jsonb) FROM (SELECT 'referrer' AS role, state, created_at, rewarded_at FROM referrals WHERE referrer_id = $1 UNION ALL SELECT 'referred', state, created_at, rewarded_at FROM referrals WHERE referred_user_id = $1) r)
+          'referrals', (SELECT COALESCE(jsonb_agg(jsonb_build_object('role', r.role, 'state', r.state, 'created_at', r.created_at, 'rewarded_at', r.rewarded_at) ORDER BY r.created_at), '[]'::jsonb) FROM (SELECT 'referrer' AS role, state, created_at, rewarded_at FROM referrals WHERE referrer_id = $1 UNION ALL SELECT 'referred', state, created_at, rewarded_at FROM referrals WHERE referred_user_id = $1) r),
+          'checkouts', (SELECT COALESCE(jsonb_agg(jsonb_build_object('kind', k.kind, 'booking', (SELECT b.number FROM bookings b WHERE b.id = k.booking_id), 'method', k.method, 'amount', k.amount, 'points', k.points, 'status', k.status, 'refund_reason', k.refund_reason, 'created_at', k.created_at) ORDER BY k.created_at), '[]'::jsonb) FROM checkouts k WHERE k.user_id = $1),
+          'payments', (SELECT COALESCE(jsonb_agg(jsonb_build_object('booking', b.number, 'kind', p.kind, 'amount', p.amount, 'status', p.status, 'refunded_amount', p.refunded_amount, 'provider', p.provider, 'created_at', p.created_at) ORDER BY p.created_at), '[]'::jsonb) FROM payments p JOIN bookings b ON b.id = p.booking_id WHERE b.user_id = $1),
+          'refunds', (SELECT COALESCE(jsonb_agg(jsonb_build_object('amount', r.amount, 'requested_at', r.created_at, 'done_at', r.done_at) ORDER BY r.created_at), '[]'::jsonb) FROM refund_queue r JOIN checkouts k ON k.id = r.checkout_id WHERE k.user_id = $1),
+          'reports', (SELECT COALESCE(jsonb_agg(jsonb_build_object('kind', c.kind, 'booking', (SELECT b.number FROM bookings b WHERE b.id = c.booking_id), 'summary', c.summary, 'photos', c.photos, 'status', c.status, 'created_at', c.created_at, 'resolved_at', c.resolved_at) ORDER BY c.created_at), '[]'::jsonb) FROM cases c WHERE c.reporter_role = 'customer' AND c.reporter_id = $1),
+          'marketing_sends', (SELECT COALESCE(jsonb_agg(jsonb_build_object('campaign', (SELECT g.name FROM campaigns g WHERE g.id = m.campaign_id), 'channel', m.channel, 'status', m.status, 'created_at', m.created_at) ORDER BY m.created_at), '[]'::jsonb) FROM marketing_sends m WHERE m.user_id = $1),
+          'chat_replies', (SELECT COALESCE(jsonb_agg(jsonb_build_object('thread_id', m.thread_id, 'sender', m.sender, 'kind', m.kind, 'body', m.body, 'created_at', m.created_at) ORDER BY m.created_at), '[]'::jsonb) FROM chat_messages m JOIN chat_threads t ON t.id = m.thread_id WHERE t.audience = 'customer' AND t.user_id = $1 AND m.sender <> 'customer')
         )",
     )
     .bind(user)

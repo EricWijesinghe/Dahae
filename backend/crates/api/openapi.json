@@ -1029,7 +1029,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "Download the customer's personal data (JSON)",
+        "summary": "Download the customer's personal data (JSON): profile, consents, addresses, bookings, checkouts, payments, refunds, reports, marketing sends, chat messages and replies, and more",
         "responses": {
           "200": {
             "description": "OK"
