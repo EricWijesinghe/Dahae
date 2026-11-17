@@ -497,6 +497,7 @@ t  "the next run starts the other"        eq "$(argv_lines)" $((before + 2))
 t  "...and both end ok"                   eq "$(state "$a")$(state "$b")" okok
 
 # ---- time limits: every job that backs up the photos first gets the long limit (last: update-tag writes history) ----
+# shellcheck disable=SC2034 # JOB_ARG is read by dispatch in the sourced agent
 limit_of() { JOB_KIND=$1; JOB_ARG=${2:-}; dispatch >/dev/null 2>&1; tail -n1 "$SB/timeout.log"; }
 for k in update backup-now rollback; do t "$k gets the long limit" eq "$(limit_of "$k")" "$UPDATE_RUN_TIMEOUT"; done
 t  "channel gets the long limit"          eq "$(limit_of channel beta)" "$UPDATE_RUN_TIMEOUT"
