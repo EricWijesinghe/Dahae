@@ -587,6 +587,9 @@ update_then_term() { # update_then_term during|after : TERM while waiting for he
 }
 t  "update stopped before health check rolls back" eq "$(update_then_term during)" "old old"
 t  "finished update keeps the new images"   eq "$(update_then_term after)" "repo/api:new repo/web:new"
+# the stack was down with no images in .env: a stop during the health check must not write empty images
+update_then_term_unknown() { local keep; keep=$(cat .env); : > .env; update_then_term during; printf '%s' "$keep" > .env; }
+t  "stop with no previous images leaves .env alone" eq "$(update_then_term_unknown)" "repo/api:new repo/web:new"
 backup_warn_after() { ( api_backup() { case "$*" in backup-seal*) [ -f "${2#/}" ] && printf 'MKB1' > "${3#/}"; return 0 ;; *"backup-upload /backups/uploads-"*) return 1 ;; *) return 0 ;; esac; }
   dc() { case "$1" in exec) printf 'dump' ;; run) printf 'tar' ;; esac; return 0; }
   cmd_backup >/dev/null 2>&1; printf '%s' "$BACKUP_WARN" ); }

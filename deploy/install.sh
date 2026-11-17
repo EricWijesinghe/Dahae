@@ -767,8 +767,13 @@ cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔
     env_set PREV_API_IMAGE "$cur_api"; env_set PREV_WEB_IMAGE "$cur_web"
   fi
   # 새 버전을 띄운 뒤 응답 확인 전에 끊기면(시간 제한·서버 종료) 확인 안 된 새 버전이 남지 않게 이전 버전으로 되돌려요
-  # shellcheck disable=SC2064 # 지금의 이전 버전 값을 넣어 둬요
-  trap "set_images $(printf '%q %q' "$cur_api" "$cur_web") >/dev/null 2>&1; exit 143" TERM INT HUP
+  # 이전 이미지를 모르면(앱이 멈춰 있고 .env 에도 없음) .env 를 비우지 않게 되돌리지 않고 멈추기만 해요
+  if [ -n "$cur_api" ] && [ -n "$cur_web" ]; then
+    # shellcheck disable=SC2064 # 지금의 이전 버전 값을 넣어 둬요
+    trap "set_images $(printf '%q %q' "$cur_api" "$cur_web") >/dev/null 2>&1; exit 143" TERM INT HUP
+  else
+    trap "exit 143" TERM INT HUP
+  fi
   set_images "$NEW_API" "$NEW_WEB"
   if wait_healthy; then
     trap - TERM INT HUP
