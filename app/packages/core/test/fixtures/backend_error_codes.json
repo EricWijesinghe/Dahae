@@ -173,6 +173,7 @@
     "out_of_range",
     "payment_not_found",
     "pro_completes_job",
+    "phone_in_use",
     "provider_not_configured",
     "quote_not_sent",
     "quote_override_required",

@@ -46,7 +46,69 @@ Future<void> _openAccount(WidgetTester tester) async {
   await settle(tester);
 }
 
+/// After a policy version bump: the required grants are for the old text, so none counts.
+Map<String, Object?> _staleConsents() => {
+  'version': _version,
+  'reconsent_required': true,
+  'items': [
+    for (final kind in ['terms', 'privacy'])
+      {'kind': kind, 'required': true, 'granted': false, 'granted_at': null},
+    {
+      'kind': 'overseas_transfer',
+      'required': false,
+      'granted': false,
+      'granted_at': null,
+    },
+    {
+      'kind': 'marketing',
+      'required': false,
+      'granted': false,
+      'granted_at': null,
+    },
+  ],
+};
+
 void main() {
+  testWidgets(
+    'after a policy change the consent screen opens on start and the required items can be ticked again',
+    (tester) async {
+      setViewport(tester, phoneSize);
+      final fake = FakeApi();
+      stockCustomerApi(fake);
+      fake.reply('GET', '/me/consents', _staleConsents());
+      fake.reply('PUT', '/me/consents', _consents());
+      final env = await TestEnv.create(fake: fake);
+      await pumpCustomerApp(tester, env);
+      await pumpUntilFound(tester, find.text(koT.pvReconsent));
+
+      for (final kind in ['terms', 'privacy', 'overseas_transfer']) {
+        await tester.tap(find.byKey(ValueKey('consent-$kind')));
+        await settle(tester);
+      }
+      await tester.tap(find.text(koT.save));
+      await settle(tester);
+
+      final body = fake.lastCall('PUT', '/me/consents')!.json;
+      final sent = (body['consents'] as List).cast<Map<String, dynamic>>();
+      for (final kind in ['terms', 'privacy', 'overseas_transfer']) {
+        expect(sent.firstWhere((c) => c['kind'] == kind), {
+          'kind': kind,
+          'granted': true,
+          'version': _version,
+        });
+      }
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.byKey(const ValueKey('consent-terms')),
+            )
+            .onChanged,
+        isNull,
+        reason: 'once granted at the current version it locks again',
+      );
+    },
+  );
+
   testWidgets(
     'marketing can be granted and saved with the policy version; required consents stay on',
     (tester) async {

@@ -287,10 +287,8 @@ async fn redeem(State(s): State<AppState>, Json(req): Json<RedeemInput>) -> ApiR
     if burned.rows_affected() == 0 || updated.is_none() {
         return Err(ApiError::BadRequest("code_invalid"));
     }
-    sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1 AND revoked_at IS NULL")
-        .bind(staff)
-        .execute(&mut *tx)
-        .await?;
+    // Access tokens and sockets end too, not only refresh tokens: a reset after a compromise must cut the attacker off.
+    owner::end_sessions_tx(&mut tx, staff).await?;
     tx.commit().await?;
     audit(
         &s.db,

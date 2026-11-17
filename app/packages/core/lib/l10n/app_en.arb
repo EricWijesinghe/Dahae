@@ -2031,6 +2031,7 @@
  "cReviewCode": "Fixed sign-in code (6 digits)",
  "cReviewActiveUntil": "Active until {date}",
  "cReviewEnable": "Turn on (14 days)",
+ "cReviewPhoneInUse": "A customer, partner or staff member already uses this number. Enter a number nobody uses.",
  "pDeleteAccountBody": "Your team and personal data will be erased. This can't be undone. Finish assigned jobs and pending payouts first.",
  "err_has_active_jobs": "You still have assigned jobs. Finish them or ask support to reassign.",
  "err_pending_payouts": "A payout is still pending. You can delete the account after it is paid.",

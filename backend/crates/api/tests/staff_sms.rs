@@ -81,6 +81,9 @@ async fn reset_code_sets_new_password_once_and_signs_out_everywhere(db: PgPool) 
 
     let (_, before) = login(&app, "consultant-reset@test.local", OLD).await;
     let refresh = before["refresh_token"].as_str().unwrap().to_string();
+    let access = before["access_token"].as_str().unwrap().to_string();
+    let (st, _) = call(&app, "POST", "/v1/realtime/ticket", Some(access.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "the session works before the reset");
     enrolled(&db, target).await;
 
     let (st, b) = reset_code(&app, &admin_tok, target).await;
@@ -97,6 +100,8 @@ async fn reset_code_sets_new_password_once_and_signs_out_everywhere(db: PgPool) 
     assert_eq!(login(&app, "consultant-reset@test.local", NEW).await.0, StatusCode::OK, "new password works");
     let (st, _) = call(&app, "POST", "/v1/auth/refresh", None, Some(json!({ "refresh_token": refresh }))).await;
     assert_eq!(st, StatusCode::UNAUTHORIZED, "existing sessions are revoked");
+    let (st, _) = call(&app, "POST", "/v1/realtime/ticket", Some(access.as_str()), None).await;
+    assert_eq!(st, StatusCode::UNAUTHORIZED, "the old access token is dead at once, not after its 15 minutes");
 
     let (st, b) = redeem(&app, PHONE, &code, "another-staff-password-3").await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "a code works once: {b}");

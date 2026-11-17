@@ -15,6 +15,7 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
+use domain::redact::mask_digit_runs;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::PgPool;
@@ -60,50 +61,19 @@ pub struct Row {
     stack: String,
 }
 
-/// Blanks out e-mail addresses and phone-like digit runs (9+ digits, dashes allowed). Hex words (a
-/// release stack trace's addresses, which `flutter symbolize` needs) are kept. Lines and spacing are
-/// kept. Addresses (street names) cannot be detected reliably: the apps must not send them.
+/// Blanks out e-mail addresses and phone-like digit runs (9+ digits, groups joined by a space, dash, dot or
+/// parens, full-width digits too). Unseparated hex words (a release stack trace's addresses, which
+/// `flutter symbolize` needs) are kept. Lines and spacing are kept. Addresses (street names) cannot be
+/// detected reliably: the apps must not send them.
 pub fn scrub(text: &str) -> String {
-    text.split('\n').map(scrub_line).collect::<Vec<_>>().join("\n")
-}
-
-/// One line: consecutive digit groups (dashes allowed inside a group) are one number when they add up to 9+
-/// digits ("010 1234 5678", "010-1234 5678").
-fn scrub_line(line: &str) -> String {
-    let tokens: Vec<&str> = line.split(' ').collect();
-    let mut out: Vec<String> = Vec::with_capacity(tokens.len());
-    let mut i = 0;
-    while i < tokens.len() {
-        let mut end = i;
-        let mut digits = 0;
-        while end < tokens.len() && is_digit_group(tokens[end]) {
-            digits += tokens[end].chars().filter(char::is_ascii_digit).count();
-            end += 1;
-        }
-        if end - i > 1 && digits >= 9 {
-            out.push("[redacted]".to_string());
-            i = end;
-        } else {
-            out.push(scrub_token(tokens[i]));
-            i += 1;
-        }
-    }
-    out.join(" ")
-}
-
-fn is_digit_group(tok: &str) -> bool {
-    tok.chars().any(|c| c.is_ascii_digit()) && tok.chars().all(|c| c.is_ascii_digit() || c == '-')
-}
-
-fn scrub_token(tok: &str) -> String {
-    let digits = tok.chars().filter(char::is_ascii_digit).count();
-    let email = tok.split_once('@').is_some_and(|(local, domain)| !local.is_empty() && domain.contains('.'));
-    let hex = tok.chars().all(|c| c.is_ascii_hexdigit()) && tok.chars().any(|c| c.is_ascii_alphabetic());
-    if email || (digits >= 9 && !hex) {
-        "[redacted]".to_string()
-    } else {
-        tok.to_string()
-    }
+    let words: Vec<&str> = text
+        .split(' ')
+        .map(|w| {
+            let email = w.split_once('@').is_some_and(|(local, domain)| !local.is_empty() && domain.contains('.'));
+            if email { "[redacted]" } else { w }
+        })
+        .collect();
+    mask_digit_runs(&words.join(" "), 9, "[redacted]", true)
 }
 
 fn cap(s: &str, max: usize) -> String {
@@ -223,6 +193,17 @@ mod tests {
         assert_eq!(scrub("연락처 010-1234 5678"), "연락처 [redacted]");
         assert_eq!(scrub("연락처 010 1234-5678"), "연락처 [redacted]");
         assert_eq!(scrub("step 2 of 3"), "step 2 of 3");
+    }
+
+    #[test]
+    fn scrub_removes_phone_numbers_next_to_punctuation_particles_and_full_width_digits() {
+        assert_eq!(scrub("연락처: 010 1234 5678."), "연락처: [redacted].");
+        assert_eq!(scrub("010 1234 5678입니다"), "[redacted]입니다");
+        assert_eq!(scrub("(010) 1234-5678"), "([redacted]");
+        assert_eq!(scrub("010 1234.5678"), "[redacted]");
+        assert_eq!(scrub("０１０-１２３４-５６７８"), "[redacted]");
+        assert_eq!(scrub("번호는 ０１０１２３４５６７８ 입니다"), "번호는 [redacted] 입니다");
+        assert_eq!(scrub("retry 3 of 5 (code 42)"), "retry 3 of 5 (code 42)");
     }
 
     #[test]

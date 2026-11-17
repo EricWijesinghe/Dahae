@@ -10,7 +10,8 @@ import 'package:ui/ui.dart';
 
 import '../state.dart';
 
-/// PIPA 동의 관리: required consents are shown checked and locked on, marketing can be withdrawn at any time.
+/// PIPA 동의 관리: required consents are shown checked and locked on (tickable while not granted for the current
+/// policy version), marketing can be withdrawn at any time.
 /// Saving sends every item with the policy version the server reported, so a consent always names the text shown.
 class ConsentScreen extends StatefulWidget {
   const ConsentScreen({super.key});
@@ -112,7 +113,11 @@ class _ConsentScreenState extends State<ConsentScreen> {
                                 : t.pvOptional,
                             style: context.text.labelSmall,
                           ),
-                          onChanged: item['required'] == true
+                          // A required consent stays on once granted for the current text; after a
+                          // policy change it is unticked and must be tickable to agree again.
+                          onChanged:
+                              item['required'] == true &&
+                                  item['granted'] == true
                               ? null
                               : (v) => setState(
                                   () => _granted[item['kind'] as String] =

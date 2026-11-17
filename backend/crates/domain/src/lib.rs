@@ -22,6 +22,7 @@ pub mod points;
 pub mod pricing;
 pub mod quality;
 pub mod quote;
+pub mod redact;
 pub mod schedule;
 pub mod service_group;
 pub mod subscription;

@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -6633,6 +6632,10 @@ class TEn extends T {
 
   @override
   String get cReviewEnable => 'Turn on (14 days)';
+
+  @override
+  String get cReviewPhoneInUse =>
+      'A customer, partner or staff member already uses this number. Enter a number nobody uses.';
 
   @override
   String get pDeleteAccountBody =>

@@ -322,25 +322,12 @@ async fn review_samples_seed_two_bookings_once_and_only_while_active(pool: PgPoo
     common::seed_catalog(&pool).await;
     let app = common::app(pool.clone());
     create_owner(&app, "ABCD2345EFGH").await;
-    let t = owner_token(&app, &pool).await;
-    let (st, b) = call(
-        &app,
-        "PUT",
-        "/v1/admin/setup/review",
-        Some(t.as_str()),
-        Some(json!({"phone": "010-9999-0001", "code": "123456"})),
-    )
-    .await;
+    let (t, secret) = owner_session(&app, &pool).await;
+    let body = json!({"phone": "010-9999-0001", "code": "123456"});
+    let (st, b) = put_review(&app, &pool, &t, &secret, body.clone()).await;
     assert_eq!((st, b["samples"].as_i64()), (StatusCode::OK, Some(2)), "{b}");
-    let (_, b) = call(
-        &app,
-        "PUT",
-        "/v1/admin/setup/review",
-        Some(t.as_str()),
-        Some(json!({"phone": "010-9999-0001", "code": "123456"})),
-    )
-    .await;
-    assert_eq!(b["samples"], 0, "saving again adds no samples");
+    let (st, b) = put_review(&app, &pool, &t, &secret, body).await;
+    assert_eq!((st, b["samples"].as_i64()), (StatusCode::OK, Some(0)), "saving again adds no samples: {b}");
     let n: i64 = sqlx::query_scalar("SELECT count(*) FROM bookings").fetch_one(&pool).await.expect("count");
     assert_eq!(n, 2);
 }
@@ -350,24 +337,10 @@ async fn review_account_signs_in_with_the_owner_code_and_no_sms_code_is_echoed(p
     ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
     let app = common::app(pool.clone());
     create_owner(&app, "ABCD2345EFGH").await;
-    let t = owner_token(&app, &pool).await;
-    let (st, b) = call(
-        &app,
-        "PUT",
-        "/v1/admin/setup/review",
-        Some(t.as_str()),
-        Some(json!({"phone": "010-9999-0001", "code": "123456", "days": 7})),
-    )
-    .await;
+    let (t, secret) = owner_session(&app, &pool).await;
+    let (st, b) = put_review(&app, &pool, &t, &secret, json!({"phone": "010-9999-0001", "code": "123456", "days": 7})).await;
     assert_eq!(st, StatusCode::OK, "{b}");
-    let (st, _) = call(
-        &app,
-        "PUT",
-        "/v1/admin/setup/review",
-        Some(t.as_str()),
-        Some(json!({"phone": "010-9999-0001", "code": "12ab"})),
-    )
-    .await;
+    let (st, _) = put_review(&app, &pool, &t, &secret, json!({"phone": "010-9999-0001", "code": "12ab"})).await;
     assert_eq!(st, StatusCode::BAD_REQUEST);
 
     let (_, sent) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({"phone": "010-9999-0001"}))).await;
@@ -382,8 +355,15 @@ async fn review_account_signs_in_with_the_owner_code_and_no_sms_code_is_echoed(p
     .await;
     assert_eq!(st, StatusCode::OK, "{b}");
 
-    let (st, _) = call(&app, "DELETE", "/v1/admin/setup/review", Some(t.as_str()), None).await;
-    assert_eq!(st, StatusCode::OK);
+    let (st, b) = call(&app, "DELETE", "/v1/admin/setup/review", Some(t.as_str()), None).await;
+    assert_eq!(
+        (st, &b["error"]["code"]),
+        (StatusCode::BAD_REQUEST, &json!("totp_required")),
+        "switching off needs the owner code too: {b}"
+    );
+    let code = owner_code(&pool, &secret).await;
+    let (st, b) = common::call_owner(&app, "DELETE", "/v1/admin/setup/review", &t, Some(&code), Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
     call(&app, "POST", "/v1/auth/otp", None, Some(json!({"phone": "010-9999-0001"}))).await;
     let (st, _) = call(
         &app,
@@ -394,6 +374,49 @@ async fn review_account_signs_in_with_the_owner_code_and_no_sms_code_is_echoed(p
     )
     .await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "switched off: the fixed code no longer works");
+}
+
+/// PUT /setup/review with a fresh owner code.
+async fn put_review(app: &axum::Router, db: &PgPool, token: &str, secret: &[u8], body: Value) -> (StatusCode, Value) {
+    let code = owner_code(db, secret).await;
+    common::call_owner(app, "PUT", "/v1/admin/setup/review", token, Some(&code), body).await
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn review_login_needs_the_owner_code_and_refuses_a_phone_someone_already_holds(pool: PgPool) {
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
+    let app = common::app(pool.clone());
+    create_owner(&app, "ABCD2345EFGH").await;
+    let (t, secret) = owner_session(&app, &pool).await;
+    let free = json!({"phone": "010-9999-0001", "code": "123456"});
+    let (st, b) = call(&app, "PUT", "/v1/admin/setup/review", Some(t.as_str()), Some(free.clone())).await;
+    assert_eq!((st, &b["error"]["code"]), (StatusCode::BAD_REQUEST, &json!("totp_required")), "{b}");
+
+    common::login(&app, "010-5000-0901", "customer").await;
+    let (_, pro) = common::verified_pro(&app, &pool, "010-5000-0902").await;
+    sqlx::query("INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1, 'Member', '01050000903', 'member', 'active')")
+        .bind(pro)
+        .execute(&pool)
+        .await
+        .expect("member");
+    sqlx::query("UPDATE staff SET phone = '01050000904' WHERE email = 'owner@test.local'")
+        .execute(&pool)
+        .await
+        .expect("staff phone");
+    for phone in ["010-5000-0901", "010-5000-0902", "010-5000-0903", "010-5000-0904"] {
+        let (st, b) = put_review(&app, &pool, &t, &secret, json!({"phone": phone, "code": "123456"})).await;
+        assert_eq!((st, &b["error"]["code"]), (StatusCode::CONFLICT, &json!("phone_in_use")), "{phone}: {b}");
+    }
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM settings WHERE key = 'review_account'")
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(n, 0, "a refused phone stores no review login");
+
+    let (st, b) = put_review(&app, &pool, &t, &secret, free.clone()).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let (st, b) = put_review(&app, &pool, &t, &secret, free).await;
+    assert_eq!(st, StatusCode::OK, "the review account's own row is not a conflict: {b}");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

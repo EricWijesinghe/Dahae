@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -6448,6 +6447,10 @@ class TKo extends T {
 
   @override
   String get cReviewEnable => '켜기 (14일)';
+
+  @override
+  String get cReviewPhoneInUse =>
+      '이미 고객, 파트너 또는 직원이 쓰는 번호예요. 아무도 쓰지 않는 번호를 넣어 주세요.';
 
   @override
   String get pDeleteAccountBody =>

@@ -46,6 +46,8 @@ const REVIEW_KEY: &str = "review_account";
 /// App Review needs days, not hours; the account switches itself off after this.
 const REVIEW_MAX_DAYS: i64 = 30;
 const REVIEW_CODE_LEN: usize = 6;
+/// Name of the customer row the review login seeds.
+const REVIEW_NAME: &str = "리뷰 계정";
 /// Gangnam-gu, where the sample address sits.
 const REVIEW_DISTRICT: &str = "11680";
 
@@ -211,8 +213,9 @@ pub async fn review_code_hash(db: &PgPool, phone: &str) -> Result<Option<String>
 async fn seed_review_samples(db: &PgPool, phone: &str) -> ApiResult<usize> {
     let mut tx = db.begin().await?;
     let user: Uuid =
-        sqlx::query_scalar("INSERT INTO users (phone, name) VALUES ($1, '리뷰 계정') ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone RETURNING id")
+        sqlx::query_scalar("INSERT INTO users (phone, name) VALUES ($1, $2) ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone RETURNING id")
             .bind(phone)
+            .bind(REVIEW_NAME)
             .fetch_one(&mut *tx)
             .await?;
     let has: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM bookings WHERE user_id = $1)")
@@ -266,13 +269,41 @@ struct ReviewAccount {
     days: Option<i64>,
 }
 
-async fn put_review(State(s): State<AppState>, Admin(a): Admin, Json(r): Json<ReviewAccount>) -> ApiResult<Json<Value>> {
-    require_owner_review(&s, a.id).await?;
+/// True when a customer, pro, team member or staff member holds `phone`, other than the review account's own
+/// seeded row: pointing the fixed-code login at a real person would let reviewers sign in as them.
+async fn phone_in_use(db: &PgPool, phone: &str) -> Result<bool, sqlx::Error> {
+    // shortcut: the seeded row is known by its name (no flag column), so a customer who renames themselves
+    // '리뷰 계정' could be chosen; add a users flag if names become editable by staff.
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM users WHERE phone = $1 AND name IS DISTINCT FROM $2)
+             OR EXISTS (SELECT 1 FROM pros WHERE phone = $1)
+             OR EXISTS (SELECT 1 FROM team_members WHERE phone = $1)
+             OR EXISTS (SELECT 1 FROM staff WHERE phone = $1)",
+    )
+    .bind(phone)
+    .bind(REVIEW_NAME)
+    .fetch_one(db)
+    .await
+}
+
+/// Owner only, with the owner's code (`X-Owner-Totp`): the fixed-code login signs in without an SMS.
+async fn put_review(
+    State(s): State<AppState>,
+    Admin(a): Admin,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Json(r): Json<ReviewAccount>,
+) -> ApiResult<Json<Value>> {
+    let step = owner::check_owner(&s, a, &headers, Some(peer.ip()), true).await?;
     let phone = crate::auth::normalize_phone(&r.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
     let code = r.code.trim();
     if code.len() != REVIEW_CODE_LEN || !code.bytes().all(|b| b.is_ascii_digit()) {
         return Err(ApiError::BadRequest("invalid_code"));
     }
+    if phone_in_use(&s.db, &phone).await? {
+        return Err(ApiError::Conflict("phone_in_use"));
+    }
+    owner::burn_totp(&s, a.id, owner::client_ip(&s, Some(peer.ip()), &headers), step).await?;
     let days = r.days.unwrap_or(14).clamp(1, REVIEW_MAX_DAYS);
     let expires_at = Utc::now() + chrono::Duration::days(days);
     let samples = seed_review_samples(&s.db, &phone).await?;
@@ -298,17 +329,8 @@ async fn put_review(State(s): State<AppState>, Admin(a): Admin, Json(r): Json<Re
     Ok(Json(json!({ "phone": phone, "expires_at": expires_at, "samples": samples })))
 }
 
-/// The fixed-code login is the owner's call: any other admin could otherwise sign in as a customer.
-async fn require_owner_review(s: &AppState, id: Uuid) -> ApiResult<()> {
-    if owner::is_owner(&s.db, id).await? {
-        Ok(())
-    } else {
-        Err(ApiError::Forbidden)
-    }
-}
-
-async fn clear_review(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<Value>> {
-    require_owner_review(&s, a.id).await?;
+/// Owner only, with the owner's code, like switching it on.
+async fn clear_review(State(s): State<AppState>, owner::OwnerTotp(a): owner::OwnerTotp) -> ApiResult<Json<Value>> {
     sqlx::query("DELETE FROM settings WHERE key = $1").bind(REVIEW_KEY).execute(&s.db).await?;
     audit(&s.db, a.role.as_str(), Some(a.id), "setup.review_account_cleared", REVIEW_KEY, json!({})).await?;
     Ok(Json(json!({ "ok": true })))
@@ -890,8 +912,11 @@ async fn payout_test(s: &AppState) -> ApiResult<Value> {
 async fn test_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Path<String>) -> ApiResult<Json<Value>> {
     let sec = section(&code)?;
     // The test takes no values: it probes with what is saved and records only its result, so a locked card
-    // runs it without an unlock. An open unlock window still belongs to the owner who opened it.
+    // runs it without an unlock, but only for the owner. An open unlock window belongs to the owner who opened it.
     let lock = integrations::lock_state(&s.db, sec).await?;
+    if lock == LockState::Locked && !owner::is_owner(&s.db, a.id).await? {
+        return Err(ApiError::Forbidden);
+    }
     require_unlocker(&s, a, lock).await?;
     let record = if sec == Section::Payout {
         payout_test(&s).await?
@@ -899,11 +924,16 @@ async fn test_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Pa
         let (ok, result) = probe(&s, sec).await;
         json!({ "ok": ok, "code": result, "at": Utc::now() })
     };
-    sqlx::query("UPDATE integration_settings SET last_test = $2 WHERE section = $1")
-        .bind(sec.code())
-        .bind(&record)
-        .execute(&s.db)
-        .await?;
+    // The saved payout pass is what opens Toss (`toss_ready`): a failed check, say a short Toss outage, must not
+    // replace it, or the loader would drop the saved Toss settings and stop the sync of open transfers. The
+    // failure is still answered and audited.
+    if sec != Section::Payout || record["ok"] == json!(true) {
+        sqlx::query("UPDATE integration_settings SET last_test = $2 WHERE section = $1")
+            .bind(sec.code())
+            .bind(&record)
+            .execute(&s.db)
+            .await?;
+    }
     audit(&s.db, a.role.as_str(), Some(a.id), "setup.test", sec.code(), record.clone()).await?;
     Ok(Json(record))
 }

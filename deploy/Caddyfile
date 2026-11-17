@@ -30,6 +30,8 @@
 	# JSON access log in the caddylogs volume: 10 MB per file, 14 files kept, 3 months at most (the retention rule in docs/privacy-retention.md). Every query string is
 	# dropped before anything is written (admin lookups carry phone numbers, names and addresses, and secrets such as
 	# the websocket ticket or signed links), and the ops-progress path's token too. One regexp covers both.
+	# Credential headers (bearer token, cookies, the owner's authenticator code) and Referer (a page URL with its
+	# query) are never written.
 	# shortcut: no edge rate limit on /v1/auth/*, the stock caddy image has no rate_limit module; add one (custom
 	#   image via xcaddy with mholt/caddy-ratelimit) or keep the app-level buckets (ratelimit.rs), when the edge needs it.
 	log {
@@ -43,6 +45,8 @@
 			fields {
 				request>headers>Authorization delete
 				request>headers>Cookie delete
+				request>headers>X-Owner-Totp delete
+				request>headers>Referer delete
 				request>uri regexp "(ops-progress/|[?]).*" "${1}REDACTED"
 			}
 		}

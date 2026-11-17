@@ -141,3 +141,60 @@ async fn deprecated_token_socket_refuses_a_staff_session_that_ended(db: PgPool) 
         "ended staff session"
     );
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn staff_ticket_dies_with_the_session_it_was_issued_in(db: PgPool) {
+    let app = common::app(db.clone());
+    let (token, id) = common::staff_token(&db, Role::StaffAdmin).await;
+
+    // Sign out everywhere (deactivation and password reset use the same step).
+    let ticket = issue(&app, &token).await;
+    let mut tx = db.begin().await.expect("tx");
+    api::owner::end_sessions_tx(&mut tx, id).await.expect("end sessions");
+    tx.commit().await.expect("commit");
+    assert!(
+        matches!(consume_ticket(&db, &ticket).await, Err(ApiError::Unauthorized)),
+        "ended session's ticket"
+    );
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM realtime_tickets WHERE subject = $1")
+        .bind(id)
+        .fetch_one(&db)
+        .await
+        .expect("count");
+    assert_eq!(left, 0, "ending the sessions deletes the tickets");
+
+    // A ticket that outlives the session some other way (issued just before the epoch moved) is refused too.
+    sqlx::query("UPDATE staff SET session_epoch = 0 WHERE id = $1")
+        .bind(id)
+        .execute(&db)
+        .await
+        .expect("epoch");
+    let ticket = issue(&app, &token).await;
+    sqlx::query("UPDATE staff SET session_epoch = session_epoch + 1 WHERE id = $1")
+        .bind(id)
+        .execute(&db)
+        .await
+        .expect("bump");
+    assert!(matches!(consume_ticket(&db, &ticket).await, Err(ApiError::Unauthorized)), "epoch moved on");
+
+    sqlx::query("UPDATE staff SET session_epoch = 0 WHERE id = $1")
+        .bind(id)
+        .execute(&db)
+        .await
+        .expect("epoch");
+    let ticket = issue(&app, &token).await;
+    sqlx::query("UPDATE staff SET active = false WHERE id = $1")
+        .bind(id)
+        .execute(&db)
+        .await
+        .expect("deactivate");
+    assert!(matches!(consume_ticket(&db, &ticket).await, Err(ApiError::Unauthorized)), "inactive account");
+
+    sqlx::query("UPDATE staff SET active = true WHERE id = $1")
+        .bind(id)
+        .execute(&db)
+        .await
+        .expect("activate");
+    let ticket = issue(&app, &token).await;
+    assert_eq!(consume_ticket(&db, &ticket).await.expect("current session").id, id);
+}

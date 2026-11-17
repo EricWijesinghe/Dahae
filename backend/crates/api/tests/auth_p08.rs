@@ -148,4 +148,50 @@ async fn otp_sends_stop_at_the_hard_ceiling(db: PgPool) {
     let app = common::app(db.clone());
     let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": "010-5555-0102" }))).await;
     assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::TOO_MANY_REQUESTS, Some("rate_limited")), "{b}");
+    // Numbers that already have an account keep signing in: the ceiling stops new sign-ups, not the service.
+    sqlx::query("INSERT INTO users (phone, name) VALUES ('01055550103', 'c')")
+        .execute(&db)
+        .await
+        .expect("customer");
+    sqlx::query("INSERT INTO pros (phone, name) VALUES ('01055550104', 'p')")
+        .execute(&db)
+        .await
+        .expect("pro");
+    for phone in ["010-5555-0103", "010-5555-0104"] {
+        let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": phone }))).await;
+        assert_eq!(st, StatusCode::OK, "{phone}: {b}");
+    }
+}
+
+/// Sets the hourly sign-in code counter of `key` (an address or a network) as if `hits` codes had gone out.
+async fn spend_otp_window(db: &PgPool, key: &str, hits: i64) {
+    sqlx::query("INSERT INTO rate_limits (key, window_start, hits) VALUES ($1, now(), $2)")
+        .bind(key)
+        .bind(hits as i32)
+        .execute(db)
+        .await
+        .expect("counter");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn otp_sends_are_capped_per_address_and_per_network(db: PgPool) {
+    let app = common::app(db.clone());
+    let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": "010-5555-0201" }))).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let hits: i32 = sqlx::query_scalar("SELECT hits FROM rate_limits WHERE key = 'otp_net:127.0.0.0/24'")
+        .fetch_one(&db)
+        .await
+        .expect("network counter");
+    assert_eq!(hits, 1, "the code counts against the /24");
+
+    // Other addresses in the same /24 spent the network's hour.
+    sqlx::query("DELETE FROM rate_limits").execute(&db).await.expect("reset");
+    spend_otp_window(&db, "otp_net:127.0.0.0/24", api::ops_alerts::OTP_MAX_PER_NETWORK_PER_HOUR).await;
+    let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": "010-5555-0202" }))).await;
+    assert_eq!(st, StatusCode::TOO_MANY_REQUESTS, "{b}");
+
+    sqlx::query("DELETE FROM rate_limits").execute(&db).await.expect("reset");
+    spend_otp_window(&db, "otp_ip:127.0.0.1", api::ops_alerts::OTP_MAX_PER_IP_PER_HOUR).await;
+    let (st, b) = call(&app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": "010-5555-0203" }))).await;
+    assert_eq!(st, StatusCode::TOO_MANY_REQUESTS, "{b}");
 }

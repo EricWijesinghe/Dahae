@@ -289,15 +289,34 @@ fn bearer(parts: &Parts) -> Option<&str> {
 /// Verifies a bearer token and, for staff, that its session epoch is still current. Every long-lived
 /// connection (websocket) must use this, not `verify_access`, or a signed-out staff token keeps streaming.
 pub async fn verify_access_live(db: &sqlx::PgPool, keys: &[&[u8]], token: &str) -> Result<Auth, ApiError> {
+    verify_access_live_epoch(db, keys, token).await.map(|(auth, _)| auth)
+}
+
+/// `verify_access_live` plus the staff session epoch the token carries (0 for other roles).
+pub async fn verify_access_live_epoch(db: &sqlx::PgPool, keys: &[&[u8]], token: &str) -> Result<(Auth, i32), ApiError> {
     let claims = decode_claims(keys, token)?;
     // Staff tokens die when the owner ends sessions (epoch bump). A missing staff row keeps the old behaviour.
     if claims.role.is_staff() && staff_epoch(db, claims.sub).await?.is_some_and(|cur| cur != claims.ep) {
         return Err(ApiError::Unauthorized);
     }
-    Ok(Auth {
+    let auth = Auth {
         id: claims.sub,
         role: claims.role,
-    })
+    };
+    Ok((auth, claims.ep))
+}
+
+/// The caller and the session epoch of its token, for a credential that must die with that session (socket tickets).
+#[derive(Debug, Clone, Copy)]
+pub struct AuthEpoch(pub Auth, pub i32);
+
+impl FromRequestParts<AppState> for AuthEpoch {
+    type Rejection = ApiError;
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+        let token = bearer(parts).ok_or(ApiError::Unauthorized)?;
+        let (auth, epoch) = verify_access_live_epoch(&state.db, &state.config.jwt_keys(), token).await?;
+        Ok(Self(auth, epoch))
+    }
 }
 
 impl FromRequestParts<AppState> for Auth {

@@ -560,6 +560,38 @@ async fn partner_export_omits_account_number_and_delete_clears_notifications(poo
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn regranting_at_the_new_policy_version_clears_reconsent(pool: PgPool) {
+    let app = app(pool.clone());
+    let c = customer(&app, &pool, "010-8100-0006").await;
+    // What a version bump leaves behind: the newest grant of each kind names the old text (the log is append-only).
+    sqlx::query(
+        "INSERT INTO user_consents (user_id, kind, version, granted)
+         SELECT $1, kind, '2000-01-01', true FROM unnest(ARRAY['terms', 'privacy', 'overseas_transfer']) AS kind",
+    )
+    .bind(c.user)
+    .execute(&pool)
+    .await
+    .expect("old-version grants");
+    let (_, s) = call(&app, "GET", "/v1/me/consents", Some(c.token.as_str()), None).await;
+    assert_eq!(s["reconsent_required"], true, "{s}");
+    assert!(!privacy::overseas_allowed(&pool, c.user).await.expect("overseas"));
+
+    // The app sends every item, as the consent screen does after the customer ticks the required ones.
+    let mut all = all_required_consents();
+    for kind in ["marketing", "location"] {
+        all.as_array_mut()
+            .expect("list")
+            .push(json!({ "kind": kind, "granted": false, "version": CONSENT_VERSION }));
+    }
+    let (st, body) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(json!({ "consents": all }))).await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(body["reconsent_required"], false, "{body}");
+    let (_, s) = call(&app, "GET", "/v1/me/consents", Some(c.token.as_str()), None).await;
+    assert_eq!(s["reconsent_required"], false, "{s}");
+    assert!(privacy::overseas_allowed(&pool, c.user).await.expect("overseas"), "push and AI chat are back");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn overseas_transfer_consent_can_be_withdrawn_and_stays_off(pool: PgPool) {
     let app = app(pool.clone());
     let c = customer(&app, &pool, "010-8100-0005").await;
@@ -618,4 +650,105 @@ async fn export_covers_every_section_that_holds_the_customers_data(pool: PgPool)
         doc["waitlist"][0]["body"]["notes"], "현관 비밀번호 1234",
         "waitlist notes are the customer's own data"
     );
+}
+
+/// Payments, refunds, reports, marketing sends and chat replies of one customer, each carrying `tag`.
+async fn seed_money_and_contact(app: &axum::Router, db: &PgPool, c: &common::Customer, tag: i64) {
+    let (booking, _) = book(app, c, 10, None).await;
+    sqlx::query("INSERT INTO payments (booking_id, amount, kind, status, provider, idempotency_key) VALUES ($1, $2, 'full', 'paid', 'test', $3)")
+        .bind(booking)
+        .bind(60_000 + tag)
+        .bind(format!("export-{tag}"))
+        .execute(db)
+        .await
+        .expect("payment");
+    let checkout: Uuid = sqlx::query_scalar(
+        "INSERT INTO checkouts (user_id, kind, booking_id, method, amount, status, expires_at, refund_reason)
+         VALUES ($1, 'booking', $2, 'card', $3, 'refunded', now(), $4) RETURNING id",
+    )
+    .bind(c.user)
+    .bind(booking)
+    .bind(50_000 + tag)
+    .bind(format!("refund-reason-{tag}"))
+    .fetch_one(db)
+    .await
+    .expect("checkout");
+    sqlx::query("INSERT INTO refund_queue (provider, tx_id, amount, checkout_id) VALUES ('test', $1, $2, $3)")
+        .bind(format!("tx-{tag}"))
+        .bind(40_000 + tag)
+        .bind(checkout)
+        .execute(db)
+        .await
+        .expect("refund");
+    sqlx::query(
+        "INSERT INTO cases (booking_id, kind, source, reporter_role, reporter_id, summary, sla_due_at)
+         VALUES ($1, 'complaint', 'manual', 'customer', $2, $3, now())",
+    )
+    .bind(booking)
+    .bind(c.user)
+    .bind(format!("report-{tag}"))
+    .execute(db)
+    .await
+    .expect("case");
+    let campaign: Uuid = sqlx::query_scalar("INSERT INTO campaigns (name, channel, title, body) VALUES ($1, 'push', 't', 'b') RETURNING id")
+        .bind(format!("campaign-{tag}"))
+        .fetch_one(db)
+        .await
+        .expect("campaign");
+    sqlx::query("INSERT INTO marketing_sends (dedupe_key, campaign_id, user_id, channel, status) VALUES ($1, $2, $3, 'push', 'sent')")
+        .bind(format!("send-{tag}"))
+        .bind(campaign)
+        .bind(c.user)
+        .execute(db)
+        .await
+        .expect("send");
+    let thread: Uuid = sqlx::query_scalar("INSERT INTO chat_threads (audience, user_id, topic) VALUES ('customer', $1, 'general') RETURNING id")
+        .bind(c.user)
+        .fetch_one(db)
+        .await
+        .expect("thread");
+    for (sender, text) in [("customer", format!("ask-{tag}")), ("staff", format!("reply-{tag}"))] {
+        sqlx::query("INSERT INTO chat_messages (thread_id, sender, kind, body) VALUES ($1, $2, 'text', $3)")
+            .bind(thread)
+            .bind(sender)
+            .bind(json!({ "text": text, "ai": sender == "staff" }))
+            .execute(db)
+            .await
+            .expect("message");
+    }
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn export_has_payments_refunds_reports_marketing_and_replies_of_this_customer_only(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = app(pool.clone());
+    let me = customer(&app, &pool, "010-8100-0008").await;
+    let other = customer(&app, &pool, "010-8100-0009").await;
+    seed_money_and_contact(&app, &pool, &me, 1111).await;
+    seed_money_and_contact(&app, &pool, &other, 2222).await;
+
+    let (st, doc) = call(&app, "GET", "/v1/me/export", Some(me.token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{doc}");
+    let has = |section: &str, needle: &str| doc[section].as_array().is_some_and(|rows| rows.iter().any(|r| r.to_string().contains(needle)));
+    let amounts = |section: &str| -> Vec<i64> { doc[section].as_array().into_iter().flatten().filter_map(|r| r["amount"].as_i64()).collect() };
+    assert!(
+        amounts("payments").contains(&61111) && !amounts("payments").contains(&62222),
+        "payments: {}",
+        doc["payments"]
+    );
+    assert!(
+        amounts("checkouts").contains(&51111) && !amounts("checkouts").contains(&52222),
+        "checkouts: {}",
+        doc["checkouts"]
+    );
+    assert!(has("checkouts", "refund-reason-1111"), "checkouts: {}", doc["checkouts"]);
+    assert_eq!(amounts("refunds"), vec![41111], "refunds: {}", doc["refunds"]);
+    assert!(has("reports", "report-1111"), "reports: {}", doc["reports"]);
+    assert!(has("marketing_sends", "campaign-1111"), "marketing: {}", doc["marketing_sends"]);
+    assert!(has("chat_replies", "reply-1111"), "replies: {}", doc["chat_replies"]);
+    assert!(!has("chat_replies", "ask-1111"), "the customer's own messages stay in chat_messages");
+    let text = doc.to_string();
+    for theirs in ["report-2222", "campaign-2222", "reply-2222", "ask-2222", "refund-reason-2222"] {
+        assert!(!text.contains(theirs), "another customer's `{theirs}` leaked into the export");
+    }
 }
