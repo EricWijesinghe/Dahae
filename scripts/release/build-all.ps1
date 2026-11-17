@@ -567,7 +567,7 @@ function Step-Verify {
   if ($DryRun -or (Test-Path -LiteralPath $consoleApk)) {
     Act "aapt2 + apksigner on $consoleApk" {
       $badging = (& "$bt\aapt2.exe" dump badging $consoleApk 2>&1 | Select-String '^package:' | Select-Object -First 1)
-      if ($LASTEXITCODE -ne 0 -or -not $badging -or "$badging" -notmatch "name='com\.malkkeum\.console'") { throw "Console APK is not com.malkkeum.console: $badging" }
+      if ($LASTEXITCODE -ne 0 -or -not $badging -or "$badging" -notmatch "name='kr\.co\.dahae\.console'") { throw "Console APK is not kr.co.dahae.console: $badging" }
       & "$bt\apksigner.bat" verify $consoleApk 2>&1 | Out-Null
       if ($LASTEXITCODE -ne 0) { throw "apksigner verify failed: $consoleApk" }
       Log "   console APK ok: $badging"

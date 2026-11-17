@@ -89,7 +89,7 @@ workflows:
     integrations: { app_store_connect: malkkeum_asc }
     environment:
       <<: *env
-      ios_signing: { distribution_type: app_store, bundle_identifier: com.malkkeum.customer }
+      ios_signing: { distribution_type: app_store, bundle_identifier: kr.co.dahae.customer }
       vars:
         # geolocator_apple would request Always location (needs NSLocationAlwaysAndWhenInUseUsageDescription, ITMS-90683).
         # The app only needs While Using. Read by the plugin's Package.swift (SwiftPM builds, no Podfile).
@@ -151,7 +151,7 @@ workflows:
     integrations: { app_store_connect: malkkeum_asc }
     environment:
       <<: *env
-      ios_signing: { distribution_type: app_store, bundle_identifier: com.malkkeum.partner }
+      ios_signing: { distribution_type: app_store, bundle_identifier: kr.co.dahae.partner }
     scripts:
       - *prepare
       - name: Signing profiles

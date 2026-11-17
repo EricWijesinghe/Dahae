@@ -8,7 +8,7 @@
 PRODUCT_NAME = customer
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.malkkeum.customer
+PRODUCT_BUNDLE_IDENTIFIER = kr.co.dahae.customer
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 Eric Wijesinghe. All rights reserved.

@@ -24,7 +24,7 @@ APPS = REPO / "app" / "apps"
 NATIVE_APPS = ["customer", "partner"]
 ANDROID_NS = "{http://schemas.android.com/apk/res/android}"
 KAKAO_AUTH_ACTIVITY = "com.kakao.sdk.flutter.auth.AuthCodeHandlerActivity"
-NAVER_SCHEME = "malkkeumnaver"  # legacy iOS < 17.4 only
+NAVER_SCHEME = "dahaenaver"  # legacy iOS < 17.4 only
 NAVER_PATH = "/auth/naver/callback"
 # PortOne appScheme: ISP / app-card apps reopen the customer app with it after authenticating (iOS only;
 # on Android they return by finishing, and a singleTop MainActivity would start a second copy instead).
@@ -162,7 +162,7 @@ def check_naver_dart(app):
     lib = REPO / "app" / "packages" / "core" / "lib" / "src"
     native = (lib / "social_native_io.dart").read_text(encoding="utf-8")
     m = re.search(r"_naverLegacyScheme = '([^']+)'", native)
-    check(m is not None and m.group(1) == NAVER_SCHEME, "social_native_io.dart: _naverLegacyScheme must be malkkeumnaver")
+    check(m is not None and m.group(1) == NAVER_SCHEME, "social_native_io.dart: _naverLegacyScheme must be dahaenaver")
     check(f"const _naverPath = '{NAVER_PATH}'" in native, "social_native_io.dart: _naverPath must be the App Link path")
     check("Uri.https(SocialKeys.appLinkHost, _naverPath)" in native, "social_native_io.dart: Naver redirect must be the https App Link")
     check("naverUsesAppLink(" in native and "Platform.operatingSystemVersion" in native,
@@ -225,8 +225,8 @@ def check_pbxproj(app, ios):
               f"{app} pbxproj: {c['name']} lacks CODE_SIGN_ENTITLEMENTS")
         check(s.get("INFOPLIST_FILE") == "Runner/Info.plist", f"{app} pbxproj: {c['name']} INFOPLIST_FILE")
     for c in configs:
-        check(c["buildSettings"].get("PRODUCT_BUNDLE_IDENTIFIER") == f"com.malkkeum.{app}",
-              f"{app} pbxproj: {c['name']} PRODUCT_BUNDLE_IDENTIFIER must be com.malkkeum.{app}")
+        check(c["buildSettings"].get("PRODUCT_BUNDLE_IDENTIFIER") == f"kr.co.dahae.{app}",
+              f"{app} pbxproj: {c['name']} PRODUCT_BUNDLE_IDENTIFIER must be kr.co.dahae.{app}")
     # firebase_core/messaging 5/17, google_sign_in_ios and image_picker_ios need iOS 15; SwiftPM plugins follow this value.
     targets = [o["buildSettings"]["IPHONEOS_DEPLOYMENT_TARGET"] for o in objs.values()
                if o.get("isa") == "XCBuildConfiguration" and "IPHONEOS_DEPLOYMENT_TARGET" in o.get("buildSettings", {})]
@@ -278,7 +278,7 @@ def check_android(app):
               for f, d in naver),
           f"{app} AndroidManifest: CallbackActivity needs an autoVerify https App Link ${{appLinkHost}}{NAVER_PATH}")
     check(not any(d.get(ANDROID_NS + "scheme") == NAVER_SCHEME for _, d in naver),
-          f"{app} AndroidManifest: the malkkeumnaver custom scheme must not be registered on Android")
+          f"{app} AndroidManifest: the dahaenaver custom scheme must not be registered on Android")
     check(not any(d.get(ANDROID_NS + "scheme") == PAY_APP_SCHEME for d in root.iter("data")),
           f"{app} AndroidManifest: {PAY_APP_SCHEME} must not be registered on Android (card apps return by finishing)")
     check('manifestPlaceholders["kakaoNativeKey"]' in gradle, f"{app} build.gradle.kts: kakaoNativeKey placeholder")
@@ -492,7 +492,7 @@ def check_merged_manifest(path):
     check_android_extras(app, None, root)
     perms = {e.get(ANDROID_NS + "name") for e in root.iter("uses-permission")}
     check("android.permission.POST_NOTIFICATIONS" in perms, f"{path}: POST_NOTIFICATIONS missing")
-    allowed = MERGED_PERMS | (set(LOCATION_PERMS) if app in LOCATION_APPS else set()) | {f"com.malkkeum.{app}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"}
+    allowed = MERGED_PERMS | (set(LOCATION_PERMS) if app in LOCATION_APPS else set()) | {f"kr.co.dahae.{app}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"}
     for perm in sorted(perms - allowed):
         check(False, f"{path}: unexpected permission {perm} (a plugin added it; review, then remove it or extend MERGED_PERMS)")
     for s in root.iter("service"):
@@ -628,7 +628,7 @@ def check_codemagic_ios(cm):
         m = re.search(rf"^  {app}-ios:\n(.*?)(?=^  [\w-]+:\s*$|\Z)", cm, re.S | re.M)
         check(m is not None, f"codemagic.yaml: {app}-ios workflow missing")
         wf = m.group(1) if m else ""
-        check(f"bundle_identifier: com.malkkeum.{app}" in wf, f"codemagic.yaml {app}-ios: ios_signing bundle_identifier")
+        check(f"bundle_identifier: kr.co.dahae.{app}" in wf, f"codemagic.yaml {app}-ios: ios_signing bundle_identifier")
         check("app_store_connect: malkkeum_asc" in wf, f"codemagic.yaml {app}-ios: App Store Connect integration malkkeum_asc")
         check(f"working_directory: app/apps/{app}\n        script: xcode-project use-profiles --project ios/Runner.xcodeproj" in wf,
               f"codemagic.yaml {app}-ios: use-profiles must target ios/Runner.xcodeproj of this app")
@@ -664,7 +664,7 @@ def check_ipa(path):
         root = app[: -len("Info.plist")]
         info = plistlib.loads(z.read(app))
         bid = info.get("CFBundleIdentifier", "")
-        check(bid in {f"com.malkkeum.{a}" for a in NATIVE_APPS}, f"{path}: CFBundleIdentifier {bid!r}")
+        check(bid in {f"kr.co.dahae.{a}" for a in NATIVE_APPS}, f"{path}: CFBundleIdentifier {bid!r}")
         check(float(str(info.get("MinimumOSVersion", "0")).split(".")[0]) >= IOS_MIN, f"{path}: MinimumOSVersion below {IOS_MIN}")
         check(re.fullmatch(r"\d+", str(info.get("CFBundleVersion", ""))) is not None, f"{path}: CFBundleVersion must be the rising integer build number")
         check(re.fullmatch(r"\d+\.\d+\.\d+", str(info.get("CFBundleShortVersionString", ""))) is not None, f"{path}: CFBundleShortVersionString must look like 1.2.3")

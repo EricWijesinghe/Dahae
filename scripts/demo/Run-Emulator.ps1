@@ -44,7 +44,7 @@ foreach ($apk in Get-ChildItem "$here\Malkkeum-*.apk") {
 # until Malkkeum is the focused window.
 $front = $false
 for ($i = 0; $i -lt 12 -and -not $front; $i++) {
-  cmd /c "`"$adb`" shell monkey -p com.malkkeum.customer -c android.intent.category.LAUNCHER 1 >nul 2>nul"
+  cmd /c "`"$adb`" shell monkey -p kr.co.dahae.customer -c android.intent.category.LAUNCHER 1 >nul 2>nul"
   Start-Sleep 10
   $front = (& $adb shell dumpsys window | Select-String 'mCurrentFocus' | Select-Object -First 1) -match 'com\.malkkeum\.customer'
 }

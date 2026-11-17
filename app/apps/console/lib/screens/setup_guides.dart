@@ -342,8 +342,8 @@ final guides = <String, Guide>{
         'developer.apple.com → Identifiers: enable Sign in with Apple for the customer and partner App IDs.',
       ),
       Tr(
-        '두 앱의 번들 ID 를 쉼표로 구분해 붙여넣어요. 예: com.malkkeum.customer, com.malkkeum.partner',
-        'Paste both bundle IDs separated by commas, e.g. com.malkkeum.customer, com.malkkeum.partner',
+        '두 앱의 번들 ID 를 쉼표로 구분해 붙여넣어요. 예: kr.co.dahae.customer, kr.co.dahae.partner',
+        'Paste both bundle IDs separated by commas, e.g. kr.co.dahae.customer, kr.co.dahae.partner',
       ),
     ],
     fields: const {

@@ -6,7 +6,7 @@
 ## 1. 최초 1회 설정 / One-time setup (Codemagic web UI)
 1. Teams > Integrations > App Store Connect: API key 를 추가하고 이름을 `malkkeum_asc` 로 지정.
 2. Environment variables > 그룹 `malkkeum`: `API_BASE` (https://서버 도메인, 필수), 로그인·푸시 키 (선택). 목록은 `docs/DEPLOY.md` §3.
-3. Apple Developer 에서 번들 ID `com.malkkeum.customer` 와 `com.malkkeum.partner` 를 등록.
+3. Apple Developer 에서 번들 ID `kr.co.dahae.customer` 와 `kr.co.dahae.partner` 를 등록.
 
 ## 2. 빌드 실행 / Run the builds
 - `customer-ios`: 고객 앱, TestFlight 자동 제출.

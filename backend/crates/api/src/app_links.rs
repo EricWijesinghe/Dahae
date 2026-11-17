@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 /// Store app ids (app/apps/customer, app/apps/partner): Android applicationId and iOS bundle identifier.
-const APP_IDS: [&str; 2] = ["com.malkkeum.customer", "com.malkkeum.partner"];
+const APP_IDS: [&str; 2] = ["kr.co.dahae.customer", "kr.co.dahae.partner"];
 /// Naver login returns here. Must match the Android intent-filter, the iOS applinks entry and social_native_io.dart.
 pub const NAVER_CALLBACK_PATH: &str = "/auth/naver/callback";
 const SETTINGS_KEY: &str = "app_links";
@@ -183,8 +183,8 @@ mod tests {
         let doc = assetlinks_document(&certs);
         let statements = doc.as_array().expect("array");
         assert_eq!(statements.len(), APP_IDS.len());
-        assert_eq!(statements[0]["target"]["package_name"], "com.malkkeum.customer");
-        assert_eq!(statements[1]["target"]["package_name"], "com.malkkeum.partner");
+        assert_eq!(statements[0]["target"]["package_name"], "kr.co.dahae.customer");
+        assert_eq!(statements[1]["target"]["package_name"], "kr.co.dahae.partner");
         assert_eq!(statements[1]["target"]["sha256_cert_fingerprints"], json!(["AA:BB"]));
         assert_eq!(statements[0]["relation"][0], "delegate_permission/common.handle_all_urls");
     }
@@ -193,7 +193,7 @@ mod tests {
     fn aasa_limits_the_link_to_the_naver_path_and_both_app_ids() {
         let doc = aasa_document("ABCDE12345");
         let detail = &doc["applinks"]["details"][0];
-        assert_eq!(detail["appIDs"], json!(["ABCDE12345.com.malkkeum.customer", "ABCDE12345.com.malkkeum.partner"]));
+        assert_eq!(detail["appIDs"], json!(["ABCDE12345.kr.co.dahae.customer", "ABCDE12345.kr.co.dahae.partner"]));
         assert_eq!(detail["components"][0]["/"], NAVER_CALLBACK_PATH);
         assert_eq!(doc["webcredentials"]["apps"], detail["appIDs"]);
     }

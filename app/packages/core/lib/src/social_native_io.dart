@@ -20,7 +20,7 @@ import 'social_auth.dart';
 const _naverPath = '/auth/naver/callback';
 
 /// shortcut: iOS below 17.4 cannot finish an https callback, so it keeps the custom scheme (interceptable by another app). Drop when min iOS is 17.4.
-const _naverLegacyScheme = 'malkkeumnaver';
+const _naverLegacyScheme = 'dahaenaver';
 
 /// Native SDK for each provider. Returns what the backend verifies (backend/crates/api/src/providers/social.rs):
 /// Kakao: access token. Naver: `code:state` (server redeems it). Google: ID token. Apple: identity token.

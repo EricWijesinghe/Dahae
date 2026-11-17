@@ -1,4 +1,4 @@
-package com.malkkeum.console
+package kr.co.dahae.console
 
 import io.flutter.embedding.android.FlutterActivity
 
