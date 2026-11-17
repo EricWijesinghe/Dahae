@@ -470,6 +470,8 @@ t  "Caddy progress route is no-store"    grep -qF 'Cache-Control "no-store"' "$R
 t  "Caddy access log rotates 14 files"   grep -qF "roll_keep 14" "$ROOT/deploy/Caddyfile"
 t  "Caddy access log drops every query string and the ops-progress token" grep -qF '(ops-progress/|[?]).*' "$ROOT/deploy/Caddyfile"
 t  "Caddy access log keeps 3 months at most" grep -qF "roll_keep_for 2160h" "$ROOT/deploy/Caddyfile"
+t  "Caddy access log drops the owner code header" grep -qF "request>headers>X-Owner-Totp delete" "$ROOT/deploy/Caddyfile"
+t  "Caddy access log drops Referer"     grep -qF "request>headers>Referer delete" "$ROOT/deploy/Caddyfile"
 t  "Caddy /ready and /metrics answer 404" grep -qF "@internal path /ready /metrics" "$ROOT/deploy/Caddyfile"
 t  "uptime-kuma is opt-in and loopback-only" grep -qF 'profiles: [monitoring]' "$ROOT/deploy/docker-compose.yml"
 t  "embedded compose has the access log volume" grep -qF "caddylogs:/var/log/caddy" "$SB/compose/docker-compose.yml"
