@@ -43,6 +43,21 @@ nt "heartbeat ampersand"   valid_hb_url 'https://x.io/a?b=1&c=2'
 # shellcheck disable=SC2016 # literal $(id) on purpose
 nt "heartbeat subshell"    valid_hb_url 'https://x.io/$(id)'
 
+# ---- installer: result ping (MALKKEUM_NOTIFY_URL, EXIT trap) ----
+# ping_url <url> <exit code>: the address notify_result would call; curl is replaced by a recorder
+ping_url() {
+  rm -f "$SB/ping.out"
+  ( curl() { printf '%s' "${*: -1}" > "$SB/ping.out"; }
+    MALKKEUM_NOTIFY_URL="$1"; (exit "$2"); notify_result ) >/dev/null 2>&1
+  cat "$SB/ping.out" 2>/dev/null || true
+}
+t  "notify success pings /0"        eq "$(ping_url https://hc-ping.com/abc 0)" https://hc-ping.com/abc/0
+t  "notify failure pings /fail"     eq "$(ping_url https://hc-ping.com/abc 1)" https://hc-ping.com/abc/fail
+t  "notify keeps the query"         eq "$(ping_url 'https://hc-ping.com/abc?x=1' 0)" 'https://hc-ping.com/abc/0?x=1'
+t  "notify trailing slash"          eq "$(ping_url https://hc-ping.com/abc/ 0)" https://hc-ping.com/abc/0
+t  "notify unset pings nothing"     eq "$(ping_url '' 0)" ""
+t  "notify rejects & (no ping)"     eq "$(ping_url 'https://x.io/a&b' 0)" ""
+
 # ---- install page (the browser side of cloud-init) ----
 PAGE_DIR="$SB/page"
 bash "$ROOT/scripts/release/build-install-page.sh" "$ROOT/deploy/install.sh" \
@@ -335,6 +350,8 @@ t  "beta guide follows the beta channel"  has "beta:guide/01-서버-설치.md" "
 # the install page is built for the tagged branch only: its hash must be the tag's install.sh
 t  "tag ships the install page"          has v1.0.0:dahae-install-page.html "INSTALL_SH_SHA256 = \"$(g show v1.0.0:install.sh | sha256sum | cut -d' ' -f1)\""
 nt "beta branch has no install page"     g cat-file -e "beta:dahae-install-page.html"
+nt "beta README has no page link"        has beta:README.md "dahae-install-page.html"
+t  "tag README has the page link"        has v1.0.0:README.md "dahae-install-page.html"
 t  "tag guide 08 uses the tag URL"       has "v1.0.0:guide/08-클라우드-배포.md" "raw.githubusercontent.com/$DIST/v1.0.0/install.sh"
 t  "first-install guide gets the URL too" has "v1.0.0:guide/00-한번에-설치.md" "raw.githubusercontent.com/$DIST/v1.0.0/install.sh"
 nt "no URL token left in published guides" sh -c "git -C '$SB/dist.git' grep -q INSTALL_URL v1.0.0 -- guide"
