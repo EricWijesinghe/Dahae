@@ -94,10 +94,12 @@ Future<String> suggestCurrentAddress(
   LocationDevice device, {
   Duration timeout = locationTimeout,
 }) async {
-  if (!await device.serviceEnabled())
+  if (!await device.serviceEnabled()) {
     throw const LocationException(LocationFailure.servicesOff);
-  if (!await device.permissionGranted())
+  }
+  if (!await device.permissionGranted()) {
     throw const LocationException(LocationFailure.denied);
+  }
   final ({double latitude, double longitude}) at;
   try {
     at = await device.position().timeout(timeout);
@@ -142,8 +144,9 @@ class PluginLocationDevice implements LocationDevice {
   @override
   Future<bool> permissionGranted() async {
     var p = await Geolocator.checkPermission();
-    if (p == LocationPermission.denied)
+    if (p == LocationPermission.denied) {
       p = await Geolocator.requestPermission();
+    }
     return p == LocationPermission.whileInUse || p == LocationPermission.always;
   }
 

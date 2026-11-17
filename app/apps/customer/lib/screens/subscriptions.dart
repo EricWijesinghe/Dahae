@@ -163,10 +163,11 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
               as Json;
       if (mounted) setState(() => _view = v);
     } on ApiException {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(context.t.errorGeneric)));
+      }
     }
   }
 

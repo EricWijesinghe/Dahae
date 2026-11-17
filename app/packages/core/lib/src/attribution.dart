@@ -23,8 +23,9 @@ abstract final class Attribution {
     final out = <String, String>{};
     for (final k in keys) {
       final v = uri.queryParameters[k]?.trim();
-      if (v != null && v.isNotEmpty)
+      if (v != null && v.isNotEmpty) {
         out[k] = v.length > _maxChars ? v.substring(0, _maxChars) : v;
+      }
     }
     return out.isEmpty ? null : out;
   }

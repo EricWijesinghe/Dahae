@@ -71,8 +71,9 @@ void main() {
       var online = false;
       await tester.pumpWidget(
         _host(() async {
-          if (!online)
+          if (!online) {
             throw const SocketException('Connection refused (OS Error: 111)');
+          }
           return ['row-1'];
         }),
       );

@@ -150,8 +150,9 @@ void main() {
 
   test('a network failure during refresh keeps the user signed in', () async {
     final (api, session, _) = await signedIn((req) async {
-      if (req.url.path == '/v1/auth/refresh')
+      if (req.url.path == '/v1/auth/refresh') {
         throw http.ClientException('offline');
+      }
       return json(401, {
         'error': {'code': 'unauthorized'},
       });

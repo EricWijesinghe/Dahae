@@ -93,8 +93,9 @@ class Analytics {
     } on Object {
       if (_consented) {
         _queue.insertAll(0, batch);
-        if (_queue.length > _maxQueued)
+        if (_queue.length > _maxQueued) {
           _queue.removeRange(_maxQueued, _queue.length);
+        }
       }
     }
   }
