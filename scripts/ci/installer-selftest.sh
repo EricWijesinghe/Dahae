@@ -43,6 +43,17 @@ nt "heartbeat ampersand"   valid_hb_url 'https://x.io/a?b=1&c=2'
 # shellcheck disable=SC2016 # literal $(id) on purpose
 nt "heartbeat subshell"    valid_hb_url 'https://x.io/$(id)'
 
+# ---- install page (the browser side of cloud-init) ----
+PAGE_DIR="$SB/page"
+bash "$ROOT/scripts/release/build-install-page.sh" "$ROOT/deploy/install.sh" \
+  "https://raw.githubusercontent.com/owner/repo/v1.0.0/install.sh" "$PAGE_DIR" >/dev/null
+t  "install page pins install.sh sha256" grep -qF "$(sha256sum "$ROOT/deploy/install.sh" | cut -d' ' -f1)" "$PAGE_DIR/index.html"
+nt "install page leaves no placeholder"  grep -q '__INSTALL_' "$PAGE_DIR/index.html"
+# the browser makes setup codes from this alphabet; the installer must accept every one of them
+t  "setup code alphabet: page = installer" eq \
+  "$(sed -n 's/^const CODE_ALPHABET = "\([^"]*\)";/\1/p' "$PAGE_DIR/index.html")" \
+  "$(sed -n 's/.*local alphabet=\([^ ]*\) .*/\1/p' "$ROOT/deploy/install.sh")"
+
 # ---- installer: version compare ----
 t  "ver_ge newer"          ver_ge 2.29.1 2.20
 t  "ver_ge equal"          ver_ge 2.20 2.20
@@ -320,7 +331,11 @@ t  "tag installer names the signer" has v1.0.0:install.sh SIGNER_REPO_DEFAULT=o/
 t  "tag SHA256SUMS matches" sums_ok v1.0.0
 t  "tag guide uses the tag URL" has "v1.0.0:guide/01-서버-설치.md" "raw.githubusercontent.com/$DIST/v1.0.0/install.sh"
 t  "tag README uses the tag URL" has v1.0.0:README.md "raw.githubusercontent.com/$DIST/v1.0.0/SHA256SUMS"
-t  "beta branch keeps the stable-branch line" has "beta:guide/01-서버-설치.md" "raw.githubusercontent.com/$DIST/main/install.sh"
+t  "beta guide follows the beta channel"  has "beta:guide/01-서버-설치.md" "raw.githubusercontent.com/$DIST/beta/install.sh"
+# the install page is built for the tagged branch only: its hash must be the tag's install.sh
+t  "tag ships the install page"          has v1.0.0:dahae-install-page.html "INSTALL_SH_SHA256 = \"$(g show v1.0.0:install.sh | sha256sum | cut -d' ' -f1)\""
+nt "beta branch has no install page"     g cat-file -e "beta:dahae-install-page.html"
+t  "tag guide 08 uses the tag URL"       has "v1.0.0:guide/08-클라우드-배포.md" "raw.githubusercontent.com/$DIST/v1.0.0/install.sh"
 t  "first-install guide gets the URL too" has "v1.0.0:guide/00-한번에-설치.md" "raw.githubusercontent.com/$DIST/v1.0.0/install.sh"
 nt "no URL token left in published guides" sh -c "git -C '$SB/dist.git' grep -q INSTALL_URL v1.0.0 -- guide"
 nt "developer-only guide not shipped" sub g cat-file -e v1.0.0:guide/05-demo-install.md
