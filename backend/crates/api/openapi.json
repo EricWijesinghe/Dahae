@@ -475,6 +475,9 @@
           },
           "default": {
             "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "description": "rate_limited: per number, per client address and network (IPv4 /24, IPv6 /64) per hour, or the global hourly ceiling for numbers without an account"
           }
         }
       }

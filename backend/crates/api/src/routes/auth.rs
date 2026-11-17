@@ -3,12 +3,13 @@ use crate::{
     crypto,
     error::{ApiError, ApiResult},
     lockout,
-    ops_alerts::OTP_GLOBAL_CEILING_PER_HOUR,
+    ops_alerts::{OTP_GLOBAL_CEILING_PER_HOUR, OTP_MAX_PER_IP_PER_HOUR, OTP_MAX_PER_NETWORK_PER_HOUR},
     privacy::{self, ConsentChange},
     providers::{
         apple,
         social::{self, SocialUser},
     },
+    ratelimit::{self, OTP_KEY_PREFIX, OTP_WINDOW},
     state::AppState,
 };
 use axum::{
@@ -20,7 +21,7 @@ use axum::{
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
@@ -70,13 +71,40 @@ struct OtpSent {
     dev_code: Option<String>,
 }
 
-async fn request_otp(State(s): State<AppState>, Json(req): Json<OtpRequest>) -> ApiResult<Json<OtpSent>> {
+/// A number someone signs in with already: customer, pro or team member.
+async fn has_account(db: &sqlx::PgPool, phone: &str) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM users WHERE phone = $1 AND deleted_at IS NULL)
+             OR EXISTS (SELECT 1 FROM pros WHERE phone = $1 AND deleted_at IS NULL)
+             OR EXISTS (SELECT 1 FROM team_members WHERE phone = $1 AND invite_status <> 'removed')",
+    )
+    .bind(phone)
+    .fetch_one(db)
+    .await
+}
+
+/// Counts one code against the client's address and network; false once either hourly budget is spent.
+async fn otp_network_admit(s: &AppState, ip: IpAddr) -> Result<bool, sqlx::Error> {
+    let ip = ip.to_canonical();
+    let by_ip = ratelimit::window_hits(&s.db, &format!("{OTP_KEY_PREFIX}ip:{ip}"), OTP_WINDOW).await?;
+    let net_key = format!("{OTP_KEY_PREFIX}net:{}", ratelimit::network_of(ip));
+    let by_net = ratelimit::window_hits(&s.db, &net_key, OTP_WINDOW).await?;
+    Ok(i64::from(by_ip) <= OTP_MAX_PER_IP_PER_HOUR && i64::from(by_net) <= OTP_MAX_PER_NETWORK_PER_HOUR)
+}
+
+async fn request_otp(
+    State(s): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Json(req): Json<OtpRequest>,
+) -> ApiResult<Json<OtpSent>> {
     let phone = auth::normalize_phone(&req.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
     let recent: i64 = sqlx::query_scalar("SELECT count(*) FROM otp_codes WHERE phone = $1 AND created_at > now() - interval '1 hour'")
         .bind(&phone)
         .fetch_one(&s.db)
         .await?;
-    // Global hard ceiling only (10x the owner's alert level): one client cannot lock every number out, yet spend stays bounded.
+    // Global hard ceiling (10x the owner's alert level) bounds spend; past it numbers with an account still get a
+    // code, so a flood of new numbers cannot lock every customer out.
     let global: i64 = sqlx::query_scalar("SELECT count(*) FROM otp_codes WHERE created_at > now() - interval '1 hour'")
         .fetch_one(&s.db)
         .await?;
@@ -86,7 +114,13 @@ async fn request_otp(State(s): State<AppState>, Json(req): Json<OtpRequest>) -> 
             .bind(OTP_RESEND_COOLDOWN_SECS)
             .fetch_one(&s.db)
             .await?;
-    if recent >= OTP_MAX_PER_HOUR || global >= OTP_GLOBAL_CEILING_PER_HOUR || cooling {
+    if recent >= OTP_MAX_PER_HOUR || cooling {
+        return Err(ApiError::RateLimited);
+    }
+    if global >= OTP_GLOBAL_CEILING_PER_HOUR && !has_account(&s.db, &phone).await? {
+        return Err(ApiError::RateLimited);
+    }
+    if !otp_network_admit(&s, lockout::ip_of(&s, peer, &headers)).await? {
         return Err(ApiError::RateLimited);
     }
     // Store-review demo number: the owner's fixed code, no SMS (reviewers are abroad).

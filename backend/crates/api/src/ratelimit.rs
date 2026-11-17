@@ -186,6 +186,42 @@ pub fn client_ip(peer: Option<IpAddr>, forwarded_for: Option<&str>, trusted_prox
     forwarded.or(peer).unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED))
 }
 
+/// Window of the sign-in code counters per address and per network (routes/auth.rs).
+pub const OTP_WINDOW: Duration = Duration::from_secs(60 * 60);
+/// Key prefix of those counters in `rate_limits`.
+pub const OTP_KEY_PREFIX: &str = "otp_";
+
+/// Adds one hit to the fixed window of `key` in Postgres (shared by every replica, kept across restarts) and
+/// returns the hits in the current window, this one included.
+pub async fn window_hits(db: &PgPool, key: &str, window: Duration) -> sqlx::Result<i32> {
+    sqlx::query_scalar(
+        "INSERT INTO rate_limits (key, window_start, hits) VALUES ($1, now(), 1)
+         ON CONFLICT (key) DO UPDATE SET
+           hits = CASE WHEN rate_limits.window_start <= now() - make_interval(secs => $2) THEN 1 ELSE rate_limits.hits + 1 END,
+           window_start = CASE WHEN rate_limits.window_start <= now() - make_interval(secs => $2) THEN now() ELSE rate_limits.window_start END
+         RETURNING hits",
+    )
+    .bind(key)
+    .bind(window.as_secs_f64())
+    .fetch_one(db)
+    .await
+}
+
+/// The IPv4 /24 or IPv6 /64 an address belongs to. An IPv4-mapped IPv6 address counts as IPv4, so a
+/// dual-stack listener does not put every IPv4 client into one /64.
+pub fn network_of(ip: IpAddr) -> String {
+    match ip.to_canonical() {
+        IpAddr::V4(v4) => {
+            let [a, b, c, _] = v4.octets();
+            format!("{a}.{b}.{c}.0/24")
+        }
+        IpAddr::V6(v6) => {
+            let [a, b, c, d, ..] = v6.segments();
+            format!("{a:x}:{b:x}:{c:x}:{d:x}::/64")
+        }
+    }
+}
+
 /// A quota is spent while `used` is below `limit`.
 pub fn within_quota(used: i64, limit: i64) -> bool {
     used < limit
@@ -224,18 +260,7 @@ impl Gate {
     /// error lets the request through: the in-memory verdict already passed.
     async fn shared_admit(&self, bucket: Bucket, ip: IpAddr) -> bool {
         let limit = i32::try_from(self.limits.of(bucket)).unwrap_or(i32::MAX);
-        let key = format!("{}:{ip}", bucket.name());
-        let hits = sqlx::query_scalar::<_, i32>(
-            "INSERT INTO rate_limits (key, window_start, hits) VALUES ($1, now(), 1)
-             ON CONFLICT (key) DO UPDATE SET
-               hits = CASE WHEN rate_limits.window_start <= now() - make_interval(secs => $2) THEN 1 ELSE rate_limits.hits + 1 END,
-               window_start = CASE WHEN rate_limits.window_start <= now() - make_interval(secs => $2) THEN now() ELSE rate_limits.window_start END
-             RETURNING hits",
-        )
-        .bind(key)
-        .bind(WINDOW.as_secs_f64())
-        .fetch_one(&self.db)
-        .await;
+        let hits = window_hits(&self.db, &format!("{}:{ip}", bucket.name()), WINDOW).await;
         match hits {
             Ok(h) => h <= limit,
             Err(e) => {
@@ -255,9 +280,12 @@ impl Gate {
             }
             due
         };
+        // The hourly sign-in code counters (`OTP_KEY_PREFIX`) keep their longer window.
         if due
-            && let Err(e) = sqlx::query("DELETE FROM rate_limits WHERE window_start < now() - make_interval(secs => $1)")
+            && let Err(e) = sqlx::query("DELETE FROM rate_limits WHERE window_start < now() - make_interval(secs => CASE WHEN key LIKE $3 THEN $2 ELSE $1 END)")
                 .bind(WINDOW.as_secs_f64() * 2.0)
+                .bind(OTP_WINDOW.as_secs_f64() * 2.0)
+                .bind(format!("{OTP_KEY_PREFIX}%"))
                 .execute(&self.db)
                 .await
         {
@@ -290,6 +318,17 @@ pub async fn limit(State(gate): State<Arc<Gate>>, req: Request, next: Next) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn networks_are_ipv4_slash_24_and_ipv6_slash_64() {
+        let net = |s: &str| network_of(s.parse().expect("ip"));
+        assert_eq!(net("203.0.113.77"), "203.0.113.0/24");
+        assert_eq!(net("203.0.113.78"), net("203.0.113.1"));
+        assert_ne!(net("203.0.114.1"), net("203.0.113.1"));
+        assert_eq!(net("2001:db8:1:2:aaaa::1"), "2001:db8:1:2::/64");
+        assert_eq!(net("2001:db8:1:2:ffff:ffff:ffff:ffff"), net("2001:db8:1:2::5"));
+        assert_eq!(net("::ffff:203.0.113.9"), "203.0.113.0/24", "IPv4-mapped counts as IPv4");
+    }
 
     const T0: Duration = Duration::from_secs(0);
 
