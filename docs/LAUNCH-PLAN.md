@@ -73,7 +73,7 @@ DODA 의 서비스가 모두 AWS 에 있으니 **AWS 서울 리전(ap-northeast-
 
 **확인되지 않은 것.** 템플릿과 CD 는 AWS 검사 도구(cfn-lint, actionlint)를 통과했지만 실제 AWS 계정에서는 아직 띄워 보지 않았어요. 첫 배포는 DODA 담당자가 해요. 개발팀은 DODA 가 요청할 때만 도와요.
 
-**확인 필요: 템플릿과 릴리스 작업.** `dahae-aws.yaml` 은 `release.yml` 의 릴리스 작업이 설치 스크립트 주소와 지문을 채워 만들어요 (`scripts/release/build-aws-template.sh`). 그 작업은 개발사의 배포 키와 전달 저장소(`DIST_REPO`)가 필요해요 (`DAHAE_MANIFEST_KEY`, `DIST_DEPLOY_KEY`). DODA 포크에서 이 작업을 돌리는 방법은 아직 없어요. 저장소의 `deploy/aws/dahae.cfn.yaml` 은 자리표시자가 있어서 그대로는 만들 수 없어요.
+**템플릿과 새 버전:** `dahae-aws.yaml` 은 다해 저장소의 릴리스 페이지(Releases → v1.5.1 → Assets)에서 받아요. 설치 스크립트 주소와 지문이 이미 채워져 있어요. 새 버전도 다해 저장소에서 릴리스되고, DODA 포크의 `deploy-aws` 는 **Run workflow** 에 버전을 넣어 설치해요 (포크에서는 릴리스 작업이 돌지 않아서 자동 시작은 없어요).
 
 **AWS 가 아닌 곳에 올릴 때**는 [guide 09](guide/09-클라우드별-설치.md) (클라우드별 설치) 와 [guide 08](guide/08-클라우드-배포.md) 을 봐요.
 
@@ -155,7 +155,7 @@ All of DODA's services run on AWS, so the server goes to **AWS Seoul (ap-northea
 
 **Not yet verified.** The template and CD pass the AWS linters (cfn-lint, actionlint) but have not been launched on a real AWS account. The first deploy is done by DODA staff. The developer helps only when DODA asks.
 
-**Open item: where the template and the release job come from.** `dahae-aws.yaml` is produced by the release job in `release.yml`, which fills in the install script URL and hash (`scripts/release/build-aws-template.sh`). That job needs the developer's delivery keys and delivery repo (`DAHAE_MANIFEST_KEY`, `DIST_DEPLOY_KEY`, `DIST_REPO`). There is no way yet to run it in DODA's fork. The template `deploy/aws/dahae.cfn.yaml` still has placeholders and cannot be launched as it is.
+**Template and new versions:** download `dahae-aws.yaml` from the Dahae repo's release page (Releases → v1.5.1 → Assets); the install script URL and SHA-256 are already filled in. New versions are released in the Dahae repo too, and DODA's fork installs them with **Run workflow** on `deploy-aws` and the version (the release job does not run in the fork, so nothing starts automatically).
 
 **Other clouds:** [guide 09](guide/09-클라우드별-설치.md) and [guide 08](guide/08-클라우드-배포.md).
 

@@ -60,7 +60,7 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 
 ### B-1. 템플릿 파일 준비
 
-DODA 포크 릴리스의 Assets 에서 **`dahae-aws.yaml`** 파일을 컴퓨터에 저장합니다. (이 파일은 다해의 특정 릴리스에만 맞춰져 있어요. 파일 이름을 바꾸지 마세요. 이 파일이 어떻게 만들어지는지는 아래 **확인 필요** 를 보세요.)
+다해 저장소의 릴리스 페이지(**github.com/EricWijesinghe/Dahae → Releases → v1.5.1 → Assets**)에서 **`dahae-aws.yaml`** 파일을 컴퓨터에 저장합니다. 이 파일은 그 릴리스의 설치 스크립트 주소와 지문(SHA-256)이 이미 채워져 있어서 바로 쓸 수 있어요. 파일 이름을 바꾸지 마세요. (저장소 안의 `deploy/aws/dahae.cfn.yaml` 은 빈칸이 있는 원본이라 그대로는 못 써요.)
 
 ### B-2. 스택 만들기
 
@@ -171,13 +171,13 @@ sudo dahae setup-code
 >
 > **승인 방식 차이:** 콘솔에서 사장님이 직접 누르는 업데이트는 기존처럼 사장님의 인증 앱 코드로 승인해요. GitHub 에서 실행되는 배포는 **GitHub 승인자의 승인**으로 대신해요.
 >
-> **확인 필요: 템플릿과 릴리스 작업.** `dahae-aws.yaml` 과 안정 태그의 릴리스 작업은 `release.yml` 이 만들어요. 그 작업은 개발사의 배포 키와 전달 저장소가 필요해요 (`DAHAE_MANIFEST_KEY`, `DIST_DEPLOY_KEY`, `DIST_REPO`). DODA 포크에서 이 작업을 어떻게 돌릴지 아직 정해지지 않았어요 ([LAUNCH-PLAN](../LAUNCH-PLAN.md) §4).
+> **포크에서의 배포:** 새 버전은 다해 저장소에서 릴리스돼요 (서명된 서버 이미지와 설치 스크립트가 공개돼 있어요). DODA 포크에서는 릴리스 작업(`release`)이 돌지 않으니 자동 시작(C-2)은 일어나지 않아요. 새 버전이 나오면 C-3 처럼 **Run workflow** 에 그 버전(예: `v1.5.1`)을 넣어 배포하세요. 버전 목록은 다해 저장소의 Releases 에 있어요.
 >
 > **자동 업데이트 주의:** 서버에는 기본으로 **매주 월요일 04:00 자동 업데이트** 가 켜져 있어요 (안정 채널, 새 버전을 본 뒤 24시간 대기). GitHub 승인 없이도 서버가 스스로 올라갈 수 있어요. GitHub 승인으로만 올리고 싶으면 서버에서 `sudo dahae update-schedule off` 를 실행하세요 (되돌리려면 `sudo dahae update-schedule mon@04:00`).
 
 ### C-3. 수동으로 배포하거나 되돌리기
 
-- **특정 버전 배포:** GitHub 저장소의 **Actions** 탭 > 왼쪽 **deploy-aws** > **Run workflow** > `version` 칸에 `v1.5.0` 입력 > **Run workflow**. 승인자가 승인하면 실행돼요.
+- **특정 버전 배포:** GitHub 저장소의 **Actions** 탭 > 왼쪽 **deploy-aws** > **Run workflow** > `version` 칸에 `v1.5.1` 입력 > **Run workflow**. 승인자가 승인하면 실행돼요.
 - **이전 버전으로 되돌리기:** 같은 화면에서 **rollback** 을 체크하고 **Run workflow**. 서버에서 `dahae rollback` 이 실행돼요. 마지막 업데이트 바로 전 버전으로 돌아가요.
 - 되돌리기는 정산이 진행 중이면 멈춰요. 그때는 콘솔 **정산** 화면에서 상태를 먼저 정리하세요.
 
@@ -238,7 +238,7 @@ sudo dahae setup-code
 This guide sets up one Dahae server on AWS (Seoul) and connects GitHub Actions so that a stable release, once approved by a reviewer, is installed on the server with `dahae update`. A non-specialist can finish it from the AWS and GitHub web consoles.
 
 1. **Deployer account (DODA):** create an IAM user with console access, attach `deploy/aws/deployer-iam-policy.json` as a customer-managed policy, enable MFA (authenticator app), and create no access keys. Send the sign-in URL and user name through a separate channel from the password.
-2. **Launch:** in CloudFormation (region ap-northeast-2), create a stack from `dahae-aws.yaml` (from the fork's release assets). Set `GitHubRepo` to the fork. The stack name must start with `dahae-`. Fill Domain, Email, and optionally HostedZoneId (Route 53). Leave SshCidr empty. Acknowledge IAM and create. Wait for CREATE_COMPLETE, then about 20 minutes for the installer.
+2. **Launch:** in CloudFormation (region ap-northeast-2), create a stack from `dahae-aws.yaml` (download it from github.com/EricWijesinghe/Dahae → Releases → v1.5.1 → Assets; it already has that release's install script URL and SHA-256 filled in). Set `GitHubRepo` to the fork. The stack name must start with `dahae-`. Fill Domain, Email, and optionally HostedZoneId (Route 53). Leave SshCidr empty. Acknowledge IAM and create. Wait for CREATE_COMPLETE, then about 20 minutes for the installer.
 3. **DNS:** with Route 53 it is automatic; otherwise add an A record for the domain pointing to the `PublicIp` output.
 4. **Setup code without SSH:** EC2 > Instances > Connect > Session Manager > Connect, then `sudo dahae setup-code` (valid 2 hours; `--renew` for a new code). Open `https://<domain>/admin`, enter the code, create the owner account, enable two-step sign-in.
 5. **CD:** DODA creates, in its own fork, the GitHub environment `doda-aws` with required reviewers, deployment branches limited to `master`, and four environment variables from the stack outputs: `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `DAHAE_DOMAIN`. The stack parameter `GitHubRepo` must be the fork (e.g. `doda/Dahae`), not the default `EricWijesinghe/Dahae`: the AWS role trusts that repository and environment. The workflow `deploy-aws.yml` runs in the same fork. Open item: how the release job that makes `dahae-aws.yaml` runs in the fork ([LAUNCH-PLAN](../LAUNCH-PLAN.md) §4). Each stable tag (vX.Y.Z) waits for approval, then runs `dahae update <tag>` through SSM and checks health and version. Manual deploy and rollback are in the Actions tab (deploy-aws, Run workflow). Beta tags are never deployed.

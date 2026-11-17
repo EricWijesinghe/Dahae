@@ -1,8 +1,8 @@
 # Delivery runbook (developer; §3 is run by the client)
 
-The client never gets source. They get a **public delivery repo** (installer + Korean guides),
+The source repo (github.com/EricWijesinghe/Dahae) is public but proprietary: reading it grants no right to use it (LICENSE §1.4, §3.1); a client uses it under a signed licence agreement. Servers install from the **public delivery repo** (installer + Korean guides),
 public server images, and store apps that the client builds on its own Codemagic and uploads to its own
-store accounts (guide 11; the developer does it only if the client asks). Source stays in the private repo.
+store accounts (guide 11; the developer does it only if the client asks).
 
 | Piece | Built by | Client receives |
 |---|---|---|
