@@ -917,3 +917,37 @@ async fn a_refused_first_send_fails_the_batch_with_a_new_key_and_ref(pool: PgPoo
     assert_ne!(key, key_before, "every earlier send had an answer, so this refusal is definite");
     assert_eq!(toss_meta(&pool, &id).await.1, Some(format!("{id}-1")));
 }
+
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_refused_list_lookup_is_unreachable_so_the_owners_not_sent_stays_open(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 0).await;
+    let refused = (StatusCode::BAD_REQUEST, json!({ "code": "INVALID_REQUEST", "message": "잘못된 요청" }));
+    let toss = start_toss_mock(vec![(StatusCode::BAD_GATEWAY, json!({}))], refused).await;
+    let app = api::routes::router(toss_state(&pool, &toss.base));
+    let (token, totp) = owner(&pool).await;
+
+    let (code, body) = call(&app, "POST", &format!("/v1/admin/settlements/payouts/{id}/sync"), Some(&token), Some(json!({}))).await;
+    assert_eq!(
+        (code, body["error"]["code"].as_str()),
+        (StatusCode::SERVICE_UNAVAILABLE, Some("provider_unreachable")),
+        "{body}"
+    );
+    let (code, body) = not_sent(&app, &id, &token, Some(&totp)).await;
+    assert_eq!((code, body["state"].as_str()), (StatusCode::OK, Some("failed")), "{body}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_refused_status_lookup_leaves_a_sent_transfer_open(pool: PgPool) {
+    seed(&pool).await;
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app(pool.clone()), &token).await;
+    make_toss(&pool, &id, "sent", Some("FPA_1"), None, 0).await;
+    let not_found = (StatusCode::NOT_FOUND, json!({ "code": "PAYOUT_NOT_FOUND" }));
+    let toss = start_toss_mock(vec![(StatusCode::BAD_GATEWAY, json!({}))], not_found).await;
+    let app = api::routes::router(toss_state(&pool, &toss.base));
+
+    let (code, body) = call(&app, "POST", &format!("/v1/admin/settlements/payouts/{id}/sync"), Some(&token), Some(json!({}))).await;
+    assert_eq!(code, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+    assert_eq!(payout_row(&pool, &id).await.0, "sent");
+}

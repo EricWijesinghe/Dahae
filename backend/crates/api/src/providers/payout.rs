@@ -291,6 +291,16 @@ pub fn classify(status: StatusCode, body: &Value) -> ProviderError {
     }
 }
 
+/// Maps an error from a read-only lookup (the payout list, one payout's status). A lookup creates nothing, so its
+/// refusal (a query parameter or limit Toss does not take, an id it does not show) says nothing about a transfer:
+/// Toss gave no answer, never a decline. A refused key stays NotConfigured.
+pub fn lookup_error(e: ProviderError) -> ProviderError {
+    match e {
+        ProviderError::Declined(reason) => ProviderError::Upstream(format!("lookup refused: {reason}")),
+        e => e,
+    }
+}
+
 /// Fingerprint of the account a seller is registered with. Equal fingerprints mean the same bank account.
 pub fn account_fingerprint(bank_code: &str, account: &str, holder: &str) -> String {
     use sha2::{Digest, Sha256};
