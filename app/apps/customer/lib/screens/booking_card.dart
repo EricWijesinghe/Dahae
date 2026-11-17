@@ -123,11 +123,14 @@ String bookingStepIcon(int status) => switch (status) {
   _ => 'status_cancelled',
 };
 
+String bookingTime(BuildContext context, Booking b) =>
+    slotTime(context, b.isQuote, b.startHour);
+
 /// Quotes are booked by half-day ("오전 방문"); fixed-price visits by the hour slot ("오전 9시~10시").
-String bookingTime(BuildContext context, Booking b) {
+String slotTime(BuildContext context, bool isQuote, int hour) {
   final t = context.t;
-  if (b.isQuote) return b.startHour < 12 ? t.dfAmVisit : t.dfPmVisit;
-  return slotRangeLabel(b.startHour, context.lang);
+  if (isQuote) return hour < 12 ? t.dfAmVisit : t.dfPmVisit;
+  return slotRangeLabel(hour, context.lang);
 }
 
 String bookingWhen(BuildContext context, Booking b) =>
