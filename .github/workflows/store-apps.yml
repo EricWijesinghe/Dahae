@@ -307,7 +307,7 @@ jobs:
             "${auth[@]}" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic archive
           xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive -exportPath build/ios/ipa \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" "${auth[@]}"
-          ipa=$(ls build/ios/ipa/*.ipa | head -n 1)
+          ipas=(build/ios/ipa/*.ipa); ipa=${ipas[0]} # no match leaves the pattern, and the check fails on it
           python3 -I ../../../scripts/ci/check-native.py --ipa "$ipa"
       - name: Keep artifacts (30 days)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -328,7 +328,7 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           set -euo pipefail
-          ipa=$(ls build/ios/ipa/*.ipa | head -n 1)
+          ipas=(build/ios/ipa/*.ipa); ipa=${ipas[0]}
           xcrun altool --upload-app --type ios --file "$ipa" --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
       - name: Remove signing material from the runner
         if: always()
