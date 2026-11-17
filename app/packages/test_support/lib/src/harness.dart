@@ -26,7 +26,10 @@ class FakeRealtime extends Realtime {
 
 /// Pumps frames for [duration] without `pumpAndSettle`, which never returns while
 /// looping animations (aurora, live dot, parallax) are running.
-Future<void> settle(WidgetTester tester, {Duration duration = const Duration(seconds: 2)}) async {
+Future<void> settle(
+  WidgetTester tester, {
+  Duration duration = const Duration(seconds: 2),
+}) async {
   final steps = duration.inMilliseconds ~/ 100;
   for (var i = 0; i < steps; i++) {
     await tester.pump(const Duration(milliseconds: 100));
@@ -72,7 +75,11 @@ Future<void> unmount(WidgetTester tester) async {
 }
 
 /// Convenience: a fresh environment with the default (signed-in, Korean, dark) setup.
-Future<TestEnv> freshEnv({bool signedIn = true, String localeCode = 'ko', ThemeMode mode = ThemeMode.dark}) =>
+Future<TestEnv> freshEnv({
+  bool signedIn = true,
+  String localeCode = 'ko',
+  ThemeMode mode = ThemeMode.dark,
+}) =>
     TestEnv.create(signedIn: signedIn, localeCode: localeCode, themeMode: mode);
 
 /// Korean strings for lookups in tests. Prefer this over hard-coded literals.

@@ -25,46 +25,71 @@ const _code = String.fromEnvironment('E2E_CODE');
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('golden path: sign in as a pro, land on the gate, and see the jobs or waiting screen', skip: !_runE2e, (tester) async {
-    final session = Session(namespace: 'e2e-partner');
-    await session.clear();
-    final api = ApiClient(baseUrl: defaultApiBase(), session: session);
-    final locale = LocaleController();
-    final theme = ThemeController();
-    await locale.set(const Locale('ko'));
-    await theme.set(ThemeMode.dark);
-    final state = PartnerState(api, Realtime(api), outbox: await CompletionOutbox.open());
-    final t = lookupT(const Locale('ko'));
+  testWidgets(
+    'golden path: sign in as a pro, land on the gate, and see the jobs or waiting screen',
+    skip: !_runE2e,
+    (tester) async {
+      final session = Session(namespace: 'e2e-partner');
+      await session.clear();
+      final api = ApiClient(baseUrl: defaultApiBase(), session: session);
+      final locale = LocaleController();
+      final theme = ThemeController();
+      await locale.set(const Locale('ko'));
+      await theme.set(ThemeMode.dark);
+      final state = PartnerState(
+        api,
+        Realtime(api),
+        outbox: await CompletionOutbox.open(),
+      );
+      final t = lookupT(const Locale('ko'));
 
-    await tester.pumpWidget(PartnerApp(session: session, app: state, locale: locale, theme: theme));
-    await pumpUntilFound(tester, find.text(t.introStart), timeout: const Duration(seconds: 15));
-    await tester.tap(find.text(t.introStart));
-    await settle(tester);
+      await tester.pumpWidget(
+        PartnerApp(session: session, app: state, locale: locale, theme: theme),
+      );
+      await pumpUntilFound(
+        tester,
+        find.text(t.introStart),
+        timeout: const Duration(seconds: 15),
+      );
+      await tester.tap(find.text(t.introStart));
+      await settle(tester);
 
-    await tester.enterText(find.byType(TextField), _phone);
-    await settle(tester, duration: const Duration(milliseconds: 300));
-    await tester.tap(find.text(t.loginSendCode));
-    await settle(tester);
-
-    final codeField = find.byType(TextField);
-    if (tester.widget<TextField>(codeField).controller!.text.isEmpty) {
-      await tester.enterText(codeField, _code);
+      await tester.enterText(find.byType(TextField), _phone);
       await settle(tester, duration: const Duration(milliseconds: 300));
-    }
-    await tester.tap(find.text(t.loginVerify));
-    await settle(tester, duration: const Duration(seconds: 2));
+      await tester.tap(find.text(t.loginSendCode));
+      await settle(tester);
 
-    // Relaunch: the root route is chosen at launch, so a fresh tree routes through the Gate.
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(PartnerApp(session: session, app: state, locale: locale, theme: theme));
-    await pumpUntilFound(tester, find.byType(Gate), timeout: const Duration(seconds: 20));
-    await settle(tester, duration: const Duration(seconds: 2));
+      final codeField = find.byType(TextField);
+      if (tester.widget<TextField>(codeField).controller!.text.isEmpty) {
+        await tester.enterText(codeField, _code);
+        await settle(tester, duration: const Duration(milliseconds: 300));
+      }
+      await tester.tap(find.text(t.loginVerify));
+      await settle(tester, duration: const Duration(seconds: 2));
 
-    final reached = find.text(t.pOnbTitle).evaluate().isNotEmpty ||
-        find.text(t.pPendingTitle).evaluate().isNotEmpty ||
-        find.text(t.pTabJobs).evaluate().isNotEmpty;
-    expect(reached, isTrue, reason: 'expected onboarding, the waiting screen, or the jobs tab');
+      // Relaunch: the root route is chosen at launch, so a fresh tree routes through the Gate.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(
+        PartnerApp(session: session, app: state, locale: locale, theme: theme),
+      );
+      await pumpUntilFound(
+        tester,
+        find.byType(Gate),
+        timeout: const Duration(seconds: 20),
+      );
+      await settle(tester, duration: const Duration(seconds: 2));
 
-    await session.logout();
-  });
+      final reached =
+          find.text(t.pOnbTitle).evaluate().isNotEmpty ||
+          find.text(t.pPendingTitle).evaluate().isNotEmpty ||
+          find.text(t.pTabJobs).evaluate().isNotEmpty;
+      expect(
+        reached,
+        isTrue,
+        reason: 'expected onboarding, the waiting screen, or the jobs tab',
+      );
+
+      await session.logout();
+    },
+  );
 }

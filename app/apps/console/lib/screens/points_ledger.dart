@@ -152,9 +152,7 @@ class PointsLedgerPanel extends StatelessWidget {
     final reason = e['reason'] as String?;
     return ListTile(
       title: Text(_kindLabel(t, e['kind'] as String)),
-      subtitle: Text(
-        [dateTimeLabel(at, context.lang), ?reason].join(' · '),
-      ),
+      subtitle: Text([dateTimeLabel(at, context.lang), ?reason].join(' · ')),
       trailing: Text(
         t.walletPoints(amount > 0 ? '+$amount' : '$amount'),
         style: context.text.titleSmall?.copyWith(

@@ -13,32 +13,46 @@ Future<void> _expectAccessible(WidgetTester tester) async {
 
 void main() {
   for (final mode in [ThemeMode.dark, ThemeMode.light]) {
-    testWidgets('jobs feed meets tap-target and contrast guidelines (${mode.name})', (tester) async {
-      setViewport(tester, phoneSize);
-      final handle = tester.ensureSemantics();
-      final fake = FakeApi();
-      stockPartnerApi(fake, jobs: [jobJson(customerPrice: 100000)]);
-      final env = await TestEnv.create(fake: fake, role: 'partner', themeMode: mode);
-      await pumpPartnerScreen(tester, env, const JobsTab());
-      await pumpUntilFound(tester, find.text(koT.pDirect));
-      await settle(tester, duration: const Duration(milliseconds: 800));
-      await _expectAccessible(tester);
-      await unmount(tester);
-      handle.dispose();
-    });
+    testWidgets(
+      'jobs feed meets tap-target and contrast guidelines (${mode.name})',
+      (tester) async {
+        setViewport(tester, phoneSize);
+        final handle = tester.ensureSemantics();
+        final fake = FakeApi();
+        stockPartnerApi(fake, jobs: [jobJson(customerPrice: 100000)]);
+        final env = await TestEnv.create(
+          fake: fake,
+          role: 'partner',
+          themeMode: mode,
+        );
+        await pumpPartnerScreen(tester, env, const JobsTab());
+        await pumpUntilFound(tester, find.text(koT.pDirect));
+        await settle(tester, duration: const Duration(milliseconds: 800));
+        await _expectAccessible(tester);
+        await unmount(tester);
+        handle.dispose();
+      },
+    );
 
-    testWidgets('pending waiting screen meets tap-target and contrast guidelines (${mode.name})', (tester) async {
-      setViewport(tester, phoneSize);
-      final handle = tester.ensureSemantics();
-      final fake = FakeApi();
-      stockPartnerApi(fake, profile: verifiedProfile(status: 'pending'));
-      final env = await TestEnv.create(fake: fake, role: 'partner', themeMode: mode);
-      await pumpPartnerApp(tester, env);
-      await pumpUntilFound(tester, find.text(koT.pPendingTitle));
-      await settle(tester, duration: const Duration(milliseconds: 800));
-      await _expectAccessible(tester);
-      await unmount(tester);
-      handle.dispose();
-    });
+    testWidgets(
+      'pending waiting screen meets tap-target and contrast guidelines (${mode.name})',
+      (tester) async {
+        setViewport(tester, phoneSize);
+        final handle = tester.ensureSemantics();
+        final fake = FakeApi();
+        stockPartnerApi(fake, profile: verifiedProfile(status: 'pending'));
+        final env = await TestEnv.create(
+          fake: fake,
+          role: 'partner',
+          themeMode: mode,
+        );
+        await pumpPartnerApp(tester, env);
+        await pumpUntilFound(tester, find.text(koT.pPendingTitle));
+        await settle(tester, duration: const Duration(milliseconds: 800));
+        await _expectAccessible(tester);
+        await unmount(tester);
+        handle.dispose();
+      },
+    );
   }
 }

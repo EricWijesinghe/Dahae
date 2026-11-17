@@ -20,7 +20,8 @@ class LocationException implements Exception {
   final Object? cause;
 
   @override
-  String toString() => 'LocationException(${reason.name}${cause == null ? '' : ', $cause'})';
+  String toString() =>
+      'LocationException(${reason.name}${cause == null ? '' : ', $cause'})';
 }
 
 /// The part of a device geocoder result the address suggestion is built from.
@@ -68,10 +69,14 @@ String? koreanAddress(GeoPlace p) {
   // Android gives the full line ("대한민국 서울특별시 강남구 테헤란로 152"): use it without the country.
   if (area.isNotEmpty && street.contains(area)) {
     final country = p.country.trim();
-    final line = country.isNotEmpty && street.startsWith(country) ? street.substring(country.length).trim() : street;
+    final line = country.isNotEmpty && street.startsWith(country)
+        ? street.substring(country.length).trim()
+        : street;
     return line == area ? null : line;
   }
-  final road = p.thoroughfare.trim().isEmpty ? street : '${p.thoroughfare.trim()} ${p.subThoroughfare.trim()}'.trim();
+  final road = p.thoroughfare.trim().isEmpty
+      ? street
+      : '${p.thoroughfare.trim()} ${p.subThoroughfare.trim()}'.trim();
   if (road.isEmpty) return null;
   final parts = <String>[];
   for (final part in [area, p.locality.trim(), p.subLocality.trim(), road]) {
@@ -82,9 +87,14 @@ String? koreanAddress(GeoPlace p) {
 
 /// The address suggestion for where the device is now. Throws [LocationException] with the reason
 /// when there is none; the caller shows it and keeps typed entry. Never saves anything.
-Future<String> suggestCurrentAddress(LocationDevice device, {Duration timeout = locationTimeout}) async {
-  if (!await device.serviceEnabled()) throw const LocationException(LocationFailure.servicesOff);
-  if (!await device.permissionGranted()) throw const LocationException(LocationFailure.denied);
+Future<String> suggestCurrentAddress(
+  LocationDevice device, {
+  Duration timeout = locationTimeout,
+}) async {
+  if (!await device.serviceEnabled())
+    throw const LocationException(LocationFailure.servicesOff);
+  if (!await device.permissionGranted())
+    throw const LocationException(LocationFailure.denied);
   final ({double latitude, double longitude}) at;
   try {
     at = await device.position().timeout(timeout);
@@ -114,7 +124,9 @@ extension LocationLabels on T {
 
 /// The geocoding plugin has Android and iOS implementations only, so the button shows only there.
 bool get locationSupported =>
-    !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS);
 
 /// [LocationDevice] over the geolocator and geocoding plugins. Coordinates stay on the device:
 /// the OS geocoder turns them into an address and nothing is sent to the Dahae server.
@@ -127,7 +139,8 @@ class PluginLocationDevice implements LocationDevice {
   @override
   Future<bool> permissionGranted() async {
     var p = await Geolocator.checkPermission();
-    if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
+    if (p == LocationPermission.denied)
+      p = await Geolocator.requestPermission();
     return p == LocationPermission.whileInUse || p == LocationPermission.always;
   }
 

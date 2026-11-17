@@ -74,7 +74,9 @@ class _FlagsCardState extends State<FlagsCard> {
               contentPadding: EdgeInsets.zero,
               title: Text(e.value(t)),
               value: _flags[e.key] ?? true,
-              onChanged: canSave ? (v) => setState(() => _flags[e.key] = v) : null,
+              onChanged: canSave
+                  ? (v) => setState(() => _flags[e.key] = v)
+                  : null,
             ),
           const Divider(),
           SwitchListTile(
@@ -91,7 +93,8 @@ class _FlagsCardState extends State<FlagsCard> {
             decoration: InputDecoration(labelText: t.oMaintenanceMessage),
           ),
           const SizedBox(height: Space.md),
-          if (canSave) PrimaryButton(label: t.oSave, busy: _busy, onPressed: _save),
+          if (canSave)
+            PrimaryButton(label: t.oSave, busy: _busy, onPressed: _save),
         ],
       ),
     );
@@ -107,7 +110,10 @@ class ClientErrorsCard extends StatelessWidget {
     final t = context.t;
     return AsyncView<List<Json>>(
       load: () async {
-        final res = await context.api.get('/admin/client-errors', query: {'limit': '50'});
+        final res = await context.api.get(
+          '/admin/client-errors',
+          query: {'limit': '50'},
+        );
         return (res['items'] as List).cast<Json>();
       },
       builder: (context, items, reload) => AppCard(
@@ -135,14 +141,21 @@ class _ErrorRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final at = item['at'] as String;
-    final when = at.length > 16 ? at.substring(0, 16).replaceFirst('T', ' ') : at;
+    final when = at.length > 16
+        ? at.substring(0, 16).replaceFirst('T', ' ')
+        : at;
     final stack = item['stack'] as String? ?? '';
     return ExpansionTile(
       tilePadding: EdgeInsets.zero,
-      title: Text(item['message'] as String, maxLines: 2, overflow: TextOverflow.ellipsis),
+      title: Text(
+        item['message'] as String,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
       subtitle: Text('${item['app']} · ${item['version']} · $when'),
       children: [
-        if (stack.isNotEmpty) SelectableText(stack, style: context.text.bodySmall),
+        if (stack.isNotEmpty)
+          SelectableText(stack, style: context.text.bodySmall),
       ],
     );
   }

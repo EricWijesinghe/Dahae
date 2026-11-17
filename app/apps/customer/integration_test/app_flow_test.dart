@@ -22,45 +22,63 @@ const _phone = String.fromEnvironment('E2E_PHONE', defaultValue: '01012345678');
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('golden path: sign in with the dev code, reach home, open a service', skip: !_runE2e, (tester) async {
-    final session = Session(namespace: 'e2e-customer');
-    await session.clear(); // start signed out, whatever the device kept
-    final api = ApiClient(baseUrl: defaultApiBase(), session: session);
-    final locale = LocaleController();
-    final theme = ThemeController();
-    await locale.set(const Locale('ko'));
-    await theme.set(ThemeMode.dark);
-    final app = AppState(api, Realtime(api));
+  testWidgets(
+    'golden path: sign in with the dev code, reach home, open a service',
+    skip: !_runE2e,
+    (tester) async {
+      final session = Session(namespace: 'e2e-customer');
+      await session.clear(); // start signed out, whatever the device kept
+      final api = ApiClient(baseUrl: defaultApiBase(), session: session);
+      final locale = LocaleController();
+      final theme = ThemeController();
+      await locale.set(const Locale('ko'));
+      await theme.set(ThemeMode.dark);
+      final app = AppState(api, Realtime(api));
 
-    await tester.pumpWidget(CustomerApp(session: session, app: app, locale: locale, theme: theme));
-    final t = lookupT(const Locale('ko'));
-    await pumpUntilFound(tester, find.text(t.introStart), timeout: const Duration(seconds: 15));
-    await tester.tap(find.text(t.introStart));
-    await settle(tester);
+      await tester.pumpWidget(
+        CustomerApp(session: session, app: app, locale: locale, theme: theme),
+      );
+      final t = lookupT(const Locale('ko'));
+      await pumpUntilFound(
+        tester,
+        find.text(t.introStart),
+        timeout: const Duration(seconds: 15),
+      );
+      await tester.tap(find.text(t.introStart));
+      await settle(tester);
 
-    await tester.enterText(find.byType(TextField), _phone);
-    await settle(tester, duration: const Duration(milliseconds: 300));
-    await tester.tap(find.text(t.loginSendCode));
-    await settle(tester);
-
-    // Dev code is pre-filled on the code step.
-    await tester.tap(find.text(t.loginVerify));
-    await settle(tester, duration: const Duration(seconds: 2));
-
-    if (find.text(t.profileTitle).evaluate().isNotEmpty) {
-      await tester.enterText(find.byType(TextField), 'E2E 고객');
+      await tester.enterText(find.byType(TextField), _phone);
       await settle(tester, duration: const Duration(milliseconds: 300));
-      await tester.tap(find.text(t.profileDone));
+      await tester.tap(find.text(t.loginSendCode));
+      await settle(tester);
+
+      // Dev code is pre-filled on the code step.
+      await tester.tap(find.text(t.loginVerify));
       await settle(tester, duration: const Duration(seconds: 2));
-    }
 
-    await pumpUntilFound(tester, find.text(t.tabHome), timeout: const Duration(seconds: 15));
-    await pumpUntilFound(tester, find.text(t.service('studio')), timeout: const Duration(seconds: 15));
-    await tester.tap(find.text(t.service('studio')));
-    await settle(tester);
-    expect(find.text(t.service('studio')), findsWidgets);
-    expect(find.text(t.dfBookNow), findsOneWidget);
+      if (find.text(t.profileTitle).evaluate().isNotEmpty) {
+        await tester.enterText(find.byType(TextField), 'E2E 고객');
+        await settle(tester, duration: const Duration(milliseconds: 300));
+        await tester.tap(find.text(t.profileDone));
+        await settle(tester, duration: const Duration(seconds: 2));
+      }
 
-    await session.logout();
-  });
+      await pumpUntilFound(
+        tester,
+        find.text(t.tabHome),
+        timeout: const Duration(seconds: 15),
+      );
+      await pumpUntilFound(
+        tester,
+        find.text(t.service('studio')),
+        timeout: const Duration(seconds: 15),
+      );
+      await tester.tap(find.text(t.service('studio')));
+      await settle(tester);
+      expect(find.text(t.service('studio')), findsWidgets);
+      expect(find.text(t.dfBookNow), findsOneWidget);
+
+      await session.logout();
+    },
+  );
 }

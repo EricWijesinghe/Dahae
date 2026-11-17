@@ -25,37 +25,63 @@ const _password = String.fromEnvironment('E2E_STAFF_PASSWORD');
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('golden path: staff login, open the palette, reach the bookings list', skip: !_runE2e, (tester) async {
-    final session = Session(namespace: 'e2e-console');
-    await session.clear();
-    final api = ApiClient(baseUrl: defaultApiBase(), session: session);
-    final locale = LocaleController();
-    final theme = ThemeController();
-    await locale.set(const Locale('ko'));
-    await theme.set(ThemeMode.dark);
-    final state = ConsoleState(api, Realtime(api), session);
+  testWidgets(
+    'golden path: staff login, open the palette, reach the bookings list',
+    skip: !_runE2e,
+    (tester) async {
+      final session = Session(namespace: 'e2e-console');
+      await session.clear();
+      final api = ApiClient(baseUrl: defaultApiBase(), session: session);
+      final locale = LocaleController();
+      final theme = ThemeController();
+      await locale.set(const Locale('ko'));
+      await theme.set(ThemeMode.dark);
+      final state = ConsoleState(api, Realtime(api), session);
 
-    await tester.pumpWidget(ConsoleApp(session: session, state: state, locale: locale, theme: theme));
-    final t = lookupT(const Locale('ko'));
-    await pumpUntilFound(tester, find.byType(TextField), timeout: const Duration(seconds: 15));
-    await tester.enterText(find.byType(TextField).at(0), _email);
-    await tester.enterText(find.byType(TextField).at(1), _password);
-    await settle(tester, duration: const Duration(milliseconds: 300));
-    await tester.tap(find.widgetWithText(PrimaryButton, t.cLogin));
-    await settle(tester, duration: const Duration(seconds: 2));
+      await tester.pumpWidget(
+        ConsoleApp(
+          session: session,
+          state: state,
+          locale: locale,
+          theme: theme,
+        ),
+      );
+      final t = lookupT(const Locale('ko'));
+      await pumpUntilFound(
+        tester,
+        find.byType(TextField),
+        timeout: const Duration(seconds: 15),
+      );
+      await tester.enterText(find.byType(TextField).at(0), _email);
+      await tester.enterText(find.byType(TextField).at(1), _password);
+      await settle(tester, duration: const Duration(milliseconds: 300));
+      await tester.tap(find.widgetWithText(PrimaryButton, t.cLogin));
+      await settle(tester, duration: const Duration(seconds: 2));
 
-    // MaterialApp.home only sets the initial route, so the shell may only appear after a fresh launch.
-    // Relaunch the app for the rest of the journey.
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(ConsoleApp(session: session, state: state, locale: locale, theme: theme));
-    await pumpUntilFound(tester, find.byType(ConsoleShell), timeout: const Duration(seconds: 15));
+      // MaterialApp.home only sets the initial route, so the shell may only appear after a fresh launch.
+      // Relaunch the app for the rest of the journey.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(
+        ConsoleApp(
+          session: session,
+          state: state,
+          locale: locale,
+          theme: theme,
+        ),
+      );
+      await pumpUntilFound(
+        tester,
+        find.byType(ConsoleShell),
+        timeout: const Duration(seconds: 15),
+      );
 
-    await tester.tap(find.byTooltip(t.cSearchCommand).first);
-    await settle(tester);
-    await tester.tap(find.widgetWithText(ListTile, t.cBookings).last);
-    await settle(tester, duration: const Duration(seconds: 2));
-    expect(find.text(t.cBookings), findsWidgets);
+      await tester.tap(find.byTooltip(t.cSearchCommand).first);
+      await settle(tester);
+      await tester.tap(find.widgetWithText(ListTile, t.cBookings).last);
+      await settle(tester, duration: const Duration(seconds: 2));
+      expect(find.text(t.cBookings), findsWidgets);
 
-    await session.logout();
-  });
+      await session.logout();
+    },
+  );
 }

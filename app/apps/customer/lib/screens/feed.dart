@@ -279,5 +279,7 @@ Future<void> openFeedCard(BuildContext context, Json card) async {
   if (!context.mounted) return;
   final nav = Navigator.of(context);
   await HapticFeedback.selectionClick();
-  await nav.push(MaterialPageRoute<void>(builder: (_) => ServiceScreen(service: service)));
+  await nav.push(
+    MaterialPageRoute<void>(builder: (_) => ServiceScreen(service: service)),
+  );
 }

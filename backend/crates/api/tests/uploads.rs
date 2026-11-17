@@ -18,13 +18,19 @@ use std::net::SocketAddr;
 use tower::ServiceExt;
 
 /// Smallest container the metadata stripper accepts: signature, IHDR, IEND.
-const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00IEND\x00\x00\x00\x00";
+const PNG: &[u8] =
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00IEND\x00\x00\x00\x00";
 
 async fn send(app: &Router, mut req: Request<Body>) -> (StatusCode, String, Vec<u8>) {
     req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40_000))));
     let res = app.clone().oneshot(req).await.expect("router is infallible");
     let status = res.status();
-    let kind = res.headers().get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).unwrap_or_default().to_string();
+    let kind = res
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_string();
     let bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.expect("body").to_vec();
     (status, kind, bytes)
 }
@@ -121,9 +127,20 @@ async fn a_photo_can_only_be_attached_by_its_uploader(pool: PgPool) {
     let (_, name) = path_of(&upload(&app, &owner.token).await);
     let stored = vec![format!("/files/{name}")];
     assert!(api::routes::uploads::owned(&pool, Some(owner.user), &stored).await.expect("check"));
-    assert!(!api::routes::uploads::owned(&pool, Some(other.user), &stored).await.expect("check"), "someone else's photo");
-    assert!(api::routes::uploads::owned(&pool, None, &stored).await.expect("check"), "staff may reference any upload");
-    assert!(!api::routes::uploads::owned(&pool, None, &["/files/ffffffffffffffffffffffffffffffff.jpg".to_string()]).await.expect("check"), "unknown file");
+    assert!(
+        !api::routes::uploads::owned(&pool, Some(other.user), &stored).await.expect("check"),
+        "someone else's photo"
+    );
+    assert!(
+        api::routes::uploads::owned(&pool, None, &stored).await.expect("check"),
+        "staff may reference any upload"
+    );
+    assert!(
+        !api::routes::uploads::owned(&pool, None, &["/files/ffffffffffffffffffffffffffffffff.jpg".to_string()])
+            .await
+            .expect("check"),
+        "unknown file"
+    );
 }
 
 #[test]
@@ -137,7 +154,11 @@ fn only_photo_fields_are_signed() {
     });
     api::routes::uploads::sign_urls(&test_config(), &mut v);
     assert!(v["url"].as_str().is_some_and(|u| u.starts_with(&format!("{BASE_URL}/v1/files/"))));
-    assert!(v["photos"]["before"][0].as_str().is_some_and(|u| u.starts_with(&format!("{BASE_URL}/v1/files/"))));
+    assert!(
+        v["photos"]["before"][0]
+            .as_str()
+            .is_some_and(|u| u.starts_with(&format!("{BASE_URL}/v1/files/")))
+    );
     assert_eq!(v["body"]["text"].as_str(), Some(format!("look {stored}").as_str()), "free text is not signed");
     assert_eq!(v["note"].as_str(), Some(stored), "unknown key is not signed");
 }
@@ -145,22 +166,29 @@ fn only_photo_fields_are_signed() {
 #[sqlx::test(migrations = "../../migrations")]
 async fn stored_photo_paths_leave_the_api_signed(pool: PgPool) {
     seed_catalog(&pool).await;
-    sqlx::query("INSERT INTO content_items (kind, title, image_url, active) VALUES ('banner', '{\"ko\":\"t\"}', '/files/0123456789abcdef0123456789abcdef.png', true)")
-        .execute(&pool)
-        .await
-        .expect("banner");
+    sqlx::query(
+        "INSERT INTO content_items (kind, title, image_url, active) VALUES ('banner', '{\"ko\":\"t\"}', '/files/0123456789abcdef0123456789abcdef.png', true)",
+    )
+    .execute(&pool)
+    .await
+    .expect("banner");
     let app = common::app(pool);
     let (status, body) = call(&app, "GET", "/v1/content?kind=banner", None, None).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let url = body[0]["image_url"].as_str().expect("image_url");
-    assert!(url.starts_with(&format!("{BASE_URL}/v1/files/0123456789abcdef0123456789abcdef.png?exp=")), "{url}");
+    assert!(
+        url.starts_with(&format!("{BASE_URL}/v1/files/0123456789abcdef0123456789abcdef.png?exp=")),
+        "{url}"
+    );
     assert!(url.contains("&sig="), "{url}");
 }
 
 /// Uploads arbitrary bytes as the customer. Returns the status and the JSON body.
 async fn upload_raw(app: &Router, token: &str, bytes: &[u8]) -> (StatusCode, Value) {
     let boundary = "XBOUNDARY";
-    let mut body = format!("--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"p.bin\"\r\nContent-Type: application/octet-stream\r\n\r\n").into_bytes();
+    let mut body =
+        format!("--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"p.bin\"\r\nContent-Type: application/octet-stream\r\n\r\n")
+            .into_bytes();
     body.extend_from_slice(bytes);
     body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
     let req = Request::builder()
@@ -185,7 +213,10 @@ fn jpeg_segment(marker: u8, body: &[u8]) -> Vec<u8> {
 fn jpeg_with_gps() -> Vec<u8> {
     let mut j = vec![0xFF, 0xD8];
     j.extend(jpeg_segment(0xE0, b"JFIF\0\x01\x01\0\0\x01\0\x01\0\0"));
-    j.extend(jpeg_segment(0xE1, b"Exif\0\0MM\0*\0\0\0\x08GPSLatitude37.5665N GPSLongitude126.9780E Make=Acme DateTimeOriginal"));
+    j.extend(jpeg_segment(
+        0xE1,
+        b"Exif\0\0MM\0*\0\0\0\x08GPSLatitude37.5665N GPSLongitude126.9780E Make=Acme DateTimeOriginal",
+    ));
     j.extend(jpeg_segment(0xE1, b"http://ns.adobe.com/xap/1.0/\0<x:xmpmeta>GPSLatitude</x:xmpmeta>"));
     j.extend(jpeg_segment(0xDB, &[0; 65]));
     j.extend(jpeg_segment(0xDA, &[1, 1, 0, 0, 63, 0]));
@@ -224,10 +255,21 @@ async fn images_that_cannot_be_cleaned_are_refused(pool: PgPool) {
     let c = customer(&app, &pool, "010-5000-0603").await;
     let heic = b"\0\0\0\x18ftypheic\0\0\0\0mif1heicEXIF-GPS";
     let truncated_jpeg = [0xFF, 0xD8, 0xFF, 0xE1, 0x00, 0x40, b'E'];
-    for (label, bytes) in [("heic keeps its EXIF inside the container", &heic[..]), ("a truncated jpeg", &truncated_jpeg[..])] {
+    for (label, bytes) in [
+        ("heic keeps its EXIF inside the container", &heic[..]),
+        ("a truncated jpeg", &truncated_jpeg[..]),
+    ] {
         let (status, body) = upload_raw(&app, &c.token, bytes).await;
-        assert_eq!((status, body["error"]["code"].as_str()), (StatusCode::BAD_REQUEST, Some("unsupported_image")), "{label}: {body}");
+        assert_eq!(
+            (status, body["error"]["code"].as_str()),
+            (StatusCode::BAD_REQUEST, Some("unsupported_image")),
+            "{label}: {body}"
+        );
     }
-    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM uploads WHERE owner_id = $1").bind(c.user).fetch_one(&pool).await.expect("count");
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM uploads WHERE owner_id = $1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
     assert_eq!(rows, 0, "refused images leave no upload row");
 }

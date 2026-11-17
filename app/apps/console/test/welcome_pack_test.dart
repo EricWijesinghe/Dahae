@@ -23,38 +23,47 @@ FakeApi _api() => FakeApi()
   ..onPut(_packPath, (c) => c.body);
 
 void main() {
-  testWidgets('growth shows the one 15,000 sign-up coupon and saves an edited pack', (tester) async {
-    setViewport(tester, tallPhoneSize);
-    final fake = _api();
-    final env = await TestEnv.create(fake: fake, role: 'staff_admin');
-    await pumpConsoleScreen(tester, env, const GrowthSettings());
-    await pumpUntilFound(tester, find.text(koT.welcomePackTitle));
+  testWidgets(
+    'growth shows the one 15,000 sign-up coupon and saves an edited pack',
+    (tester) async {
+      setViewport(tester, tallPhoneSize);
+      final fake = _api();
+      final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+      await pumpConsoleScreen(tester, env, const GrowthSettings());
+      await pumpUntilFound(tester, find.text(koT.welcomePackTitle));
 
-    final amount = find.widgetWithText(TextField, koT.welcomePackAmount);
-    expect(amount, findsOneWidget);
-    expect(tester.widget<TextField>(amount).controller!.text, '15000');
+      final amount = find.widgetWithText(TextField, koT.welcomePackAmount);
+      expect(amount, findsOneWidget);
+      expect(tester.widget<TextField>(amount).controller!.text, '15000');
 
-    await tester.enterText(amount, '20000');
-    await tester.tap(find.text(koT.welcomePackAdd));
-    await tester.pump();
-    await tester.enterText(find.widgetWithText(TextField, koT.welcomePackAmount).last, '3000');
-    // The pack editor is the first section: its save button is the first one on the screen.
-    await tester.tap(find.widgetWithText(FilledButton, koT.save).first);
-    await settle(tester, duration: const Duration(milliseconds: 500));
-    expect(fake.lastCall('PUT', _packPath)!.body, [
-      {'amount': 20000, 'service_code': null},
-      {'amount': 3000, 'service_code': null},
-    ]);
-
-    // Removing every coupon saves an empty pack (= switched off).
-    for (var i = 0; i < 2; i++) {
-      await tester.tap(find.byTooltip(koT.welcomePackRemove).first);
+      await tester.enterText(amount, '20000');
+      await tester.tap(find.text(koT.welcomePackAdd));
       await tester.pump();
-    }
-    await tester.tap(find.widgetWithText(FilledButton, koT.save).first);
-    await settle(tester, duration: const Duration(milliseconds: 500));
-    expect(fake.lastCall('PUT', _packPath)!.body, isEmpty);
-    await settle(tester, duration: const Duration(seconds: 4)); // toasts time out
-    await unmount(tester);
-  });
+      await tester.enterText(
+        find.widgetWithText(TextField, koT.welcomePackAmount).last,
+        '3000',
+      );
+      // The pack editor is the first section: its save button is the first one on the screen.
+      await tester.tap(find.widgetWithText(FilledButton, koT.save).first);
+      await settle(tester, duration: const Duration(milliseconds: 500));
+      expect(fake.lastCall('PUT', _packPath)!.body, [
+        {'amount': 20000, 'service_code': null},
+        {'amount': 3000, 'service_code': null},
+      ]);
+
+      // Removing every coupon saves an empty pack (= switched off).
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.byTooltip(koT.welcomePackRemove).first);
+        await tester.pump();
+      }
+      await tester.tap(find.widgetWithText(FilledButton, koT.save).first);
+      await settle(tester, duration: const Duration(milliseconds: 500));
+      expect(fake.lastCall('PUT', _packPath)!.body, isEmpty);
+      await settle(
+        tester,
+        duration: const Duration(seconds: 4),
+      ); // toasts time out
+      await unmount(tester);
+    },
+  );
 }

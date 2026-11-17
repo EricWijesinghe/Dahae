@@ -8,7 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// Backend error codes must either have copy in every locale or be an explicit fallback.
 /// The fixture is generated from backend/crates (api + domain) by hand-run script.
 void main() {
-  final fixture = jsonDecode(File('test/fixtures/backend_error_codes.json').readAsStringSync()) as Map<String, dynamic>;
+  final fixture =
+      jsonDecode(
+            File('test/fixtures/backend_error_codes.json').readAsStringSync(),
+          )
+          as Map<String, dynamic>;
   final localized = (fixture['localized'] as List).cast<String>();
   final fallback = (fixture['fallback'] as List).cast<String>();
 
@@ -18,17 +22,28 @@ void main() {
     expect(localized.toSet().intersection(fallback.toSet()), isEmpty);
   });
 
-  test('every localized backend code has copy in all supported locales', () async {
-    expect(T.supportedLocales, hasLength(2));
-    for (final locale in T.supportedLocales) {
-      final t = await T.delegate.load(locale);
-      for (final code in localized) {
-        final message = t.error(ApiException(400, code));
-        expect(message.trim(), isNotEmpty, reason: '${locale.languageCode}: $code');
-        expect(message, isNot(t.errorGeneric), reason: '${locale.languageCode}: $code has no dedicated copy');
+  test(
+    'every localized backend code has copy in all supported locales',
+    () async {
+      expect(T.supportedLocales, hasLength(2));
+      for (final locale in T.supportedLocales) {
+        final t = await T.delegate.load(locale);
+        for (final code in localized) {
+          final message = t.error(ApiException(400, code));
+          expect(
+            message.trim(),
+            isNotEmpty,
+            reason: '${locale.languageCode}: $code',
+          );
+          expect(
+            message,
+            isNot(t.errorGeneric),
+            reason: '${locale.languageCode}: $code has no dedicated copy',
+          );
+        }
       }
-    }
-  });
+    },
+  );
 
   test('fallback codes keep the generic message', () async {
     final en = await T.delegate.load(const Locale('en'));

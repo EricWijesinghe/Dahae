@@ -83,17 +83,19 @@ class _CouponsState extends State<_Coupons> {
     setState(() => _busy = true);
     final t = context.t;
     try {
-      final r = await context.api.post('/admin/coupons', {
-        'name': _name.text.trim(),
-        'amount': int.parse(_amount.text),
-        'service_code': _service,
-        'phones': _phones.text
-            .split('\n')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList(),
-        'all_customers': _all,
-      }) as Json;
+      final r =
+          await context.api.post('/admin/coupons', {
+                'name': _name.text.trim(),
+                'amount': int.parse(_amount.text),
+                'service_code': _service,
+                'phones': _phones.text
+                    .split('\n')
+                    .map((s) => s.trim())
+                    .where((s) => s.isNotEmpty)
+                    .toList(),
+                'all_customers': _all,
+              })
+              as Json;
       if (mounted) showToast(context, t.cIssued('${r['issued']}'));
     } catch (e) {
       if (mounted) showToast(context, t.error(e));
@@ -233,9 +235,10 @@ class _ContentState extends State<_Content> {
     };
     // Banner art card ("웰컴 혜택" over "15,000원"), read by the customer home hero.
     final card = (item?['body'] as Json?)?['card'] as Json?;
-    TextEditingController cardField(String part, String l) => TextEditingController(
-      text: ((card?[part] as Json?)?[l] as String?) ?? '',
-    );
+    TextEditingController cardField(String part, String l) =>
+        TextEditingController(
+          text: ((card?[part] as Json?)?[l] as String?) ?? '',
+        );
     final cardLabels = {for (final l in _langs) l: cardField('label', l)};
     final cardValues = {for (final l in _langs) l: cardField('value', l)};
     final save = await showDialog<bool>(
@@ -370,7 +373,9 @@ class _ContentState extends State<_Content> {
             for (final l in _langs)
               if (bodies[l]!.text.isNotEmpty) l: bodies[l]!.text,
           },
-          'card': kind == 'banner' ? _cardBody(card, cardLabels, cardValues) : null,
+          'card': kind == 'banner'
+              ? _cardBody(card, cardLabels, cardValues)
+              : null,
         }..removeWhere((k, v) => k == 'card' && v == null),
         'image_url': item?['image_url'],
         'link': link.text.trim().isEmpty ? null : link.text.trim(),

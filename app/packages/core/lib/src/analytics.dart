@@ -70,7 +70,11 @@ class Analytics {
     if (!_consented || !analyticsEventNames.contains(name)) return false;
     if (screen != null && !_screenPattern.hasMatch(screen)) return false;
     // An unknown platform (e.g. Linux) is sent as none: the API stores NULL instead of a wrong label.
-    _queue.add({'name': name, if (platform.isNotEmpty) 'platform': platform, 'screen': ?screen});
+    _queue.add({
+      'name': name,
+      if (platform.isNotEmpty) 'platform': platform,
+      'screen': ?screen,
+    });
     if (_queue.length >= _batchSize) unawaited(flush());
     return true;
   }
@@ -86,7 +90,8 @@ class Analytics {
     } on Object {
       if (_consented) {
         _queue.insertAll(0, batch);
-        if (_queue.length > _maxQueued) _queue.removeRange(_maxQueued, _queue.length);
+        if (_queue.length > _maxQueued)
+          _queue.removeRange(_maxQueued, _queue.length);
       }
     }
   }
@@ -94,12 +99,17 @@ class Analytics {
   /// A random id for this install: 128 bits from a secure RNG, hex.
   static String newAnonId() {
     final r = Random.secure();
-    return List.generate(16, (_) => r.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+    return List.generate(
+      16,
+      (_) => r.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
   }
 
   /// The install's id, kept in secure storage so it survives restarts. Never throws: a wiped or broken
   /// keystore (backup restore, OS reset) gives a fresh in-memory id so startup still reaches the first frame.
-  static Future<String> loadOrCreateAnonId({FlutterSecureStorage storage = const FlutterSecureStorage()}) async {
+  static Future<String> loadOrCreateAnonId({
+    FlutterSecureStorage storage = const FlutterSecureStorage(),
+  }) async {
     try {
       final saved = await storage.read(key: _anonKey);
       if (saved != null && _anonPattern.hasMatch(saved)) return saved;

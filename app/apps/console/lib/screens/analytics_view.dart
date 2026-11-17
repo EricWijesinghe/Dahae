@@ -12,7 +12,13 @@ double shareOf(num n, num of) => of <= 0 ? 0 : (n / of).clamp(0, 1).toDouble();
 
 /// Funnel bars (each stage as a share of signups) and a cohort table with raw counts per week.
 class AnalyticsView extends StatelessWidget {
-  const AnalyticsView({super.key, required this.funnel, required this.cohorts, this.days = 30, this.weeks = 8});
+  const AnalyticsView({
+    super.key,
+    required this.funnel,
+    required this.cohorts,
+    this.days = 30,
+    this.weeks = 8,
+  });
   final FunnelFn funnel;
   final CohortsFn cohorts;
   final int days;
@@ -42,7 +48,10 @@ class AnalyticsView extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t.anFunnel('$days'), style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  t.anFunnel('$days'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 for (final (label, n) in stages)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
@@ -76,7 +85,9 @@ class AnalyticsView extends StatelessWidget {
                       '${t.anCohortSize('${r['size']}')} · ${t.anWeekAfter('1')} ${r['w1']} · '
                       '${t.anWeekAfter('2')} ${r['w2']} · ${t.anWeekAfter('3')} ${r['w3']} · ${t.anWeekAfter('4')} ${r['w4']}',
                     ),
-                    trailing: Text('${(shareOf(r['w1'] as num, r['size'] as num) * 100).round()}%'),
+                    trailing: Text(
+                      '${(shareOf(r['w1'] as num, r['size'] as num) * 100).round()}%',
+                    ),
                   ),
               ],
             );

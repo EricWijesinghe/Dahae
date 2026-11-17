@@ -35,7 +35,14 @@ async fn session_is_issued_and_verifies_once(db: PgPool) {
 async fn unissued_id_is_refused(db: PgPool) {
     let app = common::app(db);
     let (token, _) = login(&app, "010-7100-0002", "customer").await;
-    let (st, b) = call(&app, "POST", "/v1/me/identity", Some(token.as_str()), Some(json!({ "identity_verification_id": "dev:forged" }))).await;
+    let (st, b) = call(
+        &app,
+        "POST",
+        "/v1/me/identity",
+        Some(token.as_str()),
+        Some(json!({ "identity_verification_id": "dev:forged" })),
+    )
+    .await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "{b}");
     assert_eq!(b["error"]["code"], json!("identity_not_found"));
 }
@@ -47,7 +54,14 @@ async fn id_issued_to_another_customer_is_refused(db: PgPool) {
     let (bob, _) = login(&app, "010-7100-0004", "customer").await;
     let (_, s) = session(&app, &alice).await;
     let id = s["identity_verification_id"].as_str().expect("id").to_string();
-    let (st, _) = call(&app, "POST", "/v1/me/identity", Some(bob.as_str()), Some(json!({ "identity_verification_id": id }))).await;
+    let (st, _) = call(
+        &app,
+        "POST",
+        "/v1/me/identity",
+        Some(bob.as_str()),
+        Some(json!({ "identity_verification_id": id })),
+    )
+    .await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "bob cannot use alice's session");
 }
 

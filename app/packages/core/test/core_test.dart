@@ -17,17 +17,42 @@ void main() {
     });
     expect(unit.type, PricingType.unit);
     expect(unit.fromPrice, 39000);
-    final quote = Service.fromJson({'code': 'move_in', 'pricing': {'type': 'quote'}});
+    final quote = Service.fromJson({
+      'code': 'move_in',
+      'pricing': {'type': 'quote'},
+    });
     expect(quote.isQuote, isTrue);
     expect(quote.fromPrice, isNull);
   });
 
   test('coupon applicability mirrors server rules', () {
     final future = DateTime.now().add(const Duration(days: 3));
-    final studio = Coupon(id: 'a', name: 'welcome_studio', amount: 10000, serviceCode: 'studio', expiresAt: future);
-    final any = Coupon(id: 'b', name: 'welcome_any', amount: 5000, expiresAt: future);
-    final used = Coupon(id: 'c', name: 'x', amount: 5000, expiresAt: future, usedBookingId: 'bk');
-    final expired = Coupon(id: 'd', name: 'x', amount: 5000, expiresAt: DateTime.now().subtract(const Duration(minutes: 1)));
+    final studio = Coupon(
+      id: 'a',
+      name: 'welcome_studio',
+      amount: 10000,
+      serviceCode: 'studio',
+      expiresAt: future,
+    );
+    final any = Coupon(
+      id: 'b',
+      name: 'welcome_any',
+      amount: 5000,
+      expiresAt: future,
+    );
+    final used = Coupon(
+      id: 'c',
+      name: 'x',
+      amount: 5000,
+      expiresAt: future,
+      usedBookingId: 'bk',
+    );
+    final expired = Coupon(
+      id: 'd',
+      name: 'x',
+      amount: 5000,
+      expiresAt: DateTime.now().subtract(const Duration(minutes: 1)),
+    );
     expect(studio.appliesTo('bathroom'), isFalse);
     expect(studio.appliesTo('studio'), isTrue);
     expect(any.appliesTo('bathroom'), isTrue);
@@ -56,7 +81,10 @@ void main() {
 
   test('every district code is a 5-digit Seoul code', () {
     expect(seoulDistricts.length, 25);
-    expect(seoulDistricts.every((d) => RegExp(r'^11\d{3}$').hasMatch(d.code)), isTrue);
+    expect(
+      seoulDistricts.every((d) => RegExp(r'^11\d{3}$').hasMatch(d.code)),
+      isTrue,
+    );
     expect(districtByCode('11680')?.ko, '강남구');
   });
 

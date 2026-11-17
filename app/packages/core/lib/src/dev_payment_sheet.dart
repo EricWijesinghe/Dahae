@@ -22,7 +22,11 @@ enum _Step { pick, confirm, processing, done }
 /// charged. Pops the chosen method code on "done" and null on cancel. The launcher maps it to a
 /// dev payment id, and the normal confirm path marks the booking paid.
 class DevPaymentSheet extends StatefulWidget {
-  const DevPaymentSheet({super.key, required this.intent, this.processingDelay = const Duration(milliseconds: 1400)});
+  const DevPaymentSheet({
+    super.key,
+    required this.intent,
+    this.processingDelay = const Duration(milliseconds: 1400),
+  });
 
   final CheckoutIntent intent;
 
@@ -34,10 +38,14 @@ class DevPaymentSheet extends StatefulWidget {
 }
 
 class _DevPaymentSheetState extends State<DevPaymentSheet> {
-  late String _method = devPaymentMethods.contains(widget.intent.method) ? widget.intent.method : 'card';
+  late String _method = devPaymentMethods.contains(widget.intent.method)
+      ? widget.intent.method
+      : 'card';
   _Step _step = _Step.pick;
   // Fake approval number: six digits from the clock, stable for this sheet.
-  final String _approval = (DateTime.now().microsecondsSinceEpoch % 1000000).toString().padLeft(6, '0');
+  final String _approval = (DateTime.now().microsecondsSinceEpoch % 1000000)
+      .toString()
+      .padLeft(6, '0');
 
   bool get _isVa => _method == 'virtual_account';
 
@@ -57,9 +65,18 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
       _Step.done => _done(context),
     };
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Space.gutter, 0, Space.gutter, Space.gutter),
+      padding: const EdgeInsets.fromLTRB(
+        Space.gutter,
+        0,
+        Space.gutter,
+        Space.gutter,
+      ),
       child: SingleChildScrollView(
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: body),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: body,
+        ),
       ),
     );
   }
@@ -80,7 +97,9 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
       const SizedBox(height: Space.md),
       PrimaryButton(
         key: const ValueKey('pay-next'),
-        label: _isVa ? t.apPgConfirmBtn : t.apPgPay(context.won(widget.intent.amount)),
+        label: _isVa
+            ? t.apPgConfirmBtn
+            : t.apPgPay(context.won(widget.intent.amount)),
         onPressed: () => setState(() => _step = _Step.confirm),
       ),
       _cancelButton(context),
@@ -98,14 +117,20 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
           children: [
             PayBrandBadge(code: _method),
             const SizedBox(width: Space.md),
-            Expanded(child: Text(t.payMethod(_method), style: context.text.titleSmall)),
+            Expanded(
+              child: Text(t.payMethod(_method), style: context.text.titleSmall),
+            ),
           ],
         ),
       ),
       const SizedBox(height: Space.md),
       _amountRow(context, t.apVaAmount),
       const SizedBox(height: Space.md),
-      PrimaryButton(key: const ValueKey('pay-confirm'), label: t.apPgConfirmBtn, onPressed: _process),
+      PrimaryButton(
+        key: const ValueKey('pay-confirm'),
+        label: t.apPgConfirmBtn,
+        onPressed: _process,
+      ),
       _cancelButton(context),
       _testNote(context),
     ];
@@ -116,7 +141,11 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
       const SizedBox(height: Space.lg),
       const Center(child: CircularProgressIndicator()),
       const SizedBox(height: Space.md),
-      Text(context.t.apPgProcessing, textAlign: TextAlign.center, style: context.text.bodyMedium),
+      Text(
+        context.t.apPgProcessing,
+        textAlign: TextAlign.center,
+        style: context.text.bodyMedium,
+      ),
       const SizedBox(height: Space.lg),
     ];
   }
@@ -140,7 +169,11 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
       ),
       if (_isVa) ...[
         const SizedBox(height: Space.sm),
-        Text(t.apPgVaIssued, style: context.text.bodySmall, textAlign: TextAlign.center),
+        Text(
+          t.apPgVaIssued,
+          style: context.text.bodySmall,
+          textAlign: TextAlign.center,
+        ),
       ],
       const SizedBox(height: Space.md),
       PrimaryButton(
@@ -154,9 +187,17 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
   Widget _amountRow(BuildContext context, String label) {
     return Row(
       children: [
-        Text(label, style: context.text.bodyMedium?.copyWith(color: context.colors.inkSoft)),
+        Text(
+          label,
+          style: context.text.bodyMedium?.copyWith(
+            color: context.colors.inkSoft,
+          ),
+        ),
         const Spacer(),
-        Text(context.won(widget.intent.amount), style: context.text.headlineSmall),
+        Text(
+          context.won(widget.intent.amount),
+          style: context.text.headlineSmall,
+        ),
       ],
     );
   }
@@ -166,7 +207,12 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
       padding: const EdgeInsets.only(bottom: Space.xs),
       child: Row(
         children: [
-          Text(k, style: context.text.bodySmall?.copyWith(color: context.colors.inkSoft)),
+          Text(
+            k,
+            style: context.text.bodySmall?.copyWith(
+              color: context.colors.inkSoft,
+            ),
+          ),
           const Spacer(),
           Text(v, style: context.text.bodySmall),
         ],
@@ -194,7 +240,13 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
 }
 
 class _MethodTile extends StatelessWidget {
-  const _MethodTile({super.key, required this.code, required this.label, required this.selected, required this.onTap});
+  const _MethodTile({
+    super.key,
+    required this.code,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String code;
   final String label;
@@ -218,7 +270,9 @@ class _MethodTile extends StatelessWidget {
               const SizedBox(width: Space.md),
               Expanded(child: Text(label, style: context.text.bodyMedium)),
               Icon(
-                selected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
+                selected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_unchecked_rounded,
                 color: selected ? context.primary : context.colors.inkSoft,
               ),
             ],

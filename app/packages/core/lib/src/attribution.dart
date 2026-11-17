@@ -2,7 +2,14 @@
 /// Read once per app launch and sent with signup; the server stores the first value it receives and never
 /// overwrites it. Nothing is written to cookies or storage.
 abstract final class Attribution {
-  static const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'ref'];
+  static const keys = [
+    'utm_source',
+    'utm_medium',
+    'utm_campaign',
+    'utm_content',
+    'utm_term',
+    'ref',
+  ];
   static const _maxChars = 80;
 
   static Map<String, String>? _captured;
@@ -13,7 +20,8 @@ abstract final class Attribution {
     final out = <String, String>{};
     for (final k in keys) {
       final v = uri.queryParameters[k]?.trim();
-      if (v != null && v.isNotEmpty) out[k] = v.length > _maxChars ? v.substring(0, _maxChars) : v;
+      if (v != null && v.isNotEmpty)
+        out[k] = v.length > _maxChars ? v.substring(0, _maxChars) : v;
     }
     return out.isEmpty ? null : out;
   }

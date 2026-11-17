@@ -60,11 +60,16 @@ class FakeApi {
     _routes.add(_Route(method, RegExp('^$pattern\$'), handler));
   }
 
-  void onGet(String pattern, RouteHandler handler) => on('GET', pattern, handler);
-  void onPost(String pattern, RouteHandler handler) => on('POST', pattern, handler);
-  void onPut(String pattern, RouteHandler handler) => on('PUT', pattern, handler);
-  void onPatch(String pattern, RouteHandler handler) => on('PATCH', pattern, handler);
-  void onDelete(String pattern, RouteHandler handler) => on('DELETE', pattern, handler);
+  void onGet(String pattern, RouteHandler handler) =>
+      on('GET', pattern, handler);
+  void onPost(String pattern, RouteHandler handler) =>
+      on('POST', pattern, handler);
+  void onPut(String pattern, RouteHandler handler) =>
+      on('PUT', pattern, handler);
+  void onPatch(String pattern, RouteHandler handler) =>
+      on('PATCH', pattern, handler);
+  void onDelete(String pattern, RouteHandler handler) =>
+      on('DELETE', pattern, handler);
 
   /// Constant reply for a route.
   void reply(String method, String pattern, Object? body, {int status = 200}) {
@@ -73,11 +78,12 @@ class FakeApi {
 
   /// Calls made to [method] [path] (path without `/v1`, e.g. `/bookings`).
   List<ApiCall> callsTo(String method, String path) => [
-        for (final c in calls)
-          if (c.method == method && c.path == path) c,
-      ];
+    for (final c in calls)
+      if (c.method == method && c.path == path) c,
+  ];
 
-  ApiCall? lastCall(String method, String path) => callsTo(method, path).lastOrNull;
+  ApiCall? lastCall(String method, String path) =>
+      callsTo(method, path).lastOrNull;
 
   Future<http.Response> _handle(http.Request req) async {
     final raw = req.url.path;
@@ -112,9 +118,13 @@ class FakeApi {
     }
   }
 
-  static http.Response _respond(int status, Object? body, [Map<String, String> headers = const {}]) => http.Response(
-        body == null ? '' : jsonEncode(body),
-        status,
-        headers: {'content-type': 'application/json', ...headers},
-      );
+  static http.Response _respond(
+    int status,
+    Object? body, [
+    Map<String, String> headers = const {},
+  ]) => http.Response(
+    body == null ? '' : jsonEncode(body),
+    status,
+    headers: {'content-type': 'application/json', ...headers},
+  );
 }

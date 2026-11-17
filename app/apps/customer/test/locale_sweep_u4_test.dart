@@ -21,9 +21,16 @@ const Json _request = {
 
 FakeApi _api() {
   final fake = FakeApi()
-    ..reply('GET', '/brand', {'support_hours': 'Mon–Fri 09:00–18:00, Sat 10:00–14:00'})
+    ..reply('GET', '/brand', {
+      'support_hours': 'Mon–Fri 09:00–18:00, Sat 10:00–14:00',
+    })
     ..reply('GET', '/chat/threads/th-1/messages', [
-      chatMessageJson(id: 's0', sender: 'system', kind: 'system', body: {'code': 'consultation_received'}),
+      chatMessageJson(
+        id: 's0',
+        sender: 'system',
+        kind: 'system',
+        body: {'code': 'consultation_received'},
+      ),
       chatMessageJson(id: 'c1', sender: 'system', kind: 'card', body: _request),
       chatMessageJson(
         id: 'q1',
@@ -43,7 +50,10 @@ FakeApi _api() {
       ),
     ])
     ..reply('POST', '/chat/threads/th-1/read', null);
-  stockCustomerApi(fake, threads: [threadJson(id: 'th-1', topic: 'move_out')]);
+  stockCustomerApi(
+    fake,
+    threads: [threadJson(id: 'th-1', topic: 'move_out')],
+  );
   return fake;
 }
 
@@ -51,24 +61,35 @@ void main() {
   for (final locale in LocaleController.supported) {
     final code = locale.languageCode;
     for (final scale in [1.3, 2.0]) {
-      testWidgets('[$code x$scale] chat list and quote card fit a small phone', (tester) async {
-        setViewport(tester, _smallPhone);
-        tester.platformDispatcher.textScaleFactorTestValue = scale;
-        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-        final t = lookupT(locale);
-        final env = await TestEnv.create(fake: _api(), localeCode: code);
+      testWidgets(
+        '[$code x$scale] chat list and quote card fit a small phone',
+        (tester) async {
+          setViewport(tester, _smallPhone);
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          final t = lookupT(locale);
+          final env = await TestEnv.create(fake: _api(), localeCode: code);
 
-        await pumpCustomerScreen(tester, env, const ChatListTab());
-        await pumpUntilFound(tester, find.textContaining(t.chatReplyFast));
-        expect(tester.takeException(), isNull, reason: 'list');
-        await unmount(tester);
+          await pumpCustomerScreen(tester, env, const ChatListTab());
+          await pumpUntilFound(tester, find.textContaining(t.chatReplyFast));
+          expect(tester.takeException(), isNull, reason: 'list');
+          await unmount(tester);
 
-        await pumpCustomerScreen(tester, env, const ChatRoomScreen(threadId: 'th-1', topic: 'move_out', bookingId: 'bk-9'));
-        await pumpUntilFound(tester, find.text(t.quoteConfirmedTitle));
-        expect(find.text(t.quotePayDeposit), findsOneWidget);
-        expect(tester.takeException(), isNull, reason: 'quote card');
-        await unmount(tester);
-      });
+          await pumpCustomerScreen(
+            tester,
+            env,
+            const ChatRoomScreen(
+              threadId: 'th-1',
+              topic: 'move_out',
+              bookingId: 'bk-9',
+            ),
+          );
+          await pumpUntilFound(tester, find.text(t.quoteConfirmedTitle));
+          expect(find.text(t.quotePayDeposit), findsOneWidget);
+          expect(tester.takeException(), isNull, reason: 'quote card');
+          await unmount(tester);
+        },
+      );
     }
   }
 }

@@ -31,12 +31,18 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   void _reload() => setState(() => _list = _load());
 
   Future<void> _new() async {
-    final created = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const SubscribeScreen()));
+    final created = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => const SubscribeScreen()));
     if (created == true) _reload();
   }
 
   Future<void> _open(Json sub) async {
-    await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => SubscriptionDetailScreen(id: sub['id'] as String)));
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => SubscriptionDetailScreen(id: sub['id'] as String),
+      ),
+    );
     _reload();
   }
 
@@ -72,7 +78,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           }
           final rows = snap.data ?? const <Json>[];
           if (rows.isEmpty) {
-            return Center(child: Padding(padding: const EdgeInsets.all(Space.xl), child: Text(t.subListEmpty)));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(Space.xl),
+                child: Text(t.subListEmpty),
+              ),
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(Space.xl),
@@ -83,7 +94,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               return Card(
                 child: ListTile(
                   title: Text(subscriptionTitle(t, sub)),
-                  subtitle: Text(subscriptionStatus(t, sub['status'] as String)),
+                  subtitle: Text(
+                    subscriptionStatus(t, sub['status'] as String),
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _open(sub),
                 ),
@@ -116,7 +129,8 @@ class SubscriptionDetailScreen extends StatefulWidget {
   final String id;
 
   @override
-  State<SubscriptionDetailScreen> createState() => _SubscriptionDetailScreenState();
+  State<SubscriptionDetailScreen> createState() =>
+      _SubscriptionDetailScreenState();
 }
 
 class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
@@ -141,10 +155,15 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
   /// Runs one action, shows the server's error if it refuses, and refreshes the view.
   Future<void> _act(String path, [Object? body]) async {
     try {
-      final v = await context.api.post('/subscriptions/${widget.id}/$path', body) as Json;
+      final v =
+          await context.api.post('/subscriptions/${widget.id}/$path', body)
+              as Json;
       if (mounted) setState(() => _view = v);
     } on ApiException {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.t.errorGeneric)));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.t.errorGeneric)));
     }
   }
 
@@ -155,8 +174,14 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
       builder: (ctx) => AlertDialog(
         content: Text(t.subCancelConfirm),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t.cancel)),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t.subCancelSub)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t.subCancelSub),
+          ),
         ],
       ),
     );
@@ -171,7 +196,9 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(t.subTitle)),
       body: _failed
-          ? Center(child: TextButton(onPressed: _load, child: Text(t.retry)))
+          ? Center(
+              child: TextButton(onPressed: _load, child: Text(t.retry)),
+            )
           : sub == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -180,21 +207,35 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
                 Text(subscriptionTitle(t, sub), style: context.text.titleLarge),
                 const SizedBox(height: Space.sm),
                 Text(subscriptionStatus(t, sub['status'] as String)),
-                if (sub['status'] == 'paused' && sub['paused_reason'] == 'payment') ...[
+                if (sub['status'] == 'paused' &&
+                    sub['paused_reason'] == 'payment') ...[
                   const SizedBox(height: Space.sm),
                   Text(t.subPausedPayment),
                 ],
                 const SizedBox(height: Space.lg),
                 if (sub['status'] == 'active')
-                  OutlinedButton(key: const Key('sub-pause'), onPressed: () => _act('pause'), child: Text(t.subPause)),
+                  OutlinedButton(
+                    key: const Key('sub-pause'),
+                    onPressed: () => _act('pause'),
+                    child: Text(t.subPause),
+                  ),
                 if (sub['status'] == 'paused')
-                  FilledButton(key: const Key('sub-resume'), onPressed: () => _act('resume', const <String, Object?>{}), child: Text(t.subResume)),
+                  FilledButton(
+                    key: const Key('sub-resume'),
+                    onPressed: () => _act('resume', const <String, Object?>{}),
+                    child: Text(t.subResume),
+                  ),
                 if (sub['status'] != 'cancelled') ...[
                   const SizedBox(height: Space.sm),
-                  TextButton(key: const Key('sub-cancel'), onPressed: _cancel, child: Text(t.subCancelSub)),
+                  TextButton(
+                    key: const Key('sub-cancel'),
+                    onPressed: _cancel,
+                    child: Text(t.subCancelSub),
+                  ),
                 ],
                 const SizedBox(height: Space.lg),
-                for (final v in (view?['visits'] as List? ?? const []).cast<Json>())
+                for (final v
+                    in (view?['visits'] as List? ?? const []).cast<Json>())
                   ListTile(
                     key: Key('visit-${v['id']}'),
                     title: Text(v['visit_date'] as String),
@@ -202,7 +243,10 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
                     trailing: v['state'] == 'planned' || v['state'] == 'booked'
                         ? TextButton(
                             key: Key('skip-${v['id']}'),
-                            onPressed: () => _act('visits/${v['id']}/skip', const <String, Object?>{}),
+                            onPressed: () => _act(
+                              'visits/${v['id']}/skip',
+                              const <String, Object?>{},
+                            ),
                             child: Text(t.subSkip),
                           )
                         : null,

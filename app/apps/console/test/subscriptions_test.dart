@@ -27,23 +27,47 @@ Json _row(String id, String status) => {
 };
 
 void main() {
-  testWidgets('console lists subscriptions and pauses one on the customer\'s behalf', (tester) async {
-    final fake = FakeApi()
-      ..reply('GET', '/admin/subscriptions', [_row('s-1', 'active'), _row('s-2', 'cancelled')])
-      ..reply('POST', '/admin/subscriptions/s-1/pause', _row('s-1', 'paused'));
-    final env = await TestEnv.create(fake: fake, role: 'staff_admin');
-    await pumpConsoleScreen(tester, env, const SubscriptionsScreen());
-    await pumpUntilFound(tester, find.byKey(const Key('sub-s-1')));
+  testWidgets(
+    'console lists subscriptions and pauses one on the customer\'s behalf',
+    (tester) async {
+      final fake = FakeApi()
+        ..reply('GET', '/admin/subscriptions', [
+          _row('s-1', 'active'),
+          _row('s-2', 'cancelled'),
+        ])
+        ..reply(
+          'POST',
+          '/admin/subscriptions/s-1/pause',
+          _row('s-1', 'paused'),
+        );
+      final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+      await pumpConsoleScreen(tester, env, const SubscriptionsScreen());
+      await pumpUntilFound(tester, find.byKey(const Key('sub-s-1')));
 
-    expect(find.text('${koT.service('studio')} · ${koT.subBiweekly}'), findsNWidgets(2), reason: 'both rows are studio, every two weeks');
-    expect(find.byKey(const Key('sub-toggle-s-2')), findsNothing, reason: 'cancelled subscriptions have no toggle');
+      expect(
+        find.text('${koT.service('studio')} · ${koT.subBiweekly}'),
+        findsNWidgets(2),
+        reason: 'both rows are studio, every two weeks',
+      );
+      expect(
+        find.byKey(const Key('sub-toggle-s-2')),
+        findsNothing,
+        reason: 'cancelled subscriptions have no toggle',
+      );
 
-    await tester.tap(find.byKey(const Key('sub-toggle-s-1')));
-    await settle(tester);
+      await tester.tap(find.byKey(const Key('sub-toggle-s-1')));
+      await settle(tester);
 
-    expect(fake.calls.any((c) => c.method == 'POST' && c.path == '/admin/subscriptions/s-1/pause'), isTrue);
-    await unmount(tester);
-  });
+      expect(
+        fake.calls.any(
+          (c) =>
+              c.method == 'POST' && c.path == '/admin/subscriptions/s-1/pause',
+        ),
+        isTrue,
+      );
+      await unmount(tester);
+    },
+  );
 
   testWidgets('status filter requests only that status', (tester) async {
     final fake = FakeApi()

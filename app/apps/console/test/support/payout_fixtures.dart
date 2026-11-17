@@ -26,4 +26,3 @@ final payoutRows = <Json>[
   payoutJson('po-3', 'paid'),
   payoutJson('po-4', 'failed', failure: 'account_closed'),
 ];
-

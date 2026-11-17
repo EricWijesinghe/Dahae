@@ -31,40 +31,47 @@ Json _review({bool blocked = false}) => {
 };
 
 void main() {
-  testWidgets('queue lists reports and sends keep, hide, and author-block decisions', (tester) async {
-    final decisions = <String>[];
-    final blocks = <bool>[];
-    await tester.pumpWidget(testApp(
-      ReviewReportQueue(
-        fetch: () async => [_review()],
-        decide: (id, action) async => decisions.add('$id:$action'),
-        setAuthorBlocked: (id, blocked) async => blocks.add(blocked),
-      ),
-    ));
-    await tester.pumpAndSettle();
-    final t = tester.element(find.byType(ReviewReportQueue)).t;
+  testWidgets(
+    'queue lists reports and sends keep, hide, and author-block decisions',
+    (tester) async {
+      final decisions = <String>[];
+      final blocks = <bool>[];
+      await tester.pumpWidget(
+        testApp(
+          ReviewReportQueue(
+            fetch: () async => [_review()],
+            decide: (id, action) async => decisions.add('$id:$action'),
+            setAuthorBlocked: (id, blocked) async => blocks.add(blocked),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final t = tester.element(find.byType(ReviewReportQueue)).t;
 
-    expect(find.text(t.modReports('2')), findsOneWidget);
-    expect(find.text(t.modHidden), findsOneWidget);
-    expect(find.textContaining('전화번호 포함'), findsOneWidget);
+      expect(find.text(t.modReports('2')), findsOneWidget);
+      expect(find.text(t.modHidden), findsOneWidget);
+      expect(find.textContaining('전화번호 포함'), findsOneWidget);
 
-    await tester.tap(find.text(t.modKeep));
-    await tester.pumpAndSettle();
-    expect(decisions, ['b1:keep']);
+      await tester.tap(find.text(t.modKeep));
+      await tester.pumpAndSettle();
+      expect(decisions, ['b1:keep']);
 
-    await tester.tap(find.text(t.modBlockAuthor));
-    await tester.pumpAndSettle();
-    expect(blocks, [true]);
-  });
+      await tester.tap(find.text(t.modBlockAuthor));
+      await tester.pumpAndSettle();
+      expect(blocks, [true]);
+    },
+  );
 
   testWidgets('an empty queue says so', (tester) async {
-    await tester.pumpWidget(testApp(
-      ReviewReportQueue(
-        fetch: () async => const [],
-        decide: (_, _) async {},
-        setAuthorBlocked: (_, _) async {},
+    await tester.pumpWidget(
+      testApp(
+        ReviewReportQueue(
+          fetch: () async => const [],
+          decide: (_, _) async {},
+          setAuthorBlocked: (_, _) async {},
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
     final t = tester.element(find.byType(ReviewReportQueue)).t;
     expect(find.text(t.modEmpty), findsOneWidget);

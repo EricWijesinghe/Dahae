@@ -99,7 +99,10 @@ async fn events_reach_sockets_on_other_nodes_once(pool: PgPool) {
     b.hub.send(Recipient::Staff, "chat.message", json!({ "body": big }));
     let ev = expect_event(&mut rx_a, "chat.message").await;
     assert_eq!(ev.data["body"].as_str().map(str::len), Some(big.len()));
-    let stored: i64 = sqlx::query_scalar("SELECT count(*) FROM realtime_events").fetch_one(&pool).await.expect("count");
+    let stored: i64 = sqlx::query_scalar("SELECT count(*) FROM realtime_events")
+        .fetch_one(&pool)
+        .await
+        .expect("count");
     assert_eq!(stored, 1, "the large payload went through the table");
 }
 
@@ -207,7 +210,10 @@ async fn request_metrics_use_route_templates_not_raw_paths(pool: PgPool) {
     assert!(body.contains("route=\"/health\",status=\"200\""), "health series: {body}");
     assert!(body.contains("route=\"unmatched\""), "unknown paths share one label: {body}");
     assert!(!body.contains(&id.to_string()), "raw ids never become labels");
-    assert!(body.contains("malkkeum_http_request_duration_seconds_bucket{method=\"GET\",route=\"/health\""), "histogram buckets");
+    assert!(
+        body.contains("malkkeum_http_request_duration_seconds_bucket{method=\"GET\",route=\"/health\""),
+        "histogram buckets"
+    );
 }
 
 #[sqlx::test(migrations = "../../migrations")]

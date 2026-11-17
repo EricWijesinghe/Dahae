@@ -77,14 +77,17 @@ void main() {
     ]);
   });
 
-  test('an empty platform (desktop) is left out instead of sent as a wrong label', () async {
-    final a = make(platform: '');
-    a.track('app_open');
-    await a.flush();
-    expect(sent.single['events'], [
-      {'name': 'app_open'},
-    ]);
-  });
+  test(
+    'an empty platform (desktop) is left out instead of sent as a wrong label',
+    () async {
+      final a = make(platform: '');
+      a.track('app_open');
+      await a.flush();
+      expect(sent.single['events'], [
+        {'name': 'app_open'},
+      ]);
+    },
+  );
 
   test('a full batch flushes without waiting for the timer', () async {
     final a = make();
@@ -128,15 +131,29 @@ void main() {
 
   test('platform labels match analytics.rs PLATFORMS, desktop included', () {
     expect(analyticsPlatform(web: true, target: TargetPlatform.windows), 'web');
-    expect(analyticsPlatform(web: false, target: TargetPlatform.android), 'android');
+    expect(
+      analyticsPlatform(web: false, target: TargetPlatform.android),
+      'android',
+    );
     expect(analyticsPlatform(web: false, target: TargetPlatform.iOS), 'ios');
-    expect(analyticsPlatform(web: false, target: TargetPlatform.windows), 'windows');
-    expect(analyticsPlatform(web: false, target: TargetPlatform.macOS), 'macos');
+    expect(
+      analyticsPlatform(web: false, target: TargetPlatform.windows),
+      'windows',
+    );
+    expect(
+      analyticsPlatform(web: false, target: TargetPlatform.macOS),
+      'macos',
+    );
     expect(analyticsPlatform(web: false, target: TargetPlatform.linux), '');
   });
 
-  test('a broken keystore still gives an anonymous id instead of failing startup', () async {
-    final id = await Analytics.loadOrCreateAnonId(storage: const _BrokenStorage());
-    expect(RegExp(r'^[0-9a-f]{32}$').hasMatch(id), isTrue);
-  });
+  test(
+    'a broken keystore still gives an anonymous id instead of failing startup',
+    () async {
+      final id = await Analytics.loadOrCreateAnonId(
+        storage: const _BrokenStorage(),
+      );
+      expect(RegExp(r'^[0-9a-f]{32}$').hasMatch(id), isTrue);
+    },
+  );
 }

@@ -71,4 +71,3 @@ PaymentLauncher paymentLauncherFor(
   if (isWindows ?? isWindowsApp()) return PortOneBrowserLauncher(apiBase);
   return PortOneWebViewLauncher(apiBase);
 }
-

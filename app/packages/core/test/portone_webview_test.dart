@@ -11,15 +11,19 @@ class _FakeWeb extends WebViewPlatform {
   final delegate = <_FakeDelegate>[];
 
   @override
-  PlatformWebViewController createPlatformWebViewController(PlatformWebViewControllerCreationParams params) =>
-      (controller..add(_FakeController(params))).last;
+  PlatformWebViewController createPlatformWebViewController(
+    PlatformWebViewControllerCreationParams params,
+  ) => (controller..add(_FakeController(params))).last;
 
   @override
-  PlatformNavigationDelegate createPlatformNavigationDelegate(PlatformNavigationDelegateCreationParams params) =>
-      (delegate..add(_FakeDelegate(params))).last;
+  PlatformNavigationDelegate createPlatformNavigationDelegate(
+    PlatformNavigationDelegateCreationParams params,
+  ) => (delegate..add(_FakeDelegate(params))).last;
 
   @override
-  PlatformWebViewWidget createPlatformWebViewWidget(PlatformWebViewWidgetCreationParams params) => _FakeWidget(params);
+  PlatformWebViewWidget createPlatformWebViewWidget(
+    PlatformWebViewWidgetCreationParams params,
+  ) => _FakeWidget(params);
 }
 
 class _FakeController extends PlatformWebViewController {
@@ -33,9 +37,12 @@ class _FakeController extends PlatformWebViewController {
   @override
   Future<void> setJavaScriptMode(JavaScriptMode javaScriptMode) async {}
   @override
-  Future<void> setPlatformNavigationDelegate(PlatformNavigationDelegate handler) async {}
+  Future<void> setPlatformNavigationDelegate(
+    PlatformNavigationDelegate handler,
+  ) async {}
   @override
-  Future<void> loadRequest(LoadRequestParams params) async => loads.add(params.uri);
+  Future<void> loadRequest(LoadRequestParams params) async =>
+      loads.add(params.uri);
   @override
   Future<String?> currentUrl() async => url;
   @override
@@ -57,11 +64,16 @@ class _FakeDelegate extends PlatformNavigationDelegate {
   ProgressCallback? onProgress;
 
   @override
-  Future<void> setOnNavigationRequest(NavigationRequestCallback onNavigationRequest) async => onRequest = onNavigationRequest;
+  Future<void> setOnNavigationRequest(
+    NavigationRequestCallback onNavigationRequest,
+  ) async => onRequest = onNavigationRequest;
   @override
-  Future<void> setOnWebResourceError(WebResourceErrorCallback onWebResourceError) async => onError = onWebResourceError;
+  Future<void> setOnWebResourceError(
+    WebResourceErrorCallback onWebResourceError,
+  ) async => onError = onWebResourceError;
   @override
-  Future<void> setOnProgress(ProgressCallback onProgress) async => this.onProgress = onProgress;
+  Future<void> setOnProgress(ProgressCallback onProgress) async =>
+      this.onProgress = onProgress;
 }
 
 class _FakeWidget extends PlatformWebViewWidget {
@@ -73,16 +85,25 @@ class _FakeWidget extends PlatformWebViewWidget {
 /// Opens the hosted page over a home route; the future completes with its pop result.
 Future<Future<String?>> _open(WidgetTester tester, Uri page) async {
   final nav = GlobalKey<NavigatorState>();
-  await tester.pumpWidget(MaterialApp(
-    navigatorKey: nav,
-    locale: const Locale('ko'),
-    localizationsDelegates: T.localizationsDelegates,
-    supportedLocales: T.supportedLocales,
-    home: const SizedBox(),
-  ));
-  final result = nav.currentState!.push<String?>(MaterialPageRoute(
-    builder: (_) => HostedPage<String>(uri: page, donePath: '/pay/done.html', title: 'PG', onDone: (u) => u.queryParameters['code'] ?? 'ok'),
-  ));
+  await tester.pumpWidget(
+    MaterialApp(
+      navigatorKey: nav,
+      locale: const Locale('ko'),
+      localizationsDelegates: T.localizationsDelegates,
+      supportedLocales: T.supportedLocales,
+      home: const SizedBox(),
+    ),
+  );
+  final result = nav.currentState!.push<String?>(
+    MaterialPageRoute(
+      builder: (_) => HostedPage<String>(
+        uri: page,
+        donePath: '/pay/done.html',
+        title: 'PG',
+        onDone: (u) => u.queryParameters['code'] ?? 'ok',
+      ),
+    ),
+  );
   await _settle(tester);
   return result;
 }
@@ -94,7 +115,8 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
-NavigationRequest _nav(String url) => NavigationRequest(url: url, isMainFrame: true);
+NavigationRequest _nav(String url) =>
+    NavigationRequest(url: url, isMainFrame: true);
 
 final koT = lookupT(const Locale('ko'));
 
@@ -265,34 +287,59 @@ void main() {
     setUp(() => WebViewPlatform.instance = web = _FakeWeb());
     final page = Uri.parse('https://pay.example.com/pay/?checkout=ck-1');
 
-    testWidgets('offline shows error and retry; retry loads the page again', (tester) async {
+    testWidgets('offline shows error and retry; retry loads the page again', (
+      tester,
+    ) async {
       await _open(tester, page);
       final ctl = web.controller.single;
       expect(ctl.loads, [page]);
-      web.delegate.single.onError!(const WebResourceError(errorCode: -2, description: 'offline', isForMainFrame: true));
+      web.delegate.single.onError!(
+        const WebResourceError(
+          errorCode: -2,
+          description: 'offline',
+          isForMainFrame: true,
+        ),
+      );
       await tester.pump();
       expect(find.text(koT.errorNetwork), findsOneWidget);
 
       await tester.tap(find.text(koT.retry));
       await tester.pump();
       expect(find.text(koT.errorNetwork), findsNothing);
-      expect(ctl.loads, [page, page], reason: 'the first load never committed, so it loads again');
+      expect(ctl.loads, [
+        page,
+        page,
+      ], reason: 'the first load never committed, so it loads again');
     });
 
-    testWidgets('a failed sub-resource does not cover the page', (tester) async {
+    testWidgets('a failed sub-resource does not cover the page', (
+      tester,
+    ) async {
       await _open(tester, page);
-      web.delegate.single.onError!(const WebResourceError(errorCode: -1, description: 'img', isForMainFrame: false));
+      web.delegate.single.onError!(
+        const WebResourceError(
+          errorCode: -1,
+          description: 'img',
+          isForMainFrame: false,
+        ),
+      );
       await tester.pump();
       expect(find.text(koT.errorNetwork), findsNothing);
     });
 
-    testWidgets('back walks the page history before it cancels', (tester) async {
+    testWidgets('back walks the page history before it cancels', (
+      tester,
+    ) async {
       final result = await _open(tester, page);
       final ctl = web.controller.single..history = 1;
       await tester.binding.handlePopRoute();
       await _settle(tester);
       expect(ctl.backs, 1);
-      expect(find.byType(HostedPage<String>), findsOneWidget, reason: 'a 3DS step went back, the payment is still open');
+      expect(
+        find.byType(HostedPage<String>),
+        findsOneWidget,
+        reason: 'a 3DS step went back, the payment is still open',
+      );
 
       await tester.binding.handlePopRoute();
       await _settle(tester);
@@ -300,22 +347,47 @@ void main() {
       expect(await result, isNull, reason: 'back on the first page cancels');
     });
 
-    testWidgets('cleartext http is refused; https and the done redirect are handled', (tester) async {
-      final result = await _open(tester, page);
-      final route = web.delegate.single.onRequest!;
-      expect(await route(_nav('http://evil.example.com/steal')), NavigationDecision.prevent);
-      expect(await route(_nav('http://pay.example.com/pay/x')), NavigationDecision.prevent, reason: 'our https page never downgrades');
-      expect(await route(_nav('https://pg.example.com/3ds')), NavigationDecision.navigate);
-      expect(await route(_nav('https://pay.example.com/pay/done.html?code=X')), NavigationDecision.prevent);
-      await _settle(tester);
-      expect(await result, 'X');
-    });
+    testWidgets(
+      'cleartext http is refused; https and the done redirect are handled',
+      (tester) async {
+        final result = await _open(tester, page);
+        final route = web.delegate.single.onRequest!;
+        expect(
+          await route(_nav('http://evil.example.com/steal')),
+          NavigationDecision.prevent,
+        );
+        expect(
+          await route(_nav('http://pay.example.com/pay/x')),
+          NavigationDecision.prevent,
+          reason: 'our https page never downgrades',
+        );
+        expect(
+          await route(_nav('https://pg.example.com/3ds')),
+          NavigationDecision.navigate,
+        );
+        expect(
+          await route(_nav('https://pay.example.com/pay/done.html?code=X')),
+          NavigationDecision.prevent,
+        );
+        await _settle(tester);
+        expect(await result, 'X');
+      },
+    );
 
-    testWidgets('a local http dev page may navigate within its own origin only', (tester) async {
-      await _open(tester, Uri.parse('http://10.0.2.2:8080/pay/'));
-      final route = web.delegate.single.onRequest!;
-      expect(await route(_nav('http://10.0.2.2:8080/pay/step')), NavigationDecision.navigate);
-      expect(await route(_nav('http://10.0.2.2:9999/pay/step')), NavigationDecision.prevent);
-    });
+    testWidgets(
+      'a local http dev page may navigate within its own origin only',
+      (tester) async {
+        await _open(tester, Uri.parse('http://10.0.2.2:8080/pay/'));
+        final route = web.delegate.single.onRequest!;
+        expect(
+          await route(_nav('http://10.0.2.2:8080/pay/step')),
+          NavigationDecision.navigate,
+        );
+        expect(
+          await route(_nav('http://10.0.2.2:9999/pay/step')),
+          NavigationDecision.prevent,
+        );
+      },
+    );
   });
 }

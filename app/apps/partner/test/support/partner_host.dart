@@ -12,7 +12,12 @@ import 'package:ui/ui.dart';
 
 /// Same theme and localisation wiring as [PartnerApp], around any [home] screen.
 class PartnerTestHost extends StatelessWidget {
-  const PartnerTestHost({super.key, required this.env, required this.app, required this.home});
+  const PartnerTestHost({
+    super.key,
+    required this.env,
+    required this.app,
+    required this.home,
+  });
 
   final TestEnv env;
   final PartnerState app;
@@ -20,37 +25,46 @@ class PartnerTestHost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: Listenable.merge([env.locale, env.session, env.theme]),
-        builder: (context, _) => Deps(
-          app: app,
-          session: env.session,
-          locale: env.locale,
-          theme: env.theme,
-          child: MaterialApp(
-            debugShowCheckedModeBanner: false,
-            theme: buildTheme(partnerBrand, Brightness.light),
-            darkTheme: buildTheme(partnerBrand, Brightness.dark),
-            themeMode: env.theme.mode,
-            locale: env.locale.locale,
-            supportedLocales: LocaleController.supported,
-            localizationsDelegates: const [
-              T.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            home: home,
-          ),
-        ),
-      );
+    listenable: Listenable.merge([env.locale, env.session, env.theme]),
+    builder: (context, _) => Deps(
+      app: app,
+      session: env.session,
+      locale: env.locale,
+      theme: env.theme,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: buildTheme(partnerBrand, Brightness.light),
+        darkTheme: buildTheme(partnerBrand, Brightness.dark),
+        themeMode: env.theme.mode,
+        locale: env.locale.locale,
+        supportedLocales: LocaleController.supported,
+        localizationsDelegates: const [
+          T.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: home,
+      ),
+    ),
+  );
 }
 
 /// A throwaway on-disk outbox per test.
-CompletionOutbox testOutbox() => CompletionOutbox(Directory.systemTemp.createTempSync('outbox'));
+CompletionOutbox testOutbox() =>
+    CompletionOutbox(Directory.systemTemp.createTempSync('outbox'));
 
 /// Pumps [home] inside the partner app wiring (no sign-in gate) and returns the state.
-Future<PartnerState> pumpPartnerScreen(WidgetTester tester, TestEnv env, Widget home) async {
-  final app = PartnerState(env.api, FakeRealtime(env.api), outbox: testOutbox());
+Future<PartnerState> pumpPartnerScreen(
+  WidgetTester tester,
+  TestEnv env,
+  Widget home,
+) async {
+  final app = PartnerState(
+    env.api,
+    FakeRealtime(env.api),
+    outbox: testOutbox(),
+  );
   await tester.pumpWidget(PartnerTestHost(env: env, app: app, home: home));
   return app;
 }
@@ -58,19 +72,36 @@ Future<PartnerState> pumpPartnerScreen(WidgetTester tester, TestEnv env, Widget 
 /// Pumps the real [PartnerApp] root (sign-in gate, onboarding/pending/shell routing).
 /// The saved profile lives in [TestEnv.storage], so a second pump on the same env is a restart.
 Future<PartnerState> pumpPartnerApp(WidgetTester tester, TestEnv env) async {
-  final app = PartnerState(env.api, FakeRealtime(env.api), outbox: testOutbox(), cache: JsonCache(storage: env.storage));
-  await tester.pumpWidget(PartnerApp(session: env.session, app: app, locale: env.locale, theme: env.theme));
+  final app = PartnerState(
+    env.api,
+    FakeRealtime(env.api),
+    outbox: testOutbox(),
+    cache: JsonCache(storage: env.storage),
+  );
+  await tester.pumpWidget(
+    PartnerApp(
+      session: env.session,
+      app: app,
+      locale: env.locale,
+      theme: env.theme,
+    ),
+  );
   return app;
 }
 
 /// Verified, onboarded pro with a 20% fee unless a test says otherwise.
-Json verifiedProfile({String name = '말끔팀', String status = 'verified', int feeBps = 2000, int pendingPayout = 120000}) => {
-      'name': name,
-      'team_name': '팀A',
-      'status': status,
-      'fee_bps': feeBps,
-      'pending_payout': pendingPayout,
-    };
+Json verifiedProfile({
+  String name = '말끔팀',
+  String status = 'verified',
+  int feeBps = 2000,
+  int pendingPayout = 120000,
+}) => {
+  'name': name,
+  'team_name': '팀A',
+  'status': status,
+  'fee_bps': feeBps,
+  'pending_payout': pendingPayout,
+};
 
 /// Registers the endpoints the partner Gate and tabs read on start-up.
 void stockPartnerApi(
@@ -81,7 +112,15 @@ void stockPartnerApi(
 }) {
   api
     ..reply('GET', '/partner/me', profile ?? verifiedProfile())
-    ..reply('GET', '/partner/prefs', prefs ?? {'services': ['studio', 'kitchen'], 'districts': ['11680']})
+    ..reply(
+      'GET',
+      '/partner/prefs',
+      prefs ??
+          {
+            'services': ['studio', 'kitchen'],
+            'districts': ['11680'],
+          },
+    )
     ..reply('GET', '/partner/threads', const <Json>[])
     ..reply('GET', '/partner/quotes', const <Json>[])
     ..reply('GET', '/partner/jobs', jobs);
@@ -96,19 +135,18 @@ Json jobJson({
   Json? answers,
   int? estimate,
   int? myQuote,
-}) =>
-    {
-      'id': id,
-      'service_code': serviceCode,
-      'is_open': isOpen,
-      'customer_price': customerPrice,
-      'answers': answers,
-      'estimate': estimate,
-      'my_quote': myQuote,
-      'created_at': DateTime.now().toUtc().toIso8601String(),
-      'visit_date': isoDay(DateTime.now().add(const Duration(days: 2))),
-      'start_hour': 9,
-      'district_code': '11680',
-      'road_area': null,
-      'size_pyeong': 20,
-    };
+}) => {
+  'id': id,
+  'service_code': serviceCode,
+  'is_open': isOpen,
+  'customer_price': customerPrice,
+  'answers': answers,
+  'estimate': estimate,
+  'my_quote': myQuote,
+  'created_at': DateTime.now().toUtc().toIso8601String(),
+  'visit_date': isoDay(DateTime.now().add(const Duration(days: 2))),
+  'start_hour': 9,
+  'district_code': '11680',
+  'road_area': null,
+  'size_pyeong': 20,
+};

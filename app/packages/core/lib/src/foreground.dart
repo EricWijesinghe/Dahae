@@ -9,8 +9,12 @@ const gateRecheckEvery = Duration(minutes: 10);
 /// notification shade), at most once per [every]: a quick switch to the payment app does not refetch.
 /// [onHide] runs every time the app leaves the foreground (backgrounded, tab hidden, about to be killed).
 class Foreground {
-  Foreground({this.onResume, this.onHide, this.every = const Duration(seconds: 30), DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now {
+  Foreground({
+    this.onResume,
+    this.onHide,
+    this.every = const Duration(seconds: 30),
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now {
     _last = _clock();
     _listener = AppLifecycleListener(onHide: _hidden, onResume: _resumed);
   }

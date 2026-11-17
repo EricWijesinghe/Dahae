@@ -9,7 +9,8 @@ typedef PreviewFn = Future<Json> Function(List<Json> audience);
 typedef SubmitFn = Future<void> Function(Json body, DateTime? at);
 
 /// Test send to the operator's own phone (SMS format, not logged as a campaign).
-typedef TestFn = Future<void> Function(String phone, String body, String optout);
+typedef TestFn =
+    Future<void> Function(String phone, String body, String optout);
 
 enum AudienceKind { all, neverBooked, lapsed }
 
@@ -28,12 +29,18 @@ List<Json> audienceJson(AudienceKind kind, int days) => switch (kind) {
 String smsAdText(String body, String optout) => '(광고) $body\n무료수신거부 $optout';
 
 /// Opt-out numbers: digits with optional hyphens, 9 to 12 digits.
-bool validOptout(String v) => RegExp(r'^\d{9,12}$').hasMatch(v.replaceAll('-', ''));
+bool validOptout(String v) =>
+    RegExp(r'^\d{9,12}$').hasMatch(v.replaceAll('-', ''));
 
 /// Campaign builder: audience with live consent count, channel, copy with the ad preview, schedule,
 /// and a test send. Network calls come in as callbacks so the screen can be tested without a server.
 class CampaignBuilder extends StatefulWidget {
-  const CampaignBuilder({super.key, required this.preview, required this.submit, required this.testSend});
+  const CampaignBuilder({
+    super.key,
+    required this.preview,
+    required this.submit,
+    required this.testSend,
+  });
   final PreviewFn preview;
   final SubmitFn submit;
   final TestFn testSend;
@@ -85,15 +92,27 @@ class _CampaignBuilderState extends State<CampaignBuilder> {
 
   /// Title and body are required; SMS also needs a valid 080 opt-out number.
   bool get _canSend =>
-      _title.text.trim().isNotEmpty && _body.text.trim().isNotEmpty && (_channel == 'push' || validOptout(_optout.text.trim()));
+      _title.text.trim().isNotEmpty &&
+      _body.text.trim().isNotEmpty &&
+      (_channel == 'push' || validOptout(_optout.text.trim()));
 
   Future<void> _pickTime(T t) async {
     final now = DateTime.now();
-    final day = await showDatePicker(context: context, firstDate: now, lastDate: now.add(const Duration(days: 90)));
+    final day = await showDatePicker(
+      context: context,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 90)),
+    );
     if (day == null || !mounted) return;
-    final hm = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 9, minute: 0));
+    final hm = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 9, minute: 0),
+    );
     if (hm == null || !mounted) return;
-    await _send(t, DateTime(day.year, day.month, day.day, hm.hour, hm.minute).toUtc());
+    await _send(
+      t,
+      DateTime(day.year, day.month, day.day, hm.hour, hm.minute).toUtc(),
+    );
   }
 
   Future<void> _send(T t, DateTime? at) async {
@@ -151,7 +170,9 @@ class _CampaignBuilderState extends State<CampaignBuilder> {
         if (_total != null)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(t.cmConsentCount('${_total ?? 0}', '${_consented ?? 0}')),
+            child: Text(
+              t.cmConsentCount('${_total ?? 0}', '${_consented ?? 0}'),
+            ),
           ),
         const SizedBox(height: 12),
         Text(t.cmChannel, style: Theme.of(context).textTheme.titleMedium),
@@ -163,14 +184,28 @@ class _CampaignBuilderState extends State<CampaignBuilder> {
           selected: {_channel},
           onSelectionChanged: (s) => setState(() => _channel = s.first),
         ),
-        TextField(controller: _title, decoration: InputDecoration(labelText: t.cmTitle), onChanged: (_) => setState(() {})),
-        TextField(controller: _body, minLines: 2, maxLines: 5, decoration: InputDecoration(labelText: t.cmBody), onChanged: (_) => setState(() {})),
+        TextField(
+          controller: _title,
+          decoration: InputDecoration(labelText: t.cmTitle),
+          onChanged: (_) => setState(() {}),
+        ),
+        TextField(
+          controller: _body,
+          minLines: 2,
+          maxLines: 5,
+          decoration: InputDecoration(labelText: t.cmBody),
+          onChanged: (_) => setState(() {}),
+        ),
         if (_channel == 'sms')
           TextField(
             controller: _optout,
             decoration: InputDecoration(
               labelText: t.cmOptout,
-              errorText: _optout.text.trim().isNotEmpty && !validOptout(_optout.text.trim()) ? t.cmNeedOptout : null,
+              errorText:
+                  _optout.text.trim().isNotEmpty &&
+                      !validOptout(_optout.text.trim())
+                  ? t.cmNeedOptout
+                  : null,
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -179,21 +214,41 @@ class _CampaignBuilderState extends State<CampaignBuilder> {
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Text(_channel == 'sms' ? smsAdText(_body.text, _optout.text) : '${_title.text}\n${_body.text}'),
+            child: Text(
+              _channel == 'sms'
+                  ? smsAdText(_body.text, _optout.text)
+                  : '${_title.text}\n${_body.text}',
+            ),
           ),
         ),
         const SizedBox(height: 12),
-        TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: t.cmTestSend)),
+        TextField(
+          controller: _phone,
+          keyboardType: TextInputType.phone,
+          decoration: InputDecoration(labelText: t.cmTestSend),
+        ),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
             OutlinedButton(
-              onPressed: _busy ? null : () => widget.testSend(_phone.text.trim(), _body.text.trim(), _optout.text.trim()),
+              onPressed: _busy
+                  ? null
+                  : () => widget.testSend(
+                      _phone.text.trim(),
+                      _body.text.trim(),
+                      _optout.text.trim(),
+                    ),
               child: Text(t.cmTestSend),
             ),
-            OutlinedButton(onPressed: _busy || !_canSend ? null : () => _pickTime(t), child: Text(t.cmSchedule)),
-            FilledButton(onPressed: _busy || !_canSend ? null : () => _send(t, null), child: Text(t.cmSendNow)),
+            OutlinedButton(
+              onPressed: _busy || !_canSend ? null : () => _pickTime(t),
+              child: Text(t.cmSchedule),
+            ),
+            FilledButton(
+              onPressed: _busy || !_canSend ? null : () => _send(t, null),
+              child: Text(t.cmSendNow),
+            ),
           ],
         ),
       ],

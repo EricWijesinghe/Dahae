@@ -21,7 +21,11 @@ async fn send(app: &Router, method: &str, uri: &str, token: Option<&str>, key: O
     if let Some(k) = key {
         req = req.header("idempotency-key", k);
     }
-    let res = app.clone().oneshot(req.body(Body::from(body.to_string())).expect("request")).await.expect("service");
+    let res = app
+        .clone()
+        .oneshot(req.body(Body::from(body.to_string())).expect("request"))
+        .await
+        .expect("service");
     let status = res.status();
     let headers = res.headers().clone();
     let bytes = to_bytes(res.into_body(), 1 << 20).await.expect("body");

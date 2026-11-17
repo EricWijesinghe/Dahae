@@ -51,7 +51,14 @@ async fn cancelled_seat_is_offered_then_accepted_into_a_booking(pool: PgPool) {
     assert_eq!(st, StatusCode::OK);
     assert_eq!(mine[0]["status"], "offered", "next waiter gets the freed seat: {mine}");
 
-    let (st, accepted) = call(&app, "POST", &format!("/v1/waitlist/{entry}/accept"), Some(second.token.as_str()), Some(json!({ "payment_method_id": second.card }))).await;
+    let (st, accepted) = call(
+        &app,
+        "POST",
+        &format!("/v1/waitlist/{entry}/accept"),
+        Some(second.token.as_str()),
+        Some(json!({ "payment_method_id": second.card })),
+    )
+    .await;
     assert_eq!(st, StatusCode::OK, "accept creates the booking: {accepted}");
     assert!(accepted["booking_id"].is_string());
 }
@@ -62,7 +69,14 @@ async fn tip_is_refused_before_the_job_is_completed(pool: PgPool) {
     let app = app(pool.clone());
     let c = customer(&app, &pool, "010-5400-0004").await;
     let (booking, _) = book(&app, &c, 20, None).await;
-    let (st, _) = call(&app, "POST", &format!("/v1/bookings/{booking}/tip"), Some(c.token.as_str()), Some(json!({ "amount": 5000, "payment_method_id": c.card }))).await;
+    let (st, _) = call(
+        &app,
+        "POST",
+        &format!("/v1/bookings/{booking}/tip"),
+        Some(c.token.as_str()),
+        Some(json!({ "amount": 5000, "payment_method_id": c.card })),
+    )
+    .await;
     assert_ne!(st, StatusCode::OK, "tips need a completed job");
     let tips: i64 = sqlx::query_scalar("SELECT count(*) FROM booking_tips").fetch_one(&pool).await.expect("count");
     assert_eq!(tips, 0, "nothing charged or recorded");
@@ -100,7 +114,14 @@ async fn tip_is_refused_once_the_settlement_is_in_a_payout_batch(pool: PgPool) {
     .execute(&pool)
     .await
     .expect("settlement");
-    let (st, _) = call(&app, "POST", &format!("/v1/bookings/{booking}/tip"), Some(c.token.as_str()), Some(json!({ "amount": 5000, "payment_method_id": c.card }))).await;
+    let (st, _) = call(
+        &app,
+        "POST",
+        &format!("/v1/bookings/{booking}/tip"),
+        Some(c.token.as_str()),
+        Some(json!({ "amount": 5000, "payment_method_id": c.card })),
+    )
+    .await;
     assert_eq!(st, StatusCode::CONFLICT, "a settlement in a payout batch takes no tip");
     let tips: i64 = sqlx::query_scalar("SELECT count(*) FROM booking_tips").fetch_one(&pool).await.expect("count");
     assert_eq!(tips, 0, "nothing charged or recorded");

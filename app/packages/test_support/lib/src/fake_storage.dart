@@ -15,8 +15,7 @@ class FakeStorage extends FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async =>
-      data[key];
+  }) async => data[key];
 
   @override
   Future<void> write({

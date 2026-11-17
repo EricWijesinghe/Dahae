@@ -17,7 +17,13 @@ void main() {
     online = true;
     refusal = null;
     final fake = FakeApi();
-    fake.onPost('/uploads', (_) => {'url': 'https://cdn.test/${fake.callsTo('POST', '/uploads').length}.jpg'});
+    fake.onPost(
+      '/uploads',
+      (_) => {
+        'url':
+            'https://cdn.test/${fake.callsTo('POST', '/uploads').length}.jpg',
+      },
+    );
     fake.onPost(_complete, (_) {
       if (!online) throw const SocketException('no signal');
       if (refusal != null) return refusal;
@@ -29,52 +35,73 @@ void main() {
 
   tearDown(() => box.root.deleteSync(recursive: true));
 
-  Future<QueuedCompletion> completion({required String id, bool ready = true}) async => QueuedCompletion(
+  Future<QueuedCompletion> completion({
+    required String id,
+    bool ready = true,
+  }) async => QueuedCompletion(
     basePath: '/partner',
     bookingId: id,
-    before: [await box.stash(Uint8List.fromList([1, 2, 3]), id)],
-    after: [await box.stash(Uint8List.fromList([4, 5, 6]), id)],
+    before: [
+      await box.stash(Uint8List.fromList([1, 2, 3]), id),
+    ],
+    after: [
+      await box.stash(Uint8List.fromList([4, 5, 6]), id),
+    ],
     checklist: [true, true, true, true],
     ready: ready,
   );
 
-  test('send uploads the missing photos, completes the job, and removes the entry and its files', () async {
-    final c = await completion(id: 'bk-1');
-    final files = [for (final p in c.photos) File(p.file)];
-    await box.save(c);
+  test(
+    'send uploads the missing photos, completes the job, and removes the entry and its files',
+    () async {
+      final c = await completion(id: 'bk-1');
+      final files = [for (final p in c.photos) File(p.file)];
+      await box.save(c);
 
-    final r = await box.send(env.api, c);
+      final r = await box.send(env.api, c);
 
-    expect(r['net'], 1000);
-    expect(env.fake.callsTo('POST', '/uploads'), hasLength(2));
-    final sent = env.fake.lastCall('POST', _complete)!.json;
-    expect(sent['before_photos'], ['https://cdn.test/1.jpg']);
-    expect(sent['after_photos'], ['https://cdn.test/2.jpg']);
-    expect(await box.find('bk-1'), isNull);
-    expect([for (final f in files) f.existsSync()], everyElement(isFalse));
-  });
+      expect(r['net'], 1000);
+      expect(env.fake.callsTo('POST', '/uploads'), hasLength(2));
+      final sent = env.fake.lastCall('POST', _complete)!.json;
+      expect(sent['before_photos'], ['https://cdn.test/1.jpg']);
+      expect(sent['after_photos'], ['https://cdn.test/2.jpg']);
+      expect(await box.find('bk-1'), isNull);
+      expect([for (final f in files) f.existsSync()], everyElement(isFalse));
+    },
+  );
 
-  test('a lost connection keeps the ready entry; the next drain uploads nothing twice', () async {
-    final c = await completion(id: 'bk-1');
-    c.ready = true;
-    await box.save(c);
-    online = false;
+  test(
+    'a lost connection keeps the ready entry; the next drain uploads nothing twice',
+    () async {
+      final c = await completion(id: 'bk-1');
+      c.ready = true;
+      await box.save(c);
+      online = false;
 
-    await box.drain(env.api);
+      await box.drain(env.api);
 
-    final kept = await box.find('bk-1');
-    expect(kept, isNotNull, reason: 'queued, not dropped');
-    expect(kept!.ready, isTrue);
-    expect(kept.photos.every((p) => p.url != null), isTrue, reason: 'photos went up before the completion failed');
-    expect(env.fake.callsTo('POST', '/uploads'), hasLength(2));
+      final kept = await box.find('bk-1');
+      expect(kept, isNotNull, reason: 'queued, not dropped');
+      expect(kept!.ready, isTrue);
+      expect(
+        kept.photos.every((p) => p.url != null),
+        isTrue,
+        reason: 'photos went up before the completion failed',
+      );
+      expect(env.fake.callsTo('POST', '/uploads'), hasLength(2));
 
-    online = true;
-    await box.drain(env.api);
+      online = true;
+      await box.drain(env.api);
 
-    expect(env.fake.callsTo('POST', '/uploads'), hasLength(2), reason: 'no re-upload');
-    expect(env.fake.callsTo('POST', _complete), hasLength(2));
-    expect(await box.find('bk-1'), isNull);
-  });
+      expect(
+        env.fake.callsTo('POST', '/uploads'),
+        hasLength(2),
+        reason: 'no re-upload',
+      );
+      expect(env.fake.callsTo('POST', _complete), hasLength(2));
+      expect(await box.find('bk-1'), isNull);
+    },
+  );
 
   test('a draft uploads its photos but is never completed', () async {
     final c = await completion(id: 'bk-1', ready: false);
@@ -89,37 +116,59 @@ void main() {
     expect(kept.photos.every((p) => p.url != null), isTrue);
   });
 
-  test('a server refusal is recorded on the entry instead of dropping it', () async {
-    final c = await completion(id: 'bk-1');
-    c.ready = true;
-    await box.save(c);
-    refusal = const ApiReply(409, {'error': {'code': 'job_not_active'}});
+  test(
+    'a server refusal is recorded on the entry instead of dropping it',
+    () async {
+      final c = await completion(id: 'bk-1');
+      c.ready = true;
+      await box.save(c);
+      refusal = const ApiReply(409, {
+        'error': {'code': 'job_not_active'},
+      });
 
-    await box.drain(env.api);
+      await box.drain(env.api);
 
-    final kept = await box.find('bk-1');
-    expect(kept, isNotNull);
-    expect(kept!.error, 'job_not_active');
-  });
+      final kept = await box.find('bk-1');
+      expect(kept, isNotNull);
+      expect(kept!.error, 'job_not_active');
+    },
+  );
 
-  test('a corrupt entry is set aside and the other entries still drain', () async {
-    await box.save(await completion(id: 'bk-1'));
-    // The app was killed mid-write by an older build: half a JSON document.
-    final broken = File('${box.dir.path}/bk-0.json')..writeAsStringSync('{"basePath": "/partner", "booki');
+  test(
+    'a corrupt entry is set aside and the other entries still drain',
+    () async {
+      await box.save(await completion(id: 'bk-1'));
+      // The app was killed mid-write by an older build: half a JSON document.
+      final broken = File('${box.dir.path}/bk-0.json')
+        ..writeAsStringSync('{"basePath": "/partner", "booki');
 
-    await box.drain(env.api);
+      await box.drain(env.api);
 
-    expect(env.fake.callsTo('POST', _complete), hasLength(1), reason: 'the good entry went out');
-    expect(await box.find('bk-1'), isNull);
-    expect(broken.existsSync(), isFalse, reason: 'no longer in the queue');
-    expect(File('${broken.path}.corrupt').existsSync(), isTrue, reason: 'kept on disk, not deleted');
-    expect(await box.find('bk-0'), isNull, reason: 'the complete screen opens a fresh draft');
-    expect(await box.all(), isEmpty);
-  });
+      expect(
+        env.fake.callsTo('POST', _complete),
+        hasLength(1),
+        reason: 'the good entry went out',
+      );
+      expect(await box.find('bk-1'), isNull);
+      expect(broken.existsSync(), isFalse, reason: 'no longer in the queue');
+      expect(
+        File('${broken.path}.corrupt').existsSync(),
+        isTrue,
+        reason: 'kept on disk, not deleted',
+      );
+      expect(
+        await box.find('bk-0'),
+        isNull,
+        reason: 'the complete screen opens a fresh draft',
+      );
+      expect(await box.all(), isEmpty);
+    },
+  );
 
   test('a corrupt entry opened from the job screen is set aside too', () async {
     await box.dir.create(recursive: true);
-    final broken = File('${box.dir.path}/bk-0.json')..writeAsStringSync('[1, 2]');
+    final broken = File('${box.dir.path}/bk-0.json')
+      ..writeAsStringSync('[1, 2]');
 
     expect(await box.find('bk-0'), isNull);
     expect(File('${broken.path}.corrupt').existsSync(), isTrue);
@@ -131,28 +180,43 @@ void main() {
     c.ready = true;
     await box.save(c);
 
-    final names = [for (final e in box.dir.listSync().whereType<File>()) e.uri.pathSegments.last];
+    final names = [
+      for (final e in box.dir.listSync().whereType<File>())
+        e.uri.pathSegments.last,
+    ];
     expect(names, ['bk-1.json']);
     expect((await box.find('bk-1'))!.ready, isTrue);
 
     // A write cut off before the rename leaves only the temp file: the saved entry is untouched.
-    File('${box.dir.path}/bk-1.json.tmp').writeAsStringSync('{"basePath": "/par');
+    File(
+      '${box.dir.path}/bk-1.json.tmp',
+    ).writeAsStringSync('{"basePath": "/par');
     expect((await box.all()).single.ready, isTrue);
   });
 
-  test('each account has its own queue; entries from before that go to the account signed in', () async {
-    await box.save(await completion(id: 'bk-1'));
-    var who = 'pro-a';
-    box.account = () => who;
+  test(
+    'each account has its own queue; entries from before that go to the account signed in',
+    () async {
+      await box.save(await completion(id: 'bk-1'));
+      var who = 'pro-a';
+      box.account = () => who;
 
-    expect([for (final c in await box.all()) c.bookingId], ['bk-1'], reason: 'the old entry is adopted');
-    await box.save(await completion(id: 'bk-2'));
+      expect(
+        [for (final c in await box.all()) c.bookingId],
+        ['bk-1'],
+        reason: 'the old entry is adopted',
+      );
+      await box.save(await completion(id: 'bk-2'));
 
-    who = 'pro-b';
-    expect(await box.all(), isEmpty);
-    expect(await box.find('bk-1'), isNull);
+      who = 'pro-b';
+      expect(await box.all(), isEmpty);
+      expect(await box.find('bk-1'), isNull);
 
-    who = 'pro-a';
-    expect([for (final c in await box.all()) c.bookingId]..sort(), ['bk-1', 'bk-2']);
-  });
+      who = 'pro-a';
+      expect([for (final c in await box.all()) c.bookingId]..sort(), [
+        'bk-1',
+        'bk-2',
+      ]);
+    },
+  );
 }
