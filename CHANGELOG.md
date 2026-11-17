@@ -12,6 +12,7 @@ from the release branches; no tags existed for them.
 - In the Toss sandbox, check that an EXPRESS payout comes back with `payoutDate` set to the day it was requested, and that Toss refuses a reused `refPayoutId` (the retry after a failed transfer relies on it).
 - In the Toss sandbox, check the error Toss returns for a reused `refPayoutId` and for an `Idempotency-Key` replayed with a different body (neither code is in the docs; both are kept as "maybe sent", never as a decline, after a send without an answer), and whether `GET /v2/payouts/{id}` answers inside `entityBody` (both shapes are read). Also send one payout to a sandbox seller: the create body is now a list, as in the docs.
 - After the first customer build that sends consents is published, set the customer `min_app_version` in the console business profile to that build.
+- Ship the 1.5.0 partner app with this server and then set the partner `min_app_version` to 1.5.0: older partner builds do not send the reschedule request they showed, so the server answers their reschedule confirm with `reschedule_changed` until the pro updates.
 - PortOne and Toss live keys are entered by the owner in the console setup screen (they are never shipped in the release).
 
 ### Added
