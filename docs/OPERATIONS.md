@@ -192,6 +192,10 @@ sudo dahae update vX.Y.Z     # 특정 태그 (엔지니어 지시가 있을 때)
 - **주의: 저장된 카드 암호화는 한 방향이에요.** 마이그레이션 0326 은 처음 시작할 때 저장된 카드의 빌링 키를 암호화해요.
   이전 버전은 평문 키를 읽으므로, 이 뒤로 되돌리면 저장 카드 결제와 탈퇴 시 키 삭제가 깨져요. 이때는 앞으로 가거나 업데이트 전 백업으로 복원하세요.
   근거: [docs/DEPLOY.md](DEPLOY.md) §2 (Saved cards are a one-way step).
+- **주의: 토스 정산이 결과를 기다리는 동안에는 1.5 에서 1.4 로 되돌리지 마세요.** 마이그레이션 0472·0473 이 더한 정산 상태를 1.4 는 몰라요.
+  토스가 응답하지 않은 송금(요청·송금 상태)이나 주인이 '안 보냄'으로 확인한 실패 정산이 남아 있으면, 1.4 가 그 작업의 예약 취소를 받아 환불하거나
+  새 키로 다시 보내서 같은 정산이 두 번 나갈 수 있어요. 그래서 `dahae rollback` 은 이런 정산이 한 건이라도 있거나 확인하지 못하면 멈추고 건수를 알려 줘요.
+  콘솔 [정산]에서 상태 확인으로 토스 결과가 정리된 뒤 다시 하세요.
 
 ---
 
@@ -398,6 +402,8 @@ Cron-only commands: `auto-update`, `write-cron`; installer-only: `prepare`.
 
 ## 5. Rollback
 `sudo dahae rollback` restores the images recorded before the last update (`PREV_API_IMAGE`, `PREV_WEB_IMAGE`) after taking a backup. It never removes data. Migration 0326 makes saved-card key sealing one-way: after it runs, a rollback breaks saved-card charges. Roll forward, or restore the pre-update backup ([docs/DEPLOY.md](DEPLOY.md) §2).
+
+Do not roll 1.5 back to 1.4 while a Toss payout waits on Toss. Migrations 0472 (`toss_ref`) and 0473 (`owner_not_sent_at`, `toss_memo`) add payout states 1.4 does not know: with a payout `failed` with `owner_not_sent_at` set, or `requested`/`sent` with a `failure_reason` (a send with no answer), 1.4 lets a cancel refund the job and may re-send under a new key, so the same payout can go out twice. `dahae rollback` refuses while any such payout exists, or when it cannot run the check, and prints the count (`payouts_settled_for_rollback` in [deploy/install.sh](../deploy/install.sh)). Settle them with the status check in the console's 정산 page first.
 
 ## 6. Backups
 - Local: daily at 03:30 Korea time and before every update, rollback and restore. Files are sealed with AES-256-GCM (`MKB1` format, key derived from `DATA_KEY`) and kept 14 days by modification time ([deploy/install.sh](../deploy/install.sh) `cmd_backup`, [backend/crates/api/src/backup.rs](../backend/crates/api/src/backup.rs)). If sealing fails, the plaintext stays and the command fails; update, rollback and restore refuse to run.

@@ -590,6 +590,12 @@ t  "finished update keeps the new images"   eq "$(update_then_term after)" "repo
 # the stack was down with no images in .env: a stop during the health check must not write empty images
 update_then_term_unknown() { local keep; keep=$(cat .env); : > .env; update_then_term during; printf '%s' "$keep" > .env; }
 t  "stop with no previous images leaves .env alone" eq "$(update_then_term_unknown)" "repo/api:new repo/web:new"
+# rollback waits while a Toss payout may still be at Toss in a way the previous release cannot handle
+rollback_gate() { ( dc() { [ "$1" = exec ] || return 0; [ "$GATE" = fail ] && return 1; printf '%s\n' "$GATE"; }; GATE=$1; payouts_settled_for_rollback ) >/dev/null 2>&1; }
+t  "rollback runs with no payout in doubt"   rollback_gate 0
+nt "rollback refused while a payout is in doubt" rollback_gate 2
+nt "rollback refused when the check cannot run" rollback_gate fail
+nt "rollback refused on an odd answer"       rollback_gate 'ERROR'
 backup_warn_after() { ( api_backup() { case "$*" in backup-seal*) [ -f "${2#/}" ] && printf 'MKB1' > "${3#/}"; return 0 ;; *"backup-upload /backups/uploads-"*) return 1 ;; *) return 0 ;; esac; }
   dc() { case "$1" in exec) printf 'dump' ;; run) printf 'tar' ;; esac; return 0; }
   cmd_backup >/dev/null 2>&1; printf '%s' "$BACKUP_WARN" ); }
