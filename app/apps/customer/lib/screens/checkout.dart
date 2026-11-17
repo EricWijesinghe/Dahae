@@ -59,10 +59,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _price = null;
     _priceFailed = false;
     try {
-      final p = await context.appRead.api.post(
-        '/bookings/price',
-        _bookingBody(),
-      ) as Json;
+      final p =
+          await context.appRead.api.post('/bookings/price', _bookingBody())
+              as Json;
       if (mounted && d.couponId == coupon) setState(() => _price = p);
     } on Object catch (e) {
       if (!mounted || d.couponId != coupon) return;
@@ -119,9 +118,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       } else {
         final b = Booking.fromJson(
           await app.api.postAction('/bookings', {
-            ...d.toJson(),
-            'expected_total': total,
-          }) as Json,
+                ...d.toJson(),
+                'expected_total': total,
+              })
+              as Json,
         );
         result = CheckoutPaid(b.id, b);
       }
@@ -322,8 +322,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           FlowSection(
             children: [
               Theme(
-                data: Theme.of(context)
-                    .copyWith(dividerColor: Colors.transparent),
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
                   initiallyExpanded: true,
                   tilePadding: EdgeInsets.zero,

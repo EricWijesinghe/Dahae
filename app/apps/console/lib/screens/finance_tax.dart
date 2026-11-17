@@ -8,11 +8,12 @@ import 'package:ui/ui.dart';
 import '../state.dart';
 
 /// Downloads one CSV for the given path and query. Owned by the finance screen, which knows how to save.
-typedef ExportAt = Future<void> Function(
-  String path,
-  Map<String, String?> query,
-  String fileName,
-);
+typedef ExportAt =
+    Future<void> Function(
+      String path,
+      Map<String, String?> query,
+      String fileName,
+    );
 
 /// Owner tax tools: quarterly VAT, withholding and tax-invoice exports, the cash-receipt list and the tax-invoice queue.
 class TaxSection extends StatelessWidget {
@@ -167,10 +168,13 @@ class _TaxInvoiceQueue extends StatelessWidget {
     final t = context.t;
     return AsyncView<List<Json>>(
       key: ValueKey(periodQuery.toString()),
-      load: () async => (await context.api.get(
-        '/admin/finance/tax-invoices',
-        query: periodQuery,
-      ) as List).cast<Json>(),
+      load: () async =>
+          (await context.api.get(
+                    '/admin/finance/tax-invoices',
+                    query: periodQuery,
+                  )
+                  as List)
+              .cast<Json>(),
       builder: (context, rows, reload) => AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,10 +306,13 @@ class _CashReceiptList extends StatelessWidget {
     final t = context.t;
     return AsyncView<List<Json>>(
       key: ValueKey(periodQuery.toString()),
-      load: () async => (await context.api.get(
-        '/admin/finance/cash-receipts',
-        query: periodQuery,
-      ) as List).cast<Json>(),
+      load: () async =>
+          (await context.api.get(
+                    '/admin/finance/cash-receipts',
+                    query: periodQuery,
+                  )
+                  as List)
+              .cast<Json>(),
       builder: (context, rows, reload) => AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

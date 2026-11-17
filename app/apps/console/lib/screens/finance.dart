@@ -735,8 +735,9 @@ class _ServiceCard extends StatelessWidget {
                           value: _n(s, 'gross') / max,
                           minHeight: 14,
                           backgroundColor: context.colors.line,
-                          color: ServiceHues.of(s['service_code'] as String)
-                              .tone,
+                          color: ServiceHues.of(
+                            s['service_code'] as String,
+                          ).tone,
                         ),
                       ),
                     ),
