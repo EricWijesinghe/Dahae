@@ -61,8 +61,8 @@ Principle. The developer (Eric) builds, deploys and maintains everything from hi
 
 DODA 의 서비스가 모두 AWS 에 있으니 **DODA 의 AWS 서울 리전(ap-northeast-2)** 에 올려요. 계정은 DODA 것이고, 개발자는 접근 권한으로 배포해요. 클릭 순서 전체는 [guide 10](guide/10-AWS-배포.md) 에 있어요.
 
-1. **DODA: 배포용 IAM 사용자 만들기.** 관리자 권한 대신 [`deploy/aws/deployer-iam-policy.json`](../deploy/aws/deployer-iam-policy.json) 정책만 붙이고 MFA 를 켜요. 액세스 키는 만들지 않아요. 로그인 주소와 사용자 이름은 비밀번호와 따로 개발자에게 전달해요.
-2. **개발자: CloudFormation 템플릿 한 번 실행** (배포용 IAM 사용자로 로그인, [guide 10](guide/10-AWS-배포.md) B). 릴리스 페이지의 `dahae-aws.yaml` 을 CloudFormation 에 올리고, 도메인·이메일·VPC·서브넷을 고르면 만들어져요. `GitHubRepo` 는 기본값 `EricWijesinghe/Dahae` 를 그대로 둬요 (개발자 저장소의 배포 워크플로만 이 서버에 배포할 권한을 받아요):
+1. **DODA: 배포용 IAM 사용자 만들기.** 먼저 권한 한도 정책 `dahae-boundary` 를 만들어요 (누구에게도 붙이지 않아요, [guide 10](guide/10-AWS-배포.md) A 3번). 그다음 관리자 권한 대신 [`deploy/aws/deployer-iam-policy.json`](../deploy/aws/deployer-iam-policy.json) 정책만 붙이고 MFA 를 켜요. 액세스 키는 만들지 않아요. 로그인 주소와 사용자 이름은 비밀번호와 따로 개발자에게 전달해요.
+2. **개발자: CloudFormation 템플릿 한 번 실행** (배포용 IAM 사용자로 로그인, [guide 10](guide/10-AWS-배포.md) B). 개발자가 B-1 에서 만든 `dahae-aws.yaml` 을 CloudFormation 에 올리고, 도메인·이메일·VPC·서브넷을 고르면 만들어져요. `GitHubRepo` 는 기본값 `EricWijesinghe/Dahae` 를 그대로 둬요 (개발자 저장소의 배포 워크플로만 이 서버에 배포할 권한을 받아요):
    - Ubuntu 24.04 서버 1대 (기본 t3.medium, 디스크 50 GB 암호화), 고정 IP (Elastic IP), 80/443 만 열린 보안 그룹 (SSH 22 는 기본으로 닫혀 있고, 접속은 브라우저의 Session Manager 로 해요)
    - 설치 프로그램 자동 실행 (SHA-256 로 확인한 install.sh): PostgreSQL, Caddy (자동 HTTPS), 방화벽, 자동 백업
    - 매일 디스크 스냅샷 (7일 보관), AWS 하드웨어 고장 시 자동 복구, 실수로 지우지 못하게 종료 보호
@@ -78,7 +78,7 @@ DODA 의 서비스가 모두 AWS 에 있으니 **DODA 의 AWS 서울 리전(ap-n
 
 **확인되지 않은 것.** 템플릿과 CD 는 AWS 검사 도구(cfn-lint, actionlint)를 통과했지만 실제 AWS 계정에서는 아직 띄워 보지 않았어요. 첫 배포 때 DODA 관리자와 개발자가 같이 확인해요.
 
-**템플릿과 새 버전:** `dahae-aws.yaml` 은 개발자 저장소의 릴리스 페이지(Releases → 최신 버전(Latest) → Assets)에서 받아요. 설치 스크립트 주소와 지문이 이미 채워져 있어요. 새 버전도 같은 저장소에서 릴리스돼요. 릴리스 작업이 `deploy-aws` 를 자동으로 시작해요 (승인자가 있으면 승인 후 배포).
+**템플릿과 새 버전:** v1.5.1 릴리스에 첨부된 `dahae-aws.yaml` 은 권한 한도와 GitHub 로그인 주체 수정 전 파일이라 쓰지 않아요. 개발자가 `master` 에서 v1.5.1 설치 스크립트로 새로 만들어요 ([guide 10](guide/10-AWS-배포.md) B-1). 다음 릴리스부터는 릴리스 페이지(Releases → 최신 버전(Latest) → Assets)의 파일을 그대로 써요. 설치 스크립트 주소와 지문이 이미 채워져 있어요. 새 버전도 같은 저장소에서 릴리스돼요. 릴리스 작업이 `deploy-aws` 를 자동으로 시작해요 (승인자가 있으면 승인 후 배포).
 
 **AWS 가 아닌 곳에 올릴 때**는 [guide 09](guide/09-클라우드별-설치.md) (클라우드별 설치) 와 [guide 08](guide/08-클라우드-배포.md) 을 봐요.
 
@@ -159,8 +159,8 @@ Audience: DODA (operator of the Dahae service) and the developer (Eric). Step-by
 
 All of DODA's services run on AWS, so the server goes to **DODA's AWS Seoul region (ap-northeast-2)**. The account belongs to DODA; the developer deploys with granted access. Full click path: [guide 10](guide/10-AWS-배포.md).
 
-1. **DODA: create a deployer IAM user.** Attach only [`deploy/aws/deployer-iam-policy.json`](../deploy/aws/deployer-iam-policy.json), turn on MFA, create no access keys. Send the sign-in URL and user name to the developer separately from the password.
-2. **Developer: run the CloudFormation template once**, signed in as the deployer IAM user ([guide 10](guide/10-AWS-배포.md) B). Use `dahae-aws.yaml` from the release page. Keep `GitHubRepo` at its default `EricWijesinghe/Dahae`: only the developer's deploy workflow in that repository is trusted by the server's AWS role. It creates:
+1. **DODA: create a deployer IAM user.** First create the permissions-boundary policy `dahae-boundary` and attach it to nobody ([guide 10](guide/10-AWS-배포.md) A, step 3). Then attach only [`deploy/aws/deployer-iam-policy.json`](../deploy/aws/deployer-iam-policy.json), turn on MFA, create no access keys. Send the sign-in URL and user name to the developer separately from the password.
+2. **Developer: run the CloudFormation template once**, signed in as the deployer IAM user ([guide 10](guide/10-AWS-배포.md) B). Use the `dahae-aws.yaml` the developer builds in B-1. Keep `GitHubRepo` at its default `EricWijesinghe/Dahae`: only the developer's deploy workflow in that repository is trusted by the server's AWS role. It creates:
    - One Ubuntu 24.04 server (default t3.medium, 50 GB encrypted disk), an Elastic IP, a security group open only on 80/443 (SSH 22 closed by default; shell access through Session Manager in the browser)
    - The installer, run automatically and checked by SHA-256: PostgreSQL, Caddy with automatic HTTPS, firewall, automatic backups
    - Daily disk snapshots kept 7 days, auto-recovery on AWS hardware failure, termination protection
@@ -175,7 +175,7 @@ All of DODA's services run on AWS, so the server goes to **DODA's AWS Seoul regi
 
 **Not yet verified.** The template and CD pass the AWS linters (cfn-lint, actionlint) but have not been launched on a real AWS account. The first deploy is checked together by DODA's admin and the developer.
 
-**Template and new versions:** download `dahae-aws.yaml` from the release page (Releases → Latest → Assets); the install script URL and SHA-256 are already filled in. New versions are released from the same repository, which starts `deploy-aws` automatically (waiting for approval if reviewers are set).
+**Template and new versions:** the `dahae-aws.yaml` attached to the v1.5.1 release predates the permissions boundary and the GitHub subject fix, so it is not used; the developer builds it on `master` from the v1.5.1 install script ([guide 10](guide/10-AWS-배포.md) B-1). From the next release on, download it from the release page (Releases → Latest → Assets); the install script URL and SHA-256 are already filled in. New versions are released from the same repository, which starts `deploy-aws` automatically (waiting for approval if reviewers are set).
 
 **Other clouds:** [guide 09](guide/09-클라우드별-설치.md) and [guide 08](guide/08-클라우드-배포.md).
 

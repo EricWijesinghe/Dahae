@@ -184,7 +184,7 @@ process holds port 80 or 443.
 
 ### AWS server and GitHub deploys (per client)
 
-The release also uploads `dahae-aws.yaml` (CloudFormation, pinned to the same `install.sh`) as a release asset, signed like the install page. The client launches it from the AWS console; [`.github/workflows/deploy-aws.yml`](../.github/workflows/deploy-aws.yml) then runs `dahae update <tag>` (or `dahae rollback`) on that server through SSM, after approval in the `doda-aws` GitHub environment. The client-facing steps are in [guide 10](guide/10-AWS-배포.md); the IAM policy is [deploy/aws/deployer-iam-policy.json](../deploy/aws/deployer-iam-policy.json).
+The release also uploads `dahae-aws.yaml` (CloudFormation, pinned to the same `install.sh`) as a release asset, signed like the install page. The developer launches it in the client's AWS console, signed in as the deployer IAM user (v1.5.1's asset predates the permissions boundary and the immutable OIDC subject: rebuild it on master as in guide 10 B-1); [`.github/workflows/deploy-aws.yml`](../.github/workflows/deploy-aws.yml) then runs `dahae update <tag>` (or `dahae rollback`) on that server through SSM, after approval when the `doda-aws` GitHub environment has reviewers. The client-facing steps are in [guide 10](guide/10-AWS-배포.md); the IAM policy is [deploy/aws/deployer-iam-policy.json](../deploy/aws/deployer-iam-policy.json).
 
 ## 3. Store apps (per client)
 
@@ -265,7 +265,7 @@ The code has an adapter point for each. Dev mode uses safe fakes until then.
 
 | Service | Purpose | Korean options | Where it plugs in |
 |---|---|---|---|
-| Payment gateway (PortOne V2) | One-off checkout (cards, KakaoPay, NaverPay, TossPay, PayCO, Samsung Pay, Apple Pay, bank transfer, virtual account, phone billing), saved one-tap billing, refunds | PortOne. One PortOne channel per method; put the keys in `PORTONE_CHANNEL_KEYS` (`{"kakaopay":"channel-key-…"}`). Also set `PORTONE_API_SECRET`, `PORTONE_WEBHOOK_SECRET` (webhook URL `https://<API_DOMAIN>/v1/webhooks/portone`), `PORTONE_STORE_ID` | `backend/crates/api/src/providers/portone.rs`, `routes/checkouts.rs`, `routes/webhooks.rs`; method switches in console (`/v1/admin/payment-methods`) |
+| Payment gateway (PortOne V2) | One-off checkout (cards, KakaoPay, NaverPay, TossPay, PayCO, Samsung Pay, Apple Pay, bank transfer, virtual account, phone billing), saved one-tap billing, refunds | PortOne. On a client server the owner account enters these in the console PortOne card (owner code on the first save); the env vars below are only for a server whose owner you are (development, testing). One PortOne channel per method; put the keys in `PORTONE_CHANNEL_KEYS` (`{"kakaopay":"channel-key-…"}`). Also set `PORTONE_API_SECRET`, `PORTONE_WEBHOOK_SECRET` (webhook URL `https://<API_DOMAIN>/v1/webhooks/portone`), `PORTONE_STORE_ID` | `backend/crates/api/src/providers/portone.rs`, `routes/checkouts.rs`, `routes/webhooks.rs`; method switches in console (`/v1/admin/payment-methods`) |
 | Identity (본인인증 / PASS) | Verified name and a CI hash (never the raw CI) | PortOne identity verification (same `PORTONE_API_SECRET`) | `providers/portone.rs::identity`, `POST /v1/me/identity` |
 | Kakao login | Sign-in with Kakao | Kakao Developers app: REST key → `KAKAO_APP_ID` (checked against each token). Optional Admin key (console Kakao card or `KAKAO_ADMIN_KEY`): unlinks the Kakao account when the user deletes theirs | `providers/social.rs::kakao`, `unlink_all` |
 | Naver login | Sign-in with Naver | Naver Developers app: client id + secret in the console wizard (Naver card). The app sends a login code; the server redeems it with the secret, so the token is ours | `providers/social.rs::naver` |
@@ -330,9 +330,9 @@ cd app/apps/customer && flutter run -d windows   # or chrome / an Android device
 Toss mode stays off until all of these hold. Anything else keeps payouts on `manual`.
 
 1. Env `TOSS_PAYOUTS_ENABLED=1` on the API host (read at startup and on every setup save).
-2. Console **Setup → Payouts**: save `secret_key` (sandbox `test_sk_...`) and `security_key` (보안 키, 64 hex) with mode `manual`.
-3. Press **Check connection**. The API calls `GET /v2/balances` with the secret key. It records `sandbox_connected` for a `test_sk_` key or `live_connected` for a `live_sk_` key, only when it returns 200, with a fingerprint of that key. A test pass never unlocks a live key. Changing the key requires testing again.
-4. Save mode `toss`. Accepted only when steps 1 and 3 hold; otherwise `toss_unverified`.
+2. From the owner account (steps 2–4; on a client server that is the client's owner), console **Setup → Payouts**: save `secret_key` (sandbox `test_sk_...`) and `security_key` (보안 키, 64 hex) with mode `manual`.
+3. Press **Check connection** on the locked card (no unlock needed). The API calls `GET /v2/balances` with the secret key. It records `sandbox_connected` for a `test_sk_` key or `live_connected` for a `live_sk_` key, only when it returns 200, with a fingerprint of that key. A test pass never unlocks a live key. Changing the key requires testing again.
+4. Unlock the card (owner code) and save mode `toss`. Accepted only when steps 1 and 3 hold; otherwise `toss_unverified`.
 5. Register each pro as a seller: `POST /v1/admin/settlements/toss-sellers/{pro_id}` with `business_type` (`individual` or `company`), `name`, or `representative` + `registration_no` (10 digits), `email`, `phone`. The bank account is the pro's verified payout account. Re-run after a bank-account change; a payout for a stale account is refused (`seller_account_changed`).
 6. Webhook: point Toss at `{PUBLIC_BASE_URL}/v1/webhooks/toss` for `payout.changed` and `seller.changed`. The request must carry a valid `tosspayments-webhook-signature` (HMAC-SHA256 with the 보안 키); a valid call triggers a poll of open payouts, a bad one gets 401.
 
