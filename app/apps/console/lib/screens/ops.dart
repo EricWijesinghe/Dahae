@@ -7,6 +7,7 @@ import 'package:ui/ui.dart';
 
 import '../state.dart';
 import 'flow_card.dart';
+import 'host_update.dart';
 import 'platform.dart';
 
 /// System status: green / yellow / red per check, the external services, and the owner's alert settings.
@@ -69,6 +70,8 @@ class _OpsScreenState extends State<OpsScreen> {
                 jobs: (status['jobs'] as List? ?? const []).cast<Json>(),
                 deadLetters: (status['sms_dead_letters'] as num? ?? 0).toInt(),
               ),
+              const SizedBox(height: Space.md),
+              const HostUpdateCard(),
               const SizedBox(height: Space.lg),
               SectionTitle(t.oIntegrations),
               const SizedBox(height: Space.sm),

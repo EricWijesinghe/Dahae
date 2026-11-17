@@ -113,7 +113,9 @@ void main() {
         ..reply('GET', '/admin/ops/status', _status(level: 'red'))
         ..reply('GET', '/admin/ops/alerts', _alerts)
         ..reply('GET', '/admin/config', _config)
-        ..reply('GET', '/admin/client-errors', _errors);
+        ..reply('GET', '/admin/client-errors', _errors)
+        ..reply('GET', '/admin/me/account', {'is_owner': false})
+        ..reply('GET', '/admin/host/jobs', {'jobs': <Object?>[]});
       final env = await TestEnv.create(fake: fake, role: 'staff_admin');
       await pumpConsoleScreen(tester, env, const OpsScreen());
       await settle(tester);
@@ -135,6 +137,17 @@ void main() {
         findsNothing,
         reason: 'green items carry no action line',
       );
+      // The integrations sit further down the page; the list builds rows only when they scroll into view.
+      await tester.scrollUntilVisible(
+        find.text(koT.oActIntegration),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(OpsScreen),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       expect(
         find.text(koT.oActIntegration),
         findsOneWidget,
@@ -153,6 +166,8 @@ void main() {
         ..reply('GET', '/admin/ops/alerts', _alerts)
         ..reply('GET', '/admin/config', _config)
         ..reply('GET', '/admin/client-errors', _errors)
+        ..reply('GET', '/admin/me/account', {'is_owner': false})
+        ..reply('GET', '/admin/host/jobs', {'jobs': <Object?>[]})
         ..reply('PUT', '/admin/ops/alerts', {'prefs': {}});
       final env = await TestEnv.create(fake: fake, role: 'staff_admin');
       await pumpConsoleScreen(tester, env, const OpsScreen());
@@ -194,7 +209,9 @@ void main() {
       ..reply('GET', '/admin/ops/status', _status(level: 'green'))
       ..reply('GET', '/admin/ops/alerts', _alerts)
       ..reply('GET', '/admin/config', _config)
-      ..reply('GET', '/admin/client-errors', _errors);
+      ..reply('GET', '/admin/client-errors', _errors)
+      ..reply('GET', '/admin/me/account', {'is_owner': false})
+      ..reply('GET', '/admin/host/jobs', {'jobs': <Object?>[]});
     final env = await TestEnv.create(fake: fake, role: 'staff_consultant');
     await pumpConsoleScreen(tester, env, const OpsScreen());
     await settle(tester);
@@ -212,7 +229,9 @@ void main() {
         ..reply('GET', '/admin/ops/status', _status(level: 'red'))
         ..reply('GET', '/admin/ops/alerts', _alerts)
         ..reply('GET', '/admin/config', _config)
-        ..reply('GET', '/admin/client-errors', _errors);
+        ..reply('GET', '/admin/client-errors', _errors)
+        ..reply('GET', '/admin/me/account', {'is_owner': false})
+        ..reply('GET', '/admin/host/jobs', {'jobs': <Object?>[]});
       final env = await TestEnv.create(fake: fake, role: 'staff_admin');
       await pumpConsoleScreen(tester, env, const OpsScreen());
       await settle(tester);
@@ -246,7 +265,9 @@ void main() {
       ..reply('GET', '/admin/ops/status', status)
       ..reply('GET', '/admin/ops/alerts', _alerts)
       ..reply('GET', '/admin/config', _config)
-      ..reply('GET', '/admin/client-errors', _errors);
+      ..reply('GET', '/admin/client-errors', _errors)
+      ..reply('GET', '/admin/me/account', {'is_owner': false})
+      ..reply('GET', '/admin/host/jobs', {'jobs': <Object?>[]});
     final env = await TestEnv.create(fake: fake, role: 'staff_admin');
     await pumpConsoleScreen(tester, env, const OpsScreen());
     await settle(tester);
@@ -273,7 +294,9 @@ void main() {
         ..reply('GET', '/admin/ops/status', _status(level: 'red'))
         ..reply('GET', '/admin/ops/alerts', _alerts)
         ..reply('GET', '/admin/config', _config)
-        ..reply('GET', '/admin/client-errors', _errors);
+        ..reply('GET', '/admin/client-errors', _errors)
+        ..reply('GET', '/admin/me/account', {'is_owner': false})
+        ..reply('GET', '/admin/host/jobs', {'jobs': <Object?>[]});
       final env = await TestEnv.create(fake: fake, role: 'staff_admin');
       await pumpConsoleScreen(tester, env, const OpsScreen());
       await settle(tester);
@@ -314,7 +337,9 @@ void main() {
         ..reply('GET', '/admin/ops/status', _status(level: 'red'))
         ..reply('GET', '/admin/ops/alerts', _alerts)
         ..reply('GET', '/admin/config', _config)
-        ..reply('GET', '/admin/client-errors', _errors);
+        ..reply('GET', '/admin/client-errors', _errors)
+        ..reply('GET', '/admin/me/account', {'is_owner': false})
+        ..reply('GET', '/admin/host/jobs', {'jobs': <Object?>[]});
       final env = await TestEnv.create(fake: fake, role: 'staff_admin');
       await pumpConsoleScreen(tester, env, const OpsScreen());
       await settle(tester);
