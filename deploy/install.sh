@@ -21,6 +21,8 @@
 #   MALKKEUM_SKIP_DNS_CHECK=1         도메인 IP 확인 생략
 #   MALKKEUM_HEALTH_WAIT=300          기동 확인 대기 시간(초)
 #   MALKKEUM_HEARTBEAT_URL=<핑 주소>    외부 가동 확인(healthchecks.io 등). 나중에 `dahae heartbeat <주소>` 로도 돼요
+#   MALKKEUM_NOTIFY_URL=<핑 주소>       설치가 끝나면 결과를 알려요: 성공 …/0, 실패 …/fail (서버 화면을 볼 수 없을 때 쓰는 알림)
+#   MALKKEUM_SETUP_CODE=<12자리>        설치 코드를 미리 정해요 (설치 페이지가 만들어 넣어요). 없으면 설치가 무작위로 만들어요
 #   MALKKEUM_SIGNER=<owner/repo>      이미지 서명자 GitHub 저장소 (기본: 릴리스 저장소)
 #   MALKKEUM_SKIP_SIGNATURE=1         이미지 서명 확인 끄기 (서명 없는 테스트 저장소 전용. 다시 실행하면 다시 켜져요)
 #   MALKKEUM_ANSWERS=<파일>           질문 없이 설치: DOMAIN=도메인, EMAIL=이메일 줄이 든 파일
@@ -97,6 +99,11 @@ valid_domain() {
   [ "${#d}" -le 253 ] && printf '%s' "$d" | grep -Eq "$DOMAIN_RE" && case "$d" in *.local) return 1 ;; esac
 }
 valid_email() { [ -z "$1" ] || printf '%s' "$1" | grep -Eq '^[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; }
+valid_setup_code() { printf '%s' "$1" | grep -Eq '^[2-9A-HJKMNP-Z]{12}$'; } # setup_code 와 같은 글자만 (0 O 1 I L 제외)
+check_setup_code_env() { # MALKKEUM_SETUP_CODE 가 있으면 형식을 검사해요 (틀리면 아무것도 바꾸기 전에 멈춰요)
+  [ -z "${MALKKEUM_SETUP_CODE:-}" ] || valid_setup_code "$MALKKEUM_SETUP_CODE" || { printf '%s
+' "설치 코드는 12자리 영문 대문자·숫자예요 (0 O 1 I L 은 없어요)." >&2; return 1; }
+}
 valid_hb_url() { printf '%s' "$1" | grep -Eq "$HB_URL_RE"; }
 ver_ge() { [ "$(printf '%s\n%s\n' "${2#v}" "${1#v}" | sort -V | head -n1)" = "${2#v}" ]; } # ver_ge 2.29.1 2.20
 mem_kb() { awk -v k="$1:" '$1 == k { print $2; f=1 } END { if (!f) print 0 }' "${2:-/proc/meminfo}"; }
@@ -448,7 +455,7 @@ USAGE='사용법: dahae <명령>
   applinks --android-sha256 지문[,지문] --apple-team-id 팀ID   앱 링크 설정
   demo load [--force] | demo clear   체험용 데이터
   logs [api|web|db]           로그 보기
-  setup-code [--renew]        사장님 계정 설치 코드 (2시간 동안 보여요. --renew 로 새 코드를 받아요)
+  setup-code [--renew]        사장님 계정 설치 코드 (7일 동안 써요. --renew 로 새 코드를 받아요)
   update-schedule mon@04:00|off  자동 업데이트 요일·시각 (off: 자동 업데이트 끄기)
   uninstall [--yes]           서비스 끄기 (데이터와 백업은 남겨요)
   uninstall --purge [--confirm 도메인]  데이터와 백업까지 삭제 (도메인을 입력해 확인. --yes 로는 넘어가지 않아요)
@@ -1143,7 +1150,7 @@ cmd_auto_update() { # dahae auto-update : 예약 업데이트. 건너뛰기 표�
   if [ -n "$STABLE_KEY" ]; then printf '%s\n' "$STABLE_KEY" > "$DIR/host/applied-key"; fi
 }
 
-cmd_setup_code() { # dahae setup-code [--renew] : 사장님 계정 설치 코드. 처음 보인 뒤 2시간 동안만 쓸 수 있어요
+cmd_setup_code() { # dahae setup-code [--renew] : 사장님 계정 설치 코드. 처음 보인 뒤 7일 동안 쓸 수 있어요 (SETUP_CODE_TTL_SECS 와 같아요)
   local at now code
   if [ "${1:-}" = --renew ]; then
     code=$(head -c 1024 /dev/urandom | tr -dc '23456789ABCDEFGHJKMNPQRSTUVWXYZ' | cut -c1-12)
@@ -1153,7 +1160,7 @@ cmd_setup_code() { # dahae setup-code [--renew] : 사장님 계정 설치 코드
   fi
   at=$(env_get SETUP_CODE_AT); now=$(date +%s)
   if [ -z "$at" ]; then env_set SETUP_CODE_AT "$now"; at=$now; fi
-  if [ $((now - at)) -gt 7200 ]; then die "설치 코드 기간(2시간)이 지났어요. 새로 받으려면: dahae setup-code --renew"; fi
+  if [ $((now - at)) -gt 604800 ]; then die "설치 코드 기간(7일)이 지났어요. 새로 받으려면: dahae setup-code --renew"; fi
   env_get SETUP_CODE | sed -E 's/(....)(....)(....)/\1-\2-\3/'
 }
 
@@ -1367,21 +1374,44 @@ final_banner() { # final_banner https정상(1/0)
   printf '  관리 명령:  dahae status | update | rollback | backup | restore | logs | help\n%s\n' "$line"
 }
 
+notify_result() { # EXIT 트랩: 설치가 끝나면 알림 주소에 결과를 보내요 (성공 …/0, 실패 …/fail). 알림이 실패해도 설치 결과는 그대로예요
+  local rc=$? base q
+  [ -n "${MALKKEUM_NOTIFY_URL:-}" ] && valid_hb_url "$MALKKEUM_NOTIFY_URL" || return 0
+  base="${MALKKEUM_NOTIFY_URL%%\?*}"; q="${MALKKEUM_NOTIFY_URL#"$base"}"
+  if [ "$rc" = 0 ]; then base="${base%/}/0"; else base="${base%/}/fail"; fi
+  curl -fsS --max-time 10 -o /dev/null "$base$q" 2>/dev/null || true
+}
+
 install_mode() { # install_mode FRESH : 설치된 적이 있으면(0) DB 가 꺼져 있어도 업데이트로 가요 (백업 → 새 버전 → 되돌리기)
   # 첫 설치가 이미지 준비(prepare) 전에 멈췄으면 .env 에 API_IMAGE 가 없어요: compose 가 뜰 수 없으니 처음 설치를 다시 해요
   if [ "$1" = 0 ] && [ -n "$(env_get API_IMAGE)" ]; then printf update; else printf fresh; fi
 }
+# write_fresh_env : 처음 설치할 때 .env 를 만들어요. MALKKEUM_SETUP_CODE 가 있으면 페이지가 만든 설치 코드를 그대로 써요
+write_fresh_env() {
+  cat > .env <<EOF
+# 다해 서버 설정 — install.sh 가 만들었어요. 이 파일을 안전한 곳에 따로 보관하세요.
+# DATA_KEY 를 잃어버리면 저장된 결제·연동 키와 계좌 정보를 복구할 수 없어요.
+DB_PASSWORD=$(rand_hex 24)
+JWT_SECRET=$(rand_hex 32)
+DATA_KEY=$(rand_hex 32)
+SETUP_CODE=${MALKKEUM_SETUP_CODE:-$(setup_code)}
+SETUP_CODE_AT=$(date +%s)
+EOF
+}
 main() {
   local k a m
-  for k in DOMAIN EMAIL IMAGES IMAGES_TAR CHANNEL VERSION TLS SKIP_DNS_CHECK HEALTH_WAIT HEARTBEAT_URL SIGNER SKIP_SIGNATURE; do
+  for k in DOMAIN EMAIL IMAGES IMAGES_TAR CHANNEL VERSION TLS SKIP_DNS_CHECK HEALTH_WAIT HEARTBEAT_URL NOTIFY_URL SETUP_CODE SIGNER SKIP_SIGNATURE; do
     a=DAHAE_$k; m=MALKKEUM_$k
     if [ -n "${!a:-}" ] && [ -z "${!m:-}" ]; then export "$m=${!a}"; fi
   done
   HEALTH_WAIT_SECS=${MALKKEUM_HEALTH_WAIT:-300}
   if [ -n "${MALKKEUM_ANSWERS:-}" ]; then load_answers "$MALKKEUM_ANSWERS"; fi   # 질문 없이 설치: DOMAIN=·EMAIL= 줄 파일
+  trap notify_result EXIT
 
   [ "$(id -u)" -eq 0 ] || die "관리자 권한이 필요해요. 명령 앞에 sudo 를 붙여 다시 실행해 주세요."
   command -v apt-get >/dev/null || die "Ubuntu 또는 Debian 서버에서 실행해 주세요."
+  check_setup_code_env || exit 1
+  if [ -n "${MALKKEUM_NOTIFY_URL:-}" ]; then valid_hb_url "$MALKKEUM_NOTIFY_URL" || die "MALKKEUM_NOTIFY_URL 은 https:// 주소여야 해요 (& 나 공백은 안 돼요)."; fi
 
   say "다해 서버 설치를 시작합니다"
   preflight
@@ -1449,15 +1479,7 @@ main() {
 
   if [ "$FRESH" = 1 ]; then
     umask 077
-    cat > .env <<EOF
-# 다해 서버 설정 — install.sh 가 만들었어요. 이 파일을 안전한 곳에 따로 보관하세요.
-# DATA_KEY 를 잃어버리면 저장된 결제·연동 키와 계좌 정보를 복구할 수 없어요.
-DB_PASSWORD=$(rand_hex 24)
-JWT_SECRET=$(rand_hex 32)
-DATA_KEY=$(rand_hex 32)
-SETUP_CODE=$(setup_code)
-SETUP_CODE_AT=$(date +%s)
-EOF
+    write_fresh_env
     umask 022
     ok "보안 키를 새로 만들었어요"
   fi

@@ -37,8 +37,8 @@ const SETUP_CODE_LEN: usize = 12;
 /// No 0/O/1/I/L: the code is read off a screen and typed by hand.
 const SETUP_ALPHABET: &[u8] = b"23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const SETUP_CODE_KEY: &str = "setup_code";
-/// The installer's setup code works for two hours after it is issued.
-const SETUP_CODE_TTL_SECS: i64 = 2 * 60 * 60;
+/// The installer's setup code works for seven days after it is issued: owners often finish DNS and payment signups later.
+const SETUP_CODE_TTL_SECS: i64 = 7 * 24 * 60 * 60;
 const BUSINESS_KEY: &str = "business";
 /// An owner unlock lets one save or clear through, then the card locks again.
 const UNLOCK_TTL_SECS: i64 = 5 * 60;
@@ -131,6 +131,19 @@ pub async fn ensure_setup_code(db: &PgPool, from_env: Option<&str>, issued_at: O
     Ok(())
 }
 
+/// A wrong code gets 403. The right code past its seven days gets 410, so the owner is told to ask
+/// for a new one instead of retyping; that reveals nothing an attacker did not already need.
+fn check_setup_code(expected: &str, issued_at: Option<i64>, given: &str, now: i64) -> ApiResult<()> {
+    let matches = !expected.is_empty() && bool::from(given.as_bytes().ct_eq(expected.as_bytes()));
+    if !matches {
+        return Err(ApiError::Forbidden);
+    }
+    if setup_code_expired(issued_at, now) {
+        return Err(ApiError::SetupCodeExpired);
+    }
+    Ok(())
+}
+
 /// Public: whether the console should show "create the owner account" instead of login.
 async fn state(State(s): State<AppState>) -> ApiResult<Json<Value>> {
     Ok(Json(json!({ "needs_admin": !has_staff(&s.db).await?, "dev_mode": s.config.dev_mode })))
@@ -165,10 +178,7 @@ async fn create_admin(State(s): State<AppState>, Json(req): Json<NewAdmin>) -> A
         .await?;
     let (expected, issued_at) = parse_setup_code(saved).unwrap_or_default();
     let given = req.code.trim().to_uppercase().replace(['-', ' '], "");
-    let matches = bool::from(given.as_bytes().ct_eq(expected.as_bytes()));
-    if expected.is_empty() || !matches || setup_code_expired(issued_at, Utc::now().timestamp()) {
-        return Err(ApiError::Forbidden);
-    }
+    check_setup_code(&expected, issued_at, &given, Utc::now().timestamp())?;
     // The first admin is the owner. Set here explicitly: the migration never picks one.
     let id: uuid::Uuid = sqlx::query_scalar("INSERT INTO staff (email, name, password_hash, role, is_owner) VALUES ($1, $2, $3, 'admin', TRUE) RETURNING id")
         .bind(&email)
@@ -1010,7 +1020,7 @@ mod tests {
     }
 
     #[test]
-    fn setup_code_expires_two_hours_after_issue() {
+    fn setup_code_expires_seven_days_after_issue() {
         let now = 1_000_000;
         assert!(!setup_code_expired(Some(now), now));
         assert!(!setup_code_expired(Some(now - SETUP_CODE_TTL_SECS), now));
@@ -1032,6 +1042,29 @@ mod tests {
         let (code, at) = choose_setup_code(None, None, stale, now);
         assert_ne!(code, "OLDCODE23456");
         assert_eq!(at, now);
+    }
+
+    #[test]
+    fn right_but_expired_code_is_told_apart_from_wrong() {
+        let now = 1_000_000;
+        let issued = now - SETUP_CODE_TTL_SECS - 1;
+        assert!(matches!(check_setup_code("CODE2345678A", Some(now), "CODE2345678A", now), Ok(())));
+        assert!(matches!(
+            check_setup_code("CODE2345678A", Some(issued), "CODE2345678A", now),
+            Err(ApiError::SetupCodeExpired)
+        ));
+        assert!(matches!(
+            check_setup_code("CODE2345678A", Some(issued), "WRONG2345678", now),
+            Err(ApiError::Forbidden)
+        ));
+        assert!(matches!(
+            check_setup_code("CODE2345678A", Some(now), "WRONG2345678", now),
+            Err(ApiError::Forbidden)
+        ));
+        assert!(
+            matches!(check_setup_code("", None, "", now), Err(ApiError::Forbidden)),
+            "no stored code never matches"
+        );
     }
 
     #[test]

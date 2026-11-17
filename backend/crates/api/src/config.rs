@@ -31,7 +31,7 @@ pub struct Config {
     pub seed_admin: Option<(String, String)>,
     /// One-time code for creating the owner account in the console (installer sets it; random otherwise).
     pub setup_code: Option<String>,
-    /// Unix seconds when the installer issued `setup_code`; the code expires two hours later.
+    /// Unix seconds when the installer issued `setup_code`; the code expires seven days later.
     pub setup_code_at: Option<i64>,
     /// Kakao REST app id: a Kakao token is only accepted if it was issued to this app.
     pub kakao_app_id: Option<String>,

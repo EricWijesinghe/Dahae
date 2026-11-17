@@ -93,7 +93,7 @@ for v in $page_vars; do
   n=${v%=}
   t "page: installer reads $n" grep -qF "{$n:-" "$inst"
 done
-nt "page: no answers file or page-made setup code" grep -qE 'dahae-answers|MALKKEUM_ANSWERS|SETUP_CODE' "$page"
+nt "page: no answers file (the setup code comes from the page itself)" grep -qE 'dahae-answers|MALKKEUM_ANSWERS' "$page"
 
 # ---- delivery re-run: the same release again changes no commit, and the tag stays where it was ----
 pd="$SB/pd"; mkdir -p "$pd/bin"

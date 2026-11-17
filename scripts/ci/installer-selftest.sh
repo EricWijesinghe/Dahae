@@ -43,6 +43,74 @@ nt "heartbeat ampersand"   valid_hb_url 'https://x.io/a?b=1&c=2'
 # shellcheck disable=SC2016 # literal $(id) on purpose
 nt "heartbeat subshell"    valid_hb_url 'https://x.io/$(id)'
 
+# ---- installer: result ping (MALKKEUM_NOTIFY_URL, EXIT trap) ----
+# ping_url <url> <exit code>: the address notify_result would call; curl is replaced by a recorder
+ping_url() {
+  rm -f "$SB/ping.out"
+  ( curl() { printf '%s' "${*: -1}" > "$SB/ping.out"; }
+    MALKKEUM_NOTIFY_URL="$1"; (exit "$2"); notify_result ) >/dev/null 2>&1
+  cat "$SB/ping.out" 2>/dev/null || true
+}
+t  "notify success pings /0"        eq "$(ping_url https://hc-ping.com/abc 0)" https://hc-ping.com/abc/0
+t  "notify failure pings /fail"     eq "$(ping_url https://hc-ping.com/abc 1)" https://hc-ping.com/abc/fail
+t  "notify keeps the query"         eq "$(ping_url 'https://hc-ping.com/abc?x=1' 0)" 'https://hc-ping.com/abc/0?x=1'
+t  "notify trailing slash"          eq "$(ping_url https://hc-ping.com/abc/ 0)" https://hc-ping.com/abc/0
+t  "notify unset pings nothing"     eq "$(ping_url '' 0)" ""
+t  "notify rejects & (no ping)"     eq "$(ping_url 'https://x.io/a&b' 0)" ""
+
+# ---- install page (the browser side of cloud-init) ----
+PAGE_DIR="$SB/page"
+bash "$ROOT/scripts/release/build-install-page.sh" "$ROOT/deploy/install.sh" \
+  "https://raw.githubusercontent.com/owner/repo/v1.0.0/install.sh" "$PAGE_DIR" >/dev/null
+t  "install page pins install.sh sha256" grep -qF "$(sha256sum "$ROOT/deploy/install.sh" | cut -d' ' -f1)" "$PAGE_DIR/index.html"
+nt "install page leaves no placeholder"  grep -q '__INSTALL_' "$PAGE_DIR/index.html"
+# the browser makes setup codes from this alphabet; the installer must accept every one of them
+t  "setup code alphabet: page = installer" eq \
+  "$(sed -n 's/^const CODE_ALPHABET = "\([^"]*\)";/\1/p' "$PAGE_DIR/index.html")" \
+  "$(sed -n 's/.*local alphabet=\([^ ]*\) .*/\1/p' "$ROOT/deploy/install.sh")"
+
+# the page's three outputs: #cloud-config must parse as YAML, the #!/bin/bash and browser-SSH forms must pass bash -n.
+# node runs the page's own generator functions (CI has node; in WSL set NODE_BIN to a node binary, e.g. node.exe)
+NODE_BIN=${NODE_BIN:-$(command -v node || true)}
+if [ -n "$NODE_BIN" ]; then
+  page_outputs() { # page_outputs 파일 : 페이지 생성 함수를 실행해 세 가지 결과를 JSON 으로 남겨요
+    python3 -I - "$PAGE_DIR/index.html" > "$SB/page-gen.js" <<'PY'
+import json, re, sys
+html = open(sys.argv[1], encoding="utf-8").read()
+js = re.search(r"<script>(.*?)</script>", html, re.S).group(1)
+core = js[:js.index("const $ = ")] + js[js.index("function cleanDomain"):js.index("function render()")]
+p = {"domain": "myshop.co.kr", "email": "owner@example.kr", "notify": "https://hc-ping.com/abc", "code": "ABCD2345678J"}
+print(core + "\nconst p = " + json.dumps(p) + ";\nprocess.stdout.write(JSON.stringify({cloud: buildCloudConfig(p), shell: buildShellScript(p), ssh: buildSshLine(p)}));")
+PY
+    "$NODE_BIN" - < "$SB/page-gen.js" > "$1"
+  }
+  page_part() { python3 -I -c 'import json,sys; sys.stdout.write(json.load(open(sys.argv[1]))[sys.argv[2]])' "$SB/page-out.json" "$1"; }
+  cloud_ok() { # YAML parse when PyYAML is there; otherwise the structure the page promises
+    python3 -I - "$1" <<'PY'
+import sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+try:
+    import yaml
+    doc = yaml.safe_load(text)
+    cmd = doc["runcmd"][0]
+    ok = doc.keys() == {"runcmd"} and cmd[0] == "bash" and cmd[1] == "-c" and "MALKKEUM_SETUP_CODE=ABCD2345678J" in cmd[2]
+except ImportError:
+    ok = text.startswith("#cloud-config\nruncmd:\n  - [bash, -c, \"") and "MALKKEUM_SETUP_CODE=ABCD2345678J" in text
+sys.exit(0 if ok else 1)
+PY
+  }
+  page_outputs "$SB/page-out.json"
+  page_part cloud > "$SB/page-cloud.yml"; page_part shell > "$SB/page-shell.sh"; page_part ssh > "$SB/page-ssh.sh"
+  t  "page: cloud-config parses"           cloud_ok "$SB/page-cloud.yml"
+  t  "page: shell form starts with bash"   eq "$(head -n1 "$SB/page-shell.sh")" '#!/bin/bash'
+  t  "page: shell form passes bash -n"     bash -n "$SB/page-shell.sh"
+  t  "page: browser SSH line passes bash -n" bash -n "$SB/page-ssh.sh"
+  t  "page: outputs carry the setup code"  sh -c "grep -qF MALKKEUM_SETUP_CODE=ABCD2345678J '$SB/page-cloud.yml' && grep -qF MALKKEUM_SETUP_CODE=ABCD2345678J '$SB/page-shell.sh' && grep -qF MALKKEUM_SETUP_CODE=ABCD2345678J '$SB/page-ssh.sh'"
+else
+  echo "note: install page outputs not checked (no node; set NODE_BIN)"
+fi
+
 # ---- installer: version compare ----
 t  "ver_ge newer"          ver_ge 2.29.1 2.20
 t  "ver_ge equal"          ver_ge 2.20 2.20
@@ -320,7 +388,15 @@ t  "tag installer names the signer" has v1.0.0:install.sh SIGNER_REPO_DEFAULT=o/
 t  "tag SHA256SUMS matches" sums_ok v1.0.0
 t  "tag guide uses the tag URL" has "v1.0.0:guide/01-서버-설치.md" "raw.githubusercontent.com/$DIST/v1.0.0/install.sh"
 t  "tag README uses the tag URL" has v1.0.0:README.md "raw.githubusercontent.com/$DIST/v1.0.0/SHA256SUMS"
-t  "beta branch keeps the stable-branch line" has "beta:guide/01-서버-설치.md" "raw.githubusercontent.com/$DIST/main/install.sh"
+t  "beta guide follows the beta channel"  has "beta:guide/01-서버-설치.md" "raw.githubusercontent.com/$DIST/beta/install.sh"
+nt "beta guide 00 names no page file"     has "beta:guide/00-한번에-설치.md" "dahae-install-page.html"
+t  "tag guide 00 names the page file"    has "v1.0.0:guide/00-한번에-설치.md" "dahae-install-page.html"
+# the install page is built for the tagged branch only: its hash must be the tag's install.sh
+t  "tag ships the install page"          has v1.0.0:dahae-install-page.html "INSTALL_SH_SHA256 = \"$(g show v1.0.0:install.sh | sha256sum | cut -d' ' -f1)\""
+nt "beta branch has no install page"     g cat-file -e "beta:dahae-install-page.html"
+nt "beta README has no page link"        has beta:README.md "dahae-install-page.html"
+t  "tag README has the page link"        has v1.0.0:README.md "dahae-install-page.html"
+t  "tag guide 08 uses the tag URL"       has "v1.0.0:guide/08-클라우드-배포.md" "raw.githubusercontent.com/$DIST/v1.0.0/install.sh"
 t  "first-install guide gets the URL too" has "v1.0.0:guide/00-한번에-설치.md" "raw.githubusercontent.com/$DIST/v1.0.0/install.sh"
 nt "no URL token left in published guides" sh -c "git -C '$SB/dist.git' grep -q INSTALL_URL v1.0.0 -- guide"
 nt "developer-only guide not shipped" sub g cat-file -e v1.0.0:guide/05-demo-install.md
@@ -396,12 +472,34 @@ rm -f "$SB/host/applied-key" "$SB/host/first-seen"
 nt "unreadable web manifest: no update"  has_updated "$(WEB_FAIL=1 auto_run)"
 t  "unreadable web manifest: exit 1 so the alert runs" eq "$(WEB_FAIL=1 auto_run >/dev/null; echo $?)" 1
 
-# setup code: shown in groups of four for 2 hours, then only --renew gives a new one
+# setup code: shown in groups of four for 7 days, then only --renew gives a new one
 printf 'SETUP_CODE=ABCDEFGHJKMN\nSETUP_CODE_AT=%s\n' "$(date +%s)" > "$SB/.env"
 t  "setup code shown in groups"          eq "$(setup_out)" ABCD-EFGH-JKMN
-printf 'SETUP_CODE=ABCDEFGHJKMN\nSETUP_CODE_AT=%s\n' "$(( $(date +%s) - 8000 ))" > "$SB/.env"
-nt "setup code expires after 2 hours"    setup_out
+printf 'SETUP_CODE=ABCDEFGHJKMN\nSETUP_CODE_AT=%s\n' "$(( $(date +%s) - 200000 ))" > "$SB/.env"
+t  "setup code still valid after 2 days" eq "$(setup_out)" ABCD-EFGH-JKMN
+printf 'SETUP_CODE=ABCDEFGHJKMN\nSETUP_CODE_AT=%s\n' "$(( $(date +%s) - 700000 ))" > "$SB/.env"
+nt "setup code expires after 7 days"     setup_out
+# a code the owner pastes from the install page (DAHAE_SETUP_CODE): 12 characters, no 0 O 1 I L
+t  "setup code from install page"        valid_setup_code ABCD2345678J
+nt "setup code with zero"                valid_setup_code 0BCD2345678J
+nt "setup code lowercase"                valid_setup_code abcd2345678j
+nt "setup code too short"                valid_setup_code ABCD2345678
+nt "setup code with dash"                valid_setup_code ABCD-2345678
 t  "renew gives a 12-character code"     eq "$(setup_out --renew | tail -n1 | tr -d '\n-' | wc -c | tr -d ' ')" 12
+
+# MALKKEUM_SETUP_CODE: the fresh .env keeps the page's code; a bad code stops the installer before it changes anything
+fresh_env() { # fresh_env 코드 : write_fresh_env 가 만든 .env 의 설치 코드 줄
+  local d; d=$(mktemp -d "$SB/fresh.XXXX")
+  ( cd "$d" && MALKKEUM_SETUP_CODE="$1" write_fresh_env >/dev/null 2>&1 && grep '^SETUP_CODE=' .env ) || true
+}
+code_env() { ( MALKKEUM_SETUP_CODE="$1"; check_setup_code_env ) >/dev/null 2>&1; }
+t  "fresh .env keeps the page code"      eq "$(fresh_env ABCD2345678J)" SETUP_CODE=ABCD2345678J
+t  "fresh .env makes a code without one" eq "$(fresh_env '' | awk '{ print length($0) }')" 23
+t  "install accepts the page code"       code_env ABCD2345678J
+nt "install refuses a code with zero"    code_env 0BCD2345678J
+nt "install refuses a short code"        code_env ABCD2345678
+no_code_env() { ( unset MALKKEUM_SETUP_CODE; check_setup_code_env ); }
+t  "install without a code is fine"      no_code_env
 
 # MALKKEUM_ANSWERS: only DOMAIN and EMAIL are read, values hold no spaces, environment values win
 printf 'DOMAIN=answers.example.kr\nEMAIL=owner@example.kr\nEVIL=1\n' > "$SB/answers"

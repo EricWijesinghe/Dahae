@@ -90,7 +90,7 @@ curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/malkkeum-install/bet
 설치를 다시 실행하면 **업데이트**가 돼요: 백업 → 새 버전 → 응답 확인 → 실패하면 이전 버전으로 되돌려요. 설정과 데이터는 그대로예요.
 
 ### 설치 뒤 바로 할 일
-1. 브라우저에서 `https://도메인/admin/` 을 열고 설치 코드로 사장님 계정을 만들어요. 설치 코드는 설치할 때 만들어져서 그때부터 2시간 동안 쓸 수 있어요. 지났으면 `sudo dahae setup-code --renew` 로 새로 받으세요.
+1. 브라우저에서 `https://도메인/admin/` 을 열고 설치 코드로 사장님 계정을 만들어요. 설치 코드는 설치할 때 만들어져서 그때부터 7일 동안 쓸 수 있어요. 지났으면 `sudo dahae setup-code --renew` 로 새로 받으세요.
 2. 콘솔 **설정** 에서 결제·문자·로그인 연동을 차례로 넣고 [연결 확인] 을 눌러요 (PortOne 은 [API 키 확인]) ([docs/guide/02-설정-마법사.md](guide/02-설정-마법사.md)).
 3. `sudo dahae keys-backup` 으로 비밀 키 사본을 만들고, 사본과 비밀번호를 서버 밖에 보관한 뒤 확인 문구를 입력해요.
 4. 외부 백업을 연결해요 (콘솔 **설정 > 외부 백업**, [§6](#6-백업--backups)).
@@ -125,7 +125,7 @@ curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/malkkeum-install/bet
 | `dahae applinks --android-sha256 …  --apple-team-id …` | 네이버 로그인 앱 링크 설정 | 개발자가 값을 알려 줘요 |
 | `dahae demo load [--force]` / `dahae demo clear` | 체험용 데이터 넣기 / 지우기 (실제 고객 데이터는 지우지 않아요) | `demo clear` 는 확인 문구 `yes` |
 | `dahae logs [api\|web\|db]` | 최근 200줄을 보고 계속 따라가요 (기본 api) | Ctrl+C 로 나가요 |
-| `dahae setup-code [--renew]` | 사장님 계정 설치 코드 보기 (설치할 때부터 2시간) | `--renew` 는 새 코드 |
+| `dahae setup-code [--renew]` | 사장님 계정 설치 코드 보기 (설치할 때부터 7일) | `--renew` 는 새 코드 |
 | `dahae update-schedule mon@04:00\|off` | 자동 업데이트 요일·시각 (또는 끄기) | 예약표를 다시 써요 |
 | `dahae keys-backup` | `.env` 를 비밀번호로 잠근 사본 만들기 (12자 이상) | 보관 확인 문구 입력 |
 | `dahae keys-restore 파일 [--yes]` | 새 서버에 예전 `DATA_KEY`·`JWT_SECRET` 넣기 | `restore-offsite` 보다 먼저 |
@@ -381,7 +381,7 @@ Secrets live in `/opt/malkkeum/.env` (mode 600). Integration keys are entered in
 - Stable: `curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/malkkeum-install/main/install.sh | sudo bash`; beta uses the `beta` branch in place of `main`.
 - The installer asks for the domain and an optional e-mail, creates keys, installs Docker, hardens the host (unattended upgrades, fail2ban: 1-hour ban after 5 failed SSH logins in 10 minutes, ufw only after confirmation), verifies the cosign signature of the images, installs the `dahae` command and the schedules, and starts the stack.
 - Re-running the installer is an update: backup, new images, health check, automatic rollback on failure. Data and settings are kept.
-- After install: open `https://DOMAIN/admin/`, enter the setup code (created at install, valid 2 hours from then; `sudo dahae setup-code --renew` for a new one), fill the setup wizard, run `sudo dahae keys-backup` and store the copy off the server, connect offsite backup, and set a heartbeat.
+- After install: open `https://DOMAIN/admin/`, enter the setup code (created at install, valid 7 days from then; `sudo dahae setup-code --renew` for a new one), fill the setup wizard, run `sudo dahae keys-backup` and store the copy off the server, connect offsite backup, and set a heartbeat.
 - Unattended options (`MALKKEUM_DOMAIN`, `MALKKEUM_EMAIL`, `MALKKEUM_CHANNEL`, `MALKKEUM_HEARTBEAT_URL`, `MALKKEUM_ANSWERS`; `DAHAE_*` also accepted) are listed at the top of [deploy/install.sh](../deploy/install.sh). `MALKKEUM_SKIP_SIGNATURE=1` is for unsigned test registries only.
 
 ## 3. dahae commands

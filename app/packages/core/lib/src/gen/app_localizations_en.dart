@@ -4766,6 +4766,47 @@ class TEn extends T {
   String get oFlowNoBookings => 'No bookings';
 
   @override
+  String get hjTitle => 'Server update';
+
+  @override
+  String get hjBody =>
+      'Installs the newest version. The site may drop for a few minutes. If it fails, the server goes back to the previous version by itself.';
+
+  @override
+  String get hjUpdateNow => 'Update now';
+
+  @override
+  String get hjQueued => 'Update started. You can follow its progress below';
+
+  @override
+  String get hjRecent => 'Recent server jobs';
+
+  @override
+  String get hjKindUpdate => 'Update';
+
+  @override
+  String get hjStateQueued => 'Waiting';
+
+  @override
+  String get hjStateRunning => 'In progress';
+
+  @override
+  String get hjStateOk => 'Done';
+
+  @override
+  String get hjStateFailed => 'Failed';
+
+  @override
+  String get hjStateRolledBack =>
+      'Failed, so it went back to the previous version';
+
+  @override
+  String get hjStateCheck => 'Needs a check';
+
+  @override
+  String get hjEmpty => 'No server jobs yet';
+
+  @override
   String get err_owner_exists => 'An owner is already set';
 
   @override
@@ -6837,6 +6878,10 @@ class TEn extends T {
 
   @override
   String get cWrongSetupCode => 'That setup code is not right';
+
+  @override
+  String get cSetupCodeExpired =>
+      'This setup code expired (valid for 7 days). Ask your developer or installer for a new code';
 
   @override
   String get cWeakPassword => 'Password needs at least 12 characters';
