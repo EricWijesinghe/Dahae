@@ -10,49 +10,47 @@ App IDs: customer `kr.co.dahae.customer`, partner `kr.co.dahae.partner`, console
 
 | 질문 | 답 |
 |---|---|
-| 안드로이드 AAB 는 언제? | DODA 가 도메인 이름을 알려 주는 **그날** 보내요 (앱 두 개, AAB 파일 두 개). When DODA gives the domain: the same day. |
-| iOS 는 어떻게? | 맥이 필요 없어요. 개발자가 Codemagic 클라우드 맥에서 빌드해 TestFlight 로 올려요. DODA 는 Apple 계정에 **관리자(Admin)** 로 개발자를 초대해 주세요. No Mac needed; DODA invites the developer as Admin. |
+| 안드로이드 AAB 는 누가 만들어요? | **DODA 가 직접 빌드해요.** 도메인이 정해지면 [guide 11](guide/11-앱-직접-빌드.md) 대로 DODA 의 Codemagic 과 Play Console 에서 AAB 두 개를 만들어요. 개발팀에 보내는 파일은 없어요. DODA builds both AABs itself, following guide 11. |
+| iOS 는 어떻게? | 맥이 필요 없어요. DODA 가 자기 Apple 계정과 Codemagic 으로 빌드해 TestFlight 로 올려요. 개발자 초대는 없어요. No Mac needed; DODA builds and uploads with its own Apple account and Codemagic. No developer invitation. |
 | 서버는 어떻게 배포? | AWS 서울 리전에 CloudFormation 템플릿으로 서버 1대를 만들고, 새 버전은 GitHub Actions 가 승인 후 배포해요 (CD). 키는 DODA 가 콘솔 설정 마법사에 직접 넣어요. AWS Seoul via one CloudFormation template; GitHub Actions deploys each release after approval. |
 
 ## 2. 안드로이드 (Google Play) / Android
 
 **AAB 준비 시점**
-- 개발팀은 DODA 의 도메인을 받은 날 `API_BASE=https://<도메인>` 을 넣어 AAB 를 빌드해요 (`codemagic.yaml` 의 `customer-android`, `partner-android`). 빌드 자체는 서버가 떠 있지 않아도 돼요.
+- DODA 가 도메인을 정한 날 `API_BASE=https://<도메인>` 을 넣고 [guide 11](guide/11-앱-직접-빌드.md) 대로 `customer-android`, `partner-android` 를 실행해요 (`codemagic.yaml`). 빌드 자체는 서버가 떠 있지 않아도 돼요.
 - 1차 AAB 는 카카오·네이버·구글·Firebase 키 없이 빌드해요. 해당 로그인 버튼은 숨겨지고 푸시는 꺼져요. 내부 테스트에는 충분해요.
-- DODA 가 키를 보내면 다시 빌드해요 (약 1시간). 키 목록은 [DEPLOY.md](DEPLOY.md) §3 표.
+- DODA 가 키를 Codemagic 에 넣으면 다시 빌드해요 (약 1시간). 키 목록은 [DEPLOY.md](DEPLOY.md) §3 표와 guide 11 의 3-3.
 - 심사 제출 전에는 서버가 반드시 떠 있어야 해요. 심사원은 데모 계정으로 로그인해요 (아래 §4-7).
 
 **Play Console 계정 (DODA)**
 1. play.google.com/console 에서 **조직(Organization)** 계정으로 가입해요. D-U-N-S 번호가 필요해요. 개인 계정은 새로 만들면 테스터 12명·14일 비공개 테스트를 거친 뒤에야 정식 출시할 수 있어요 ([03 앱 출시](guide/03-앱-출시.md) 준비물 표).
-2. 개발자 이메일을 [사용자 및 권한]에 초대해요. 권한: **앱 출시**, **앱 정보 관리**.
-3. 앱 두 개를 만들어요 (`kr.co.dahae.customer`, `kr.co.dahae.partner`).
+2. 개발팀 초대는 없어요. DODA 가 Play 서비스 계정을 만들어 **출시 관리자** 권한을 주고 ([guide 11](guide/11-앱-직접-빌드.md) 4-3), 앱 두 개를 직접 만들어요 (`kr.co.dahae.customer`, `kr.co.dahae.partner`).
 
 **업로드와 서명**
-- 업로드 키는 개발자가 만들고 오프라인 백업으로 보관해요 ([DEPLOY.md](DEPLOY.md) §3 항목 2).
+- 업로드 키는 DODA 가 만들고 오프라인 백업으로 보관해요 ([guide 11](guide/11-앱-직접-빌드.md) 3-2). 개발팀의 키를 받지 않아요.
 - DODA 는 앱을 만들 때 **Play 앱 서명(Play App Signing)** 을 켜 두세요 (기본값).
-- 빌드가 끝나면 Codemagic 이 AAB 를 Play 내부 테스트 트랙에 **초안(draft)** 으로 올려요. 올리려면 DODA 가 만든 Play 서비스 계정 키 (권한 **출시 관리자**, 키는 1:1 로 전달) 가 필요해요. DODA 는 Play Console 에서 초안을 확인하고 출시(승격)해요.
-- 카카오·구글 로그인에는 **Play 앱 서명 키**의 SHA-1 이 필요해요. 첫 업로드 뒤 DODA 가 Play Console → 앱 무결성(App integrity) 에서 복사해 카카오·구글 콘솔에 등록해요. 업로드 키의 지문은 개발팀이 알려 줘요.
+- 첫 AAB 는 DODA 가 Play Console 에 직접 올려요 (Google Play API 로는 첫 릴리스를 만들 수 없어요, [guide 11](guide/11-앱-직접-빌드.md) 6번). 이후 빌드는 Codemagic 이 서비스 계정 키(`GCLOUD_SERVICE_ACCOUNT_CREDENTIALS`)로 Play 내부 테스트 트랙에 **초안(draft)** 으로 올려요. DODA 는 Play Console 에서 초안을 확인하고 출시(승격)해요.
+- 카카오·구글 로그인에는 **Play 앱 서명 키**의 SHA-1 이 필요해요. 첫 업로드 뒤 DODA 가 Play Console → 앱 무결성(App integrity) 에서 복사해 카카오·구글 콘솔에 등록해요.
 
 **업데이트**
-- 새 버전마다 개발팀이 빌드 번호가 올라간 새 AAB 를 보내요. DODA 가 같은 방법으로 올려요. 빌드 번호는 자동으로 올라가요 (직접 정하지 않아요).
+- 새 버전은 DODA 가 포크에서 새 태그를 만들고 Codemagic 을 다시 실행해요 ([guide 11](guide/11-앱-직접-빌드.md) 8번). 빌드 번호는 자동으로 올라가요 (직접 정하지 않아요).
 
 ## 3. iOS (App Store · TestFlight)
 
 **왜 DODA 가 맥을 준비할 필요가 없나**
-- 빌드는 Codemagic 클라우드 맥에서 해요. 저장소는 비공개예요. DODA 는 맥이 필요 없어요 ([store/ios-release.md](store/ios-release.md) 1·2항).
+- 빌드는 Codemagic 클라우드 맥에서 해요. DODA 는 맥이 필요 없어요 ([store/ios-release.md](store/ios-release.md) 1·2항).
 
-**접근 방법 (비밀번호를 공유하지 않아요)**
-- DODA 가 App Store Connect → [사용자 및 액세스]에서 개발자의 Apple ID 를 **관리자(Admin)** 로 초대해요. 비밀번호나 2단계 인증 코드는 주고받지 않아요.
-- 관리자 역할이 있어야 개발자 사이트에서 App ID, APNs 키를 만들 수 있어요.
-- 개발자는 초대를 수락한 뒤 다음을 해요: App ID 두 개 (`kr.co.dahae.customer`, `kr.co.dahae.partner`, 푸시·Apple 로그인·Associated Domains 켜기), App Store Connect 앱 두 개, App Store Connect API 키 (역할 **App Manager**, Codemagic 에 `malkkeum_asc` 이름으로 연결), APNs 키 (푸시용).
-- 개발자는 Apple 팀 ID 를 받아 서버 `.env` 의 `APPLE_TEAM_ID` 에 넣어요 (`dahae applinks --apple-team-id`, [DEPLOY.md](DEPLOY.md) §3).
+**계정 (DODA 가 직접 만들어요, 개발자 초대는 없어요)**
+- DODA 계정 소유자가 Apple Developer 와 App Store Connect 에서 App ID 두 개 (`kr.co.dahae.customer`, `kr.co.dahae.partner`, 푸시·Apple 로그인·Associated Domains 켜기), 앱 두 개, APNs 키를 만들어요 ([guide 11](guide/11-앱-직접-빌드.md) 4-1, 4-2).
+- App Store Connect API 키 (역할 **App Manager**) 는 Codemagic 에 `malkkeum_asc` 이름으로 연결해요 ([guide 11](guide/11-앱-직접-빌드.md) 3-1).
+- Apple 팀 ID 는 서버 콘솔 **설정 → 앱 링크** 카드에 넣어요 ([guide 11](guide/11-앱-직접-빌드.md) 4-8).
 
 **DODA 가 직접 해야 할 것 (계정 소유자만 가능)**
 1. Apple Developer Program 을 **조직**으로 가입해요. D-U-N-S 번호가 필요하고, 연 99 USD 예요.
 2. 계약(Agreements)에 동의해요. 계정 소유자(Account Holder)만 할 수 있어요.
 3. 세금·정산 정보는 앱이 유료가 아니므로 기본적으로 필요 없어요. 결제는 PortOne 웹 결제이고 인앱 결제(IAP)가 아니에요.
-4. TestFlight 내부 테스트는 DODA 직원이 해요. 개발자는 설치 링크만 보내요.
-5. 심사 제출은 사람이 해요 (자동 제출하지 않아요). DODA 가 직접 누르거나, 개발자에게 권한을 주고 개발자가 눌러도 돼요. 심사 메모는 [store/review-notes.md](store/review-notes.md).
+4. TestFlight 내부 테스트는 DODA 직원이 해요.
+5. 심사 제출은 사람이 해요 (자동 제출하지 않아요). DODA 가 직접 눌러요. 심사 메모는 [store/review-notes.md](store/review-notes.md).
 
 ## 4. 백엔드 서버 배포 / How we plan to deploy the backend server
 
@@ -81,34 +79,24 @@ DODA 의 서비스가 모두 AWS 에 있으니 **AWS 서울 리전(ap-northeast-
 
 | 날 · Day | 누가 · Who | 할 일 · Task |
 |---|---|---|
-| Day 0 | DODA | 도메인 정하기, AWS 배포용 IAM 사용자 만들기, Play 조직 계정 가입, Apple 조직 가입, Apple 관리자 초대 |
-| Day 0 | 개발팀 | 도메인을 받으면 AAB 2개 빌드 (`API_BASE`) |
+| Day 0 | DODA | 도메인 정하기, AWS 배포용 IAM 사용자 만들기, Play 조직 계정 가입, Apple 조직 가입 |
 | Day 0–1 | 개발팀 + DODA | CloudFormation 으로 서버 만들기 (§4), 설정 마법사, 사장님 계정, GitHub CD 연결 |
-| Day 1 | 개발팀 | App ID, App Store Connect 앱, API 키, APNs 키, Codemagic 연결, 첫 TestFlight 빌드 (Apple 처리 10–30분) |
-| Day 1 | DODA | Codemagic 이 올린 AAB 초안을 Play 내부 테스트 트랙에서 확인·출시, Play 앱 서명 SHA-1 등록 |
+| Day 1 | DODA | 포크, Codemagic 설정, App ID, App Store Connect 앱, API 키, APNs 키, 첫 AAB 빌드와 Play 첫 업로드, 첫 TestFlight 빌드 (Apple 처리 10–30분) ([guide 11](guide/11-앱-직접-빌드.md)) |
+| Day 1 | DODA | Play 내부 테스트 트랙에서 초안 확인·출시, Play 앱 서명 SHA-1 등록 |
 | Day 1–3 | DODA 직원 | 안드로이드·iOS 실기기 테스트 (로그인, 사진, 결제 창, 푸시, 위치) |
 | 심사 제출 시 | DODA + 개발팀 | 데모 계정 켜기, 심사 메모, 개인정보처리방침·계정 삭제 주소 확인, 제출 |
 | 심사 기간 | 스토어 | Google 은 보통 며칠, Apple 은 보통 1–3일 (일반적인 기간이며 보장되지 않아요) |
 
 ## 6. DODA 가 보내 줄 것 / What DODA sends us
 
-- [ ] 도메인 이름 (예: `myshop.co.kr`)
 - [ ] AWS 배포용 IAM 사용자 (정책 `deploy/aws/deployer-iam-policy.json`, MFA 켜기), 설치 날 통화 가능 시간
 - [ ] GitHub 승인자로 지정할 DODA 담당자의 GitHub 계정
-- [ ] Apple 관리자 초대 (개발자 Apple ID 에 Admin)
-- [ ] Play Console 개발자 초대 (앱 출시, 앱 정보 관리)
-- [ ] Play 서비스 계정 키 (JSON, 권한 **출시 관리자**): Codemagic 의 Play 자동 업로드에 필요해요. 1:1 로 전달해요
-- [ ] 키 (선택, 있을 때만): 카카오 네이티브 키, 네이버 클라이언트 ID·시크릿, 구글 OAuth 클라이언트 ID (웹·iOS), Firebase 설정 파일 (고객·파트너, Android·iOS)
-- 키 파일과 비밀번호는 카카오톡 단체방이 아니라 1:1 로 보내요 ([guide 03](guide/03-앱-출시.md) 전달 방법).
+- 앱 계정, 서비스 계정 키, 앱 키, 도메인 설정은 DODA 가 직접 만들고 직접 넣어요 (Apple, Play, Codemagic, 서버 콘솔). 개발팀에 보내는 것은 없어요 ([guide 11](guide/11-앱-직접-빌드.md)).
 
 ## 7. 개발팀이 보내 줄 것 / What we send DODA
 
-- [ ] AAB 파일 두 개: `kr.co.dahae.customer`, `kr.co.dahae.partner` (안드로이드)
-- [ ] TestFlight 설치 안내 (iOS)
-- [ ] 스토어 설명 문구 `docs/store/listing-ko.md`, `listing-en.md`
-- [ ] 스크린샷 `docs/store/screenshots/`
-- [ ] 데이터 안전 답변 `docs/store/data-safety.md` (Google), `docs/store/app-privacy.md` (Apple)
-- [ ] 심사 메모 `docs/store/review-notes.md`
+- 앱 빌드 파일은 없어요. DODA 가 [guide 11](guide/11-앱-직접-빌드.md) 로 직접 빌드해요.
+- [ ] 스토어 자료는 저장소 포크의 `docs/store/` 에 있어요: 설명 문구, 스크린샷, 데이터 안전, 개인정보 라벨, 심사 메모. 따로 보내지 않아요.
 - [ ] 서버 설치 명령과 설치 안내 ([guide 00](guide/00-한번에-설치.md), [guide 01](guide/01-서버-설치.md))
 
 ---
@@ -121,31 +109,30 @@ Audience: DODA (operator of the Dahae service) and the developer team. Step-by-s
 
 | Question | Answer |
 |---|---|
-| When is the Android AAB ready? | The same day DODA gives us the domain name. Two files: customer and partner. |
-| How does iOS work? | No Mac needed. The developer builds on Codemagic cloud Macs and uploads to TestFlight. DODA invites the developer as Admin in App Store Connect; no password or 2FA code is shared. |
+| Who builds the Android AAB? | **DODA builds it itself.** Once the domain is set, DODA follows [guide 11](guide/11-앱-직접-빌드.md) to build two AABs on its own Codemagic and Play Console. Nothing is sent to the developer. |
+| How does iOS work? | No Mac needed. DODA builds with its own Apple account and Codemagic, and uploads to TestFlight. No developer invitation. |
 | How is the server deployed? | One server in AWS Seoul from a CloudFormation template; GitHub Actions deploys each new release after a DODA reviewer approves (CD). DODA enters its own payment and messaging keys in the console setup wizard. |
 
 ### 2. Android (Google Play)
 
-- **AAB timing.** The developer builds both AABs with `API_BASE=https://<domain>` on the day the domain is known (`codemagic.yaml`, workflows `customer-android` and `partner-android`). The server does not need to be running for the build.
-- **First build without keys.** Kakao, Naver, Google sign-in buttons stay hidden and push stays off. This is enough for internal testing. When DODA sends the keys, we rebuild (about 1 hour). Key list: [DEPLOY.md](DEPLOY.md) §3.
+- **AAB timing.** DODA builds both AABs with `API_BASE=https://<domain>` once the domain is set (`codemagic.yaml`, workflows `customer-android` and `partner-android`, steps in [guide 11](guide/11-앱-직접-빌드.md)). The server does not need to be running for the build.
+- **First build without keys.** Kakao, Naver, Google sign-in buttons stay hidden and push stays off. This is enough for internal testing. When DODA adds the keys to Codemagic, it rebuilds (about 1 hour). Key list: [DEPLOY.md](DEPLOY.md) §3 and guide 11 step 3-3.
 - **Server before review.** The server must be running before DODA submits for Play review, because reviewers log in with the demo account (section 4, item 7).
-- **Play Console account (DODA).** Register as an **Organization** (a D-U-N-S number is needed). A new personal account must run a closed test with 12 testers for 14 days before production. Invite the developer under Users and permissions: App release and App information management.
-- **Upload and signing.** The developer creates the upload key and keeps an offline backup ([DEPLOY.md](DEPLOY.md) §3 item 2). DODA keeps **Play App Signing** on (the default). Codemagic uploads each AAB to the internal testing track as a draft, using a Play service account key from DODA (role **Release manager**). DODA checks the draft and promotes it.
-- **Sign-in SHA-1.** Kakao and Google sign-in need the **Play app-signing key** SHA-1. After the first upload, DODA copies it from Play Console → App integrity and registers it in the Kakao and Google consoles. The developer provides the upload key fingerprint.
-- **Updates.** Each new version is a new AAB with a higher build number. DODA uploads it the same way. Build numbers are set by the build script, never by hand.
+- **Play Console account (DODA).** Register as an **Organization** (a D-U-N-S number is needed). A new personal account must run a closed test with 12 testers for 14 days before production. No developer invitation: DODA creates the apps itself.
+- **Upload and signing.** DODA creates the upload key and keeps an offline backup (guide 11, step 3-2). DODA keeps **Play App Signing** on (the default). The first AAB is uploaded by hand in Play Console, because the Google Play API cannot create the first release (guide 11, step 6). After that, Codemagic uploads each AAB to the internal testing track as a draft, using a Play service account key that DODA creates (role **Release manager**). DODA checks the draft and promotes it.
+- **Sign-in SHA-1.** Kakao and Google sign-in need the **Play app-signing key** SHA-1. After the first upload, DODA copies it from Play Console → App integrity and registers it in the Kakao and Google consoles.
+- **Updates.** DODA tags a new version on its fork and runs Codemagic again (guide 11, step 8). Build numbers are set by the build script, never by hand.
 
 ### 3. iOS (App Store · TestFlight)
 
-- **No Mac for DODA.** Builds run on Codemagic cloud Macs from a private repository ([store/ios-release.md](store/ios-release.md)).
-- **Access.** DODA invites the developer's Apple ID in App Store Connect → Users and Access with the **Admin** role. The developer needs Admin to create App IDs and APNs keys. No password or 2FA code is shared.
-- **Developer does.** Creates App IDs `kr.co.dahae.customer` and `kr.co.dahae.partner` with Push, Sign in with Apple and Associated Domains enabled; creates the two App Store Connect apps; creates an App Store Connect API key (role App Manager, named `malkkeum_asc` in Codemagic); creates the APNs key; sets the Apple Team ID in the server `.env` (`APPLE_TEAM_ID`, [DEPLOY.md](DEPLOY.md) §3).
+- **No Mac for DODA.** Builds run on Codemagic cloud Macs ([store/ios-release.md](store/ios-release.md)).
+- **Accounts (DODA creates them; no developer invitation).** The account holder creates App IDs `kr.co.dahae.customer` and `kr.co.dahae.partner` with Push, Sign in with Apple and Associated Domains enabled; creates the two App Store Connect apps and the APNs key (guide 11, steps 4-1 and 4-2). An App Store Connect API key (role App Manager) is connected in Codemagic as `malkkeum_asc` (guide 11, step 3-1). The Apple Team ID goes into the server console's App links card (guide 11, step 4-8).
 - **DODA must do (account holder only where noted).**
   1. Enrol in the Apple Developer Program as an **organization**: D-U-N-S number needed, 99 USD per year.
   2. Accept the agreements (Account Holder only).
   3. Tax and banking are not needed for free apps. Payments use PortOne web checkout, not in-app purchase.
   4. TestFlight internal testing is done by DODA staff.
-  5. Submit for review: a person presses "Submit for Review" (not automated). DODA presses it, or the developer does if DODA grants access. Review notes: [store/review-notes.md](store/review-notes.md).
+  5. Submit for review: a person presses "Submit for Review" (not automated). DODA presses it. Review notes: [store/review-notes.md](store/review-notes.md).
 
 ### 4. Backend server: deployment plan
 
@@ -174,32 +161,22 @@ All of DODA's services run on AWS, so the server goes to **AWS Seoul (ap-northea
 
 | Day | Who | Task |
 |---|---|---|
-| Day 0 | DODA | Pick domain, create the AWS deployer IAM user, register Play organization account, enrol in Apple Developer Program, invite developer as Apple Admin |
-| Day 0 | Developer | Build both AABs once the domain is known |
+| Day 0 | DODA | Pick domain, create the AWS deployer IAM user, register Play organization account, enrol in Apple Developer Program |
 | Day 0–1 | Developer + DODA | Create the server with CloudFormation (section 4), setup wizard, owner account, connect GitHub CD |
-| Day 1 | Developer | App IDs, App Store Connect apps, API key, APNs key, Codemagic link, first TestFlight build (Apple processing 10–30 min) |
-| Day 1 | DODA | Check and promote the Codemagic AAB draft on the Play internal track; register the Play app-signing SHA-1 |
+| Day 1 | DODA | Fork, Codemagic setup, App IDs, App Store Connect apps, API key, APNs key, first AAB builds and first manual Play upload, first TestFlight build (Apple processing 10–30 min) ([guide 11](guide/11-앱-직접-빌드.md)) |
+| Day 1 | DODA | Check and promote the AAB draft on the Play internal track; register the Play app-signing SHA-1 |
 | Day 1–3 | DODA staff | Test on real Android and iPhone devices (sign-in, photos, payment window, push, location) |
 | At submission | DODA + developer | Turn on demo account, review notes, confirm privacy and account-deletion URLs, submit |
 | Review | Stores | Google usually takes a few days; Apple usually 1–3 days. Typical, not guaranteed. |
 
 ### 6. What DODA sends us
 
-- [ ] Domain name (e.g. `myshop.co.kr`)
 - [ ] A deployer IAM user (policy `deploy/aws/deployer-iam-policy.json`, MFA on) and a time slot for a call on install day
 - [ ] The GitHub account of the DODA person who approves deploys
-- [ ] Apple Admin invite for the developer's Apple ID
-- [ ] Play Console developer invite (App release, App information management)
-- [ ] Play service account key (JSON, role **Release manager**): needed for Codemagic's automatic Play upload; sent one-to-one
-- [ ] Keys, if available: Kakao native key, Naver client ID and secret, Google OAuth client IDs (web and iOS), Firebase config files (customer and partner, Android and iOS)
-- Send keys and passwords one-to-one, never in a group chat ([guide 03](guide/03-앱-출시.md)).
+- App accounts, the Play service account key, app keys and domain settings are created and entered by DODA itself (Apple, Play, Codemagic, server console). Nothing is sent to the developer ([guide 11](guide/11-앱-직접-빌드.md)).
 
 ### 7. What we send DODA
 
-- [ ] AAB files: `kr.co.dahae.customer`, `kr.co.dahae.partner` (Android)
-- [ ] TestFlight invitation instructions (iOS)
-- [ ] Store listing text: `docs/store/listing-ko.md`, `listing-en.md`
-- [ ] Screenshots: `docs/store/screenshots/`
-- [ ] Data safety answers: `docs/store/data-safety.md` (Google), `docs/store/app-privacy.md` (Apple)
-- [ ] Review notes: `docs/store/review-notes.md`
+- App build files: none. DODA builds them itself with [guide 11](guide/11-앱-직접-빌드.md).
+- [ ] Store material is in the repository fork under `docs/store/`: listing text, screenshots, data safety, app privacy labels, review notes. Not sent separately.
 - [ ] Install command and guides ([guide 00](guide/00-한번에-설치.md), [guide 01](guide/01-서버-설치.md))

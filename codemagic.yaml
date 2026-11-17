@@ -11,7 +11,7 @@
 #        GOOGLE_SERVICES_JSON_B64 / GOOGLE_SERVICE_INFO_PLIST_B64          (customer Firebase, base64)
 #        PARTNER_GOOGLE_SERVICES_JSON_B64 / PARTNER_GOOGLE_SERVICE_INFO_PLIST_B64 (partner Firebase)
 #   4. Start "customer-ios", "customer-android", "partner-ios", "partner-android" on a tag v1.2.3.
-# Run by the developer on the private repo, never by the client. Runbook: docs/DEPLOY.md §3
+# Run by the client (DODA) on its own fork and Codemagic account, step by step: docs/guide/11-앱-직접-빌드.md. Runbook: docs/DEPLOY.md §3
 #
 # Secrets: none in this file or the repo. The keystore, the App Store Connect key and the group
 # "malkkeum" live in Codemagic (mark every value there as secure); iOS certificates and profiles are
