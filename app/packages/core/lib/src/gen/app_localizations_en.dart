@@ -6704,6 +6704,9 @@ class TEn extends T {
   String get cSetupOwnerOnly => 'Only the owner can unlock';
 
   @override
+  String get cSetupLastPassKept => 'The earlier passing check is still in use';
+
+  @override
   String get cPaymentsTitle => 'Payments';
 
   @override

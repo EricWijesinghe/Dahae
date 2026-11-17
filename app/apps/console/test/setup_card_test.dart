@@ -19,7 +19,12 @@ Json _field(String name, String kind, {bool set = false, Object? preview}) => {
   'preview': preview,
 };
 
-Json _payoutCard({String? mode, bool configured = true}) => {
+Json _payoutCard({
+  String? mode,
+  bool configured = true,
+  Json? lastTest,
+  Json? lastCheck,
+}) => {
   'code': 'payout',
   'source': configured ? 'console' : 'none',
   'configured': configured,
@@ -39,8 +44,12 @@ Json _payoutCard({String? mode, bool configured = true}) => {
     ),
     _field('security_key', 'secret'),
   ],
-  'last_test': null,
+  'last_test': lastTest,
+  'last_check': lastCheck,
 };
+
+const _pass = {'ok': true, 'code': 'sandbox_connected', 'key_fp': 'fp'};
+const _fail = {'ok': false, 'code': 'unreachable', 'key_fp': 'fp'};
 
 Json _portoneCard() => {
   'code': 'portone',
@@ -82,6 +91,7 @@ const _fullCardSize = Size(390, 3200);
 
 void main() {
   _lockedTests();
+  _lastCheckTests();
 
   testWidgets('a saved test key shows the 테스트 badge and no live badge', (
     tester,
@@ -187,8 +197,9 @@ void main() {
   );
 }
 
-Json _lockedPortone({bool unlocked = false}) => {
+Json _lockedPortone({bool unlocked = false, bool canTest = true}) => {
   'code': 'portone',
+  'can_test': canTest,
   'source': 'console',
   'configured': true,
   'locked': !unlocked,
@@ -231,7 +242,7 @@ void _lockedTests() {
   );
 
   testWidgets(
-    'a locked card still runs the connection test with no unlock, no owner code and no values',
+    'the owner runs the connection test on a locked card with no unlock, no owner code and no values',
     (tester) async {
       final api = FakeApi()
         ..reply('POST', '/admin/setup/portone/test', {
@@ -252,6 +263,22 @@ void _lockedTests() {
       expect(call.body, isNull, reason: 'the server tests the saved values');
       expect(call.headers.keys, isNot(contains('x-owner-totp')));
       expect(api.callsTo('POST', '/admin/setup/portone/unlock'), isEmpty);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'a locked card hides the connection test from a viewer who may not run it',
+    (tester) async {
+      await _pump(tester, _lockedPortone(canTest: false), size: _fullCardSize);
+      await tester.tap(find.byType(ExpansionTile));
+      await settle(tester);
+
+      expect(
+        find.widgetWithText(OutlinedButton, koT.cSetupTestApiKey),
+        findsNothing,
+      );
+      expect(find.text(koT.cSetupLockedBadge), findsOneWidget);
       await unmount(tester);
     },
   );
@@ -414,6 +441,67 @@ void _lockedTests() {
     await settle(tester);
 
     expect(find.text(koT.err_invalid_store_id), findsOneWidget);
+    await unmount(tester);
+  });
+}
+
+void _lastCheckTests() {
+  testWidgets('a passing Toss check reads as connected', (tester) async {
+    await _pump(
+      tester,
+      _payoutCard(mode: 'test', lastTest: _pass, lastCheck: _pass),
+    );
+
+    expect(find.text(koT.cSetupConnected), findsOneWidget);
+    expect(find.text(koT.cSetupLastPassKept), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets(
+    'a reopened card shows the latest failed check, not the earlier pass',
+    (tester) async {
+      await _pump(
+        tester,
+        _payoutCard(mode: 'test', lastTest: _pass, lastCheck: _fail),
+      );
+
+      expect(find.text(koT.cSetupUnreachable), findsOneWidget);
+      expect(find.text(koT.cSetupConnected), findsNothing);
+      expect(find.text(koT.cSetupLastPassKept), findsOneWidget);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets('a failed check answer replaces the shown pass', (tester) async {
+    final api = FakeApi()
+      ..reply('POST', '/admin/setup/payout/test', {
+        ..._fail,
+        'last_test': _pass,
+      });
+    await _pump(
+      tester,
+      _payoutCard(mode: 'test', lastTest: _pass, lastCheck: _pass),
+      api: api,
+      size: _fullCardSize,
+    );
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+    await tester.tap(find.widgetWithText(OutlinedButton, koT.cSetupTest));
+    await settle(tester);
+
+    expect(find.text(koT.cSetupUnreachable), findsOneWidget);
+    expect(find.text(koT.cSetupConnected), findsNothing);
+    expect(find.text(koT.cSetupLastPassKept), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('a card without a newer attempt still shows its stored check', (
+    tester,
+  ) async {
+    await _pump(tester, _payoutCard(mode: 'test', lastTest: _fail));
+
+    expect(find.text(koT.cSetupUnreachable), findsOneWidget);
+    expect(find.text(koT.cSetupLastPassKept), findsNothing);
     await unmount(tester);
   });
 }

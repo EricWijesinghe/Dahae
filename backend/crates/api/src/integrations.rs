@@ -726,7 +726,7 @@ pub async fn save_section(db: &PgPool, key: &[u8; 32], section: Section, values:
     let enc = crypto::encrypt(key, crypto::aad::INTEGRATION, &Value::Object(values.clone()).to_string());
     sqlx::query(
         "INSERT INTO integration_settings (section, secret, updated_by) VALUES ($1, $2, $3)
-         ON CONFLICT (section) DO UPDATE SET secret = EXCLUDED.secret, updated_by = EXCLUDED.updated_by, updated_at = now(), last_test = NULL,
+         ON CONFLICT (section) DO UPDATE SET secret = EXCLUDED.secret, updated_by = EXCLUDED.updated_by, updated_at = now(), last_test = NULL, last_check = NULL,
              unlocked_until = NULL, unlocked_by = NULL
          WHERE integration_settings.unlocked_until > now() AND integration_settings.unlocked_by = EXCLUDED.updated_by",
     )

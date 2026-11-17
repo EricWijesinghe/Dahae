@@ -2051,6 +2051,7 @@
  "cSetupHide": "Hide",
  "cSetupUnlockedBadge": "Unlocked",
  "cSetupOwnerOnly": "Only the owner can unlock",
+ "cSetupLastPassKept": "The earlier passing check is still in use",
  "cPaymentsTitle": "Payments",
  "cSetupClear": "Disconnect",
  "cSetupConnected": "Connected",

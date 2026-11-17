@@ -196,7 +196,10 @@ class _IntegrationCardState extends State<IntegrationCard> {
   // Secret fields the owner has asked to see while typing (show/hide).
   final _revealed = <String>{};
   bool _busy = false;
+  // The latest connection check, passed or not.
   Json? _result;
+  // The stored passing check: a failed payout check does not replace it, and it keeps Toss open.
+  Json? _lastPass;
   // Keeps the unlock countdown current and reloads once the server has closed the window.
   Timer? _lockTimer;
 
@@ -245,7 +248,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
   void initState() {
     super.initState();
     _watchUnlock();
-    _result = widget.card['last_test'] as Json?;
+    _result = (widget.card['last_check'] ?? widget.card['last_test']) as Json?;
+    _lastPass = widget.card['last_test'] as Json?;
     for (final f in _fields) {
       final name = f['name'] as String;
       final kind = f['kind'] as String;
@@ -346,7 +350,11 @@ class _IntegrationCardState extends State<IntegrationCard> {
 
   Future<void> _test() async {
     final r = await context.api.post('/admin/setup/$_code/test') as Json;
-    if (mounted) setState(() => _result = r);
+    if (!mounted) return;
+    setState(() {
+      _result = r;
+      _lastPass = r['last_test'] as Json?;
+    });
   }
 
   /// Stored values leave the boxes once saved: from here on only the server's masked preview is shown.
@@ -361,8 +369,9 @@ class _IntegrationCardState extends State<IntegrationCard> {
         }
       }
       _revealed.clear();
-      // The save clears the server-side test result, so the old one must not show.
+      // The save clears the server-side test results, so the old ones must not show.
       _result = null;
+      _lastPass = null;
     });
   }
 
@@ -429,6 +438,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
     // Test or live from the saved Toss key prefix (server-side); null when there is none.
     final mode = widget.card['mode'] as String?;
     final ok = _result?['ok'] == true;
+    final passKept = _result?['ok'] == false && _lastPass?['ok'] == true;
     final status = !configured
         ? Tag(label: t.cSetupNotConnected, hue: StatusHues.consultation)
         : widget.card['source'] == 'env'
@@ -470,6 +480,11 @@ class _IntegrationCardState extends State<IntegrationCard> {
               runSpacing: Space.xs,
               children: [
                 status,
+                if (passKept)
+                  Tag(
+                    label: t.cSetupLastPassKept,
+                    hue: StatusHues.consultation,
+                  ),
                 if (widget.card['locked'] == true)
                   Tag(label: t.cSetupLockedBadge, hue: StatusHues.cancelled),
                 if (widget.card['unlock_expires_at'] != null)
@@ -505,9 +520,10 @@ class _IntegrationCardState extends State<IntegrationCard> {
                   icon: const Icon(Icons.save_rounded),
                   label: Text(t.cSetupSave),
                 ),
-                if (configured)
+                // The server tests the saved values and takes none, so the owner runs it on a locked card
+                // with no unlock. Anyone else gets a refusal there, so the server hides it (`can_test`).
+                if (configured && widget.card['can_test'] != false)
                   OutlinedButton.icon(
-                    // The server tests the saved values and takes none, so a locked card can run it.
                     onPressed: _busy ? null : () => _run(_test),
                     icon: const Icon(Icons.wifi_tethering_rounded),
                     label: Text(
