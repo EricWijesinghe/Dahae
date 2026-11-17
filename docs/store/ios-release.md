@@ -1,7 +1,7 @@
 # iOS 출시 순서 (App Store · TestFlight) / iOS release steps
 
-고객 앱 `kr.co.dahae.customer`(다해)와 파트너 앱 `kr.co.dahae.partner`(다해 파트너)를 Codemagic 에서 빌드해 소유자의 Apple 개발자 계정으로 올려요. Mac 은 필요 없어요. 개인정보 라벨·수출 규정 답은 `app-privacy.md`, 심사 메모는 `review-notes.md`, 키 목록은 `docs/DEPLOY.md` §3 예요.
-Both apps are built on Codemagic and uploaded to the owner's Apple developer account. No Mac needed. Privacy label and export answers: `app-privacy.md`; review notes: `review-notes.md`; key list: `docs/DEPLOY.md` §3.
+고객 앱 `kr.co.dahae.customer`(다해)와 파트너 앱 `kr.co.dahae.partner`(다해 파트너)를 DODA 가 자기 Codemagic 과 Apple 개발자 계정으로 빌드해 올려요 ([guide 11](../guide/11-앱-직접-빌드.md)). 개발사는 관여하지 않아요. Mac 은 필요 없어요. 개인정보 라벨·수출 규정 답은 `app-privacy.md`, 심사 메모는 `review-notes.md`, 키 목록은 `docs/DEPLOY.md` §3 예요.
+DODA builds both apps on its own Codemagic and uploads them to its own Apple developer account ([guide 11](../guide/11-앱-직접-빌드.md)). The developer is not involved. No Mac needed. Privacy label and export answers: `app-privacy.md`; review notes: `review-notes.md`; key list: `docs/DEPLOY.md` §3.
 
 ## 1. 소유자가 준비할 것 / What the owner provides
 
@@ -15,7 +15,7 @@ Both apps are built on Codemagic and uploaded to the owner's Apple developer acc
 | 6 | APNs 인증 키 (`.p8`) | Apple Developer → Keys → Apple Push Notifications service | Firebase 콘솔 → 프로젝트 설정 → Cloud Messaging → Apple 앱 구성에 앱마다 업로드. Upload per iOS app in Firebase |
 | 7 | Firebase iOS 앱 2개 (번들 ID 동일) → `GoogleService-Info.plist` | Firebase 콘솔 | `base64 -w0` 로 바꿔 Codemagic 변수 `GOOGLE_SERVICE_INFO_PLIST_B64`(고객), `PARTNER_GOOGLE_SERVICE_INFO_PLIST_B64`(파트너). 없으면 푸시만 꺼진 채로 빌드돼요. Without it the build works, push is off |
 | 8 | 로그인 키 | `docs/DEPLOY.md` §3 표 | `GOOGLE_IOS_CLIENT_ID`(번들 ID마다 iOS OAuth 클라이언트), `KAKAO_NATIVE_KEY`(카카오 개발자 콘솔 → 플랫폼 → iOS 번들 ID 등록), 네이버 개발자센터에서 iOS 번들 ID 등록 |
-| 9 | `APP_LINK_DOMAIN` (서버 도메인) + 서버 `.env` 의 `APPLE_TEAM_ID` | Apple Developer 우측 상단 Membership → Team ID | 서버가 `/.well-known/apple-app-site-association` 을 내줘야 네이버 로그인이 iOS 17.4+ 에서 돼요. 아래 4항 확인 |
+| 9 | `APP_LINK_DOMAIN` (서버 도메인) + 서버 콘솔 **설정 → 앱 링크** 카드의 Apple Team ID | Apple Developer 우측 상단 Membership → Team ID ([guide 11](../guide/11-앱-직접-빌드.md) 4-8) | 서버가 `/.well-known/apple-app-site-association` 을 내줘야 네이버 로그인이 iOS 17.4+ 에서 돼요. 아래 4항 확인 |
 | 10 | Apple 로그인 서버 키 (`.p8`) | 콘솔 Apple 카드, `review-notes.md` §3 | 탈퇴 때 Apple 토큰 해지에 쓰여요 |
 | 11 | 스크린샷, 설명, 개인정보처리방침 URL | App Store Connect 앱 페이지 | 아이폰 6.9인치 스크린샷 필수 (`docs/store/screenshots`, 문구 `listing-*.md`). 아이패드용은 필요 없어요 (앱이 아이폰 전용) |
 
@@ -23,7 +23,7 @@ Codemagic 변수 그룹 `malkkeum` 에 넣는 값은 모두 **secure** 로 표�
 
 ## 2. 첫 빌드 / First build
 
-1. `git tag v1.0.0 && git push origin v1.0.0` 후 Codemagic 에서 `customer-ios`, `partner-ios` 를 시작해요 (태그가 없으면 pubspec 의 1.0.0 을 써요). Start both workflows.
+1. 포크에서 버전 태그를 만들고 (예: `v1.5.1`, [guide 11](../guide/11-앱-직접-빌드.md) 1-4) Codemagic 에서 `customer-ios`, `partner-ios` 를 시작해요 (태그가 없으면 pubspec 의 버전을 써요). Start both workflows.
 2. 워크플로가 하는 일 / The workflow does: `check-native.py`(Info.plist·권한·개인정보 매니페스트 검사) → `xcode-project use-profiles`(API 키로 인증서·프로필 자동 생성, 앱별 `ios/Runner.xcodeproj` 만) → `flutter build ipa`(난독화, 빌드 번호는 `scripts/ci/build-number.py`) → `check-native.py --ipa`(서명된 ipa 검사) → TestFlight 업로드.
 3. 빌드 번호는 시간(분) 기준 증가 값이라 같은 번호가 두 번 나오지 않아요. 직접 올리지 마세요. Build numbers rise by the minute; never set one by hand.
 4. 업로드 후 Apple 처리에 10~30분. TestFlight 내부 테스터로 먼저 실기기 확인: 로그인(전화, 카카오, 네이버, 구글, Apple), 사진 고르기, 결제창(PortOne, 카드 앱 호출), 푸시, 위치.

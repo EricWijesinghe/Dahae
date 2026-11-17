@@ -1,14 +1,14 @@
-# Delivery runbook (developer only)
+# Delivery runbook (developer; §3 is run by the client)
 
 The client never gets source. They get a **public delivery repo** (installer + Korean guides),
-public server images, and store apps that the developer builds and uploads to the client's own
-store accounts. Source stays in the private repo.
+public server images, and store apps that the client builds on its own Codemagic and uploads to its own
+store accounts (guide 11; the developer does it only if the client asks). Source stays in the private repo.
 
 | Piece | Built by | Client receives |
 |---|---|---|
 | API image, web image (website + console at `/admin/`) | `release.yml` → GHCR | `docker pull` via install.sh |
 | install.sh + `SHA256SUMS` + `guide/` + `store/` | `release.yml` → `DIST_REPO` (branches `main` = stable, `beta`; annotated tag `v<VER>` on the release's channel commit) | one `curl … \| sudo bash` line |
-| Customer / partner apps | Codemagic on the private repo | TestFlight / Play internal test, then stores |
+| Customer / partner apps | Codemagic on the client's fork ([guide 11](guide/11-앱-직접-빌드.md)) | TestFlight / Play internal test, then stores |
 
 ## 0. Release gate
 
@@ -189,8 +189,9 @@ The release also uploads `dahae-aws.yaml` (CloudFormation, pinned to the same `i
 
 ## 3. Store apps (per client)
 
-The client creates the store accounts and invites the developer (guide 03). Then in Codemagic,
-connected to the **private** repo:
+The client builds the store apps itself, on its own fork of the repo and its own Codemagic account, and
+uploads them to its own store accounts. Follow [guide 11](guide/11-앱-직접-빌드.md). The developer runs these
+steps only if the client asks. The client does:
 1. Integrations → App Store Connect: the client's API key, name `malkkeum_asc`.
 2. Code signing → Android keystores: generate upload keystore, reference `malkkeum_upload`.
    Keep a copy offline — losing it blocks Play updates (recoverable only via Play support).

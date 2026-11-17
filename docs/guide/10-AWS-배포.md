@@ -22,10 +22,10 @@
 | 준비물 | 누가 | 메모 |
 |---|---|---|
 | AWS 계정 (결제 수단 등록 완료) | DODA | 회사 이름으로 만드세요 |
-| IAM 사용자 1명 (담당 계정) | DODA 가 만들고 개발사에 전달 | 아래 A 단계 |
+| IAM 사용자 1명 (담당 계정) | DODA 가 만들어요 (개발사에 보내지 않아요) | 아래 A 단계 |
 | 도메인 (예: `app.example.co.kr`) | DODA | 고객이 들어갈 주소 |
 | 도메인 DNS 관리 권한 또는 Route 53 호스팅 영역 | DODA | 있으면 자동 연결, 없으면 A 레코드 한 줄 |
-| GitHub 저장소 접근 권한 | 개발사 (EricWijesinghe/Dahae) | 승인자(reviewer)도 이 저장소 접근이 있어야 해요 |
+| GitHub 저장소 (DODA 포크, 예: `doda/Dahae`) | DODA | [guide 11](11-앱-직접-빌드.md) 1번으로 포크해요. 승인자(reviewer)도 이 저장소 접근이 있어야 해요 |
 | 인증 앱 (Google Authenticator 등) | 사장님 | 사장님 계정 로그인과 승인 코드에 써요 |
 | 비밀번호 관리 앱 | DODA | 계정 정보는 채팅에 쓰지 마세요 |
 
@@ -43,7 +43,7 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 4. 사용자 이름: `dahae-deployer` (또는 원하는 이름). **AWS Management Console 에 대한 사용자 액세스 권한 제공** 을 체크합니다.
 5. 암호는 **사용자 지정 암호** 를 고르고 강한 암호를 만듭니다. 비밀번호 관리 앱에 저장하세요. "다음 로그인 시 암호 재설정 필요" 는 체크를 해제해도 되고 켜도 됩니다.
 6. **권한 설정** 에서 **직접 정책 연결** 을 고르고 **정책 생성** 을 누릅니다 (새 탭이 열려요).
-7. **JSON** 탭을 누르고, 개발사가 보내 준 `deployer-iam-policy.json` 내용을 전부 붙여 넣습니다. **다음**, 정책 이름: `dahae-deployer-policy`, **정책 생성**.
+7. **JSON** 탭을 누르고, DODA 포크의 `deploy/aws/deployer-iam-policy.json` 내용을 전부 붙여 넣습니다. **다음**, 정책 이름: `dahae-deployer-policy`, **정책 생성**.
 8. 이전 탭으로 돌아와 목록을 새로 고침하고 `dahae-deployer-policy` 를 체크한 뒤 **다음 > 사용자 생성**.
 9. 사용자 목록에서 방금 만든 사용자를 눌러 **보안 자격 증명 > 다단계 인증(MFA) 할당** 을 누르고 **인증 앱** 을 고릅니다. QR 코드를 인증 앱으로 읽고, 코드 두 개를 입력합니다.
    - MFA 를 켜기 전에는 이 계정으로 서버 관련 작업이 거부돼요. 정책이 MFA 없이는 막도록 되어 있어요. 이건 의도된 동작입니다.
@@ -60,7 +60,7 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 
 ### B-1. 템플릿 파일 준비
 
-개발사가 보내 준 **`dahae-aws.yaml`** 파일을 컴퓨터에 저장합니다. (이 파일은 다해의 특정 릴리스에만 맞춰져 있어요. 파일 이름을 바꾸지 마세요.)
+DODA 포크 릴리스의 Assets 에서 **`dahae-aws.yaml`** 파일을 컴퓨터에 저장합니다. (이 파일은 다해의 특정 릴리스에만 맞춰져 있어요. 파일 이름을 바꾸지 마세요. 이 파일이 어떻게 만들어지는지는 아래 **확인 필요** 를 보세요.)
 
 ### B-2. 스택 만들기
 
@@ -80,7 +80,7 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 | VpcId | 기본 VPC (default) 를 고르면 됩니다 |
 | SubnetId | 그 VPC 의 **인터넷으로 나갈 수 있는 서브넷** 하나. 모르면 기본 서브넷 중 하나 |
 | SshCidr | **비워 두기** (SSH 를 열지 않아요. 접속은 AWS 웹 화면으로 합니다) |
-| GitHubRepo | `EricWijesinghe/Dahae` (기본값 그대로) |
+| GitHubRepo | **DODA 포크 주소** (예: `doda/Dahae`). 기본값 `EricWijesinghe/Dahae` 를 두면 안 돼요. 그 저장소의 워크플로가 이 서버 배포 권한을 얻게 돼요 |
 | GitHubEnvironment | `doda-aws` (기본값 그대로, C 단계와 같은 이름이어야 해요) |
 | CreateGitHubOidcProvider | 이 계정에 GitHub 연결이 처음이면 `true`. 이미 있다면 `false` |
 | AmdAmiId, ArmAmiId | 바꾸지 마세요 (기본값이 Ubuntu 24.04 를 찾아요) |
@@ -138,13 +138,13 @@ sudo dahae setup-code
 
 새 버전은 **GitHub 에서 승인한 뒤에만** 서버에 들어갑니다. 승인은 GitHub 의 승인자(reviewer)가 합니다.
 
-### C-1. GitHub 환경(Environment) 만들기 (개발사 저장소)
+### C-1. GitHub 환경(Environment) 만들기 (DODA 포크)
 
-이 단계는 저장소 관리자(개발사 담당)가 GitHub 웹 화면에서 합니다.
+이 단계는 DODA 가 자기 포크의 GitHub 웹 화면에서 합니다.
 
-1. https://github.com/EricWijesinghe/Dahae 를 엽니다 (접근 권한이 있는 계정으로).
+1. DODA 포크 주소 (예: https://github.com/doda/Dahae) 를 엽니다 (DODA 계정으로).
 2. **Settings > Environments > New environment** 를 누르고 이름을 `doda-aws` 로 입력 (B-2 의 GitHubEnvironment 와 같아야 해요).
-3. **Required reviewers** 를 켜고 승인할 사람(DODA 담당자 또는 개발사 담당자)을 추가합니다. 승인자는 이 저장소에 접근 권한이 있어야 해요.
+3. **Required reviewers** 를 켜고 승인할 DODA 담당자를 추가합니다. 승인자는 이 저장소에 접근 권한이 있어야 해요.
    - **Deployment branches** 를 **Selected branches** 로 바꾸고 `master` 하나만 추가합니다. 다른 브랜치에서는 이 환경을 쓸 수 없어요. (승인자를 빼면 승인 없이 배포가 돌아요. 꼭 넣으세요.)
 4. **Environment variables** 에 아래 네 개를 **Add variable** 로 넣습니다. 값은 B-2 스택의 **출력(Outputs)** 탭에 있어요.
 
@@ -157,10 +157,11 @@ sudo dahae setup-code
 
 - 이 값들은 **Secrets 가 아니라 Variables** 에 넣습니다. 비밀번호나 키가 아니에요.
 - 변수 이름은 대소문자까지 똑같이 쓰세요.
+- **CD 워크플로(`deploy-aws.yml`)는 실행되는 저장소에서 돌아요.** DODA 포크의 파일이 돌고, 환경과 변수 네 개도 DODA 포크에 있어야 해요. 승인 신뢰(OIDC)는 B-2 의 `GitHubRepo` 와 `GitHubEnvironment` 로 정해져요. 개발사 저장소에는 이 서버의 권한이 없어요.
 
 ### C-2. 자동으로 무엇이 일어나나
 
-1. 개발사가 안정 버전 태그(예: `v1.5.0`)를 만들면 릴리스 작업이 끝나요.
+1. DODA 가 포크에서 안정 버전 태그(예: `v1.5.0`)를 만들면 릴리스 작업이 끝나요.
 2. **deploy-aws** 작업이 자동으로 시작하고, `doda-aws` 환경의 승인을 기다립니다 (Actions 탭에 "Waiting" 으로 보여요).
 3. 승인자가 **Review deployments > doda-aws > Approve and deploy** 를 누르면 서버에서 `dahae update v1.5.0` 이 실행됩니다.
 4. 서버는 백업을 먼저 하고, 새 버전을 받고, 응답을 확인합니다. 새 버전이 응답하지 않으면 **이전 버전으로 자동으로 되돌립니다.**
@@ -169,6 +170,8 @@ sudo dahae setup-code
 > **베타 버전(`v1.5.0-beta.1` 같은 태그)은 자동 배포되지 않아요.** 고객 서버에는 안정 버전만 갑니다.
 >
 > **승인 방식 차이:** 콘솔에서 사장님이 직접 누르는 업데이트는 기존처럼 사장님의 인증 앱 코드로 승인해요. GitHub 에서 실행되는 배포는 **GitHub 승인자의 승인**으로 대신해요.
+>
+> **확인 필요: 템플릿과 릴리스 작업.** `dahae-aws.yaml` 과 안정 태그의 릴리스 작업은 `release.yml` 이 만들어요. 그 작업은 개발사의 배포 키와 전달 저장소가 필요해요 (`DAHAE_MANIFEST_KEY`, `DIST_DEPLOY_KEY`, `DIST_REPO`). DODA 포크에서 이 작업을 어떻게 돌릴지 아직 정해지지 않았어요 ([LAUNCH-PLAN](../LAUNCH-PLAN.md) §4).
 >
 > **자동 업데이트 주의:** 서버에는 기본으로 **매주 월요일 04:00 자동 업데이트** 가 켜져 있어요 (안정 채널, 새 버전을 본 뒤 24시간 대기). GitHub 승인 없이도 서버가 스스로 올라갈 수 있어요. GitHub 승인으로만 올리고 싶으면 서버에서 `sudo dahae update-schedule off` 를 실행하세요 (되돌리려면 `sudo dahae update-schedule mon@04:00`).
 
@@ -235,10 +238,10 @@ sudo dahae setup-code
 This guide sets up one Dahae server on AWS (Seoul) and connects GitHub Actions so that a stable release, once approved by a reviewer, is installed on the server with `dahae update`. A non-specialist can finish it from the AWS and GitHub web consoles.
 
 1. **Deployer account (DODA):** create an IAM user with console access, attach `deploy/aws/deployer-iam-policy.json` as a customer-managed policy, enable MFA (authenticator app), and create no access keys. Send the sign-in URL and user name through a separate channel from the password.
-2. **Launch:** in CloudFormation (region ap-northeast-2), create a stack from `dahae-aws.yaml`. The stack name must start with `dahae-`. Fill Domain, Email, and optionally HostedZoneId (Route 53). Leave SshCidr empty. Acknowledge IAM and create. Wait for CREATE_COMPLETE, then about 20 minutes for the installer.
+2. **Launch:** in CloudFormation (region ap-northeast-2), create a stack from `dahae-aws.yaml` (from the fork's release assets). Set `GitHubRepo` to the fork. The stack name must start with `dahae-`. Fill Domain, Email, and optionally HostedZoneId (Route 53). Leave SshCidr empty. Acknowledge IAM and create. Wait for CREATE_COMPLETE, then about 20 minutes for the installer.
 3. **DNS:** with Route 53 it is automatic; otherwise add an A record for the domain pointing to the `PublicIp` output.
 4. **Setup code without SSH:** EC2 > Instances > Connect > Session Manager > Connect, then `sudo dahae setup-code` (valid 2 hours; `--renew` for a new code). Open `https://<domain>/admin`, enter the code, create the owner account, enable two-step sign-in.
-5. **CD:** the repo admin creates the GitHub environment `doda-aws` with required reviewers, deployment branches limited to `master`, and four environment variables from the stack outputs: `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `DAHAE_DOMAIN`. Each stable tag (vX.Y.Z) waits for approval, then runs `dahae update <tag>` through SSM and checks health and version. Manual deploy and rollback are in the Actions tab (deploy-aws, Run workflow). Beta tags are never deployed.
+5. **CD:** DODA creates, in its own fork, the GitHub environment `doda-aws` with required reviewers, deployment branches limited to `master`, and four environment variables from the stack outputs: `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `DAHAE_DOMAIN`. The stack parameter `GitHubRepo` must be the fork (e.g. `doda/Dahae`), not the default `EricWijesinghe/Dahae`: the AWS role trusts that repository and environment. The workflow `deploy-aws.yml` runs in the same fork. Open item: how the release job that makes `dahae-aws.yaml` runs in the fork ([LAUNCH-PLAN](../LAUNCH-PLAN.md) §4). Each stable tag (vX.Y.Z) waits for approval, then runs `dahae update <tag>` through SSM and checks health and version. Manual deploy and rollback are in the Actions tab (deploy-aws, Run workflow). Beta tags are never deployed.
 6. **Note:** the server's weekly auto-update is on by default. To make GitHub approval the only path, run `sudo dahae update-schedule off`.
 7. **Backups:** keep the offsite backup and the keys backup (`sudo dahae keys-backup`) outside the server. EBS snapshots run daily at 03:00 Seoul time, keep 7.
 8. **Costs:** use the AWS pricing calculator (https://calculator.aws/) with Seoul pricing. This guide lists no prices.
