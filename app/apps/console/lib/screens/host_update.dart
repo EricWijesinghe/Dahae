@@ -10,8 +10,16 @@ import '../widgets/owner_totp_dialog.dart';
 
 /// "Update now" for the owner, plus the recent server jobs with their state. The button needs the owner's
 /// code for each press and is hidden from other admins; a run already queued or running turns it off.
-class HostUpdateCard extends StatelessWidget {
+class HostUpdateCard extends StatefulWidget {
   const HostUpdateCard({super.key});
+
+  @override
+  State<HostUpdateCard> createState() => _HostUpdateCardState();
+}
+
+class _HostUpdateCardState extends State<HostUpdateCard> {
+  // True from the code prompt until the request is answered: a second tap cannot queue a second update.
+  bool _sending = false;
 
   @override
   Widget build(BuildContext context) => AsyncView<Json>(
@@ -43,7 +51,9 @@ class HostUpdateCard extends StatelessWidget {
               const SizedBox(height: Space.sm),
               PrimaryButton(
                 label: t.hjUpdateNow,
-                onPressed: busy ? null : () => _update(context, reload),
+                onPressed: busy || _sending
+                    ? null
+                    : () => _update(context, reload),
               ),
             ],
             const SizedBox(height: Space.md),
@@ -70,16 +80,22 @@ class HostUpdateCard extends StatelessWidget {
     BuildContext context,
     Future<void> Function() reload,
   ) async {
-    final sent = await runOwnerAction(
-      context,
-      (headers) => context.api.post(
-        '/admin/host/jobs',
-        {'kind': 'update', 'arg': ''},
-        ApiClient.newIdempotencyKey(),
-        headers,
-      ),
-      done: context.t.hjQueued,
-    );
+    setState(() => _sending = true);
+    final Object? sent;
+    try {
+      sent = await runOwnerAction(
+        context,
+        (headers) => context.api.post(
+          '/admin/host/jobs',
+          {'kind': 'update', 'arg': ''},
+          ApiClient.newIdempotencyKey(),
+          headers,
+        ),
+        done: context.t.hjQueued,
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
     if (sent != null) await reload();
   }
 }

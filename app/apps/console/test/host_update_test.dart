@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
+import 'dart:async';
+
 import 'package:console/screens/host_update.dart';
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
@@ -64,6 +66,38 @@ void main() {
       );
     },
   );
+
+  testWidgets('a second tap while the update is being sent queues nothing', (
+    tester,
+  ) async {
+    setViewport(tester, tallPhoneSize);
+    final gate = Completer<void>();
+    final fake = FakeApi()
+      ..reply('GET', '/admin/me/account', {'is_owner': true})
+      ..reply('GET', '/admin/host/jobs', {'jobs': <Json>[]})
+      ..on('POST', '/admin/host/jobs', (_) async {
+        await gate.future;
+        return const ApiReply(202, {'id': 'job-1'});
+      });
+    final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+    await pumpConsoleScreen(
+      tester,
+      env,
+      const SingleChildScrollView(child: HostUpdateCard()),
+    );
+    await settle(tester);
+
+    await tester.tap(find.text(koT.hjUpdateNow));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).last, '123456');
+    await tester.tap(find.widgetWithText(FilledButton, koT.oaContinue));
+    await tester.pump();
+    expect(_button(tester).onPressed, isNull, reason: 'off while sending');
+
+    gate.complete();
+    await settle(tester);
+    expect(fake.callsTo('POST', '/admin/host/jobs'), hasLength(1));
+  });
 
   testWidgets('other admins see the jobs but no update button', (tester) async {
     await _pump(tester, owner: false);
