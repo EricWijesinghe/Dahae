@@ -2141,6 +2141,18 @@ class TEn extends T {
   String get rescheduled => 'Rescheduled';
 
   @override
+  String get rescheduleRequested =>
+      'Change requested. We\'ll let you know once the pro confirms.';
+
+  @override
+  String get reschedulePending => 'Waiting for the pro to confirm';
+
+  @override
+  String reschedulePendingTo(String when) {
+    return 'You asked to move it to $when. It changes once the pro confirms.';
+  }
+
+  @override
   String get visitNotes => 'Notes for the team';
 
   @override
@@ -3384,6 +3396,14 @@ class TEn extends T {
   @override
   String get err_reschedule_closed =>
       'The visit can\'t be rescheduled now. Contact our team.';
+
+  @override
+  String get err_reschedule_changed =>
+      'The customer changed the request. Check the new one.';
+
+  @override
+  String get err_reschedule_expired =>
+      'The requested day can no longer be booked. Decline it and agree a new time with the customer.';
 
   @override
   String get err_too_many_open_requests =>

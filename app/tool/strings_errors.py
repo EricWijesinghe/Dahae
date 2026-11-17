@@ -21,6 +21,8 @@ S = {
   "err_booking_changed": ["예약 내용이 바뀌었어요. 새로고침 후 다시 확인해 주세요.", "The booking changed. Refresh and check the details."],
   "err_booking_closed": ["이 예약은 더 이상 바꿀 수 없어요.", "This booking can't be changed anymore."],
   "err_reschedule_closed": ["방문 날짜는 지금 변경할 수 없어요. 상담팀에 문의해 주세요.", "The visit can't be rescheduled now. Contact our team."],
+  "err_reschedule_changed": ["고객이 일정 변경 요청을 바꿨어요. 새 요청을 확인해 주세요.", "The customer changed the request. Check the new one."],
+  "err_reschedule_expired": ["요청한 날짜로는 이제 옮길 수 없어요. 거절한 뒤 고객과 다시 조율해 주세요.", "The requested day can no longer be booked. Decline it and agree a new time with the customer."],
   "err_too_many_open_requests": ["진행 중인 요청이 너무 많아요. 하나를 마무리한 뒤 다시 시도해 주세요.", "You have too many open requests. Finish one first."],
   "err_already_reviewed": ["이미 후기를 남긴 방문이에요.", "You already reviewed this visit."],
   "err_identity_not_verified": ["본인인증을 먼저 완료해 주세요.", "Finish identity verification first."],

@@ -2091,6 +2091,17 @@ class TKo extends T {
   String get rescheduled => '일정을 변경했어요';
 
   @override
+  String get rescheduleRequested => '일정 변경을 요청했어요. 파트너가 확인하면 알려 드릴게요.';
+
+  @override
+  String get reschedulePending => '일정 변경 확인 중';
+
+  @override
+  String reschedulePendingTo(String when) {
+    return '$when(으)로 변경을 요청했어요. 파트너가 확인하면 바뀌어요.';
+  }
+
+  @override
   String get visitNotes => '방문 요청사항';
 
   @override
@@ -3310,6 +3321,13 @@ class TKo extends T {
 
   @override
   String get err_reschedule_closed => '방문 날짜는 지금 변경할 수 없어요. 상담팀에 문의해 주세요.';
+
+  @override
+  String get err_reschedule_changed => '고객이 일정 변경 요청을 바꿨어요. 새 요청을 확인해 주세요.';
+
+  @override
+  String get err_reschedule_expired =>
+      '요청한 날짜로는 이제 옮길 수 없어요. 거절한 뒤 고객과 다시 조율해 주세요.';
 
   @override
   String get err_too_many_open_requests =>

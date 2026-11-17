@@ -4087,6 +4087,24 @@ abstract class T {
   /// **'일정을 변경했어요'**
   String get rescheduled;
 
+  /// No description provided for @rescheduleRequested.
+  ///
+  /// In ko, this message translates to:
+  /// **'일정 변경을 요청했어요. 파트너가 확인하면 알려 드릴게요.'**
+  String get rescheduleRequested;
+
+  /// No description provided for @reschedulePending.
+  ///
+  /// In ko, this message translates to:
+  /// **'일정 변경 확인 중'**
+  String get reschedulePending;
+
+  /// No description provided for @reschedulePendingTo.
+  ///
+  /// In ko, this message translates to:
+  /// **'{when}(으)로 변경을 요청했어요. 파트너가 확인하면 바뀌어요.'**
+  String reschedulePendingTo(String when);
+
   /// No description provided for @visitNotes.
   ///
   /// In ko, this message translates to:
@@ -6360,6 +6378,18 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'방문 날짜는 지금 변경할 수 없어요. 상담팀에 문의해 주세요.'**
   String get err_reschedule_closed;
+
+  /// No description provided for @err_reschedule_changed.
+  ///
+  /// In ko, this message translates to:
+  /// **'고객이 일정 변경 요청을 바꿨어요. 새 요청을 확인해 주세요.'**
+  String get err_reschedule_changed;
+
+  /// No description provided for @err_reschedule_expired.
+  ///
+  /// In ko, this message translates to:
+  /// **'요청한 날짜로는 이제 옮길 수 없어요. 거절한 뒤 고객과 다시 조율해 주세요.'**
+  String get err_reschedule_expired;
 
   /// No description provided for @err_too_many_open_requests.
   ///
