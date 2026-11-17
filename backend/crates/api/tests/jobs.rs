@@ -240,8 +240,8 @@ async fn two_no_show_scans_in_parallel_open_one_case_per_booking(pool: PgPool) {
         let (id, _) = book(&app, &c, days, None).await;
         accept(&app, id, pro.as_str()).await;
         visit_today(&pool, id).await;
-        // From midnight KST: the grace period has passed.
-        sqlx::query("UPDATE bookings SET start_hour = 0 WHERE id = $1")
+        // Midnight KST yesterday: past any grace period whatever the time of day (today 00:00 is not, from 00:00 to 00:30 KST).
+        sqlx::query("UPDATE bookings SET start_hour = 0, visit_date = visit_date - 1 WHERE id = $1")
             .bind(id)
             .execute(&pool)
             .await

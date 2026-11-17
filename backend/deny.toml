@@ -17,6 +17,9 @@ ignore = [
   # uses a backend without them (e.g. aws_lc_rs) or a jsonwebtoken release depends on rsa >=0.10 / crypto-bigint >=0.7.6.
   { id = "RUSTSEC-2023-0071", reason = "rsa 0.9 Marvin attack, no fixed 0.9.x: still pulled by jsonwebtoken 11.1 (rust_crypto); the API decrypts nothing with RSA, it only verifies RS256 JWKs and signs FCM/Apple assertions locally, no attacker-timed oracle" },
   { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5 timing (p256/p384 via jsonwebtoken 11.1 rust_crypto): ES256 client-secret signing runs server-side with no attacker-timed oracle" },
+  # Published 2026-11-17: an "unmaintained" notice, not a vulnerability; sqlx and the API's date code still need chrono.
+  # Drop the line when the code moves to jiff (the advisory's suggested replacement), planned for the next audited release.
+  { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained notice (no known vulnerability); used for dates through sqlx and the API, replacement planned with the next audited release" },
 ]
 
 [licenses]

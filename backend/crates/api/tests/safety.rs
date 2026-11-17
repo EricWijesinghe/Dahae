@@ -65,6 +65,9 @@ async fn audit_count(pool: &PgPool, action: &str) -> i64 {
         .expect("audit")
 }
 
+// shortcut: these no-show tests start the visit at 00:00 KST today, so they fail when run between 00:00 and
+// 00:30 KST (still inside the grace). They also check in or reassign, which needs a visit today; give the scan an
+// injectable clock in the next audited release.
 #[sqlx::test(migrations = "../../migrations")]
 async fn entry_code_is_encrypted_and_revealed_only_to_the_assigned_partner_on_the_visit_day(pool: PgPool) {
     seed_catalog(&pool).await;
