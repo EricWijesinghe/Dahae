@@ -4642,6 +4642,46 @@ class TKo extends T {
   String get oFlowNoBookings => '예약이 없어요';
 
   @override
+  String get hjTitle => '서버 업데이트';
+
+  @override
+  String get hjBody =>
+      '새 버전을 받아 설치해요. 설치하는 동안 잠깐 접속이 끊길 수 있어요. 실패하면 이전 버전으로 자동으로 되돌아가요.';
+
+  @override
+  String get hjUpdateNow => '지금 업데이트';
+
+  @override
+  String get hjQueued => '업데이트를 시작했어요. 아래에서 진행 상황을 볼 수 있어요';
+
+  @override
+  String get hjRecent => '최근 서버 작업';
+
+  @override
+  String get hjKindUpdate => '업데이트';
+
+  @override
+  String get hjStateQueued => '대기 중';
+
+  @override
+  String get hjStateRunning => '진행 중';
+
+  @override
+  String get hjStateOk => '완료';
+
+  @override
+  String get hjStateFailed => '실패';
+
+  @override
+  String get hjStateRolledBack => '실패해서 이전 버전으로 되돌렸어요';
+
+  @override
+  String get hjStateCheck => '확인이 필요해요';
+
+  @override
+  String get hjEmpty => '아직 서버 작업이 없어요';
+
+  @override
   String get err_owner_exists => '이미 소유자가 있어요';
 
   @override
@@ -6637,6 +6677,10 @@ class TKo extends T {
 
   @override
   String get cWrongSetupCode => '설치 코드가 맞지 않아요';
+
+  @override
+  String get cSetupCodeExpired =>
+      '설치 코드 유효 기간(7일)이 지났어요. 설치를 도와준 개발자나 설치 담당에게 새 코드를 요청하세요';
 
   @override
   String get cWeakPassword => '비밀번호는 12자 이상이어야 해요';

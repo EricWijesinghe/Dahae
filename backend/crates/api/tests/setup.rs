@@ -112,14 +112,45 @@ async fn first_owner_needs_the_setup_code_and_only_one_can_be_created(pool: PgPo
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn installer_setup_code_expires_after_two_hours(pool: PgPool) {
+async fn installer_setup_code_expires_after_seven_days(pool: PgPool) {
     let now = chrono::Utc::now().timestamp();
-    ensure_setup_code(&pool, Some("ABCD2345EFGH"), Some(now - 7201)).await.expect("code");
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), Some(now - 7 * 24 * 3600 - 1))
+        .await
+        .expect("code");
     let app = common::app(pool.clone());
     let (st, b) = create_owner(&app, "ABCD2345EFGH").await;
-    assert_eq!(st, StatusCode::FORBIDDEN, "expired code refused even when correct: {b}");
+    assert_eq!(st, StatusCode::GONE, "expired code refused even when correct: {b}");
+    assert_eq!(b["error"]["code"], "setup_code_expired", "the owner is told the code expired: {b}");
     let (_, s) = call(&app, "GET", "/v1/setup", None, None).await;
     assert_eq!(s["needs_admin"], true, "expired code does not create the owner");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn wrong_code_after_expiry_still_says_wrong(pool: PgPool) {
+    let now = chrono::Utc::now().timestamp();
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), Some(now - 7 * 24 * 3600 - 1))
+        .await
+        .expect("code");
+    let app = common::app(pool.clone());
+    let (st, b) = create_owner(&app, "WRONG2345EFG").await;
+    assert_eq!(
+        st,
+        StatusCode::FORBIDDEN,
+        "a wrong guess gets the same answer whether or not the code expired: {b}"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn code_stops_working_once_the_owner_exists(pool: PgPool) {
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
+    let app = common::app(pool.clone());
+    let (st, b) = create_owner(&app, "ABCD2345EFGH").await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let (st, b) = create_owner(&app, "ABCD2345EFGH").await;
+    assert_eq!(st, StatusCode::CONFLICT, "second owner is refused: {b}");
+    ensure_setup_code(&pool, Some("ZZZZ2345EFGH"), None).await.expect("no-op once staff exist");
+    let (st, _) = create_owner(&app, "ZZZZ2345EFGH").await;
+    assert_eq!(st, StatusCode::CONFLICT, "a new installer code cannot create a second owner");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

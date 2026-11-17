@@ -93,6 +93,7 @@ class _FirstRunScreenState extends State<FirstRunScreen> {
       setState(
         () => _error = switch (e.status) {
           403 => t.cWrongSetupCode,
+          410 => t.cSetupCodeExpired,
           409 => t.cLoginFailed,
           400 => e.code == 'weak_password' ? t.cWeakPassword : t.cInvalidValue,
           _ => t.error(e),

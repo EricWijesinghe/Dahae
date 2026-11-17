@@ -95,6 +95,7 @@ S = {
   "cName": ["이름", "Name"],
   "cFirstRunCreate": ["계정 만들고 시작하기", "Create account and start"],
   "cWrongSetupCode": ["설치 코드가 맞지 않아요", "That setup code is not right"],
+  "cSetupCodeExpired": ["설치 코드 유효 기간(7일)이 지났어요. 설치를 도와준 개발자나 설치 담당에게 새 코드를 요청하세요", "This setup code expired (valid for 7 days). Ask your developer or installer for a new code"],
   "cWeakPassword": ["비밀번호는 12자 이상이어야 해요", "Password needs at least 12 characters"],
   "cInvalidValue": ["입력값을 확인해 주세요", "Please check the highlighted value"],
   "cSetupNothingSaved": ["저장된 값이 없어요. 먼저 저장한 뒤 잠금을 풀어 주세요", "Nothing is saved yet. Save first, then unlock"],

@@ -8803,6 +8803,84 @@ abstract class T {
   /// **'예약이 없어요'**
   String get oFlowNoBookings;
 
+  /// No description provided for @hjTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버 업데이트'**
+  String get hjTitle;
+
+  /// No description provided for @hjBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 버전을 받아 설치해요. 설치하는 동안 잠깐 접속이 끊길 수 있어요. 실패하면 이전 버전으로 자동으로 되돌아가요.'**
+  String get hjBody;
+
+  /// No description provided for @hjUpdateNow.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 업데이트'**
+  String get hjUpdateNow;
+
+  /// No description provided for @hjQueued.
+  ///
+  /// In ko, this message translates to:
+  /// **'업데이트를 시작했어요. 아래에서 진행 상황을 볼 수 있어요'**
+  String get hjQueued;
+
+  /// No description provided for @hjRecent.
+  ///
+  /// In ko, this message translates to:
+  /// **'최근 서버 작업'**
+  String get hjRecent;
+
+  /// No description provided for @hjKindUpdate.
+  ///
+  /// In ko, this message translates to:
+  /// **'업데이트'**
+  String get hjKindUpdate;
+
+  /// No description provided for @hjStateQueued.
+  ///
+  /// In ko, this message translates to:
+  /// **'대기 중'**
+  String get hjStateQueued;
+
+  /// No description provided for @hjStateRunning.
+  ///
+  /// In ko, this message translates to:
+  /// **'진행 중'**
+  String get hjStateRunning;
+
+  /// No description provided for @hjStateOk.
+  ///
+  /// In ko, this message translates to:
+  /// **'완료'**
+  String get hjStateOk;
+
+  /// No description provided for @hjStateFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'실패'**
+  String get hjStateFailed;
+
+  /// No description provided for @hjStateRolledBack.
+  ///
+  /// In ko, this message translates to:
+  /// **'실패해서 이전 버전으로 되돌렸어요'**
+  String get hjStateRolledBack;
+
+  /// No description provided for @hjStateCheck.
+  ///
+  /// In ko, this message translates to:
+  /// **'확인이 필요해요'**
+  String get hjStateCheck;
+
+  /// No description provided for @hjEmpty.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 서버 작업이 없어요'**
+  String get hjEmpty;
+
   /// No description provided for @err_owner_exists.
   ///
   /// In ko, this message translates to:
@@ -12653,6 +12731,12 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'설치 코드가 맞지 않아요'**
   String get cWrongSetupCode;
+
+  /// No description provided for @cSetupCodeExpired.
+  ///
+  /// In ko, this message translates to:
+  /// **'설치 코드 유효 기간(7일)이 지났어요. 설치를 도와준 개발자나 설치 담당에게 새 코드를 요청하세요'**
+  String get cSetupCodeExpired;
 
   /// No description provided for @cWeakPassword.
   ///
