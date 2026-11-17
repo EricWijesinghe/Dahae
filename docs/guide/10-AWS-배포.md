@@ -2,9 +2,9 @@
 
 [English](#english) · 한국어
 
-이 안내서는 다해 서버를 **DODA 의 AWS 계정**에 올리고, 개발자의 GitHub 저장소(`EricWijesinghe/Dahae`)에서 새 버전이 배포되도록 연결하는 전 과정입니다. AWS 계정과 비용은 DODA 명의이고, 배포와 유지보수는 개발자가 해요. DODA 가 원하면 배포 승인자를 한 명 넣을 수 있어요 (C 단계). 클라우드 전문가가 아니어도 **화면의 버튼을 누르는 순서대로** 따라 하면 됩니다. 명령을 직접 입력하는 곳은 서버 안의 `dahae setup-code` 한 줄뿐이고, 그것도 AWS 웹 화면에서 엽니다.
+이 안내서는 다해 서버를 **DODA 의 AWS 계정**에 올리고, 개발자의 GitHub 저장소(`EricWijesinghe/Dahae`)에서 새 버전이 배포되도록 연결하는 전 과정입니다. AWS 계정과 비용은 DODA 명의이고, 배포와 유지보수는 개발자가 해요. DODA 가 원하면 배포 승인자를 한 명 넣을 수 있어요 (C 단계). DODA 가 할 일(A 단계)은 **화면의 버튼을 누르는 순서대로** 따라 하면 되고, 명령은 입력하지 않아요. 명령은 개발자가 B-1 (템플릿 만들기) 과 서버 안 (`dahae setup-code`) 에서만 씁니다.
 
-> 이 안내서가 가리키는 파일: [deploy/aws/dahae.cfn.yaml](../../deploy/aws/dahae.cfn.yaml) (서버 한 대를 만드는 AWS 템플릿), [deploy/aws/deployer-iam-policy.json](../../deploy/aws/deployer-iam-policy.json) (담당 계정의 권한), [.github/workflows/deploy-aws.yml](../../.github/workflows/deploy-aws.yml) (자동 배포). 템플릿 파일은 각 릴리스의 Assets 에 `dahae-aws.yaml` 이름으로 올라가요.
+> 이 안내서가 가리키는 파일: [deploy/aws/dahae.cfn.yaml](../../deploy/aws/dahae.cfn.yaml) (서버 한 대를 만드는 AWS 템플릿), [deploy/aws/deployer-iam-policy.json](../../deploy/aws/deployer-iam-policy.json) (담당 계정의 권한), [deploy/aws/dahae-boundary-policy.json](../../deploy/aws/dahae-boundary-policy.json) (서버 역할의 권한 한도), [.github/workflows/deploy-aws.yml](../../.github/workflows/deploy-aws.yml) (자동 배포). 채워진 템플릿 `dahae-aws.yaml` 은 B-1 에서 만들어요.
 
 ## 목차
 
@@ -22,11 +22,13 @@
 | 준비물 | 누가 | 메모 |
 |---|---|---|
 | AWS 계정 (결제 수단 등록 완료) | DODA | 회사 이름으로 만드세요 |
-| IAM 사용자 1명 (담당 계정) | DODA 가 만들어요 (개발자에게 보내지 않아요 (배포는 GitHub 로 해요)) | 아래 A 단계 |
+| IAM 사용자 1명 (담당 계정) | DODA 가 만들어 개발자에게 줘요 (개발자가 이 계정으로 B 단계를 해요. 새 버전 배포는 GitHub 로 해요) | 아래 A 단계 |
+| 권한 한도 정책 `dahae-boundary` | DODA 가 한 번 만들어요 (누구에게도 붙이지 않아요) | 아래 A 단계 6번 |
 | 도메인 (예: `app.example.co.kr`) | 개발자 (Cloudflare 계정으로 구매) | 고객이 들어갈 주소. DODA 와 정해요 |
-| 도메인 DNS (A 레코드) | 개발자 (Cloudflare) | Route 53 을 쓰면 자동 연결, 아니면 A 레코드 한 줄 (Cloudflare 는 회색 구름) |
+| 도메인 DNS (A 레코드) | 개발자 (Cloudflare) | A 레코드 한 줄. 앞부분 없는 도메인(예: `example.co.kr`)이면 `@` 와 `www` 두 줄. Cloudflare 는 회색 구름 (DNS only) |
 | GitHub 저장소 `EricWijesinghe/Dahae` | 개발자 | 개발자가 관리해요. DODA 가 배포 승인자를 원하면 그 사람도 이 저장소 접근 권한이 있어야 해요 |
 | 인증 앱 (Google Authenticator 등) | 사장님 | 사장님 계정 로그인과 승인 코드에 써요 |
+| 인증 앱 | 개발자 | 담당 계정(IAM 사용자)의 MFA. A 단계 10번에서 통화하며 설정해요 |
 | 비밀번호 관리 앱 | DODA | 계정 정보는 채팅에 쓰지 마세요 |
 
 **보안 원칙:** 비밀번호와 MFA 설정 키는 채팅, 메일 본문, 문서에 적지 않습니다. 비밀번호 관리 앱에 저장하고, 필요하면 전화 등 다른 경로로 전달하세요. AWS 액세스 키(장기 키)는 만들지 않습니다. GitHub 배포는 키 없이 임시 권한으로 돌아갑니다.
@@ -39,28 +41,43 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 
 1. 오른쪽 위 지역을 **아시아 태평양(서울) ap-northeast-2** 로 바꿉니다.
 2. 검색창에 **IAM** 을 입력해 엽니다.
-3. 왼쪽 **사용자 > 사용자 생성** 을 누릅니다.
-4. 사용자 이름: `dahae-deployer` (또는 원하는 이름). **AWS Management Console 에 대한 사용자 액세스 권한 제공** 을 체크합니다.
+3. **권한 한도 정책 먼저 (한 번만):** 왼쪽 **정책 > 정책 생성 > JSON** 을 누르고, 다해 저장소의 `deploy/aws/dahae-boundary-policy.json` 내용을 전부 붙여 넣습니다. **다음**, 정책 이름: **정확히 `dahae-boundary`**, **정책 생성**. 이 정책은 사용자에게 붙이지 **않아요.** 템플릿이 만드는 서버 역할들이 이 한도 안에서만 움직이고, 담당 계정은 이 한도가 없는 역할을 만들 수 없고 이 정책을 고칠 수도 없어요. 이름이 다르면 B 단계의 스택 만들기가 실패해요.
+4. 왼쪽 **사용자 > 사용자 생성** 을 누릅니다. 사용자 이름: `dahae-deployer` (또는 원하는 이름). **AWS Management Console 에 대한 사용자 액세스 권한 제공** 을 체크합니다.
 5. 암호는 **사용자 지정 암호** 를 고르고 강한 암호를 만듭니다. 비밀번호 관리 앱에 저장하세요. "다음 로그인 시 암호 재설정 필요" 는 체크를 해제해도 되고 켜도 됩니다.
 6. **권한 설정** 에서 **직접 정책 연결** 을 고르고 **정책 생성** 을 누릅니다 (새 탭이 열려요).
 7. **JSON** 탭을 누르고, 다해 저장소의 `deploy/aws/deployer-iam-policy.json` 내용을 전부 붙여 넣습니다. **다음**, 정책 이름: `dahae-deployer-policy`, **정책 생성**.
-8. 이전 탭으로 돌아와 목록을 새로 고침하고 `dahae-deployer-policy` 를 체크한 뒤 **다음 > 사용자 생성**.
-9. 사용자 목록에서 방금 만든 사용자를 눌러 **보안 자격 증명 > 다단계 인증(MFA) 할당** 을 누르고 **인증 앱** 을 고릅니다. QR 코드를 인증 앱으로 읽고, 코드 두 개를 입력합니다.
+8. 이전 탭으로 돌아와 목록을 새로 고침하고 `dahae-deployer-policy` 를 체크한 뒤 **다음 > 사용자 생성**. (`dahae-boundary` 는 체크하지 마세요.)
+9. 사용자 목록에서 방금 만든 사용자를 눌러 **보안 자격 증명 > 다단계 인증(MFA) 할당** 을 누르고 **인증 앱** 을 고릅니다.
+10. 이 단계는 **개발자와 통화하며** 해요: 개발자가 화면의 QR 코드를 자기 휴대폰 인증 앱으로 읽고, 나온 코드 두 개를 불러 주면 입력합니다. (담당 계정의 정책은 스스로 MFA 를 등록할 권한이 없어서 DODA 가 등록해 줘야 해요. 인증 앱은 개발자 휴대폰에 있어요.)
    - MFA 를 켜기 전에는 이 계정으로 서버 관련 작업이 거부돼요. 정책이 MFA 없이는 막도록 되어 있어요. 이건 의도된 동작입니다.
    - 액세스 키는 **만들지 마세요.**
-10. 담당자에게 전달할 것: 계정 로그인 주소 (`https://<12자리 계정 번호>.signin.aws.amazon.com/console`), 사용자 이름, 비밀번호 (별도 경로), MFA 는 담당자가 직접 설정합니다.
+11. 개발자에게 전달할 것: 계정 로그인 주소 (`https://<12자리 계정 번호>.signin.aws.amazon.com/console`), 사용자 이름, 비밀번호 (별도 경로). MFA 는 10번에서 개발자 휴대폰에 이미 설정됐어요.
 
-**English:** Create one IAM user for the deployer, enable console access, paste the policy JSON as a customer-managed policy, attach it, and turn on an authenticator-app MFA. Do not create access keys. Send the sign-in URL and user name through a channel other than chat, and send the password separately.
+**English:** First create the customer-managed policy `dahae-boundary` (exact name) from `deploy/aws/dahae-boundary-policy.json` and attach it to nobody: it is the permissions boundary the template puts on its roles, and the deployer can neither create a role without it nor edit it. Then create one IAM user for the developer, enable console access, paste `deploy/aws/deployer-iam-policy.json` as a second customer-managed policy, and attach only that one. Assign the authenticator-app MFA on a call with the developer, who scans the QR code with the developer's own phone and reads back the two codes (the policy does not let the user register MFA alone). Do not create access keys. Send the sign-in URL and user name through a channel other than chat, and send the password separately.
 
 ---
 
 ## B. 서버 만들기 (CloudFormation)
 
-담당자가 위 계정으로 로그인하고 MFA 코드를 넣습니다. 지역이 **서울(ap-northeast-2)** 인지 다시 확인하세요.
+개발자가 위 계정으로 로그인하고 MFA 코드를 넣습니다. 지역이 **서울(ap-northeast-2)** 인지 다시 확인하세요.
 
-### B-1. 템플릿 파일 준비
+### B-1. 템플릿 파일 준비 (개발자)
 
-다해 저장소의 릴리스 페이지(**github.com/EricWijesinghe/Dahae → Releases → v1.5.1 → Assets**)에서 **`dahae-aws.yaml`** 파일을 컴퓨터에 저장합니다. 이 파일은 그 릴리스의 설치 스크립트 주소와 지문(SHA-256)이 이미 채워져 있어서 바로 쓸 수 있어요. 파일 이름을 바꾸지 마세요. (저장소 안의 `deploy/aws/dahae.cfn.yaml` 은 빈칸이 있는 원본이라 그대로는 못 써요.)
+**v1.5.1 Release 의 Assets 에 있는 `dahae-aws.yaml` 은 쓰지 마세요.** 그 파일은 권한 한도(`dahae-boundary`), GitHub 의 새 로그인 주체(owner@번호/repo@번호), 6시간 배포 시간 수정 전에 만들어져서, 그 파일로 만든 서버에는 GitHub 배포가 들어가지 않아요. 개발자가 `master` 의 템플릿에 v1.5.1 설치 스크립트를 채워 새로 만듭니다 (Git Bash 나 Linux 셸, `gh` 로그인 상태).
+
+```bash
+git clone https://github.com/EricWijesinghe/Dahae.git && cd Dahae   # master
+gh release download v1.5.1 -R EricWijesinghe/Dahae -p install.sh -p SHA256SUMS -p SHA256SUMS.bundle -D rel-v1.5.1
+bash scripts/release/verify-blob.sh rel-v1.5.1/SHA256SUMS EricWijesinghe/Dahae   # cosign 이 있으면: 릴리스 서명 확인
+(cd rel-v1.5.1 && sha256sum -c --ignore-missing SHA256SUMS)                       # install.sh: OK
+dist=https://raw.githubusercontent.com/EricWijesinghe/malkkeum-install           # 공개 배포 저장소 (DIST_REPO)
+bash scripts/release/build-aws-template.sh rel-v1.5.1/install.sh "$dist/v1.5.1/install.sh" out
+```
+
+- 마지막 줄이 `aws template written: out/dahae-aws.yaml (install.sh sha256 fe451ef20b85c19c44906978c73bffe56d58577bb276f85a160689a92cb6f14f)` 로 나와요. 이 지문이 `SHA256SUMS` 의 `install.sh` 줄과 같아야 해요.
+- 주소는 반드시 태그(`/v1.5.1/`)가 들어간 주소여야 해요. 스크립트가 `main` 같은 브랜치 주소는 거부해요.
+- 만든 `out/dahae-aws.yaml` 을 B-2 에서 올립니다. v1.5.1 다음 릴리스가 나오면 그 릴리스 Assets 의 `dahae-aws.yaml` 에 이 수정이 들어가 있어서 바로 써도 돼요.
+- (저장소 안의 `deploy/aws/dahae.cfn.yaml` 은 빈칸이 있는 원본이라 그대로는 못 써요.)
 
 ### B-2. 스택 만들기
 
@@ -81,6 +98,7 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 | SubnetId | 그 VPC 의 **인터넷으로 나갈 수 있는 서브넷** 하나. 모르면 기본 서브넷 중 하나 |
 | SshCidr | **비워 두기** (SSH 를 열지 않아요. 접속은 AWS 웹 화면으로 합니다) |
 | GitHubRepo | **기본값 `EricWijesinghe/Dahae` 를 그대로 두세요.** 이 저장소의 `deploy-aws` 워크플로만 이 서버에 배포할 권한을 얻어요. 다른 주소를 넣지 마세요 |
+| GitHubRepoIds | **기본값 `EricWijesinghe@48539716/Dahae@1452913067` 그대로.** GitHub 가 배포 로그인에 쓰는 고정 번호예요 (저장소 이름이 바뀌어도 그대로). 개발자는 `gh api repos/EricWijesinghe/Dahae --jq '.owner.id,.id'` 로 확인할 수 있어요 |
 | GitHubEnvironment | `doda-aws` (기본값 그대로, C 단계와 같은 이름이어야 해요) |
 | CreateGitHubOidcProvider | 이 계정에 GitHub 연결이 처음이면 `true`. 이미 있다면 `false` |
 | AmdAmiId, ArmAmiId | 바꾸지 마세요 (기본값이 Ubuntu 24.04 를 찾아요) |
@@ -92,12 +110,15 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 
 ### B-3. 도메인 연결
 
-- **Route 53 을 쓴 경우 (HostedZoneId 입력):** 자동으로 끝났어요. 할 일 없음.
-- **도메인 등록 업체(가비아, 후이즈, Cloudflare 등)를 쓴 경우:** 스택의 **출력(Outputs)** 탭에서 `PublicIp` 값을 복사합니다. DNS 관리 화면에서 **A 레코드** 를 추가합니다.
-  - 호스트(이름): 도메인 앞부분 (예: `app`)
+도메인은 개발자의 **Cloudflare** 계정에 있어요. 그래서 보통은 아래 두 번째 경우예요.
+
+- **Route 53 을 쓴 경우 (HostedZoneId 입력):** `Domain` 의 A 레코드는 자동으로 만들어져요. 앞부분 없는 도메인이면 `www` A 레코드 한 줄은 직접 추가하세요 (같은 IP).
+- **Cloudflare (또는 가비아, 후이즈 등) 를 쓴 경우:** 스택의 **출력(Outputs)** 탭에서 `PublicIp` 값을 복사합니다. DNS 관리 화면에서 **A 레코드** 를 추가합니다.
+  - 호스트(이름): 도메인 앞부분 (예: `app`). 도메인에 앞부분이 없으면 (예: `example.co.kr`) `@` 와 `www` 두 줄을 만들어요.
   - 형식: `A`
   - 값: `PublicIp` 에 적힌 IP
   - TTL: 300 (또는 기본값)
+  - Cloudflare 는 **프록시 상태를 회색 구름 (DNS only)** 으로 두세요. 서버가 직접 인증서를 받고 고객 연결을 받아요.
 - DNS 반영까지 몇 분~1시간 걸릴 수 있어요. 인증서는 자동으로 발급됩니다.
 
 ### B-4. 설치 끝나는지 확인
@@ -144,9 +165,9 @@ sudo dahae setup-code
 
 1. https://github.com/EricWijesinghe/Dahae 를 엽니다 (개발자 계정으로).
 2. **Settings > Environments > New environment** 를 누르고 이름을 `doda-aws` 로 입력 (B-2 의 GitHubEnvironment 와 같아야 해요).
-3. (선택) DODA 가 승인하기를 원하면 **Required reviewers** 를 켜고 DODA 담당자를 추가합니다. 넣지 않으면 개발자가 Actions 에서 바로 실행해요.
-   - **Deployment branches** 를 **Selected branches** 로 바꾸고 `master` 하나만 추가합니다. 다른 브랜치에서는 이 환경을 쓸 수 없어요. (승인자를 빼면 승인 없이 배포가 돌아요. 꼭 넣으세요.)
-4. **Environment variables** 에 아래 네 개를 **Add variable** 로 넣습니다. 값은 B-2 스택의 **출력(Outputs)** 탭에 있어요.
+3. **Deployment branches** 를 **Selected branches** 로 바꾸고 `master` 하나만 추가합니다 (꼭 하세요). 다른 브랜치에서는 이 환경을 쓸 수 없어요.
+4. (선택) DODA 가 승인하기를 원하면 **Required reviewers** 를 켜고 DODA 담당자를 추가합니다. (승인자가 없으면 개발자가 실행하는 즉시 배포돼요.)
+5. **Environment variables** 에 아래 네 개를 **Add variable** 로 넣습니다. 값은 B-2 스택의 **출력(Outputs)** 탭에 있어요.
 
 | 변수 이름 (Name) | 출력 탭의 값 | 예시 |
 |---|---|---|
@@ -157,27 +178,27 @@ sudo dahae setup-code
 
 - 이 값들은 **Secrets 가 아니라 Variables** 에 넣습니다. 비밀번호나 키가 아니에요.
 - 변수 이름은 대소문자까지 똑같이 쓰세요.
-- **CD 워크플로(`deploy-aws.yml`)는 `EricWijesinghe/Dahae` 에서 돌아요.** 환경과 변수 네 개도 이 저장소에 있어야 해요. 승인 신뢰(OIDC)는 B-2 의 `GitHubRepo` 와 `GitHubEnvironment` 로 정해져요. 다른 저장소는 이 서버에 배포할 수 없어요.
+- **CD 워크플로(`deploy-aws.yml`)는 `EricWijesinghe/Dahae` 에서 돌아요.** 환경과 변수 네 개도 이 저장소에 있어야 해요. 승인 신뢰(OIDC)는 B-2 의 `GitHubRepoIds`, `GitHubRepo`, `GitHubEnvironment` 로 정해져요. 다른 저장소는 이 서버에 배포할 수 없어요.
 
 ### C-2. 자동으로 무엇이 일어나나
 
 1. 개발자가 안정 버전 태그
 2. **deploy-aws** 작업이 자동으로 시작해요. `doda-aws` 환경에 승인자가 있으면 승인을 기다리고 (없으면 바로 배포돼요)
-3. 승인자가 **Review deployments > doda-aws > Approve and deploy** 를 누르면 서버에서 `dahae update v1.5.1` 이 실행됩니다.
+3. 서버에서 `dahae update v1.5.1` 이 실행됩니다 (승인자를 넣었다면 승인자가 **Review deployments > doda-aws > Approve and deploy** 를 누른 뒤). 업데이트는 최대 6시간까지 기다려요.
 4. 서버는 백업을 먼저 하고, 새 버전을 받고, 응답을 확인합니다. 새 버전이 응답하지 않으면 **이전 버전으로 자동으로 되돌립니다.**
 5. 마지막으로 `https://<도메인>/health` 와 서버가 보고하는 버전을 확인합니다. 모두 통과하면 작업이 초록색이 됩니다.
 
 > **베타 버전(`v1.5.0-beta.1` 같은 태그)은 자동 배포되지 않아요.** 고객 서버에는 안정 버전만 갑니다.
 >
-> **승인 방식 차이:** 콘솔에서 사장님이 직접 누르는 업데이트는 기존처럼 사장님의 인증 앱 코드로 승인해요. GitHub 에서 실행되는 배포는 **GitHub 승인자의 승인**으로 대신해요.
+> **승인 방식 차이:** 콘솔에서 사장님이 직접 누르는 업데이트는 기존처럼 사장님의 인증 앱 코드로 승인해요. GitHub 에서 실행되는 배포는 승인자를 넣었다면 **GitHub 승인자의 승인**으로, 아니면 개발자의 실행으로 대신해요.
 >
 > **릴리스와 배포:** 새 버전은 `EricWijesinghe/Dahae` 에서 릴리스돼요 (서명된 서버 이미지와 설치 스크립트가 공개돼 있어요). 릴리스 작업이 끝나면 `deploy-aws` 가 자동으로 시작해요. 특정 버전 배포와 되돌리기는 C-3 을 봐요.
 >
-> **자동 업데이트 주의:** 서버에는 기본으로 **매주 월요일 04:00 자동 업데이트** 가 켜져 있어요 (안정 채널, 새 버전을 본 뒤 24시간 대기). GitHub 승인 없이도 서버가 스스로 올라갈 수 있어요. GitHub 승인으로만 올리고 싶으면 서버에서 `sudo dahae update-schedule off` 를 실행하세요 (되돌리려면 `sudo dahae update-schedule mon@04:00`).
+> **자동 업데이트 주의:** 서버에는 기본으로 **매주 월요일 04:00 자동 업데이트** 가 켜져 있어요 (안정 채널, 새 버전을 본 뒤 24시간 대기). GitHub 배포 없이도 서버가 스스로 올라갈 수 있어요. GitHub 배포로만 올리고 싶으면 서버에서 `sudo dahae update-schedule off` 를 실행하세요 (되돌리려면 `sudo dahae update-schedule mon@04:00`).
 
 ### C-3. 수동으로 배포하거나 되돌리기
 
-- **특정 버전 배포:** GitHub 저장소의 **Actions** 탭 > 왼쪽 **deploy-aws** > **Run workflow** > `version` 칸에 `v1.5.1` 입력 > **Run workflow**. 승인자가 승인하면 실행돼요.
+- **특정 버전 배포:** GitHub 저장소의 **Actions** 탭 > 왼쪽 **deploy-aws** > **Run workflow** > `version` 칸에 `v1.5.1` 입력 > **Run workflow**. 승인자를 넣었다면 승인 뒤 실행돼요.
 - **이전 버전으로 되돌리기:** 같은 화면에서 **rollback** 을 체크하고 **Run workflow**. 서버에서 `dahae rollback` 이 실행돼요. 마지막 업데이트 바로 전 버전으로 돌아가요.
 - 되돌리기는 정산이 진행 중이면 멈춰요. 그때는 콘솔 **정산** 화면에서 상태를 먼저 정리하세요.
 
@@ -224,10 +245,10 @@ sudo dahae setup-code
 3. CloudFormation > 스택 > `dahae-…` 선택 > **삭제**.
 4. 삭제 후에도 남는 것:
    - **디스크(볼륨):** 서버를 종료해도 디스크는 남아요 (데이터 보호). 더 필요 없다고 확인한 뒤 EC2 > 볼륨에서 직접 지우세요.
-   - **고정 IP:** EC2 > 탄력적 IP 에서 확인하고, 필요 없으면 해제하세요.
+   - **고정 IP:** EC2 > 탄력적 IP 에서 확인하고, 필요 없으면 해제하세요 (담당 계정으로 안 되면 DODA 의 관리자 계정으로).
    - **OIDC 공급자:** 계정 전체에서 쓰이므로 스택이 지우지 않아요.
 5. GitHub 환경 `doda-aws` 의 변수를 지우거나 환경을 삭제하세요.
-6. 담당 IAM 사용자는 더 쓸 일이 없으면 **IAM > 사용자 > 삭제** 로 지우세요.
+6. 담당 IAM 사용자는 더 쓸 일이 없으면 **IAM > 사용자 > 삭제** 로 지우세요. 다해 서버가 하나도 남지 않으면 정책 `dahae-deployer-policy` 와 `dahae-boundary` 도 **IAM > 정책** 에서 지워요 (DODA 관리자 계정).
 
 > **스택 업데이트 주의:** CloudFormation 에서 스택을 **업데이트** 할 때 변경 세트에 `ServerInstance` 가 `Replacement: True` 로 나오면 **취소**하세요. 서버가 새로 만들어지는 변경이에요. 새 서버로 옮기려면 개발사와 먼저 상의하세요.
 
@@ -237,14 +258,15 @@ sudo dahae setup-code
 
 This guide sets up one Dahae server on AWS (Seoul) and connects the developer's GitHub Actions (github.com/EricWijesinghe/Dahae), so that a stable release is installed on the server with `dahae update`, optionally after a DODA reviewer approves. A non-specialist can finish the server part from the AWS console.
 
-1. **Deployer account (DODA):** create an IAM user with console access, attach `deploy/aws/deployer-iam-policy.json` as a customer-managed policy, enable MFA (authenticator app), and create no access keys. Send the sign-in URL and user name through a separate channel from the password.
-2. **Launch:** in CloudFormation (region ap-northeast-2), create a stack from `dahae-aws.yaml` (download it from github.com/EricWijesinghe/Dahae → Releases → v1.5.1 → Assets; it already has that release's install script URL and SHA-256 filled in). Keep `GitHubRepo` at its default `EricWijesinghe/Dahae`. The stack name must start with `dahae-`. Fill Domain, Email, and optionally HostedZoneId (Route 53). Leave SshCidr empty. Acknowledge IAM and create. Wait for CREATE_COMPLETE, then about 20 minutes for the installer.
-3. **DNS:** with Route 53 it is automatic; otherwise add an A record for the domain pointing to the `PublicIp` output.
-4. **Setup code without SSH:** EC2 > Instances > Connect > Session Manager > Connect, then `sudo dahae setup-code` (valid 2 hours; `--renew` for a new code). Open `https://<domain>/admin`, enter the code, create the owner account, enable two-step sign-in.
-5. **CD:** the developer's repository `EricWijesinghe/Dahae` holds the GitHub environment `doda-aws` (optionally with required reviewers from DODA, deployment branches limited to `master`) and four environment variables from the stack outputs: `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `DAHAE_DOMAIN`. The AWS role trusts that repository and environment, so no other repository can deploy here. The workflow `deploy-aws.yml` runs there. Each stable tag (vX.Y.Z) runs `dahae update <tag>` through SSM and checks health and version (after approval, when reviewers are set). Manual deploy and rollback are in the Actions tab (deploy-aws, Run workflow). Beta tags are never deployed.
-6. **Note:** the server's weekly auto-update is on by default. To make GitHub approval the only path, run `sudo dahae update-schedule off`.
-7. **Backups:** keep the offsite backup and the keys backup (`sudo dahae keys-backup`) outside the server. EBS snapshots run daily at 03:00 Seoul time, keep 7.
-8. **Costs:** use the AWS pricing calculator (https://calculator.aws/) with Seoul pricing. This guide lists no prices.
-9. **Deleting:** back up first, turn off termination protection, then delete the stack. The disk and the Elastic IP stay until you delete them yourself. The GitHub OIDC provider is account-wide and stays.
+1. **Deployer account (DODA, for the developer):** first create the customer-managed policy `dahae-boundary` (exact name) from `deploy/aws/dahae-boundary-policy.json` and attach it to nobody; it is the permissions boundary of the template's roles. Then create an IAM user with console access for the developer and attach only `deploy/aws/deployer-iam-policy.json` (as a second customer-managed policy). Assign its MFA on a call: the developer scans the QR code with the developer's own phone and reads back the two codes. Create no access keys. Send the sign-in URL and user name through a separate channel from the password.
+2. **Template (developer):** do not use the `dahae-aws.yaml` attached to the v1.5.1 Release; it predates the permissions boundary, GitHub's immutable OIDC subject and the 6-hour deploy fix, so deploys to it would fail. On a `master` checkout, download `install.sh`, `SHA256SUMS` and `SHA256SUMS.bundle` of v1.5.1 (`gh release download v1.5.1 -R EricWijesinghe/Dahae -p install.sh -p SHA256SUMS -p SHA256SUMS.bundle -D rel-v1.5.1`), check them (`scripts/release/verify-blob.sh rel-v1.5.1/SHA256SUMS EricWijesinghe/Dahae` when cosign is installed, then `sha256sum -c --ignore-missing SHA256SUMS`), and, with `dist=https://raw.githubusercontent.com/EricWijesinghe/malkkeum-install` (the public delivery repo), run `bash scripts/release/build-aws-template.sh rel-v1.5.1/install.sh "$dist/v1.5.1/install.sh" out`. It writes `out/dahae-aws.yaml` and prints the install.sh SHA-256 (`fe451ef20b85c19c44906978c73bffe56d58577bb276f85a160689a92cb6f14f` for v1.5.1). Releases after v1.5.1 attach a template with these fixes.
+3. **Launch (developer, signed in as the deployer user):** in CloudFormation (region ap-northeast-2), create a stack from that `dahae-aws.yaml`. Keep `GitHubRepo` (`EricWijesinghe/Dahae`) and `GitHubRepoIds` (`EricWijesinghe@48539716/Dahae@1452913067`) at their defaults. The stack name must start with `dahae-`. Fill Domain, Email, and optionally HostedZoneId (Route 53). Leave SshCidr empty. Acknowledge IAM and create. Wait for CREATE_COMPLETE, then about 20 minutes for the installer.
+4. **DNS (developer, Cloudflare):** add an A record for the domain pointing to the `PublicIp` output, DNS only (grey cloud). For a bare domain such as `example.co.kr`, add two: `@` and `www`. With Route 53 (HostedZoneId) the stack writes the `Domain` record only.
+5. **Setup code without SSH:** EC2 > Instances > Connect > Session Manager > Connect, then `sudo dahae setup-code` (valid 2 hours; `--renew` for a new code). Open `https://<domain>/admin`, enter the code, create the owner account, enable two-step sign-in.
+6. **CD:** the developer's repository `EricWijesinghe/Dahae` holds the GitHub environment `doda-aws` (deployment branches limited to `master`; required reviewers from DODA are optional, and without them a run deploys as soon as the developer starts it) and four environment variables from the stack outputs: `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `DAHAE_DOMAIN`. The AWS role trusts that repository (by its immutable owner and repository ids) and environment, so no other repository can deploy here. The workflow `deploy-aws.yml` runs there. Each stable tag (vX.Y.Z) runs `dahae update <tag>` through SSM and checks health and version (after approval, when reviewers are set). Manual deploy and rollback are in the Actions tab (deploy-aws, Run workflow). Beta tags are never deployed.
+7. **Note:** the server's weekly auto-update is on by default. To make the GitHub deploy the only path, run `sudo dahae update-schedule off`.
+8. **Backups:** keep the offsite backup and the keys backup (`sudo dahae keys-backup`) outside the server. EBS snapshots run daily at 03:00 Seoul time, keep 7.
+9. **Costs:** use the AWS pricing calculator (https://calculator.aws/) with Seoul pricing. This guide lists no prices.
+10. **Deleting:** back up first, turn off termination protection, then delete the stack. The disk and the Elastic IP stay until you delete them yourself. The GitHub OIDC provider is account-wide and stays. With no Dahae server left, DODA's admin deletes the deployer user and both policies.
 
 [한국어로 돌아가기](#10-aws-에-다해-서버-올리고-자동-배포하기)
