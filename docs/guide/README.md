@@ -4,6 +4,8 @@
 
 처음이라면 **0번 한 장**만 따라 하면 설치가 끝나요. Start with guide 0 if this is your first setup.
 
+출시 계획 (안드로이드 · iOS · 서버 배포) · [Launch plan](../LAUNCH-PLAN.md)
+
 | 번호 | 안내서 · Guide | 한 줄 설명 · What it covers | 누가 · Who | 언제 · When |
 |---|---|---|---|---|
 | 0 | [한 번에 설치하기](00-한번에-설치.md) · *Install in one go* | 서버 빌리기, 도메인 연결, 설치 명령 한 줄, 사장님 계정까지 | 사장님 또는 설치 담당 | 처음 한 번 (약 30분) |
