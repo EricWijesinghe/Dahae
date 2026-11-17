@@ -145,6 +145,7 @@ sudo dahae setup-code
 1. https://github.com/EricWijesinghe/Dahae 를 엽니다 (접근 권한이 있는 계정으로).
 2. **Settings > Environments > New environment** 를 누르고 이름을 `doda-aws` 로 입력 (B-2 의 GitHubEnvironment 와 같아야 해요).
 3. **Required reviewers** 를 켜고 승인할 사람(DODA 담당자 또는 개발사 담당자)을 추가합니다. 승인자는 이 저장소에 접근 권한이 있어야 해요.
+   - **Deployment branches** 를 **Selected branches** 로 바꾸고 `master` 하나만 추가합니다. 다른 브랜치에서는 이 환경을 쓸 수 없어요. (승인자를 빼면 승인 없이 배포가 돌아요. 꼭 넣으세요.)
 4. **Environment variables** 에 아래 네 개를 **Add variable** 로 넣습니다. 값은 B-2 스택의 **출력(Outputs)** 탭에 있어요.
 
 | 변수 이름 (Name) | 출력 탭의 값 | 예시 |
@@ -237,7 +238,7 @@ This guide sets up one Dahae server on AWS (Seoul) and connects GitHub Actions s
 2. **Launch:** in CloudFormation (region ap-northeast-2), create a stack from `dahae-aws.yaml`. The stack name must start with `dahae-`. Fill Domain, Email, and optionally HostedZoneId (Route 53). Leave SshCidr empty. Acknowledge IAM and create. Wait for CREATE_COMPLETE, then about 20 minutes for the installer.
 3. **DNS:** with Route 53 it is automatic; otherwise add an A record for the domain pointing to the `PublicIp` output.
 4. **Setup code without SSH:** EC2 > Instances > Connect > Session Manager > Connect, then `sudo dahae setup-code` (valid 2 hours; `--renew` for a new code). Open `https://<domain>/admin`, enter the code, create the owner account, enable two-step sign-in.
-5. **CD:** the repo admin creates the GitHub environment `doda-aws` with required reviewers and four environment variables from the stack outputs: `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `DAHAE_DOMAIN`. Each stable tag (vX.Y.Z) waits for approval, then runs `dahae update <tag>` through SSM and checks health and version. Manual deploy and rollback are in the Actions tab (deploy-aws, Run workflow). Beta tags are never deployed.
+5. **CD:** the repo admin creates the GitHub environment `doda-aws` with required reviewers, deployment branches limited to `master`, and four environment variables from the stack outputs: `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `DAHAE_DOMAIN`. Each stable tag (vX.Y.Z) waits for approval, then runs `dahae update <tag>` through SSM and checks health and version. Manual deploy and rollback are in the Actions tab (deploy-aws, Run workflow). Beta tags are never deployed.
 6. **Note:** the server's weekly auto-update is on by default. To make GitHub approval the only path, run `sudo dahae update-schedule off`.
 7. **Backups:** keep the offsite backup and the keys backup (`sudo dahae keys-backup`) outside the server. EBS snapshots run daily at 03:00 Seoul time, keep 7.
 8. **Costs:** use the AWS pricing calculator (https://calculator.aws/) with Seoul pricing. This guide lists no prices.
