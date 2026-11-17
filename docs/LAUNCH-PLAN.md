@@ -96,7 +96,7 @@ DODA 의 서비스가 모두 AWS 에 있으니 **DODA 의 AWS 서울 리전(ap-n
 
 ## 6. DODA 가 제공하는 것 / What DODA provides
 
-DODA 는 기술 작업을 하지 않아요. 아래 계정과 권한만 제공해요. 계정은 DODA 명의로 만들고, 개발자에게 관리자 권한을 줘요.
+DODA 는 빌드, 서명, 배포 같은 기술 작업을 하지 않아요. 아래 계정, 계약, 권한만 제공해요. 계정은 DODA 명의로 만들고, 개발자에게 관리자 권한을 줘요. 콘솔에 키를 넣는 일은 개발자가 접근 권한으로 대신할 수 있어요.
 
 | 항목 | DODA 가 하는 일 | 이유 |
 |---|---|---|
@@ -192,7 +192,7 @@ All of DODA's services run on AWS, so the server goes to **DODA's AWS Seoul regi
 
 ### 6. What DODA provides
 
-DODA does no technical work. It creates the accounts below in its own name and grants the developer admin access.
+DODA does no build, signing or deployment work. It creates the accounts and contracts below in its own name and grants the developer admin access; the developer can enter keys in the consoles on its behalf.
 
 | Item | What DODA does | Why |
 |---|---|---|
