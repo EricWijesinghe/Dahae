@@ -105,11 +105,10 @@ class GuestChatTab extends StatelessWidget {
           child: Text(t.guestFaqTitle, style: context.text.titleMedium),
         ),
         AsyncView<List<ContentItem>>(
-          load: () async =>
-              (await context.api.get('/content', query: {'kind': 'faq'})
-                      as List)
-                  .map((e) => ContentItem(e as Json))
-                  .toList(),
+          load: () async => (await context.api.get(
+            '/content',
+            query: {'kind': 'faq'},
+          ) as List).map((e) => ContentItem(e as Json)).toList(),
           builder: (context, items, _) =>
               Column(children: [for (final f in items) FaqRow(item: f)]),
         ),
@@ -138,7 +137,8 @@ class GuestChatTab extends StatelessWidget {
   void _openLegal(BuildContext context, String slug, String title) =>
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => LegalScreen(slug: slug, title: title),
+          builder: (_) =>
+              LegalScreen(api: context.api, slug: slug, title: title),
         ),
       );
 }

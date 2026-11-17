@@ -14,7 +14,6 @@ import 'booking_detail.dart';
 import 'auth.dart' show ensureCustomerName;
 import 'booking_flow.dart';
 import 'cancel_policy_card.dart';
-import 'more.dart' show LegalScreen;
 import 'pay_flow.dart';
 import 'pay_method_picker.dart';
 import 'virtual_account.dart';
@@ -60,9 +59,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _price = null;
     _priceFailed = false;
     try {
-      final p =
-          await context.appRead.api.post('/bookings/price', _bookingBody())
-              as Json;
+      final p = await context.appRead.api.post(
+        '/bookings/price',
+        _bookingBody(),
+      ) as Json;
       if (mounted && d.couponId == coupon) setState(() => _price = p);
     } on Object catch (e) {
       if (!mounted || d.couponId != coupon) return;
@@ -119,10 +119,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       } else {
         final b = Booking.fromJson(
           await app.api.postAction('/bookings', {
-                ...d.toJson(),
-                'expected_total': total,
-              })
-              as Json,
+            ...d.toJson(),
+            'expected_total': total,
+          }) as Json,
         );
         result = CheckoutPaid(b.id, b);
       }
@@ -323,9 +322,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           FlowSection(
             children: [
               Theme(
-                data: Theme.of(
-                  context,
-                ).copyWith(dividerColor: Colors.transparent),
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
                   initiallyExpanded: true,
                   tilePadding: EdgeInsets.zero,
@@ -590,8 +588,11 @@ class AgreementBox extends StatelessWidget {
               TextButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) =>
-                        LegalScreen(slug: 'terms', title: t.moreTerms),
+                    builder: (_) => LegalScreen(
+                      api: context.api,
+                      slug: 'terms',
+                      title: t.moreTerms,
+                    ),
                   ),
                 ),
                 child: Text(t.moreTerms),
