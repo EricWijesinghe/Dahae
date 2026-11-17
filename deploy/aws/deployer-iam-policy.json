@@ -22,7 +22,7 @@
       }
     },
     {
-      "Sid": "StackLifecycle",
+      "Sid": "StackLifecycleNoImport",
       "Effect": "Allow",
       "Action": [
         "cloudformation:CreateStack",
@@ -39,7 +39,12 @@
         "cloudformation:ListChangeSets",
         "cloudformation:ListStackResources"
       ],
-      "Resource": "arn:aws:cloudformation:ap-northeast-2:*:stack/dahae-*/*"
+      "Resource": "arn:aws:cloudformation:ap-northeast-2:*:stack/dahae-*/*",
+      "Condition": {
+        "Null": {
+          "cloudformation:ImportResourceTypes": "true"
+        }
+      }
     },
     {
       "Sid": "StackHelpers",

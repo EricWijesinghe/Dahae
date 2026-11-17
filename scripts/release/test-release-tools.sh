@@ -92,6 +92,11 @@ t  "aws: every role carries the dahae-boundary permissions boundary" every_role_
 # shellcheck disable=SC2016 # ${GitHubRepoIds} is CloudFormation text, not a shell expansion
 t  "aws: deploy role trusts the immutable OIDC subject" grep -qF 'sub: !Sub "repo:${GitHubRepoIds}:environment:' "$SB/aws/out/dahae-aws.yaml"
 t  "aws: deployer creates roles only with the boundary" grep -qF '"iam:PermissionsBoundary": "arn:aws:iam::*:policy/dahae-boundary"' "$ROOT/deploy/aws/deployer-iam-policy.json"
+# An import change set would tag another instance aws:cloudformation:stack-name=dahae-* and open StartSession on it.
+t  "aws: deployer change sets cannot import resources" grep -qF '"cloudformation:ImportResourceTypes": "true"' "$ROOT/deploy/aws/deployer-iam-policy.json"
+fits_iam_limit() { [ "$(tr -d '[:space:]' < "$1" | wc -c)" -le 6144 ]; } # managed policy limit, whitespace not counted
+t  "aws: deployer policy fits the IAM size limit" fits_iam_limit "$ROOT/deploy/aws/deployer-iam-policy.json"
+t  "aws: boundary policy fits the IAM size limit" fits_iam_limit "$ROOT/deploy/aws/dahae-boundary-policy.json"
 
 # ---- install page -> installer: cloud-init sets only variables install.sh reads, no answers file ----
 page="$ROOT/deploy/install-page/index.html"
