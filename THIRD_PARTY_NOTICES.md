@@ -415,7 +415,7 @@ Rust crates: 259 (api binary, normal dependencies; union of x86_64 and aarch64 L
 
 ## Dart and Flutter packages (customer, partner, console apps)
 
-Dart/Flutter packages: 151 hosted (pub.dev) plus the Flutter SDK packages below. Identifiers are read from each package's LICENSE file (pub.dev does not declare an SPDX id).
+Dart/Flutter packages: 154 hosted (pub.dev) plus the Flutter SDK packages below. Identifiers are read from each package's LICENSE file (pub.dev does not declare an SPDX id).
 
 ### Flutter SDK (BSD-3-Clause)
 
@@ -540,7 +540,7 @@ Dart/Flutter packages: 151 hosted (pub.dev) plus the Flutter SDK packages below.
 | win32 | 6.4.0 | BSD-3-Clause | https://pub.dev/packages/win32/versions/6.4.0 |
 | xdg_directories | 1.1.0 | BSD-3-Clause | https://pub.dev/packages/xdg_directories/versions/1.1.0 |
 
-### MIT (29)
+### MIT (30)
 
 | Package | Version | License | Source |
 |---|---|---|---|
@@ -555,9 +555,10 @@ Dart/Flutter packages: 151 hosted (pub.dev) plus the Flutter SDK packages below.
 | geocoding_android | 5.1.0 | MIT | https://pub.dev/packages/geocoding_android/versions/5.1.0 |
 | geocoding_darwin | 1.0.3 | MIT | https://pub.dev/packages/geocoding_darwin/versions/1.0.3 |
 | geocoding_platform_interface | 5.0.0 | MIT | https://pub.dev/packages/geocoding_platform_interface/versions/5.0.0 |
-| geolocator | 14.0.1 | MIT | https://pub.dev/packages/geolocator/versions/14.0.1 |
+| geolocator | 14.1.2 | MIT | https://pub.dev/packages/geolocator/versions/14.1.2 |
 | geolocator_android | 5.2.1 | MIT | https://pub.dev/packages/geolocator_android/versions/5.2.1 |
 | geolocator_apple | 2.4.3 | MIT | https://pub.dev/packages/geolocator_apple/versions/2.4.3 |
+| geolocator_linux | 0.2.6 | MIT | https://pub.dev/packages/geolocator_linux/versions/0.2.6 |
 | geolocator_platform_interface | 4.4.1 | MIT | https://pub.dev/packages/geolocator_platform_interface/versions/4.4.1 |
 | geolocator_web | 4.1.4 | MIT | https://pub.dev/packages/geolocator_web/versions/4.1.4 |
 | geolocator_windows | 0.2.5 | MIT | https://pub.dev/packages/geolocator_windows/versions/0.2.5 |
@@ -595,16 +596,18 @@ Dart/Flutter packages: 151 hosted (pub.dev) plus the Flutter SDK packages below.
 | asn1lib | 1.6.8 | BSD-2-Clause | https://pub.dev/packages/asn1lib/versions/1.6.8 |
 | timezone | 0.11.2 | BSD-2-Clause | https://pub.dev/packages/timezone/versions/0.11.2 |
 
-### MPL-2.0 (1)
+### MPL-2.0 (3)
 
 | Package | Version | License | Source |
 |---|---|---|---|
-| dbus | 0.8.0 | MPL-2.0 | https://pub.dev/packages/dbus/versions/0.8.0 |
+| dbus | 0.7.15 | MPL-2.0 | https://pub.dev/packages/dbus/versions/0.7.15 |
+| geoclue | 0.1.1 | MPL-2.0 | https://pub.dev/packages/geoclue/versions/0.1.1 |
+| gsettings | 0.2.8 | MPL-2.0 | https://pub.dev/packages/gsettings/versions/0.2.8 |
 
 ## Notes on the lists
 
 - **Dual and multi-license crates.** Crates that offer a choice (for example `MIT OR Apache-2.0`) are listed with the expression as declared. Crates whose declared identifier is not a formal SPDX expression (`MIT/Apache-2.0`, `Apache-2.0/MIT`) are listed as written by the crate. The license chosen for use is the upstream's choice; this file does not pick one.
-- **Copyleft in the shipped code.** The Rust graph has no copyleft license: the policy in [backend/deny.toml](backend/deny.toml) (`[licenses] allow`) permits only permissive licenses, and CI enforces it with `cargo deny`. The Dart graph contains one MPL-2.0 package, `dbus`, which is file-level copyleft. `dbus` is used only by the Linux desktop builds (via `flutter_local_notifications_linux`, [app/packages/core/pubspec.yaml](app/packages/core/pubspec.yaml) line 27); it is not in the web images. It is used as shipped and not modified in this repository. If it is redistributed, the MPL-2.0 applies to the dbus source files.
+- **Copyleft in the shipped code.** The Rust graph has no copyleft license: the policy in [backend/deny.toml](backend/deny.toml) (`[licenses] allow`) permits only permissive licenses, and CI enforces it with `cargo deny`. The Dart graph contains three MPL-2.0 packages, `dbus`, `geoclue` and `gsettings`, which are file-level copyleft. `dbus` is used by the Linux desktop builds (via `flutter_local_notifications_linux`, [app/packages/core/pubspec.yaml](app/packages/core/pubspec.yaml) line 27, and via `geolocator_linux`); `geoclue` and `gsettings` are reached only through `geolocator_linux`. None of them is in the web images. It is used as shipped and not modified in this repository. If it is redistributed, the MPL-2.0 applies to the dbus source files.
 - **Flutter SDK packages.** `flutter`, `flutter_localizations` and `flutter_web_plugins` are part of the SDK, not hosted packages. The SDK is BSD-3-Clause.
 - **Operating-system packages in images.** The Debian, Alpine and PostgreSQL images carry many packages with their own licenses. This file names the base images only; each image's own package metadata is the authority for those packages.
 
