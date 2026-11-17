@@ -14,9 +14,13 @@ name: release
 #   release-cosign   images job: GHCR push and keyless cosign signing (OIDC).
 #   release-delivery delivery job: DIST_DEPLOY_KEY (push to DIST_REPO), DAHAE_MANIFEST_KEY (ed25519 PEM,
 #                    signs installer_manifest.json), and the cosign OIDC identity for SHA256SUMS and the page.
-#   Not in this workflow yet: the Android store build is still signed locally by scripts/release/build-all.ps1
-#   (planned: a dispatch-driven job in an android-signing environment; docs/DEPLOY.md, Release environments).
-#   GitHub creates a missing environment without protection rules, so set up the three above before the first tag.
+#   Store apps: .github/workflows/store-apps.yml (manual run, environment store).
+#   GitHub creates a missing environment without protection rules, so set up the two above before the first tag.
+#
+# Store images (docs/store/screenshots and graphics) are gitignored and not built here. After the Release
+# exists the developer attaches them from a machine that ran scripts/store/generate.sh:
+#   (cd docs/store && zip -qr ../../dahae-store-images-<version>.zip screenshots graphics release-notes)
+#   gh release upload v<version> dahae-store-images-<version>.zip
 #
 # Channels: image tags `<version>` and `beta` on every release; `stable` and `latest` only without a
 # prerelease suffix. Delivery branches: `beta` gets every release, `main` (stable) only stable ones.
@@ -64,7 +68,7 @@ jobs:
     uses: ./.github/workflows/e2e.yml
     permissions: { contents: read }
 
-  # Listing length limits (docs/store/check_listings.py) and the store screenshots, when generated.
+  # Listing length limits (docs/store/check_listings.py) and the release notes (screenshots are gitignored).
   store:
     needs: guard
     runs-on: ubuntu-24.04
@@ -113,9 +117,11 @@ jobs:
           case "$ver" in *-*) ;; *) tags="$tags,$repo/$NAME:stable,$repo/$NAME:latest" ;; esac
           { echo "tags=$tags"; echo "version=$ver"; } >> "$GITHUB_OUTPUT"
       # linux/arm64 on the x86 runner through QEMU.
+      # binfmt and BuildKit images pinned by digest (the actions default to mutable tags).
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-        with: { platforms: arm64 }
+        with: { platforms: arm64, image: "docker.io/tonistiigi/binfmt:qemu-v10.2.3@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0" }
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with: { driver-opts: "image=moby/buildkit:v0.34.2@sha256:c5f8862f52499773af85bc07695b2379ef08e8002352b0df2c4864c91d78dabe" }
       - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
       - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3

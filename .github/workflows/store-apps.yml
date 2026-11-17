@@ -241,8 +241,8 @@ jobs:
       - name: Location bypass (customer only)
         if: matrix.app == 'customer'
         run: echo "BYPASS_PERMISSION_LOCATION_ALWAYS=1" >> "$GITHUB_ENV"
-      # App Store Connect key (role App Manager). Automatic signing: Xcode creates and fetches certificates and
-      # profiles with this key; no manual certificates and no match repository.
+      # App Store Connect key (role Admin: cloud signing needs it). Automatic signing: Xcode creates and fetches
+      # certificates and profiles with this key; no manual certificates and no match repository.
       - name: App Store Connect key (runner temp only)
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
