@@ -73,6 +73,9 @@ pub enum Failure {
     /// PortOne captured another amount than today's price. Refunded and retried; not a card problem either.
     Repriced,
     Blocked,
+    /// The gateway reports CANCELLED for a charge the engine refunded itself after its booking step failed (a deadlock,
+    /// say). Retried under a new id without a notice; not a card problem.
+    Refunded,
 }
 
 impl Failure {
@@ -82,17 +85,22 @@ impl Failure {
     }
 
     /// The customer notice as (kind, title, body). Each kind has this one text, owner-editable (`i18n::EVENTS`).
-    fn notice(&self) -> (&'static str, &'static str, &'static str) {
-        match self {
+    fn notice(&self) -> Option<(&'static str, &'static str, &'static str)> {
+        Some(match self {
             Failure::Declined(_) => ("subscription.payment_failed", "정기 청소 결제가 실패했어요", "카드 정보를 확인해 주세요"),
-            Failure::Full => ("subscription.slot_full", "정기 청소 시간이 가득 찼어요", "결제된 금액은 환불해 드려요"),
+            Failure::Full => (
+                "subscription.slot_full",
+                "정기 청소 시간이 가득 찼어요",
+                "빈자리가 생기면 다시 예약을 시도할게요",
+            ),
             Failure::Repriced => ("subscription.price_changed", "정기 청소 금액이 바뀌었어요", "먼저 결제된 금액은 환불해 드려요"),
             Failure::Blocked => (
                 "subscription.visit_blocked",
                 "정기 청소 예약을 진행하지 못했어요",
                 "주소와 결제 수단을 확인해 주세요",
             ),
-        }
+            Failure::Refunded => return None,
+        })
     }
 }
 
@@ -404,10 +412,31 @@ async fn charge_visit(s: &AppState, d: &Due) -> ApiResult<Attempt> {
     if sent {
         return reconcile(s, &c, &pid).await;
     }
+    if !seat_free(s, d).await? {
+        return Ok(Attempt::Failed(Failure::Full));
+    }
     if !persist_ref(s, d.visit_id, &pid).await? {
         return Ok(Attempt::Skipped);
     }
     charge_once(s, &c, &pid).await
+}
+
+/// Whether the visit's slot still has a seat, checked before the card so a full slot is never charged and refunded.
+/// `book_visit` takes the slot again under its lock once the money has moved.
+async fn seat_free(s: &AppState, d: &Due) -> ApiResult<bool> {
+    let mut tx = s.db.begin().await?;
+    let (used, cap) = lock_and_count_slot(&mut tx, d.visit_date, d.start_hour as u8, Some(d.visit_id)).await?;
+    Ok(check_capacity(used, cap).is_ok())
+}
+
+/// Whether `pid` is a charge the engine itself queued a refund for (`finalize` after a failed booking step).
+async fn refunded_by_us(s: &AppState, pid: &str) -> ApiResult<bool> {
+    Ok(
+        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM refund_queue WHERE provider = 'portone' AND tx_id = $1)")
+            .bind(pid)
+            .fetch_one(&s.db)
+            .await?,
+    )
 }
 
 /// Saves the payment id in its own commit before PortOne is called, so a timeout or crash leaves it to reconcile.
@@ -432,13 +461,15 @@ async fn reconcile(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attempt
                 refund_or_alert(s, "portone", pid, paid).await;
                 Ok(Attempt::Failed(Failure::Repriced))
             }
+            Verdict::Declined(_) if info.status == "CANCELLED" && refunded_by_us(s, pid).await? => Ok(Attempt::Failed(Failure::Refunded)),
             Verdict::Declined(code) => Ok(Attempt::Failed(Failure::Declined(code))),
             Verdict::Open => {
                 tracing::warn!(status = %info.status, payment = pid, "subscription payment not settled; checked again next pass");
                 Ok(Attempt::Pending)
             }
         },
-        // PortOne has no record of this id, so nothing was charged and sending it again is safe.
+        // PortOne has no record of this id, so nothing was charged and sending it again is safe once a seat is free.
+        Err(ProviderError::NotFound) if !seat_free(s, c.d).await? => Ok(Attempt::Failed(Failure::Full)),
         Err(ProviderError::NotFound) => charge_once(s, c, pid).await,
         Err(e) => {
             tracing::warn!(error = %e, payment = pid, "subscription payment lookup failed; checked again next pass");
@@ -578,20 +609,37 @@ async fn record_failure(s: &AppState, d: &Due, failure: &Failure, now: DateTime<
     if retry == Retry::Pause {
         pause(s, d, failure).await?;
     }
-    let (kind, title, body) = failure.notice();
     let data = json!({ "subscription_id": d.sub_id, "visit_date": d.visit_date });
-    best_effort("notify", notify(s, Recipient::User(d.user_id), kind, title, body, data)).await;
+    // A full slot is retried at the same slot: the customer hears it once per visit, not on every retry.
+    if let Some((kind, title, body)) = failure.notice()
+        && !(*failure == Failure::Full && already_told(s, d.user_id, kind, &data).await?)
+    {
+        best_effort("notify", notify(s, Recipient::User(d.user_id), kind, title, body, data)).await;
+    }
     if lost {
         announce_missed(s, d.user_id).await;
     }
     Ok(())
 }
 
+/// Whether the customer already has notice `kind` with `data` (inbox rows wrap it under `data`, or still queued).
+async fn already_told(s: &AppState, user: Uuid, kind: &str, data: &Value) -> ApiResult<bool> {
+    Ok(sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM notifications WHERE owner_id = $1 AND kind = $2 AND data->'data' = $3)
+             OR EXISTS (SELECT 1 FROM notification_outbox WHERE owner_id = $1 AND kind = $2 AND data = $3)",
+    )
+    .bind(user)
+    .bind(kind)
+    .bind(data)
+    .fetch_one(&s.db)
+    .await?)
+}
+
 /// Pauses the subscription after repeated failures and tells the customer.
 async fn pause(s: &AppState, d: &Due, failure: &Failure) -> ApiResult<()> {
     let reason = match failure {
         Failure::Declined(_) => "payment",
-        Failure::Full | Failure::Repriced | Failure::Blocked => "booking",
+        Failure::Full | Failure::Repriced | Failure::Blocked | Failure::Refunded => "booking",
     };
     let paused = sqlx::query("UPDATE subscriptions SET status = 'paused', paused_reason = $2, updated_at = now() WHERE id = $1 AND status = 'active'")
         .bind(d.sub_id)
@@ -734,12 +782,14 @@ mod tests {
     fn only_a_card_or_booking_refusal_counts_and_each_failure_says_its_reason() {
         let declined = Failure::Declined("card_declined".into());
         assert!(declined.counts() && Failure::Blocked.counts());
-        assert!(!Failure::Repriced.counts() && !Failure::Full.counts());
-        assert_eq!(declined.notice().0, "subscription.payment_failed");
+        assert!(!Failure::Repriced.counts() && !Failure::Full.counts() && !Failure::Refunded.counts());
+        let card = declined.notice().expect("decline notice");
+        assert_eq!(card.0, "subscription.payment_failed");
+        assert_eq!(Failure::Refunded.notice(), None, "the engine's own refund sends no notice");
         for f in [Failure::Repriced, Failure::Full, Failure::Blocked] {
-            let (kind, title, body) = f.notice();
+            let (kind, title, body) = f.notice().expect("notice");
             assert_ne!(kind, "subscription.payment_failed", "{f:?}");
-            assert_ne!(body, declined.notice().2, "{f:?}");
+            assert_ne!(body, card.2, "{f:?}");
             let ev = crate::i18n::event(kind).expect("listed for the owner");
             assert_eq!((ev.title, ev.body), (title, body), "{f:?}");
         }

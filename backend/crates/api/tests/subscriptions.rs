@@ -265,6 +265,20 @@ async fn close_slot(db: &PgPool, hour: i16) {
         .expect("close slot");
 }
 
+/// Closes `hour` the moment the engine stores a charge id, i.e. after its seat check and before the charge.
+async fn close_slot_once_the_charge_id_is_stored(db: &PgPool, hour: i16) {
+    sqlx::raw_sql(&format!(
+        "CREATE FUNCTION close_slot_on_charge() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+           INSERT INTO slot_capacity (start_hour, capacity) VALUES ({hour}, 0) ON CONFLICT (start_hour) DO UPDATE SET capacity = 0;
+           RETURN NEW; END $$;
+         CREATE TRIGGER close_slot_on_charge AFTER UPDATE OF payment_ref ON subscription_visits
+           FOR EACH ROW WHEN (NEW.payment_ref IS NOT NULL) EXECUTE FUNCTION close_slot_on_charge();"
+    ))
+    .execute(db)
+    .await
+    .expect("trigger");
+}
+
 async fn count_notices(db: &PgPool, kind: &str, owner: Option<Uuid>) -> i64 {
     sqlx::query_scalar("SELECT count(*) FROM notifications WHERE kind = $1 AND ($2::uuid IS NULL OR owner_id = $2)")
         .bind(kind)
@@ -315,8 +329,8 @@ async fn booking_that_fails_after_the_charge_is_refunded(pool: PgPool) {
     let c = customer(&app, &pool, "010-7000-0012").await;
     let (_, body) = subscribe(&app, &c, weekday_index(kst_today() + Duration::days(1)), 1, 9, None).await;
     assert!(!visits(&body).is_empty(), "{body}");
-    // The window fills after planning: the charge goes through, then the booking is refused.
-    close_slot(&pool, 9).await;
+    // The window fills between the seat check and the booking: the charge goes through, then the booking is refused.
+    close_slot_once_the_charge_id_is_stored(&pool, 9).await;
 
     let report = subscription_engine::pass(&state).await.expect("pass");
     assert_eq!((report.booked, report.failed), (0, 1), "{report:?}");
@@ -572,9 +586,12 @@ async fn a_full_slot_at_charge_time_is_retried_without_pausing_for_payment(pool:
         assert_eq!(subscription_engine::pass(&state).await.expect("pass").failed, 1);
     }
     assert_eq!(sub_status(&pool, id).await, ("active".to_string(), None, 0));
-    // The customer hears the real reason, not a card problem.
+    // The seat is checked before the card: nothing is charged, so nothing is refunded.
+    let refunds: i64 = sqlx::query_scalar("SELECT count(*) FROM refund_queue").fetch_one(&pool).await.expect("refunds");
+    assert_eq!(refunds, 0, "a full slot never charges the card");
+    // The customer hears the real reason once, not a card problem and not on every retry.
     assert_eq!(count_notices(&pool, "subscription.payment_failed", Some(c.user)).await, 0);
-    assert_eq!(count_notices(&pool, "subscription.slot_full", Some(c.user)).await, 3);
+    assert_eq!(count_notices(&pool, "subscription.slot_full", Some(c.user)).await, 1);
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -744,4 +761,57 @@ async fn a_charge_still_open_at_the_gateway_waits_before_the_visit_is_missed(poo
     assert_eq!((visit_state.as_str(), payment_ref.as_deref()), ("planned", Some("dev:virtual_account")));
     assert_eq!(refunds_of(&pool, "dev:virtual_account").await, 0);
     assert_eq!(count_notices(&pool, "subscription.visit_missed", Some(c.user)).await, 0);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_charge_the_engine_refunded_itself_is_not_a_card_decline(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let (app, state) = app_and_state(pool.clone());
+    let c = customer(&app, &pool, "010-7000-0041").await;
+    let tomorrow = kst_today() + Duration::days(1);
+    let (_, body) = subscribe(&app, &c, weekday_index(tomorrow), 1, 9, None).await;
+    let id = sub_id(&body);
+    // An earlier pass charged, the booking step then failed (a deadlock, say) and the engine refunded its own
+    // charge; the gateway now reports that payment as CANCELLED.
+    sqlx::query("UPDATE subscription_visits SET payment_ref = 'dev:cancelled' WHERE subscription_id = $1 AND visit_date = $2")
+        .bind(id)
+        .bind(tomorrow)
+        .execute(&pool)
+        .await
+        .expect("stored charge");
+    sqlx::query("INSERT INTO refund_queue (provider, tx_id, amount, cancellable, next_at, done_at) VALUES ('portone', 'dev:cancelled', 1, 1, now(), now())")
+        .execute(&pool)
+        .await
+        .expect("own refund");
+
+    assert_eq!(subscription_engine::pass(&state).await.expect("pass").failed, 1);
+    assert_eq!(
+        sub_status(&pool, id).await,
+        ("active".to_string(), None, 0),
+        "the engine's own refund is not a card decline"
+    );
+    assert_eq!(count_notices(&pool, "subscription.payment_failed", Some(c.user)).await, 0);
+    let (visit_state, payment_ref, retry_at) = visit_on(&pool, id, tomorrow).await;
+    assert_eq!((visit_state.as_str(), payment_ref), ("planned", None), "retried under a new charge id");
+    assert!(retry_at.is_some());
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_cancelled_charge_the_engine_never_refunded_still_counts_as_a_decline(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let (app, state) = app_and_state(pool.clone());
+    let c = customer(&app, &pool, "010-7000-0042").await;
+    let tomorrow = kst_today() + Duration::days(1);
+    let (_, body) = subscribe(&app, &c, weekday_index(tomorrow), 1, 9, None).await;
+    let id = sub_id(&body);
+    sqlx::query("UPDATE subscription_visits SET payment_ref = 'dev:cancelled' WHERE subscription_id = $1 AND visit_date = $2")
+        .bind(id)
+        .bind(tomorrow)
+        .execute(&pool)
+        .await
+        .expect("stored charge");
+
+    assert_eq!(subscription_engine::pass(&state).await.expect("pass").failed, 1);
+    assert_eq!(sub_status(&pool, id).await.2, 1, "a payment cancelled elsewhere is still a failed card attempt");
+    assert_eq!(count_notices(&pool, "subscription.payment_failed", Some(c.user)).await, 1);
 }
