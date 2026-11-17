@@ -6,7 +6,7 @@ name: ci
 # self-hosted runner to a job of this repository.
 on:
   push:
-    branches: [master, develop]
+    branches: [master]
   pull_request:
   schedule:
     - cron: "17 3 * * 1"
@@ -17,7 +17,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/develop' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Pull requests skip the heavy jobs their files cannot affect (a skipped job counts as passed for

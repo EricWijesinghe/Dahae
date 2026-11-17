@@ -106,7 +106,7 @@ The `feat/ntd-redesign` branch adds Flutter tests under `app/` that are not in t
 
 ## CI gates
 
-Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Runs on push to `master` and `develop`,
+Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Runs on push to `master`,
 on every pull request, weekly (new RustSec advisories), and from `release.yml` before anything is published.
 All jobs run on `ubuntu-24.04` (GitHub-hosted).
 
