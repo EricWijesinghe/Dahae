@@ -6,8 +6,9 @@
 #   manual:    Actions > deploy-aws > Run workflow: version vX.Y.Z, or rollback (`dahae rollback`)
 # The server runs the command through AWS Systems Manager (root). Access is an OIDC role from this run, no AWS keys.
 # The job uses the GitHub environment named in DEPLOY_AWS_ENVIRONMENT (default doda-aws). Put required reviewers on
-# that environment: each deploy waits for their approval. An update sent here is approved that way instead of the
-# owner's authenticator code (host-approval covers only updates the owner starts from the console).
+# that environment: each deploy waits for their approval, and restrict its deployment branches to master. An update sent
+# here is approved that way instead of the owner's authenticator code (host-approval covers only updates the owner starts
+# from the console). The AWS role trusts only this file on master (job_workflow_ref), so a branch cannot reach the server.
 # Without the environment's variables the job posts a notice and passes, so copies of this repo for other clients stay green.
 name: deploy-aws
 
@@ -67,20 +68,21 @@ jobs:
             [ -n "${!name}" ] || missing="$missing $name"
           done
           [ -z "$missing" ] || skip "environment $ENV_NAME has no$missing; nothing deployed"
+          # flock: the server's cron backup and weekly update hold /run/dahae.lock; take it too so runs never overlap
           if [ "${ROLLBACK_IN:-false}" = true ]; then
-            cmd="dahae rollback"
+            cmd="flock -w 3600 /run/dahae.lock dahae rollback"; update=false; version=""
           else
             if [[ ! $TAG =~ $stable ]]; then
               [ "$EVENT" = workflow_run ] && skip "$TAG is not a stable tag; beta and dry runs are not deployed here"
               echo "::error::version must look like v1.5.0 (got '$TAG')"; exit 1
             fi
-            cmd="dahae update $TAG"
+            cmd="flock -w 3600 /run/dahae.lock dahae update $TAG"; update=true; version="${TAG#v}"
           fi
           {
             echo "run=true"
             echo "command=$cmd"
-            echo "update=$([ "${ROLLBACK_IN:-false}" = true ] && echo false || echo true)"
-            echo "version=${TAG#v}"
+            echo "update=$update"
+            echo "version=$version"
           } >> "$GITHUB_OUTPUT"
           echo "::notice title=AWS deploy planned::$cmd in $ENV_NAME"
 
