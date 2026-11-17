@@ -184,42 +184,10 @@ pub fn mask_name(name: &str) -> String {
 }
 
 /// Public review text without contact details: runs of 4+ digits (phone numbers, unit numbers, also written
-/// with spaces between digit groups) and anything shaped like an e-mail address become `***`.
+/// with spaces, dots, dashes or full-width digits) and anything shaped like an e-mail address become `***`.
 pub fn redact_contacts(text: &str) -> String {
-    let words: Vec<String> = text
-        .split(' ')
-        .map(|w| {
-            if w.contains('@') && w.contains('.') {
-                "***".to_string()
-            } else {
-                w.to_string()
-            }
-        })
-        .collect();
-    let joined = words.join(" ");
-    let mut out = String::with_capacity(joined.len());
-    let mut run = String::new();
-    let flush = |run: &mut String, out: &mut String| {
-        if run.chars().filter(char::is_ascii_digit).count() >= 4 {
-            out.push_str("***")
-        } else {
-            out.push_str(run)
-        }
-        run.clear();
-    };
-    let chars: Vec<char> = joined.chars().collect();
-    for (i, &c) in chars.iter().enumerate() {
-        // A single space between two digits joins the run: "010 12 34 56 78" is one number.
-        let spaced_digits = c == ' ' && run.ends_with(|p: char| p.is_ascii_digit()) && chars.get(i + 1).is_some_and(char::is_ascii_digit);
-        if c.is_ascii_digit() || (!run.is_empty() && (c == '-' || c == '.' || spaced_digits)) {
-            run.push(c);
-        } else {
-            flush(&mut run, &mut out);
-            out.push(c);
-        }
-    }
-    flush(&mut run, &mut out);
-    out
+    let words: Vec<&str> = text.split(' ').map(|w| if w.contains('@') && w.contains('.') { "***" } else { w }).collect();
+    crate::redact::mask_digit_runs(&words.join(" "), 4, "***", false)
 }
 
 /// Refund, discount and compensation words. A reply may use one only when the facts use it too.
@@ -500,6 +468,13 @@ mod tests {
         assert_eq!(redact_contacts("연락처 010 12 34 56 78"), "연락처 ***");
         assert_eq!(redact_contacts("010 1234 5678"), "***");
         assert_eq!(redact_contacts("2 3 번 와주셨어요"), "2 3 번 와주셨어요");
+    }
+
+    #[test]
+    fn public_reviews_hide_full_width_and_punctuated_phone_numbers() {
+        assert_eq!(redact_contacts("연락처 ０１０-１２３４-５６７８ 주세요"), "연락처 *** 주세요");
+        assert_eq!(redact_contacts("(010) 1234-5678로 연락"), "(***로 연락");
+        assert_eq!(redact_contacts("101동　１２０３호"), "101동　***호");
     }
 
     #[test]
