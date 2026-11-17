@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:core/auth_pay.dart';
 import 'package:core/core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -180,6 +181,28 @@ void main() {
           isNot(contains('naver')),
           reason: 'Naver needs the App Link host for its https callback',
         );
+      },
+    );
+
+    test(
+      'iOS keeps Sign in with Apple when SOCIAL_PROVIDERS omits it (App Store 4.8)',
+      () {
+        final keys = {'KAKAO_NATIVE_KEY': 'k'};
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        try {
+          expect(providersForKeys(requested: 'kakao', keys: keys, ios: true), {
+            'kakao',
+            'apple',
+          });
+          expect(providersForKeys(requested: 'apple', keys: keys, ios: true), {
+            'apple',
+          }, reason: 'Apple alone needs no other provider');
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+        expect(providersForKeys(requested: 'kakao', keys: keys, ios: false), {
+          'kakao',
+        }, reason: 'off iOS Apple is not offered');
       },
     );
 
