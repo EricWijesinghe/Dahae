@@ -74,6 +74,16 @@ nt "page: branch URL refused" bash "$R/build-install-page.sh" "$SB/rel/install.s
 nt "page: non-raw host refused" bash "$R/build-install-page.sh" "$SB/rel/install.sh" "https://evil.example/v1.2.3/install.sh" "$SB/page/out3"
 nt "page: missing installer refused" bash "$R/build-install-page.sh" "$SB/none.sh" "$url" "$SB/page/out4"
 
+# ---- AWS template: same pin as the install page, every placeholder filled, the first boot runs the pinned installer ----
+aws_tpl="$ROOT/deploy/aws/dahae.cfn.yaml"
+t  "aws: template source has both placeholders" grep -q '__INSTALL_URL__' "$aws_tpl" && grep -q '__INSTALL_SH_SHA256__' "$aws_tpl"
+t  "aws: template builds for a pinned tag URL" bash "$R/build-aws-template.sh" "$SB/rel/install.sh" "$url" "$SB/aws/out"
+t  "aws: template embeds the install.sh hash" grep -q "$(sha256sum "$SB/rel/install.sh" | cut -d' ' -f1)" "$SB/aws/out/dahae-aws.yaml"
+t  "aws: template embeds the install URL" grep -qF "$url" "$SB/aws/out/dahae-aws.yaml"
+t  "aws: template checks the hash before running" grep -qF 'sha256sum -c -' "$SB/aws/out/dahae-aws.yaml"
+nt "aws: branch URL refused" bash "$R/build-aws-template.sh" "$SB/rel/install.sh" "https://raw.githubusercontent.com/owner/dist/main/install.sh" "$SB/aws/out2"
+nt "aws: missing installer refused" bash "$R/build-aws-template.sh" "$SB/none.sh" "$url" "$SB/aws/out3"
+
 # ---- install page -> installer: cloud-init sets only variables install.sh reads, no answers file ----
 page="$ROOT/deploy/install-page/index.html"
 inst="$ROOT/deploy/install.sh"
@@ -116,7 +126,7 @@ t  "delivery: re-run keeps the tag on its commit" [ "$(published 'v9.9.9^{commit
 t  "delivery: re-run ships the same signature" [ "$(cat "$pd/assets/SHA256SUMS.bundle")" = "$bundle1" ]
 
 # ---- syntax ----
-for s in make-manifest.sh verify-manifest.sh sign-blob.sh verify-blob.sh build-install-page.sh test-release-tools.sh; do
+for s in make-manifest.sh verify-manifest.sh sign-blob.sh verify-blob.sh build-install-page.sh build-aws-template.sh installer-pin.sh test-release-tools.sh; do
   t "syntax: $s" bash -n "$R/$s"
 done
 t "syntax: publish-delivery.sh" bash -n "$ROOT/deploy/publish-delivery.sh"

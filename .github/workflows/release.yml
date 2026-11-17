@@ -2,8 +2,9 @@ name: release
 
 # Tag vX.Y.Z or vX.Y.Z-beta.N on master -> full CI (ci.yml) + install e2e with image scan (e2e.yml) + store
 # listing check -> server images on GHCR (SBOM + provenance, cosign-signed by digest) -> installer, signed
-# SHA256SUMS and manifest, and the install page into the PUBLIC delivery repo (repo variable DIST_REPO, e.g.
-# owner/malkkeum-install) -> GitHub Release with the same files as assets.
+# SHA256SUMS and manifest, the install page and the AWS CloudFormation template (deploy/aws, pinned to the same
+# install.sh) into the PUBLIC delivery repo (repo variable DIST_REPO, e.g. owner/malkkeum-install) -> GitHub Release
+# with the same files as assets. deploy-aws.yml then rolls a client's AWS server to a stable tag.
 # Nothing is published unless ci.yml and e2e.yml pass on the tagged commit, and a tag must point into master.
 # workflow_dispatch on a branch is a dry run: tests, install e2e and the listing check only.
 # GitHub-hosted runners only (signing identity, deploy key and package write access never touch a

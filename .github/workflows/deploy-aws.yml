@@ -1,0 +1,144 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
+# CD to a client's AWS server (deploy/aws/dahae.cfn.yaml, guide docs/guide/10-AWS-배포.md).
+#   automatic: a stable release (tag vX.Y.Z) finished in the release workflow -> `dahae update <tag>` on the server
+#   manual:    Actions > deploy-aws > Run workflow: version vX.Y.Z, or rollback (`dahae rollback`)
+# The server runs the command through AWS Systems Manager (root). Access is an OIDC role from this run, no AWS keys.
+# The job uses the GitHub environment named in DEPLOY_AWS_ENVIRONMENT (default doda-aws). Put required reviewers on
+# that environment: each deploy waits for their approval, and restrict its deployment branches to master. An update sent
+# here is approved that way instead of the owner's authenticator code (host-approval covers only updates the owner starts
+# from the console). The AWS role trusts only this file on master (job_workflow_ref), so a branch cannot reach the server.
+# Without the environment's variables the job posts a notice and passes, so copies of this repo for other clients stay green.
+name: deploy-aws
+
+on:
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Stable release tag to install, e.g. v1.5.0 (ignored for rollback)"
+        required: false
+        default: ""
+        type: string
+      rollback:
+        description: "Roll back to the previous version instead"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-aws-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: ${{ vars.DEPLOY_AWS_ENVIRONMENT || 'doda-aws' }}
+    permissions:
+      contents: read
+      id-token: write # OIDC token for the deploy role (see AWS_DEPLOY_ROLE_ARN)
+    env:
+      TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || inputs.version }}
+      EVENT: ${{ github.event_name }}
+      ROLLBACK_IN: ${{ inputs.rollback }}
+    steps:
+      # Decides what to run. Nothing here touches AWS, so a skipped client copy never reaches the server.
+      - name: Plan
+        id: plan
+        env:
+          ENV_NAME: ${{ vars.DEPLOY_AWS_ENVIRONMENT || 'doda-aws' }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          AWS_INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
+          DAHAE_DOMAIN: ${{ vars.DAHAE_DOMAIN }}
+        run: |
+          set -euo pipefail
+          stable='^v[0-9]+\.[0-9]+\.[0-9]+$'
+          skip() { echo "run=false" >> "$GITHUB_OUTPUT"; echo "::notice title=AWS deploy skipped::$1"; exit 0; }
+          missing=""
+          for name in AWS_REGION AWS_DEPLOY_ROLE_ARN AWS_INSTANCE_ID DAHAE_DOMAIN; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          [ -z "$missing" ] || skip "environment $ENV_NAME has no$missing; nothing deployed"
+          # flock: the server's cron backup and weekly update hold /run/dahae.lock; take it too so runs never overlap
+          if [ "${ROLLBACK_IN:-false}" = true ]; then
+            cmd="flock -w 3600 /run/dahae.lock dahae rollback"; update=false; version=""
+          else
+            if [[ ! $TAG =~ $stable ]]; then
+              [ "$EVENT" = workflow_run ] && skip "$TAG is not a stable tag; beta and dry runs are not deployed here"
+              echo "::error::version must look like v1.5.0 (got '$TAG')"; exit 1
+            fi
+            cmd="flock -w 3600 /run/dahae.lock dahae update $TAG"; update=true; version="${TAG#v}"
+          fi
+          {
+            echo "run=true"
+            echo "command=$cmd"
+            echo "update=$update"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice title=AWS deploy planned::$cmd in $ENV_NAME"
+
+      - name: Configure AWS credentials (OIDC)
+        if: steps.plan.outputs.run == 'true'
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: dahae-deploy-${{ github.run_id }}
+
+      # Sends one shell command to the server and waits for it. Output is printed; a non-zero exit fails the job.
+      - name: Run on the server
+        if: steps.plan.outputs.run == 'true'
+        env:
+          COMMAND: ${{ steps.plan.outputs.command }}
+          UPDATE: ${{ steps.plan.outputs.update }}
+          VERSION: ${{ steps.plan.outputs.version }}
+          AWS_INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
+        run: |
+          set -euo pipefail
+          run_on_server() { # run_on_server <command> : prints its output, returns 1 unless it succeeded
+            local id status=Pending out
+            id=$(aws ssm send-command --instance-ids "$AWS_INSTANCE_ID" --document-name AWS-RunShellScript \
+              --comment "GitHub run $GITHUB_RUN_ID" --timeout-seconds 1800 \
+              --parameters "$(jq -cn --arg c "$1" '{commands: [$c]}')" \
+              --query 'Command.CommandId' --output text)
+            for _ in $(seq 1 120); do # 120 x 15 s = 30 minutes
+              status=$(aws ssm get-command-invocation --command-id "$id" --instance-id "$AWS_INSTANCE_ID" \
+                --query Status --output text 2>/dev/null || echo Pending)
+              case "$status" in Pending|InProgress|Delayed) sleep 15 ;; *) break ;; esac
+            done
+            out=$(aws ssm get-command-invocation --command-id "$id" --instance-id "$AWS_INSTANCE_ID" \
+              --query StandardOutputContent --output text 2>/dev/null || true)
+            echo "::group::server output: $1 ($status)"; echo "$out"
+            aws ssm get-command-invocation --command-id "$id" --instance-id "$AWS_INSTANCE_ID" \
+              --query StandardErrorContent --output text 2>/dev/null || true
+            echo "::endgroup::"
+            [ "$status" = Success ] || { echo "::error::'$1' ended with $status on the server"; return 1; }
+          }
+          run_on_server "$COMMAND"
+          if [ "$UPDATE" = true ]; then
+            ver_out=$(run_on_server "dahae version")
+            grep -qF "$VERSION" <<< "$ver_out" \
+              || { echo "::error::the server does not report version $VERSION"; exit 1; }
+          fi
+
+      - name: Health check
+        if: steps.plan.outputs.run == 'true'
+        env: { DAHAE_DOMAIN: "${{ vars.DAHAE_DOMAIN }}" }
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 10 "https://$DAHAE_DOMAIN/health" >/dev/null; then
+              echo "health ok on try $i"; echo "https://$DAHAE_DOMAIN/health answers" >> "$GITHUB_STEP_SUMMARY"; exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::https://$DAHAE_DOMAIN/health did not answer within 5 minutes"; exit 1
