@@ -35,11 +35,14 @@ RUN python3 -I tool/gen_arb.py \
  && cd apps/console && flutter build web --release --wasm --no-web-resources-cdn --base-href /admin/ \
  && cd ../customer && flutter build web --release --wasm --no-web-resources-cdn --base-href /app/
 
-FROM caddy:2.11.9-builder@sha256:345264d8c6b50f44f4a4d507d4e6b6bcae40eef2f210d70f76e717fd8cc31baf AS caddy
+FROM --platform=$BUILDPLATFORM caddy:2.11.9-builder@sha256:345264d8c6b50f44f4a4d507d4e6b6bcae40eef2f210d70f76e717fd8cc31baf AS caddy
 # The stock 2.11.9 binary ships golang.org/x/net and klauspost/compress with fixed HIGH advisories
 # (GO-2026-6860, GO-2026-6865). Same Caddy version, rebuilt against the patched modules.
 # shortcut: pinned by hand, drop the replaces once a Caddy release ships these versions.
-RUN xcaddy build v2.11.9 --output /usr/bin/caddy \
+# Go cross-compiles on the build machine: under QEMU emulation the arm64 build stalled.
+ARG TARGETOS
+ARG TARGETARCH
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 xcaddy build v2.11.9 --output /usr/bin/caddy \
       --replace golang.org/x/net=golang.org/x/net@v0.62.0 \
       --replace github.com/klauspost/compress=github.com/klauspost/compress@v1.20.4
 
