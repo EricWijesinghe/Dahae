@@ -17,5 +17,5 @@ S = {
   "oClientErrorsEmpty": ["최근 오류가 없어요", "No recent errors"],
   "oHeartbeat": ["업타임 하트비트", "Uptime heartbeat"],
   "oHeartbeatOn": ["연결됨. 서버가 살아 있으면 외부에서 알려줘요.", "Connected. An outside service is notified while the server is up."],
-  "oHeartbeatOff": ["설정 필요: install.sh 에 MALKKEUM_HEARTBEAT_URL 을 넣어주세요.", "Not set: add MALKKEUM_HEARTBEAT_URL to install.sh."],
+  "oHeartbeatOff": ["설정 필요: 개발사에 업타임 하트비트 연결을 요청하세요.", "Not set: ask your developer to connect the uptime heartbeat."],
 }

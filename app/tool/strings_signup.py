@@ -7,5 +7,5 @@
 S = {
   "sgConsentHint": ["필수 항목에 동의해야 인증번호를 받을 수 있어요.", "Agree to the required items to get a verification code."],
   "err_required_consent": ["가입하려면 필수 약관에 모두 동의해 주세요", "Please agree to all required terms to sign up"],
-  "sgOverseasNote":["서비스 가입에 꼭 필요한 동의예요. 동의하지 않으면 가입할 수 없어요. 가입 후에는 동의 관리에서 철회할 수 있지만, 철회하면 푸시 알림과 AI 상담을 쓸 수 없어요.", "This consent is needed to sign up. Without it you cannot sign up. After signing up you can withdraw it in Consent settings, but then push notifications and the AI chat stop."],
+  "sgOverseasNote":["서비스 가입에 꼭 필요한 동의예요. 동의하지 않으면 가입할 수 없어요. AI 상담을 쓰면 고객이 입력한 문장과 상담 맥락이 미국의 Anthropic, PBC에 전송되어 AI 답변을 만들어요. 가입 후에는 동의 관리에서 철회할 수 있지만, 철회하면 푸시 알림과 AI 상담을 쓸 수 없어요.", "This consent is needed to sign up. Without it you cannot sign up. AI chat sends the sentences you type, with the chat context, to Anthropic, PBC (USA), which writes the AI replies. After signing up you can withdraw it in Consent settings, but then push notifications and the AI chat stop."],
 }

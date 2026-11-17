@@ -4249,6 +4249,12 @@ abstract class T {
   /// **'궁금한 점이 있으면 언제든 물어보세요'**
   String get chatEmpty;
 
+  /// No description provided for @chatAiNotice.
+  ///
+  /// In ko, this message translates to:
+  /// **'AI 상담이 답변하면 입력한 대화 내용이 미국의 Anthropic, PBC로 전송돼요.'**
+  String get chatAiNotice;
+
   /// No description provided for @chatNew.
   ///
   /// In ko, this message translates to:
@@ -8362,7 +8368,7 @@ abstract class T {
   /// No description provided for @oActDb.
   ///
   /// In ko, this message translates to:
-  /// **'데이터베이스에 연결하지 못했어요. 서버에서 malkkeum logs 로 원인을 보고, 계속되면 서버를 재시작하세요.'**
+  /// **'데이터베이스에 연결하지 못했어요. 계속되면 개발사에 연락해 서버 상태를 확인해 달라고 하세요.'**
   String get oActDb;
 
   /// No description provided for @oActDisk.
@@ -8374,13 +8380,13 @@ abstract class T {
   /// No description provided for @oActBackup.
   ///
   /// In ko, this message translates to:
-  /// **'자동 백업이 오래됐어요. 서버에서 malkkeum backup 을 실행하고 backups/backup.log 를 확인하세요.'**
+  /// **'자동 백업이 오래됐어요. 개발사에 백업 확인을 요청하세요. 외부 백업을 켜 두었다면 설정 > 외부 백업 (S3 호환)에서 연결 상태를 확인하세요.'**
   String get oActBackup;
 
   /// No description provided for @oActErrors.
   ///
   /// In ko, this message translates to:
-  /// **'서버 오류가 많아요. malkkeum logs 에서 error 줄을 확인하고, 반복되면 개발사에 전달하세요.'**
+  /// **'서버 오류가 많아요. 반복되면 오류 내용을 개발사에 전달하세요.'**
   String get oActErrors;
 
   /// No description provided for @oActPayments.
@@ -10689,7 +10695,7 @@ abstract class T {
   /// No description provided for @oHeartbeatOff.
   ///
   /// In ko, this message translates to:
-  /// **'설정 필요: install.sh 에 MALKKEUM_HEARTBEAT_URL 을 넣어주세요.'**
+  /// **'설정 필요: 개발사에 업타임 하트비트 연결을 요청하세요.'**
   String get oHeartbeatOff;
 
   /// No description provided for @pvManage.
@@ -11475,7 +11481,7 @@ abstract class T {
   /// No description provided for @rnwName.
   ///
   /// In ko, this message translates to:
-  /// **'이름 (예: malkkeum.kr)'**
+  /// **'이름 (예: myshop.co.kr)'**
   String get rnwName;
 
   /// No description provided for @rnwNameError.
@@ -12831,7 +12837,7 @@ abstract class T {
   /// No description provided for @sgOverseasNote.
   ///
   /// In ko, this message translates to:
-  /// **'서비스 가입에 꼭 필요한 동의예요. 동의하지 않으면 가입할 수 없어요. 가입 후에는 동의 관리에서 철회할 수 있지만, 철회하면 푸시 알림과 AI 상담을 쓸 수 없어요.'**
+  /// **'서비스 가입에 꼭 필요한 동의예요. 동의하지 않으면 가입할 수 없어요. AI 상담을 쓰면 고객이 입력한 문장과 상담 맥락이 미국의 Anthropic, PBC에 전송되어 AI 답변을 만들어요. 가입 후에는 동의 관리에서 철회할 수 있지만, 철회하면 푸시 알림과 AI 상담을 쓸 수 없어요.'**
   String get sgOverseasNote;
 
   /// No description provided for @cStaffInvite.

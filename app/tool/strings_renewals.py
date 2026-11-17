@@ -9,7 +9,7 @@ S = {
     "rnwAdd": ["갱신 항목 추가", "Add a renewal"],
     "rnwEmpty": ["아직 등록한 갱신 항목이 없어요.", "No renewal items yet."],
     "rnwLoadFailed": ["목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.", "The list could not be loaded. Please try again shortly."],
-    "rnwName": ["이름 (예: malkkeum.kr)", "Name (for example malkkeum.kr)"],
+    "rnwName": ["이름 (예: myshop.co.kr)", "Name (for example myshop.co.kr)"],
     "rnwNameError": ["이름은 1~80자로 적어 주세요.", "Enter a name of 1 to 80 characters."],
     "rnwKind": ["종류", "Type"],
     "rnwDate": ["갱신 기한", "Due date"],
