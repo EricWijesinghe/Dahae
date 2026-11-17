@@ -56,6 +56,8 @@ done
 for r in '/v1/ws?REDACTED' '/v1/files?REDACTED' '/ops-progress/REDACTED' '/v1/admin/customers?REDACTED'; do
   grep -qF "$r" <<< "$out" || { echo "::error::edge access log lacks $r"; fail=1; }
 done
+# The header probe must have reached Caddy, or the secret-absence loop above passed without exercising its headers.
+grep -qF '/v1/admin/setup' <<< "$out" || { echo "::error::header probe request missing from the access log"; fail=1; }
 grep -qxF 'READY=404' <<< "$out" || { echo "::error::/ready is not 404 at the edge"; fail=1; }
 [ "$fail" = 0 ] && echo "ok: edge access log redacts secrets, /ready is 404"
 exit "$fail"
