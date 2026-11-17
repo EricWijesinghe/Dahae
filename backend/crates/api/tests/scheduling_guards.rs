@@ -437,6 +437,65 @@ async fn a_reschedule_without_a_pro_still_moves_and_says_so_at_once(pool: PgPool
     assert_eq!(said.iter().map(|m| m.0.as_str()).collect::<Vec<_>>(), ["rescheduled"]);
 }
 
+/// A PG deposit checkout for the quote booking (the window the customer pays in).
+async fn deposit_checkout(app: &Router, c: &common::Customer, quote: Uuid) -> (StatusCode, serde_json::Value) {
+    let ck = serde_json::json!({ "kind": "deposit", "method": "card", "booking_id": quote });
+    call(app, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(ck)).await
+}
+
+async fn checkouts_for(pool: &PgPool, booking: Uuid) -> i64 {
+    sqlx::query_scalar("SELECT count(*) FROM checkouts WHERE booking_id = $1")
+        .bind(booking)
+        .fetch_one(pool)
+        .await
+        .expect("checkouts")
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn deposit_checkout_refuses_a_pro_who_is_booked_at_that_time_before_any_payment(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app_with_channels(pool.clone(), &["card"]);
+    let c = customer(&app, &pool, "010-5400-0325").await;
+    let (pro, pro_id) = verified_pro(&app, &pool, "010-5400-0326").await;
+    let _busy = assigned_at(&app, &pool, &c, pro.as_str(), 10, 9).await;
+    let quote = selected_quote(&app, &pool, &c, pro_id).await;
+
+    let (st, b) = deposit_checkout(&app, &c, quote).await;
+    assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("schedule_overlap")), "{b}");
+    assert_eq!(checkouts_for(&pool, quote).await, 0, "no PG window opens for a pro who cannot take the visit");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn deposit_checkout_refuses_a_paused_pro_before_any_payment(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app_with_channels(pool.clone(), &["card"]);
+    let c = customer(&app, &pool, "010-5400-0327").await;
+    let (_, pro_id) = verified_pro(&app, &pool, "010-5400-0328").await;
+    sqlx::query("INSERT INTO partner_quality (pro_id, score, status, lift_pause, inputs, computed_at) VALUES ($1, 20, 'paused', FALSE, '{}'::jsonb, now())")
+        .bind(pro_id)
+        .execute(&pool)
+        .await
+        .expect("paused");
+    let quote = selected_quote(&app, &pool, &c, pro_id).await;
+
+    let (st, b) = deposit_checkout(&app, &c, quote).await;
+    assert_eq!((st, b["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("quality_paused")), "{b}");
+    assert_eq!(checkouts_for(&pool, quote).await, 0, "no PG window opens for a paused pro");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn deposit_checkout_opens_for_a_free_pro(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = common::app_with_channels(pool.clone(), &["card"]);
+    let c = customer(&app, &pool, "010-5400-0329").await;
+    let (_, pro_id) = verified_pro(&app, &pool, "010-5400-0330").await;
+    let quote = selected_quote(&app, &pool, &c, pro_id).await;
+
+    let (st, b) = deposit_checkout(&app, &c, quote).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert_eq!(checkouts_for(&pool, quote).await, 1);
+}
+
 /// True while some session of this test's database waits on an advisory lock.
 async fn advisory_waiter(pool: &PgPool) -> bool {
     sqlx::query_scalar(

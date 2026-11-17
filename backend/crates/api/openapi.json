@@ -1497,7 +1497,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "Start a payment checkout (idempotent). Optional `points` pays part with points: checked against balance and cap here, debited when the checkout settles; the response `amount` is what the PG charges (`total - points`). Booking checkouts may send `expected_total` (the total from POST /v1/bookings/price): another server price is a 409 `price_changed` before any PG window.",
+        "summary": "Start a payment checkout (idempotent). Optional `points` pays part with points: checked against balance and cap here, debited when the checkout settles; the response `amount` is what the PG charges (`total - points`). Booking checkouts may send `expected_total` (the total from POST /v1/bookings/price): another server price is a 409 `price_changed` before any PG window. Deposit checkouts are refused before any PG window when the selected pro is paused (409 `quality_paused`) or already booked at that time (409 `schedule_overlap`)",
         "parameters": [
           {
             "$ref": "#/components/parameters/IdempotencyKey"
