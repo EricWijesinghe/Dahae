@@ -10,7 +10,7 @@
 # Nothing is sent to App Review from here: in App Store Connect add the build to the version, attach
 # docs/store/review-notes.md and press "Submit for Review". Promote a Play draft in Play Console.
 #
-# Environment "store" (create it in Settings → Environments, add required reviewers and deployment branches = master).
+# Environment "store" (create it in Settings → Environments; required reviewers optional; deployment branches = master).
 # Every job here runs inside it, so its secrets and variables are the only ones the build can read.
 #   Variables: API_BASE (https://<client domain>), APP_LINK_DOMAIN (bare host, optional),
 #              APPLE_TEAM_ID (the Apple Developer team ID, 10 characters).
@@ -160,7 +160,7 @@ jobs:
           set -euo pipefail
           name_arg=()
           if [ -n "$BUILD_NAME" ]; then name_arg=(--build-name="$BUILD_NAME"); fi
-          flutter build appbundle --release --build-number="$BUILD_NUMBER" "${name_arg[@]}" \
+          flutter build appbundle --release --build-number="$BUILD_NUMBER" ${name_arg[@]+"${name_arg[@]}"} \
             --obfuscate --split-debug-info=build/symbols --dart-define-from-file=keys.json
           # The bundle (16 KB alignment) and the manifest Gradle merged from every plugin (permissions, FGS types).
           aab=build/app/outputs/bundle/release/app-release.aab
@@ -191,6 +191,12 @@ jobs:
           releaseFiles: app/apps/${{ matrix.app }}/build/app/outputs/bundle/release/app-release.aab
           track: internal
           status: draft
+      - name: Play upload skipped (no credential)
+        if: inputs.upload && steps.play_cred.outputs.present != 'true'
+        run: echo "::warning::GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not set, so the Play upload was skipped."
+      - name: Remove the keystore from the runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
 
   ios:
     needs: plan
@@ -199,7 +205,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.ios) }}
     name: iOS · ${{ matrix.app }}
-    # macOS-26 image: the runner that carries Xcode 26.6 (setup-xcode below selects it). Unverified until the first run.
+    # macOS-26 image: Xcode 26.6 is installed there (actions/runner-images macOS 26 readme); setup-xcode below selects it.
     runs-on: macos-26
     timeout-minutes: 90
     environment: store
@@ -284,7 +290,8 @@ jobs:
           name_arg=()
           if [ -n "$BUILD_NAME" ]; then name_arg=(--build-name="$BUILD_NAME"); fi
           # Writes ios/Flutter/Generated.xcconfig (version, obfuscation, dart-defines); xcodebuild then archives it.
-          flutter build ios --config-only --release --build-number="$BUILD_NUMBER" "${name_arg[@]}" \
+          # The macOS image runs Bash 3.2, which rejects an empty array under set -u: the +-form expands to nothing.
+          flutter build ios --config-only --release --build-number="$BUILD_NUMBER" ${name_arg[@]+"${name_arg[@]}"} \
             --obfuscate --split-debug-info=build/symbols --dart-define-from-file=keys.json
       - name: Archive and export the ipa
         working-directory: app/apps/${{ matrix.app }}
@@ -323,3 +330,6 @@ jobs:
           set -euo pipefail
           ipa=$(ls build/ios/ipa/*.ipa | head -n 1)
           xcrun altool --upload-app --type ios --file "$ipa" --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+      - name: Remove signing material from the runner
+        if: always()
+        run: rm -rf "$HOME/.appstoreconnect" "$RUNNER_TEMP/ExportOptions.plist"
