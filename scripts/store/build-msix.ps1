@@ -66,8 +66,8 @@ function Get-Setting([string]$Name, [string]$Default = '') {
 $publisher = Get-Setting 'MSIX_PUBLISHER' 'CN=Dahae'
 $publisherName = Get-Setting 'MSIX_PUBLISHER_DISPLAY_NAME' 'Dahae'
 $identity = @{
-  customer = Get-Setting 'MSIX_IDENTITY_CUSTOMER' 'com.malkkeum.customer'
-  partner  = Get-Setting 'MSIX_IDENTITY_PARTNER' 'com.malkkeum.partner'
+  customer = Get-Setting 'MSIX_IDENTITY_CUSTOMER' 'kr.co.dahae.customer'
+  partner  = Get-Setting 'MSIX_IDENTITY_PARTNER' 'kr.co.dahae.partner'
 }
 
 # Test certificate: created once per publisher (subject = publisher), password kept next to it.
