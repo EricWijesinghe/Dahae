@@ -804,3 +804,116 @@ async fn an_ambiguous_send_keeps_its_ref_payout_id_through_the_owners_not_sent(p
         "no Toss answer: the reference stays, so a send Toss did take is never repeated"
     );
 }
+
+/// Toss mock with scripted answers. `POST /v2/payouts` answers `sends` in turn (the last one repeats) and keeps
+/// every decrypted body in `sent`; the lookups (`GET /v2/payouts` and `GET /v2/payouts/{id}`) answer `get`.
+struct TossMock {
+    base: String,
+    sent: std::sync::Arc<std::sync::Mutex<Vec<serde_json::Value>>>,
+}
+
+type Answer = (StatusCode, serde_json::Value);
+
+async fn start_toss_mock(sends: Vec<Answer>, get: Answer) -> TossMock {
+    let sent = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let log = std::sync::Arc::clone(&sent);
+    let key = api::providers::toss_jwe::key_bytes(SECURITY_HEX).expect("key");
+    let send = move |body: String| async move {
+        let mut log = log.lock().expect("log");
+        log.push(api::providers::toss_jwe::open(&key, &body).expect("encrypted body"));
+        let (status, answer) = sends[(log.len() - 1).min(sends.len() - 1)].clone();
+        (status, axum::Json(answer))
+    };
+    let lookup = move || async move { (get.0, axum::Json(get.1)) };
+    let router = axum::Router::new()
+        .route("/v2/payouts", axum::routing::post(send).get(lookup.clone()))
+        .route("/v2/payouts/{id}", axum::routing::get(lookup));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind toss mock");
+    let addr = listener.local_addr().expect("addr");
+    tokio::spawn(async move { axum::serve(listener, router).await.expect("mock serves") });
+    TossMock {
+        base: format!("http://{addr}"),
+        sent,
+    }
+}
+
+fn empty_list() -> Answer {
+    (
+        StatusCode::OK,
+        json!({ "entityType": "payout-list", "entityBody": { "hasMore": false, "items": [] } }),
+    )
+}
+
+/// The one transfer in a create body (Toss takes a list of up to 100).
+fn transfer_in(body: &serde_json::Value) -> &serde_json::Value {
+    body.get(0).unwrap_or(body)
+}
+
+async fn toss_meta(pool: &PgPool, id: &str) -> (Option<String>, Option<String>) {
+    sqlx::query_as("SELECT failure_reason, toss_ref FROM payouts WHERE id = $1::uuid")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .expect("row")
+}
+
+async fn send_now(app: &axum::Router, token: &str, id: &str) -> (StatusCode, serde_json::Value) {
+    call(app, "POST", &format!("/v1/admin/settlements/payouts/{id}/send"), Some(token), Some(json!({}))).await
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_refused_resend_of_an_ambiguous_send_keeps_its_key_and_ref(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 0).await;
+    toss_seller(&pool).await;
+    let (_, _, key_before) = payout_row(&pool, &id).await;
+    // A 4xx on the re-send (a refPayoutId Toss already holds, a key it no longer replays) does not prove the first send failed.
+    let refused = (
+        StatusCode::BAD_REQUEST,
+        json!({ "code": "INVALID_REQUEST", "message": "이미 사용된 refPayoutId" }),
+    );
+    let toss = start_toss_mock(vec![refused], empty_list()).await;
+    let app = api::routes::router(toss_state(&pool, &toss.base));
+    let token = admin_token(&pool).await;
+
+    for _ in 0..2 {
+        let (code, body) = send_now(&app, &token, &id).await;
+        assert_eq!(
+            (code, body["error"]["code"].as_str()),
+            (StatusCode::CONFLICT, Some("payout_in_transfer")),
+            "{body}"
+        );
+    }
+    let (st, _, key) = payout_row(&pool, &id).await;
+    assert_eq!((st.as_str(), key), ("requested", key_before), "still open for the sync or the owner, same key");
+    let (failure, toss_ref) = toss_meta(&pool, &id).await;
+    assert_eq!(failure.as_deref(), Some("이미 사용된 refPayoutId"));
+    assert_eq!(toss_ref, None, "the reference is never rotated without an answer from Toss");
+    let refs: Vec<_> = toss.sent.lock().expect("log").iter().map(|b| transfer_in(b)["refPayoutId"].clone()).collect();
+    assert_eq!(
+        refs,
+        vec![json!(id), json!(id)],
+        "the same refPayoutId every time, so Toss can never take it twice"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_refused_first_send_fails_the_batch_with_a_new_key_and_ref(pool: PgPool) {
+    seed(&pool).await;
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app(pool.clone()), &token).await;
+    sqlx::query("UPDATE payouts SET provider = 'toss' WHERE id = $1::uuid")
+        .bind(&id)
+        .execute(&pool)
+        .await
+        .expect("toss");
+    toss_seller(&pool).await;
+    let (_, _, key_before) = payout_row(&pool, &id).await;
+    let toss = start_toss_mock(vec![(StatusCode::BAD_REQUEST, json!({ "message": "계좌 오류" }))], empty_list()).await;
+    let app = api::routes::router(toss_state(&pool, &toss.base));
+
+    let (code, body) = send_now(&app, &token, &id).await;
+    assert_eq!((code, body["state"].as_str()), (StatusCode::OK, Some("failed")), "{body}");
+    let (_, _, key) = payout_row(&pool, &id).await;
+    assert_ne!(key, key_before, "every earlier send had an answer, so this refusal is definite");
+    assert_eq!(toss_meta(&pool, &id).await.1, Some(format!("{id}-1")));
+}

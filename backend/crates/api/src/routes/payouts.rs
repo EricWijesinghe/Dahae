@@ -500,7 +500,9 @@ async fn step(s: &AppState, id: Uuid, step: Owner) -> ApiResult<State> {
 }
 
 /// Sends a Toss transfer. The idempotency key is the payout's own key, so a retry after a timeout
-/// cannot create a second transfer. A definite decline rotates the key before the payout is retried.
+/// cannot create a second transfer. A decline rotates the key before the payout is retried only when no
+/// earlier send may be at Toss: Toss warns that changing the key after an error risks a second payout
+/// (guides/v2/payouts, 지급대행 요청하기).
 async fn send(s: &AppState, id: Uuid) -> ApiResult<State> {
     let mut tx = s.db.begin().await?;
     let row = lock(&mut tx, id).await?;
@@ -543,6 +545,18 @@ async fn send(s: &AppState, id: Uuid) -> ApiResult<State> {
             }
             tx.commit().await?;
             Ok(State::Sent)
+        }
+        Err(ProviderError::Declined(reason)) if row.failure_reason.is_some() => {
+            // An earlier send got no answer, so a refusal of this re-send (its refPayoutId taken, the key no longer
+            // replayed) does not prove that send failed: key and reference stay, and the batch stays open for the
+            // sync or the owner.
+            sqlx::query("UPDATE payouts SET failure_reason = $2, attempts = attempts + 1, updated_at = now() WHERE id = $1 AND state = 'requested'")
+                .bind(id)
+                .bind(truncate(&reason))
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+            Err(ApiError::Conflict("payout_in_transfer"))
         }
         Err(ProviderError::Declined(reason)) => {
             // Definitely not transferred: a fresh key and reference make the next retry a new transfer.
