@@ -25,7 +25,7 @@ List<NavOption> navOptions(String address) {
     ),
     NavOption(
       'Naver Map',
-      Uri.parse('nmap://search?query=$q&appname=com.malkkeum.partner'),
+      Uri.parse('nmap://search?query=$q&appname=kr.co.dahae.partner'),
       Uri.parse('https://map.naver.com/v5/search/$q'),
     ),
     // T map has no public web search page, so its web fallback is Google Maps.

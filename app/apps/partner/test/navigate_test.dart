@@ -22,7 +22,7 @@ void main() {
   );
 
   test('Naver needs the bundle id as appname', () {
-    expect(options[1].app.queryParameters['appname'], 'com.malkkeum.partner');
+    expect(options[1].app.queryParameters['appname'], 'kr.co.dahae.partner');
   });
 
   test('every option has an https web fallback that carries the address', () {

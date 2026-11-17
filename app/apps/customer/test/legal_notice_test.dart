@@ -14,7 +14,7 @@ void main() {
   setUp(
     () => PackageInfo.setMockInitialValues(
       appName: 'customer',
-      packageName: 'com.malkkeum.customer',
+      packageName: 'kr.co.dahae.customer',
       version: '1.4.2',
       buildNumber: '7',
       buildSignature: '',

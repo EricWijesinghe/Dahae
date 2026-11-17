@@ -41,7 +41,7 @@ async fn env_values_serve_both_files_until_the_owner_saves(db: PgPool) {
     assert_eq!(android[0]["target"]["sha256_cert_fingerprints"], json!([ENV_CERT]));
     let (st, aasa) = well_known(&app, "/.well-known/apple-app-site-association").await;
     assert_eq!(st, StatusCode::OK);
-    assert_eq!(aasa["webcredentials"]["apps"][0], format!("{ENV_TEAM}.com.malkkeum.customer"));
+    assert_eq!(aasa["webcredentials"]["apps"][0], format!("{ENV_TEAM}.kr.co.dahae.customer"));
 
     let (token, _) = staff_token(&db, Role::StaffAdmin).await;
     let (st, status) = call(&app, "GET", "/v1/admin/app-links", Some(&token), None).await;
@@ -65,7 +65,7 @@ async fn saved_values_replace_the_env_values(db: PgPool) {
     let (_, android) = well_known(&app, "/.well-known/assetlinks.json").await;
     assert_eq!(android[0]["target"]["sha256_cert_fingerprints"], json!([SAVED_CERT]));
     let (_, aasa) = well_known(&app, "/.well-known/apple-app-site-association").await;
-    assert_eq!(aasa["webcredentials"]["apps"][1], format!("{SAVED_TEAM}.com.malkkeum.partner"));
+    assert_eq!(aasa["webcredentials"]["apps"][1], format!("{SAVED_TEAM}.kr.co.dahae.partner"));
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -87,7 +87,7 @@ async fn bad_values_are_refused_and_the_env_values_stay(db: PgPool) {
     let (st, _) = admin_put(&app, &token, json!({ "android_cert_sha256": [], "apple_team_id": "short" })).await;
     assert_eq!(st, StatusCode::BAD_REQUEST);
     let (_, aasa) = well_known(&app, "/.well-known/apple-app-site-association").await;
-    assert_eq!(aasa["webcredentials"]["apps"][0], format!("{ENV_TEAM}.com.malkkeum.customer"));
+    assert_eq!(aasa["webcredentials"]["apps"][0], format!("{ENV_TEAM}.kr.co.dahae.customer"));
     let stored: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM settings WHERE key = 'app_links'")
         .fetch_one(&db)
         .await
