@@ -83,6 +83,15 @@ t  "aws: template embeds the install URL" grep -qF "$url" "$SB/aws/out/dahae-aws
 t  "aws: template checks the hash before running" grep -qF 'sha256sum -c -' "$SB/aws/out/dahae-aws.yaml"
 nt "aws: branch URL refused" bash "$R/build-aws-template.sh" "$SB/rel/install.sh" "https://raw.githubusercontent.com/owner/dist/main/install.sh" "$SB/aws/out2"
 nt "aws: missing installer refused" bash "$R/build-aws-template.sh" "$SB/none.sh" "$url" "$SB/aws/out3"
+# the deployer may create roles only inside dahae-boundary, so every role in the template must carry it
+every_role_bounded() {
+  local roles; roles=$(grep -c 'Type: AWS::IAM::Role$' "$1")
+  [ "$roles" -gt 0 ] && [ "$roles" = "$(grep -c 'PermissionsBoundary: .*policy/dahae-boundary' "$1")" ]
+}
+t  "aws: every role carries the dahae-boundary permissions boundary" every_role_bounded "$SB/aws/out/dahae-aws.yaml"
+# shellcheck disable=SC2016 # ${GitHubRepoIds} is CloudFormation text, not a shell expansion
+t  "aws: deploy role trusts the immutable OIDC subject" grep -qF 'sub: !Sub "repo:${GitHubRepoIds}:environment:' "$SB/aws/out/dahae-aws.yaml"
+t  "aws: deployer creates roles only with the boundary" grep -qF '"iam:PermissionsBoundary": "arn:aws:iam::*:policy/dahae-boundary"' "$ROOT/deploy/aws/deployer-iam-policy.json"
 
 # ---- install page -> installer: cloud-init sets only variables install.sh reads, no answers file ----
 page="$ROOT/deploy/install-page/index.html"

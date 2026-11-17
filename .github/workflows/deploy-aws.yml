@@ -5,10 +5,11 @@
 #   automatic: a stable release (tag vX.Y.Z) finished in the release workflow -> `dahae update <tag>` on the server
 #   manual:    Actions > deploy-aws > Run workflow: version vX.Y.Z, or rollback (`dahae rollback`)
 # The server runs the command through AWS Systems Manager (root). Access is an OIDC role from this run, no AWS keys.
-# The job uses the GitHub environment named in DEPLOY_AWS_ENVIRONMENT (default doda-aws). Put required reviewers on
-# that environment: each deploy waits for their approval, and restrict its deployment branches to master. An update sent
-# here is approved that way instead of the owner's authenticator code (host-approval covers only updates the owner starts
-# from the console). The AWS role trusts only this file on master (job_workflow_ref), so a branch cannot reach the server.
+# The job uses the GitHub environment named in DEPLOY_AWS_ENVIRONMENT (default doda-aws); restrict its deployment
+# branches to master. Required reviewers on it are optional: with them each deploy waits for their approval, which
+# stands in for the owner's authenticator code (host-approval covers only updates the owner starts from the console).
+# The AWS role trusts only this file on master (job_workflow_ref) and this repo by its immutable ids, so a branch cannot
+# reach the server.
 # Without the environment's variables the job posts a notice and passes, so copies of this repo for other clients stay green.
 name: deploy-aws
 
@@ -93,6 +94,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-session-name: dahae-deploy-${{ github.run_id }}
+          role-duration-seconds: 21600 # the update may run 6 h; the role's MaxSessionDuration allows it
 
       # Sends one shell command to the server and waits for it. Output is printed; a non-zero exit fails the job.
       - name: Run on the server
@@ -108,11 +110,15 @@ jobs:
             local id status=Pending out
             id=$(aws ssm send-command --instance-ids "$AWS_INSTANCE_ID" --document-name AWS-RunShellScript \
               --comment "GitHub run $GITHUB_RUN_ID" --timeout-seconds 21600 \
-              --parameters "$(jq -cn --arg c "$1" '{commands: [$c]}')" \
+              --parameters "$(jq -cn --arg c "$1" '{commands: [$c], executionTimeout: ["21600"]}')" \
               --query 'Command.CommandId' --output text)
             for _ in $(seq 1 1400); do # 1400 x 15 s = 350 minutes; the update runs up to 21600 s (deploy/agent.sh UPDATE_RUN_TIMEOUT)
-              status=$(aws ssm get-command-invocation --command-id "$id" --instance-id "$AWS_INSTANCE_ID" \
-                --query Status --output text 2>/dev/null || echo Pending)
+              # Only "not registered yet" counts as pending; any other error (an expired token) stops the job.
+              if ! status=$(aws ssm get-command-invocation --command-id "$id" --instance-id "$AWS_INSTANCE_ID" \
+                --query Status --output text 2>"$RUNNER_TEMP/ssm.err"); then
+                grep -q InvocationDoesNotExist "$RUNNER_TEMP/ssm.err" || { echo "::error::cannot read the status of '$1': $(cat "$RUNNER_TEMP/ssm.err")"; return 1; }
+                status=Pending
+              fi
               case "$status" in Pending|InProgress|Delayed) sleep 15 ;; *) break ;; esac
             done
             out=$(aws ssm get-command-invocation --command-id "$id" --instance-id "$AWS_INSTANCE_ID" \

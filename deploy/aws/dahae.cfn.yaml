@@ -16,7 +16,7 @@ Metadata:
       - Label: { default: "서버 / Server" }
         Parameters: [InstanceType, DiskSizeGiB, VpcId, SubnetId, SshCidr]
       - Label: { default: "GitHub 배포 / GitHub deploy" }
-        Parameters: [GitHubRepo, GitHubEnvironment, CreateGitHubOidcProvider]
+        Parameters: [GitHubRepo, GitHubRepoIds, GitHubEnvironment, CreateGitHubOidcProvider]
       - Label: { default: "고급 - 바꾸지 마세요 / Advanced - do not change" }
         Parameters: [AmdAmiId, ArmAmiId]
 
@@ -65,6 +65,12 @@ Parameters:
     Default: EricWijesinghe/Dahae
     AllowedPattern: "^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$"
     ConstraintDescription: owner/repo 형식이어야 해요. Must be owner/repo.
+  GitHubRepoIds:
+    Type: String
+    Default: EricWijesinghe@48539716/Dahae@1452913067
+    AllowedPattern: "^[A-Za-z0-9._-]+@[0-9]+/[A-Za-z0-9._-]+@[0-9]+$"
+    Description: "GitHub 로그인 주체 owner@번호/repo@번호 (기본값 그대로). OIDC subject owner@ownerId/repo@repoId: gh api repos/OWNER/REPO --jq '.owner.id,.id'."
+    ConstraintDescription: owner@숫자/repo@숫자 형식이어야 해요. Must be owner@id/repo@id.
   GitHubEnvironment:
     Type: String
     Default: doda-aws
@@ -135,6 +141,8 @@ Resources:
         Version: "2012-10-17"
         Statement:
           - { Effect: Allow, Principal: { Service: ec2.amazonaws.com }, Action: sts:AssumeRole }
+      # Created once by the account admin from deploy/aws/dahae-boundary-policy.json; the deployer cannot make a role without it.
+      PermissionsBoundary: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/dahae-boundary"
       ManagedPolicyArns:
         - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
 
@@ -204,6 +212,7 @@ Resources:
         Version: "2012-10-17"
         Statement:
           - { Effect: Allow, Principal: { Service: dlm.amazonaws.com }, Action: sts:AssumeRole }
+      PermissionsBoundary: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/dahae-boundary"
       ManagedPolicyArns:
         - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSDataLifecycleManagerServiceRole"
 
@@ -240,6 +249,8 @@ Resources:
   DeployRole:
     Type: AWS::IAM::Role
     Properties:
+      PermissionsBoundary: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/dahae-boundary"
+      MaxSessionDuration: 21600 # the deploy job may wait up to 6 h for `dahae update` (deploy-aws.yml)
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -253,7 +264,8 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubRepo}:environment:${GitHubEnvironment}"
+                # The repo uses GitHub's immutable subject (owner@id/repo@id), so a renamed or re-created repo cannot match.
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubRepoIds}:environment:${GitHubEnvironment}"
                 # Only deploy-aws.yml on master may use this role: a branch cannot edit the workflow and reach the server.
                 token.actions.githubusercontent.com:job_workflow_ref: !Sub "${GitHubRepo}/.github/workflows/deploy-aws.yml@refs/heads/master"
       Policies:

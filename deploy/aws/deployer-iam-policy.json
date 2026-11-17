@@ -32,7 +32,6 @@
         "cloudformation:DescribeStackEvents",
         "cloudformation:DescribeStackResources",
         "cloudformation:GetTemplate",
-        "cloudformation:GetTemplateSummary",
         "cloudformation:CreateChangeSet",
         "cloudformation:DescribeChangeSet",
         "cloudformation:ExecuteChangeSet",
@@ -47,9 +46,25 @@
       "Effect": "Allow",
       "Action": [
         "cloudformation:ValidateTemplate",
-        "cloudformation:ListStacks"
+        "cloudformation:ListStacks",
+        "cloudformation:GetTemplateSummary",
+        "cloudformation:CreateUploadBucket"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "ConsoleTemplateUpload",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::cf-templates-*",
+        "arn:aws:s3:::cf-templates-*/*"
+      ]
     },
     {
       "Sid": "ServerNetworkAndInstance",
@@ -87,18 +102,18 @@
       "Resource": "arn:aws:ec2:ap-northeast-2:*:instance/*",
       "Condition": {
         "StringLike": {
-          "aws:ResourceTag/dahae-backup": "*"
+          "aws:ResourceTag/aws:cloudformation:stack-name": "dahae-*"
         }
       }
     },
     {
-      "Sid": "ServerElasticIpReleaseOnlyWhenNamed",
+      "Sid": "ServerElasticIpReleaseOnlyFromDahaeStack",
       "Effect": "Allow",
       "Action": "ec2:ReleaseAddress",
       "Resource": "arn:aws:ec2:ap-northeast-2:*:elastic-ip/*",
       "Condition": {
         "StringLike": {
-          "aws:ResourceTag/Name": "dahae-*"
+          "aws:ResourceTag/aws:cloudformation:stack-name": "dahae-*"
         }
       }
     },
@@ -106,16 +121,11 @@
       "Sid": "ServerRolesAndProfile",
       "Effect": "Allow",
       "Action": [
-        "iam:CreateRole",
         "iam:DeleteRole",
         "iam:GetRole",
         "iam:UpdateAssumeRolePolicy",
-        "iam:PutRolePolicy",
-        "iam:DeleteRolePolicy",
         "iam:GetRolePolicy",
         "iam:ListRolePolicies",
-        "iam:AttachRolePolicy",
-        "iam:DetachRolePolicy",
         "iam:ListAttachedRolePolicies",
         "iam:TagRole",
         "iam:UntagRole",
@@ -130,6 +140,50 @@
         "arn:aws:iam::*:role/dahae-*",
         "arn:aws:iam::*:instance-profile/dahae-*"
       ]
+    },
+    {
+      "Sid": "ServerRolesOnlyInsideBoundary",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy"
+      ],
+      "Resource": "arn:aws:iam::*:role/dahae-*",
+      "Condition": {
+        "ArnLike": {
+          "iam:PermissionsBoundary": "arn:aws:iam::*:policy/dahae-boundary"
+        }
+      }
+    },
+    {
+      "Sid": "KeepTheBoundary",
+      "Effect": "Deny",
+      "Action": [
+        "iam:CreatePolicyVersion",
+        "iam:DeletePolicy",
+        "iam:DeletePolicyVersion",
+        "iam:SetDefaultPolicyVersion",
+        "iam:DeleteRolePermissionsBoundary",
+        "iam:PutRolePermissionsBoundary"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:policy/dahae-boundary",
+        "arn:aws:iam::*:role/*"
+      ]
+    },
+    {
+      "Sid": "RecoverAlarmServiceLinkedRole",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/events.amazonaws.com/AWSServiceRoleForCloudWatchEvents",
+      "Condition": {
+        "StringEquals": {
+          "iam:AWSServiceName": "events.amazonaws.com"
+        }
+      }
     },
     {
       "Sid": "PassServerRolesOnlyToEc2AndDlm",
@@ -187,10 +241,20 @@
       "Resource": "*"
     },
     {
-      "Sid": "DnsRecordOnly",
+      "Sid": "DnsARecordOnly",
+      "Effect": "Allow",
+      "Action": "route53:ChangeResourceRecordSets",
+      "Resource": "arn:aws:route53:::hostedzone/*",
+      "Condition": {
+        "ForAllValues:StringEquals": {
+          "route53:ChangeResourceRecordSetsRecordTypes": "A"
+        }
+      }
+    },
+    {
+      "Sid": "DnsRead",
       "Effect": "Allow",
       "Action": [
-        "route53:ChangeResourceRecordSets",
         "route53:GetChange",
         "route53:ListResourceRecordSets"
       ],
@@ -206,7 +270,7 @@
       "Resource": "arn:aws:ec2:ap-northeast-2:*:instance/*",
       "Condition": {
         "StringLike": {
-          "ssm:resourceTag/dahae-backup": "*"
+          "ssm:resourceTag/aws:cloudformation:stack-name": "dahae-*"
         },
         "BoolIfExists": {
           "ssm:SessionDocumentAccessCheck": "true"
