@@ -5629,7 +5629,7 @@ class TEn extends T {
 
   @override
   String poNotSentBody(String name, String amount) {
-    return 'Toss did not answer or did not list it, so we can\'t tell automatically whether this payout left.\n\nSign in to the Toss Payments merchant dashboard and look in the payouts list for $name, $amount.\n\n• If it isn\'t there, or it shows failed or cancelled, it was not sent. Confirm below: this payout becomes failed, and you can cancel the booking or send it again.\n• If it shows requested, in progress or completed, the money left or is leaving. Don\'t confirm; tap \'Check with Toss\' again later.';
+    return 'Toss did not answer or did not list it, so we can\'t tell automatically whether this payout left.\n\nSign in to the Toss Payments merchant dashboard and look in the payouts list for $name, $amount.\n\n• If it isn\'t there, or it shows failed or cancelled, it was not sent. Confirm below: this payout becomes failed and you can send it again. Its bookings can\'t be cancelled until Toss reports how that send ended.\n• If it shows requested, in progress or completed, the money left or is leaving. Don\'t confirm; tap \'Check with Toss\' again later.';
   }
 
   @override
