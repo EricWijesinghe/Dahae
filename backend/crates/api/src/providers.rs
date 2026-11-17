@@ -363,7 +363,8 @@ impl Providers {
         }
         let (secret, key) = self.payout_keys()?;
         let req = payout::status_request(&self.http, &secret, provider_id)?;
-        Ok(payout::parse_status(&self.payout_call(req, Some(&key)).await?))
+        let body = self.payout_call(req, Some(&key)).await.map_err(payout::lookup_error)?;
+        Ok(payout::parse_status(&body))
     }
 
     /// Toss payouts dated `since` or later whose refPayoutId is `ref_id`, as (Toss id, status). For a send that
@@ -374,7 +375,8 @@ impl Providers {
         }
         let (secret, key) = self.payout_keys()?;
         let req = payout::list_request(&self.http, &secret, &since.to_string())?;
-        payout::find_in_list(&self.payout_call(req, Some(&key)).await?, ref_id)
+        let body = self.payout_call(req, Some(&key)).await.map_err(payout::lookup_error)?;
+        payout::find_in_list(&body, ref_id)
     }
 
     /// Harmless read used by the console's sandbox connection test: `GET /v2/balances` with the given key.

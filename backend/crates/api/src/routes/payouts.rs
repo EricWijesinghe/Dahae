@@ -107,6 +107,8 @@ struct Row {
     provider_transfer_id: Option<String>,
     failure_reason: Option<String>,
     toss_ref: Option<String>,
+    owner_not_sent_at: Option<DateTime<Utc>>,
+    toss_memo: Option<String>,
 }
 
 impl Row {
@@ -123,6 +125,12 @@ impl Row {
     /// A Toss transfer that may already exist at the provider: sent, or requested after an ambiguous send error.
     fn awaiting_provider(&self) -> bool {
         at_provider(&self.state, self.failure_reason.as_deref())
+    }
+
+    /// Toss may hold an earlier send of this payout under its current key and reference: a send got no answer, or
+    /// the owner's not-sent (which keeps both) has not been settled by Toss since.
+    fn earlier_send_unsettled(&self) -> bool {
+        self.failure_reason.is_some() || self.owner_not_sent_at.is_some()
     }
 }
 
@@ -416,7 +424,8 @@ fn transfer_amount(row: &Row) -> i64 {
 
 async fn lock(tx: &mut Transaction<'_, Postgres>, id: Uuid) -> ApiResult<Row> {
     Ok(sqlx::query_as(
-        "SELECT pro_id, payout_date, amount, tax_type, provider, state, bank, holder, account_enc, idempotency_key, provider_transfer_id, failure_reason, toss_ref
+        "SELECT pro_id, payout_date, amount, tax_type, provider, state, bank, holder, account_enc, idempotency_key, provider_transfer_id, failure_reason, toss_ref,
+                owner_not_sent_at, toss_memo
          FROM payouts WHERE id = $1 FOR UPDATE",
     )
     .bind(id)
@@ -503,7 +512,9 @@ async fn step(s: &AppState, id: Uuid, step: Owner) -> ApiResult<State> {
 }
 
 /// Sends a Toss transfer. The idempotency key is the payout's own key, so a retry after a timeout
-/// cannot create a second transfer. A definite decline rotates the key before the payout is retried.
+/// cannot create a second transfer. A decline rotates the key before the payout is retried only when no
+/// earlier send may be at Toss: Toss warns that changing the key after an error risks a second payout
+/// (guides/v2/payouts, 지급대행 요청하기).
 async fn send(s: &AppState, id: Uuid) -> ApiResult<State> {
     let mut tx = s.db.begin().await?;
     let row = lock(&mut tx, id).await?;
@@ -524,12 +535,22 @@ async fn send(s: &AppState, id: Uuid) -> ApiResult<State> {
     if seller_fp.as_deref() != Some(adapter::account_fingerprint(bank_code, &account, &row.holder).as_str()) {
         return Err(ApiError::Conflict("seller_account_changed"));
     }
+    // The memo of the first send is kept, so a re-send under the same key carries the same body after a rename.
+    let memo = match &row.toss_memo {
+        Some(memo) => memo.clone(),
+        None => payout_memo(&super::setup::brand_name(&s.db).await, row.payout_date),
+    };
+    sqlx::query("UPDATE payouts SET toss_memo = $2 WHERE id = $1 AND toss_memo IS NULL")
+        .bind(id)
+        .bind(&memo)
+        .execute(&mut *tx)
+        .await?;
     let transfer = adapter::Transfer {
         amount: transfer_amount(&row),
         bank_code,
         account,
         holder: row.holder.clone(),
-        memo: payout_memo(&super::setup::brand_name(&s.db).await, row.payout_date),
+        memo,
     };
     match s.providers.send_transfer(&row.idempotency_key, &row.toss_ref(id), &seller_id, &transfer).await {
         Ok(transfer_id) => {
@@ -546,6 +567,17 @@ async fn send(s: &AppState, id: Uuid) -> ApiResult<State> {
             }
             tx.commit().await?;
             Ok(State::Sent)
+        }
+        Err(ProviderError::Declined(reason)) if row.earlier_send_unsettled() => {
+            // A refusal of this re-send (its refPayoutId taken, the key no longer replayed) does not prove the
+            // earlier send failed: key and reference stay, and the batch stays open for the sync or the owner.
+            sqlx::query("UPDATE payouts SET failure_reason = $2, attempts = attempts + 1, updated_at = now() WHERE id = $1 AND state = 'requested'")
+                .bind(id)
+                .bind(truncate(&reason))
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+            Err(ApiError::Conflict("payout_in_transfer"))
         }
         Err(ProviderError::Declined(reason)) => {
             // Definitely not transferred: a fresh key and reference make the next retry a new transfer.
@@ -613,7 +645,7 @@ async fn ask_provider(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uuid
             // The provider confirms no money moved: rotate the key and reference so the retry is a new transfer.
             let r = sqlx::query(
                 "UPDATE payouts SET state = 'failed', failure_reason = $2, idempotency_key = gen_random_uuid()::text,
-                   toss_ref = id::text || '-' || attempts, updated_at = now()
+                   toss_ref = id::text || '-' || attempts, owner_not_sent_at = NULL, updated_at = now()
                  WHERE id = $1 AND state IN ('requested', 'sent')",
             )
             .bind(id)
@@ -660,8 +692,9 @@ async fn find_ambiguous(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uu
 
 /// POST /settlements/payouts/{id}/not-sent. The owner checked the Toss dashboard and states that an ambiguous
 /// send never left. Taken only when Toss cannot be asked or does not list the send: when Toss knows the
-/// transfer, its answer settles the batch and this is refused. Marks the batch failed, which frees cancels and card changes. The key is kept,
-/// so a resend of a send Toss did take is answered with that transfer, not repeated.
+/// transfer, its answer settles the batch and this is refused. Marks the batch failed, which frees card changes. The key
+/// and reference are kept, so a resend of a send Toss did take is answered with that transfer, not repeated; for that
+/// the batch stays fixed (cancels wait) until Toss reports the transfer failed.
 pub async fn confirm_not_sent(
     AxState(s): AxState<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -695,6 +728,10 @@ pub async fn confirm_not_sent(
     }
     owner::burn_totp(&s, a.id, owner::client_ip(&s, Some(peer.ip()), &headers), step).await?;
     write(&mut tx, id, State::Failed, Some(OWNER_NOT_SENT)).await?;
+    sqlx::query("UPDATE payouts SET owner_not_sent_at = now() WHERE id = $1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
     audit(
         &mut *tx,
         "staff",
@@ -710,18 +747,22 @@ pub async fn confirm_not_sent(
 
 /// Takes a cancelled booking's pending settlements out of their batch. A batch nobody has sent is
 /// shrunk to what remains (deleted when nothing does), so its amount still matches its settlements.
-/// Refuses while such a batch may be at Toss. Call inside the cancel transaction before any refund:
+/// Refuses while such a batch may be at Toss, or after the owner's not-sent until Toss settles it (the kept key
+/// must replay the same body). Call inside the cancel transaction before any refund:
 /// the batch row lock here waits out a send in flight, so a refused cancel never moves money.
 pub(crate) async fn detach_booking(tx: &mut Transaction<'_, Postgres>, booking: Uuid) -> ApiResult<()> {
-    let batches: Vec<(Uuid, String, Option<String>)> = sqlx::query_as(
-        "SELECT p.id, p.state, p.failure_reason FROM payouts p
+    let batches: Vec<(Uuid, String, Option<String>, bool)> = sqlx::query_as(
+        "SELECT p.id, p.state, p.failure_reason, p.owner_not_sent_at IS NOT NULL FROM payouts p
          WHERE p.id IN (SELECT payout_id FROM settlements WHERE booking_id = $1 AND state = 'pending' AND payout_id IS NOT NULL)
          ORDER BY p.id FOR UPDATE",
     )
     .bind(booking)
     .fetch_all(&mut **tx)
     .await?;
-    if batches.iter().any(|(_, state, failure)| at_provider(state, failure.as_deref())) {
+    if batches
+        .iter()
+        .any(|(_, state, failure, not_sent)| *not_sent || at_provider(state, failure.as_deref()))
+    {
         return Err(ApiError::Conflict("settlement_in_transfer"));
     }
     sqlx::query("UPDATE settlements SET payout_id = NULL WHERE booking_id = $1 AND state = 'pending' AND payout_id IS NOT NULL")

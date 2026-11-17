@@ -686,7 +686,7 @@ async fn owner_not_sent_is_refused_when_toss_shows_the_transfer(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn owner_not_sent_while_toss_is_unreachable_fails_the_batch_and_unblocks_cancel(pool: PgPool) {
+async fn owner_not_sent_while_toss_is_unreachable_fails_the_batch_and_keeps_it_fixed(pool: PgPool) {
     let (id, settlement) = ambiguous_batch(&pool, 0).await;
     let (_, _, key_before) = payout_row(&pool, &id).await;
     let app = api::routes::router(toss_state(&pool, "http://127.0.0.1:9"));
@@ -713,8 +713,9 @@ async fn owner_not_sent_while_toss_is_unreachable_fails_the_batch_and_unblocks_c
     let (code, body) = not_sent(&app, &id, &token, Some(&totp)).await;
     assert_eq!(code, StatusCode::CONFLICT, "only once: {body}");
 
-    let (code, body) = call(&app, "POST", &cancel, Some(&token), Some(json!({}))).await;
-    assert_eq!(code, StatusCode::OK, "{body}");
+    // Toss may still hold the send under the kept key, so the batch keeps its amount until Toss settles it.
+    let (_, body) = call(&app, "POST", &cancel, Some(&token), Some(json!({}))).await;
+    assert_eq!(body["error"]["code"].as_str(), Some("settlement_in_transfer"), "{body}");
 }
 
 /// Toss mock: `GET /v2/payouts/{id}` answers that payout with `status`.
@@ -806,4 +807,234 @@ async fn an_ambiguous_send_keeps_its_ref_payout_id_through_the_owners_not_sent(p
         id,
         "no Toss answer: the reference stays, so a send Toss did take is never repeated"
     );
+}
+
+/// Toss mock with scripted answers. `POST /v2/payouts` answers `sends` in turn (the last one repeats) and keeps
+/// every decrypted body in `sent`; the lookups (`GET /v2/payouts` and `GET /v2/payouts/{id}`) answer `get`.
+struct TossMock {
+    base: String,
+    sent: std::sync::Arc<std::sync::Mutex<Vec<serde_json::Value>>>,
+}
+
+type Answer = (StatusCode, serde_json::Value);
+
+async fn start_toss_mock(sends: Vec<Answer>, get: Answer) -> TossMock {
+    let sent = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let log = std::sync::Arc::clone(&sent);
+    let key = api::providers::toss_jwe::key_bytes(SECURITY_HEX).expect("key");
+    let send = move |body: String| async move {
+        let mut log = log.lock().expect("log");
+        log.push(api::providers::toss_jwe::open(&key, &body).expect("encrypted body"));
+        let (status, answer) = sends[(log.len() - 1).min(sends.len() - 1)].clone();
+        (status, axum::Json(answer))
+    };
+    let lookup = move || async move { (get.0, axum::Json(get.1)) };
+    let router = axum::Router::new()
+        .route("/v2/payouts", axum::routing::post(send).get(lookup.clone()))
+        .route("/v2/payouts/{id}", axum::routing::get(lookup));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind toss mock");
+    let addr = listener.local_addr().expect("addr");
+    tokio::spawn(async move { axum::serve(listener, router).await.expect("mock serves") });
+    TossMock {
+        base: format!("http://{addr}"),
+        sent,
+    }
+}
+
+fn empty_list() -> Answer {
+    (
+        StatusCode::OK,
+        json!({ "entityType": "payout-list", "entityBody": { "hasMore": false, "items": [] } }),
+    )
+}
+
+/// The one transfer in a create body (Toss takes a list of up to 100).
+fn transfer_in(body: &serde_json::Value) -> &serde_json::Value {
+    body.get(0).unwrap_or(body)
+}
+
+async fn toss_meta(pool: &PgPool, id: &str) -> (Option<String>, Option<String>) {
+    sqlx::query_as("SELECT failure_reason, toss_ref FROM payouts WHERE id = $1::uuid")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .expect("row")
+}
+
+async fn set_brand(pool: &PgPool, name: &str) {
+    sqlx::query("INSERT INTO settings (key, value) VALUES ('business', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value")
+        .bind(json!({ "name": name }))
+        .execute(pool)
+        .await
+        .expect("brand");
+}
+
+async fn send_now(app: &axum::Router, token: &str, id: &str) -> (StatusCode, serde_json::Value) {
+    call(app, "POST", &format!("/v1/admin/settlements/payouts/{id}/send"), Some(token), Some(json!({}))).await
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_refused_resend_of_an_ambiguous_send_keeps_its_key_and_ref(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 0).await;
+    toss_seller(&pool).await;
+    let (_, _, key_before) = payout_row(&pool, &id).await;
+    // A 4xx on the re-send (a refPayoutId Toss already holds, a key it no longer replays) does not prove the first send failed.
+    let refused = (
+        StatusCode::BAD_REQUEST,
+        json!({ "code": "INVALID_REQUEST", "message": "이미 사용된 refPayoutId" }),
+    );
+    let toss = start_toss_mock(vec![refused], empty_list()).await;
+    let app = api::routes::router(toss_state(&pool, &toss.base));
+    let token = admin_token(&pool).await;
+
+    for _ in 0..2 {
+        let (code, body) = send_now(&app, &token, &id).await;
+        assert_eq!(
+            (code, body["error"]["code"].as_str()),
+            (StatusCode::CONFLICT, Some("payout_in_transfer")),
+            "{body}"
+        );
+    }
+    let (st, _, key) = payout_row(&pool, &id).await;
+    assert_eq!((st.as_str(), key), ("requested", key_before), "still open for the sync or the owner, same key");
+    let (failure, toss_ref) = toss_meta(&pool, &id).await;
+    assert_eq!(failure.as_deref(), Some("이미 사용된 refPayoutId"));
+    assert_eq!(toss_ref, None, "the reference is never rotated without an answer from Toss");
+    let refs: Vec<_> = toss.sent.lock().expect("log").iter().map(|b| transfer_in(b)["refPayoutId"].clone()).collect();
+    assert_eq!(
+        refs,
+        vec![json!(id), json!(id)],
+        "the same refPayoutId every time, so Toss can never take it twice"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_refused_first_send_fails_the_batch_with_a_new_key_and_ref(pool: PgPool) {
+    seed(&pool).await;
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app(pool.clone()), &token).await;
+    sqlx::query("UPDATE payouts SET provider = 'toss' WHERE id = $1::uuid")
+        .bind(&id)
+        .execute(&pool)
+        .await
+        .expect("toss");
+    toss_seller(&pool).await;
+    let (_, _, key_before) = payout_row(&pool, &id).await;
+    let toss = start_toss_mock(vec![(StatusCode::BAD_REQUEST, json!({ "message": "계좌 오류" }))], empty_list()).await;
+    let app = api::routes::router(toss_state(&pool, &toss.base));
+
+    let (code, body) = send_now(&app, &token, &id).await;
+    assert_eq!((code, body["state"].as_str()), (StatusCode::OK, Some("failed")), "{body}");
+    let (_, _, key) = payout_row(&pool, &id).await;
+    assert_ne!(key, key_before, "every earlier send had an answer, so this refusal is definite");
+    assert_eq!(toss_meta(&pool, &id).await.1, Some(format!("{id}-1")));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn after_the_owners_not_sent_the_batch_body_stays_fixed_until_a_send_settles_it(pool: PgPool) {
+    let (settlement, _) = seed(&pool).await;
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app(pool.clone()), &token).await;
+    sqlx::query("UPDATE payouts SET provider = 'toss' WHERE id = $1::uuid")
+        .bind(&id)
+        .execute(&pool)
+        .await
+        .expect("toss");
+    toss_seller(&pool).await;
+    set_brand(&pool, "가나청소").await;
+    let no_answer = (StatusCode::BAD_GATEWAY, json!({}));
+    let mismatch = (StatusCode::BAD_REQUEST, json!({ "message": "멱등키 요청 내용 불일치" }));
+    let toss = start_toss_mock(vec![no_answer, mismatch], empty_list()).await;
+    let app = api::routes::router(toss_state(&pool, &toss.base));
+    let (code, body) = send_now(&app, &token, &id).await;
+    assert_eq!(code, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+    let (_, _, key_before) = payout_row(&pool, &id).await;
+    let (owner_token, totp) = owner(&pool).await;
+    let (code, body) = not_sent(&app, &id, &owner_token, Some(&totp)).await;
+    assert_eq!((code, body["state"].as_str()), (StatusCode::OK, Some("failed")), "{body}");
+
+    // The owner may be wrong and Toss may hold the first send under the kept key: the batch must not shrink.
+    let booking = booking_of(&pool, settlement).await;
+    set_active(&pool, booking).await;
+    let (code, body) = call(
+        &app,
+        "POST",
+        &format!("/v1/admin/bookings/{booking}/cancel"),
+        Some(&owner_token),
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(
+        (code, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("settlement_in_transfer")),
+        "{body}"
+    );
+
+    set_brand(&pool, "다른이름").await;
+    assert_eq!(payout_action(&app, &token, &id, "retry").await, "requested");
+    let (code, body) = send_now(&app, &token, &id).await;
+    assert_eq!(
+        (code, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("payout_in_transfer")),
+        "a refused re-send after the owner's not-sent proves nothing: {body}"
+    );
+    let (st, _, key) = payout_row(&pool, &id).await;
+    assert_eq!((st.as_str(), key), ("requested", key_before));
+    assert_eq!(toss_meta(&pool, &id).await.1, None);
+    let sent = toss.sent.lock().expect("log").clone();
+    assert_eq!(sent.len(), 2);
+    assert_eq!(
+        transfer_in(&sent[1]),
+        transfer_in(&sent[0]),
+        "the same body under the same key, so Toss can replay it"
+    );
+    assert_eq!(transfer_in(&sent[0])["transactionDescription"], "가나청소 정산");
+
+    // Toss reports that exact transfer FAILED: settled, so the batch may change again.
+    let failed = json!({ "entityBody": { "hasMore": false, "items": [{ "id": "FPA_1", "refPayoutId": id, "status": "FAILED" }] } });
+    let later = start_toss_mock(vec![(StatusCode::BAD_GATEWAY, json!({}))], (StatusCode::OK, failed)).await;
+    api::payout_sync::sync_pass(&toss_state(&pool, &later.base)).await.expect("pass");
+    assert_eq!(payout_row(&pool, &id).await.0, "failed");
+    let (code, body) = call(
+        &app,
+        "POST",
+        &format!("/v1/admin/bookings/{booking}/cancel"),
+        Some(&owner_token),
+        Some(json!({})),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK, "{body}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_refused_list_lookup_is_unreachable_so_the_owners_not_sent_stays_open(pool: PgPool) {
+    let (id, _) = ambiguous_batch(&pool, 0).await;
+    let refused = (StatusCode::BAD_REQUEST, json!({ "code": "INVALID_REQUEST", "message": "잘못된 요청" }));
+    let toss = start_toss_mock(vec![(StatusCode::BAD_GATEWAY, json!({}))], refused).await;
+    let app = api::routes::router(toss_state(&pool, &toss.base));
+    let (token, totp) = owner(&pool).await;
+
+    let (code, body) = call(&app, "POST", &format!("/v1/admin/settlements/payouts/{id}/sync"), Some(&token), Some(json!({}))).await;
+    assert_eq!(
+        (code, body["error"]["code"].as_str()),
+        (StatusCode::SERVICE_UNAVAILABLE, Some("provider_unreachable")),
+        "{body}"
+    );
+    let (code, body) = not_sent(&app, &id, &token, Some(&totp)).await;
+    assert_eq!((code, body["state"].as_str()), (StatusCode::OK, Some("failed")), "{body}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_refused_status_lookup_leaves_a_sent_transfer_open(pool: PgPool) {
+    seed(&pool).await;
+    let token = admin_token(&pool).await;
+    let id = first_payout_id(&app(pool.clone()), &token).await;
+    make_toss(&pool, &id, "sent", Some("FPA_1"), None, 0).await;
+    let not_found = (StatusCode::NOT_FOUND, json!({ "code": "PAYOUT_NOT_FOUND" }));
+    let toss = start_toss_mock(vec![(StatusCode::BAD_GATEWAY, json!({}))], not_found).await;
+    let app = api::routes::router(toss_state(&pool, &toss.base));
+
+    let (code, body) = call(&app, "POST", &format!("/v1/admin/settlements/payouts/{id}/sync"), Some(&token), Some(json!({}))).await;
+    assert_eq!(code, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+    assert_eq!(payout_row(&pool, &id).await.0, "sent");
 }
