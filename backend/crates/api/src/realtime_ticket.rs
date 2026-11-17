@@ -5,7 +5,7 @@
 //! so the long-lived credential never appears in a URL (proxies and access logs record those).
 
 use crate::{
-    auth::{Auth, AuthEpoch, Role, new_refresh_token, sha256_hex, staff_epoch, verify_access_live},
+    auth::{Auth, AuthEpoch, Role, new_refresh_token, sha256_hex, verify_access_live_epoch},
     error::{ApiError, ApiResult},
     state::AppState,
 };
@@ -47,7 +47,8 @@ pub async fn consume_ticket(db: &PgPool, ticket: &str) -> ApiResult<Auth> {
 }
 
 /// Spends a ticket and returns its owner and session epoch. A staff ticket opens a socket only while the account
-/// is active and the session it was issued in is still current (no sign-out everywhere since).
+/// is active and the session it was issued in is still current (no sign-out everywhere since); any other ticket only
+/// while its owner still has a signed-in device.
 async fn redeem(db: &PgPool, ticket: &str) -> ApiResult<(Auth, i32)> {
     let row: Option<(Uuid, String, Option<i32>)> =
         sqlx::query_as("DELETE FROM realtime_tickets WHERE token_hash = $1 AND expires_at > now() RETURNING subject, role, epoch")
@@ -66,8 +67,19 @@ async fn redeem(db: &PgPool, ticket: &str) -> ApiResult<(Auth, i32)> {
         if !live {
             return Err(ApiError::Unauthorized);
         }
+    } else if !has_signed_in_device(db, id).await? {
+        return Err(ApiError::Unauthorized);
     }
     Ok((Auth { id, role }, epoch.unwrap_or(0)))
+}
+
+/// True while `subject` holds a live refresh token. Sign-out everywhere, account deletion, partner deletion and
+/// team-member removal revoke them all, which is how a customer, partner or member socket learns its session ended.
+pub async fn has_signed_in_device(db: &PgPool, subject: Uuid) -> sqlx::Result<bool> {
+    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM refresh_tokens WHERE subject = $1 AND revoked_at IS NULL AND rotated_at IS NULL AND expires_at > now())")
+        .bind(subject)
+        .fetch_one(db)
+        .await
 }
 
 /// Identity of a socket opening and its session epoch, from its ticket (or, deprecated, its access token).
@@ -77,8 +89,6 @@ pub async fn authenticate_socket(state: &AppState, q: &WsQuery) -> ApiResult<(Au
     }
     let token = q.token.as_deref().ok_or(ApiError::Unauthorized)?;
     tracing::warn!("realtime socket opened with the deprecated ?token= form; clients should send ?ticket=");
-    let auth = verify_access_live(&state.db, &state.config.jwt_keys(), token).await?;
-    // shortcut: this deprecated path reads the epoch after the token check; it goes with the `token` field.
-    let epoch = staff_epoch(&state.db, auth.id).await?.unwrap_or(0);
-    Ok((auth, epoch))
+    // The epoch the token was checked at, not a second read: a sign-out landing in between must still end it.
+    verify_access_live_epoch(&state.db, &state.config.jwt_keys(), token).await
 }

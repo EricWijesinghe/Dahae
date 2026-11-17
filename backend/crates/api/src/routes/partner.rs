@@ -277,6 +277,11 @@ async fn remove_member(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uu
     if r.rows_affected() == 0 {
         return Err(ApiError::NotFound);
     }
+    // Ends the member's sessions: refresh is refused and an open socket closes at its next check.
+    sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1 AND revoked_at IS NULL")
+        .bind(id)
+        .execute(&s.db)
+        .await?;
     sqlx::query(&format!(
         "UPDATE bookings SET assignee_id = (SELECT id FROM team_members WHERE pro_id = $2 AND role = 'owner') WHERE assignee_id = $1 AND status = {}",
         BookingStatus::TeamAssigned.as_i16()

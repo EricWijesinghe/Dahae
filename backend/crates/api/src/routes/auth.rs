@@ -6,7 +6,7 @@ use crate::{
     crypto,
     error::{ApiError, ApiResult},
     lockout,
-    ops_alerts::{OTP_GLOBAL_CEILING_PER_HOUR, OTP_MAX_PER_IP_PER_HOUR, OTP_MAX_PER_NETWORK_PER_HOUR},
+    ops_alerts::{OTP_GLOBAL_CEILING_PER_HOUR, OTP_MAX_PER_IP_PER_HOUR, OTP_MAX_PER_IPV4_NET_PER_HOUR, OTP_MAX_PER_IPV6_NET_PER_HOUR},
     privacy::{self, ConsentChange},
     providers::{
         apple,
@@ -74,25 +74,22 @@ struct OtpSent {
     dev_code: Option<String>,
 }
 
-/// A number someone signs in with already: customer, pro or team member.
-async fn has_account(db: &sqlx::PgPool, phone: &str) -> Result<bool, sqlx::Error> {
-    sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM users WHERE phone = $1 AND deleted_at IS NULL)
-             OR EXISTS (SELECT 1 FROM pros WHERE phone = $1 AND deleted_at IS NULL)
-             OR EXISTS (SELECT 1 FROM team_members WHERE phone = $1 AND invite_status <> 'removed')",
-    )
-    .bind(phone)
-    .fetch_one(db)
-    .await
-}
-
 /// Counts one code against the client's address and network; false once either hourly budget is spent.
 async fn otp_network_admit(s: &AppState, ip: IpAddr) -> Result<bool, sqlx::Error> {
     let ip = ip.to_canonical();
     let by_ip = ratelimit::window_hits(&s.db, &format!("{OTP_KEY_PREFIX}ip:{ip}"), OTP_WINDOW).await?;
     let net_key = format!("{OTP_KEY_PREFIX}net:{}", ratelimit::network_of(ip));
     let by_net = ratelimit::window_hits(&s.db, &net_key, OTP_WINDOW).await?;
-    Ok(i64::from(by_ip) <= OTP_MAX_PER_IP_PER_HOUR && i64::from(by_net) <= OTP_MAX_PER_NETWORK_PER_HOUR)
+    Ok(i64::from(by_ip) <= OTP_MAX_PER_IP_PER_HOUR && i64::from(by_net) <= network_cap(ip))
+}
+
+/// Hourly code budget of the client's network; `ip` is canonical, so an IPv4-mapped address counts as IPv4.
+fn network_cap(ip: IpAddr) -> i64 {
+    if ip.is_ipv4() {
+        OTP_MAX_PER_IPV4_NET_PER_HOUR
+    } else {
+        OTP_MAX_PER_IPV6_NET_PER_HOUR
+    }
 }
 
 async fn request_otp(
@@ -106,8 +103,8 @@ async fn request_otp(
         .bind(&phone)
         .fetch_one(&s.db)
         .await?;
-    // Global hard ceiling (10x the owner's alert level) bounds spend; past it numbers with an account still get a
-    // code, so a flood of new numbers cannot lock every customer out.
+    // Global hard ceiling (10x the owner's alert level) bounds all SMS spend. Past it every number gets the same
+    // refusal, account or not, so the answer never tells which numbers have one.
     let global: i64 = sqlx::query_scalar("SELECT count(*) FROM otp_codes WHERE created_at > now() - interval '1 hour'")
         .fetch_one(&s.db)
         .await?;
@@ -117,17 +114,14 @@ async fn request_otp(
             .bind(OTP_RESEND_COOLDOWN_SECS)
             .fetch_one(&s.db)
             .await?;
-    if recent >= OTP_MAX_PER_HOUR || cooling {
-        return Err(ApiError::RateLimited);
-    }
-    if global >= OTP_GLOBAL_CEILING_PER_HOUR && !has_account(&s.db, &phone).await? {
+    if recent >= OTP_MAX_PER_HOUR || cooling || global >= OTP_GLOBAL_CEILING_PER_HOUR {
         return Err(ApiError::RateLimited);
     }
     if !otp_network_admit(&s, lockout::ip_of(&s, peer, &headers)).await? {
         return Err(ApiError::RateLimited);
     }
     // Store-review demo number: the owner's fixed code, no SMS (reviewers are abroad).
-    let review = super::setup::review_code_hash(&s.db, &phone).await?;
+    let review = super::setup::review_code_for_request(&s.db, &phone).await?;
     let code = auth::otp_code();
     let code_hash = review.clone().unwrap_or_else(|| auth::otp_hash(s.config.otp_key(), &phone, &code));
     sqlx::query("INSERT INTO otp_codes (phone, code_hash, expires_at) VALUES ($1, $2, $3)")
@@ -207,7 +201,12 @@ async fn verify_otp(
     let keys = lockout::keys("otp", lockout::ip_of(&s, peer, &headers), &phone);
     s.lockout.delay(&keys).await?;
     s.lockout.check(&keys).await?;
-    match consume_otp(&s, &phone, &req.code).await {
+    // The store-review fixed code signs in only the review customer account, never a partner or member on that number.
+    let checked = match burn_code(&s, &phone, &req.code).await {
+        Ok(true) if req.audience != Audience::Customer => Err(ApiError::BadRequest("otp_invalid")),
+        other => other.map(|_| ()),
+    };
+    match checked {
         Ok(()) => s.lockout.success(&keys).await?,
         Err(e @ ApiError::BadRequest(_)) => {
             if s.lockout.failure(&keys).await? {
@@ -323,8 +322,17 @@ pub struct PhoneBind {
     pub code: String,
 }
 
-/// Checks a login code and burns it: attempts are counted before comparing, and a code works once.
+/// Checks a login code and burns it, for binding a phone: the store-review fixed code proves nothing about who holds the number.
 pub async fn consume_otp(s: &AppState, phone: &str, code: &str) -> ApiResult<()> {
+    if burn_code(s, phone, code).await? {
+        return Err(ApiError::BadRequest("otp_invalid"));
+    }
+    Ok(())
+}
+
+/// Checks a login code and burns it: attempts are counted before comparing, and a code works once.
+/// Returns whether it was the store-review fixed code.
+async fn burn_code(s: &AppState, phone: &str, code: &str) -> ApiResult<bool> {
     // Count the attempt *before* comparing, atomically: parallel guesses can't share one budget.
     let row: Option<String> = sqlx::query_scalar(
         "UPDATE otp_codes SET attempts = attempts + 1
@@ -354,8 +362,7 @@ pub async fn consume_otp(s: &AppState, phone: &str, code: &str) -> ApiResult<()>
     if consumed.rows_affected() == 0 {
         return Err(ApiError::BadRequest("otp_expired"));
     }
-
-    Ok(())
+    Ok(super::setup::is_review_code(&s.db, phone, &stored).await?)
 }
 
 #[derive(Deserialize)]
@@ -439,12 +446,19 @@ async fn logout(State(s): State<AppState>, Json(req): Json<RefreshRequest>) -> A
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 
-/// Signs out every device of the caller. Access tokens already issued last at most ACCESS_TTL_MIN.
+/// Signs out every device of the caller. Staff also move their session epoch, so their access tokens and socket
+/// tickets die at once; other roles' access tokens last at most ACCESS_TTL_MIN and their sockets close at the next check.
 async fn logout_all(State(s): State<AppState>, a: Auth) -> ApiResult<Json<serde_json::Value>> {
-    sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1 AND revoked_at IS NULL")
-        .bind(a.id)
-        .execute(&s.db)
-        .await?;
+    let mut tx = s.db.begin().await?;
+    if a.role.is_staff() {
+        crate::owner::end_sessions_tx(&mut tx, a.id).await?;
+    } else {
+        sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1 AND revoked_at IS NULL")
+            .bind(a.id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await?;
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 
@@ -747,4 +761,21 @@ async fn phone_missing(s: &AppState, id: Uuid, role: Role) -> ApiResult<bool> {
         .fetch_one(&s.db)
         .await?;
     Ok(missing)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn network_cap_leaves_room_for_carrier_nat_on_ipv4_only() {
+        let canonical = |s: &str| s.parse::<IpAddr>().expect("ip").to_canonical();
+        assert_eq!(network_cap(canonical("203.0.113.7")), OTP_MAX_PER_IPV4_NET_PER_HOUR);
+        assert_eq!(
+            network_cap(canonical("::ffff:203.0.113.7")),
+            OTP_MAX_PER_IPV4_NET_PER_HOUR,
+            "IPv4-mapped counts as IPv4"
+        );
+        assert_eq!(network_cap(canonical("2001:db8::1")), OTP_MAX_PER_IPV6_NET_PER_HOUR);
+    }
 }

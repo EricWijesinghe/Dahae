@@ -114,7 +114,7 @@ Sign-in by one-time code, social login and staff password. Rotating tokens.
 | POST | `/v1/auth/logout` | Revoke the session | bearer |  |
 | POST | `/v1/auth/staff/login` | Staff e-mail and password sign-in | none |  |
 | POST | `/v1/auth/social` | Sign in with Kakao, Naver, Google or Apple (Apple may add authorization_code for revocation on deletion) | none |  |
-| POST | `/v1/auth/logout-all` | Revoke every session of the signed-in account | bearer |  |
+| POST | `/v1/auth/logout-all` | Revoke every session of the signed-in account (staff access tokens end at once) | bearer |  |
 | POST | `/v1/auth/staff/mfa/enrol` | Start staff TOTP enrolment | bearer |  |
 | POST | `/v1/auth/staff/mfa/enrol/confirm` | Confirm staff TOTP enrolment with a code | bearer |  |
 | POST | `/v1/auth/staff/mfa/verify` | Second factor for a staff sign-in | bearer |  |
@@ -329,8 +329,8 @@ Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see 
 | GET | `/v1/admin/checkouts` | Checkouts, newest first (cursor-paginated, optional status filter) | bearer: staff | paged |
 | GET | `/v1/admin/setup` | Setup checklist and state | bearer: staff |  |
 | PUT | `/v1/admin/setup/business` | Business details | bearer: staff |  |
-| PUT | `/v1/admin/setup/review` | Store the app-review test account | bearer: staff |  |
-| DELETE | `/v1/admin/setup/review` | Remove the app-review test account | bearer: staff |  |
+| PUT | `/v1/admin/setup/review` | Store the app-review test account (owner only, `X-Owner-Totp`; 400 `totp_required` without the code, 409 `phone_in_use` when someone already holds the phone) | bearer: staff |  |
+| DELETE | `/v1/admin/setup/review` | Remove the app-review test account (owner only, `X-Owner-Totp`; 400 `totp_required` without the code) | bearer: staff |  |
 | PUT | `/v1/admin/setup/{section}` | Store a setup section | bearer: staff |  |
 | DELETE | `/v1/admin/setup/{section}` | Clear a setup section | bearer: staff |  |
 | POST | `/v1/admin/setup/{section}/test` | Test a provider connection for a section | bearer: staff |  |

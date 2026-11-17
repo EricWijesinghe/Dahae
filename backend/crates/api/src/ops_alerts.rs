@@ -48,13 +48,15 @@ pub const COOLDOWN_HOURS: i64 = 6;
 /// Hourly sign-in code sends (all numbers) that raise the owner's `otp_volume` alert. Nothing is refused at this level.
 pub const OTP_GLOBAL_WARN_PER_HOUR: i64 = 3_000;
 /// Hard stop on hourly sign-in code sends (all numbers): 10x the warn level, far above normal peaks, so spend is bounded.
-/// Past it only numbers that already have an account get a code.
+/// Past it no number gets a code, account or not, and every request gets the same refusal.
 pub const OTP_GLOBAL_CEILING_PER_HOUR: i64 = 10 * OTP_GLOBAL_WARN_PER_HOUR;
 /// Hourly sign-in codes from one client address (several customers can share one behind a carrier NAT).
 pub const OTP_MAX_PER_IP_PER_HOUR: i64 = 100;
-/// Hourly sign-in codes from one network (IPv4 /24, IPv6 /64), so a few addresses, or one IPv6 /64 with endless
-/// addresses, cannot spend the global ceiling.
-pub const OTP_MAX_PER_NETWORK_PER_HOUR: i64 = 300;
+/// Hourly sign-in codes from one IPv4 /24: carriers put many customers behind shared IPv4 (CGNAT), so this sits above
+/// a whole company's peak hour of sign-ins.
+pub const OTP_MAX_PER_IPV4_NET_PER_HOUR: i64 = 1_000;
+/// Hourly sign-in codes from one IPv6 /64 (one subscriber's prefix), so its endless addresses cannot spend the ceiling.
+pub const OTP_MAX_PER_IPV6_NET_PER_HOUR: i64 = 300;
 const PREFS_KEY: &str = "ops_alerts";
 const BUSINESS_KEY: &str = "business";
 const PASS_EVERY: StdDuration = StdDuration::from_secs(300);
@@ -272,8 +274,8 @@ pub async fn otp_volume(db: &PgPool) -> ApiResult<Vec<Finding>> {
     if sent >= OTP_GLOBAL_CEILING_PER_HOUR {
         return Ok(vec![Finding {
             rule: "otp_volume",
-            title: "인증 번호 발송이 상한에 닿아 새 가입을 막고 있어요",
-            body: "한 시간 동안 인증 번호가 상한만큼 나가서, 지금은 새로 가입하려는 번호에 인증 번호를 보내지 않고 막고 있어요. 이미 가입한 고객과 파트너는 계속 로그인할 수 있어요. 같은 IP나 번호에서 반복 요청이 없는지 확인하세요.",
+            title: "인증 번호 발송이 상한에 닿아 모든 로그인을 멈췄어요",
+            body: "한 시간 동안 인증 번호가 상한만큼 나가서, 지금은 가입한 고객과 파트너를 포함해 모든 번호에 인증 번호를 보내지 않아요. 한 시간이 지나 발송 수가 상한 아래로 내려가면 다시 보내요. 같은 IP나 번호에서 반복 요청이 없는지 확인하세요.",
         }]);
     }
     Ok(vec![Finding {

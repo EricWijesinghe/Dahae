@@ -477,7 +477,7 @@
             "$ref": "#/components/responses/Error"
           },
           "429": {
-            "description": "rate_limited: per number, per client address and network (IPv4 /24, IPv6 /64) per hour, or the global hourly ceiling for numbers without an account"
+            "description": "rate_limited: per number, per client address and network (IPv4 /24, IPv6 /64) per hour, or the global hourly ceiling; past the ceiling every number gets this answer, account or not, until the hour rolls over"
           }
         }
       }
@@ -3844,6 +3844,9 @@
           "200": {
             "description": "OK"
           },
+          "400": {
+            "description": "totp_required: the X-Owner-Totp header is missing; invalid_phone, invalid_code: not a Korean mobile number or not 6 digits"
+          },
           "default": {
             "$ref": "#/components/responses/Error"
           },
@@ -3851,7 +3854,7 @@
             "description": "owner only (is_owner)"
           },
           "409": {
-            "description": "phone_in_use: a customer, partner or staff member already holds this phone"
+            "description": "phone_in_use: a customer, partner, team member or staff member already holds this phone"
           }
         },
         "parameters": [
@@ -3875,6 +3878,9 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "400": {
+            "description": "totp_required: the X-Owner-Totp header is missing"
           },
           "403": {
             "description": "owner only (is_owner)"
@@ -4261,6 +4267,7 @@
           "auth"
         ],
         "summary": "Revoke every session of the signed-in account",
+        "description": "Revokes every refresh token. A staff session also moves its session epoch, so its access tokens and unspent socket tickets end at once. For other roles unspent tickets are refused, open sockets close within a minute, and access tokens last until expiry (at most 15 minutes).",
         "responses": {
           "200": {
             "description": "OK"

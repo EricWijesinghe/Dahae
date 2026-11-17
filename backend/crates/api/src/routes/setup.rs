@@ -202,10 +202,23 @@ async fn active_review(db: &PgPool) -> Result<Option<Value>, sqlx::Error> {
 /// Store-review demo login: one phone number whose sign-in code is fixed by the owner, so app
 /// reviewers abroad can log in without a Korean SMS. Returns the stored code hash while active.
 /// The code still goes through `otp_codes`, so the normal attempt and hourly limits apply.
-pub async fn review_code_hash(db: &PgPool, phone: &str) -> Result<Option<String>, sqlx::Error> {
+async fn review_code_hash(db: &PgPool, phone: &str) -> Result<Option<String>, sqlx::Error> {
     let Some(v) = active_review(db).await? else { return Ok(None) };
     let same = v["phone"].as_str() == Some(phone);
     Ok(same.then(|| v["code_hash"].as_str().map(String::from)).flatten())
+}
+
+/// The fixed code to store for a code request on `phone`: only while no pro, team member or staff member holds the
+/// number, so a person added on it later gets a real SMS code. No real customer can hold it while the review is on:
+/// a sign-up there lands on the review row, and binding the number needs a code it never gets (`consume_otp`).
+pub async fn review_code_for_request(db: &PgPool, phone: &str) -> Result<Option<String>, sqlx::Error> {
+    let Some(hash) = review_code_hash(db, phone).await? else { return Ok(None) };
+    Ok((!held_by_partner_or_staff(db, phone).await?).then_some(hash))
+}
+
+/// True when `stored` (a burnt code's hash) is the active fixed code of the review number.
+pub async fn is_review_code(db: &PgPool, phone: &str, stored: &str) -> Result<bool, sqlx::Error> {
+    Ok(review_code_hash(db, phone).await?.is_some_and(|h| h == stored))
 }
 
 /// Sample bookings for the review account, so reviewers see a history without paying. Two rows
@@ -274,14 +287,22 @@ struct ReviewAccount {
 async fn phone_in_use(db: &PgPool, phone: &str) -> Result<bool, sqlx::Error> {
     // shortcut: the seeded row is known by its name (no flag column), so a customer who renames themselves
     // '리뷰 계정' could be chosen; add a users flag if names become editable by staff.
+    let customer: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM users WHERE phone = $1 AND name IS DISTINCT FROM $2)")
+        .bind(phone)
+        .bind(REVIEW_NAME)
+        .fetch_one(db)
+        .await?;
+    Ok(customer || held_by_partner_or_staff(db, phone).await?)
+}
+
+/// True when a pro, team member or staff member holds `phone`.
+async fn held_by_partner_or_staff(db: &PgPool, phone: &str) -> Result<bool, sqlx::Error> {
     sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM users WHERE phone = $1 AND name IS DISTINCT FROM $2)
-             OR EXISTS (SELECT 1 FROM pros WHERE phone = $1)
+        "SELECT EXISTS (SELECT 1 FROM pros WHERE phone = $1)
              OR EXISTS (SELECT 1 FROM team_members WHERE phone = $1)
              OR EXISTS (SELECT 1 FROM staff WHERE phone = $1)",
     )
     .bind(phone)
-    .bind(REVIEW_NAME)
     .fetch_one(db)
     .await
 }

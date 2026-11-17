@@ -370,11 +370,11 @@ struct LiveSession {
 }
 
 impl LiveSession {
-    /// False once a staff session has ended (epoch moved on). Customers have no epoch and stay live.
+    /// False once the session has ended: staff by their epoch, other roles once no signed-in device is left.
     /// A failed lookup counts as ended: the socket fails closed.
     async fn still_current(&self) -> ApiResult<bool> {
         if !self.auth.role.is_staff() {
-            return Ok(true);
+            return Ok(crate::realtime_ticket::has_signed_in_device(&self.db, self.auth.id).await?);
         }
         Ok(staff_epoch(&self.db, self.auth.id).await?.is_none_or(|cur| cur == self.epoch))
     }
@@ -864,13 +864,27 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../../migrations")]
-    async fn customer_socket_is_never_closed_by_the_epoch(db: PgPool) {
+    async fn customer_socket_lives_as_long_as_a_signed_in_device(db: PgPool) {
         let id = Uuid::now_v7();
+        sqlx::query("INSERT INTO refresh_tokens (token_hash, subject, role, expires_at, family_id) VALUES ('h', $1, 'customer', now() + interval '1 day', $1)")
+            .bind(id)
+            .execute(&db)
+            .await
+            .expect("refresh token");
         let session = LiveSession {
             auth: Auth { id, role: Role::Customer },
             epoch: 0,
-            db,
+            db: db.clone(),
         };
         assert!(session.still_current().await.expect("check"));
+        sqlx::query("UPDATE refresh_tokens SET revoked_at = now() WHERE subject = $1")
+            .bind(id)
+            .execute(&db)
+            .await
+            .expect("revoke");
+        assert!(
+            !session.still_current().await.expect("check"),
+            "sign-out everywhere, deletion or removal closes the socket"
+        );
     }
 }
