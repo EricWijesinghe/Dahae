@@ -598,7 +598,7 @@ def check_site_csp(caddy):
         rel = page.relative_to(REPO).as_posix()
         if rel.startswith("website/pay/"):
             continue
-        for attrs, body in re.findall(r"<script([^>]*)>(.*?)</script>", page.read_text(encoding="utf-8"), re.S | re.I):
+        for attrs, body in re.findall(r"<script([^>]*)>(.*?)</script\s*>", page.read_text(encoding="utf-8"), re.S | re.I):
             if "src=" in attrs or "application/ld+json" in attrs:
                 continue
             digest = base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode()
