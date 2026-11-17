@@ -909,8 +909,11 @@ async fn payout_test(s: &AppState) -> ApiResult<Value> {
 async fn test_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Path<String>) -> ApiResult<Json<Value>> {
     let sec = section(&code)?;
     // The test takes no values: it probes with what is saved and records only its result, so a locked card
-    // runs it without an unlock. An open unlock window still belongs to the owner who opened it.
+    // runs it without an unlock, but only for the owner. An open unlock window belongs to the owner who opened it.
     let lock = integrations::lock_state(&s.db, sec).await?;
+    if lock == LockState::Locked && !owner::is_owner(&s.db, a.id).await? {
+        return Err(ApiError::Forbidden);
+    }
     require_unlocker(&s, a, lock).await?;
     let record = if sec == Section::Payout {
         payout_test(&s).await?
@@ -918,11 +921,16 @@ async fn test_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Pa
         let (ok, result) = probe(&s, sec).await;
         json!({ "ok": ok, "code": result, "at": Utc::now() })
     };
-    sqlx::query("UPDATE integration_settings SET last_test = $2 WHERE section = $1")
-        .bind(sec.code())
-        .bind(&record)
-        .execute(&s.db)
-        .await?;
+    // The saved payout pass is what opens Toss (`toss_ready`): a failed check, say a short Toss outage, must not
+    // replace it, or the loader would drop the saved Toss settings and stop the sync of open transfers. The
+    // failure is still answered and audited.
+    if sec != Section::Payout || record["ok"] == json!(true) {
+        sqlx::query("UPDATE integration_settings SET last_test = $2 WHERE section = $1")
+            .bind(sec.code())
+            .bind(&record)
+            .execute(&s.db)
+            .await?;
+    }
     audit(&s.db, a.role.as_str(), Some(a.id), "setup.test", sec.code(), record.clone()).await?;
     Ok(Json(record))
 }

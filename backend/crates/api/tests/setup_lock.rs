@@ -451,7 +451,7 @@ async fn connection_test_runs_on_a_locked_card_with_the_saved_values_only(db: Pg
     assert_eq!(body["code"], "unreachable");
     let (admin, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
     let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/backup/test", &admin, None, Value::Null).await;
-    assert_eq!(st, StatusCode::OK, "admins could test before, and still can: {body}");
+    assert_eq!(st, StatusCode::FORBIDDEN, "only the owner tests a locked card: {body}");
     assert_eq!(backup_row(&db).await, before, "no value, saver or lock changed");
 
     let (consultant, _) = staff_token(&db, api::auth::Role::StaffConsultant).await;
@@ -461,4 +461,38 @@ async fn connection_test_runs_on_a_locked_card_with_the_saved_values_only(db: Pg
     let (st, body) = common::call_owner(&app, "PUT", "/v1/admin/setup/backup", &token, None, backup("othersecret")).await;
     assert_eq!((st, body["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("card_locked")), "{body}");
     assert_eq!(backup_row(&db).await, before);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_failed_payout_test_keeps_the_saved_pass_and_the_toss_settings(db: PgPool) {
+    let app = common::app(db.clone());
+    let (token, owner) = enrolled_owner(&db).await;
+    let key = test_config().data_key;
+    let secret = "test_sk_fakefakefakefake";
+    let values = json!({ "mode": "toss", "secret_key": secret, "security_key": SECURITY_KEY });
+    let pass = json!({ "ok": true, "code": "sandbox_connected", "key_fp": api::integrations::key_fingerprint(&key, secret), "at": Utc::now() });
+    sqlx::query("INSERT INTO integration_settings (section, secret, updated_by, last_test) VALUES ('payout', $1, $2, $3)")
+        .bind(crypto::encrypt(&key, crypto::aad::INTEGRATION, &values.to_string()))
+        .bind(owner)
+        .bind(&pass)
+        .execute(&db)
+        .await
+        .expect("saved toss card");
+
+    // Toss cannot be reached from the test server: the check fails.
+    let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/payout/test", &token, None, Value::Null).await;
+    assert_eq!((st, body["ok"].as_bool()), (StatusCode::OK, Some(false)), "{body}");
+    let last: Value = sqlx::query_scalar("SELECT last_test FROM integration_settings WHERE section = 'payout'")
+        .fetch_one(&db)
+        .await
+        .expect("last test");
+    assert_eq!(last, pass, "a failed check never replaces the recorded pass");
+    assert!(
+        api::integrations::toss_ready(true, Some(&last), &key, secret),
+        "the saved Toss settings still load"
+    );
+
+    let (admin, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
+    let (st, body) = common::call_owner(&app, "POST", "/v1/admin/setup/payout/test", &admin, None, Value::Null).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "only the owner tests the locked payout card: {body}");
 }

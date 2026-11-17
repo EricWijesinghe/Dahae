@@ -3945,7 +3945,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Test a provider connection for a section",
+        "summary": "Test a provider connection for a section with its saved values (a locked card: owner only). A failed payout check keeps the last passing record",
         "parameters": [
           {
             "$ref": "#/components/parameters/Section"
@@ -3960,6 +3960,9 @@
           },
           "default": {
             "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "description": "a locked card is tested by the owner only; an open unlock window by the owner who opened it"
           }
         }
       }
