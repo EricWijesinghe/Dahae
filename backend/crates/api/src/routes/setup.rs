@@ -37,8 +37,8 @@ const SETUP_CODE_LEN: usize = 12;
 /// No 0/O/1/I/L: the code is read off a screen and typed by hand.
 const SETUP_ALPHABET: &[u8] = b"23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const SETUP_CODE_KEY: &str = "setup_code";
-/// The installer's setup code works for two hours after it is issued.
-const SETUP_CODE_TTL_SECS: i64 = 2 * 60 * 60;
+/// The installer's setup code works for seven days after it is issued: owners often finish DNS and payment signups later.
+const SETUP_CODE_TTL_SECS: i64 = 7 * 24 * 60 * 60;
 const BUSINESS_KEY: &str = "business";
 /// An owner unlock lets one save or clear through, then the card locks again.
 const UNLOCK_TTL_SECS: i64 = 5 * 60;

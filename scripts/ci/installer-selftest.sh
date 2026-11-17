@@ -396,11 +396,19 @@ rm -f "$SB/host/applied-key" "$SB/host/first-seen"
 nt "unreadable web manifest: no update"  has_updated "$(WEB_FAIL=1 auto_run)"
 t  "unreadable web manifest: exit 1 so the alert runs" eq "$(WEB_FAIL=1 auto_run >/dev/null; echo $?)" 1
 
-# setup code: shown in groups of four for 2 hours, then only --renew gives a new one
+# setup code: shown in groups of four for 7 days, then only --renew gives a new one
 printf 'SETUP_CODE=ABCDEFGHJKMN\nSETUP_CODE_AT=%s\n' "$(date +%s)" > "$SB/.env"
 t  "setup code shown in groups"          eq "$(setup_out)" ABCD-EFGH-JKMN
-printf 'SETUP_CODE=ABCDEFGHJKMN\nSETUP_CODE_AT=%s\n' "$(( $(date +%s) - 8000 ))" > "$SB/.env"
-nt "setup code expires after 2 hours"    setup_out
+printf 'SETUP_CODE=ABCDEFGHJKMN\nSETUP_CODE_AT=%s\n' "$(( $(date +%s) - 200000 ))" > "$SB/.env"
+t  "setup code still valid after 2 days" eq "$(setup_out)" ABCD-EFGH-JKMN
+printf 'SETUP_CODE=ABCDEFGHJKMN\nSETUP_CODE_AT=%s\n' "$(( $(date +%s) - 700000 ))" > "$SB/.env"
+nt "setup code expires after 7 days"     setup_out
+# a code the owner pastes from the install page (DAHAE_SETUP_CODE): 12 characters, no 0 O 1 I L
+t  "setup code from install page"        valid_setup_code ABCD2345678J
+nt "setup code with zero"                valid_setup_code 0BCD2345678J
+nt "setup code lowercase"                valid_setup_code abcd2345678j
+nt "setup code too short"                valid_setup_code ABCD2345678
+nt "setup code with dash"                valid_setup_code ABCD-2345678
 t  "renew gives a 12-character code"     eq "$(setup_out --renew | tail -n1 | tr -d '\n-' | wc -c | tr -d ' ')" 12
 
 # MALKKEUM_ANSWERS: only DOMAIN and EMAIL are read, values hold no spaces, environment values win
