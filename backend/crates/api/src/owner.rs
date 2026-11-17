@@ -155,8 +155,12 @@ pub async fn verify_totp(s: &AppState, staff: Uuid, code: &str, ip: IpAddr, requ
 }
 
 /// Ends every session of a staff member inside `tx`: the epoch moves on (access tokens stop at the next
-/// request) and every refresh token is revoked.
+/// request), every refresh token is revoked and unspent socket tickets are deleted.
 pub async fn end_sessions_tx(tx: &mut Transaction<'_, Postgres>, staff: Uuid) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM realtime_tickets WHERE subject = $1")
+        .bind(staff)
+        .execute(&mut **tx)
+        .await?;
     sqlx::query("UPDATE staff SET session_epoch = session_epoch + 1 WHERE id = $1")
         .bind(staff)
         .execute(&mut **tx)

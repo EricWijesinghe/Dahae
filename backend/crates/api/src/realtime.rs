@@ -347,9 +347,7 @@ fn matches(to: Recipient, id: Uuid, role: Role) -> bool {
 const SOCKET_LIFETIME: Duration = Duration::from_secs(crate::auth::ACCESS_TTL_MIN as u64 * 60);
 
 pub async fn ws_handler(State(state): State<AppState>, Query(q): Query<WsQuery>, ws: WebSocketUpgrade) -> ApiResult<Response> {
-    let auth = authenticate_socket(&state, &q).await?;
-    // shortcut: the epoch is read when the socket opens, not when its ticket was issued (30 s window), upgrade by storing it on the ticket.
-    let epoch = staff_epoch(&state.db, auth.id).await?.unwrap_or(0);
+    let (auth, epoch) = authenticate_socket(&state, &q).await?;
     let rx = state.hub.subscribe();
     let presence = auth.role.is_staff().then(|| state.hub.staff_join());
     let draining = state.hub.drain_signal();
