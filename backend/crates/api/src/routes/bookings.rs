@@ -381,10 +381,12 @@ async fn lock_status(conn: &mut PgConnection, id: Uuid) -> ApiResult<i16> {
 }
 
 /// Refunds every paid payment on a booking (full or a capped amount) and records it.
-/// Holds the booking lock, so it never overlaps a cancel of the same booking.
+/// Holds the booking lock, so it never overlaps a cancel of the same booking. Like a cancel, it first takes the job
+/// out of an unsent payout batch and is refused (`settlement_in_transfer`) while that batch may be at Toss.
 pub async fn refund_all(s: &AppState, booking: Uuid, max_amount: Option<i64>, actor: Actor<'_>) -> ApiResult<i64> {
     let mut tx = s.db.begin().await?;
     lock_status(&mut tx, booking).await?;
+    payouts::detach_booking(&mut tx, booking).await?;
     let refunds = refund_locked(s, &mut tx, booking, max_amount, actor).await?;
     tx.commit().await?;
     refunds.close_receipts(s).await;

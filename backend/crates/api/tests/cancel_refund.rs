@@ -568,6 +568,95 @@ async fn staff_case_refund_names_the_staff_member(pool: PgPool) {
     assert_eq!(payment_row(&pool, id).await.1, paid);
 }
 
+async fn case_for(db: &PgPool, booking: Uuid) -> Uuid {
+    sqlx::query_scalar(
+        "INSERT INTO cases (booking_id, kind, source, reporter_role, summary, sla_due_at) VALUES ($1, 'complaint', 'manual', 'system', 'refund', now()) RETURNING id",
+    )
+    .bind(booking)
+    .fetch_one(db)
+    .await
+    .expect("case")
+}
+
+/// A case refund on a job whose settlement may be at Toss is refused before PortOne is called, and the claim is
+/// released so staff can refund once Toss settles the batch. Both refusal states: sent, and the owner's not-sent.
+#[sqlx::test(migrations = "../../migrations")]
+async fn case_refund_is_refused_while_the_settlement_is_at_toss(pool: PgPool) {
+    let w = world(&pool, "010-7100-0008").await;
+    let (admin, _) = staff_token(&pool, Role::StaffAdmin).await;
+    let (id, _) = book(&w.prod, &w.c, 10, None).await;
+    let batch = toss_batch_for(&pool, id, "sent").await;
+    let case = case_for(&pool, id).await;
+    for setup in [
+        "UPDATE payouts SET provider_transfer_id = 'tp_sent' WHERE id = $1",
+        "UPDATE payouts SET state = 'failed', failure_reason = 'declined', owner_not_sent_at = now() WHERE id = $1",
+    ] {
+        sqlx::query(setup).bind(batch).execute(&pool).await.expect("batch state");
+        let (st, body) = call(
+            &w.prod,
+            "PUT",
+            &format!("/v1/admin/cases/{case}"),
+            Some(admin.as_str()),
+            Some(json!({ "refund_amount": 5000 })),
+        )
+        .await;
+        assert_eq!(
+            (st, body["error"]["code"].as_str()),
+            (StatusCode::CONFLICT, Some("settlement_in_transfer")),
+            "{setup}: {body}"
+        );
+        assert!(cancels(&w.gateway).is_empty(), "{setup}: no PortOne refund");
+        assert_eq!(payment_row(&pool, id).await.1, 0, "{setup}: nothing refunded");
+        let (amount, linked): (i64, Option<Uuid>) =
+            sqlx::query_as("SELECT p.amount, s.payout_id FROM settlements s JOIN payouts p ON p.id = $1 WHERE s.booking_id = $2")
+                .bind(batch)
+                .bind(id)
+                .fetch_one(&pool)
+                .await
+                .expect("batch");
+        assert_eq!((amount, linked), (80_000, Some(batch)), "{setup}: batch untouched");
+        let claim: Option<Value> = sqlx::query_scalar("SELECT outcome->'refund' FROM cases WHERE id = $1")
+            .bind(case)
+            .fetch_one(&pool)
+            .await
+            .expect("case");
+        assert_eq!(claim, None, "{setup}: the claim is released so a later refund can run");
+    }
+}
+
+/// A batch nobody has sent gives the job back before the refund, so staff can then hold its settlement.
+#[sqlx::test(migrations = "../../migrations")]
+async fn case_refund_takes_the_job_out_of_an_unsent_batch(pool: PgPool) {
+    let w = world(&pool, "010-7100-0009").await;
+    let (admin, _) = staff_token(&pool, Role::StaffAdmin).await;
+    let (id, _) = book(&w.prod, &w.c, 10, None).await;
+    let batch = toss_batch_for(&pool, id, "requested").await;
+    let case = case_for(&pool, id).await;
+
+    let (st, body) = call(
+        &w.prod,
+        "PUT",
+        &format!("/v1/admin/cases/{case}"),
+        Some(admin.as_str()),
+        Some(json!({ "refund_amount": 5000, "hold_settlement": true })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{body}");
+    assert_eq!(payment_row(&pool, id).await.1, 5000);
+    let (state, linked): (String, Option<Uuid>) = sqlx::query_as("SELECT state, payout_id FROM settlements WHERE booking_id = $1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .expect("settlement");
+    assert_eq!((state.as_str(), linked), ("held", None), "detached, then held");
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM payouts WHERE id = $1")
+        .bind(batch)
+        .fetch_one(&pool)
+        .await
+        .expect("batch");
+    assert_eq!(left, 0, "the emptied batch is gone");
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn failed_refund_audit_rolls_back_the_local_refund(pool: PgPool) {
     let w = world(&pool, "010-7100-0008").await;
