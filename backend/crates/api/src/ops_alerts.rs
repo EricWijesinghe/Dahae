@@ -248,7 +248,7 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
         out.push(Finding {
             rule: "backup_stale",
             title: "자동 백업이 기준 시간보다 오래 없어요",
-            body: "서버에서 malkkeum backup 을 실행하고, backups 폴더의 backup.log 를 확인하세요.",
+            body: "개발사에 백업 확인을 요청하세요. 외부 백업을 켜 두었다면 설정 > 외부 백업 (S3 호환)에서 연결 상태를 확인하세요.",
         });
     }
     out.extend(offsite_backup_findings(db).await?);

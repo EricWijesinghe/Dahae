@@ -253,6 +253,7 @@ S = {
   "chatTeam": ["상담팀", "Support team"],
   "chatHours": ["평일 09:00~18:00", "Weekdays 09:00~18:00"],
   "chatEmpty": ["궁금한 점이 있으면 언제든 물어보세요", "Questions? Ask us anytime"],
+  "chatAiNotice": ["AI 상담이 답변하면 입력한 대화 내용이 미국의 Anthropic, PBC로 전송돼요.", "When AI replies, the chat text you type is sent to Anthropic, PBC (USA)."],
   "chatNew": ["새 상담", "New chat"],
   "chatTopicTitle": ["무엇이 궁금하세요?", "What's it about?"],
   "topicOther": ["기타 문의", "Something else"],

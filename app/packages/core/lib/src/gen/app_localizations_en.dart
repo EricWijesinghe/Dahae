@@ -2230,6 +2230,10 @@ class TEn extends T {
   String get chatEmpty => 'Questions? Ask us anytime';
 
   @override
+  String get chatAiNotice =>
+      'When AI replies, the chat text you type is sent to Anthropic, PBC (USA).';
+
+  @override
   String get chatNew => 'New chat';
 
   @override
@@ -4516,7 +4520,7 @@ class TEn extends T {
 
   @override
   String get oActDb =>
-      'The database is unreachable. Run malkkeum logs on the server; restart it if this continues.';
+      'The database is unreachable. If this continues, ask your developer to check the server.';
 
   @override
   String get oActDisk =>
@@ -4524,11 +4528,11 @@ class TEn extends T {
 
   @override
   String get oActBackup =>
-      'The automatic backup is overdue. Run malkkeum backup on the server and check backups/backup.log.';
+      'The automatic backup is overdue. Ask your developer to check the backup. If offsite backup is on, check its connection under Setup > Offsite backup (S3-compatible).';
 
   @override
   String get oActErrors =>
-      'Many server errors. Check the error lines in malkkeum logs and send them to your developer if they repeat.';
+      'Many server errors. If they keep happening, send the error details to your developer.';
 
   @override
   String get oActPayments =>
@@ -5772,7 +5776,7 @@ class TEn extends T {
 
   @override
   String get oHeartbeatOff =>
-      'Not set: add MALKKEUM_HEARTBEAT_URL to install.sh.';
+      'Not set: ask your developer to connect the uptime heartbeat.';
 
   @override
   String get pvManage => 'Consent settings';
@@ -6197,7 +6201,7 @@ class TEn extends T {
       'The list could not be loaded. Please try again shortly.';
 
   @override
-  String get rnwName => 'Name (for example malkkeum.kr)';
+  String get rnwName => 'Name (for example myshop.co.kr)';
 
   @override
   String get rnwNameError => 'Enter a name of 1 to 80 characters.';
@@ -6937,7 +6941,7 @@ class TEn extends T {
 
   @override
   String get sgOverseasNote =>
-      'This consent is needed to sign up. Without it you cannot sign up. After signing up you can withdraw it in Consent settings, but then push notifications and the AI chat stop.';
+      'This consent is needed to sign up. Without it you cannot sign up. AI chat sends the sentences you type, with the chat context, to Anthropic, PBC (USA), which writes the AI replies. After signing up you can withdraw it in Consent settings, but then push notifications and the AI chat stop.';
 
   @override
   String get cStaffInvite => 'Invite staff';

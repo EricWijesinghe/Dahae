@@ -135,42 +135,60 @@ class _ChatListTabState extends State<ChatListTab> {
     final topic = await showAppSheet<String>(
       context,
       title: t.chatTopicTitle,
-      builder: (ctx) => GridView.count(
-        shrinkWrap: true,
-        crossAxisCount: 3,
-        padding: const EdgeInsets.fromLTRB(
-          Space.gutter,
-          0,
-          Space.gutter,
-          Space.gutter,
-        ),
-        childAspectRatio: 1.05,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (final (i, code) in _topics.indexed)
-            StaggerIn(
-              index: i,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(Radii.tile),
-                onTap: () => Navigator.of(ctx).pop(code),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    code == 'other'
-                        ? const CircleAvatar(
-                            radius: 26,
-                            child: Icon(Icons.more_horiz_rounded),
-                          )
-                        : ServiceGlyph(code, size: 52),
-                    const SizedBox(height: 6),
-                    Text(
-                      code == 'other' ? t.topicOther : t.serviceShort(code),
-                      style: ctx.text.labelMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+          GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 3,
+            padding: const EdgeInsets.fromLTRB(
+              Space.gutter,
+              0,
+              Space.gutter,
+              Space.gutter,
             ),
+            childAspectRatio: 1.05,
+            children: [
+              for (final (i, code) in _topics.indexed)
+                StaggerIn(
+                  index: i,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(Radii.tile),
+                    onTap: () => Navigator.of(ctx).pop(code),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        code == 'other'
+                            ? const CircleAvatar(
+                                radius: 26,
+                                child: Icon(Icons.more_horiz_rounded),
+                              )
+                            : ServiceGlyph(code, size: 52),
+                        const SizedBox(height: 6),
+                        Text(
+                          code == 'other' ? t.topicOther : t.serviceShort(code),
+                          style: ctx.text.labelMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Space.gutter,
+              0,
+              Space.gutter,
+              Space.gutter,
+            ),
+            child: Text(
+              t.chatAiNotice,
+              style: ctx.text.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ],
       ),
     );
