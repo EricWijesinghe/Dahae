@@ -13,6 +13,7 @@ Json _jobDetail({
   String id = 'job-1',
   int status = 1,
   bool committed = false,
+  Json? reschedule,
 }) => {
   'booking': {
     'id': id,
@@ -30,7 +31,7 @@ Json _jobDetail({
     'address': {'road_address': '서울특별시 강남구 테헤란로 1', 'detail': '101동'},
     'visit_notes': <String, dynamic>{},
     'answers': null,
-    'reschedule': null,
+    'reschedule': reschedule,
     'cancelled': false,
   },
   'committed': committed,
@@ -162,4 +163,49 @@ void main() {
       await unmount(tester);
     },
   );
+
+  for (final accept in [true, false]) {
+    testWidgets(
+      'answering a reschedule (accept: $accept) sends back the request the pro was shown',
+      (tester) async {
+        setViewport(tester, phoneSize);
+        final day = isoDay(DateTime.now().add(const Duration(days: 3)));
+        const requestedAt = '2026-11-17T01:02:03.456789Z';
+        final fake = FakeApi()
+          ..onGet(
+            '/partner/jobs/job-1',
+            (_) => _jobDetail(
+              status: 2,
+              committed: true,
+              reschedule: {
+                'from_date': day,
+                'from_hour': 9,
+                'to_date': day,
+                'to_hour': 14,
+                'requested_at': requestedAt,
+              },
+            ),
+          )
+          ..reply('POST', '/partner/jobs/job-1/reschedule', {'ok': true});
+        stockPartnerApi(fake);
+        final env = await TestEnv.create(fake: fake, role: 'partner');
+        await pumpPartnerScreen(
+          tester,
+          env,
+          const JobDetailScreen(id: 'job-1'),
+        );
+        final button = find.text(
+          accept ? koT.pRescheduleOk : koT.pRescheduleNo,
+        );
+        await pumpUntilFound(tester, button);
+        await tester.ensureVisible(button);
+        await tester.tap(button);
+        await settle(tester);
+
+        final sent = fake.lastCall('POST', '/partner/jobs/job-1/reschedule')!;
+        expect(sent.json, {'accept': accept, 'requested_at': requestedAt});
+        await unmount(tester);
+      },
+    );
+  }
 }
