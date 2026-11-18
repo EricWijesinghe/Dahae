@@ -201,6 +201,12 @@ async fn attempt_refund(s: &AppState, r: &QueuedRefund) -> Result<(), ProviderEr
     if r.attempts > 0 && real_gateway {
         match s.providers.payment(&r.provider, &r.tx_id, r.amount).await {
             Ok(info) if info.status == "CANCELLED" => return Ok(()),
+            // A saved-card charge Toss still does not know minutes later never happened (Toss answers within 60 s):
+            // nothing to refund. Stops before the try that would alert.
+            Err(ProviderError::NotFound) if r.provider == crate::providers::TOSS_BILLING && r.attempts + 1 >= REFUND_ALERT_AFTER => {
+                tracing::warn!(tx_id = %r.tx_id, "queued refund of a Toss charge that never happened; closing it");
+                return Ok(());
+            }
             Ok(_) | Err(ProviderError::NotFound) => {}
             Err(e) => return Err(e),
         }

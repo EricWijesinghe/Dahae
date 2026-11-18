@@ -36,6 +36,8 @@ struct PortOneMock {
     payments: HashMap<String, (i64, i64)>,
     cancels: Vec<String>,
     charges: Vec<String>,
+    /// The next charge answers 500: `Some(true)` after charging (answer lost), `Some(false)` without charging.
+    fail_next_charge: Option<bool>,
 }
 
 type PortOneShared = Arc<Mutex<PortOneMock>>;
@@ -61,12 +63,18 @@ async fn po_cancel(State(g): State<PortOneShared>, Path(id): Path<String>, Json(
     Json(json!({ "cancellation": { "status": "SUCCEEDED" } }))
 }
 
-async fn po_charge(State(g): State<PortOneShared>, Path(id): Path<String>, Json(b): Json<Value>) -> Json<Value> {
+async fn po_charge(State(g): State<PortOneShared>, Path(id): Path<String>, Json(b): Json<Value>) -> (StatusCode, Json<Value>) {
     let mut g = g.lock().expect("portone");
     g.charges.push(id.clone());
-    let total = b["amount"]["total"].as_i64().unwrap_or(0);
-    g.payments.insert(id, (total, 0));
-    Json(json!({ "payment": { "paidAt": "2026-11-18T00:00:00Z" } }))
+    let fail = g.fail_next_charge.take();
+    if fail != Some(false) {
+        let total = b["amount"]["total"].as_i64().unwrap_or(0);
+        g.payments.insert(id, (total, 0));
+    }
+    if fail.is_some() {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({})));
+    }
+    (StatusCode::OK, Json(json!({ "payment": { "paidAt": "2026-11-18T00:00:00Z" } })))
 }
 
 async fn po_list() -> Json<Value> {
@@ -237,12 +245,71 @@ async fn an_unclear_confirm_is_looked_up_before_it_fails(pool: PgPool) {
     let (st, out) = toss_confirm(&w, id, "pk_500", amount).await;
     assert_eq!((st, out["status"].as_str()), (StatusCode::OK, Some("paid")), "{out}");
 
+    // "Already done" answers to a re-POST (the first confirm captured, its fulfil died): looked up, never a decline.
+    for (status, code) in [
+        (400, "ALREADY_COMPLETED_PAYMENT"),
+        (400, "DUPLICATED_REQUEST"),
+        (403, "FORBIDDEN_CONSECUTIVE_REQUEST"),
+    ] {
+        let (id, amount, _) = checkout(&w, "card").await;
+        {
+            let mut f = w.toss.lock().expect("fake");
+            f.push("confirm", status, json!({ "code": code }));
+            f.paid(&id.to_string(), amount);
+        }
+        let (st, out) = toss_confirm(&w, id, "pk_again", amount).await;
+        assert_eq!((st, out["status"].as_str()), (StatusCode::OK, Some("paid")), "{code}: {out}");
+    }
+    // Already processed but the lookup still shows READY: unclear, not a decline the page would report.
+    let (id, amount, _) = checkout(&w, "card").await;
+    {
+        let mut f = w.toss.lock().expect("fake");
+        f.push("confirm", 400, json!({ "code": "ALREADY_PROCESSED_PAYMENT" }));
+        f.paid(&id.to_string(), amount);
+        f.orders.get_mut(&id.to_string()).expect("order")["status"] = json!("READY");
+    }
+    let (st, out) = toss_confirm(&w, id, "pk_ready", amount).await;
+    assert_eq!(st, StatusCode::SERVICE_UNAVAILABLE, "{out}");
+    assert_eq!(checkout_state(&pool, id).await.0, "pending");
+
     // A decline: nothing captured, the checkout stays open for another try.
     let (id, amount, _) = checkout(&w, "card").await;
     w.toss.lock().expect("fake").push("confirm", 403, json!({ "code": "REJECT_CARD_COMPANY" }));
     let (st, out) = toss_confirm(&w, id, "pk_no", amount).await;
     assert_eq!(st, StatusCode::PAYMENT_REQUIRED, "{out}");
     assert_eq!(checkout_state(&pool, id).await.0, "pending");
+}
+
+/// Windows: the customer may tap "done" before the success page captured. That is "not yet", never a decline.
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_early_app_confirm_is_pending_not_declined(pool: PgPool) {
+    let w = world(&pool, "010-7600-0016", true).await;
+    let (id, amount, _) = checkout(&w, "card").await;
+    let app_confirm = || async {
+        let body = json!({ "payment_id": id.to_string() });
+        call(&w.env.app, "POST", &format!("/v1/checkouts/{id}/confirm"), Some(w.c.token.as_str()), Some(body)).await
+    };
+    let (st, out) = app_confirm().await;
+    assert_eq!(
+        (st, out["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("payment_pending")),
+        "unknown order: {out}"
+    );
+    {
+        let mut f = w.toss.lock().expect("fake");
+        f.paid(&id.to_string(), amount);
+        f.orders.get_mut(&id.to_string()).expect("order")["status"] = json!("IN_PROGRESS");
+    }
+    let (st, out) = app_confirm().await;
+    assert_eq!(
+        (st, out["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("payment_pending")),
+        "authenticated: {out}"
+    );
+    assert_eq!(checkout_state(&pool, id).await.0, "pending");
+    w.toss.lock().expect("fake").orders.get_mut(&id.to_string()).expect("order")["status"] = json!("DONE");
+    let (st, out) = app_confirm().await;
+    assert_eq!((st, out["status"].as_str()), (StatusCode::OK, Some("paid")), "{out}");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -283,6 +350,25 @@ async fn virtual_account_waits_for_the_deposit_callback(pool: PgPool) {
     let callback = json!({ "createdAt": "2026-11-18T10:00:00.000000", "secret": "s", "status": "DONE", "transactionKey": "t1", "orderId": id.to_string() });
     assert_eq!(webhook(&w.env.app, &callback, None).await, StatusCode::OK);
     assert_eq!(checkout_state(&pool, id).await.0, "paid", "the re-read DONE settles it");
+
+    // 입금 오류: Toss moves DONE back to WAITING_FOR_DEPOSIT and calls again. The booking stays, staff hear of it once.
+    w.toss.lock().expect("fake").orders.get_mut(&id.to_string()).expect("order")["status"] = json!("WAITING_FOR_DEPOSIT");
+    let reversed =
+        json!({ "createdAt": "2026-11-18T11:00:00.000000", "secret": "s", "status": "WAITING_FOR_DEPOSIT", "transactionKey": "t2", "orderId": id.to_string() });
+    assert_eq!(webhook(&w.env.app, &reversed, None).await, StatusCode::OK);
+    assert_eq!(webhook(&w.env.app, &reversed, None).await, StatusCode::OK, "a repeat is harmless");
+    let booking = checkout_state(&pool, id).await.2.expect("booking");
+    let cases: i64 = sqlx::query_scalar("SELECT count(*) FROM cases WHERE booking_id = $1 AND kind = 'payment_dispute'")
+        .bind(booking)
+        .fetch_one(&pool)
+        .await
+        .expect("cases");
+    assert_eq!(cases, 1, "one case per order");
+    let alert: Option<String> = sqlx::query_scalar("SELECT last_error FROM ops_health WHERE integration = 'payment_stuck'")
+        .fetch_optional(&pool)
+        .await
+        .expect("health");
+    assert_eq!(alert.as_deref(), Some("deposit_reversed"));
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -576,6 +662,10 @@ async fn the_console_card_saves_with_the_owner_code_and_tests_both_mids(pool: Pg
     w.toss.lock().expect("fake").push("order", 401, json!({ "code": "UNAUTHORIZED_KEY" }));
     let (_, test) = call(app, "POST", "/v1/admin/setup/tosspayments/test", Some(owner.as_str()), None).await;
     assert_eq!(test["code"], "billing_invalid_key");
+    // Toss also answers a bad secret with 400 INVALID_API_KEY: a key to fix, not an outage.
+    w.toss.lock().expect("fake").push("order", 400, json!({ "code": "INVALID_API_KEY" }));
+    let (_, test) = call(app, "POST", "/v1/admin/setup/tosspayments/test", Some(owner.as_str()), None).await;
+    assert_eq!(test["code"], "invalid_key");
 
     let (st, overview) = call(app, "GET", "/v1/admin/setup", Some(owner.as_str()), None).await;
     assert_eq!(st, StatusCode::OK);
@@ -588,6 +678,14 @@ async fn the_console_card_saves_with_the_owner_code_and_tests_both_mids(pool: Pg
         .find(|c| c["code"] == "tosspayments")
         .cloned();
     assert_eq!(toss_card.expect("card")["mode"], "test");
+    assert_eq!(overview["payment_gateway_mode"], Value::Null, "PortOne is live");
+    set_toss(&w.env, toss::card(true)).await;
+    let (_, overview) = call(app, "GET", "/v1/admin/setup", Some(owner.as_str()), None).await;
+    assert_eq!(
+        (overview["payment_gateway"].as_str(), overview["payment_gateway_mode"].as_str()),
+        (Some("tosspayments"), Some("test")),
+        "live on test keys: the console warns"
+    );
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -712,4 +810,134 @@ async fn a_subscription_visit_charges_its_toss_card_and_retries_the_same_order(p
         .await
         .expect("payment");
     assert_eq!(provider, "tosspayments_billing");
+}
+
+/// Starts a weekly subscription on the customer's PortOne card whose first visit is tomorrow. Returns the visit id.
+async fn portone_subscription(w: &World) -> Uuid {
+    let tomorrow = (chrono::Utc::now() + chrono::Duration::hours(9)).date_naive() + chrono::Duration::days(1);
+    let weekday = chrono::Datelike::weekday(&tomorrow).num_days_from_monday();
+    let body = json!({ "service_code": "studio", "address_id": w.c.address, "payment_method_id": w.c.card,
+                       "cadence_weeks": 1, "weekday": weekday, "start_hour": 9 });
+    let (st, sub) = call(&w.env.app, "POST", "/v1/subscriptions", Some(w.c.token.as_str()), Some(body)).await;
+    assert_eq!(st, StatusCode::OK, "{sub}");
+    sqlx::query_scalar(
+        "SELECT v.id FROM subscription_visits v JOIN subscriptions s ON s.id = v.subscription_id WHERE s.user_id = $1 ORDER BY v.visit_date LIMIT 1",
+    )
+    .bind(w.c.user)
+    .fetch_one(&w.env.state.db)
+    .await
+    .expect("visit")
+}
+
+async fn move_subscription_to(w: &World, card: Uuid) {
+    sqlx::query("UPDATE subscriptions SET payment_method_id = $2 WHERE user_id = $1")
+        .bind(w.c.user)
+        .bind(card)
+        .execute(&w.env.state.db)
+        .await
+        .expect("card change");
+}
+
+/// A visit's charge id stays with the gateway it was sent to, even when the subscription moves to a Toss card.
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_open_subscription_charge_stays_on_its_gateway_after_a_card_change(pool: PgPool) {
+    let w = world(&pool, "010-7600-0017", true).await;
+    let (toss_card, _) = register_toss_card(&w).await;
+    portone_subscription(&w).await;
+    let pass = || api::routes::subscription_engine::pass(&w.env.state);
+
+    // PortOne charged, its answer was lost; then the card changes to Toss. The next pass asks PortOne and books.
+    w.portone.lock().expect("portone").fail_next_charge = Some(true);
+    assert_eq!(pass().await.expect("pass").booked, 0);
+    move_subscription_to(&w, toss_card).await;
+    assert_eq!(pass().await.expect("pass").booked, 1);
+    assert!(w.toss.lock().expect("fake").calls_of("charge").is_empty(), "never charged again at Toss");
+    let provider: String = sqlx::query_scalar("SELECT p.provider FROM payments p JOIN bookings b ON b.id = p.booking_id WHERE b.subscription_id IS NOT NULL")
+        .fetch_one(&pool)
+        .await
+        .expect("payment");
+    assert_eq!(provider, "portone");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_charge_unknown_to_its_old_gateway_is_retried_on_the_new_card_under_a_new_id(pool: PgPool) {
+    let w = world(&pool, "010-7600-0018", true).await;
+    let (toss_card, _) = register_toss_card(&w).await;
+    let visit = portone_subscription(&w).await;
+    let pass = || api::routes::subscription_engine::pass(&w.env.state);
+
+    // PortOne never saw the charge. After the card change the stored id is dropped, not sent to Toss.
+    w.portone.lock().expect("portone").fail_next_charge = Some(false);
+    assert_eq!(pass().await.expect("pass").booked, 0);
+    let sent = w.portone.lock().expect("portone").charges.clone();
+    move_subscription_to(&w, toss_card).await;
+    assert_eq!(pass().await.expect("pass").booked, 0);
+    assert!(w.toss.lock().expect("fake").calls_of("charge").is_empty());
+    assert_eq!(pass().await.expect("pass").booked, 1);
+    let charges = w.toss.lock().expect("fake").calls_of("charge");
+    assert_eq!(charges.len(), 1);
+    assert_ne!(charges[0].body["orderId"].as_str(), sent.first().map(String::as_str), "a fresh id");
+    assert!(charges[0].body["orderId"].as_str().expect("id").starts_with(&format!("subvisit-{visit}-")));
+}
+
+/// A queued Toss saved-card refund for a charge Toss never saw stops once Toss would long have answered.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_refund_of_a_charge_toss_never_made_stops_retrying(pool: PgPool) {
+    let w = world(&pool, "010-7600-0019", true).await;
+    let id = sqlx::query_scalar(
+        "INSERT INTO refund_queue (provider, tx_id, amount, cancellable, attempts, next_at)
+         VALUES ('tosspayments_billing', 'full-never', 5000, 5000, 2, now()) RETURNING id",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("row");
+    let row = |attempts| api::util::QueuedRefund {
+        id,
+        provider: "tosspayments_billing".into(),
+        tx_id: "full-never".into(),
+        amount: 5000,
+        cancellable: 5000,
+        attempts,
+        checkout_id: None,
+    };
+    // Earlier tries still retry: the charge may land late.
+    assert_eq!(api::util::retry_refund(&w.env.state, &row(1)).await, api::util::Refund::Pending);
+    assert_eq!(api::util::retry_refund(&w.env.state, &row(2)).await, api::util::Refund::Done);
+    assert!(w.toss.lock().expect("fake").calls_of("cancel").is_empty());
+    let alert: Option<String> = sqlx::query_scalar("SELECT last_error FROM ops_health WHERE integration = 'payment_stuck'")
+        .fetch_optional(&pool)
+        .await
+        .expect("health");
+    assert_eq!(alert, None, "no stuck-refund alert for a charge that never happened");
+}
+
+/// One gateway leg failing keeps the other legs' mismatches and leaves the day to be diffed again.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_failing_diff_leg_keeps_the_other_legs(pool: PgPool) {
+    let w = world(&pool, "010-7600-0020", true).await;
+    {
+        let mut f = w.toss.lock().expect("fake");
+        f.push("transactions", 500, json!({ "code": "FAILED_INTERNAL_SYSTEM_PROCESSING" }));
+        f.billing_transactions =
+            vec![json!({ "orderId": "full-ghost", "status": "DONE", "amount": 1000, "transactionAt": "2026-11-17T13:00:00+09:00", "transactionKey": "t9" })];
+    }
+    let run_at = chrono::NaiveDate::from_ymd_opt(2026, 11, 18)
+        .expect("day")
+        .and_hms_opt(0, 0, 0)
+        .expect("t")
+        .and_utc();
+    let found = checkout_recon::payment_diff_at(&w.env.state, run_at)
+        .await
+        .expect("the pass survives a failing leg");
+    assert_eq!(found, 1);
+    let codes: Vec<String> = sqlx::query_scalar("SELECT code FROM ops_failures WHERE integration = 'payment_mismatch' ORDER BY code")
+        .fetch_all(&pool)
+        .await
+        .expect("codes");
+    assert_eq!(codes, ["diff_leg_failed", "missing_locally"]);
+    let state: Value = sqlx::query_scalar("SELECT value FROM settings WHERE key = 'payment_diff'")
+        .fetch_one(&pool)
+        .await
+        .expect("state");
+    assert_eq!(state["done_day"], Value::Null, "the day is tried again");
 }

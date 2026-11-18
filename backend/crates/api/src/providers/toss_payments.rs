@@ -17,9 +17,11 @@ use reqwest::{RequestBuilder, StatusCode, Url, header::AUTHORIZATION};
 use serde_json::{Value, json};
 use std::{collections::HashMap, time::Duration};
 
-/// A billing charge may take up to 60 s at Toss. 45 s plus one 10 s lookup keeps `bookings::charge`, which runs inside
-/// a transaction, under the 60 s idle-in-transaction limit (db.rs).
-const CHARGE_TIMEOUT: Duration = Duration::from_secs(45);
+/// A billing charge may take up to 60 s at Toss, but `bookings::charge` runs inside the request, which is cut at 30 s
+/// (routes::REQUEST_TIMEOUT): a cut drops the lookup and the refund, and a charge landing then is never recorded.
+/// 15 s plus the 10 s lookup ends in time; a charge that lands later is refunded through the refund queue.
+const CHARGE_TIMEOUT: Duration = Duration::from_secs(15);
+const _: () = assert!(CHARGE_TIMEOUT.as_secs() + super::HTTP_TIMEOUT.as_secs() < crate::routes::REQUEST_TIMEOUT.as_secs());
 /// Toss's maximum page size for `/v1/transactions`.
 const TX_PAGE: usize = 5000;
 /// 20 pages of 5000 rows: hitting it fails the diff pass instead of diffing half a day.
@@ -65,8 +67,9 @@ fn url(segments: &[&str]) -> Result<Url, ProviderError> {
     Ok(u)
 }
 
+/// Without the URL: Toss puts the billingKey in the path, and this text reaches the logs.
 fn upstream(e: reqwest::Error) -> ProviderError {
-    ProviderError::Upstream(e.to_string())
+    ProviderError::Upstream(e.without_url().to_string())
 }
 
 /// Sends a request (re-pointed by `with_toss_api` in tests). The body is JSON or empty; anything else reads as null.
@@ -224,7 +227,8 @@ pub async fn confirm(p: &Providers, payment_key: &str, order_id: &str, amount: i
         .json(&json!({ "paymentKey": payment_key, "orderId": order_id, "amount": amount }));
     let err = match call(p, rb).await {
         Ok((s, v)) if s.is_success() => return Ok(info(&v)),
-        Ok((_, v)) if error_code(&v) == "ALREADY_PROCESSED_PAYMENT" => return payment(p, Mid::Window, order_id).await,
+        // "Already done" answers: an earlier confirm may have captured. Look it up like an unclear answer.
+        Ok((_, v)) if ALREADY_DONE.contains(&error_code(&v)) => ProviderError::Upstream(error_code(&v).into()),
         Ok((s, v)) => match classify(s, &v) {
             // NOT_FOUND_PAYMENT_SESSION and other 404s: the authentication is gone, nothing was captured.
             ProviderError::NotFound => ProviderError::Declined(nonempty(error_code(&v), "NOT_FOUND_PAYMENT_SESSION")),
@@ -240,6 +244,14 @@ pub async fn confirm(p: &Providers, payment_key: &str, order_id: &str, amount: i
         _ => Err(err),
     }
 }
+
+/// Confirm answers that mean a confirm of this order is done or still running, not that the payment was refused.
+const ALREADY_DONE: [&str; 4] = [
+    "ALREADY_PROCESSED_PAYMENT",
+    "ALREADY_COMPLETED_PAYMENT",
+    "DUPLICATED_REQUEST",
+    "FORBIDDEN_CONSECUTIVE_REQUEST",
+];
 
 fn nonempty(code: &str, fallback: &str) -> String {
     if code.is_empty() { fallback.into() } else { code.into() }
@@ -438,6 +450,18 @@ pub fn fold(rows: &[Value]) -> Result<Vec<ProviderPayment>, ProviderError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Toss puts the billingKey in the path, so a transport error must not carry the URL into logs.
+    #[tokio::test]
+    async fn transport_errors_never_carry_the_url() {
+        let err = reqwest::Client::new()
+            .get("http://127.0.0.1:1/v1/billing/bk_secret_value")
+            .send()
+            .await
+            .expect_err("nothing listens on port 1");
+        let ProviderError::Upstream(text) = upstream(err) else { panic!("upstream") };
+        assert!(!text.contains("bk_secret_value"), "{text}");
+    }
 
     #[test]
     fn auth_is_basic_of_the_secret_and_a_colon() {

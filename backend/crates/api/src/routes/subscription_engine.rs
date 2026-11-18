@@ -13,7 +13,7 @@ use super::{
 };
 use crate::{
     error::{ApiError, ApiResult},
-    providers::{Gateway, ProviderError, SavedCard},
+    providers::{ProviderError, SavedCard},
     realtime::{Recipient, notify},
     schedule::{clash, lock_schedule},
     state::AppState,
@@ -414,21 +414,23 @@ async fn charge_visit(s: &AppState, d: &Due) -> ApiResult<Attempt> {
         card: &card,
     };
     if price.total.0 == 0 {
-        return finalize(s, &c, None).await;
+        return finalize(s, &c, c.provider(), None).await;
     }
-    let (attempts, stored): (i32, Option<String>) = sqlx::query_as("SELECT charge_attempts, payment_ref FROM subscription_visits WHERE id = $1")
-        .bind(d.visit_id)
-        .fetch_one(&s.db)
-        .await?;
+    // A stored id stays on the gateway it was sent to (NULL: sent before Toss, so PortOne), whatever the card is now.
+    let (attempts, stored, sent_to): (i32, Option<String>, String) =
+        sqlx::query_as("SELECT charge_attempts, payment_ref, COALESCE(payment_provider, 'portone') FROM subscription_visits WHERE id = $1")
+            .bind(d.visit_id)
+            .fetch_one(&s.db)
+            .await?;
     let sent = stored.is_some();
     let pid = payment_ref_for(stored, d.visit_id, attempts);
     if sent {
-        return reconcile(s, &c, &pid).await;
+        return reconcile(s, &c, &pid, &sent_to).await;
     }
     if !seat_free(s, d).await? {
         return Ok(Attempt::Failed(Failure::Full));
     }
-    if !persist_ref(s, d.visit_id, &pid).await? {
+    if !persist_ref(s, d.visit_id, &pid, c.provider()).await? {
         return Ok(Attempt::Skipped);
     }
     charge_once(s, &c, &pid).await
@@ -453,36 +455,53 @@ async fn refunded_by_us(s: &AppState, provider: &str, pid: &str) -> ApiResult<bo
     )
 }
 
-/// Saves the payment id in its own commit before PortOne is called, so a timeout or crash leaves it to reconcile.
-async fn persist_ref(s: &AppState, visit: Uuid, pid: &str) -> ApiResult<bool> {
-    let n = sqlx::query("UPDATE subscription_visits SET payment_ref = $2, updated_at = now() WHERE id = $1 AND state = 'planned' AND payment_ref IS NULL")
-        .bind(visit)
-        .bind(pid)
-        .execute(&s.db)
-        .await?
-        .rows_affected();
+/// Saves the payment id and its gateway in its own commit before the gateway is called, so a timeout or crash leaves
+/// it to reconcile.
+async fn persist_ref(s: &AppState, visit: Uuid, pid: &str, provider: &str) -> ApiResult<bool> {
+    let n = sqlx::query(
+        "UPDATE subscription_visits SET payment_ref = $2, payment_provider = $3, updated_at = now()
+         WHERE id = $1 AND state = 'planned' AND payment_ref IS NULL",
+    )
+    .bind(visit)
+    .bind(pid)
+    .bind(provider)
+    .execute(&s.db)
+    .await?
+    .rows_affected();
     Ok(n == 1)
 }
 
-/// An earlier pass already sent `pid`: ask PortOne what happened instead of charging again.
-async fn reconcile(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attempt> {
+/// An earlier pass already sent `pid` to `sent_to`: ask that gateway what happened instead of charging again.
+async fn reconcile(s: &AppState, c: &Charge<'_>, pid: &str, sent_to: &str) -> ApiResult<Attempt> {
     let total = c.price.total.0;
-    match s.providers.payment(c.provider(), pid, total).await {
+    match s.providers.payment(sent_to, pid, total).await {
         Ok(info) => match verdict(&info.status, info.total, total) {
-            Verdict::Book => finalize(s, c, Some((pid, pid))).await,
+            Verdict::Book => finalize(s, c, sent_to, Some((pid, pid))).await,
             // Captured at another price: give the money back, then the next try charges today's price under a new id.
             Verdict::Refund(paid) => {
-                refund_or_alert(s, c.provider(), pid, paid).await;
+                refund_or_alert(s, sent_to, pid, paid).await;
                 Ok(Attempt::Failed(Failure::Repriced))
             }
-            Verdict::Declined(_) if info.status == "CANCELLED" && refunded_by_us(s, c.provider(), pid).await? => Ok(Attempt::Failed(Failure::Refunded)),
+            Verdict::Declined(_) if info.status == "CANCELLED" && refunded_by_us(s, sent_to, pid).await? => Ok(Attempt::Failed(Failure::Refunded)),
             Verdict::Declined(code) => Ok(Attempt::Failed(Failure::Declined(code))),
             Verdict::Open => {
                 tracing::warn!(status = %info.status, payment = pid, "subscription payment not settled; checked again next pass");
                 Ok(Attempt::Pending)
             }
         },
-        // PortOne has no record of this id, so nothing was charged and sending it again is safe once a seat is free.
+        // The card moved to another gateway: never send this id there. Drop it; the next pass charges a fresh one.
+        Err(ProviderError::NotFound) if sent_to != c.provider() => {
+            sqlx::query(
+                "UPDATE subscription_visits SET payment_ref = NULL, payment_provider = NULL, charge_attempts = charge_attempts + 1, updated_at = now()
+                 WHERE id = $1 AND payment_ref = $2",
+            )
+            .bind(c.d.visit_id)
+            .bind(pid)
+            .execute(&s.db)
+            .await?;
+            Ok(Attempt::Pending)
+        }
+        // The gateway has no record of this id, so nothing was charged and sending it again is safe once a seat is free.
         Err(ProviderError::NotFound) if !seat_free(s, c.d).await? => Ok(Attempt::Failed(Failure::Full)),
         Err(ProviderError::NotFound) => charge_once(s, c, pid).await,
         Err(e) => {
@@ -495,7 +514,7 @@ async fn reconcile(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attempt
 async fn charge_once(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attempt> {
     let r = s.providers.charge_billing(c.card, c.price.total.0, pid, "정기 청소", c.d.user_id).await;
     match settle(r) {
-        Settled::Paid(tx) => finalize(s, c, Some((pid, &tx))).await,
+        Settled::Paid(tx) => finalize(s, c, c.provider(), Some((pid, &tx))).await,
         Settled::Declined(code) => Ok(Attempt::Failed(Failure::Declined(code))),
         Settled::Unknown => {
             tracing::warn!(payment = pid, "subscription charge unconfirmed; checked again next pass");
@@ -504,16 +523,17 @@ async fn charge_once(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attem
     }
 }
 
-/// Books the visit once the money is settled. The charge already happened, so any outcome other than a booking refunds it.
-async fn finalize(s: &AppState, c: &Charge<'_>, paid: Option<(&str, &str)>) -> ApiResult<Attempt> {
-    let outcome = book_visit(s, c, paid).await;
+/// Books the visit once the money is settled at `provider`. The charge already happened, so any outcome other than a
+/// booking refunds it.
+async fn finalize(s: &AppState, c: &Charge<'_>, provider: &str, paid: Option<(&str, &str)>) -> ApiResult<Attempt> {
+    let outcome = book_visit(s, c, provider, paid).await;
     let Some((_, tx)) = paid else {
         return outcome;
     };
     if matches!(outcome, Ok(Attempt::Booked(_))) {
         return outcome;
     }
-    refund_or_alert(s, c.provider(), tx, c.price.total.0).await;
+    refund_or_alert(s, provider, tx, c.price.total.0).await;
     // The customer saw the charge, so a full slot now says the money comes back.
     match outcome {
         Ok(Attempt::Failed(Failure::Full)) => Ok(Attempt::Failed(Failure::FullRefunded)),
@@ -523,7 +543,7 @@ async fn finalize(s: &AppState, c: &Charge<'_>, paid: Option<(&str, &str)>) -> A
 
 /// One transaction: lock the subscription, take the slot, insert the paid booking and its payment, then commit.
 /// No row lock is held across the PortOne call; the lock is taken only after money has moved.
-async fn book_visit(s: &AppState, c: &Charge<'_>, paid: Option<(&str, &str)>) -> ApiResult<Attempt> {
+async fn book_visit(s: &AppState, c: &Charge<'_>, provider: &str, paid: Option<(&str, &str)>) -> ApiResult<Attempt> {
     let id = Uuid::now_v7();
     let mut tx = s.db.begin().await?;
     let live: Option<(String, String)> = sqlx::query_as(
@@ -543,7 +563,7 @@ async fn book_visit(s: &AppState, c: &Charge<'_>, paid: Option<(&str, &str)>) ->
     }
     let number = insert_paid(&mut tx, &s.config.data_key, id, c.d.user_id, c.prep, c.body, c.price).await?;
     if let Some((pid, tx_id)) = paid {
-        record_payment(&mut tx, id, c.price.total.0, "full", c.provider(), tx_id, pid).await?;
+        record_payment(&mut tx, id, c.price.total.0, "full", provider, tx_id, pid).await?;
     }
     commit_booking(tx, id, c.d, c.sub).await?;
     after_booking_created(s, id, &number).await;
@@ -571,7 +591,7 @@ async fn commit_booking(mut tx: sqlx::Transaction<'_, sqlx::Postgres>, id: Uuid,
             .await?;
         }
     }
-    sqlx::query("UPDATE subscription_visits SET state = 'booked', booking_id = $2, charge_attempts = charge_attempts + 1, retry_at = NULL, payment_ref = NULL, updated_at = now() WHERE id = $1")
+    sqlx::query("UPDATE subscription_visits SET state = 'booked', booking_id = $2, charge_attempts = charge_attempts + 1, retry_at = NULL, payment_ref = NULL, payment_provider = NULL, updated_at = now() WHERE id = $1")
         .bind(d.visit_id)
         .bind(id)
         .execute(&mut *tx)
@@ -617,7 +637,7 @@ async fn record_failure(s: &AppState, d: &Due, failure: &Failure, now: DateTime<
     };
     let lost = retry != Retry::Pause && due.is_none();
     sqlx::query(
-        "UPDATE subscription_visits SET charge_attempts = charge_attempts + 1, payment_ref = NULL, retry_at = $2,
+        "UPDATE subscription_visits SET charge_attempts = charge_attempts + 1, payment_ref = NULL, payment_provider = NULL, retry_at = $2,
            state = CASE WHEN $3 AND state = 'planned' THEN 'missed' ELSE state END, updated_at = now()
          WHERE id = $1",
     )
@@ -719,16 +739,15 @@ async fn expire(s: &AppState) -> ApiResult<usize> {
 /// Visits whose charge id is still stored and that will not be booked (day come, or skipped or cancelled meanwhile):
 /// PortOne is asked once per pass. A capture is refunded, a failure or an unknown id clears the id, an open answer waits.
 async fn settle_open_charges(s: &AppState) -> ApiResult<()> {
-    // The charge went to the gateway of the subscription's card (a deleted card keeps its gateway row).
+    // Asked where the charge was sent (NULL: before Toss, so PortOne), not where the card is now.
     let open: Vec<(Uuid, String, String)> = sqlx::query_as(&format!(
-        "SELECT v.id, v.payment_ref, COALESCE(pm.gateway, 'portone') FROM subscription_visits v
-         JOIN subscriptions s ON s.id = v.subscription_id LEFT JOIN payment_methods pm ON pm.id = s.payment_method_id
+        "SELECT v.id, v.payment_ref, COALESCE(v.payment_provider, 'portone') FROM subscription_visits v
          WHERE v.payment_ref IS NOT NULL AND v.state <> 'booked' AND (v.state <> 'planned' OR v.visit_date <= {KST_TODAY})"
     ))
     .fetch_all(&s.db)
     .await?;
-    for (visit, pid, gateway) in open {
-        let provider = Gateway::parse(&gateway).unwrap_or(Gateway::Portone).billing_provider();
+    for (visit, pid, provider) in open {
+        let provider = provider.as_str();
         // The visit does not store its price; the refund takes what the gateway says it captured.
         let clear = match s.providers.payment(provider, &pid, DEV_LOOKUP_TOTAL).await {
             Ok(info) => match verdict(&info.status, info.total, info.total) {
@@ -747,7 +766,7 @@ async fn settle_open_charges(s: &AppState) -> ApiResult<()> {
             }
         };
         if clear {
-            sqlx::query("UPDATE subscription_visits SET payment_ref = NULL, updated_at = now() WHERE id = $1 AND payment_ref = $2")
+            sqlx::query("UPDATE subscription_visits SET payment_ref = NULL, payment_provider = NULL, updated_at = now() WHERE id = $1 AND payment_ref = $2")
                 .bind(visit)
                 .bind(&pid)
                 .execute(&s.db)

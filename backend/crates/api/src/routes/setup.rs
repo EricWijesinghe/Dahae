@@ -666,6 +666,8 @@ async fn overview(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<
         "toss_webhook_url": format!("{}/v1/webhooks/toss", s.config.public_base_url.trim_end_matches('/')),
         "toss_payments_webhook_url": format!("{}/v1/webhooks/tosspayments", s.config.public_base_url.trim_end_matches('/')),
         "payment_gateway": s.providers.integ().gateway().code(),
+        // "test" while Toss takes payments on test keys: bookings get paid with no money behind them.
+        "payment_gateway_mode": s.providers.integ().toss_payments.as_ref().filter(|t| t.active).and_then(|t| integrations::toss_key_mode(&t.secret_key)),
     })))
 }
 
@@ -923,6 +925,8 @@ async fn probe(s: &AppState, sec: Section) -> (bool, &'static str) {
 async fn toss_payments_probe(s: &AppState, t: &integrations::TossPayments) -> (bool, &'static str) {
     let probe = |secret: String| async move {
         match toss_payments::check(&s.providers, &secret).await {
+            // Toss also answers a bad secret with 400 INVALID_API_KEY.
+            Ok(StatusCode::BAD_REQUEST) => (false, "invalid_key"),
             Ok(st) => check_result(st, &[StatusCode::NOT_FOUND]),
             Err(_) => (false, "unreachable"),
         }

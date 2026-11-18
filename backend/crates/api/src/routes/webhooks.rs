@@ -364,6 +364,9 @@ async fn handle_payment(s: &AppState, payment_id: &str, ask_portone: bool) -> Ap
         tracing::info!(payment_id, "payment event for an unknown checkout");
         return Ok(());
     };
+    if !ask_portone && ck.status == "paid" {
+        return deposit_reversed(s, &ck, payment_id).await;
+    }
     match settle(s, &ck, payment_id).await {
         Ok(_) => Ok(()),
         // Retry later: PortOne re-sends on a 5xx.
@@ -374,6 +377,50 @@ async fn handle_payment(s: &AppState, payment_id: &str, ask_portone: bool) -> Ap
             Ok(())
         }
     }
+}
+
+/// A paid Toss checkout called about again: 입금 오류 moves a virtual-account deposit from DONE back to
+/// WAITING_FOR_DEPOSIT. The booking stays (staff decide); one case per order, and the owner is alerted.
+async fn deposit_reversed(s: &AppState, ck: &CheckoutRow, order: &str) -> ApiResult<()> {
+    let info = match s.providers.payment(&ck.gateway, order, ck.charge()).await {
+        Ok(info) => info,
+        Err(ProviderError::NotFound) => return Ok(()),
+        Err(e) => return Err(e.into()),
+    };
+    if info.status != "VIRTUAL_ACCOUNT_ISSUED" {
+        return Ok(());
+    }
+    let summary = format!(
+        "The virtual-account deposit for order {order} was reversed at {TOSS_NAME} (deposit error): the booking is marked paid with no money behind it. Check the payment in the {TOSS_NAME} console and contact the customer."
+    );
+    let mut tx = s.db.begin().await?;
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1))")
+        .bind(format!("deposit_reversed:{order}"))
+        .execute(&mut *tx)
+        .await?;
+    let open: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM cases WHERE kind = 'payment_dispute' AND summary = $1)")
+        .bind(&summary)
+        .fetch_one(&mut *tx)
+        .await?;
+    if !open {
+        cases::insert(
+            &mut *tx,
+            NewCase {
+                booking: ck.result_booking_id,
+                kind: "payment_dispute",
+                source: "provider",
+                reporter: "system",
+                reporter_id: None,
+                summary: &summary,
+                photos: json!([]),
+            },
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    tracing::error!(checkout = %ck.id, order, "virtual-account deposit reversed after the booking was paid");
+    crate::ops::record(&s.db, "payment_stuck", Err("deposit_reversed")).await;
+    Ok(())
 }
 
 /// By checkout id or stored payment id first; then by the `checkoutId` the payment was created with.

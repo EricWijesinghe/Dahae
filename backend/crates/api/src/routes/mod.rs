@@ -75,7 +75,7 @@ use tower_http::{
 const BODY_LIMIT_BYTES: usize = 12 * 1024 * 1024;
 /// Anonymous error reports (4000-char stack, JSON-escaped) and analytics batches (50 events) fit well inside this.
 const INGEST_BODY_LIMIT: usize = 64 * 1024;
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+pub(crate) const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub fn router(state: AppState) -> Router {
     let origins: Vec<HeaderValue> = state.config.allowed_origins.iter().filter_map(|o| o.parse().ok()).collect();

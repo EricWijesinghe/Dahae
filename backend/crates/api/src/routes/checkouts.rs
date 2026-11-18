@@ -417,10 +417,17 @@ pub async fn settle(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResu
         return Ok(ConfirmResult::paid(ck.result_booking_id));
     }
     let lookup = dev_lookup(payment_id);
+    // An open Toss checkout may still be capturing on the success page (Windows: "done" tapped first): not yet,
+    // not a decline. The app keeps asking.
+    let capturing = ck.gateway == Gateway::TossPayments.code() && ck.status == "pending" && ck.expires_at > Utc::now();
     let info = s.providers.payment(&ck.gateway, lookup, ck.charge()).await.map_err(|e| match e {
+        ProviderError::NotFound if capturing => ApiError::Conflict("payment_pending"),
         ProviderError::NotFound => ApiError::BadRequest("payment_not_found"),
         other => other.into(),
     })?;
+    if capturing && info.status == "READY" {
+        return Err(ApiError::Conflict("payment_pending"));
+    }
     // Dev window: the method the customer picked is the one the payment is stored under.
     if let (Some(code), "pending") = (dev_method(lookup), ck.status.as_str()) {
         sqlx::query("UPDATE checkouts SET method = $2 WHERE id = $1 AND status = 'pending'")

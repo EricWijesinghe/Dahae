@@ -306,27 +306,45 @@ async fn local_payments(
 }
 
 /// One diff per configured gateway leg: PortOne, the Toss window MID (its checkouts and payments), and the Toss
-/// billing MID (saved-card charges only).
-async fn diff_day(s: &AppState, day: NaiveDate) -> ApiResult<Vec<Mismatch>> {
+/// billing MID (saved-card charges only). A failing leg is reported and keeps the others' mismatches; the bool says
+/// whether every leg ran.
+async fn diff_day(s: &AppState, day: NaiveDate) -> (Vec<Mismatch>, bool) {
     let (from, until) = diff_window(day);
     let integ = s.providers.integ();
     let mut found = Vec::new();
+    let mut complete = true;
+    let mut leg = |name: &'static str, result: ApiResult<Vec<Mismatch>>| match result {
+        Ok(m) => found.extend(m),
+        Err(e) => {
+            tracing::error!(%day, leg = name, error = %e, "payment diff leg failed; the day is tried again");
+            complete = false;
+        }
+    };
     if integ.portone.api_secret.is_some() {
-        let provider = fetch_provider_day(s, from, until).await?;
-        let local = local_payments(&s.db, from, until, &["portone"], Some(Gateway::Portone.code())).await?;
-        found.extend(diff_leg(day, "portone", &provider, &local));
+        let r = async {
+            let provider = fetch_provider_day(s, from, until).await?;
+            let local = local_payments(&s.db, from, until, &["portone"], Some(Gateway::Portone.code())).await?;
+            Ok(diff_leg(day, "portone", &provider, &local))
+        };
+        leg("portone", r.await);
     }
     if let Some(toss) = &integ.toss_payments {
-        let provider = fetch_toss_day(s, Mid::Window, from, until).await?;
-        let local = local_payments(&s.db, from, until, &[TOSS], Some(TOSS)).await?;
-        found.extend(diff_leg(day, TOSS, &provider, &local));
+        let r = async {
+            let provider = fetch_toss_day(s, Mid::Window, from, until).await?;
+            let local = local_payments(&s.db, from, until, &[TOSS], Some(TOSS)).await?;
+            Ok(diff_leg(day, TOSS, &provider, &local))
+        };
+        leg(TOSS, r.await);
         if toss.billing.is_some() {
-            let provider = fetch_toss_day(s, Mid::Billing, from, until).await?;
-            let local = local_payments(&s.db, from, until, &[TOSS_BILLING], None).await?;
-            found.extend(diff_leg(day, TOSS_BILLING, &provider, &local));
+            let r = async {
+                let provider = fetch_toss_day(s, Mid::Billing, from, until).await?;
+                let local = local_payments(&s.db, from, until, &[TOSS_BILLING], None).await?;
+                Ok(diff_leg(day, TOSS_BILLING, &provider, &local))
+            };
+            leg(TOSS_BILLING, r.await);
         }
     }
-    Ok(found)
+    (found, complete)
 }
 
 fn diff_leg(day: NaiveDate, leg: &str, provider: &[ProviderPayment], local: &[LocalPayment]) -> Vec<Mismatch> {
@@ -383,9 +401,15 @@ pub async fn payment_diff_at(s: &AppState, now: DateTime<Utc>) -> ApiResult<usiz
     }
     st.attempted_at = Some(now);
     save_diff_state(&s.db, &st).await?;
-    let found = diff_day(s, day).await?;
+    let (found, complete) = diff_day(s, day).await;
     for m in &found {
         ops::record_failure(&s.db, "payment_mismatch", m.code).await?;
+    }
+    if !complete {
+        // Counted like a mismatch, so the owner's alert sees a gateway the diff cannot read. A retry may record the
+        // other legs' mismatches again; the alert is a threshold.
+        ops::record_failure(&s.db, "payment_mismatch", "diff_leg_failed").await?;
+        return Ok(found.len());
     }
     st.done_day = Some(day);
     save_diff_state(&s.db, &st).await?;
