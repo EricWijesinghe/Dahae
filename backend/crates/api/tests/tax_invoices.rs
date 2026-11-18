@@ -291,7 +291,7 @@ async fn full_refund_before_settlement_link_cancels_the_pending_request(pool: Pg
     .await
     .expect("request");
     full_refund(&pool, booking).await;
-    api::routes::tax_invoices::on_settled(&pool, checkout, "tx-01070000304").await;
+    api::routes::tax_invoices::on_settled(&pool, checkout, "portone", "tx-01070000304").await;
     assert_eq!(request_state(&pool, request).await, "cancelled", "the refund ran before the link");
 }
 
@@ -311,7 +311,7 @@ async fn settlement_link_does_not_queue_a_payment_already_refunded(pool: PgPool)
     .fetch_one(&pool)
     .await
     .expect("request");
-    api::routes::tax_invoices::on_settled(&pool, checkout, "tx-01070000305").await;
+    api::routes::tax_invoices::on_settled(&pool, checkout, "portone", "tx-01070000305").await;
     assert_eq!(request_state(&pool, request).await, "cancelled", "never queued for the owner");
 }
 
