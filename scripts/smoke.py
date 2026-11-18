@@ -280,6 +280,8 @@ def social_flow(staff, visit):
     assert settled["status"] == "paid" and settled["booking_id"], settled
     step("card checkout settled by unsigned dev Transaction.Paid webhook (paymentId = checkout id); confirm is idempotent")
 
+    toss_leg(sc, body, visit)
+
     listed = call("GET", "/v1/admin/checkouts?status=paid", token=staff)
     assert any(c["id"] == card["id"] for c in listed), "paid checkout missing from console list"
     call("GET", "/v1/admin/checkouts", token=sc, expect=403)
@@ -302,6 +304,39 @@ def social_flow(staff, visit):
     step("social pro without a phone: accept -> 409 phone_required")
 
     quote_limit(visit)
+
+
+def toss_leg(sc, body, visit):
+    # Toss Payments checkouts on the dev gateway. Smoke has no owner code to save the Toss card, so the checkout
+    # is flipped to the Toss gateway in the database; everything after that goes through the Toss paths.
+    day = (date.fromisoformat(visit) + timedelta(days=2)).isoformat()
+
+    def toss_checkout(hour):
+        ck = call("POST", "/v1/checkouts", {"kind": "booking", "booking": {**body, "start_hour": hour, "visit_date": day}, "method": "card"}, sc)
+        sql(f"UPDATE checkouts SET gateway = 'tosspayments' WHERE id = '{ck['id']}'")
+        return ck
+
+    ck = toss_checkout(9)
+    confirm_path = f"/v1/checkouts/{ck['id']}/toss-confirm"
+    wrong = call("POST", confirm_path, {"payment_key": "dev:paid", "amount": ck["amount"] + 1}, expect=400)
+    assert wrong["error"]["code"] == "amount_mismatch", wrong
+    assert call("POST", confirm_path, {"payment_key": "dev:paid", "amount": ck["amount"]}) == {"status": "paid"}
+    assert call("POST", confirm_path, {"payment_key": "dev:paid", "amount": ck["amount"]}) == {"status": "paid"}
+    done = call("POST", f"/v1/checkouts/{ck['id']}/confirm", {"payment_id": ck["id"]}, sc)
+    assert done["status"] == "paid" and done["booking_id"], done
+    step("toss-confirm: wrong amount 400 amount_mismatch; paid, re-post paid; app confirm returns the booking")
+
+    hooked = toss_checkout(13)
+    status, _ = raw("POST", "/v1/webhooks/tosspayments", {"eventType": "PAYMENT_STATUS_CHANGED", "data": {"orderId": hooked["id"], "status": "DONE"}})
+    assert status == 200, status
+    settled = call("POST", f"/v1/checkouts/{hooked['id']}/confirm", {"payment_id": hooked["id"]}, sc)
+    assert settled["status"] == "paid" and settled["booking_id"], settled
+    step("toss checkout settled by an unsigned dev PAYMENT_STATUS_CHANGED webhook")
+
+    declined = toss_checkout(8)
+    path = f"/v1/checkouts/{declined['id']}/toss-confirm"
+    assert call("POST", path, {"payment_key": "dev:failed", "amount": declined["amount"]}, expect=402)["error"]["code"] == "payment_failed"
+    step("toss-confirm dev:failed -> 402 payment_failed")
 
 
 def quote_limit(visit):

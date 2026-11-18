@@ -86,6 +86,10 @@ async fn request(State(s): State<AppState>, Customer(a): Customer, Path(checkout
     if ck.status != "pending" && ck.status != "awaiting_deposit" {
         return Err(ApiError::Conflict("checkout_not_open"));
     }
+    // Toss issues the receipt in its own payment window and cancels it with the payment: nothing to request here.
+    if ck.gateway != "portone" {
+        return Err(ApiError::BadRequest("cash_receipt_method"));
+    }
     let method: String = sqlx::query_scalar("SELECT method FROM checkouts WHERE id = $1")
         .bind(checkout)
         .fetch_one(&s.db)

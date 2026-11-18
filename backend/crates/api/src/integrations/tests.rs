@@ -421,3 +421,87 @@ fn saving_portone_keeps_env_webhook_secret_and_channel_keys() {
     assert_eq!(out.portone.channel_keys.get("card").map(String::as_str), Some("channel-key-1"));
     assert_eq!(out.portone.channel_keys.get("identity").map(String::as_str), Some("channel-key-3"));
 }
+
+const HEX64: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+fn toss_card() -> Value {
+    json!({"client_key": "test_ck_w", "secret_key": "test_sk_w", "billing_client_key": "test_ck_b", "billing_secret_key": "test_sk_b", "security_key": HEX64, "active": true})
+}
+
+#[test]
+fn toss_payments_card_checks_prefixes_pairs_modes_and_the_switch() {
+    let base = Integrations::default();
+    let t = apply(&base, Section::TossPayments, &obj(toss_card())).unwrap().toss_payments.unwrap();
+    assert_eq!(t.billing, Some(("test_ck_b".into(), "test_sk_b".into())));
+    assert!(t.active);
+    let with = |field: &str, v: Value| {
+        let mut c = toss_card();
+        c[field] = v;
+        apply(&base, Section::TossPayments, &obj(c)).map(|i| i.toss_payments.unwrap())
+    };
+    assert_eq!(
+        with("client_key", json!("test_gck_widget")).unwrap_err(),
+        Invalid("invalid_client_key"),
+        "widget keys refused"
+    );
+    assert_eq!(with("secret_key", json!("test_gsk_widget")).unwrap_err(), Invalid("invalid_secret_key"));
+    assert_eq!(with("secret_key", json!("test_sk_")).unwrap_err(), Invalid("invalid_secret_key"));
+    assert_eq!(with("client_key", json!("test_ck_a b")).unwrap_err(), Invalid("invalid_client_key"));
+    assert_eq!(with("billing_client_key", json!("live_ck_b")).unwrap_err(), Invalid("key_mode_mismatch"));
+    assert_eq!(
+        with("billing_secret_key", Value::Null).unwrap_err(),
+        Invalid("missing_field"),
+        "both or neither"
+    );
+    assert_eq!(with("security_key", json!("abc")).unwrap_err(), Invalid("invalid_security_key"));
+    assert_eq!(with("active", json!("yes")).unwrap_err(), Invalid("invalid_toggle"));
+    assert_eq!(with("client_key", Value::Null).unwrap_err(), Invalid("missing_field"));
+    let mut bare = toss_card();
+    for k in ["billing_client_key", "billing_secret_key", "security_key", "active"] {
+        bare.as_object_mut().unwrap().remove(k);
+    }
+    let t = apply(&base, Section::TossPayments, &obj(bare)).unwrap().toss_payments.unwrap();
+    assert_eq!((t.billing, t.security_key, t.active), (None, None, false), "optional fields; off by default");
+    let live = json!({"client_key": "live_ck_w", "secret_key": "live_sk_w"});
+    assert!(apply(&base, Section::TossPayments, &obj(live)).is_ok());
+}
+
+#[test]
+fn gateway_is_toss_only_when_its_card_is_saved_and_on() {
+    let mut integ = Integrations::default();
+    assert_eq!(integ.gateway(), Gateway::Portone, "no card");
+    let mut off = toss_card();
+    off["active"] = json!(false);
+    integ = apply(&integ, Section::TossPayments, &obj(off)).unwrap();
+    assert_eq!(integ.gateway(), Gateway::Portone, "saved but off");
+    integ = apply(&integ, Section::TossPayments, &obj(toss_card())).unwrap();
+    assert_eq!(integ.gateway(), Gateway::TossPayments);
+    let mut bad = toss_card();
+    bad["secret_key"] = json!("nope");
+    assert!(
+        apply(&Integrations::default(), Section::TossPayments, &obj(bad)).is_err(),
+        "an invalid card is skipped by load: PortOne stays"
+    );
+    assert!(!toggle_default(&Integrations::default(), Section::TossPayments, "active"));
+}
+
+#[test]
+fn toss_payments_merge_keeps_secrets_and_preview_masks_them() {
+    let saved = obj(toss_card());
+    let merged = merge(
+        Section::TossPayments,
+        &saved,
+        &obj(json!({"secret_key": "", "billing_secret_key": "", "active": false})),
+    );
+    assert_eq!(merged["secret_key"], json!("test_sk_w"), "a blank secret keeps the saved one");
+    assert_eq!(merged["active"], json!(false));
+    let kinds: Vec<(&str, Kind)> = Section::TossPayments.fields().iter().map(|f| (f.name, f.kind)).collect();
+    for (name, kind) in kinds {
+        let shown = preview(kind, &saved[name]);
+        match name {
+            "client_key" | "billing_client_key" => assert_eq!(shown, saved[name], "client keys are public"),
+            "secret_key" | "billing_secret_key" | "security_key" => assert_eq!(shown, json!(MASK)),
+            _ => assert_eq!(shown, json!(true)),
+        }
+    }
+}

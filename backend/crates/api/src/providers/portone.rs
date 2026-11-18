@@ -37,7 +37,7 @@ pub async fn check(http: &reqwest::Client, secret: &str) -> Result<StatusCode, P
 }
 
 /// Ids are put into URL paths: only plain tokens, so no traversal or query injection.
-fn check_id(id: &str) -> Result<(), ProviderError> {
+pub(crate) fn check_id(id: &str) -> Result<(), ProviderError> {
     let ok = !id.is_empty() && id.len() <= 128 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
     if ok { Ok(()) } else { Err(ProviderError::NotFound) }
 }

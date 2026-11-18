@@ -181,7 +181,7 @@ async fn park_for_staff(s: &AppState, r: &QueuedRefund) {
             source: "provider",
             reporter: "system",
             reporter_id: None,
-            summary: "A refund was refused by PortOne because the payment balance changed (a cancel made outside the app). Check the payment in the PortOne console and refund the rest by hand.",
+            summary: "A refund was refused by the payment gateway because the payment balance changed (a cancel made outside the app). Check the payment in the payment gateway's console and refund the rest by hand.",
             photos: json!([]),
         },
     )
@@ -196,9 +196,10 @@ async fn attempt_refund(s: &AppState, r: &QueuedRefund) -> Result<(), ProviderEr
     if s.config.dev_mode && dev_refund_fails(&r.tx_id) {
         return Err(ProviderError::Upstream("dev refund failure".into()));
     }
-    // After an ambiguous failure PortOne may have cancelled it already. Queued refunds are full refunds.
-    if r.attempts > 0 && r.provider == "portone" {
-        match s.providers.payment(&r.tx_id, r.amount).await {
+    // After an ambiguous failure the gateway may have cancelled it already. Queued refunds are full refunds.
+    let real_gateway = matches!(r.provider.as_str(), "portone" | crate::providers::TOSS | crate::providers::TOSS_BILLING);
+    if r.attempts > 0 && real_gateway {
+        match s.providers.payment(&r.provider, &r.tx_id, r.amount).await {
             Ok(info) if info.status == "CANCELLED" => return Ok(()),
             Ok(_) | Err(ProviderError::NotFound) => {}
             Err(e) => return Err(e),

@@ -8,7 +8,6 @@ use crate::{
     address::{self, Invalid},
     auth::{Auth, Role},
     error::{ApiError, ApiResult},
-    providers::portone,
     ratelimit::UserLimiter,
     state::AppState,
 };
@@ -97,6 +96,6 @@ async fn features(State(s): State<AppState>) -> Json<Value> {
     let integ = s.providers.integ();
     Json(json!({
         "address_search": integ.juso_confm_key.is_some(),
-        "card_billing": portone::billing_ready(&integ.portone),
+        "card_billing": s.providers.billing_ready(),
     }))
 }

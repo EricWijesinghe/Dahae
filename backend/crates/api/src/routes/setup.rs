@@ -14,7 +14,7 @@ use crate::{
     error::{ApiError, ApiResult},
     integrations::{self, Invalid, Kind, LockState, Section},
     owner,
-    providers::{fcm, portone, sms},
+    providers::{fcm, portone, sms, toss_payments},
     state::AppState,
 };
 use axum::{
@@ -596,11 +596,11 @@ async fn card(s: &AppState, sec: Section, last_test: Option<Value>) -> ApiResult
     } else {
         "none"
     };
-    // Toss payouts only: the key prefix says whether the saved key moves test or real money. PortOne ids carry no mode.
+    // Toss cards only: the key prefix says whether the saved key moves test or real money. PortOne ids carry no mode.
     let mode = saved
         .get("secret_key")
         .and_then(Value::as_str)
-        .filter(|_| sec == Section::Payout)
+        .filter(|_| matches!(sec, Section::Payout | Section::TossPayments))
         .and_then(integrations::toss_key_mode);
     Ok(
         json!({ "code": sec.code(), "source": source, "configured": source != "none", "mode": mode, "fields": fields, "last_test": last_test, "locked": lock == LockState::Locked, "unlock_expires_at": unlock_expires(lock) }),
@@ -664,6 +664,8 @@ async fn overview(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<
         "public_base_url": s.config.public_base_url,
         "webhook_url": format!("{}/v1/webhooks/portone", s.config.public_base_url.trim_end_matches('/')),
         "toss_webhook_url": format!("{}/v1/webhooks/toss", s.config.public_base_url.trim_end_matches('/')),
+        "toss_payments_webhook_url": format!("{}/v1/webhooks/tosspayments", s.config.public_base_url.trim_end_matches('/')),
+        "payment_gateway": s.providers.integ().gateway().code(),
     })))
 }
 
@@ -699,7 +701,7 @@ async fn put_section(
     // money goes, and Toss payouts move real money. An unlock already checked it. The code is checked now and
     // spent only once the values validate, so a typo does not cost a code.
     let money_card = match sec {
-        Section::Portone => true,
+        Section::Portone | Section::TossPayments => true,
         Section::Payout => is_toss(&merged),
         _ => false,
     };
@@ -731,7 +733,8 @@ async fn put_section(
         Some(a.id),
         "setup.integration",
         sec.code(),
-        json!({ "fields": merged.keys().collect::<Vec<_>>() }),
+        // The live gateway is on record with every save, so each switch is audited.
+        json!({ "fields": merged.keys().collect::<Vec<_>>(), "gateway": s.providers.integ().gateway().code() }),
     )
     .await?;
     Ok(Json(card(&s, sec, None).await?))
@@ -871,6 +874,10 @@ async fn probe(s: &AppState, sec: Section) -> (bool, &'static str) {
                 Err(_) => (false, "unreachable"),
             },
         },
+        Section::TossPayments => match integ.toss_payments.as_ref() {
+            None => (false, "not_configured"),
+            Some(t) => toss_payments_probe(s, t).await,
+        },
         Section::Solapi => match integ.solapi.as_ref() {
             None => (false, "not_configured"),
             Some(cfg) => match sms::check(http, cfg).await {
@@ -909,6 +916,24 @@ async fn probe(s: &AppState, sec: Section) -> (bool, &'static str) {
         // Login keys can only be proven by a real sign-in from the app.
         _ if integ.has(sec) => (true, "saved_check_in_app"),
         _ => (false, "not_configured"),
+    }
+}
+
+/// Checks the window MID's secret, then the billing MID's when one is set. 404 on an order that cannot exist = accepted.
+async fn toss_payments_probe(s: &AppState, t: &integrations::TossPayments) -> (bool, &'static str) {
+    let probe = |secret: String| async move {
+        match toss_payments::check(&s.providers, &secret).await {
+            Ok(st) => check_result(st, &[StatusCode::NOT_FOUND]),
+            Err(_) => (false, "unreachable"),
+        }
+    };
+    let window = probe(t.secret_key.clone()).await;
+    match &t.billing {
+        Some((_, sk)) if window.0 => match probe(sk.clone()).await {
+            (false, "invalid_key") => (false, "billing_invalid_key"),
+            other => other,
+        },
+        _ => window,
     }
 }
 

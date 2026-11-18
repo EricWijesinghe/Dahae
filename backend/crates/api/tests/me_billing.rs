@@ -10,7 +10,7 @@ mod common;
 use api::{
     billing_keys, build_state,
     crypto::{billing_key_digest, open_billing_key, seal_billing_key},
-    providers::{FAKE_DECLINE_KEY, ProviderError},
+    providers::{FAKE_DECLINE_KEY, Gateway, ProviderError, SavedCard},
 };
 use axum::http::StatusCode;
 use common::{app, call, customer, prod_app, seed_catalog, test_config};
@@ -63,15 +63,20 @@ async fn charge_opens_the_stored_key_before_the_gateway_check(pool: PgPool) {
     let state = build_state(pool.clone(), test_config()).expect("state");
     let key = test_config().data_key;
     let user = Uuid::now_v7();
+    let card = |sealed: &str| SavedCard {
+        gateway: Gateway::Portone,
+        sealed_key: sealed.to_string(),
+        customer_key: None,
+    };
     let (declined, _) = seal_billing_key(&key, FAKE_DECLINE_KEY);
     assert!(matches!(
-        state.providers.charge_billing(&declined, 1000, "pid-decline", "order", user).await,
+        state.providers.charge_billing(&card(&declined), 1000, "pid-decline", "order", user).await,
         Err(ProviderError::Declined(ref m)) if m == "card_declined"
     ));
     let (ok, _) = seal_billing_key(&key, "bk_live_ok");
-    assert!(state.providers.charge_billing(&ok, 1000, "pid-ok", "order", user).await.is_ok());
+    assert!(state.providers.charge_billing(&card(&ok), 1000, "pid-ok", "order", user).await.is_ok());
     assert!(matches!(
-        state.providers.charge_billing("bk_plaintext", 1000, "pid-plain", "order", user).await,
+        state.providers.charge_billing(&card("bk_plaintext"), 1000, "pid-plain", "order", user).await,
         Err(ProviderError::Declined(ref m)) if m == "billing_key_unreadable"
     ));
 }

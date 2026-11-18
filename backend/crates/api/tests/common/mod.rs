@@ -133,6 +133,55 @@ pub fn prod_app(db: PgPool, portone_api: &str) -> Router {
 /// API secret `prod_app` sends to the PortOne mock.
 pub const PORTONE_SECRET: &str = "test-portone-secret";
 
+pub mod toss;
+
+/// A production-mode app and the state behind it, so a test can change the saved Toss card and reload.
+pub struct TossEnv {
+    pub app: Router,
+    pub state: api::state::AppState,
+}
+
+/// Production mode with PortOne (secret, store, card and billing channels) at `portone_api` and the Toss card
+/// (both MIDs and the 보안 키) at `toss_api`, switched on when `active`. The card is stored like a console save,
+/// so `setup::reload` keeps it.
+pub async fn prod_app_toss(db: PgPool, toss_api: &str, portone_api: &str, active: bool) -> TossEnv {
+    let mut cfg = test_config();
+    cfg.dev_mode = false;
+    cfg.portone = PortOne {
+        api_secret: Some(PORTONE_SECRET.into()),
+        store_id: Some("store-test".into()),
+        channel_keys: [("card", "channel-key-card"), ("card_billing", "channel-key-billing")]
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect(),
+        cash_receipts: true,
+        ..PortOne::default()
+    };
+    let mut state = build_state(db.clone(), cfg.clone()).expect("http client");
+    let providers = Providers::new(cfg, db)
+        .expect("http client")
+        .with_portone_api(portone_api)
+        .with_toss_api(toss_api);
+    state.providers = Arc::new(providers);
+    let env = TossEnv {
+        app: routes::router(state.clone()),
+        state,
+    };
+    set_toss(&env, toss::card(active)).await;
+    env
+}
+
+/// Saves the Toss card values (encrypted, as the console stores them) and reloads the live keys.
+pub async fn set_toss(env: &TossEnv, values: serde_json::Map<String, Value>) {
+    let enc = crypto::encrypt(&env.state.config.data_key, crypto::aad::INTEGRATION, &Value::Object(values).to_string());
+    sqlx::query("INSERT INTO integration_settings (section, secret) VALUES ('tosspayments', $1) ON CONFLICT (section) DO UPDATE SET secret = EXCLUDED.secret")
+        .bind(enc)
+        .execute(&env.state.db)
+        .await
+        .expect("toss card");
+    routes::setup::reload(&env.state).await.expect("reload");
+}
+
 /// A live staff row plus a token for it. Returns (token, staff id).
 pub async fn staff_token(db: &PgPool, role: Role) -> (String, Uuid) {
     let id = Uuid::now_v7();

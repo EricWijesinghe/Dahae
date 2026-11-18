@@ -199,18 +199,18 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
             body: "설정 > 앱 알림(Firebase) 키 파일을 확인하고 연결 테스트를 해 주세요.",
         });
     }
-    if count(db, &["portone", "portone_webhook"], PAYMENT_WINDOW_MIN).await? >= PAYMENT_FAILURES {
+    if count(db, &["portone", "portone_webhook", "tosspayments", "tosspayments_webhook"], PAYMENT_WINDOW_MIN).await? >= PAYMENT_FAILURES {
         out.push(Finding {
             rule: "payment_failing",
             title: "결제 연동에 문제가 생겼어요",
-            body: "설정 > 결제(PortOne)의 키와 웹훅 시크릿을 확인하세요. 고객 결제가 실패할 수 있어요.",
+            body: "설정 > 결제(PortOne/토스페이먼츠)의 키와 웹훅 설정을 확인하세요. 고객 결제가 실패할 수 있어요.",
         });
     }
     if count(db, &["payment_stuck"], STUCK_WINDOW_MIN).await? >= 1 {
         out.push(Finding {
             rule: "payment_stuck",
             title: "결제는 됐지만 자동 처리가 안 됐어요",
-            body: "PortOne 관리자 화면에서 해당 결제를 찾아 예약 생성 또는 환불 여부를 직접 확인하세요.",
+            body: "결제(PortOne/토스페이먼츠) 관리자 화면에서 해당 결제를 찾아 예약 생성 또는 환불 여부를 직접 확인하세요.",
         });
     }
     if count(db, &["sms_dead_letter"], DEAD_LETTER_WINDOW_MIN).await? >= 1 {
@@ -224,7 +224,7 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
         out.push(Finding {
             rule: "payment_mismatch",
             title: "PG 결제 내역이 우리 기록과 달라요",
-            body: "PortOne 관리자 화면에서 어제 결제 목록을 확인하고, 예약·결제 내역과 금액이 맞지 않는 건을 직접 확인하세요.",
+            body: "결제(PortOne/토스페이먼츠) 관리자 화면에서 어제 결제 목록을 확인하고, 예약·결제 내역과 금액이 맞지 않는 건을 직접 확인하세요.",
         });
     }
     if count(db, &SOCIAL_PROVIDERS, SOCIAL_WINDOW_MIN).await? >= SOCIAL_FAILURES {
