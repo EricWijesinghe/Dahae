@@ -694,8 +694,10 @@ void _tossPaymentsTests() {
     await unmount(tester);
   });
 
-  testWidgets('the payments heading says where new payments go', (
-    tester,
+  Future<void> gatewayHeading(
+    WidgetTester tester,
+    String? mode,
+    String expected,
   ) async {
     setViewport(tester, tallPhoneSize);
     final api = FakeApi()
@@ -707,6 +709,7 @@ void _tossPaymentsTests() {
         'webhook_url': 'https://api.example.test/v1/webhooks/portone',
         'toss_payments_webhook_url': paymentsUrl,
         'payment_gateway': 'tosspayments',
+        'payment_gateway_mode': mode,
       })
       ..reply('GET', '/admin/payment-methods', const <Json>[])
       ..reply('GET', '/admin/app-links', {
@@ -718,7 +721,7 @@ void _tossPaymentsTests() {
     await pumpConsoleScreen(tester, env, const SetupScreen());
     await settle(tester);
 
-    final line = find.text(koT.cSetupGatewayLive('토스페이먼츠'));
+    final line = find.text(expected);
     await tester.scrollUntilVisible(
       line,
       300,
@@ -731,5 +734,19 @@ void _tossPaymentsTests() {
     );
     expect(line, findsOneWidget);
     await unmount(tester);
-  });
+  }
+
+  testWidgets(
+    'the payments heading says where new payments go',
+    (tester) => gatewayHeading(tester, 'live', koT.cSetupGatewayLive('토스페이먼츠')),
+  );
+
+  testWidgets(
+    'live on test keys, the heading says no real money moves',
+    (tester) => gatewayHeading(
+      tester,
+      'test',
+      '${koT.cSetupGatewayLive('토스페이먼츠')} ${koT.cSetupGatewayTestKeys}',
+    ),
+  );
 }

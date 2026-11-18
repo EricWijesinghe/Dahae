@@ -172,7 +172,8 @@ class CheckoutService {
           'payment_id': paymentId,
         });
       } on ApiException catch (e) {
-        if (isFinalAnswer(e)) {
+        // payment_pending: Toss is still capturing on the success page (Windows "done" tapped first).
+        if (isFinalAnswer(e) && e.code != 'payment_pending') {
           return CheckoutFailed(
             e.code == 'slot_full' ? 'paid_slot_full' : e.code,
           );

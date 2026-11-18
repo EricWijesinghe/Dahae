@@ -75,7 +75,11 @@ class _SetupScreenState extends State<SetupScreen> {
                     Text(t.cPaymentsTitle, style: context.text.titleMedium),
                     if (_gatewayNames[data['payment_gateway']] case final g?)
                       Text(
-                        t.cSetupGatewayLive(g.of(context.lang)),
+                        [
+                          t.cSetupGatewayLive(g.of(context.lang)),
+                          if (data['payment_gateway_mode'] == 'test')
+                            t.cSetupGatewayTestKeys,
+                        ].join(' '),
                         style: context.text.bodyMedium,
                       ),
                     const SizedBox(height: Space.sm),

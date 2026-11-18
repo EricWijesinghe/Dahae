@@ -2268,8 +2268,8 @@
  "oActDisk": "디스크 여유 공간이 10% 아래예요. 오래된 백업 파일을 지우거나 서버 디스크를 늘려 주세요.",
  "oActBackup": "자동 백업이 오래됐어요. 개발사에 백업 확인을 요청하세요. 외부 백업을 켜 두었다면 설정 > 외부 백업 (S3 호환)에서 연결 상태를 확인하세요.",
  "oActErrors": "서버 오류가 많아요. 반복되면 오류 내용을 개발사에 전달하세요.",
- "oActPayments": "결제는 됐지만 자동 처리가 안 됐을 수 있어요. PortOne 관리자 화면에서 해당 결제를 확인하고 필요하면 직접 환불하세요.",
- "oActWebhook": "결제 알림의 서명 검사가 실패했어요. 설정 > 결제(PortOne)에서 웹훅 시크릿을 다시 입력하세요.",
+ "oActPayments": "결제는 됐지만 자동 처리가 안 됐을 수 있어요. PortOne 또는 토스페이먼츠 관리자 화면에서 해당 결제를 확인하고 필요하면 직접 환불하세요.",
+ "oActWebhook": "결제 알림의 서명 검사가 실패했어요. PortOne은 설정 > 결제 (PortOne)의 웹훅 시크릿, 토스페이먼츠는 설정 > 결제 (토스페이먼츠)의 보안 키를 다시 넣어 주세요.",
  "oActIntegration": "연동이 실패하고 있어요. 설정 화면에서 키를 다시 확인하고 [연결 확인] 을 누르세요.",
  "oActNotSet": "아직 설정되지 않았어요. 설정 화면에서 키를 입력하세요.",
  "oAlerts": "알림 설정",
@@ -2278,7 +2278,7 @@
  "oRulePush": "앱 알림(푸시) 실패",
  "oRulePayment": "결제 연동 실패",
  "oRuleStuck": "결제 자동 처리 실패",
- "oRuleMismatch": "PortOne 결제 내역 불일치",
+ "oRuleMismatch": "결제사(PortOne/토스페이먼츠) 내역 불일치",
  "oRuleSocial": "소셜 로그인 실패",
  "oRuleBackup": "자동 백업 누락",
  "oRuleBackupPhotos": "사진 외부 백업 실패",
@@ -3415,6 +3415,7 @@
    }
   }
  },
+ "cSetupGatewayTestKeys": "(테스트 키: 실제 돈이 오가지 않아요)",
  "cSetupBillingInvalidKey": "자동결제(빌링) 키가 올바르지 않아요. 빌링 MID의 키를 확인해 주세요",
  "err_invalid_client_key": "클라이언트 키는 test_ck_ 또는 live_ck_로 시작해야 해요.",
  "err_key_mode_mismatch": "테스트 키와 라이브 키를 섞을 수 없어요. 같은 종류의 키를 넣어 주세요.",

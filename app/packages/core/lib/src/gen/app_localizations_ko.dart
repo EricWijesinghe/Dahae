@@ -4414,11 +4414,11 @@ class TKo extends T {
 
   @override
   String get oActPayments =>
-      '결제는 됐지만 자동 처리가 안 됐을 수 있어요. PortOne 관리자 화면에서 해당 결제를 확인하고 필요하면 직접 환불하세요.';
+      '결제는 됐지만 자동 처리가 안 됐을 수 있어요. PortOne 또는 토스페이먼츠 관리자 화면에서 해당 결제를 확인하고 필요하면 직접 환불하세요.';
 
   @override
   String get oActWebhook =>
-      '결제 알림의 서명 검사가 실패했어요. 설정 > 결제(PortOne)에서 웹훅 시크릿을 다시 입력하세요.';
+      '결제 알림의 서명 검사가 실패했어요. PortOne은 설정 > 결제 (PortOne)의 웹훅 시크릿, 토스페이먼츠는 설정 > 결제 (토스페이먼츠)의 보안 키를 다시 넣어 주세요.';
 
   @override
   String get oActIntegration =>
@@ -4447,7 +4447,7 @@ class TKo extends T {
   String get oRuleStuck => '결제 자동 처리 실패';
 
   @override
-  String get oRuleMismatch => 'PortOne 결제 내역 불일치';
+  String get oRuleMismatch => '결제사(PortOne/토스페이먼츠) 내역 불일치';
 
   @override
   String get oRuleSocial => '소셜 로그인 실패';
@@ -7141,6 +7141,9 @@ class TKo extends T {
   String cSetupGatewayLive(String name) {
     return '새 결제를 받는 곳: $name';
   }
+
+  @override
+  String get cSetupGatewayTestKeys => '(테스트 키: 실제 돈이 오가지 않아요)';
 
   @override
   String get cSetupBillingInvalidKey =>

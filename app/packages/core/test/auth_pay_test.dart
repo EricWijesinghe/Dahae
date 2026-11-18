@@ -626,6 +626,34 @@ void main() {
     );
 
     testWidgets(
+      'payment_pending (Toss still capturing) is asked again, never a decline',
+      (tester) async {
+        var confirms = 0;
+        final api = _client((req) async {
+          if (req.url.path == '/v1/checkouts') return _json(200, _intent);
+          if (req.url.path == '/v1/bookings/b1') {
+            return _json(200, {'id': 'b1', 'status': 1});
+          }
+          if (++confirms < 3) {
+            return _json(409, {
+              'error': {'code': 'payment_pending'},
+            });
+          }
+          return _json(200, {'status': 'paid', 'booking_id': 'b1'});
+        });
+        final ctx = await _context(tester);
+        final result = await tester.runAsync(
+          () => service(
+            api,
+            _FakeLauncher(const PaymentApproved('co1')),
+          ).run(ctx, body),
+        );
+        expect((result! as CheckoutPaid).bookingId, 'b1');
+        expect(confirms, 3);
+      },
+    );
+
+    testWidgets(
       'confirm answered paid but the booking load fails: still paid, by id',
       (tester) async {
         final api = _client((req) async {

@@ -8392,13 +8392,13 @@ abstract class T {
   /// No description provided for @oActPayments.
   ///
   /// In ko, this message translates to:
-  /// **'결제는 됐지만 자동 처리가 안 됐을 수 있어요. PortOne 관리자 화면에서 해당 결제를 확인하고 필요하면 직접 환불하세요.'**
+  /// **'결제는 됐지만 자동 처리가 안 됐을 수 있어요. PortOne 또는 토스페이먼츠 관리자 화면에서 해당 결제를 확인하고 필요하면 직접 환불하세요.'**
   String get oActPayments;
 
   /// No description provided for @oActWebhook.
   ///
   /// In ko, this message translates to:
-  /// **'결제 알림의 서명 검사가 실패했어요. 설정 > 결제(PortOne)에서 웹훅 시크릿을 다시 입력하세요.'**
+  /// **'결제 알림의 서명 검사가 실패했어요. PortOne은 설정 > 결제 (PortOne)의 웹훅 시크릿, 토스페이먼츠는 설정 > 결제 (토스페이먼츠)의 보안 키를 다시 넣어 주세요.'**
   String get oActWebhook;
 
   /// No description provided for @oActIntegration.
@@ -8452,7 +8452,7 @@ abstract class T {
   /// No description provided for @oRuleMismatch.
   ///
   /// In ko, this message translates to:
-  /// **'PortOne 결제 내역 불일치'**
+  /// **'결제사(PortOne/토스페이먼츠) 내역 불일치'**
   String get oRuleMismatch;
 
   /// No description provided for @oRuleSocial.
@@ -13631,6 +13631,12 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'새 결제를 받는 곳: {name}'**
   String cSetupGatewayLive(String name);
+
+  /// No description provided for @cSetupGatewayTestKeys.
+  ///
+  /// In ko, this message translates to:
+  /// **'(테스트 키: 실제 돈이 오가지 않아요)'**
+  String get cSetupGatewayTestKeys;
 
   /// No description provided for @cSetupBillingInvalidKey.
   ///

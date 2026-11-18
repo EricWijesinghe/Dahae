@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -95,6 +97,19 @@ List<String> appLinkTargets(String url) {
     if (pkg != null && _androidPackage.hasMatch(pkg))
       'market://details?id=$pkg',
   ];
+}
+
+/// The app link a sub-frame failed to load, or null. Android's WebView plugin (newer than 3.16.0) drops sub-frame
+/// navigations before `onNavigationRequest`, so a card app link fired inside a card company's iframe (ISP, app
+/// cards) only shows up here, as ERR_UNKNOWN_URL_SCHEME (Toss doc 44). iOS sends every frame to the handler.
+String? subFrameAppLink(WebResourceError e) {
+  final url = e.url;
+  if (e.isForMainFrame != false || url == null || !_scheme.hasMatch(url)) {
+    return null;
+  }
+  final scheme = url.substring(0, url.indexOf(':')).toLowerCase();
+  const web = {'http', 'https', 'about', 'data', 'blob', 'javascript'};
+  return web.contains(scheme) ? null : url;
 }
 
 /// The intent's percent-encoded `S.browser_fallback_url`, kept only when it is https or market.
@@ -202,6 +217,11 @@ class _HostedPageState<T> extends State<HostedPage<T>> {
             if (mounted) setState(() => _progress = p);
           },
           onWebResourceError: (e) {
+            final link = subFrameAppLink(e);
+            if (link != null) {
+              unawaited(_launchApp(link));
+              return;
+            }
             // A failed image or script inside the page is the page's problem; a failed page is ours.
             if (mounted && (e.isForMainFrame ?? true)) {
               setState(() => _failed = true);
@@ -264,16 +284,20 @@ class _HostedPageState<T> extends State<HostedPage<T>> {
       if (_webAllowed(uri)) return NavigationDecision.navigate;
       if (uri.scheme == 'http') return NavigationDecision.prevent;
     }
-    // Card / wallet apps (ISP, KakaoTalk, Toss, bank apps): hand them to the OS. The page keeps
-    // waiting here; the app returns by finishing (Android) or through payAppScheme (iOS).
-    for (final target in appLinkTargets(req.url)) {
+    await _launchApp(req.url);
+    return NavigationDecision.prevent;
+  }
+
+  /// Card / wallet apps (ISP, KakaoTalk, Toss, bank apps): hand them to the OS. The page keeps
+  /// waiting here; the app returns by finishing (Android) or through payAppScheme (iOS).
+  Future<void> _launchApp(String url) async {
+    for (final target in appLinkTargets(url)) {
       if (target.startsWith('https://')) {
         await _web.loadRequest(Uri.parse(target));
-        break;
+        return;
       }
-      if (await _open(target)) break;
+      if (await _open(target)) return;
     }
-    return NavigationDecision.prevent;
   }
 
   /// False when no installed app takes [target] (url_launcher reports that, or throws on some).

@@ -26,9 +26,10 @@ void main() {
     }
     expect(
       named,
-      7,
+      8,
       reason:
-          'portone, tosspayments, backup, solapi, push, juso and ai each end with the check',
+          'portone, backup, solapi, push, juso and ai each end with the check; '
+          'tosspayments checks the test keys, then the live keys',
     );
     expect(koT.oActIntegration, contains('[${koT.cSetupTest}]'));
     expect(en.oActIntegration, contains(en.cSetupTest));

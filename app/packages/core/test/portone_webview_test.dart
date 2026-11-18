@@ -3,7 +3,7 @@
 
 import 'package:core/auth_pay.dart';
 import 'package:core/core.dart';
-import 'package:core/src/portone_webview.dart' show HostedPage;
+import 'package:core/src/portone_webview.dart' show HostedPage, subFrameAppLink;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
@@ -285,6 +285,33 @@ void main() {
       expect(intentOf(store: 's').payable, isFalse);
       expect(intentOf(gw: 'tosspayments').payable, isFalse);
     });
+  });
+
+  test('a card app link failing in a sub-frame is handed to the OS', () {
+    WebResourceError err(String? url, {bool? main = false}) => WebResourceError(
+      errorCode: -10,
+      description: 'net::ERR_UNKNOWN_URL_SCHEME',
+      errorType: WebResourceErrorType.unsupportedScheme,
+      isForMainFrame: main,
+      url: url,
+    );
+    const isp =
+        'intent://p#Intent;scheme=ispmobile;package=kvp.jjy.MispAndroid320;end';
+    expect(subFrameAppLink(err(isp)), isp);
+    expect(subFrameAppLink(err('kb-acp://pay?x=1')), 'kb-acp://pay?x=1');
+    expect(
+      subFrameAppLink(err(isp, main: true)),
+      isNull,
+      reason: 'main frame goes through the handler',
+    );
+    expect(subFrameAppLink(err(isp, main: null)), isNull);
+    expect(subFrameAppLink(err(null)), isNull);
+    expect(
+      subFrameAppLink(err('https://card.example.com/x')),
+      isNull,
+      reason: 'a failed web resource',
+    );
+    expect(subFrameAppLink(err('javascript:alert(1)')), isNull);
   });
 
   group('appLinkTargets', () {

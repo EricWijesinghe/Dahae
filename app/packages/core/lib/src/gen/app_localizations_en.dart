@@ -4536,11 +4536,11 @@ class TEn extends T {
 
   @override
   String get oActPayments =>
-      'A payment may have gone through without being processed. Check it in the PortOne console and refund it yourself if needed.';
+      'A payment may have gone through without being processed. Check it in the PortOne or Toss Payments console and refund it yourself if needed.';
 
   @override
   String get oActWebhook =>
-      'Payment webhook signature checks are failing. Re-enter the webhook secret under Setup > Payments (PortOne).';
+      'Payment webhook signature checks are failing. Re-enter the webhook secret under Setup > Payments (PortOne) for PortOne, or the security key under Setup > Payments (Toss Payments) for Toss Payments.';
 
   @override
   String get oActIntegration =>
@@ -4569,7 +4569,8 @@ class TEn extends T {
   String get oRuleStuck => 'Payment not processed automatically';
 
   @override
-  String get oRuleMismatch => 'Payments differ from PortOne';
+  String get oRuleMismatch =>
+      'Payments differ from the gateway (PortOne/Toss Payments)';
 
   @override
   String get oRuleSocial => 'Social sign-in fails';
@@ -7365,6 +7366,9 @@ class TEn extends T {
   String cSetupGatewayLive(String name) {
     return 'New payments go to: $name';
   }
+
+  @override
+  String get cSetupGatewayTestKeys => '(test keys: no real money moves)';
 
   @override
   String get cSetupBillingInvalidKey =>
