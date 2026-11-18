@@ -30,6 +30,7 @@ regexes = [
   '''"secret_key": "(sk_plain|test_sk_abcdef1234|live_sk_zz9876)"''',
   '''\('portone', 'webhook_secret', 'whsec_aGVsbG8=', null\)''',
   '''\('payout', 'security_key', '0123456789abcdef'( \* 4, null|, 'invalid_security_key')\)''',
+  '''\('tosspayments', 'security_key', 'abcdef0123456789' \* 4, null\)''',
   '''Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==''',
   '''SECRET=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ # the RFC 6238 test key''',
   '''"email": "consult-new@test\.local", "name": "Consult", "role": "consultant", "password": "Dahae-consult-2026"''',
