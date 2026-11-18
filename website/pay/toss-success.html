@@ -30,13 +30,26 @@
         location.replace('/pay/done.html?' + p.toString());
       };
       if (!id || !key) return done({ code: 'CONFIRM_DECLINED' });
-      fetch('/v1/checkouts/' + encodeURIComponent(id) + '/toss-confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payment_key: key, amount: Number(q.get('amount')) }),
-      })
-        .then(function (r) { done(r.status === 402 ? { code: 'CONFIRM_DECLINED' } : {}); })
-        .catch(function () { done(); });
+      // Nobody else can capture (the paymentKey is not stored), so a lost answer, 5xx or 429 is tried again after
+      // 1 s and 3 s. Confirm is safe to repeat, and this stays far inside Toss's 10-minute window.
+      var waits = [1000, 3000];
+      var attempt = function () {
+        var again = function () {
+          if (!waits.length) return done();
+          setTimeout(attempt, waits.shift());
+        };
+        fetch('/v1/checkouts/' + encodeURIComponent(id) + '/toss-confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payment_key: key, amount: Number(q.get('amount')) }),
+        })
+          .then(function (r) {
+            if (r.status >= 500 || r.status === 429) return again();
+            done(r.status === 402 ? { code: 'CONFIRM_DECLINED' } : {});
+          })
+          .catch(again);
+      };
+      attempt();
     })();
   </script>
 </body>
