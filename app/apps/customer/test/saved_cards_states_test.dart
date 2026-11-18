@@ -30,6 +30,7 @@ FakeApi _api({
   }
   fake.reply('GET', '/me/payment-methods/setup', {
     'enabled': true,
+    'gateway': 'portone',
     'store_id': 'store-1',
     'channels': {'card': 'ch-card', 'kakaopay': 'ch-kp'},
     'issue_id': 'iss-1',

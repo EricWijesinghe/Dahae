@@ -11,37 +11,39 @@ import 'checkout.dart';
 import 'i18n.dart';
 import 'payment_launcher.dart';
 
-/// PortOne `appScheme` for the in-app WebView: ISP and app-card apps open it to bring the
+/// `appScheme` (PortOne; Toss `card.appScheme`) for the in-app WebView: ISP and app-card apps open it to bring the
 /// customer back after authenticating. Registered in the customer iOS Info.plist (check-native.py).
 const payAppScheme = 'malkkeumpay://';
 
-/// URL of our hosted PortOne page for [intent] (website/pay/index.html, same domain as the API).
-/// `paymentId` is the checkout id there: the webhook and the recovery pass depend on it.
-/// [app] is the app's return scheme; only the WebView passes it.
+/// URL of our hosted payment page for [intent], same domain as the API: website/pay/index.html
+/// (PortOne) or website/pay/toss.html (Toss Payments), by the checkout's gateway.
+/// The PG's payment id (PortOne paymentId, Toss orderId) is the checkout id there: the webhook and
+/// the recovery pass depend on it. [app] is the app's return scheme; only the WebView passes it.
 Uri portOnePageUri(
   String apiBase,
   CheckoutIntent intent, {
   String? phone,
   String? back,
   String? app,
-}) => Uri.parse('$apiBase/pay/').replace(
-  queryParameters: {
-    'checkout': intent.id,
-    'store': intent.storeId,
-    'channel': intent.channelKey,
-    'amount': '${intent.amount}',
-    'method': intent.method,
-    'name': intent.orderName,
-    'phone': ?phone,
-    'back': ?back,
-    'app': ?app,
-  },
-);
+}) => Uri.parse(intent.isToss ? '$apiBase/pay/toss.html' : '$apiBase/pay/')
+    .replace(
+      queryParameters: {
+        'checkout': intent.id,
+        if (!intent.isToss) 'store': intent.storeId,
+        'channel': intent.channelKey,
+        'amount': '${intent.amount}',
+        'method': intent.method,
+        'name': intent.orderName,
+        'phone': ?phone,
+        'back': ?back,
+        'app': ?app,
+      },
+    );
 
 /// Where the web app resumes after the hosted page (same origin, hash route, see customer web_return).
 const webPayReturnPath = '/app/#/pay-return';
 
-/// Result codes PortOne puts on the redirect when the customer backs out.
+/// Result codes PortOne and Toss put on the redirect when the customer backs out.
 const _cancelCodes = {
   'PAY_PROCESS_CANCELED',
   'USER_CANCEL',
@@ -120,7 +122,7 @@ class PortOneRedirectLauncher extends PaymentLauncher {
     required BuildContext context,
     required CheckoutIntent intent,
   }) async {
-    if (intent.storeId.isEmpty || intent.channelKey.isEmpty) {
+    if (!intent.payable) {
       return const PaymentRejected('provider_not_configured');
     }
     final uri = portOnePageUri(
@@ -146,7 +148,7 @@ class PortOneWebViewLauncher extends PaymentLauncher {
     required BuildContext context,
     required CheckoutIntent intent,
   }) async {
-    if (intent.storeId.isEmpty || intent.channelKey.isEmpty) {
+    if (!intent.payable) {
       return const PaymentRejected('provider_not_configured');
     }
     return Navigator.of(context).push<PaymentOutcome?>(

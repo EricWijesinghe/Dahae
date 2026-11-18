@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>결제 확인</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0B1217; color: #EEF4F7;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+    .box { text-align: center; padding: 24px; }
+    .spin { width: 44px; height: 44px; margin: 0 auto 16px; border-radius: 50%; border: 4px solid rgba(255,255,255,.15); border-top-color: #1E9EBA; animation: r 1s linear infinite; }
+    @keyframes r { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <main class="box" aria-live="polite"><div class="spin" aria-hidden="true"></div><p>결제를 확인하는 중…</p></main>
+  <script>
+    // Toss successUrl: ?paymentKey=..&orderId=<checkout id>&amount=.. (https://docs.tosspayments.com/sdk/v2/js/payment).
+    // Toss captures nothing until the server confirms, so this page asks our API to confirm, then hands over to
+    // done.html like the PortOne page. The server confirms with its own amount; the app then confirms the checkout.
+    // Only a decline (402) is reported here: any other answer leaves the outcome to the app's confirm.
+    (function () {
+      var q = new URLSearchParams(location.search);
+      var id = q.get('orderId');
+      var key = q.get('paymentKey');
+      var done = function (extra) {
+        var p = new URLSearchParams(Object.assign({ paymentId: id || '' }, extra || {}));
+        location.replace('/pay/done.html?' + p.toString());
+      };
+      if (!id || !key) return done({ code: 'CONFIRM_DECLINED' });
+      fetch('/v1/checkouts/' + encodeURIComponent(id) + '/toss-confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_key: key, amount: Number(q.get('amount')) }),
+      })
+        .then(function (r) { done(r.status === 402 ? { code: 'CONFIRM_DECLINED' } : {}); })
+        .catch(function () { done(); });
+    })();
+  </script>
+</body>
+</html>

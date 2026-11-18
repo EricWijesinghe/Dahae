@@ -31,6 +31,7 @@ FakeApi _apiWith({required bool billing, required bool addressSearch}) {
       billing
           ? {
               'enabled': true,
+              'gateway': 'portone',
               'store_id': 'store-1',
               'channels': {'card': 'ch-card'},
               'issue_id': 'iss-1',
@@ -136,6 +137,7 @@ void main() {
     expect(BillingSetup.fromJson({'enabled': false}).enabled, isFalse);
     final on = BillingSetup.fromJson({
       'enabled': true,
+      'gateway': 'portone',
       'store_id': 's',
       'channels': {'card': 'c'},
       'issue_id': 'i',
@@ -143,6 +145,18 @@ void main() {
     expect(on.supports('card'), isTrue);
     expect(on.supports('kakaopay'), isFalse);
     expect(BillingSetup.off.supports('card'), isFalse);
+    // Toss saves cards only, with the billing client key and no store.
+    final toss = BillingSetup.fromJson({
+      'enabled': true,
+      'gateway': 'tosspayments',
+      'store_id': null,
+      'channels': {'card': 'test_ck_billing'},
+      'issue_id': '0b8e6c1e-3f7a-4d2b-9c1d-2a6f0e9b7c45',
+      'customer_id': 'u',
+    });
+    expect(toss.isToss, isTrue);
+    expect(toss.supports('card'), isTrue);
+    expect(toss.supports('kakaopay'), isFalse);
   });
 
   test(

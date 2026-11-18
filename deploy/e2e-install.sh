@@ -93,9 +93,9 @@ maintenance_page_when_api_down() {
 }
 console_served() { [ "$(code /admin/)" = 200 ] && get /admin/ | grep -q 'base href="/admin/"'; }
 csp_of() { curl_d -D - -o /dev/null "https://$DOMAIN$1" | grep -i '^content-security-policy:'; }
-csp_tight() { # apps: PortOne-only connect-src, no unsafe-eval, nothing may frame us
+csp_tight() { # apps: connect-src only to the payment gateways (PortOne, Toss), no unsafe-eval, nothing may frame us
   local csp; csp="$(csp_of /admin/)"
-  echo "$csp" | grep -q "connect-src 'self' https://\*\.portone\.io" \
+  echo "$csp" | grep -q "connect-src 'self' https://\*\.portone\.io https://\*\.tosspayments\.com;" \
     && echo "$csp" | grep -q "frame-ancestors 'none'" \
     && ! echo "$csp" | grep -qi "'unsafe-eval'" # 'wasm-unsafe-eval' (Flutter --wasm) is fine
 }
@@ -133,7 +133,7 @@ owner_token() { # console sign-in: password, then the TOTP second factor
   local mfa; mfa=$(staff_login | json mfa_token)
   post /v1/auth/staff/mfa/verify "{\"mfa_token\":\"$mfa\",\"code\":\"$(fresh_totp)\"}" | json access_token
 }
-wizard_has_sections() { local o; o=$(get_auth /v1/admin/setup "$TOKEN"); for s in portone solapi backup business; do echo "$o" | grep -q "\"$s\"" || return 1; done; }
+wizard_has_sections() { local o; o=$(get_auth /v1/admin/setup "$TOKEN"); for s in portone tosspayments solapi backup business; do echo "$o" | grep -q "\"$s\"" || return 1; done; }
 heartbeat_on_in_wizard() { get_auth /v1/admin/setup "$(owner_token)" | grep -q '"heartbeat_configured":true'; }
 upload_marker() { dc exec -T api cat /data/uploads/e2e-marker.txt 2>/dev/null | grep -q e2e-upload; }
 no_old_brand() { ! grep -q '말끔' "$LOG/install1.txt"; }
@@ -181,7 +181,7 @@ expect "API health" api_healthy
 expect "API reports the image version" api_version_is_test
 expect "website served" website_served
 expect "console served at /admin/" console_served
-expect "app CSP limits connect-src to PortOne and forbids eval" csp_tight
+expect "app CSP limits connect-src to the payment gateways and forbids eval" csp_tight
 expect "website CSP allows inline scripts by hash only" site_csp_strict
 expect "setup wizard waits for the owner" needs_owner
 expect "dahae status" dahae status
