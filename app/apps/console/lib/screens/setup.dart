@@ -73,6 +73,11 @@ class _SetupScreenState extends State<SetupScreen> {
                   const SizedBox(height: Space.md),
                   if (c['code'] == 'portone') ...[
                     Text(t.cPaymentsTitle, style: context.text.titleMedium),
+                    if (_gatewayNames[data['payment_gateway']] case final g?)
+                      Text(
+                        t.cSetupGatewayLive(g.of(context.lang)),
+                        style: context.text.bodyMedium,
+                      ),
                     const SizedBox(height: Space.sm),
                   ],
                   IntegrationCard(
@@ -80,6 +85,8 @@ class _SetupScreenState extends State<SetupScreen> {
                     card: c,
                     webhookUrl: data['webhook_url'] as String?,
                     tossWebhookUrl: data['toss_webhook_url'] as String?,
+                    tossPaymentsWebhookUrl:
+                        data['toss_payments_webhook_url'] as String?,
                     onChanged: _reload,
                   ),
                 ],
@@ -97,6 +104,12 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 }
+
+/// Where new payments go (`payment_gateway` from the server), by brand name.
+const _gatewayNames = <Object?, Tr>{
+  'portone': Tr('PortOne', 'PortOne'),
+  'tosspayments': Tr('토스페이먼츠', 'Toss Payments'),
+};
 
 class _Header extends StatelessWidget {
   const _Header({
@@ -178,11 +191,13 @@ class IntegrationCard extends StatefulWidget {
     required this.onChanged,
     this.webhookUrl,
     this.tossWebhookUrl,
+    this.tossPaymentsWebhookUrl,
   });
   final Json card;
   final VoidCallback onChanged;
   final String? webhookUrl;
   final String? tossWebhookUrl;
+  final String? tossPaymentsWebhookUrl;
 
   @override
   State<IntegrationCard> createState() => _IntegrationCardState();
@@ -204,6 +219,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
   Timer? _lockTimer;
 
   String get _code => widget.card['code'] as String;
+  // Payment gateway cards: owner code on first save, "API 키 확인" as the check label.
+  bool get _gatewayCard => _code == 'portone' || _code == 'tosspayments';
   // The server locks a saved card; the screen only reflects it.
   bool get _locked => widget.card['locked'] == true;
   Guide get _guide => guides[_code]!;
@@ -336,9 +353,9 @@ class _IntegrationCardState extends State<IntegrationCard> {
   Future<Map<String, String>?> _ownerHeaders({required bool clearing}) async {
     // An open unlock window already carries the owner's code; the server ignores a second one.
     if (widget.card['unlock_expires_at'] != null) return const {};
-    // The first save of the PortOne card sets where checkout money goes, so it needs the owner too.
+    // The first save of a payment gateway card sets where checkout money goes, so it needs the owner too.
     final typedToss = !clearing && _text['mode']?.text.trim() == 'toss';
-    final needsCode = _code == 'portone'
+    final needsCode = _gatewayCard
         ? !clearing && !_locked
         : _code == 'payout' && (typedToss || _savedMode == 'toss');
     if (!needsCode) {
@@ -508,6 +525,12 @@ class _IntegrationCardState extends State<IntegrationCard> {
                 label: t.cSetupTossWebhook,
                 value: widget.tossWebhookUrl!,
               ),
+            if (_code == 'tosspayments' &&
+                widget.tossPaymentsWebhookUrl != null)
+              _CopyRow(
+                label: t.cSetupTossWebhook,
+                value: widget.tossPaymentsWebhookUrl!,
+              ),
             const SizedBox(height: Space.md),
             for (final f in _fields) _field(context, f),
             const SizedBox(height: Space.md),
@@ -527,7 +550,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
                     onPressed: _busy ? null : () => _run(_test),
                     icon: const Icon(Icons.wifi_tethering_rounded),
                     label: Text(
-                      _code == 'portone' ? t.cSetupTestApiKey : t.cSetupTest,
+                      _gatewayCard ? t.cSetupTestApiKey : t.cSetupTest,
                     ),
                   ),
                 if (widget.card['locked'] == true &&
@@ -637,11 +660,14 @@ class _IntegrationCardState extends State<IntegrationCard> {
     }
     final preview = f['preview'];
     if (kind == 'toggle') {
+      final hint = g?.hint?.of(context.lang);
       return SwitchListTile(
         contentPadding: EdgeInsets.zero,
         title: Text(label),
+        subtitle: hint == null ? null : Text(hint),
         value: _toggles[name] ?? preview == true,
-        onChanged: (on) => setState(() => _toggles[name] = on),
+        // A locked card cannot be saved, so its switches do not move either.
+        onChanged: _locked ? null : (on) => setState(() => _toggles[name] = on),
       );
     }
     return Padding(

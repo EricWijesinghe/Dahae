@@ -11,10 +11,16 @@ import 'package:test_support/test_support.dart';
 
 import 'support/console_host.dart';
 
-Json _field(String name, String kind, {bool set = false, Object? preview}) => {
+Json _field(
+  String name,
+  String kind, {
+  bool set = false,
+  Object? preview,
+  bool required = true,
+}) => {
   'name': name,
   'kind': kind,
-  'required': true,
+  'required': required,
   'set': set,
   'preview': preview,
 };
@@ -64,6 +70,7 @@ Future<void> _pump(
   Json card, {
   String? webhookUrl,
   String? tossWebhookUrl,
+  String? tossPaymentsWebhookUrl,
   FakeApi? api,
   Size size = tallPhoneSize,
 }) async {
@@ -79,6 +86,7 @@ Future<void> _pump(
           onChanged: () {},
           webhookUrl: webhookUrl,
           tossWebhookUrl: tossWebhookUrl,
+          tossPaymentsWebhookUrl: tossPaymentsWebhookUrl,
         ),
       ],
     ),
@@ -92,6 +100,7 @@ const _fullCardSize = Size(390, 3200);
 void main() {
   _lockedTests();
   _lastCheckTests();
+  _tossPaymentsTests();
 
   testWidgets('a saved test key shows the 테스트 badge and no live badge', (
     tester,
@@ -502,6 +511,225 @@ void _lastCheckTests() {
 
     expect(find.text(koT.cSetupUnreachable), findsOneWidget);
     expect(find.text(koT.cSetupLastPassKept), findsNothing);
+    await unmount(tester);
+  });
+}
+
+Json _tossPaymentsCard({
+  bool configured = false,
+  bool locked = false,
+  String? mode,
+}) => {
+  'code': 'tosspayments',
+  'can_test': true,
+  'source': configured ? 'console' : 'none',
+  'configured': configured,
+  'locked': locked,
+  'mode': mode,
+  'fields': [
+    _field(
+      'client_key',
+      'text',
+      set: configured,
+      preview: configured ? 'test_ck_fakefakefake' : null,
+    ),
+    _field(
+      'secret_key',
+      'secret',
+      set: configured,
+      preview: configured ? '••••' : null,
+    ),
+    _field('billing_client_key', 'text', required: false),
+    _field('billing_secret_key', 'secret', required: false),
+    _field('security_key', 'secret', required: false),
+    _field('active', 'toggle', required: false),
+  ],
+  'last_test': null,
+};
+
+void _tossPaymentsTests() {
+  const paymentsUrl = 'https://api.example.test/v1/webhooks/tosspayments';
+  const payoutsUrl = 'https://api.example.test/v1/webhooks/toss';
+
+  testWidgets(
+    'the Toss Payments card labels every field, explains the switch and shows its own webhook address',
+    (tester) async {
+      await _pump(
+        tester,
+        _tossPaymentsCard(),
+        tossWebhookUrl: payoutsUrl,
+        tossPaymentsWebhookUrl: paymentsUrl,
+        size: _fullCardSize,
+      );
+
+      expect(find.text(koT.cIntTossPayments), findsOneWidget);
+      final g = guides['tosspayments']!;
+      for (final f in ['client_key', 'secret_key']) {
+        expect(find.text(g.fields[f]!.label.ko), findsOneWidget, reason: f);
+      }
+      expect(
+        find.text(
+          '${g.fields['billing_client_key']!.label.ko} (${koT.cSetupOptional})',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(g.fields['active']!.hint!.ko), findsOneWidget);
+      expect(find.text(paymentsUrl), findsOneWidget);
+      expect(find.text(koT.cSetupTossWebhook), findsOneWidget);
+      expect(
+        find.text(payoutsUrl),
+        findsNothing,
+        reason: 'the payouts address belongs on the payout card',
+      );
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'the first save of the Toss Payments card asks for the owner code and sends it',
+    (tester) async {
+      final api = FakeApi()
+        ..reply('PUT', '/admin/setup/tosspayments', _tossPaymentsCard());
+      await _pump(tester, _tossPaymentsCard(), api: api, size: _fullCardSize);
+
+      await tester.enterText(
+        find.byType(TextField).at(0),
+        'test_ck_fakefakefake',
+      );
+      await tester.enterText(
+        find.byType(TextField).at(1),
+        'test_sk_fakefakefake',
+      );
+      await settle(tester);
+      await tester.tap(find.widgetWithText(FilledButton, koT.cSetupSave));
+      await settle(tester);
+
+      final dialog = find.byType(AlertDialog);
+      expect(dialog, findsOneWidget, reason: 'the owner code is asked first');
+      await tester.enterText(
+        find.descendant(of: dialog, matching: find.byType(TextField)),
+        '123456',
+      );
+      await settle(tester);
+      await tester.tap(
+        find.descendant(
+          of: dialog,
+          matching: find.widgetWithText(FilledButton, koT.cOwnerCodeConfirm),
+        ),
+      );
+      await settle(tester);
+
+      final call = api.lastCall('PUT', '/admin/setup/tosspayments')!;
+      expect(call.headers['x-owner-totp'], '123456');
+      expect(call.body, {
+        'client_key': 'test_ck_fakefakefake',
+        'secret_key': 'test_sk_fakefakefake',
+      });
+      await unmount(tester);
+    },
+  );
+
+  testWidgets('a widget client key is refused before any request is sent', (
+    tester,
+  ) async {
+    final api = FakeApi();
+    await _pump(tester, _tossPaymentsCard(), api: api, size: _fullCardSize);
+
+    await tester.enterText(find.byType(TextField).at(0), 'test_gck_fakefake');
+    await settle(tester);
+    await tester.tap(find.widgetWithText(FilledButton, koT.cSetupSave));
+    await settle(tester);
+
+    expect(api.callsTo('PUT', '/admin/setup/tosspayments'), isEmpty);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text(koT.err_invalid_client_key), findsWidgets);
+    await unmount(tester);
+  });
+
+  testWidgets(
+    'a saved Toss Payments card checks its API key and shows the test badge',
+    (tester) async {
+      final api = FakeApi()
+        ..reply('POST', '/admin/setup/tosspayments/test', {
+          'ok': false,
+          'code': 'billing_invalid_key',
+        });
+      await _pump(
+        tester,
+        _tossPaymentsCard(configured: true, mode: 'test'),
+        api: api,
+        size: _fullCardSize,
+      );
+      expect(find.text(koT.cSetupModeTest), findsOneWidget);
+      await tester.tap(find.byType(ExpansionTile));
+      await settle(tester);
+
+      await tester.tap(
+        find.widgetWithText(OutlinedButton, koT.cSetupTestApiKey),
+      );
+      await settle(tester);
+
+      expect(
+        api.callsTo('POST', '/admin/setup/tosspayments/test'),
+        hasLength(1),
+      );
+      expect(find.text(koT.cSetupBillingInvalidKey), findsOneWidget);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets('the gateway switch does not move on a locked card', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _tossPaymentsCard(configured: true, locked: true),
+      size: _fullCardSize,
+    );
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+
+    final toggle = tester.widget<SwitchListTile>(find.byType(SwitchListTile));
+    expect(toggle.onChanged, isNull);
+    await unmount(tester);
+  });
+
+  testWidgets('the payments heading says where new payments go', (
+    tester,
+  ) async {
+    setViewport(tester, tallPhoneSize);
+    final api = FakeApi()
+      ..reply('GET', '/admin/setup', {
+        'business': {'name': 'Dahae'},
+        'review_account': null,
+        'integrations': [_portoneCard(), _tossPaymentsCard()],
+        'dev_mode': false,
+        'webhook_url': 'https://api.example.test/v1/webhooks/portone',
+        'toss_payments_webhook_url': paymentsUrl,
+        'payment_gateway': 'tosspayments',
+      })
+      ..reply('GET', '/admin/payment-methods', const <Json>[])
+      ..reply('GET', '/admin/app-links', {
+        'android_cert_sha256': <String>[],
+        'apple_team_id': null,
+        'source': 'env',
+      });
+    final env = await TestEnv.create(fake: api, role: 'staff_admin');
+    await pumpConsoleScreen(tester, env, const SetupScreen());
+    await settle(tester);
+
+    final line = find.text(koT.cSetupGatewayLive('토스페이먼츠'));
+    await tester.scrollUntilVisible(
+      line,
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(SetupScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(line, findsOneWidget);
     await unmount(tester);
   });
 }

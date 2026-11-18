@@ -7135,6 +7135,26 @@ class TKo extends T {
   String get tReceiptSettings => '영수증 설정';
 
   @override
+  String get cIntTossPayments => '결제 (토스페이먼츠)';
+
+  @override
+  String cSetupGatewayLive(String name) {
+    return '새 결제를 받는 곳: $name';
+  }
+
+  @override
+  String get cSetupBillingInvalidKey =>
+      '자동결제(빌링) 키가 올바르지 않아요. 빌링 MID의 키를 확인해 주세요';
+
+  @override
+  String get err_invalid_client_key =>
+      '클라이언트 키는 test_ck_ 또는 live_ck_로 시작해야 해요.';
+
+  @override
+  String get err_key_mode_mismatch =>
+      '테스트 키와 라이브 키를 섞을 수 없어요. 같은 종류의 키를 넣어 주세요.';
+
+  @override
   String get reviewRuleLine => '욕설, 개인정보, 허위·광고 내용은 금지되며 신고된 후기는 숨겨집니다.';
 
   @override

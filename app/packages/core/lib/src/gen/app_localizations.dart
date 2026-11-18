@@ -13620,6 +13620,36 @@ abstract class T {
   /// **'영수증 설정'**
   String get tReceiptSettings;
 
+  /// No description provided for @cIntTossPayments.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제 (토스페이먼츠)'**
+  String get cIntTossPayments;
+
+  /// No description provided for @cSetupGatewayLive.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 결제를 받는 곳: {name}'**
+  String cSetupGatewayLive(String name);
+
+  /// No description provided for @cSetupBillingInvalidKey.
+  ///
+  /// In ko, this message translates to:
+  /// **'자동결제(빌링) 키가 올바르지 않아요. 빌링 MID의 키를 확인해 주세요'**
+  String get cSetupBillingInvalidKey;
+
+  /// No description provided for @err_invalid_client_key.
+  ///
+  /// In ko, this message translates to:
+  /// **'클라이언트 키는 test_ck_ 또는 live_ck_로 시작해야 해요.'**
+  String get err_invalid_client_key;
+
+  /// No description provided for @err_key_mode_mismatch.
+  ///
+  /// In ko, this message translates to:
+  /// **'테스트 키와 라이브 키를 섞을 수 없어요. 같은 종류의 키를 넣어 주세요.'**
+  String get err_key_mode_mismatch;
+
   /// No description provided for @reviewRuleLine.
   ///
   /// In ko, this message translates to:

@@ -152,6 +152,81 @@ final guides = <String, Guide>{
       ),
     },
   ),
+  'tosspayments': Guide(
+    title: (t) => t.cIntTossPayments,
+    site: 'https://developers.tosspayments.com',
+    steps: const [
+      Tr(
+        '토스페이먼츠와 전자결제 계약을 맺어요. 저장한 카드로 결제하려면 자동결제(빌링) 계약도 따로 필요해요. 카카오페이·네이버페이는 각각 따로 승인을 받아요.',
+        'Sign the Toss Payments online-payment contract. Saved cards need a separate auto-billing contract; KakaoPay and NaverPay are approved separately.',
+      ),
+      Tr(
+        'developers.tosspayments.com 에 로그인하고 API 키 메뉴에서 결제창용 상점아이디(MID)를 골라요. "API 개별 연동 키"의 클라이언트 키(ck)와 시크릿 키(sk)를 붙여넣어요. 위젯 연동 키(gck, gsk)가 아니에요.',
+        'Log in at developers.tosspayments.com, open the API keys menu and pick the payment-window MID. Paste the client key (ck) and secret key (sk) under "API individual integration keys", not the widget keys (gck, gsk).',
+      ),
+      Tr(
+        '자동결제 계약이 있으면 자동결제 MID를 골라 그 MID의 ck, sk를 자동결제 칸에 넣어요. 없으면 비워 두세요. 그러면 카드는 매번 결제창으로 결제해요.',
+        'With an auto-billing contract, pick the billing MID and paste its ck and sk in the billing boxes. Without one, leave them empty: cards then pay in the window each time.',
+      ),
+      Tr(
+        '같은 화면의 보안 키(64글자)를 넣으면 웹훅 서명을 확인해요. 넣지 않아도 결제는 돼요.',
+        'Paste the security key (64 characters) from the same page to check webhook signatures. Payments work without it.',
+      ),
+      Tr(
+        '개발자센터 웹훅 메뉴에서 결제창 MID에 아래 "웹훅 주소"를 등록하고 PAYMENT_STATUS_CHANGED, DEPOSIT_CALLBACK 이벤트를 골라요.',
+        'In the developer center webhooks menu, register the webhook URL below on the payment-window MID with the PAYMENT_STATUS_CHANGED and DEPOSIT_CALLBACK events.',
+      ),
+      Tr(
+        '사용을 끈 채로 저장하고 [API 키 확인] 을 눌러 초록색인지 봐요. 테스트 키로 먼저 결제와 환불을 해 본 뒤, 잠금을 풀고 사용을 켜고 저장하면 새 결제가 토스페이먼츠로 가요.',
+        'Save with the switch off, then press Check API key and look for green. Try a payment and a refund with test keys first, then unlock, switch it on and save: new payments go to Toss Payments.',
+      ),
+    ],
+    devHelp: true,
+    fields: const {
+      'client_key': FieldGuide(
+        Tr('클라이언트 키 (결제창 MID)', 'Client key (payment-window MID)'),
+        hint: Tr(
+          'test_ck_ 또는 live_ck_로 시작해요. 결제창을 여는 공개 키예요',
+          'Starts with test_ck_ or live_ck_. The public key that opens the payment window',
+        ),
+      ),
+      'secret_key': FieldGuide(
+        Tr('시크릿 키 (결제창 MID)', 'Secret key (payment-window MID)'),
+        hint: Tr(
+          'test_sk_ 또는 live_sk_로 시작해요. 서버에만 저장되고 다시 보여주지 않아요',
+          'Starts with test_sk_ or live_sk_. Kept on the server only and never shown again',
+        ),
+      ),
+      'billing_client_key': FieldGuide(
+        Tr('자동결제 클라이언트 키', 'Billing client key'),
+        hint: Tr(
+          '자동결제 MID의 test_ck_ / live_ck_ 키예요. 자동결제 시크릿 키와 함께 넣거나 둘 다 비워요',
+          'The billing MID\'s test_ck_ / live_ck_ key. Fill it together with the billing secret key, or leave both empty',
+        ),
+      ),
+      'billing_secret_key': FieldGuide(
+        Tr('자동결제 시크릿 키', 'Billing secret key'),
+        hint: Tr(
+          '자동결제 MID의 test_sk_ / live_sk_ 키예요',
+          'The billing MID\'s test_sk_ / live_sk_ key',
+        ),
+      ),
+      'security_key': FieldGuide(
+        Tr('보안 키', 'Security key'),
+        hint: Tr(
+          '0~9, a~f 64글자예요. 웹훅 서명 확인에 써요',
+          '64 characters, 0-9 and a-f. Used to check webhook signatures',
+        ),
+      ),
+      'active': FieldGuide(
+        Tr('새 결제를 토스페이먼츠로 받기', 'Take new payments with Toss Payments'),
+        hint: Tr(
+          '켜면 새 결제와 새로 저장하는 카드가 토스페이먼츠로 가요. 진행 중인 결제, 환불, 이미 저장된 카드는 처음 결제한 곳(PortOne)에서 계속 처리하니 PortOne 연결을 지우지 마세요. 본인인증(PASS)도 PortOne이 필요해요. 테스트 키로 먼저 확인하세요.',
+          'On: new payments and newly saved cards go to Toss Payments. Payments in progress, refunds and cards saved before stay on the gateway they started on, so keep the PortOne card. Identity checks (PASS) also need PortOne. Try test keys first.',
+        ),
+      ),
+    },
+  ),
   'backup': Guide(
     title: (t) => t.cIntBackup,
     site: 'https://dash.cloudflare.com',
@@ -510,6 +585,9 @@ String setupMessage(T t, String code) => switch (code) {
   'unknown_channel_key' => t.err_unknown_channel_key,
   'invalid_secret_key' => t.err_invalid_secret_key,
   'invalid_security_key' => t.err_invalid_security_key,
+  'invalid_client_key' => t.err_invalid_client_key,
+  'key_mode_mismatch' => t.err_key_mode_mismatch,
+  'billing_invalid_key' => t.cSetupBillingInvalidKey,
   'totp_invalid' => t.cOwnerCodeWrong,
   'totp_reused' => t.err_totp_reused,
   'totp_required' => t.err_totp_required,
