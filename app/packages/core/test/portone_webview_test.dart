@@ -221,6 +221,72 @@ void main() {
     );
   });
 
+  group('Toss Payments checkout', () {
+    const toss = CheckoutIntent(
+      id: 'ck-1',
+      amount: 52000,
+      orderName: '화장실 청소',
+      method: 'kakaopay',
+      storeId: '',
+      channelKey: 'test_ck_1',
+      gateway: 'tosspayments',
+    );
+
+    test('opens toss.html with the same parameter names, without a store', () {
+      final u = portOnePageUri(
+        'https://malkkeum.co.kr',
+        toss,
+        phone: '01012345678',
+        app: payAppScheme,
+      );
+      expect(u.path, '/pay/toss.html');
+      expect(u.queryParameters, {
+        'checkout': 'ck-1',
+        'channel': 'test_ck_1',
+        'amount': '52000',
+        'method': 'kakaopay',
+        'name': '화장실 청소',
+        'phone': '01012345678',
+        'app': 'malkkeumpay://',
+      });
+    });
+
+    test('the gateway comes from the intent and defaults to PortOne', () {
+      final j = {
+        'id': 'ck-1',
+        'amount': 52000,
+        'method': 'card',
+        'store_id': null,
+        'channel_key': 'test_ck_1',
+      };
+      expect(CheckoutIntent.fromJson(j).isToss, isFalse);
+      final t = CheckoutIntent.fromJson({...j, 'gateway': 'tosspayments'});
+      expect(t.isToss, isTrue);
+      expect(t.gateway, 'tosspayments');
+    });
+
+    test('Toss needs only its client key; PortOne also needs the store', () {
+      expect(toss.payable, isTrue);
+      expect(_intent.payable, isTrue);
+      CheckoutIntent intentOf({
+        String store = '',
+        String channel = '',
+        String gw = 'portone',
+      }) => CheckoutIntent(
+        id: 'x',
+        amount: 1,
+        orderName: '',
+        method: 'card',
+        storeId: store,
+        channelKey: channel,
+        gateway: gw,
+      );
+      expect(intentOf(channel: 'ch').payable, isFalse);
+      expect(intentOf(store: 's').payable, isFalse);
+      expect(intentOf(gw: 'tosspayments').payable, isFalse);
+    });
+  });
+
   group('appLinkTargets', () {
     List<String> targets(String url) => appLinkTargets(url);
 
@@ -374,6 +440,79 @@ void main() {
         );
         await _settle(tester);
         expect(await result, 'X');
+      },
+    );
+
+    testWidgets(
+      'a Toss checkout opens toss.html; success confirms the checkout, a decline rejects',
+      (tester) async {
+        const toss = CheckoutIntent(
+          id: 'ck-1',
+          amount: 52000,
+          orderName: '청소 예약',
+          method: 'card',
+          storeId: '',
+          channelKey: 'test_ck_1',
+          gateway: 'tosspayments',
+        );
+        // Completes once the page is open, with the launcher's pending outcome.
+        Future<Future<PaymentOutcome?>> pay() async {
+          final nav = GlobalKey<NavigatorState>();
+          await tester.pumpWidget(
+            MaterialApp(
+              navigatorKey: nav,
+              locale: const Locale('ko'),
+              localizationsDelegates: T.localizationsDelegates,
+              supportedLocales: T.supportedLocales,
+              home: const SizedBox(),
+            ),
+          );
+          final result = const PortOneWebViewLauncher(
+            'https://pay.example.com',
+          ).pay(context: nav.currentContext!, intent: toss);
+          await _settle(tester);
+          return result;
+        }
+
+        final approved = await pay();
+        final opened = web.controller.last.loads.single;
+        expect(opened.path, '/pay/toss.html');
+        expect(opened.queryParameters['app'], payAppScheme);
+        var route = web.delegate.last.onRequest!;
+        expect(
+          await route(
+            _nav(
+              'https://pay.example.com/pay/toss-success.html?paymentKey=k&orderId=ck-1&amount=52000',
+            ),
+          ),
+          NavigationDecision.navigate,
+          reason: 'the success page confirms with the API, so it must load',
+        );
+        await route(
+          _nav('https://pay.example.com/pay/done.html?paymentId=ck-1'),
+        );
+        await _settle(tester);
+        expect(
+          await approved,
+          isA<PaymentApproved>().having((p) => p.paymentId, 'id', 'ck-1'),
+        );
+
+        final declined = await pay();
+        route = web.delegate.last.onRequest!;
+        await route(
+          _nav(
+            'https://pay.example.com/pay/done.html?paymentId=ck-1&code=CONFIRM_DECLINED',
+          ),
+        );
+        await _settle(tester);
+        expect(
+          await declined,
+          isA<PaymentRejected>().having(
+            (p) => p.code,
+            'code',
+            'payment_failed',
+          ),
+        );
       },
     );
 

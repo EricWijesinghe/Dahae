@@ -3,6 +3,7 @@
 
 import 'package:core/auth_pay.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _intent = CheckoutIntent(
@@ -57,4 +58,51 @@ void main() {
       isFalse,
     );
   });
+
+  test(
+    'the web tab opens toss.html for a Toss checkout, with the return path',
+    () {
+      const toss = CheckoutIntent(
+        id: 'ck-1',
+        amount: 52000,
+        orderName: '화장실 청소',
+        method: 'card',
+        storeId: '',
+        channelKey: 'test_ck_1',
+        gateway: 'tosspayments',
+      );
+      final u = portOnePageUri('https://x', toss, back: webPayReturnPath);
+      expect(u.path, '/pay/toss.html');
+      expect(u.queryParameters['back'], '/app/#/pay-return');
+      expect(u.queryParameters.containsKey('store'), isFalse);
+    },
+  );
+
+  testWidgets(
+    'a Toss checkout without a client key is refused before any page opens',
+    (tester) async {
+      await tester.pumpWidget(const SizedBox());
+      final context = tester.element(find.byType(SizedBox));
+      const keyless = CheckoutIntent(
+        id: 'ck-1',
+        amount: 1,
+        orderName: '',
+        method: 'card',
+        storeId: '',
+        channelKey: '',
+        gateway: 'tosspayments',
+      );
+      final out = await const PortOneRedirectLauncher(
+        'https://x',
+      ).pay(context: context, intent: keyless);
+      expect(
+        out,
+        isA<PaymentRejected>().having(
+          (r) => r.code,
+          'code',
+          'provider_not_configured',
+        ),
+      );
+    },
+  );
 }

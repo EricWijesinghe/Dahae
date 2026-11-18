@@ -10,9 +10,10 @@ import 'i18n.dart';
 import 'payment_launcher.dart';
 import 'portone_webview.dart';
 
-/// Windows: no WebView plugin, so the hosted PortOne page opens in the default browser.
-/// The customer comes back and taps "done"; the server then verifies the payment with PortOne
-/// (confirm), so a false tap is rejected there.
+/// Windows: no WebView plugin, so the hosted payment page opens in the default browser.
+/// The customer comes back and taps "done"; the server then verifies the payment with the gateway
+/// (confirm), so a false tap is rejected there. A Toss payment is captured by the hosted success
+/// page itself, so it does not depend on the app seeing the redirect.
 class PortOneBrowserLauncher extends PaymentLauncher {
   const PortOneBrowserLauncher(this.apiBase, {this.phone});
   final String apiBase;
@@ -23,7 +24,7 @@ class PortOneBrowserLauncher extends PaymentLauncher {
     required BuildContext context,
     required CheckoutIntent intent,
   }) async {
-    if (intent.storeId.isEmpty || intent.channelKey.isEmpty) {
+    if (!intent.payable) {
       return const PaymentRejected('provider_not_configured');
     }
     final uri = portOnePageUri(apiBase, intent, phone: phone);

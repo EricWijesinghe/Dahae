@@ -35,6 +35,7 @@ class CheckoutIntent {
     required this.storeId,
     required this.channelKey,
     this.cashReceipts = false,
+    this.gateway = 'portone',
   });
 
   final String id;
@@ -42,7 +43,17 @@ class CheckoutIntent {
   final String orderName;
   final String method;
   final String storeId;
+
+  /// The key the hosted page starts its SDK with: the PortOne channel key, or the Toss client key.
   final String channelKey;
+
+  /// Gateway the checkout is pinned to: `portone` or `tosspayments`. Picks the hosted page.
+  final String gateway;
+
+  bool get isToss => gateway == 'tosspayments';
+
+  /// The hosted page has what it needs: Toss runs on its client key alone, PortOne also needs the store.
+  bool get payable => channelKey.isNotEmpty && (isToss || storeId.isNotEmpty);
 
   /// Server has 현금영수증 switched on; receipt options are shown only then.
   final bool cashReceipts;
@@ -55,6 +66,7 @@ class CheckoutIntent {
     storeId: j['store_id'] as String? ?? '',
     channelKey: j['channel_key'] as String? ?? '',
     cashReceipts: j['cash_receipts'] == true,
+    gateway: j['gateway'] as String? ?? 'portone',
   );
 }
 
