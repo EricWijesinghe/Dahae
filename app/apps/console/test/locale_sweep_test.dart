@@ -51,6 +51,14 @@ List<Json> _setupCards() => [
     _field('webhook_secret', 'secret'),
     _field('channel_keys', 'map'),
   ]),
+  _card('tosspayments', [
+    _field('client_key', 'text', required: true),
+    _field('secret_key', 'secret', required: true),
+    _field('billing_client_key', 'text'),
+    _field('billing_secret_key', 'secret'),
+    _field('security_key', 'secret'),
+    _field('active', 'toggle'),
+  ]),
   _card('solapi', [
     _field('api_key', 'secret', required: true),
     _field('api_secret', 'secret', required: true),
@@ -179,6 +187,9 @@ FakeApi _stockedApi() {
       'dev_mode': false,
       'public_base_url': 'https://example.test',
       'webhook_url': 'https://example.test/v1/webhooks/portone',
+      'toss_payments_webhook_url':
+          'https://example.test/v1/webhooks/tosspayments',
+      'payment_gateway': 'portone',
     })
     ..reply('GET', '/admin/ops/status', _ops())
     ..reply('GET', '/admin/ops/alerts', _alerts)

@@ -304,7 +304,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Payment methods enabled for checkout",
+        "summary": "Payment methods enabled for checkout, [{code, flow}]. Under Toss Payments `flow` is `billing` only for card and only when the billing MID keys are set; every other method is `checkout`",
         "security": [],
         "responses": {
           "200": {
@@ -407,7 +407,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Feature flags for the apps",
+        "summary": "Feature flags for the apps. card_billing: the live gateway can save cards",
         "security": [],
         "responses": {
           "200": {
@@ -443,7 +443,7 @@
         "tags": [
           "webhook"
         ],
-        "summary": "Toss Payments notifications (signature verified)",
+        "summary": "Toss payouts (지급대행) notifications (signature verified). Payments use /v1/webhooks/tosspayments",
         "security": [],
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
@@ -451,6 +451,36 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/webhooks/tosspayments": {
+      "post": {
+        "operationId": "tossPaymentsWebhook",
+        "tags": [
+          "webhook"
+        ],
+        "summary": "Toss Payments payment notifications: PAYMENT_STATUS_CHANGED and DEPOSIT_CALLBACK, registered on the payment-window MID. The tosspayments-webhook-signature HMAC is checked with the 보안 키 when both are present. The body is only a hint: the server re-reads the payment by orderId with its secret key. Other event types answer 200 and are ignored",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "{\"ok\":true}, for handled and ignored events"
+          },
+          "400": {
+            "description": "invalid_event"
+          },
+          "401": {
+            "description": "Bad signature"
+          },
+          "503": {
+            "description": "provider_not_configured (no Toss Payments card). Toss retries on 5xx"
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -856,7 +886,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "Register a billing key",
+        "summary": "Register a saved card. Body {provider, auth_key, display_name}: auth_key is the PortOne billingKey, or the Toss authKey from requestBillingAuth (the server issues and seals the billing key). The card keeps the gateway it was registered with",
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
         },
@@ -876,10 +906,17 @@
         "tags": [
           "customer"
         ],
-        "summary": "Provider parameters to start card registration",
+        "summary": "Gateway parameters to start card registration (see BillingSetup)",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingSetup"
+                }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -1511,7 +1548,14 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "The intent the hosted pay page starts from (see CheckoutIntent). `gateway` names the hosted page: `portone` opens /pay/, `tosspayments` opens /pay/toss.html. A checkout keeps its gateway for confirm, webhooks, refunds and reconciliation even if the owner switches later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutIntent"
+                }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -1540,6 +1584,73 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/checkouts/{id}/toss-confirm": {
+      "post": {
+        "operationId": "tossConfirmCheckout",
+        "tags": [
+          "public"
+        ],
+        "summary": "Capture a Toss Payments checkout from /pay/toss-success.html. Public: the page holds no session. `amount` must equal the checkout's charge (400 amount_mismatch before any Toss call); the server confirms with its own stored amount, never the client's. Repeats answer the settled state. Not Idempotency-Key replayable: the checkout state makes it idempotent. After it, the app calls POST /v1/checkouts/{id}/confirm as for PortOne",
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TossConfirm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Captured: status paid, or awaiting_deposit for a virtual account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "paid",
+                        "awaiting_deposit"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "amount_mismatch | payment_not_for_checkout (not a Toss checkout) | invalid_input"
+          },
+          "402": {
+            "description": "payment_failed: Toss declined the confirm; nothing was captured"
+          },
+          "404": {
+            "description": "No such checkout"
+          },
+          "409": {
+            "description": "checkout_closed | checkout_expired"
+          },
+          "503": {
+            "description": "maintenance | payments_disabled | provider_unreachable | provider_not_configured"
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -3805,7 +3916,7 @@
         "summary": "Setup checklist and state",
         "responses": {
           "200": {
-            "description": "OK. Each integrations[] card carries last_test (the stored passing check, the Toss gate record), last_check (the latest check, passed or failed) and can_test (whether this viewer may run the connection test: the owner only on a locked card)"
+            "description": "OK. Each integrations[] card carries last_test (the stored passing check, the Toss gate record), last_check (the latest check, passed or failed) and can_test (whether this viewer may run the connection test: the owner only on a locked card). Top level also has toss_payments_webhook_url (\"{public_base_url}/v1/webhooks/tosspayments\", for the Toss developer center) and payment_gateway (portone | tosspayments: where new payments go). The tosspayments card has fields client_key, secret_key, billing_client_key, billing_secret_key, security_key and active (toggle), and a mode (test | live | null) read from the secret key prefix"
           }
         }
       }
@@ -3913,7 +4024,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Store a setup section",
+        "summary": "Store a setup section. The portone and tosspayments cards need the owner TOTP header on first save and an owner unlock afterwards. tosspayments 400 codes: missing_field, invalid_client_key, invalid_secret_key, invalid_security_key, key_mode_mismatch, invalid_toggle; 409 card_locked. Turning tosspayments `active` on sends new payments and new saved cards to Toss Payments",
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
         },
@@ -3962,7 +4073,7 @@
         },
         "responses": {
           "200": {
-            "description": "The check record (ok, code, at) plus last_test, the stored passing check still in use"
+            "description": "The check record (ok, code, at) plus last_test, the stored passing check still in use. tosspayments codes: connected, invalid_key, billing_invalid_key (the billing MID keys were refused), provider_error, unreachable, not_configured"
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -4470,7 +4581,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "Request a cash receipt for a paid checkout",
+        "summary": "Request a cash receipt for a paid checkout (PortOne checkouts only: a Toss Payments checkout gets its receipt in the Toss window and is refused with cash_receipt_method)",
         "parameters": [
           {
             "$ref": "#/components/parameters/Id"
@@ -7110,6 +7221,129 @@
           },
           "amount": {
             "type": "integer"
+          }
+        }
+      },
+      "CheckoutIntent": {
+        "description": "Parameters for the hosted payment page. New checkouts use the gateway switched on in the console (GET /v1/admin/setup `payment_gateway`).",
+        "type": "object",
+        "required": [
+          "id",
+          "amount",
+          "total",
+          "points",
+          "order_name",
+          "method",
+          "gateway",
+          "store_id",
+          "channel_key",
+          "cash_receipts"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Checkout id; also the gateway's paymentId (PortOne) or orderId (Toss Payments)"
+          },
+          "amount": {
+            "type": "integer",
+            "description": "What the gateway charges: total - points"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "points": {
+            "type": "integer"
+          },
+          "order_name": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "gateway": {
+            "type": "string",
+            "enum": [
+              "portone",
+              "tosspayments"
+            ]
+          },
+          "store_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "PortOne store id; null for Toss Payments"
+          },
+          "channel_key": {
+            "type": "string",
+            "description": "The key the hosted page starts its SDK with: the PortOne channel key, or the Toss Payments client key (test_ck_/live_ck_ of the payment-window MID)"
+          },
+          "cash_receipts": {
+            "type": "boolean",
+            "description": "Whether the app offers its own cash-receipt request. Always false for Toss Payments: the Toss window issues the receipt"
+          }
+        }
+      },
+      "TossConfirm": {
+        "description": "Body of POST /v1/checkouts/{id}/toss-confirm: the values Toss appends to successUrl.",
+        "type": "object",
+        "required": [
+          "payment_key",
+          "amount"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "payment_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Toss paymentKey (never stored)"
+          },
+          "amount": {
+            "type": "integer",
+            "description": "The amount Toss shows; must equal the checkout's charge"
+          }
+        }
+      },
+      "BillingSetup": {
+        "description": "Card registration parameters, or {\"enabled\": false} when the live gateway cannot save cards. Under Toss Payments only `card` is offered, and only when the billing MID keys are set.",
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "gateway": {
+            "type": "string",
+            "enum": [
+              "portone",
+              "tosspayments"
+            ]
+          },
+          "store_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "PortOne store id; null for Toss Payments"
+          },
+          "channels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Method code to key: PortOne channel keys, or for Toss Payments {\"card\": <billing MID client key>}"
+          },
+          "issue_id": {
+            "type": "string",
+            "description": "Registration ticket (UUID v4); the Toss customerKey of the new card"
+          },
+          "customer_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       }

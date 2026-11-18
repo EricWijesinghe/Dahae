@@ -76,7 +76,7 @@ HEAD = """<!doctype html>
 
 FOOT = """  </main>
   <footer><div class="wrap cols">
-    <div><p class="company">{{httpInclude "/v1/public/seller-info"}}</p><p>© <span id="year"></span> <span data-brand-name>다해</span></p></div>
+    <div><p class="company">{{httpInclude "/v1/public/seller-info"}}</p><p>© <span id="year"></span> <span data-brand-name>다해</span></p><p class="credit">Powered by Dahae · 소프트웨어 © 2026 Eric Wijesinghe</p></div>
     <div><b data-t="f_support">고객센터</b><br>{{httpInclude "/v1/public/seller-info?field=support_phone"}}<br>{{httpInclude "/v1/public/seller-info?field=support_email"}}</div>
     <div><a href="privacy.html" data-t="f_privacy">개인정보처리방침</a><br><a href="terms.html" data-t="f_terms">이용약관</a><br><a href="location-terms.html">위치기반서비스 이용약관</a><br>
       <a href="delete-account.html" data-t="f_delete">계정 삭제 안내</a></div>
@@ -139,6 +139,7 @@ PRIVACY = f"""
     <h2>5. 처리 위탁</h2>
     <table><tr><th>수탁자</th><th>위탁 업무</th><th>처리 장소</th></tr>
       <tr><td>PortOne 및 각 결제대행사</td><td>결제 처리, 자동결제 키 관리, 본인인증</td><td>국내</td></tr>
+      <tr><td>토스페이먼츠</td><td>결제 처리, 자동결제 키 관리</td><td>국내</td></tr>
       <tr><td>Solapi</td><td>문자 메시지·카카오 알림톡 발송</td><td>국내</td></tr>
       <tr><td>도로명주소 개발자센터(행정안전부, 주소 검색 API)</td><td>주소 검색</td><td>국내</td></tr>
       <tr><td>Google LLC (Firebase Cloud Messaging)</td><td>앱 푸시 알림 발송</td><td>미국 (국외 이전, 아래 6항)</td></tr>

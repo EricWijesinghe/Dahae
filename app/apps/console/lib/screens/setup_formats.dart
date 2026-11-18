@@ -19,6 +19,11 @@ String? formatError(String card, String field, String value) {
       v.startsWith('channel-key-') && !_space.hasMatch(v),
     ('payout', 'secret_key') => _tossSecret.hasMatch(v),
     ('payout', 'security_key') => _hex64.hasMatch(v),
+    ('tosspayments', 'client_key' || 'billing_client_key') =>
+      _tossClient.hasMatch(v),
+    ('tosspayments', 'secret_key' || 'billing_secret_key') =>
+      _tossSecret.hasMatch(v),
+    ('tosspayments', 'security_key') => _hex64.hasMatch(v),
     _ => true,
   };
   if (ok) return null;
@@ -27,7 +32,8 @@ String? formatError(String card, String field, String value) {
     'api_secret' => 'invalid_api_secret',
     'webhook_secret' => 'invalid_webhook_secret',
     'channel_keys' => 'invalid_channel_key',
-    'secret_key' => 'invalid_secret_key',
+    'client_key' || 'billing_client_key' => 'invalid_client_key',
+    'secret_key' || 'billing_secret_key' => 'invalid_secret_key',
     _ => 'invalid_security_key',
   };
 }
@@ -46,4 +52,6 @@ bool _webhookOk(String v) {
 }
 
 final _tossSecret = RegExp(r'^(test|live)_sk_\S+$');
+// API 개별 연동 client keys only: widget keys (`test_gck_`) do not open the payment window.
+final _tossClient = RegExp(r'^(test|live)_ck_\S+$');
 final _hex64 = RegExp(r'^[0-9a-fA-F]{64}$');

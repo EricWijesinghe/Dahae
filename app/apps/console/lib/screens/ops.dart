@@ -356,6 +356,7 @@ class _Jobs extends StatelessWidget {
 
 final _integrationNames = <String, String Function(T)>{
   'portone': (T t) => t.cIntPortone,
+  'tosspayments': (T t) => t.cIntTossPayments,
   'solapi': (T t) => t.cIntSolapi,
   'push': (T t) => t.cIntPush,
   'kakao': (T t) => t.cIntKakao,

@@ -51,6 +51,14 @@ Json _status({required String level}) => {
       'last_error': null,
     },
     {
+      'code': 'tosspayments',
+      'configured': true,
+      'level': 'green',
+      'last_ok_at': '2026-11-11T02:00:00Z',
+      'last_fail_at': null,
+      'last_error': null,
+    },
+    {
       'code': 'backup',
       'configured': false,
       'level': 'yellow',
@@ -283,6 +291,34 @@ void main() {
       findsOneWidget,
       reason: 'the dead-letter count sits on the notification outbox card',
     );
+    await unmount(tester);
+  });
+
+  testWidgets('the Toss Payments gateway row has its own label', (
+    tester,
+  ) async {
+    setViewport(tester, wideSize);
+    final fake = FakeApi()
+      ..reply('GET', '/admin/ops/status', _status(level: 'red'))
+      ..reply('GET', '/admin/ops/alerts', _alerts)
+      ..reply('GET', '/admin/config', _config)
+      ..reply('GET', '/admin/client-errors', _errors)
+      ..reply('GET', '/admin/me/account', {'is_owner': false})
+      ..reply('GET', '/admin/host/jobs', {'jobs': <Object?>[]});
+    final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+    await pumpConsoleScreen(tester, env, const OpsScreen());
+    await settle(tester);
+
+    final page = find.descendant(
+      of: find.byType(OpsScreen),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      find.text(koT.cIntTossPayments),
+      200,
+      scrollable: page,
+    );
+    expect(find.text(koT.cIntTossPayments), findsOneWidget);
     await unmount(tester);
   });
 

@@ -8,8 +8,8 @@
 다해는 청소 업체 한 곳이 자기 서버 한 대에 설치해 운영하는 예약·결제·파트너 배정 시스템입니다.
 
 - **구성**: 고객 앱(모바일·웹 PWA), 파트너(청소 기사) 앱, 사장님 콘솔(관리자 웹·Android), Rust API, PostgreSQL 17, Caddy 웹 서버 한 개로 이루어진 Docker Compose 스택입니다. 설치와 업데이트는 `dahae` 명령(설치 스크립트)으로 합니다.
-- **돈의 흐름**: 결제는 PortOne이 처리합니다. 서버는 결제 결과를 항상 PortOne에 직접 다시 확인하고, 앱이나 웹훅 본문은 금액 근거로 쓰지 않습니다. 기사 정산은 주 1회(수요일) 지급 날짜로 계산하며, 지급대행(Toss)은 아직 샌드박스 검증 전입니다.
-- **비밀 키**: PortOne·Toss·문자 발송 키는 콘솔에서 붙여 넣고, 암호화(AES-256-GCM)해 DB에 저장한 뒤 카드처럼 잠급니다. PortOne 카드와 토스 지급대행 카드를 처음 저장할 때와 잠금 해제할 때 사장님의 인증 앱 코드를 요구하며, 저장과 해제는 모두 감사 기록됩니다.
+- **돈의 흐름**: 결제는 PortOne이 처리하고, 사장님이 콘솔에서 켜면 새 결제는 토스페이먼츠(직접 연동)가 처리합니다. 결제와 저장 카드는 시작한 결제사에 고정되어 확인·환불·대사가 그 결제사로 갑니다. 서버는 결제 결과를 항상 결제사에 직접 다시 확인하고, 앱이나 웹훅 본문은 금액 근거로 쓰지 않습니다. 기사 정산은 주 1회(수요일) 지급 날짜로 계산하며, 지급대행(Toss)은 아직 샌드박스 검증 전입니다.
+- **비밀 키**: PortOne·Toss·문자 발송 키는 콘솔에서 붙여 넣고, 암호화(AES-256-GCM)해 DB에 저장한 뒤 카드처럼 잠급니다. PortOne 카드, 토스페이먼츠 결제 카드, 토스 지급대행 카드를 처음 저장할 때와 잠금 해제할 때 사장님의 인증 앱 코드를 요구하며, 저장과 해제는 모두 감사 기록됩니다.
 - **백업**: 매일 03:30 DB와 사진을 덤프해 같은 키에서 파생한 키로 봉인(MKB1)합니다. 봉인이 끝나면 평문은 지웁니다. 외부 S3 호환 저장소 업로드는 선택 사항입니다.
 - **업데이트**: 이미지는 cosign으로 서명되어 있고, 설치·업데이트 때 서명을 확인합니다. DB 백업이 실패하면 업데이트를 시작하지 않고, 새 버전이 응답하지 않으면 직전 버전으로 되돌립니다.
 - **고객 상담 도우미**: 외부 API(Anthropic Messages API)를 호출하는 상담 응답 기능이 있습니다. 전화번호와 이메일은 전송 전에 가리고, 국외 이전 필수 동의가 가입 때 받아집니다. 상세는 [§5.1](#51-backend-crates-backendcrates)의 `ai.rs`를 보세요.
@@ -22,6 +22,7 @@
 | Area | Status in this branch | Evidence |
 |---|---|---|
 | Card payments via PortOne V2 (checkout, confirm, webhook, daily diff) | Built. Live use needs the owner's PortOne keys | [`routes/checkouts.rs`](../backend/crates/api/src/routes/checkouts.rs), [`routes/webhooks.rs`](../backend/crates/api/src/routes/webhooks.rs), [`routes/checkout_recon.rs`](../backend/crates/api/src/routes/checkout_recon.rs) |
+| Payments via Toss Payments (direct; owner switches new payments to it in the console) | Built. Live use needs the owner's Toss contracts and keys; checks that need real test keys are in [payments-setup §6](guide/payments-setup.md#6-토스페이먼츠로-결제받기) | [`routes/checkouts.rs`](../backend/crates/api/src/routes/checkouts.rs), `providers/toss_payments.rs`, [`integrations.rs`](../backend/crates/api/src/integrations.rs) |
 | Partner payouts, manual transfer | Built, default mode | [`providers/payout.rs`](../backend/crates/api/src/providers/payout.rs) |
 | Partner payouts via Toss 지급대행 | Built. **Sandbox verification not done** (see [§7](#7-known-limits-and-open-items)) | [`DEPLOY.md` §7](DEPLOY.md#7-toss-payouts-지급대행-sandbox-verification) |
 | Encrypted integration keys with lock and unlock | Built | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs), [`integrations.rs`](../backend/crates/api/src/integrations.rs) |
@@ -53,7 +54,7 @@ flowchart LR
   end
 
   PO["PortOne V2<br/>api.portone.io, cdn.portone.io<br/>payments, cancels, cash receipts, billing keys"]
-  TOSS["Toss Payments 지급대행<br/>api.tosspayments.com"]
+  TOSS["Toss Payments<br/>api.tosspayments.com, js.tosspayments.com<br/>payments (when switched on), 지급대행"]
   SOL["Solapi<br/>api.solapi.com<br/>SMS and KakaoTalk AlimTalk"]
   FCM["Firebase Cloud Messaging<br/>fcm.googleapis.com"]
   SOC["Social sign-in<br/>Kakao, Naver, Google, Apple"]
@@ -75,6 +76,9 @@ flowchart LR
   API -->|"payment reads, cancels"| PO
   PO -->|"webhook /v1/webhooks/portone"| API
   API -->|"payout transfers, JWE"| TOSS
+  CUS -.->|"payment window, when Toss is live"| TOSS
+  API -->|"payment confirm, reads, cancels, billing"| TOSS
+  TOSS -->|"webhook /v1/webhooks/tosspayments"| API
   TOSS -->|"webhook /v1/webhooks/toss"| API
   API -->|"SMS, alimtalk"| SOL
   API --> FCM
@@ -205,7 +209,9 @@ Rules visible in the code:
 - **Payment methods.** A method is offered only when an admin switched it on and its PortOne channel key is set ([`payments.rs`, `ensure_enabled`](../backend/crates/api/src/routes/payments.rs)).
 - **Checkout lifetime.** `CHECKOUT_TTL_MIN` = 30 ([`checkouts.rs`](../backend/crates/api/src/routes/checkouts.rs)).
 
-Recovery when the confirm or the webhook never arrives: the reconciler ([`reconciler.rs`](../backend/crates/api/src/reconciler.rs), [`checkout_recon.rs`](../backend/crates/api/src/routes/checkout_recon.rs)) runs only when a PortOne API secret is configured. It re-checks open checkouts, re-checks checkouts that PortOne reports paid but that are unfinished after 24 h (stopping at 30 days), and runs a daily diff of the previous KST day's PortOne payments against local rows (`payment_diff_pass`, interval `PAYMENT_DIFF_INTERVAL_SECS`, default 3600).
+**Two gateways, pinned per row.** PortOne and Toss Payments sit side by side behind `Providers` (enum dispatch on `Gateway`, codes `portone` and `tosspayments`). The live gateway is PortOne unless the Toss Payments console card (integration section `tosspayments`) is saved, valid and has `active` on; it only decides where *new* checkouts and newly saved cards go. Each checkout and saved card stores its gateway when it is created (`checkouts.gateway`, `payment_methods.gateway`), and `payments.provider` / `refund_queue.provider` were already per row (`portone`, `tosspayments`, `tosspayments_billing` for saved-card charges on the 자동결제 MID). Confirm, webhooks, reconciliation, refunds and saved-card charges always follow the row, never the switch, so a payment started on PortOne finishes and refunds on PortOne after a switch. Toss differs in three places: the hosted success page `/pay/toss-success.html` captures the payment through the public `POST /v1/checkouts/{id}/toss-confirm` (the server confirms with its own stored amount), the orderId is always our own id so `paymentKey` is never stored, and the adapter maps Toss statuses into the PortOne-shaped `PaymentInfo`, so `checkout_policy.rs` is unchanged. Identity (PASS) stays on PortOne; cash receipts for Toss payments come from the Toss window. Toss payment webhooks arrive on `/v1/webhooks/tosspayments` (payouts keep `/v1/webhooks/toss`) and are only a hint: the handler re-reads the payment by orderId.
+
+Recovery when the confirm or the webhook never arrives: the reconciler ([`reconciler.rs`](../backend/crates/api/src/reconciler.rs), [`checkout_recon.rs`](../backend/crates/api/src/routes/checkout_recon.rs)) runs when a PortOne API secret or a Toss Payments card is configured. It re-checks open checkouts on their own gateway, re-checks checkouts that the gateway reports paid but that are unfinished after 24 h (stopping at 30 days), and runs a daily diff of the previous KST day's payments against local rows per gateway (PortOne, then Toss `/v1/transactions` per MID) (`payment_diff_pass`, interval `PAYMENT_DIFF_INTERVAL_SECS`, default 3600).
 
 Settlement to partners happens at job completion (§4.3).
 
@@ -315,7 +321,7 @@ sequenceDiagram
   API->>DB: lock state of this card
   alt card locked
     API-->>OWN: 409 card_locked
-  else first save of a money card (PortOne card, Toss payouts)
+  else first save of a money card (PortOne card, Toss Payments card, Toss payouts)
     API->>API: owner authenticator code checked, spent only after validation
   end
   API->>API: merge with stored values, validate (integrations::apply)
@@ -455,7 +461,7 @@ Workspace: [`backend/Cargo.toml`](../backend/Cargo.toml). Two crates: `api` (HTT
 | Secrets and setup | `crypto.rs`, `integrations.rs`, `routes/setup.rs`, `routes/keys.rs`, `keys_bundle.rs`, `totp.rs`, `owner.rs`, `auth.rs`, `lockout.rs` | Encrypted sections and card lock, key bundle, authenticator codes, sign-in |
 | Ops and backup | `backup.rs`, `host_jobs.rs`, `ops.rs`, `ops_alerts.rs`, `renewals.rs`, `metrics.rs`, `lifecycle.rs`, `telemetry.rs`, `client_errors.rs`, `analytics.rs` | Offsite backup, server job queue, owner alerts, status, metrics, graceful stop, app error reports |
 | Background jobs | `jobs.rs` (runner), `reconciler.rs`, `payout_sync.rs`, `renewals.rs`, `retention.rs`, `noshow.rs`, `points.rs`, `marketing.rs`, `quality.rs`, `routes/waitlist.rs`, `routes/subscription_engine.rs`, `sms_outbox.rs`, `realtime.rs` (outbox) | Periodic passes; each is a session advisory lock, so one replica runs a pass at a time |
-| Providers | `providers.rs` (dispatch, fakes in dev mode), `providers/portone.rs`, `portone_cash_receipt.rs`, `payout.rs`, `sms.rs`, `fcm.rs`, `social.rs`, `apple.rs` | Adapters behind one interface |
+| Providers | `providers.rs` (dispatch, fakes in dev mode), `providers/portone.rs`, `portone_cash_receipt.rs`, `toss_payments.rs`, `payout.rs`, `sms.rs`, `fcm.rs`, `social.rs`, `apple.rs` | Adapters behind one interface |
 | Notifications and live events | `realtime.rs`, `realtime_ticket.rs`, `realtime_heartbeat.rs`, `sms_outbox.rs` | WebSocket hub, `pg_notify` fan-out, durable outbox, dead-letter after 8 attempts |
 | Edge and limits | `ratelimit.rs`, `idempotency.rs`, `config.rs`, `contract.rs`, `error.rs` | Per-IP and per-user limits, idempotency, env config, error envelope |
 | Public content | `seo.rs`, `app_links.rs`, `address.rs`, `uploads.rs`, `seller` route, `config` route | SEO pages, app links, address search, photo upload with signed links |

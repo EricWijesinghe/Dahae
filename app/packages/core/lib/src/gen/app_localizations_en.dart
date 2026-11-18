@@ -7359,6 +7359,26 @@ class TEn extends T {
   String get tReceiptSettings => 'Receipt settings';
 
   @override
+  String get cIntTossPayments => 'Payments (Toss Payments)';
+
+  @override
+  String cSetupGatewayLive(String name) {
+    return 'New payments go to: $name';
+  }
+
+  @override
+  String get cSetupBillingInvalidKey =>
+      'The billing keys were rejected. Check the billing MID\'s keys';
+
+  @override
+  String get err_invalid_client_key =>
+      'The client key starts with test_ck_ or live_ck_.';
+
+  @override
+  String get err_key_mode_mismatch =>
+      'Test and live keys can\'t be mixed. Use keys of one kind.';
+
+  @override
   String get reviewRuleLine =>
       'No insults, personal information, fake or promotional content. Reported reviews are hidden.';
 
