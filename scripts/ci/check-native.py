@@ -413,12 +413,14 @@ def check_camera_and_analytics():
 
 
 def check_pay_scheme():
-    """The app passes the scheme Info.plist registers, and both hosted PortOne pages forward it."""
+    """The app passes the scheme Info.plist registers, and the hosted pages that open card apps forward it.
+    Toss takes it as card.appScheme; its billing window has no appScheme (no app hand-off)."""
     dart = CORE_WEBVIEW.read_text(encoding="utf-8")
     check(f"const payAppScheme = '{PAY_APP_SCHEME}://';" in dart, f"core portone_webview.dart: payAppScheme must be {PAY_APP_SCHEME}://")
-    for page in ["index.html", "billing.html"]:
+    for page, line in [("index.html", "req.appScheme = app"), ("billing.html", "req.appScheme = app"),
+                       ("toss.html", "req.card.appScheme = app")]:
         html = (REPO / "website" / "pay" / page).read_text(encoding="utf-8")
-        check("req.appScheme = app" in html, f"website/pay/{page}: requestPayment/requestIssueBillingKey must pass appScheme")
+        check(line in html, f"website/pay/{page}: the payment request must pass appScheme ({line})")
 
 
 def check_legal_notices():
