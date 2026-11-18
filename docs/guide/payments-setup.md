@@ -97,7 +97,7 @@ PortOne 은 그대로 둔 채, 새 결제만 토스페이먼츠(직접 연동)�
 - **자동결제(빌링)** 계약: 저장한 카드로 결제하거나 정기 방문을 쓸 때만. 정기결제 전용 심사가 따로 있고, MID 도 결제창과 달라요.
 - 가상계좌와 현금영수증은 토스페이먼츠 상점관리자에서 설정해요.
 
-자동결제 계약이 없으면 토스페이먼츠 모드에서 카드를 저장할 수 없어요. 카드는 매번 결제창으로 결제하고, 새 정기 방문은 만들 수 없어요. 이미 PortOne 으로 저장한 카드는 PortOne 으로 계속 결제돼요.
+자동결제 계약이 없으면 토스페이먼츠 모드에서 카드를 저장할 수 없어요. 카드는 매번 결제창으로 결제하고, PortOne 으로 저장한 카드가 없는 고객은 새 정기 방문을 만들 수 없어요. 이미 PortOne 으로 저장한 카드는 PortOne 으로 계속 결제돼요.
 
 ### 키 받기 (개발자센터)
 
@@ -108,12 +108,15 @@ PortOne 은 그대로 둔 채, 새 결제만 토스페이먼츠(직접 연동)�
 
 ### 콘솔 순서
 
-1. **결제 (토스페이먼츠)** 카드에 키를 넣어요. **사용** 스위치는 끈 채로 둬요.
-2. **저장**: 처음 저장은 소유자 인증 코드가 필요해요. 저장하면 카드가 잠겨요.
-3. **[API 키 확인]**: 결제창 MID 키, 그다음 자동결제 MID 키를 확인해요. 자동결제 키만 틀리면 "자동결제(빌링) 키가 올바르지 않아요"가 떠요. 카드에 **테스트** / **실거래** 표시가 시크릿 키 종류대로 떠요.
-4. **웹훅 등록**: 카드 옆 복사 버튼의 주소 `<PUBLIC_BASE_URL>/v1/webhooks/tosspayments` 를 개발자센터 **웹훅** 메뉴에서 **결제창 MID** 에 등록하고, `PAYMENT_STATUS_CHANGED` 와 `DEPOSIT_CALLBACK` 이벤트를 골라요. 자동결제 MID 에는 등록하지 않아도 돼요 (자동결제 승인은 웹훅이 오지 않아요). 지급대행 주소 `/v1/webhooks/toss` 와 헷갈리지 마세요.
-5. **켜기**: 잠금 해제(소유자 코드) → **사용** 켜기 → 저장. "결제 연결" 제목 아래가 "새 결제를 받는 곳: 토스페이먼츠"로 바뀌어요.
-6. **되돌리기**: 잠금 해제 → **사용** 끄기 → 저장. 전환은 매번 감사 기록에 남아요.
+스위치 이름은 **사용: 새 결제를 토스페이먼츠로 받기** 예요. 꺼져 있는 동안 새 결제는 모두 PortOne 으로 가요. 그래서 토스페이먼츠 시험은 스위치를 켠 채로 테스트 키로 해야 하고, 영업을 시작하기 전에 끝내야 해요.
+
+1. **테스트 키로 저장**: **결제 (토스페이먼츠)** 카드에 테스트 키(`test_`) 네 개를 넣고 저장해요. 처음 저장은 소유자 인증 코드가 필요하고, 저장하면 카드가 잠겨요.
+2. **[API 키 확인]**: 결제창 MID 키, 그다음 자동결제 MID 키를 확인해요. 자동결제 키만 틀리면 "자동결제(빌링) 키가 올바르지 않아요"가 떠요. 카드에 **테스트** / **실거래** 표시가 시크릿 키 종류대로 떠요. 이 확인은 시크릿 키만 봐요. 다른 MID 의 클라이언트 키를 넣었다면 첫 테스트 결제에서야 드러나요.
+3. **웹훅 등록**: 카드 옆 복사 버튼의 주소 `<PUBLIC_BASE_URL>/v1/webhooks/tosspayments` 를 개발자센터 **웹훅** 메뉴에서 **결제창 MID** 에 등록하고, `PAYMENT_STATUS_CHANGED` 와 `DEPOSIT_CALLBACK` 이벤트를 골라요. 자동결제 MID 에는 등록하지 않아도 돼요 (자동결제 승인은 웹훅이 오지 않아요). 지급대행 주소 `/v1/webhooks/toss` 와 헷갈리지 마세요.
+4. **결제 수단 고르기**: 켜기 전에 설정 > **결제 수단**에서 토스페이먼츠와 계약·승인된 수단만 켜 두세요. 토스로 바꾸면 PortOne 에서 채널 키가 없어 숨겨졌던 수단도 고객에게 보여요. 승인 안 된 수단을 고른 고객은 토스페이먼츠 오류를 봐요.
+5. **켜고 시험하기 (영업 전)**: 잠금 해제(소유자 코드) → **사용** 켜기 → 저장. "결제 연결" 제목 아래가 "새 결제를 받는 곳: 토스페이먼츠 (테스트 키: 실제 돈이 오가지 않아요)"로 바뀌어요. 아래 "테스트 키로 먼저 확인할 것"을 결제수단마다 해 보고, 테스트 결제는 모두 환불해요.
+6. **라이브 키로 바꾸기**: 잠금 해제 → 네 키를 모두 라이브 키(`live_`)로 바꿔 저장 → [API 키 확인] 을 다시 눌러요. "테스트 키" 표시가 사라졌는지 봐요. 테스트 키로 켜져 있는 동안 받은 예약은 결제 완료로 보여도 실제 돈이 들어오지 않아요.
+7. **되돌리기**: 잠금 해제 → **사용** 끄기 → 저장. 전환은 매번 감사 기록에 남아요.
 
 ### 전환 규칙 (무엇이 어디로 가나)
 
@@ -142,9 +145,11 @@ PortOne 은 그대로 둔 채, 새 결제만 토스페이먼츠(직접 연동)�
 4. 자동결제 키가 있으면: 카드 저장(테스트 인증번호 000000) → 그 카드로 예약 결제 → 환불 → 카드 삭제.
 5. 개발자센터 웹훅 기록에서 우리 서버가 200 으로 답했는지.
 6. Android, iOS 기기에서 카드사 앱, 토스, 카카오페이로 넘어갔다가 앱으로 돌아오는지.
-7. 모두 통과하면 라이브 키로 바꿔 저장하고 (네 키 모두), [API 키 확인] 후 사용을 켜요.
+7. 모두 통과하면 테스트 결제를 모두 환불하고, 위 "콘솔 순서" 6번대로 라이브 키로 바꿔요.
 
-실제 테스트 키로만 확인할 수 있는 항목: 웹훅에 서명 헤더가 오는지, 가상계좌 은행 코드와 예금주 표시, 자동결제 승인 응답 시간(서버는 45초까지 기다려요), 거래 내역 조회(`/v1/transactions`)의 날짜 형식과 페이지, 결제 승인 10분 제한. 개발자센터에서 API 버전을 정해 기록해 두세요.
+개발자가 확인할 항목(웹훅 서명 헤더, 거래 내역 조회, 자동결제 응답 시간 등)은 [payments-reference.md](payments-reference.md) 4장에 있어요.
+
+되돌릴 때 (서버를 토스 이전 버전으로 내려야 할 때): 먼저 **사용**을 끄고, 토스페이먼츠 결제 중 진행 중이거나 입금을 기다리는 결제, 대기 중인 토스 환불이 하나도 없을 때까지 기다리세요. 토스 이전 버전은 토스 결제를 조회하거나 환불하지 못해요.
 
 ---
 
@@ -175,12 +180,12 @@ Fill-in values to provide: store id, PortOne test API secret, one channel key pe
 
 PortOne stays as it is; only new payments move to Toss Payments (direct integration), and you can switch back at any time.
 
-Contracts first: the Toss Payments online-payment contract (payment-window MID); each easy pay approved separately (KakaoPay and NaverPay review the merchant); an auto-billing (빌링) contract with its own MID only if you want saved cards or recurring visits; virtual-account and cash-receipt settings in the Toss merchant admin. Without auto-billing, Toss mode has no saved cards (cards pay in the window each time) and no new subscriptions; cards already saved with PortOne keep charging through PortOne.
+Contracts first: the Toss Payments online-payment contract (payment-window MID); each easy pay approved separately (KakaoPay and NaverPay review the merchant); an auto-billing (빌링) contract with its own MID only if you want saved cards or recurring visits; virtual-account and cash-receipt settings in the Toss merchant admin. Without auto-billing, Toss mode has no saved cards (cards pay in the window each time), and customers without a card saved with PortOne cannot start a subscription; cards already saved with PortOne keep charging through PortOne.
 
 Keys (developer center, API keys menu): the **API individual integration** client key (`test_ck_`) and secret key (`test_sk_`) of the payment-window MID, not the widget keys (`gck`/`gsk`); optionally the billing MID's pair (both or neither) and the 64-character security key. All keys must be test keys, or all live keys (`key_mode_mismatch` otherwise).
 
-Console order: (1) enter the keys with **Active** off; (2) Save (owner code on the first save); (3) Check API key: the window keys, then the billing keys (`billing_invalid_key` when only the billing pair fails); (4) register `<PUBLIC_BASE_URL>/v1/webhooks/tosspayments` on the payment-window MID with `PAYMENT_STATUS_CHANGED` and `DEPOSIT_CALLBACK` (not on the billing MID: billing approvals send no webhook); (5) unlock (owner code), switch **Active** on, Save: the payments heading now says "New payments go to: Toss Payments"; (6) to switch back, unlock, switch it off, Save. Every switch is in the audit log.
+Console order. The switch is **Active: take new payments with Toss Payments**; while it is off every new payment goes to PortOne, so Toss can only be tried with Active on and test keys, before opening for business. (1) Save the four test keys (owner code on the first save); (2) Check API key: the window keys, then the billing keys (`billing_invalid_key` when only the billing pair fails). It checks the secret keys only: a client key from another MID shows up only at the first test payment; (3) register `<PUBLIC_BASE_URL>/v1/webhooks/tosspayments` on the payment-window MID with `PAYMENT_STATUS_CHANGED` and `DEPOSIT_CALLBACK` (not on the billing MID: billing approvals send no webhook); (4) under Setup > **Payment methods**, leave on only the methods Toss Payments contracted and approved: under Toss, methods PortOne hid for lack of a channel key are shown to customers too; (5) unlock (owner code), switch **Active** on, Save: the payments heading says "New payments go to: Toss Payments (test keys: no real money moves)". Run the test list below per method and refund every test payment; (6) unlock, replace all four keys with live keys (`live_`), Save, Check API key again, and see the "test keys" note gone: bookings taken on test keys look paid but bring in no money; (7) to switch back, unlock, switch it off, Save. Every switch is in the audit log.
 
 Switching rules: new payments and newly saved cards go to the live gateway (Toss only when its card is saved and Active is on); a payment already started, its refunds, lookups and reconciliation stay on the gateway it started on; saved cards and their subscription charges stay on the gateway they were saved with; identity checks (PASS) always use PortOne; cash receipts for Toss payments come from the Toss window and are cancelled by Toss with the payment; payouts are unchanged. So **keep the PortOne card**, and keep the Toss card while Toss payments or cards exist: clearing a card makes its refunds fail and alert. Under Toss, KakaoPay, NaverPay, Toss Pay and PAYCO cannot be saved (Toss billing is card only) and become one-off payments.
 
-Test with test keys first (no money moves; virtual accounts start with `X`; KakaoPay needs a contracted MID key, PAYCO live keys, Apple Pay Safari): one payment per method, a full and a partial refund, a closed or failed window, a saved card (test code 000000) charge, refund and delete when billing keys are set, the webhook log showing 200, and the hand-off to card apps, Toss and KakaoPay and back on Android and iOS. Then save the live keys (all four), check, and switch on. Only real test keys can show: whether webhooks carry the signature header, virtual-account bank codes and holder, billing charge latency (the server waits up to 45 s), the `/v1/transactions` date format and paging, and the 10-minute confirm limit. Set and record the API version in the developer center.
+Test with test keys first (no money moves; virtual accounts start with `X`; KakaoPay needs a contracted MID key, PAYCO live keys, Apple Pay Safari): one payment per method, a full and a partial refund, a closed or failed window, a saved card (test code 000000) charge, refund and delete when billing keys are set, the webhook log showing 200, and the hand-off to card apps, Toss and KakaoPay and back on Android and iOS. Then refund every test payment and switch to live keys (console order step 6). Developer checks (webhook signature header, the transaction list, billing latency) are in payments-reference.md section 4. Rolling the server back to a release from before Toss: switch Active off first and wait until no Toss payment is pending or awaiting deposit and no Toss refund is queued; older releases cannot look up or refund Toss payments.

@@ -48,7 +48,7 @@ Basis: official docs and OpenAPI spec (2026-11). `[verified]` = read in the orig
 ## 1b. 토스페이먼츠 결제 (직접 연동, PortOne 대신 고를 수 있음)
 
 콘솔 **결제 (토스페이먼츠)** 카드의 **사용** 스위치를 켜면 새 결제와 새로 저장하는 카드가 토스페이먼츠로 가요. 이미 시작한 결제, 환불, 저장된 카드는 처음 처리한 곳을 따라가요 ([설정 가이드 6절](payments-setup.md#6-토스페이먼츠로-결제받기)).
-With the Toss Payments card's Active switch on, new payments and newly saved cards go to Toss Payments; existing payments, refunds and saved cards stay on their gateway.
+With the Toss Payments card's switch "Active: take new payments with Toss Payments" on, new payments and newly saved cards go to Toss Payments; existing payments, refunds and saved cards stay on their gateway.
 
 ### 키와 인증 · Keys and authentication
 - **API 개별 연동 키**만 써요: 클라이언트 키 `test_ck_` / `live_ck_`(브라우저 SDK), 시크릿 키 `test_sk_` / `live_sk_`(서버). 위젯 키(`gck`/`gsk`)는 주문번호 조회와 부가 API를 못 써서 받지 않아요 `[확인]`
@@ -215,9 +215,12 @@ Confirm these in a test store with test keys before any live use.
 14. 토스페이먼츠 결제: 결제수단별 결제창 (간편결제 자체창 코드, 계좌이체·가상계좌의 현금영수증 단계), 실패 주소에 `paymentId`가 남는지.
 15. 토스페이먼츠 결제: 승인 10분 제한, 두 번 승인할 때 `ALREADY_PROCESSED_PAYMENT`, 금액을 바꿨을 때의 오류 코드, 주문번호 조회가 `IN_PROGRESS`/`ABORTED` 결제도 돌려주는지.
 16. 토스페이먼츠 결제: `PAYMENT_STATUS_CHANGED`와 `DEPOSIT_CALLBACK`에 서명 헤더가 오는지, HMAC 키 바이트, 가상계좌 입금 시뮬레이션과 실제 `bankCode`, 예금주 표시.
-17. 토스페이먼츠 자동결제: 테스트 인증번호 000000, 발급 응답 형식, 청구 응답 시간(서버 45초 제한), 삭제 동작, customerKey 길이 제한.
-18. 토스페이먼츠: `/v1/transactions` 날짜 형식과 페이지. 개발자센터에서 API 버전을 정해 기록해요.
+17. 토스페이먼츠 자동결제: 테스트 인증번호 000000, 발급 응답 형식, 청구 응답 시간(서버는 15초 기다린 뒤 주문번호로 조회하고, 늦게 승인된 청구는 환불 대기열이 환불해요. 요청 전체가 30초에 끊기기 때문이에요), 삭제 동작, customerKey 길이 제한.
+18. 토스페이먼츠: `/v1/transactions` 날짜 형식과 페이지. 개발자센터에서 API 버전을 2022-11-16(현재 최신)으로 정해 기록해요. 코드가 읽는 필드: `status`, `totalAmount`, `balanceAmount`, `orderId`, `paymentKey`, `virtualAccount.*`, `easyPay.provider`.
 19. 토스페이먼츠: 결제 페이지의 CSP 위반이 없는지 (데스크톱, 모바일), Android·iOS에서 카드사 앱·토스·카카오페이로 넘어갔다가 `malkkeumpay://`로 돌아오는지.
+20. 토스페이먼츠 결제: 승인 재요청에 오는 코드(`ALREADY_COMPLETED_PAYMENT`, `DUPLICATED_REQUEST`, `FORBIDDEN_CONSECUTIVE_REQUEST`). 서버는 이 코드를 거절이 아니라 "조회 후 판단"으로 다뤄요.
+21. 토스페이먼츠 가상계좌: 입금 오류로 `DONE` 이 `WAITING_FOR_DEPOSIT` 으로 돌아갈 때 `DEPOSIT_CALLBACK` 이 오는지. 서버는 결제 분쟁 케이스를 열고 알림을 보내요.
+22. Android 기기에서 iframe 안의 카드사 앱 링크(ISP/페이북, KB Pay, 신한, 삼성, 현대, NH, 롯데, 하나, 우리, 토스, 카카오페이, 백신 앱)가 열리는지. `webview_flutter_android` 4.x 는 iframe 이동을 앱에 넘기지 않아, 앱이 그 로드 오류에서 링크를 읽어 열어요. 개발자 출시 전 확인 항목이에요.
 
 ---
 

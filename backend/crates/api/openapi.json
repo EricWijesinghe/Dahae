@@ -1569,7 +1569,7 @@
         "tags": [
           "customer"
         ],
-        "summary": "Confirm payment after the provider redirect (idempotent). An issued virtual account answers `status: awaiting_deposit` with `virtual_account` (see VirtualAccount), including the amount to deposit",
+        "summary": "Confirm payment after the provider redirect (idempotent). An issued virtual account answers `status: awaiting_deposit` with `virtual_account` (see VirtualAccount), including the amount to deposit. A Toss Payments checkout whose success page has not captured yet answers 409 `payment_pending` (ask again; not a decline)",
         "parameters": [
           {
             "$ref": "#/components/parameters/Id"
@@ -3916,7 +3916,7 @@
         "summary": "Setup checklist and state",
         "responses": {
           "200": {
-            "description": "OK. Each integrations[] card carries last_test (the stored passing check, the Toss gate record), last_check (the latest check, passed or failed) and can_test (whether this viewer may run the connection test: the owner only on a locked card). Top level also has toss_payments_webhook_url (\"{public_base_url}/v1/webhooks/tosspayments\", for the Toss developer center) and payment_gateway (portone | tosspayments: where new payments go). The tosspayments card has fields client_key, secret_key, billing_client_key, billing_secret_key, security_key and active (toggle), and a mode (test | live | null) read from the secret key prefix"
+            "description": "OK. Each integrations[] card carries last_test (the stored passing check, the Toss gate record), last_check (the latest check, passed or failed) and can_test (whether this viewer may run the connection test: the owner only on a locked card). Top level also has toss_payments_webhook_url (\"{public_base_url}/v1/webhooks/tosspayments\", for the Toss developer center) payment_gateway (portone | tosspayments: where new payments go) and payment_gateway_mode (test | live, or null unless Toss Payments is live: test means bookings are paid with no real money). The tosspayments card has fields client_key, secret_key, billing_client_key, billing_secret_key, security_key and active (toggle), and a mode (test | live | null) read from the secret key prefix"
           }
         }
       }
@@ -7292,7 +7292,6 @@
           "payment_key",
           "amount"
         ],
-        "additionalProperties": false,
         "properties": {
           "payment_key": {
             "type": "string",

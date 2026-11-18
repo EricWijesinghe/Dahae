@@ -136,6 +136,9 @@ process holds port 80 or 443.
   pre-update backup. Run one server instance during this update: stop the old container before the new
   one starts, so no old process writes a plaintext key after the seal. The old `payment_methods_billing_key_live`
   index is dropped in the contract migration of the next release.
+- **Toss Payments (migrations 0500-0502) is safe for the schema only.** A release from before Toss looks Toss
+  checkouts up at PortOne, marks them expired, and cannot refund Toss payments. Before rolling back, switch the
+  Toss card's Active off and wait until no Toss checkout is pending or awaiting deposit and no Toss refund is queued.
 - **Backups, RPO and RTO.** Every server takes a `pg_dump` daily at 03:30 KST and before every
   update, kept 14 days on the server's own disk. The disk copy is sealed in the same AES-256-GCM format
   as the offsite copy (`*.sql.gz.enc`, opened again by `dahae restore`), so no plaintext dump stays on
