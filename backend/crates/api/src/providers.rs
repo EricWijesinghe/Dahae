@@ -12,6 +12,7 @@ pub mod portone_cash_receipt;
 pub mod sms;
 pub mod social;
 pub mod toss_jwe;
+pub mod toss_payments;
 pub mod toss_webhook;
 
 use crate::entropy;
@@ -58,6 +59,55 @@ impl From<ProviderError> for ApiError {
                 ApiError::Unavailable("provider_unreachable")
             }
         }
+    }
+}
+
+/// Gateway code (and `payments.provider`) of Toss Payments one-time payments, on the window MID.
+pub const TOSS: &str = "tosspayments";
+/// `payments.provider` of a saved-card charge through Toss: it is made on the 자동결제 (billing) MID.
+pub const TOSS_BILLING: &str = "tosspayments_billing";
+
+/// The payment gateway a checkout or saved card is pinned to. New ones follow `Integrations::gateway`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Gateway {
+    Portone,
+    TossPayments,
+}
+
+impl Gateway {
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::Portone => "portone",
+            Self::TossPayments => TOSS,
+        }
+    }
+
+    pub fn parse(code: &str) -> Option<Self> {
+        [Self::Portone, Self::TossPayments].into_iter().find(|g| g.code() == code)
+    }
+
+    /// `payments.provider` of a saved-card charge: Toss bills on its own MID.
+    pub const fn billing_provider(self) -> &'static str {
+        match self {
+            Self::Portone => "portone",
+            Self::TossPayments => TOSS_BILLING,
+        }
+    }
+}
+
+/// A saved card as stored: its gateway, the sealed key and Toss's customerKey.
+pub struct SavedCard {
+    pub gateway: Gateway,
+    pub sealed_key: String,
+    pub customer_key: Option<String>,
+}
+
+/// The Toss MID a stored provider code was charged on; None for any other provider.
+fn toss_mid(provider: &str) -> Option<toss_payments::Mid> {
+    match provider {
+        TOSS => Some(toss_payments::Mid::Window),
+        TOSS_BILLING => Some(toss_payments::Mid::Billing),
+        _ => None,
     }
 }
 
@@ -239,12 +289,22 @@ impl Providers {
     }
 
     /// Exchange the gateway's card-auth result for a reusable billing key.
-    /// Dev mode fakes it. Live: the key must be `ISSUED` and bound to `customer` and `issue` before it is stored.
-    pub async fn issue_billing_key(&self, auth_key: &str, customer: &str, issue: &str) -> Result<String, ProviderError> {
+    /// Dev mode fakes it. PortOne: the key must be `ISSUED` and bound to `customer` and `issue` before it is stored.
+    /// Toss: the authKey is exchanged for a billingKey bound to the customerKey `issue`.
+    pub async fn issue_billing_key(&self, gw: Gateway, auth_key: &str, customer: &str, issue: &str) -> Result<String, ProviderError> {
         if !self.dev() {
-            let verified = portone::verify_billing_key(self, auth_key, customer, issue).await;
-            self.observe("portone", outcome(&verified)).await;
-            return verified.map(|()| auth_key.to_string());
+            return match gw {
+                Gateway::Portone => {
+                    let verified = portone::verify_billing_key(self, auth_key, customer, issue).await;
+                    self.observe("portone", outcome(&verified)).await;
+                    verified.map(|()| auth_key.to_string())
+                }
+                Gateway::TossPayments => {
+                    let issued = toss_payments::issue_billing_key(self, auth_key, issue).await;
+                    self.observe(TOSS, outcome(&issued)).await;
+                    issued
+                }
+            };
         }
         if auth_key == FAKE_DECLINE_KEY {
             return Ok(FAKE_DECLINE_KEY.into());
@@ -252,23 +312,52 @@ impl Providers {
         Ok(random_id("bk"))
     }
 
-    /// Charges a saved PortOne billing key once (subscription visits, booking payments, tips).
-    /// Takes the stored (sealed) key and opens it first. Dev mode fakes it; `FAKE_DECLINE_KEY` declines.
-    pub async fn charge_billing(&self, stored_key: &str, amount: i64, payment_id: &str, order: &str, customer: Uuid) -> Result<String, ProviderError> {
-        let Some(billing_key) = crypto::open_billing_key(&self.cfg.data_key, stored_key) else {
+    /// Charges a saved card once (subscription visits, booking payments, tips) through the gateway it was saved on.
+    /// Opens the sealed key first. Dev mode fakes it; `FAKE_DECLINE_KEY` declines.
+    pub async fn charge_billing(&self, card: &SavedCard, amount: i64, payment_id: &str, order: &str, customer: Uuid) -> Result<String, ProviderError> {
+        let Some(billing_key) = crypto::open_billing_key(&self.cfg.data_key, &card.sealed_key) else {
             tracing::error!(%customer, payment_id, "saved-card billing key cannot be opened: charge refused");
             return Err(ProviderError::Declined("billing_key_unreadable".into()));
         };
         if !self.dev() {
-            let charged = portone::charge_billing(self, &billing_key, payment_id, amount, order, customer).await;
-            self.observe("portone", outcome(&charged)).await;
-            return charged;
+            return match card.gateway {
+                Gateway::Portone => {
+                    let charged = portone::charge_billing(self, &billing_key, payment_id, amount, order, customer).await;
+                    self.observe("portone", outcome(&charged)).await;
+                    charged
+                }
+                Gateway::TossPayments => {
+                    let customer_key = card.customer_key.as_deref().ok_or(ProviderError::Declined("billing_key_not_bound".into()))?;
+                    let charged = toss_payments::charge_billing(self, &billing_key, customer_key, payment_id, amount, order).await;
+                    self.observe(TOSS, outcome(&charged)).await;
+                    charged
+                }
+            };
         }
         if billing_key == FAKE_DECLINE_KEY {
             return Err(ProviderError::Declined("card_declined".into()));
         }
         tracing::info!(target: "fake_pg", amount, payment_id, "billed");
         Ok(random_id("tx"))
+    }
+
+    /// Stops a saved card at the gateway it was saved on. Takes the opened key.
+    pub async fn delete_billing_key(&self, gw: Gateway, key: &str) -> Result<(), ProviderError> {
+        let deleted = match gw {
+            Gateway::Portone => portone::delete_billing_key(self, key).await,
+            Gateway::TossPayments => toss_payments::delete_billing_key(self, key).await,
+        };
+        self.observe(if gw == Gateway::Portone { "portone" } else { TOSS }, outcome(&deleted)).await;
+        deleted
+    }
+
+    /// Whether the live gateway can save cards: PortOne's billing channel, or Toss's 자동결제 key pair.
+    pub fn billing_ready(&self) -> bool {
+        let integ = self.integ();
+        match integ.gateway() {
+            Gateway::Portone => portone::billing_ready(&integ.portone),
+            Gateway::TossPayments => integ.toss_payments.as_ref().is_some_and(|t| t.billing.is_some()),
+        }
     }
 
     /// Refunds (or cancels) a payment at the gateway that took it.
@@ -283,10 +372,15 @@ impl Providers {
     }
 
     async fn cancel_at(&self, provider: &str, tx_id: &str, amount: i64, cancellable: Option<i64>) -> Result<(), ProviderError> {
-        match provider {
-            "portone" if !self.dev() => {
+        match (provider, toss_mid(provider)) {
+            ("portone", _) if !self.dev() => {
                 let cancelled = portone::cancel(self, tx_id, amount, cancellable).await;
                 self.observe("portone", outcome(&cancelled)).await;
+                cancelled
+            }
+            (_, Some(mid)) if !self.dev() => {
+                let cancelled = toss_payments::cancel(self, mid, tx_id, amount, cancellable).await;
+                self.observe(TOSS, outcome(&cancelled)).await;
                 cancelled
             }
             _ => {
@@ -297,14 +391,34 @@ impl Providers {
         }
     }
 
-    /// Fetches a PortOne payment. Dev mode fakes only `dev:` ids, priced at `dev_total`.
-    pub async fn payment(&self, payment_id: &str, dev_total: i64) -> Result<PaymentInfo, ProviderError> {
-        if !self.dev() {
-            let found = portone::payment(self, payment_id).await;
-            self.observe("portone", outcome(&found)).await;
+    /// Fetches a payment from the gateway `provider` names (a `payments.provider` or `checkouts.gateway` code).
+    /// Dev mode fakes only `dev:` ids and checkout ids, priced at `dev_total`.
+    pub async fn payment(&self, provider: &str, payment_id: &str, dev_total: i64) -> Result<PaymentInfo, ProviderError> {
+        if self.dev() {
+            return portone::dev_payment(payment_id, dev_total).ok_or(ProviderError::NotFound);
+        }
+        if let Some(mid) = toss_mid(provider) {
+            let found = toss_payments::payment(self, mid, payment_id).await;
+            self.observe(TOSS, outcome(&found)).await;
             return found;
         }
-        portone::dev_payment(payment_id, dev_total).ok_or(ProviderError::NotFound)
+        let found = portone::payment(self, payment_id).await;
+        self.observe("portone", outcome(&found)).await;
+        found
+    }
+
+    /// Captures a Toss window payment with the amount we stored (`POST /v1/payments/confirm`). Dev mode: a
+    /// `dev:failed` key declines, any other is paid at `amount`.
+    pub async fn confirm_toss(&self, payment_key: &str, order_id: &str, amount: i64) -> Result<PaymentInfo, ProviderError> {
+        if !self.dev() {
+            let confirmed = toss_payments::confirm(self, payment_key, order_id, amount).await;
+            self.observe(TOSS, outcome(&confirmed)).await;
+            return confirmed;
+        }
+        if payment_key == "dev:failed" {
+            return Err(ProviderError::Declined("dev_declined".into()));
+        }
+        portone::dev_payment("dev:card", amount).ok_or(ProviderError::NotFound)
     }
 
     /// Verifies a PortOne identity verification (PASS / 본인인증).

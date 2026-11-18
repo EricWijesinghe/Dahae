@@ -12,7 +12,7 @@ use crate::{
     ai::{self, AiConfig, Caps, Mode},
     config::{AppleSignInKey, Config, PortOne, SolapiConfig},
     crypto,
-    providers::fcm::ServiceAccount,
+    providers::{Gateway, fcm::ServiceAccount},
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
 use chrono::{DateTime, Utc};
@@ -34,6 +34,8 @@ pub struct Integrations {
     /// Sign in with Apple key: code exchange at sign-in and token revocation on deletion. Optional.
     pub apple_signin: Option<AppleSignInKey>,
     pub portone: PortOne,
+    /// Toss Payments (direct). Console-only; `active` makes it the gateway for new payments.
+    pub toss_payments: Option<TossPayments>,
     pub solapi: Option<SolapiConfig>,
     pub fcm: Option<ServiceAccount>,
     /// AI support agent. Console-only (no env fallback).
@@ -46,6 +48,20 @@ pub struct Integrations {
     /// True when Toss payouts may be enabled: env `TOSS_PAYOUTS_ENABLED=1` and the saved sandbox key passed
     /// the console test (see `toss_ready`). Set by the loader, never by the console.
     pub payout_toss_ready: bool,
+}
+
+/// The Toss Payments card: API 개별 연동 keys of the window MID, optionally of the 자동결제 MID, and the switch.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TossPayments {
+    /// Public (`test_ck_` / `live_ck_`): the hosted page starts the SDK with it.
+    pub client_key: String,
+    pub secret_key: String,
+    /// (client, secret) of the 자동결제 (billing) MID. Without it, saved cards cannot be added under Toss.
+    pub billing: Option<(String, String)>,
+    /// 보안 키 (64 hex): webhook signatures.
+    pub security_key: Option<String>,
+    /// New payments and new saved cards go to Toss.
+    pub active: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -136,6 +152,7 @@ impl Integrations {
             apple_client_ids: c.apple_client_ids.clone(),
             apple_signin: c.apple_signin.clone(),
             portone: c.portone.clone(),
+            toss_payments: None,
             solapi: c.solapi.clone(),
             fcm: c.fcm.clone(),
             ai: None,
@@ -146,10 +163,20 @@ impl Integrations {
         }
     }
 
+    /// Gateway for new payments: Toss only when its card is saved, valid and switched on.
+    pub fn gateway(&self) -> Gateway {
+        if self.toss_payments.as_ref().is_some_and(|t| t.active) {
+            Gateway::TossPayments
+        } else {
+            Gateway::Portone
+        }
+    }
+
     /// Whether the env (not the console) already provides this section.
     pub fn has(&self, s: Section) -> bool {
         match s {
             Section::Portone => self.portone.api_secret.is_some() && self.portone.store_id.is_some(),
+            Section::TossPayments => self.toss_payments.is_some(),
             Section::Solapi => self.solapi.is_some(),
             Section::Push => self.fcm.is_some(),
             Section::Kakao => self.kakao_app_id.is_some(),
@@ -195,6 +222,7 @@ const fn f(name: &'static str, kind: Kind, required: bool) -> Field {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Section {
     Portone,
+    TossPayments,
     Solapi,
     Push,
     Kakao,
@@ -208,8 +236,9 @@ pub enum Section {
 }
 
 impl Section {
-    pub const ALL: [Section; 11] = [
+    pub const ALL: [Section; 12] = [
         Self::Portone,
+        Self::TossPayments,
         Self::Solapi,
         Self::Push,
         Self::Kakao,
@@ -225,6 +254,7 @@ impl Section {
     pub fn code(self) -> &'static str {
         match self {
             Self::Portone => "portone",
+            Self::TossPayments => crate::providers::TOSS,
             Self::Solapi => "solapi",
             Self::Push => "push",
             Self::Kakao => "kakao",
@@ -245,6 +275,7 @@ impl Section {
     pub fn fields(self) -> &'static [Field] {
         match self {
             Self::Portone => &PORTONE_FIELDS,
+            Self::TossPayments => &TOSS_PAYMENTS_FIELDS,
             Self::Solapi => &SOLAPI_FIELDS,
             Self::Push => &PUSH_FIELDS,
             Self::Kakao => &KAKAO_FIELDS,
@@ -265,6 +296,14 @@ const PORTONE_FIELDS: [Field; 5] = [
     f("webhook_secret", Kind::Secret, false),
     f("channel_keys", Kind::Map, false),
     f("cash_receipts", Kind::Toggle, false),
+];
+const TOSS_PAYMENTS_FIELDS: [Field; 6] = [
+    f("client_key", Kind::Text, true),
+    f("secret_key", Kind::Secret, true),
+    f("billing_client_key", Kind::Text, false),
+    f("billing_secret_key", Kind::Secret, false),
+    f("security_key", Kind::Secret, false),
+    f("active", Kind::Toggle, false),
 ];
 const SOLAPI_FIELDS: [Field; 5] = [
     f("api_key", Kind::Secret, true),
@@ -472,6 +511,54 @@ fn payout_settings(v: &Map<String, Value>, toss_ready: bool) -> Result<PayoutSet
     })
 }
 
+/// `test` or `live` for a Toss API 개별 연동 key of `kind` (`ck` client, `sk` secret). Widget keys (`gck`/`gsk`) and
+/// anything with whitespace are refused.
+fn toss_key(key: &str, kind: &str) -> Option<&'static str> {
+    let body = |mode: &str| {
+        key.strip_prefix(&format!("{mode}_{kind}_"))
+            .filter(|r| !r.is_empty() && !r.contains(char::is_whitespace))
+    };
+    if body("test").is_some() {
+        Some("test")
+    } else if body("live").is_some() {
+        Some("live")
+    } else {
+        None
+    }
+}
+
+fn toss_payments(v: &Map<String, Value>) -> Result<TossPayments, Invalid> {
+    let client_key = required(v, "client_key")?;
+    let secret_key = required(v, "secret_key")?;
+    let mut modes = vec![
+        toss_key(&client_key, "ck").ok_or(Invalid("invalid_client_key"))?,
+        toss_key(&secret_key, "sk").ok_or(Invalid("invalid_secret_key"))?,
+    ];
+    let billing = match (text(v, "billing_client_key"), text(v, "billing_secret_key")) {
+        (None, None) => None,
+        (Some(ck), Some(sk)) => {
+            modes.push(toss_key(&ck, "ck").ok_or(Invalid("invalid_client_key"))?);
+            modes.push(toss_key(&sk, "sk").ok_or(Invalid("invalid_secret_key"))?);
+            Some((ck, sk))
+        }
+        _ => return Err(Invalid("missing_field")),
+    };
+    if modes.iter().any(|m| *m != modes[0]) {
+        return Err(Invalid("key_mode_mismatch"));
+    }
+    let security_key = text(v, "security_key");
+    if let Some(k) = &security_key {
+        crate::providers::toss_jwe::key_bytes(k).map_err(|_| Invalid("invalid_security_key"))?;
+    }
+    Ok(TossPayments {
+        client_key,
+        secret_key,
+        billing,
+        security_key,
+        active: toggle(v, "active")?.unwrap_or(false),
+    })
+}
+
 /// Team id, key id and .p8 key go together: all three or none.
 fn apple_key(v: &Map<String, Value>) -> Result<Option<AppleSignInKey>, Invalid> {
     match (text(v, "team_id"), text(v, "key_id"), text(v, "private_key")) {
@@ -554,6 +641,7 @@ pub fn apply(base: &Integrations, section: Section, v: &Map<String, Value>) -> R
                 templates,
             });
         }
+        Section::TossPayments => out.toss_payments = Some(toss_payments(v)?),
         Section::Push => out.fcm = Some(service_account(v)?),
         Section::Backup => out.backup = Some(s3_config(v)?),
         Section::Payout => out.payout = Some(payout_settings(v, base.payout_toss_ready)?),

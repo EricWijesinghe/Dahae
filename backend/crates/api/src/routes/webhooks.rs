@@ -12,7 +12,7 @@ use super::tax_invoices;
 use crate::{
     error::{ApiError, ApiResult},
     providers::{
-        ProviderError,
+        ProviderError, TOSS, TOSS_BILLING,
         portone::{self, WebhookError, verify_webhook},
         toss_webhook,
     },
@@ -28,8 +28,81 @@ const PAYMENT_EVENTS: [&str; 2] = ["Transaction.Paid", "Transaction.VirtualAccou
 /// Cancellations PortOne reports: a refund made in its console, or a partial one. They never settle a checkout.
 const CANCEL_EVENTS: [&str; 2] = ["Transaction.Cancelled", "Transaction.PartialCancelled"];
 
+/// Gateway names in staff case summaries.
+const PORTONE_NAME: &str = "PortOne";
+const TOSS_NAME: &str = "Toss Payments";
+
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/webhooks/portone", post(portone)).route("/webhooks/toss", post(toss))
+    Router::new()
+        .route("/webhooks/portone", post(portone))
+        .route("/webhooks/toss", post(toss))
+        .route("/webhooks/tosspayments", post(toss_payments))
+}
+
+/// How a Toss Payments webhook is let in. Toss does not promise the signature header on payment events, and the
+/// body is only a hint (the handlers re-read the payment with our secret), so an unsigned event is accepted.
+#[derive(Debug, PartialEq, Eq)]
+pub enum TossGate {
+    /// 보안 키 set and the header present: the signature must verify.
+    Verify,
+    /// Accept as a hint.
+    Hint,
+    /// Production with no Toss card: refuse.
+    Unavailable,
+}
+
+pub fn toss_gate(dev_mode: bool, configured: bool, security_key: bool, signed: bool) -> TossGate {
+    match (configured, security_key && signed) {
+        (true, true) => TossGate::Verify,
+        (true, false) => TossGate::Hint,
+        (false, _) if dev_mode => TossGate::Hint,
+        (false, _) => TossGate::Unavailable,
+    }
+}
+
+/// What a Toss payment event is about: the orderId (`data.orderId`, or top level for DEPOSIT_CALLBACK, which has no
+/// eventType) and, for a cancellation hint, the dispute kind it is recorded as. None for events about no payment.
+pub fn toss_event(v: &Value) -> Option<(String, Option<&'static str>)> {
+    let kind = v["eventType"].as_str();
+    if !matches!(kind, None | Some("PAYMENT_STATUS_CHANGED" | "DEPOSIT_CALLBACK")) {
+        return None;
+    }
+    let order = v["data"]["orderId"].as_str().or_else(|| v["orderId"].as_str())?;
+    let status = v["data"]["status"].as_str().or_else(|| v["status"].as_str()).unwrap_or_default();
+    let cancel = match status {
+        "CANCELED" => Some(CANCEL_EVENTS[0]),
+        "PARTIAL_CANCELED" => Some(CANCEL_EVENTS[1]),
+        _ => None,
+    };
+    Some((order.to_string(), cancel))
+}
+
+/// Toss Payments `PAYMENT_STATUS_CHANGED` and `DEPOSIT_CALLBACK`. The payment is always re-read with our secret key,
+/// so a forged body can at most cause one lookup. A 5xx makes Toss retry.
+async fn toss_payments(State(s): State<AppState>, headers: HeaderMap, body: Bytes) -> ApiResult<Json<Value>> {
+    let integ = s.providers.integ();
+    let key = integ.toss_payments.as_ref().and_then(|t| t.security_key.clone());
+    let signature = header(&headers, toss_webhook::SIGNATURE_HEADER);
+    match toss_gate(s.config.dev_mode, integ.toss_payments.is_some(), key.is_some(), !signature.is_empty()) {
+        TossGate::Verify => {
+            let time = header(&headers, toss_webhook::TRANSMISSION_TIME_HEADER);
+            if !toss_webhook::verify(key.as_deref().unwrap_or_default(), time, signature, &body) {
+                tracing::warn!("tosspayments webhook rejected: bad signature");
+                s.providers.observe("tosspayments_webhook", Err("bad_signature")).await;
+                return Err(ApiError::Unauthorized);
+            }
+            s.providers.observe("tosspayments_webhook", Ok(())).await;
+        }
+        TossGate::Hint => {}
+        TossGate::Unavailable => return Err(ApiError::Unavailable("provider_not_configured")),
+    }
+    let event: Value = serde_json::from_slice(&body).map_err(|_| ApiError::BadRequest("invalid_event"))?;
+    match toss_event(&event) {
+        Some((order, Some(kind))) => sync_cancellation(&s, &[TOSS, TOSS_BILLING], &order, kind).await?,
+        Some((order, None)) => handle_payment(&s, &order, false).await?,
+        None => {}
+    }
+    Ok(Json(json!({ "ok": true })))
 }
 
 /// Toss `payout.changed` / `seller.changed`. Signed with the 보안 키 (see `providers::toss_webhook`). A verified
@@ -145,9 +218,9 @@ async fn dispatch(s: &AppState, event: &Event) -> ApiResult<()> {
         return Ok(());
     };
     if is_cancel_event(&event.kind) {
-        sync_cancellation(s, payment_id, &event.kind).await
+        sync_cancellation(s, &["portone"], payment_id, &event.kind).await
     } else if is_payment_event(&event.kind) {
-        handle_payment(s, payment_id).await
+        handle_payment(s, payment_id, true).await
     } else {
         Ok(())
     }
@@ -180,32 +253,35 @@ fn plan_cancellation(amount: i64, recorded: i64, provider_cancelled: i64) -> Api
 /// Records a cancellation at the amount PortOne reports, so a replay sets the same values again. A cancel the app
 /// already recorded changes nothing. Any other cancel opens a dispute and a staff case once per cumulative
 /// cancelled amount: PortOne's transaction id can be the original payment's on every cancel, so it is not used.
-async fn sync_cancellation(s: &AppState, payment_id: &str, kind: &str) -> ApiResult<()> {
+/// `providers` are the `payments.provider` codes of the gateway that sent the event.
+async fn sync_cancellation(s: &AppState, providers: &[&str], payment_id: &str, kind: &str) -> ApiResult<()> {
     let mut tx = s.db.begin().await?;
     // Booking, then payment: the order apply_cancel and the refund paths lock in, so the two cannot deadlock.
     let booking: Option<Uuid> = sqlx::query_scalar(
-        "SELECT b.id FROM bookings b JOIN payments p ON p.booking_id = b.id WHERE p.provider = 'portone' AND p.provider_tx_id = $1 FOR UPDATE OF b",
+        "SELECT b.id FROM bookings b JOIN payments p ON p.booking_id = b.id WHERE p.provider = ANY($2) AND p.provider_tx_id = $1 FOR UPDATE OF b",
     )
     .bind(payment_id)
+    .bind(providers)
     .fetch_optional(&mut *tx)
     .await?;
     let Some(booking) = booking else {
-        tracing::info!(payment_id, "portone cancellation for a payment with no booking");
+        tracing::info!(payment_id, "gateway cancellation for a payment with no booking");
         return Ok(());
     };
     // Locked until commit: a refund the app is making right now is recorded before this reads the amount.
-    let row: Option<(Uuid, i64, i64)> =
-        sqlx::query_as("SELECT id, amount, refunded_amount FROM payments WHERE provider = 'portone' AND provider_tx_id = $1 FOR UPDATE")
+    let row: Option<(Uuid, i64, i64, String)> =
+        sqlx::query_as("SELECT id, amount, refunded_amount, provider FROM payments WHERE provider = ANY($2) AND provider_tx_id = $1 FOR UPDATE")
             .bind(payment_id)
+            .bind(providers)
             .fetch_optional(&mut *tx)
             .await?;
-    let Some((payment, amount, recorded)) = row else {
+    let Some((payment, amount, recorded, provider)) = row else {
         return Ok(());
     };
-    let cancelled = match s.providers.payment(payment_id, amount).await {
+    let cancelled = match s.providers.payment(&provider, payment_id, amount).await {
         Ok(info) => info.cancelled,
         Err(ProviderError::NotFound) => {
-            tracing::warn!(payment_id, "portone cancellation for a payment PortOne does not know");
+            tracing::warn!(payment_id, provider, "gateway cancellation for a payment the gateway does not know");
             return Ok(());
         }
         Err(e) => return Err(e.into()),
@@ -221,6 +297,7 @@ async fn sync_cancellation(s: &AppState, payment_id: &str, kind: &str) -> ApiRes
             kind,
             cancelled,
             status,
+            gateway: if provider == "portone" { PORTONE_NAME } else { TOSS_NAME },
         },
     )
     .await?;
@@ -235,6 +312,8 @@ struct Recorded<'a> {
     kind: &'a str,
     cancelled: i64,
     status: &'static str,
+    /// The gateway's name, for the staff case.
+    gateway: &'static str,
 }
 
 async fn record_external_cancel(tx: &mut sqlx::PgConnection, c: Recorded<'_>) -> ApiResult<()> {
@@ -264,7 +343,7 @@ async fn record_external_cancel(tx: &mut sqlx::PgConnection, c: Recorded<'_>) ->
                 source: "provider",
                 reporter: "system",
                 reporter_id: None,
-                summary: "Refunded in the PortOne console, outside the app. Check the booking and its payout.",
+                summary: &format!("Refunded in the {} console, outside the app. Check the booking and its payout.", c.gateway),
                 photos: json!([]),
             },
         )
@@ -273,10 +352,16 @@ async fn record_external_cancel(tx: &mut sqlx::PgConnection, c: Recorded<'_>) ->
     Ok(())
 }
 
-/// Settles the checkout a payment event is about. Unknown payments are acknowledged and ignored.
-async fn handle_payment(s: &AppState, payment_id: &str) -> ApiResult<()> {
-    let Some(ck) = locate(s, payment_id).await? else {
-        tracing::info!(payment_id, "portone event for an unknown checkout");
+/// Settles the checkout a payment event is about. Unknown payments are acknowledged and ignored. Only PortOne
+/// (`ask_portone`) is asked for the checkout a foreign id was created with; a Toss orderId is the checkout id.
+async fn handle_payment(s: &AppState, payment_id: &str, ask_portone: bool) -> ApiResult<()> {
+    let found = if ask_portone {
+        locate(s, payment_id).await?
+    } else {
+        find_by_payment(&s.db, payment_id).await?
+    };
+    let Some(ck) = found else {
+        tracing::info!(payment_id, "payment event for an unknown checkout");
         return Ok(());
     };
     match settle(s, &ck, payment_id).await {
@@ -285,7 +370,7 @@ async fn handle_payment(s: &AppState, payment_id: &str) -> ApiResult<()> {
         Err(e @ (ApiError::Db(_) | ApiError::Internal(_) | ApiError::Unavailable(_))) => Err(e),
         // Business refusals (slot full, amount mismatch, not paid yet) are handled inside settle.
         Err(e) => {
-            tracing::warn!(error = %e, checkout = %ck.id, "portone payment not fulfilled");
+            tracing::warn!(error = %e, checkout = %ck.id, "gateway payment not fulfilled");
             Ok(())
         }
     }
@@ -312,6 +397,32 @@ mod tests {
         assert_eq!(webhook_auth(false, Some("whsec_x")), WebhookAuth::Verify);
         assert_eq!(webhook_auth(true, None), WebhookAuth::UnsignedDev);
         assert_eq!(webhook_auth(false, None), WebhookAuth::Unavailable);
+    }
+
+    #[test]
+    fn toss_gate_truth_table() {
+        assert_eq!(toss_gate(false, true, true, true), TossGate::Verify, "key and header: verify");
+        assert_eq!(toss_gate(true, true, true, true), TossGate::Verify, "dev never skips a real key");
+        assert_eq!(toss_gate(false, true, true, false), TossGate::Hint, "no header: a hint, re-read");
+        assert_eq!(toss_gate(false, true, false, true), TossGate::Hint, "no key: a hint, re-read");
+        assert_eq!(toss_gate(false, false, false, false), TossGate::Unavailable, "prod without a card");
+        assert_eq!(toss_gate(false, false, true, true), TossGate::Unavailable);
+        assert_eq!(toss_gate(true, false, false, false), TossGate::Hint, "dev accepts unsigned");
+    }
+
+    #[test]
+    fn toss_events_route_by_status_hint() {
+        let changed = |status: &str| json!({ "eventType": "PAYMENT_STATUS_CHANGED", "data": { "orderId": "o-1", "status": status } });
+        assert_eq!(toss_event(&changed("DONE")), Some(("o-1".into(), None)));
+        assert_eq!(toss_event(&changed("CANCELED")), Some(("o-1".into(), Some("Transaction.Cancelled"))));
+        assert_eq!(
+            toss_event(&changed("PARTIAL_CANCELED")),
+            Some(("o-1".into(), Some("Transaction.PartialCancelled")))
+        );
+        let deposit = json!({ "createdAt": "x", "secret": "s", "status": "DONE", "transactionKey": "t", "orderId": "o-2" });
+        assert_eq!(toss_event(&deposit), Some(("o-2".into(), None)), "DEPOSIT_CALLBACK has no eventType");
+        assert_eq!(toss_event(&json!({ "eventType": "BILLING_DELETED", "data": { "billingKey": "k" } })), None);
+        assert_eq!(toss_event(&json!({ "eventType": "PAYMENT_STATUS_CHANGED", "data": {} })), None, "no order");
     }
 
     #[test]

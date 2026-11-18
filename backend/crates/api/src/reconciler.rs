@@ -16,11 +16,10 @@ use crate::{
 use std::time::Duration;
 use tokio::task::JoinHandle;
 
-/// Dev mode always runs it (the fake gateway answers); production needs PortOne configured.
-/// Only against a real PortOne account: in dev mode the fake gateway reports every
+/// Only against a real gateway account (PortOne or Toss Payments): in dev mode the fake gateway reports every
 /// checkout as paid, so reconciling would turn abandoned checkouts into bookings.
-pub fn enabled(_dev_mode: bool, portone_configured: bool) -> bool {
-    portone_configured
+pub fn enabled(_dev_mode: bool, gateway_configured: bool) -> bool {
+    gateway_configured
 }
 
 /// Starts the periodic pass. Each tick re-checks the live keys, so PortOne entered later in the
@@ -31,7 +30,8 @@ pub fn spawn(state: AppState) -> JoinHandle<()> {
     tokio::spawn(async move {
         let mut tick = tokio::time::interval(every);
         while next_tick(&mut tick, &mut stop).await {
-            if !enabled(state.config.dev_mode, state.providers.integ().portone.api_secret.is_some()) {
+            let integ = state.providers.integ();
+            if !enabled(state.config.dev_mode, integ.portone.api_secret.is_some() || integ.toss_payments.is_some()) {
                 job_pass("reconciler", true);
                 continue;
             }

@@ -11,8 +11,9 @@ use crate::{
     error::{ApiError, ApiResult},
     ops,
     providers::{
-        ProviderError,
+        Gateway, ProviderError, TOSS, TOSS_BILLING,
         portone::{self, ProviderPayment},
+        toss_payments::{self, Mid},
     },
     state::AppState,
     util::{QueuedRefund, REFUND_COLS, REFUND_LEASE_MINS, Refund, retry_refund},
@@ -52,7 +53,7 @@ const DIFF_GRACE_MINS: i64 = 60;
 /// One reconciler pass: retry due refunds, sweep pending checkouts older than a day to 'expired',
 /// then claim a batch of recent unfinished checkouts and settle each against the provider.
 /// Returns how many refunds and checkouts were checked.
-pub(crate) async fn reconcile_pass(s: &AppState) -> ApiResult<usize> {
+pub async fn reconcile_pass(s: &AppState) -> ApiResult<usize> {
     let refunds = drain_refunds(s).await?;
     let now = Utc::now();
     sqlx::query(
@@ -88,7 +89,7 @@ pub(crate) async fn reconcile_pass(s: &AppState) -> ApiResult<usize> {
 async fn reconcile_one(s: &AppState, ck: &CheckoutRow) {
     // Payment id = checkout id, as the app pays with it.
     let payment_id = ck.id.to_string();
-    let info = match s.providers.payment(&payment_id, ck.charge()).await {
+    let info = match s.providers.payment(&ck.gateway, &payment_id, ck.charge()).await {
         Ok(info) => Some(info),
         Err(ProviderError::NotFound) => None,
         Err(e) => {
@@ -163,7 +164,7 @@ async fn reconcile_stale_one(s: &AppState, ck: &CheckoutRow) {
     let Some(payment_id) = ck.provider_payment_id.as_deref() else {
         return;
     };
-    let info = match s.providers.payment(payment_id, ck.charge()).await {
+    let info = match s.providers.payment(&ck.gateway, payment_id, ck.charge()).await {
         Ok(info) => info,
         Err(ProviderError::NotFound) => return,
         Err(e) => {
@@ -261,23 +262,38 @@ async fn fetch_provider_day(s: &AppState, from: DateTime<Utc>, until: DateTime<U
     Err(ApiError::Internal("payment list exceeds the page cap".into()))
 }
 
-/// Local records for the window: checkouts with a provider payment id, plus portone payment rows
-/// that no checkout covers. One entry per payment id.
-async fn local_payments(db: &PgPool, from: DateTime<Utc>, until: DateTime<Utc>) -> ApiResult<Vec<LocalPayment>> {
+/// Lists every transaction of one Toss MID in the window (as KST wall time, which Toss takes), one row per order.
+async fn fetch_toss_day(s: &AppState, mid: Mid, from: DateTime<Utc>, until: DateTime<Utc>) -> ApiResult<Vec<ProviderPayment>> {
+    let kst = |t: DateTime<Utc>| (t + Duration::hours(9)).naive_utc().format("%Y-%m-%dT%H:%M:%S").to_string();
+    Ok(toss_payments::transactions(&s.providers, mid, &kst(from), &kst(until)).await?)
+}
+
+/// Local records for the window on one gateway leg: checkouts of `checkout_gateway` with a provider payment id,
+/// plus payment rows of `providers` that no checkout covers. One entry per payment id. Without the gateway filter
+/// the PortOne diff would report every Toss checkout as missing at PortOne.
+async fn local_payments(
+    db: &PgPool,
+    from: DateTime<Utc>,
+    until: DateTime<Utc>,
+    providers: &[&str],
+    checkout_gateway: Option<&str>,
+) -> ApiResult<Vec<LocalPayment>> {
     let checkouts: Vec<(String, bool, i64)> = sqlx::query_as(
         "SELECT provider_payment_id, status IN ('paid','refund_pending','refunded'), amount - points
-         FROM checkouts WHERE provider_payment_id IS NOT NULL AND created_at >= $1 AND created_at < $2",
+         FROM checkouts WHERE provider_payment_id IS NOT NULL AND created_at >= $1 AND created_at < $2 AND gateway = $3",
     )
     .bind(from)
     .bind(until)
+    .bind(checkout_gateway)
     .fetch_all(db)
     .await?;
     let payments: Vec<(String, bool, i64)> = sqlx::query_as(
         "SELECT provider_tx_id, status IN ('paid','partially_refunded','refunded'), amount
-         FROM payments WHERE provider = 'portone' AND provider_tx_id IS NOT NULL AND created_at >= $1 AND created_at < $2",
+         FROM payments WHERE provider = ANY($3) AND provider_tx_id IS NOT NULL AND created_at >= $1 AND created_at < $2",
     )
     .bind(from)
     .bind(until)
+    .bind(providers)
     .fetch_all(db)
     .await?;
     let mut seen = HashSet::new();
@@ -289,13 +305,34 @@ async fn local_payments(db: &PgPool, from: DateTime<Utc>, until: DateTime<Utc>) 
         .collect())
 }
 
+/// One diff per configured gateway leg: PortOne, the Toss window MID (its checkouts and payments), and the Toss
+/// billing MID (saved-card charges only).
 async fn diff_day(s: &AppState, day: NaiveDate) -> ApiResult<Vec<Mismatch>> {
     let (from, until) = diff_window(day);
-    let provider = fetch_provider_day(s, from, until).await?;
-    let local = local_payments(&s.db, from, until).await?;
-    let found = diff_payments(&provider, &local);
-    tracing::info!(%day, listed = provider.len(), mismatches = found.len(), "payment diff pass");
+    let integ = s.providers.integ();
+    let mut found = Vec::new();
+    if integ.portone.api_secret.is_some() {
+        let provider = fetch_provider_day(s, from, until).await?;
+        let local = local_payments(&s.db, from, until, &["portone"], Some(Gateway::Portone.code())).await?;
+        found.extend(diff_leg(day, "portone", &provider, &local));
+    }
+    if let Some(toss) = &integ.toss_payments {
+        let provider = fetch_toss_day(s, Mid::Window, from, until).await?;
+        let local = local_payments(&s.db, from, until, &[TOSS], Some(TOSS)).await?;
+        found.extend(diff_leg(day, TOSS, &provider, &local));
+        if toss.billing.is_some() {
+            let provider = fetch_toss_day(s, Mid::Billing, from, until).await?;
+            let local = local_payments(&s.db, from, until, &[TOSS_BILLING], None).await?;
+            found.extend(diff_leg(day, TOSS_BILLING, &provider, &local));
+        }
+    }
     Ok(found)
+}
+
+fn diff_leg(day: NaiveDate, leg: &str, provider: &[ProviderPayment], local: &[LocalPayment]) -> Vec<Mismatch> {
+    let found = diff_payments(provider, local);
+    tracing::info!(%day, leg, listed = provider.len(), mismatches = found.len(), "payment diff pass");
+    found
 }
 
 /// Pass state in `settings`: the last KST day fully reconciled, and when an attempt last started

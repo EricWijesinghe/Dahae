@@ -7,6 +7,7 @@ use super::audit;
 use crate::{
     auth::Admin,
     error::{ApiError, ApiResult},
+    providers::Gateway,
     state::AppState,
 };
 use axum::{Json, Router, extract::State, routing::get};
@@ -54,14 +55,25 @@ pub fn channel_key(channel_keys: &HashMap<String, String>, code: &str) -> Option
 }
 
 /// Methods offered to customers: switched on by an admin and, on the real PortOne gateway, given a channel key.
-/// The dev fake provider takes no keys, so every enabled method is offered there (a local demo can pay).
+/// Toss opens every method from its one client key, so under Toss every enabled method is offered. The dev fake
+/// provider takes no keys, so every enabled method is offered there (a local demo can pay).
 pub async fn offered_codes(s: &AppState) -> ApiResult<Vec<String>> {
     let on = enabled_codes(&s.db).await?;
-    if s.providers.dev() {
+    let integ = s.providers.integ();
+    if s.providers.dev() || integ.gateway() == Gateway::TossPayments {
         return Ok(on);
     }
-    let integ = s.providers.integ();
     Ok(on.into_iter().filter(|c| channel_key(&integ.portone.channel_keys, c).is_some()).collect())
+}
+
+/// A method's flow on the live gateway. Toss saves cards only (자동결제, card only) and only with a billing key
+/// pair, so under Toss every other method is a one-off checkout. The app hides billing methods it cannot register.
+pub fn flow(gw: Gateway, code: &str, catalogue_flow: &'static str, toss_billing: bool) -> &'static str {
+    match gw {
+        Gateway::Portone => catalogue_flow,
+        Gateway::TossPayments if code == "card" && toss_billing => "billing",
+        Gateway::TossPayments => "checkout",
+    }
 }
 
 /// Rejects unknown, switched-off or unconfigured methods before any intent is created.
@@ -83,11 +95,16 @@ struct Method {
 
 async fn enabled(State(s): State<AppState>) -> ApiResult<Json<Vec<Method>>> {
     let on = offered_codes(&s).await?;
+    let integ = s.providers.integ();
+    let toss_billing = integ.toss_payments.as_ref().is_some_and(|t| t.billing.is_some());
     Ok(Json(
         METHODS
             .iter()
             .filter(|(code, _)| on.iter().any(|c| c == code))
-            .map(|&(code, flow)| Method { code, flow })
+            .map(|&(code, f)| Method {
+                code,
+                flow: flow(integ.gateway(), code, f, toss_billing),
+            })
             .collect(),
     ))
 }
@@ -98,14 +115,15 @@ struct AdminMethod {
     flow: &'static str,
     /// Switched on by an admin.
     enabled: bool,
-    /// Has a PortOne channel key; without one the method is never shown to customers even when enabled.
+    /// Has a PortOne channel key (always true under Toss); without one the method is never shown even when enabled.
     configured: bool,
 }
 
 async fn admin_view(s: &AppState) -> ApiResult<Vec<AdminMethod>> {
     let on = enabled_codes(&s.db).await?;
-    let fake = s.providers.dev();
-    let keys = &s.providers.integ().portone.channel_keys;
+    let integ = s.providers.integ();
+    let fake = s.providers.dev() || integ.gateway() == Gateway::TossPayments;
+    let keys = &integ.portone.channel_keys;
     Ok(METHODS
         .iter()
         .map(|&(code, flow)| AdminMethod {
@@ -148,8 +166,18 @@ async fn admin_update(State(s): State<AppState>, Admin(a): Admin, Json(u): Json<
 
 #[cfg(test)]
 mod tests {
-    use super::channel_key;
+    use super::{Gateway, channel_key, flow};
     use std::collections::HashMap;
+
+    #[test]
+    fn under_toss_only_card_with_billing_keys_is_saved() {
+        assert_eq!(flow(Gateway::Portone, "kakaopay", "billing", false), "billing");
+        assert_eq!(flow(Gateway::Portone, "transfer", "checkout", true), "checkout");
+        assert_eq!(flow(Gateway::TossPayments, "card", "billing", true), "billing");
+        assert_eq!(flow(Gateway::TossPayments, "card", "billing", false), "checkout");
+        assert_eq!(flow(Gateway::TossPayments, "kakaopay", "billing", true), "checkout");
+        assert_eq!(flow(Gateway::TossPayments, "transfer", "checkout", true), "checkout");
+    }
 
     fn keys(pairs: &[(&str, &str)]) -> HashMap<String, String> {
         pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()

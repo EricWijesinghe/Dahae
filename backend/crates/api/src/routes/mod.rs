@@ -103,6 +103,7 @@ pub fn router(state: AppState) -> Router {
         .merge(chat::routes())
         .merge(uploads::routes().layer(DefaultBodyLimit::max(contract::UPLOAD_BODY_LIMIT)))
         .merge(checkouts::routes())
+        .merge(checkouts::public_routes())
         .merge(cash_receipts::routes())
         .merge(tax_invoices::routes())
         .merge(growth::public_routes())

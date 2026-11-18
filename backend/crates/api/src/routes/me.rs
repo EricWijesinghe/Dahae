@@ -10,7 +10,7 @@ use crate::{
     contract::{PageQuery, cursor_part, decode_cursor, encode_cursor, page_limit, paged, ts_key},
     crypto,
     error::{ApiError, ApiResult},
-    providers::{ProviderError, portone},
+    providers::{Gateway, ProviderError, portone},
     state::AppState,
 };
 use axum::{
@@ -372,19 +372,35 @@ struct MethodRow {
     created_at: DateTime<Utc>,
 }
 
-/// What the app needs to open PortOne's card registration page. Hidden (`enabled: false`) until PortOne is configured.
+/// What the app needs to open the live gateway's card registration page. Hidden (`enabled: false`) until that
+/// gateway can save cards (PortOne's billing channel, or Toss's 자동결제 keys).
 async fn billing_setup(State(s): State<AppState>, Customer(a): Customer) -> ApiResult<Json<Value>> {
     let integ = s.providers.integ();
     let p = &integ.portone;
-    if !portone::billing_ready(p) {
+    if !s.providers.billing_ready() {
         return Ok(Json(json!({ "enabled": false })));
     }
-    // The ticket is stored so register_method can require it (single use, 30 minutes).
+    // The ticket is stored so register_method can require it (single use, 30 minutes). Random (v4): Toss binds the
+    // card to it as the customerKey, which must not be guessable.
+    let mut random = [0u8; 16];
+    crate::entropy::fill(&mut random);
     let issue: Uuid = sqlx::query_scalar("INSERT INTO billing_issues (id, user_id, expires_at) VALUES ($1, $2, now() + interval '30 minutes') RETURNING id")
-        .bind(Uuid::now_v7())
+        .bind(uuid::Builder::from_random_bytes(random).into_uuid())
         .bind(a.id)
         .fetch_one(&s.db)
         .await?;
+    let gw = integ.gateway();
+    if let (Gateway::TossPayments, Some(t)) = (gw, &integ.toss_payments) {
+        let card = t.billing.as_ref().map(|(ck, _)| ck.clone());
+        return Ok(Json(json!({
+            "enabled": true,
+            "gateway": gw.code(),
+            "store_id": null,
+            "channels": { "card": card },
+            "issue_id": issue,
+            "customer_id": a.id,
+        })));
+    }
     // The app reads the billing channel under "card" and the identity channel under "identity". The one-off
     // card, cash receipt and other method channels stay server-side.
     let mut channels = serde_json::Map::new();
@@ -396,6 +412,7 @@ async fn billing_setup(State(s): State<AppState>, Customer(a): Customer) -> ApiR
     }
     Ok(Json(json!({
         "enabled": true,
+        "gateway": gw.code(),
         "store_id": p.store_id,
         "channels": channels,
         "issue_id": issue,
@@ -424,6 +441,11 @@ async fn register_method(State(s): State<AppState>, Customer(a): Customer, Json(
     if !matches!(r.provider.as_str(), "card" | "kakaopay" | "naverpay" | "tosspay" | "payco") || r.display_name.chars().count() > MAX_NAME_LEN {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
+    // A card registers with the live gateway; Toss 자동결제 saves cards only.
+    let gw = s.providers.integ().gateway();
+    if gw == Gateway::TossPayments && r.provider != "card" {
+        return Err(ApiError::BadRequest("invalid_payment_method"));
+    }
     // Newest open ticket of this customer. Locked and consumed in the same transaction as the insert.
     let mut tx = s.db.begin().await?;
     let issue: Uuid = sqlx::query_scalar(
@@ -435,7 +457,7 @@ async fn register_method(State(s): State<AppState>, Customer(a): Customer, Json(
     .ok_or(ApiError::BadRequest("billing_issue_expired"))?;
     let key = s
         .providers
-        .issue_billing_key(&r.auth_key, &a.id.to_string(), &issue.to_string())
+        .issue_billing_key(gw, &r.auth_key, &a.id.to_string(), &issue.to_string())
         .await
         .map_err(|e| ApiError::PaymentFailed(e.to_string()))?;
     sqlx::query("UPDATE billing_issues SET consumed_at = now() WHERE id = $1")
@@ -444,13 +466,16 @@ async fn register_method(State(s): State<AppState>, Customer(a): Customer, Json(
         .await?;
     let (sealed, digest) = crypto::seal_billing_key(&s.config.data_key, &key);
     let row = sqlx::query_as(
-        "INSERT INTO payment_methods (user_id, provider, billing_key, billing_key_digest, display_name) VALUES ($1,$2,$3,$4,$5) RETURNING id, provider, display_name, created_at",
+        "INSERT INTO payment_methods (user_id, provider, billing_key, billing_key_digest, display_name, gateway, customer_key)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, provider, display_name, created_at",
     )
     .bind(a.id)
     .bind(&r.provider)
     .bind(sealed)
     .bind(digest)
     .bind(&r.display_name)
+    .bind(gw.code())
+    .bind((gw == Gateway::TossPayments).then(|| issue.to_string()))
     .fetch_one(&mut *tx)
     .await?;
     tx.commit().await?;
@@ -458,14 +483,15 @@ async fn register_method(State(s): State<AppState>, Customer(a): Customer, Json(
 }
 
 async fn delete_method(State(s): State<AppState>, Customer(a): Customer, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
-    let stored: Option<String> = sqlx::query_scalar("SELECT billing_key FROM payment_methods WHERE id = $1 AND user_id = $2 AND billing_key <> ''")
-        .bind(id)
-        .bind(a.id)
-        .fetch_optional(&s.db)
-        .await?;
-    // The gateway key is revoked before the local copy is erased: if PortOne refuses, the card stays on file to retry.
-    if let Some(stored) = stored {
-        crate::privacy::revoke_billing_key(&s, id, &stored).await?;
+    let stored: Option<(String, String)> =
+        sqlx::query_as("SELECT billing_key, gateway FROM payment_methods WHERE id = $1 AND user_id = $2 AND billing_key <> ''")
+            .bind(id)
+            .bind(a.id)
+            .fetch_optional(&s.db)
+            .await?;
+    // The gateway key is revoked before the local copy is erased: if the gateway refuses, the card stays on file to retry.
+    if let Some((stored, gateway)) = stored {
+        crate::privacy::revoke_billing_key(&s, id, &gateway, &stored).await?;
     }
     sqlx::query("UPDATE payment_methods SET deleted_at = now(), billing_key = '', billing_key_digest = NULL WHERE id = $1 AND user_id = $2")
         .bind(id)

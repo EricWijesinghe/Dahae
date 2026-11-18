@@ -142,17 +142,18 @@ async fn request(State(s): State<AppState>, Customer(a): Customer, Path(checkout
 
 /// Called after a checkout settles: links the pending request to the payment and queues it for the owner. A payment
 /// already refunded in full by the time the link lands is cancelled instead, never queued.
-pub async fn on_settled(db: &PgPool, checkout: Uuid, provider_tx_id: &str) {
+pub async fn on_settled(db: &PgPool, checkout: Uuid, provider: &str, provider_tx_id: &str) {
     let linked = sqlx::query(
         "UPDATE tax_invoice_requests SET
-           payment_id = (SELECT id FROM payments WHERE provider = 'portone' AND provider_tx_id = $2 LIMIT 1),
-           state = CASE WHEN (SELECT status FROM payments WHERE provider = 'portone' AND provider_tx_id = $2 LIMIT 1) = 'refunded'
+           payment_id = (SELECT id FROM payments WHERE provider = $3 AND provider_tx_id = $2 LIMIT 1),
+           state = CASE WHEN (SELECT status FROM payments WHERE provider = $3 AND provider_tx_id = $2 LIMIT 1) = 'refunded'
                         THEN 'cancelled' ELSE 'requested' END,
            updated_at = now()
          WHERE checkout_id = $1 AND state = 'pending'",
     )
     .bind(checkout)
     .bind(provider_tx_id)
+    .bind(provider)
     .execute(db)
     .await;
     if let Err(e) = linked {

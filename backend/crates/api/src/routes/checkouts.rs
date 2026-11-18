@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
-//! One-off payments through PortOne: checkout intents, confirm, virtual-account deposits, expiry.
+//! One-off payments through PortOne or Toss Payments: checkout intents, confirm, virtual-account deposits, expiry.
+//! Each checkout keeps the gateway it was created on (`gateway`), so a later switch never moves its payment.
 //! Money moves only through `settle`: a PAID payment is checked against the checkout, then
 //! fulfilled in one transaction. Any failure after PAID refunds the payment (durably: see
 //! `util::refund_durably`). Recovery and the checkout lists live in `checkout_recon`.
@@ -23,7 +24,7 @@ use crate::{
     auth::Customer,
     error::{ApiError, ApiResult},
     providers::{
-        PaymentInfo, ProviderError,
+        Gateway, PaymentInfo, ProviderError,
         portone::{self, dev_method},
     },
     realtime::{Recipient, notify},
@@ -47,12 +48,20 @@ use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 const CHECKOUT_TTL_MIN: i64 = 30;
-pub(super) const CHECKOUT_COLS: &str = "id, user_id, kind, booking_id, draft, amount, points, status, provider_payment_id, result_booking_id, expires_at";
+/// A Toss paymentKey is opaque, at most 200 characters.
+const TOSS_KEY_MAX: usize = 200;
+pub(super) const CHECKOUT_COLS: &str =
+    "id, user_id, kind, booking_id, draft, amount, points, status, provider_payment_id, result_booking_id, expires_at, gateway";
 
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/checkouts", crate::idempotency::replayable(get(list).post(create)))
         .route("/checkouts/{id}/confirm", crate::idempotency::replayable(post(confirm)))
+}
+
+/// Public: the Toss success page posts here from a browser that holds no session (see `toss_confirm`).
+pub fn public_routes() -> Router<AppState> {
+    Router::new().route("/checkouts/{id}/toss-confirm", post(toss_confirm))
 }
 
 pub fn admin_routes() -> Router<AppState> {
@@ -128,7 +137,10 @@ struct CheckoutIntent {
     points: i64,
     order_name: &'static str,
     method: String,
+    /// Which hosted page the app opens: `portone` or `tosspayments`.
+    gateway: &'static str,
     store_id: Option<String>,
+    /// The key the hosted page starts its SDK with: the PortOne channel key, or the Toss client key.
     channel_key: String,
     /// 현금영수증 request is offered only when the server has it switched on.
     cash_receipts: bool,
@@ -147,6 +159,8 @@ pub struct CheckoutRow {
     pub provider_payment_id: Option<String>,
     pub result_booking_id: Option<Uuid>,
     pub expires_at: DateTime<Utc>,
+    /// `portone` or `tosspayments`: confirm, webhooks, reconciliation and refunds always use this one.
+    pub gateway: String,
 }
 
 impl CheckoutRow {
@@ -269,15 +283,18 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         split.points
     };
     let method = req.method();
+    let integ = s.providers.integ();
+    let gw = integ.gateway();
     // Checked before the row exists: a method without a channel key must not leave a pending checkout behind.
     // The fake provider takes no channel key; the real gateway needs one (`ensure_enabled` checked it above).
-    let key = if s.providers.dev() {
-        channel_key(&s.providers.integ().portone.channel_keys, method).unwrap_or_default()
-    } else {
-        channel_key_for(&s.providers.integ().portone.channel_keys, method)?
+    // Toss starts every method from its one client key.
+    let key = match (gw, &integ.toss_payments) {
+        (Gateway::TossPayments, Some(t)) => t.client_key.clone(),
+        _ if s.providers.dev() => channel_key(&integ.portone.channel_keys, method).unwrap_or_default(),
+        _ => channel_key_for(&integ.portone.channel_keys, method)?,
     };
     let id = Uuid::now_v7();
-    sqlx::query("INSERT INTO checkouts (id, user_id, kind, booking_id, draft, method, amount, points, status, expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$9,'pending',$8)")
+    sqlx::query("INSERT INTO checkouts (id, user_id, kind, booking_id, draft, method, amount, points, status, expires_at, gateway) VALUES ($1,$2,$3,$4,$5,$6,$7,$9,'pending',$8,$10)")
         .bind(id)
         .bind(a.id)
         .bind(intent.kind)
@@ -287,10 +304,12 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         .bind(intent.amount)
         .bind(Utc::now() + Duration::minutes(CHECKOUT_TTL_MIN))
         .bind(points)
+        .bind(gw.code())
         .execute(&s.db)
         .await?;
-    let integ = s.providers.integ();
     let portone = &integ.portone;
+    // Toss issues cash receipts in its own window (and cancels them with the payment), so the app offers none.
+    let toss = gw == Gateway::TossPayments;
     Ok(Json(CheckoutIntent {
         id,
         amount: intent.amount - points,
@@ -298,9 +317,10 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         points,
         order_name: order_name(intent.kind),
         method: method.to_string(),
-        store_id: portone.store_id.clone(),
+        gateway: gw.code(),
+        store_id: if toss { None } else { portone.store_id.clone() },
         channel_key: key,
-        cash_receipts: portone.cash_receipts,
+        cash_receipts: portone.cash_receipts && !toss,
     }))
 }
 
@@ -353,6 +373,40 @@ async fn confirm(State(s): State<AppState>, Customer(a): Customer, Path(id): Pat
     Ok(Json(settle(&s, &ck, &req.payment_id).await?))
 }
 
+#[derive(Deserialize)]
+struct TossConfirm {
+    payment_key: String,
+    amount: i64,
+}
+
+/// `POST /checkouts/{id}/toss-confirm`: the Toss success page hands over the paymentKey, and the server captures the
+/// payment with the amount it stored (never the client's). Public, because the page's browser has no session: the
+/// worst a caller can do with someone's checkout id and paymentKey is complete the payment that customer authorised.
+async fn toss_confirm(State(s): State<AppState>, Path(id): Path<Uuid>, Json(r): Json<TossConfirm>) -> ApiResult<Json<Value>> {
+    if !crate::providers::toss_payments::valid_key(&r.payment_key, TOSS_KEY_MAX) {
+        return Err(ApiError::BadRequest("invalid_input"));
+    }
+    let ck = find_by_id(&s.db, id).await?.ok_or(ApiError::NotFound)?;
+    if ck.gateway != Gateway::TossPayments.code() {
+        return Err(ApiError::BadRequest("payment_not_for_checkout"));
+    }
+    // Before any Toss call: a tampered amount is never confirmed.
+    if r.amount != ck.charge() {
+        return Err(ApiError::BadRequest("amount_mismatch"));
+    }
+    if ck.kind == "booking" && ck.result_booking_id.is_none() && super::config::maintenance_on(&s.db, &s.config).await? {
+        return Err(ApiError::Unavailable("maintenance"));
+    }
+    let order_id = ck.id.to_string();
+    if ck.status == "paid" && ck.provider_payment_id.as_deref() == Some(order_id.as_str()) {
+        return Ok(Json(json!({ "status": "paid" })));
+    }
+    let info = s.providers.confirm_toss(&r.payment_key, &order_id, ck.charge()).await?;
+    // Only the status: the caller is not authenticated, so no booking id or account goes back.
+    let result = apply(&s, &ck, &order_id, Some(&info)).await?;
+    Ok(Json(json!({ "status": result.status })))
+}
+
 /// Verifies a provider payment against a checkout and moves the checkout forward.
 /// Shared by the confirm call, the PortOne webhook and the reconciler. The provider is
 /// always asked; the webhook body and the client are never trusted for money.
@@ -363,7 +417,7 @@ pub async fn settle(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResu
         return Ok(ConfirmResult::paid(ck.result_booking_id));
     }
     let lookup = dev_lookup(payment_id);
-    let info = s.providers.payment(lookup, ck.charge()).await.map_err(|e| match e {
+    let info = s.providers.payment(&ck.gateway, lookup, ck.charge()).await.map_err(|e| match e {
         ProviderError::NotFound => ApiError::BadRequest("payment_not_found"),
         other => other.into(),
     })?;
@@ -379,12 +433,14 @@ pub async fn settle(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResu
 }
 
 /// The id this checkout's payment is stored under. A payment of another checkout is refused before
-/// anything is read, changed or refunded: one PortOne payment backs exactly one checkout.
+/// anything is read, changed or refunded: one provider payment backs exactly one checkout. A Toss payment's
+/// orderId is always the checkout id, so only PortOne is asked about any other id.
 async fn bound_payment(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResult<String> {
     let foreign = ApiError::BadRequest("payment_not_for_checkout");
     match bind(ck.id, payment_id) {
         Binding::Bound(id) => Ok(id),
         Binding::Foreign => Err(foreign),
+        Binding::AskProvider if ck.gateway != "portone" => Err(foreign),
         Binding::AskProvider => match portone::custom_checkout_id(&s.providers, payment_id).await {
             Ok(Some(owner)) if owner == ck.id => Ok(payment_id.to_string()),
             Ok(_) | Err(ProviderError::NotFound) => Err(foreign),
@@ -425,16 +481,21 @@ pub(super) async fn apply(s: &AppState, ck: &CheckoutRow, payment_id: &str, info
         }
         Action::MarkAwaitingDeposit => {
             let i = info.ok_or(ApiError::Internal("virtual account without provider payment".into()))?;
+            let mut method = i.method.clone();
+            // Toss reports no account holder; the account is the business's, and the app always shows a holder row.
+            if method.is_object() && method.get("remitteeName").is_none_or(Value::is_null) {
+                method["remitteeName"] = json!(super::setup::brand_name(&s.db).await);
+            }
             sqlx::query("UPDATE checkouts SET status = 'awaiting_deposit', provider_payment_id = $2, virtual_account = $3 WHERE id = $1 AND status IN ('pending','awaiting_deposit')")
                 .bind(ck.id)
                 .bind(payment_id)
-                .bind(&i.method)
+                .bind(&method)
                 .execute(&s.db)
                 .await?;
             Ok(ConfirmResult {
                 status: "awaiting_deposit",
                 booking_id: None,
-                virtual_account: Some(virtual_account_view(&i.method, ck.charge())),
+                virtual_account: Some(virtual_account_view(&method, ck.charge())),
             })
         }
         Action::MarkExpired => {
@@ -458,7 +519,7 @@ async fn unfulfilled(s: &AppState, ck: &CheckoutRow, payment_id: &str, action: A
         // Unknown state: refunding an unfulfilled charge is the safe default.
         Err(re) => tracing::error!(error = %re, checkout = %ck.id, "re-reading checkout before refund failed"),
     }
-    let refund = refund_durably(s, "portone", payment_id, ck.charge(), Some(ck.id)).await;
+    let refund = refund_durably(s, &ck.gateway, payment_id, ck.charge(), Some(ck.id)).await;
     let reason = refund_reason(&e);
     if ck.kind == "deposit" && deposit_changed(&e) {
         // Re-quoted or changed after the customer paid: the money goes back, say so, and keep the reason.
@@ -480,7 +541,7 @@ async fn unfulfilled(s: &AppState, ck: &CheckoutRow, payment_id: &str, action: A
 /// Refunds this checkout's PAID payment in full, as the provider reports it.
 async fn give_back(s: &AppState, ck: &CheckoutRow, payment_id: &str, info: Option<&PaymentInfo>) -> Refund {
     match info {
-        Some(i) => refund_durably(s, "portone", payment_id, i.total, Some(ck.id)).await,
+        Some(i) => refund_durably(s, &ck.gateway, payment_id, i.total, Some(ck.id)).await,
         // Nothing was paid, so nothing is owed.
         None => Refund::Done,
     }
@@ -639,7 +700,16 @@ async fn fulfil(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResult<U
         // user lock, and a failure rolls everything back (the PG charge is then refunded by `apply`).
         crate::points::spend(&mut tx, ck.user_id, booking_id, Won(ck.amount), ck.points).await?;
     }
-    record_payment(&mut tx, booking_id, ck.charge(), db_kind, "portone", payment_id, &format!("checkout:{}", ck.id)).await?;
+    record_payment(
+        &mut tx,
+        booking_id,
+        ck.charge(),
+        db_kind,
+        &ck.gateway,
+        payment_id,
+        &format!("checkout:{}", ck.id),
+    )
+    .await?;
     sqlx::query("UPDATE checkouts SET status = 'paid', provider_payment_id = $2, result_booking_id = $3 WHERE id = $1")
         .bind(ck.id)
         .bind(payment_id)
@@ -660,7 +730,7 @@ async fn fulfil(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResult<U
     )
     .await;
     super::cash_receipts::on_settled(s, ck.id, payment_id).await;
-    super::tax_invoices::on_settled(&s.db, ck.id, payment_id).await;
+    super::tax_invoices::on_settled(&s.db, ck.id, &ck.gateway, payment_id).await;
     match number {
         Some(n) => after_booking_created(s, booking_id, &n).await,
         None if db_kind == "deposit" => {

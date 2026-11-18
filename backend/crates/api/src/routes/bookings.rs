@@ -17,7 +17,7 @@ use crate::{
     contract::{PageQuery, cursor_part, decode_cursor, encode_cursor, page_limit, paged},
     crypto,
     error::{ApiError, ApiResult},
-    providers::ProviderError,
+    providers::{Gateway, ProviderError, SavedCard, TOSS_BILLING},
     ratelimit::within_quota,
     realtime::{Recipient, notify},
     safety,
@@ -142,29 +142,53 @@ pub(crate) struct CreateBooking {
     pub(crate) expected_total: Option<i64>,
 }
 
-/// Charges a saved PortOne billing key and records the payment. Used inside a transaction.
-/// The PortOne payment id is stored as the transaction id: cancel and lookup are keyed by it.
-pub async fn charge(s: &AppState, conn: &mut PgConnection, user: Uuid, method: Uuid, booking: Uuid, amount: Won, kind: &str) -> ApiResult<String> {
-    let key: String = sqlx::query_scalar("SELECT billing_key FROM payment_methods WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL")
-        .bind(method)
-        .bind(user)
-        .fetch_optional(&mut *conn)
-        .await?
-        .ok_or(ApiError::BadRequest("payment_method_required"))?;
+/// A saved card as stored, for charging through the gateway it was saved on.
+pub(crate) async fn saved_card(conn: &mut PgConnection, user: Uuid, method: Uuid) -> ApiResult<Option<SavedCard>> {
+    let row: Option<(String, String, Option<String>)> =
+        sqlx::query_as("SELECT billing_key, gateway, customer_key FROM payment_methods WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL")
+            .bind(method)
+            .bind(user)
+            .fetch_optional(&mut *conn)
+            .await?;
+    row.map(|(sealed_key, gateway, customer_key)| {
+        let gateway = Gateway::parse(&gateway).ok_or_else(|| ApiError::Internal(format!("saved card on unknown gateway {gateway}")))?;
+        Ok(SavedCard {
+            gateway,
+            sealed_key,
+            customer_key,
+        })
+    })
+    .transpose()
+}
+
+/// Charges a saved card at its gateway and records the payment. Used inside a transaction.
+/// Our payment id is stored as the transaction id (PortOne paymentId, Toss orderId): cancel and lookup are keyed
+/// by it. Returns the `payments.provider` it was recorded under, and that id.
+pub async fn charge(
+    s: &AppState,
+    conn: &mut PgConnection,
+    user: Uuid,
+    method: Uuid,
+    booking: Uuid,
+    amount: Won,
+    kind: &str,
+) -> ApiResult<(&'static str, String)> {
+    let card = saved_card(conn, user, method).await?.ok_or(ApiError::BadRequest("payment_method_required"))?;
+    let provider = card.gateway.billing_provider();
     let idem = format!("{booking}:{kind}");
     // A fresh id per attempt, so a declined id is never sent again; `idem` keeps one payment per booking and kind.
     let pid = format!("{kind}-{}", Uuid::now_v7().simple());
-    match s.providers.charge_billing(&key, amount.0, &pid, order_name(kind), user).await {
+    match s.providers.charge_billing(&card, amount.0, &pid, order_name(kind), user).await {
         Ok(_) => {}
-        Err(ProviderError::Upstream(cause)) => confirm_charge(s, &pid, amount.0, &cause).await?,
+        Err(ProviderError::Upstream(cause)) => confirm_charge(s, provider, &pid, amount.0, &cause).await?,
         Err(e @ ProviderError::Declined(_)) => return Err(ApiError::PaymentFailed(e.to_string())),
         Err(e) => return Err(e.into()),
     }
-    if let Err(e) = record_payment(conn, booking, amount.0, kind, "portone", &pid, &idem).await {
-        refund_or_alert(s, "portone", &pid, amount.0).await;
+    if let Err(e) = record_payment(conn, booking, amount.0, kind, provider, &pid, &idem).await {
+        refund_or_alert(s, provider, &pid, amount.0).await;
         return Err(e);
     }
-    Ok(pid)
+    Ok((provider, pid))
 }
 
 fn order_name(kind: &str) -> &'static str {
@@ -176,16 +200,17 @@ fn order_name(kind: &str) -> &'static str {
     }
 }
 
-/// The charge answer was lost or unclear: ask PortOne. An unknown outcome is cancelled so nobody pays for nothing.
-async fn confirm_charge(s: &AppState, pid: &str, amount: i64, cause: &str) -> ApiResult<()> {
-    match s.providers.payment(pid, amount).await {
+/// The charge answer was lost or unclear: ask the gateway. An unknown outcome is cancelled so nobody pays for nothing.
+/// A Toss billing charge can still land after our timeout, so Toss not knowing the order yet is unknown, not failed.
+async fn confirm_charge(s: &AppState, provider: &str, pid: &str, amount: i64, cause: &str) -> ApiResult<()> {
+    match s.providers.payment(provider, pid, amount).await {
         Ok(i) if i.status == "PAID" && i.total == amount => Ok(()),
         Ok(i) if i.status == "FAILED" => Err(ApiError::PaymentFailed("charge_failed".into())),
-        Err(ProviderError::NotFound) => Err(ApiError::PaymentFailed("charge_failed".into())),
+        Err(ProviderError::NotFound) if provider != TOSS_BILLING => Err(ApiError::PaymentFailed("charge_failed".into())),
         other => {
             let status = other.as_ref().map_or("lookup_failed", |i| i.status.as_str());
             tracing::warn!(payment = pid, cause, status, "charge outcome unknown; cancelling it");
-            refund_or_alert(s, "portone", pid, amount).await;
+            refund_or_alert(s, provider, pid, amount).await;
             Err(ApiError::Unavailable("provider_unreachable"))
         }
     }
@@ -304,8 +329,8 @@ async fn create_paid(s: &AppState, user: Uuid, req: &CreateBooking, prep: &Prepa
     };
     if let Err(e) = tx.commit().await {
         // Charged but not saved: give the money back before reporting the failure.
-        if let Some(t) = tx_id {
-            refund_or_alert(s, "portone", &t, price.total.0).await;
+        if let Some((provider, t)) = tx_id {
+            refund_or_alert(s, provider, &t, price.total.0).await;
         }
         return Err(e.into());
     }
@@ -681,9 +706,9 @@ async fn pay_deposit(State(s): State<AppState>, Customer(a): Customer, Path(id):
     let mut tx = s.db.begin().await?;
     take_deposit(&s, &mut tx, id, deposit, &p.seen).await?;
     // Charge last: after this only the commit can fail, and that path refunds.
-    let tx_id = charge(&s, &mut tx, a.id, p.payment_method_id, id, Won(deposit), "deposit").await?;
+    let (provider, tx_id) = charge(&s, &mut tx, a.id, p.payment_method_id, id, Won(deposit), "deposit").await?;
     if let Err(e) = tx.commit().await {
-        refund_or_alert(&s, "portone", &tx_id, deposit).await;
+        refund_or_alert(&s, provider, &tx_id, deposit).await;
         return Err(e.into());
     }
     // Reload: the pro attached by the deposit is needed for the notifications.
@@ -698,9 +723,9 @@ async fn pay_balance(State(s): State<AppState>, Customer(a): Customer, Path(id):
     let balance = balance_due(&b)?;
     let mut tx = s.db.begin().await?;
     take_balance(&mut tx, &b, balance).await?;
-    let tx_id = charge(&s, &mut tx, a.id, p.payment_method_id, id, Won(balance), "balance").await?;
+    let (provider, tx_id) = charge(&s, &mut tx, a.id, p.payment_method_id, id, Won(balance), "balance").await?;
     if let Err(e) = tx.commit().await {
-        refund_or_alert(&s, "portone", &tx_id, balance).await;
+        refund_or_alert(&s, provider, &tx_id, balance).await;
         return Err(e.into());
     }
     Ok(Json(load_booking(&s.db, id).await?))

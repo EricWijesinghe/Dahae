@@ -69,7 +69,7 @@ pub fn bucket_for(path: &str) -> Bucket {
         "/v1/uploads" => Bucket::Upload,
         "/v1/client-errors" | "/v1/events" => Bucket::Ingest,
         "/v1/address/search" => Bucket::AddressSearch,
-        "/v1/webhooks/toss" => Bucket::Webhook,
+        "/v1/webhooks/toss" | "/v1/webhooks/tosspayments" => Bucket::Webhook,
         _ if path == "/v1/auth" || path.starts_with("/v1/auth/") => Bucket::Auth,
         _ => Bucket::General,
     }
@@ -416,7 +416,8 @@ mod tests {
         assert_eq!(bucket_for("/v1/events"), Bucket::Ingest);
         assert_eq!(bucket_for("/v1/address/search"), Bucket::AddressSearch);
         assert_eq!(bucket_for("/v1/webhooks/toss"), Bucket::Webhook);
-        assert_eq!(bucket_for("/v1/webhooks/portone"), Bucket::General, "only the Toss hook is tightened");
+        assert_eq!(bucket_for("/v1/webhooks/tosspayments"), Bucket::Webhook);
+        assert_eq!(bucket_for("/v1/webhooks/portone"), Bucket::General, "only the Toss hooks are tightened");
         assert_eq!(bucket_for("/v1/events/extra"), Bucket::General);
     }
 

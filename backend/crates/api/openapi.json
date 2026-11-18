@@ -458,6 +458,27 @@
         }
       }
     },
+    "/v1/webhooks/tosspayments": {
+      "post": {
+        "operationId": "tossPaymentsWebhook",
+        "tags": [
+          "webhook"
+        ],
+        "summary": "Toss Payments payment notifications (PAYMENT_STATUS_CHANGED, DEPOSIT_CALLBACK); the payment is re-read from Toss",
+        "security": [],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/auth/otp": {
       "post": {
         "operationId": "requestOtp",
@@ -1532,6 +1553,32 @@
           },
           {
             "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/checkouts/{id}/toss-confirm": {
+      "post": {
+        "operationId": "tossConfirmCheckout",
+        "tags": [
+          "customer"
+        ],
+        "summary": "Capture a Toss Payments window payment from the hosted success page (public; the server confirms with its stored amount)",
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
           }
         ],
         "requestBody": {

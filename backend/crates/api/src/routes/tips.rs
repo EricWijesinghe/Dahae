@@ -55,7 +55,7 @@ async fn tip(State(s): State<AppState>, Customer(a): Customer, Path(id): Path<Uu
         .await?;
     check_tip_allowed(completed, existing.map(Won))?;
     let split = split_tip(amount);
-    let tx_id = charge(&s, &mut tx, a.id, t.payment_method_id, id, amount, "tip").await?;
+    let (_, tx_id) = charge(&s, &mut tx, a.id, t.payment_method_id, id, amount, "tip").await?;
     sqlx::query("INSERT INTO booking_tips (booking_id, user_id, pro_id, amount, payment_key) VALUES ($1, $2, $3, $4, $5)")
         .bind(id)
         .bind(a.id)

@@ -13,7 +13,7 @@ use super::{
 };
 use crate::{
     error::{ApiError, ApiResult},
-    providers::ProviderError,
+    providers::{Gateway, ProviderError, SavedCard},
     realtime::{Recipient, notify},
     schedule::{clash, lock_schedule},
     state::AppState,
@@ -304,7 +304,14 @@ struct Charge<'a> {
     prep: &'a Prepared,
     body: &'a BookingBody,
     price: &'a PriceBreakdown,
-    key: &'a str,
+    card: &'a SavedCard,
+}
+
+impl Charge<'_> {
+    /// `payments.provider` of this card's charges (and the gateway lookups and refunds go to).
+    fn provider(&self) -> &'static str {
+        self.card.gateway.billing_provider()
+    }
 }
 
 /// The PortOne payment id for one try. Stable per visit and attempt count, so a retry reuses it and PortOne cannot charge twice.
@@ -394,12 +401,8 @@ async fn charge_visit(s: &AppState, d: &Due) -> ApiResult<Attempt> {
         total: Won(vp.total),
         minutes: list.minutes,
     };
-    let key: Option<String> = sqlx::query_scalar("SELECT billing_key FROM payment_methods WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL")
-        .bind(sub.payment_method_id)
-        .bind(sub.user_id)
-        .fetch_optional(&s.db)
-        .await?;
-    let Some(key) = key else {
+    let card = super::bookings::saved_card(&mut *s.db.acquire().await?, sub.user_id, sub.payment_method_id).await?;
+    let Some(card) = card else {
         return Ok(Attempt::Failed(Failure::Blocked));
     };
     let c = Charge {
@@ -408,7 +411,7 @@ async fn charge_visit(s: &AppState, d: &Due) -> ApiResult<Attempt> {
         prep: &prep,
         body: &body,
         price: &price,
-        key: &key,
+        card: &card,
     };
     if price.total.0 == 0 {
         return finalize(s, &c, None).await;
@@ -440,10 +443,11 @@ async fn seat_free(s: &AppState, d: &Due) -> ApiResult<bool> {
 }
 
 /// Whether `pid` is a charge the engine itself queued a refund for (`finalize` after a failed booking step).
-async fn refunded_by_us(s: &AppState, pid: &str) -> ApiResult<bool> {
+async fn refunded_by_us(s: &AppState, provider: &str, pid: &str) -> ApiResult<bool> {
     Ok(
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM refund_queue WHERE provider = 'portone' AND tx_id = $1)")
+        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM refund_queue WHERE provider = $2 AND tx_id = $1)")
             .bind(pid)
+            .bind(provider)
             .fetch_one(&s.db)
             .await?,
     )
@@ -463,15 +467,15 @@ async fn persist_ref(s: &AppState, visit: Uuid, pid: &str) -> ApiResult<bool> {
 /// An earlier pass already sent `pid`: ask PortOne what happened instead of charging again.
 async fn reconcile(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attempt> {
     let total = c.price.total.0;
-    match s.providers.payment(pid, total).await {
+    match s.providers.payment(c.provider(), pid, total).await {
         Ok(info) => match verdict(&info.status, info.total, total) {
             Verdict::Book => finalize(s, c, Some((pid, pid))).await,
             // Captured at another price: give the money back, then the next try charges today's price under a new id.
             Verdict::Refund(paid) => {
-                refund_or_alert(s, "portone", pid, paid).await;
+                refund_or_alert(s, c.provider(), pid, paid).await;
                 Ok(Attempt::Failed(Failure::Repriced))
             }
-            Verdict::Declined(_) if info.status == "CANCELLED" && refunded_by_us(s, pid).await? => Ok(Attempt::Failed(Failure::Refunded)),
+            Verdict::Declined(_) if info.status == "CANCELLED" && refunded_by_us(s, c.provider(), pid).await? => Ok(Attempt::Failed(Failure::Refunded)),
             Verdict::Declined(code) => Ok(Attempt::Failed(Failure::Declined(code))),
             Verdict::Open => {
                 tracing::warn!(status = %info.status, payment = pid, "subscription payment not settled; checked again next pass");
@@ -489,7 +493,7 @@ async fn reconcile(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attempt
 }
 
 async fn charge_once(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attempt> {
-    let r = s.providers.charge_billing(c.key, c.price.total.0, pid, "정기 청소", c.d.user_id).await;
+    let r = s.providers.charge_billing(c.card, c.price.total.0, pid, "정기 청소", c.d.user_id).await;
     match settle(r) {
         Settled::Paid(tx) => finalize(s, c, Some((pid, &tx))).await,
         Settled::Declined(code) => Ok(Attempt::Failed(Failure::Declined(code))),
@@ -509,7 +513,7 @@ async fn finalize(s: &AppState, c: &Charge<'_>, paid: Option<(&str, &str)>) -> A
     if matches!(outcome, Ok(Attempt::Booked(_))) {
         return outcome;
     }
-    refund_or_alert(s, "portone", tx, c.price.total.0).await;
+    refund_or_alert(s, c.provider(), tx, c.price.total.0).await;
     // The customer saw the charge, so a full slot now says the money comes back.
     match outcome {
         Ok(Attempt::Failed(Failure::Full)) => Ok(Attempt::Failed(Failure::FullRefunded)),
@@ -539,7 +543,7 @@ async fn book_visit(s: &AppState, c: &Charge<'_>, paid: Option<(&str, &str)>) ->
     }
     let number = insert_paid(&mut tx, &s.config.data_key, id, c.d.user_id, c.prep, c.body, c.price).await?;
     if let Some((pid, tx_id)) = paid {
-        record_payment(&mut tx, id, c.price.total.0, "full", "portone", tx_id, pid).await?;
+        record_payment(&mut tx, id, c.price.total.0, "full", c.provider(), tx_id, pid).await?;
     }
     commit_booking(tx, id, c.d, c.sub).await?;
     after_booking_created(s, id, &number).await;
@@ -715,19 +719,22 @@ async fn expire(s: &AppState) -> ApiResult<usize> {
 /// Visits whose charge id is still stored and that will not be booked (day come, or skipped or cancelled meanwhile):
 /// PortOne is asked once per pass. A capture is refunded, a failure or an unknown id clears the id, an open answer waits.
 async fn settle_open_charges(s: &AppState) -> ApiResult<()> {
-    let open: Vec<(Uuid, String)> = sqlx::query_as(&format!(
-        "SELECT id, payment_ref FROM subscription_visits
-         WHERE payment_ref IS NOT NULL AND state <> 'booked' AND (state <> 'planned' OR visit_date <= {KST_TODAY})"
+    // The charge went to the gateway of the subscription's card (a deleted card keeps its gateway row).
+    let open: Vec<(Uuid, String, String)> = sqlx::query_as(&format!(
+        "SELECT v.id, v.payment_ref, COALESCE(pm.gateway, 'portone') FROM subscription_visits v
+         JOIN subscriptions s ON s.id = v.subscription_id LEFT JOIN payment_methods pm ON pm.id = s.payment_method_id
+         WHERE v.payment_ref IS NOT NULL AND v.state <> 'booked' AND (v.state <> 'planned' OR v.visit_date <= {KST_TODAY})"
     ))
     .fetch_all(&s.db)
     .await?;
-    for (visit, pid) in open {
-        // The visit does not store its price; the refund takes what PortOne says it captured.
-        let clear = match s.providers.payment(&pid, DEV_LOOKUP_TOTAL).await {
+    for (visit, pid, gateway) in open {
+        let provider = Gateway::parse(&gateway).unwrap_or(Gateway::Portone).billing_provider();
+        // The visit does not store its price; the refund takes what the gateway says it captured.
+        let clear = match s.providers.payment(provider, &pid, DEV_LOOKUP_TOTAL).await {
             Ok(info) => match verdict(&info.status, info.total, info.total) {
                 // The visit can no longer be booked, so a capture goes back to the customer.
                 Verdict::Book | Verdict::Refund(_) => {
-                    refund_or_alert(s, "portone", &pid, info.total).await;
+                    refund_or_alert(s, provider, &pid, info.total).await;
                     true
                 }
                 Verdict::Declined(_) => true,

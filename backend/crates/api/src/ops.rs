@@ -59,8 +59,9 @@ const ERRORS_WARN: i64 = 20;
 const ERRORS_BAD: i64 = 100;
 const SIGNATURE_BAD: i64 = 3;
 /// Integration codes whose health is shown on the status page (same codes as the setup wizard).
-pub const INTEGRATIONS: [Section; 8] = [
+pub const INTEGRATIONS: [Section; 9] = [
     Section::Portone,
+    Section::TossPayments,
     Section::Solapi,
     Section::Push,
     Section::Kakao,
@@ -329,7 +330,7 @@ pub async fn status(s: &AppState) -> ApiResult<Value> {
     let health: Vec<HealthRow> = sqlx::query_as("SELECT integration, last_ok_at, last_fail_at, last_error FROM ops_health")
         .fetch_all(&s.db)
         .await?;
-    let signatures = count_failures(&s.db, "portone_webhook", 24).await?;
+    let signatures = count_failures(&s.db, "portone_webhook", 24).await? + count_failures(&s.db, "tosspayments_webhook", 24).await?;
     let stuck = count_failures(&s.db, "payment_stuck", 24).await?;
     let sms_dead = crate::sms_outbox::dead_count(&s.db).await?;
     let disk = disk_usage(s.config.upload_dir.clone()).await;
