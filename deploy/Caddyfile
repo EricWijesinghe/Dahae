@@ -10,7 +10,7 @@
 #   https://www.DOMAIN/*     permanent redirect to https://DOMAIN/* (needs a www DNS record; harmless without one)
 #   https://DOMAIN/auth/naver/callback   Naver login: the app takes this URL (App Link); the page is only the browser fallback
 #   https://OLD/*            a former domain after a console domain change: everything is served as on DOMAIN (installed
-#                            apps keep working), only website pages get a 301 to DOMAIN. The API decides which hosts
+#                            apps keep working), only website pages get a 302 to DOMAIN. The API decides which hosts
 #                            (crates/api/src/domains.rs); nothing about them is in compose or .env.
 {
 	# Quoted: an empty ACME_EMAIL (the installer allows it) is then one empty argument, not a parse error.
@@ -107,8 +107,11 @@
 	header @site_csp Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-BAOxqSXTXY0xct7XpdRWh4Q+kVwbxikbI09LZ/Tqsqg=' 'sha256-UtC0U60paHl4CC9DOzN7OY+bZaNnUQ9p4kyLhFax6ts='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
 	# Probes, metrics and the certificate question are for the server itself, never the internet.
+	# A handle block, not a bare respond: handle runs before respond, so the catch-all handle below would answer first.
 	@internal path /ready /metrics /internal/*
-	respond @internal 404
+	handle @internal {
+		respond 404
+	}
 
 	@api path /v1/* /health /.well-known/assetlinks.json /.well-known/apple-app-site-association
 	handle @api {
@@ -238,6 +241,7 @@ www.{$DOMAIN} {
 https:// {
 	import alias-tls-{$TLS_MODE}
 	@old_pages not path /v1/* /health /.well-known/* /pay /pay/* /auth/* /app /app/* /admin /admin/* /c/* /sitemap.xml /robots.txt /notices.xml /webfonts/* /ops-progress/*
-	redir @old_pages https://{$DOMAIN}{uri} permanent
+	# 302, not 301: browsers keep a 301 for good, and a rolled-back or repeated move would then loop.
+	redir @old_pages https://{$DOMAIN}{uri} 302
 	import site
 }

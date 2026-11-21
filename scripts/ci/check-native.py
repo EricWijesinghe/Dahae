@@ -611,6 +611,8 @@ def check_former_domains(caddy):
     check("ask http://api:8080/internal/tls-ask" in caddy, "deploy/Caddyfile: on_demand_tls must ask the API (/internal/tls-ask)")
     m = re.search(r"@internal path ([^\n]+)", caddy)
     check(m is not None and "/internal/*" in m.group(1).split(), "deploy/Caddyfile: /internal/* must be 404 at the edge")
+    # A bare `respond @internal` never runs: handle comes first in Caddy's order and the catch-all handle answers.
+    check(re.search(r"handle @internal \{\s*respond 404\s*\}", caddy) is not None, "deploy/Caddyfile: /internal/*, /ready and /metrics need `handle @internal { respond 404 }`")
     m = re.search(r"@api path ([^\n]+)", caddy)
     check(m is not None and not any(p.startswith("/internal") for p in m.group(1).split()), "deploy/Caddyfile: /internal must never be proxied")
     block = re.search(r"^https:// \{\n(.*?)^\}", caddy, re.S | re.M)
