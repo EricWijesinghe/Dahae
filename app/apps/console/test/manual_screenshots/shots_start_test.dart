@@ -11,6 +11,7 @@ import 'package:console/screens/setup.dart';
 import 'package:console/screens/setup_app_links.dart';
 import 'package:console/screens/setup_business.dart';
 import 'package:console/screens/setup_guides.dart';
+import 'package:console/screens/setup_pay_methods.dart';
 import 'package:console/screens/setup_review.dart';
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
@@ -106,9 +107,8 @@ Json _lockedPayout() => setupCard(
 
 String _in(DateTime d) => d.toUtc().toIso8601String();
 
-// Left out until their layout bug is fixed (both throw "Trailing widget consumes the entire tile
-// width" in a ListTile): console-my-account (FilledButton trailing, theme minimumSize fromHeight) and
-// console-setup-pay-methods (PayBrandBadge as SwitchListTile.secondary expands to the full width).
+// Left out until its layout bug is fixed (throws "Trailing widget consumes the entire tile width" in a
+// ListTile): console-my-account (FilledButton trailing, theme minimumSize fromHeight).
 final _shots = <ManualShot>[
   // 06 First sign-in
   ManualShot(
@@ -248,6 +248,12 @@ final _shots = <ManualShot>[
       await scrollTo(tester, find.text(t.uAppVersionTitle));
     },
   ),
+  ManualShot(
+    'console-setup-pay-methods',
+    device: cardView,
+    build: (env) => cardHost(env, const PayMethodsCard()),
+    act: _expand,
+  ),
   // 11 PortOne
   _cardShot('console-setup-portone', () => _fresh('portone')),
   _cardShot(
@@ -287,8 +293,12 @@ final _shots = <ManualShot>[
     build: consoleApp,
     api: (f) => f.reply('GET', '/admin/setup', {
       ...freshSetup(),
-      'payment_gateway': 'tosspayments',
-      'payment_gateway_mode': 'test',
+      'payment_gateways': [
+        {'code': 'portone', 'mode': null},
+        {'code': 'tosspayments', 'mode': 'test'},
+      ],
+      'payment_gateway': 'portone',
+      'payment_gateway_mode': null,
     }),
     act: (tester, t) async {
       await openSection(tester, t.cSetup);

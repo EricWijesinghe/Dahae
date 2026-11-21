@@ -268,13 +268,13 @@ Not yet verified: automatic certificate and profile creation, returning from car
 
 - Webhooks never change payment state directly. The server looks the payment up at the gateway again.
 - Reconciliation runs every `reconcile_interval_secs` (default 60 seconds).
-- **PortOne, Toss Payments, or both.** PortOne is configured with an API secret and a store id (env or console) and serves a method only when that method has a channel key. Toss Payments is configured when its card is saved and valid, and is offered while `active` is on (the default).
+- **PortOne, Toss Payments, or both.** PortOne is configured with an API secret and a store id (env or console) and serves a method only when that method has a channel key. Toss Payments is configured when its card is saved and valid, and is offered while `active` is on. A card saved without the switch stores it on with live keys and off with test keys.
   - Each method goes to one gateway: PortOne if it serves the method, else Toss Payments if offered, else the method is hidden. Methods keep catalogue order; where gateways are listed, PortOne comes first.
-  - New saved cards: PortOne if it can save cards (`card_billing` or the legacy `card` key), else Toss Payments with its billing key pair, else card saving is off.
+  - New saved cards: PortOne if it can save cards (`card_billing` or the legacy `card` key), else Toss Payments with its billing key pair, else card saving is off (`POST /v1/me/payment-methods` answers 503 `provider_not_configured`). Only card is ever `flow: billing`; easy-pay methods are one-off on both gateways.
   - Rows never move: `checkouts`, `payment_methods` and `payments` keep the `gateway` they name, so refunds, webhooks, reconciliation and subscription charges follow the row. `active` off stops only new Toss checkouts and new saved cards.
-  - `GET /v1/payments/methods` and `GET`/`PUT /v1/admin/payment-methods` return `gateway` per method. `GET /v1/admin/setup` returns `payment_gateways: [{code, mode}]`; the old `payment_gateway` and `payment_gateway_mode` stay for older consoles. No request fields were added and there is no migration.
+  - `GET /v1/payments/methods` and `GET`/`PUT /v1/admin/payment-methods` return `gateway` per method. `GET /v1/admin/setup` returns `payment_gateways: [{code, mode}]`; the old `payment_gateway` and `payment_gateway_mode` stay for older consoles. `GET /v1/payments/methods` and `GET /v1/me/payment-methods/setup` take `?gateways=portone,tosspayments` (current apps send it); without `tosspayments` (v1.5.1 apps) Toss methods and Toss card saving are left out. `DELETE /v1/admin/setup/{portone|tosspayments}` answers 409 `gateway_in_use` while the card has pending or awaiting-deposit checkouts, live saved cards or queued refunds. A PortOne payment or billing key on a `TEST` channel records `payment_stuck` (`portone_test_channel`). There is no migration.
   - A PortOne channel key set in env without an API secret or store id is no longer listed (it could never be paid).
-  - **To be confirmed:** PASS reads the PortOne config from env only (`routes/me.rs`), so a PortOne identity channel saved in the console may not turn PASS on until that read uses the console values.
+  - PASS reads the PortOne store id and identity channel from env or the console (`identity_enabled`); checking a result also needs the V2 API secret.
 - Not yet verified: real PortOne card decline codes, the cash receipt issue response, a measured Toss webhook signature, the Toss payout creation response wrapper (`payments-setup.md` section 5).
 
 ---

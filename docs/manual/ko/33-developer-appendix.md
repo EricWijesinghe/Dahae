@@ -268,13 +268,13 @@ bash launch.sh --domain example.co.kr --email owner@example.co.kr
 
 - 웹훅은 결제 상태를 바로 바꾸지 않아요. 서버가 결제사에 다시 조회해요.
 - 결제 대사는 `reconcile_interval_secs` (기본 60초)마다 돌아요.
-- **PortOne, 토스페이먼츠, 또는 둘 다.** PortOne은 API secret과 store id(env 또는 콘솔)가 있으면 설정된 것이고, 채널 키가 있는 결제 방법만 받아요. 토스페이먼츠는 카드가 저장되고 올바르면 설정된 것이고, `active` 가 켜진 동안(기본값 켜짐) 고객에게 보여요.
+- **PortOne, 토스페이먼츠, 또는 둘 다.** PortOne은 API secret과 store id(env 또는 콘솔)가 있으면 설정된 것이고, 채널 키가 있는 결제 방법만 받아요. 토스페이먼츠는 카드가 저장되고 올바르면 설정된 것이고, `active` 가 켜진 동안 고객에게 보여요. 스위치 없이 저장한 카드는 라이브 키면 켜짐, 테스트 키면 꺼짐으로 저장돼요.
   - 결제 방법마다 결제사는 하나예요: PortOne이 받으면 PortOne, 아니면 토스페이먼츠가 보이면 토스페이먼츠, 둘 다 아니면 숨겨요. 방법 순서는 카탈로그 순서 그대로이고, 결제사를 나열할 때는 PortOne이 먼저예요.
-  - 새로 저장하는 카드: PortOne이 카드를 저장할 수 있으면(`card_billing` 또는 예전 `card` 키) PortOne, 아니면 자동결제 키 쌍이 있는 토스페이먼츠, 둘 다 아니면 카드 저장은 꺼져요.
+  - 새로 저장하는 카드: PortOne이 카드를 저장할 수 있으면(`card_billing` 또는 예전 `card` 키) PortOne, 아니면 자동결제 키 쌍이 있는 토스페이먼츠, 둘 다 아니면 카드 저장은 꺼져요 (`POST /v1/me/payment-methods` 가 503 `provider_not_configured`). `flow: billing` 은 카드만이고, 간편결제는 두 결제사 모두 1회 결제예요.
   - 행은 옮겨 가지 않아요: `checkouts`, `payment_methods`, `payments` 는 적힌 `gateway` 를 그대로 써서 환불, 웹훅, 대사, 정기결제가 행을 따라가요. `active` 를 끄면 새 토스 체크아웃과 새 카드 저장만 멈춰요.
-  - `GET /v1/payments/methods` 와 `GET`/`PUT /v1/admin/payment-methods` 는 방법마다 `gateway` 를 돌려줘요. `GET /v1/admin/setup` 은 `payment_gateways: [{code, mode}]` 를 돌려주고, 예전 `payment_gateway`, `payment_gateway_mode` 는 옛 콘솔을 위해 남아 있어요. 요청 필드는 늘지 않았고 마이그레이션도 없어요.
+  - `GET /v1/payments/methods` 와 `GET`/`PUT /v1/admin/payment-methods` 는 방법마다 `gateway` 를 돌려줘요. `GET /v1/admin/setup` 은 `payment_gateways: [{code, mode}]` 를 돌려주고, 예전 `payment_gateway`, `payment_gateway_mode` 는 옛 콘솔을 위해 남아 있어요. `GET /v1/payments/methods` 와 `GET /v1/me/payment-methods/setup` 은 `?gateways=portone,tosspayments` 를 받아요(지금 앱이 보내요). `tosspayments` 가 없으면(v1.5.1 앱) 토스 결제 방법과 토스 카드 저장을 빼요. `DELETE /v1/admin/setup/{portone|tosspayments}` 는 그 카드에 대기·입금 대기 체크아웃, 살아 있는 저장 카드, 대기 중인 환불이 있으면 409 `gateway_in_use` 예요. PortOne `TEST` 채널의 결제나 빌링키는 `payment_stuck` (`portone_test_channel`) 을 남겨요. 마이그레이션은 없어요.
   - API secret이나 store id 없이 env에만 있는 PortOne 채널 키의 방법은 더 이상 보이지 않아요 (원래 결제될 수 없었어요).
-  - **확인 필요:** PASS는 PortOne 설정을 env에서만 읽어요(`routes/me.rs`). 그래서 콘솔에 저장한 PortOne 본인인증 채널로는 그 읽기가 콘솔 값을 쓰게 바뀔 때까지 PASS가 켜지지 않을 수 있어요.
+  - PASS는 PortOne 상점 아이디와 본인인증 채널을 env나 콘솔에서 읽어요(`identity_enabled`). 결과를 확인하려면 V2 API secret도 있어야 해요.
 - 아직 확인하지 않은 항목: PortOne 실제 카드 거절 코드, 현금영수증 발급 응답, 토스 웹훅 서명 실측, 토스 지급 생성 응답 형식 (`payments-setup.md` 5절).
 
 ---

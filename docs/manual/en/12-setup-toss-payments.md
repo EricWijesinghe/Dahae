@@ -24,8 +24,8 @@ You save and test with test keys, then move to live keys. You also learn what go
 
 - You can set up PortOne only, Toss Payments only, or both. You never have to pick one: customers are offered the methods of every gateway that is set up.
 - With both set up, each payment method goes to one gateway. A method that has a PortOne channel key goes to PortOne. Every other switched-on method goes to Toss Payments.
-- The switch **Active: take payments with Toss Payments (Optional)** at the bottom of the card is **on** by default. While it is on, Toss Payments takes payments as soon as its card is saved. Turn it off to stop new Toss payments for a while (12.10).
-- Order: ① on a server that already takes payments, turn **Active** off first → ② save test keys → ③ check the keys → ④ register the webhook → ⑤ choose payment methods → ⑥ turn **Active** on and test → ⑦ move to live keys. Finish testing **before** you open for business.
+- The switch **Active: take payments with Toss Payments (Optional)** at the bottom of the card decides whether Toss Payments takes new payments. If you do not touch it, the first save stores it **off** with test keys and **on** with live keys, and it keeps that value when you change keys later. Turn it off to stop new Toss payments for a while (12.10).
+- Order: ① on a server that already takes payments, keep **Active** off → ② save test keys → ③ check the keys → ④ register the webhook → ⑤ choose payment methods → ⑥ turn **Active** on and test → ⑦ move to live keys. Finish testing **before** you open for business.
 - You can add PortOne or Toss Payments later. 12.9 shows what changes and what stays.
 
 ![The Toss Payments card opened](../img/en/console-setup-toss.png)
@@ -41,7 +41,7 @@ You save and test with test keys, then move to live keys. You also learn what go
 | **Billing client key (Optional)** | Client key of the auto-billing MID | `test_ck_` / `live_ck_` | No |
 | **Billing secret key (Optional)** | Secret key of the auto-billing MID | `test_sk_` / `live_sk_` | **Yes (server only)** |
 | **Security key (Optional)** | The security key on the same page | 64 characters, 0–9 and a–f | **Yes (server only)** |
-| **Active: take payments with Toss Payments (Optional)** | (a switch, on by default) | on / off | — |
+| **Active: take payments with Toss Payments (Optional)** | (a switch; untouched, the first save stores it off with test keys, on with live keys) | on / off | — |
 
 > **Warning** Never enter the **widget keys** (`gck`, `gsk`). Always use the **API individual integration keys** (`ck`, `sk`). Widget keys are refused when you save.
 
@@ -70,12 +70,11 @@ You save and test with test keys, then move to live keys. You also learn what go
 
 ## 12.4 Save the test keys and check them
 
-1. Look at the switch **Active: take payments with Toss Payments (Optional)**. It is on.
-   - If customers already pay on this server (through PortOne), click it to turn it **off** now. Then nothing changes for customers until 12.7.
-   - If you have not opened yet, you can leave it on.
+1. Look at the switch **Active: take payments with Toss Payments (Optional)**. Before the first save it shows on, but test keys are saved with it **off** unless you touch it. Leave it as it is.
+   - If customers already pay on this server (through PortOne), you may also click it **off** to be sure. Nothing changes for customers until 12.7.
 2. Click **[Save]**.
 3. In **Owner authenticator code**, type the 6 digits and click **[Confirm]**. (Asked on the first save only.)
-4. The card header shows **Saved**, **Locked** and **Test**.
+4. The card header shows **Saved**, **Locked** and **Test**, and the **Active** switch shows off.
 5. Click **[Check API key]**.
 
 **You should now see:** a green **Connected** label on the card header.
@@ -85,7 +84,7 @@ You save and test with test keys, then move to live keys. You also learn what go
 
 > **Warning** **[Check API key]** checks the secret keys only. A client key from another MID shows up only at the first test payment.
 
-> **Warning** If you save with **Active** on and PortOne already takes payments, Toss Payments is offered **at once** for every switched-on method that has no PortOne channel key. On a new install all 10 methods are on. So either turn **Active** off before saving (step 1), or first do 12.6.
+> **Warning** If you turn **Active** on yourself before saving and PortOne already takes payments, Toss Payments is offered **at once** for every switched-on method that has no PortOne channel key. On a new install all 10 methods are on. So leave the switch as it is (step 1), or first do 12.6.
 
 ---
 
@@ -115,15 +114,15 @@ While **Active** is on, every switched-on method that has no PortOne channel key
 1. Open the **Payment methods** card near the top of **[Setup]** (10.9).
 2. Leave on only the methods that some gateway can take: the ones Toss Payments contracted and approved, and the ones PortOne has a channel key for. Turn the others off.
 
-**You should now see:** once **Active** is on (12.7), each switched-on row has a grey line telling you its gateway, for example **Gateway: Toss Payments** or **Gateway: PortOne**.
+**You should now see:** once **Active** is on (12.7), each row has a grey line telling you its gateway, for example **Gateway: Toss Payments** or **Gateway: PortOne**. When that method is on, its payments go to that gateway.
 
-> **Tip** With PortOne too: to move a method from PortOne to Toss Payments, clear that method's channel key on the PortOne card (chapter 11, 11.12).
+> **Tip** With PortOne too: to move a method from PortOne to Toss Payments, press **Clear this slot** on that method's channel key on the PortOne card and save (chapter 11, 11.12).
 
 ---
 
 ## 12.7 Turn Active on and test (before opening)
 
-If **Active** is already on (you left it on in 12.4), skip steps 1–4.
+Test keys leave **Active** off after 12.4, so do steps 1–4. If it is already on, skip them.
 
 1. In the **Payments (Toss Payments)** card, click **[Unlock (owner code)]**.
 2. In **Owner authenticator code**, type the 6 digits and click **[Confirm]**.
@@ -142,7 +141,7 @@ If **Active** is already on (you left it on in 12.4), skip steps 1–4.
 
 > **Warning** Bookings paid through Toss Payments in this state look paid but bring in no real money. Keep it like this only before you open. On a server that is already open, do the tests below quickly, then move to live keys (12.8) or turn **Active** off (12.10).
 
-> **Warning** Customer apps from the stores that are older than the first release with Toss Payments cannot open Toss Payments. For them, a method that goes to Toss Payments fails (no money moves). Before Toss Payments takes payments, publish the new apps and raise the customer app's **Minimum version** (chapter 25). The web app is always up to date.
+> **Note** Customer apps from the stores that are older than the first release with Toss Payments cannot open Toss Payments, so the server shows them only the PortOne methods. To give those customers the Toss Payments methods, publish the new apps and raise the customer app's **Minimum version** (chapter 25). The web app is always up to date.
 
 **Test with the test keys** (no money moves on test keys)
 
@@ -163,7 +162,7 @@ If **Active** is already on (you left it on in 12.4), skip steps 1–4.
 
 1. In the developer center, get the **live keys** (`live_ck_…`, `live_sk_…`) of the same MIDs.
 2. In the console card, click **[Unlock (owner code)]** and type the 6 digits.
-3. Paste live keys into **all** four key boxes (two if you do not use billing).
+3. Paste live keys into **all** four key boxes (two if you do not use billing). Check that **Active** is on: it keeps the value it had.
 4. Click **[Save]** within 5 minutes.
 5. Click **[Check API key]**.
 
@@ -179,7 +178,7 @@ If **Active** is already on (you left it on in 12.4), skip steps 1–4.
 
 | What is set up | Methods customers see | New saved cards | Line under **Payments** |
 |---|---|---|---|
-| Nothing | none (customers cannot pay) | not offered | **No payment gateway is set up yet. Set up PortOne, Toss Payments, or both.** |
+| Nothing | none (customers cannot pay) | not offered | **No gateway takes payments right now. Set up PortOne or Toss Payments, or turn Toss Payments' Active on.** |
 | PortOne only | the switched-on methods that have a PortOne channel key | PortOne (needs the **Recurring billing key** or **Card payment** channel key) | **Payments go to: PortOne** |
 | Toss Payments only, with billing keys | every switched-on method | Toss Payments | **Payments go to: Toss Payments** |
 | Toss Payments only, no billing keys | every switched-on method; cards pay in the payment window each time | not offered | **Payments go to: Toss Payments** |
@@ -187,7 +186,8 @@ If **Active** is already on (you left it on in 12.4), skip steps 1–4.
 | Both, Toss **Active** off | as PortOne only | PortOne | **Payments go to: PortOne** |
 
 - A method is never offered twice. **Setup > Payment methods** shows each method's gateway (10.9).
-- Under Toss Payments, KakaoPay, NaverPay, TossPay and PAYCO cannot be saved (Toss auto-billing is card only). The customer app shows them as one-off payments. Easy-pay methods already saved through PortOne keep working.
+- KakaoPay, NaverPay, TossPay and PAYCO are one-off payments on either gateway (only cards are saved). Easy-pay methods already saved through PortOne keep working.
+- Card is a saved card while some gateway can save cards. While PortOne has the **Recurring billing key** or **Card payment** key, cards are saved on PortOne and the card row shows **Gateway: PortOne**. In the web app and the Windows app, card is paid in the payment window each time.
 - Customers with no saved card cannot start a new recurring visit while no gateway can save cards.
 
 **What stays where it started**
@@ -206,7 +206,7 @@ If **Active** is already on (you left it on in 12.4), skip steps 1–4.
 - **Adding Toss Payments to PortOne:** methods PortOne already takes stay on PortOne, and so do saved cards. Toss Payments takes only the switched-on methods without a PortOne channel key. Do 12.6 first.
 - **Adding PortOne to Toss Payments:** every method you give a PortOne channel key moves to PortOne for new payments. New saved cards also go to PortOne once it has the **Card payment** or **Recurring billing key** channel key. Payments and cards already on Toss Payments stay there.
 
-> **Warning** So **keep every card you have used.** The PortOne card is needed for refunds of PortOne payments, for cards saved through PortOne and for identity checks. The Toss Payments card is needed while any Toss payments or saved cards exist. Removing a card makes its refunds fail and raises an alert.
+> **Warning** So **keep every card you have used.** The PortOne card is needed for refunds of PortOne payments, for cards saved through PortOne and for identity checks. The Toss Payments card is needed while any Toss payments or saved cards exist. While a card still has payments in progress, saved cards or refunds waiting, **[Disconnect]** is refused with **This gateway still has payments in progress, saved cards or refunds, so it can't be disconnected. To stop new payments only, turn Toss Payments' Active off, or clear PortOne's channel key slots.** Refunds of older payments are not guarded: removing the card makes them fail and raises an alert.
 
 ### What follows by itself
 
@@ -222,7 +222,7 @@ If **Active** is already on (you left it on in 12.4), skip steps 1–4.
 2. Turn off **Active: take payments with Toss Payments (Optional)**.
 3. Click **[Save]**.
 
-**You should now see:** Toss Payments is gone from the line under **Payments**. With PortOne set up it reads **Payments go to: PortOne**. Without PortOne it reads **No payment gateway is set up yet. Set up PortOne, Toss Payments, or both.**, and customers cannot pay until you turn **Active** on again.
+**You should now see:** Toss Payments is gone from the line under **Payments**. With PortOne set up it reads **Payments go to: PortOne**. Without PortOne it reads **No gateway takes payments right now. Set up PortOne or Toss Payments, or turn Toss Payments' Active on.**, and customers cannot pay until you turn **Active** on again.
 
 - Off stops only **new** Toss payments and **new** saved cards. Payments in progress, refunds, saved cards and recurring visit charges keep running on Toss Payments. That is why you only turn the switch off and keep the card.
 - Methods that went to Toss Payments are no longer shown, unless PortOne has a channel key for them.
@@ -243,8 +243,11 @@ If **Active** is already on (you left it on in 12.4), skip steps 1–4.
 | **Fill in every required field.** | One payment-window key is empty, or only one billing key was entered | Fill both payment-window keys; enter both billing keys or neither |
 | **The billing keys were rejected. Check the billing MID's keys** | The auto-billing MID keys are wrong | Pick the auto-billing MID in the developer center and copy its keys again |
 | **The key was rejected. Check the value you copied** | The payment-window secret key is wrong | Copy the payment-window MID's `sk` again |
-| Toss Payments is missing from **Payments go to** | The card was not saved, **Active** is off, or PortOne has a channel key for every switched-on method and can save cards | Save the card with **Active** on (12.7). To send a method to Toss Payments, clear its PortOne channel key (chapter 11, 11.12) |
+| Toss Payments is missing from **Payments go to** | The card was not saved, **Active** is off, or PortOne has a channel key for every switched-on method and can save cards | Save the card with **Active** on (12.7). To send a method to Toss Payments, press **Clear this slot** on its PortOne channel key (chapter 11, 11.12) |
 | **(test keys: no real money moves)** stays | The keys are still test keys | Move to live keys (12.8) |
 | A customer picks a method and gets a Toss Payments error | A method Toss has not approved is on | Turn it off under **Payment methods** (12.6) |
-| A method fails only in some customers' phones | Their store app is older than the first release with Toss Payments | Ask them to update; raise **Minimum version** (chapter 25) |
+| Some customers' phones do not show the Toss Payments methods | Their store app is older than the first release with Toss Payments | Ask them to update; raise **Minimum version** (chapter 25) |
+| After a server update, Toss Payments takes payments although you never turned **Active** on | The card was saved with live keys before the switch was stored; live keys saved without touching it count as on | Turn **Active** off (12.10) if Toss Payments should not take payments yet |
+| After a server update, card or another method goes to PortOne instead of Toss Payments | PortOne still has that method's channel key (for card: the **Recurring billing key** or **Card payment** key) | Unlock the PortOne card, press **Clear this slot** on those keys and save (chapter 11, 11.12) |
+| **This gateway still has payments in progress, saved cards or refunds, so it can't be disconnected.** | The card still has open payments, saved cards or queued refunds | Keep the card. To stop new Toss payments, turn **Active** off (12.10) |
 | Customers cannot save a card | No billing keys, and PortOne cannot save cards | After the auto-billing contract, enter the keys in step 7 of 12.3 |

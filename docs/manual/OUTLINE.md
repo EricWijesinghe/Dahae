@@ -184,7 +184,7 @@ developer-only material lives in chapter 33.
 - 12.3 Webhook `cSetupTossWebhook` (`…/v1/webhooks/tosspayments`), events `PAYMENT_STATUS_CHANGED`, `DEPOSIT_CALLBACK`.
 - 12.4 Save test keys (owner code) → **[API 키 확인]** (checks secret key only).
 - 12.5 PortOne, Toss Payments or both: each method goes to PortOne when it has a channel key, else to Toss while
-  **사용** (`active`, on by default) is on; what stays (started payments, refunds, saved cards stay on their first
+  **사용** (`active`; untouched: on with live keys, off with test keys) is on; what stays (started payments, refunds, saved cards stay on their first
   gateway; PASS identity stays on PortOne) — `multi-gateway-design.md` §2, `payments-setup.md` §6.
 - 12.6 Test each method, refund all tests; then unlock → live keys → check; the "(테스트 키…)" note disappears.
 - 12.7 Pause Toss: unlock → turn **사용** off → save (only new Toss payments and new saved cards stop).

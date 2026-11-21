@@ -202,8 +202,8 @@ Turn the payment methods in the customer app on or off. Each switch applies at o
 
 | Text | Meaning | What to do |
 |---|---|---|
-| **Gateway: PortOne** or **Gateway: Toss Payments** | Customers see this method, and its payments go to that gateway | Nothing. To move a method from PortOne to Toss Payments, see chapter 11, 11.12 |
-| **Needs a PortOne channel key or Toss Payments** | No gateway takes this method: PortOne has no channel key for it, and Toss Payments is not set up or its **Active** switch is off. It cannot be turned on (the switch is grey) | Add the channel key in the **Payments (PortOne)** card (chapter 11), or set up Toss Payments (chapter 12) |
+| **Gateway: PortOne** or **Gateway: Toss Payments** | When this method is on, its payments go to that gateway. For card it is the gateway that saves cards, while one can | Nothing. To move a method from PortOne to Toss Payments, see chapter 11, 11.12 |
+| **Needs a PortOne channel key or Toss Payments with Active on** | No gateway takes this method: PortOne has no channel key for it, and Toss Payments is not set up or its **Active** switch is off. It cannot be turned on (the switch is grey) | Add the channel key in the **Payments (PortOne)** card (chapter 11), or set up Toss Payments and turn its **Active** on (chapter 12) |
 | **This payment channel is not connected yet, so customers can't see it. Ask whoever manages your setup.** | It is on, but no gateway takes it, so customers do not see it | Add the channel key (chapter 11) or set up Toss Payments (chapter 12), or switch it off |
 
 > **Warning** You cannot turn every method off. Turning off the last one shows **Keep at least one payment method on. With none on, customers can't pay.** and nothing is saved.

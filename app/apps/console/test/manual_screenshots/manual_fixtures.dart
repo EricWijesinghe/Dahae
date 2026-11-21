@@ -170,16 +170,33 @@ Json freshSetup() => {
   'webhook_url': webhookUrl,
   'toss_webhook_url': tossPayoutWebhookUrl,
   'toss_payments_webhook_url': tossPaymentsWebhookUrl,
+  'payment_gateways': <Json>[],
   'payment_gateway': null,
 };
 
-/// Payment methods: card and KakaoPay have keys, NaverPay does not yet.
+/// Payment methods showing each row line the manual explains (10.9): card and KakaoPay on PortOne, bank transfer
+/// and the virtual account on Toss Payments, and NaverPay with no gateway.
 List<Json> payMethods() => [
-  {'code': 'card', 'enabled': true, 'configured': true},
-  {'code': 'kakaopay', 'enabled': true, 'configured': true},
-  {'code': 'naverpay', 'enabled': false, 'configured': false},
-  {'code': 'tosspay', 'enabled': false, 'configured': true},
-  {'code': 'virtual_account', 'enabled': false, 'configured': true},
+  {'code': 'card', 'enabled': true, 'configured': true, 'gateway': 'portone'},
+  {
+    'code': 'kakaopay',
+    'enabled': true,
+    'configured': true,
+    'gateway': 'portone',
+  },
+  {'code': 'naverpay', 'enabled': false, 'configured': false, 'gateway': null},
+  {
+    'code': 'transfer',
+    'enabled': true,
+    'configured': true,
+    'gateway': 'tosspayments',
+  },
+  {
+    'code': 'virtual_account',
+    'enabled': false,
+    'configured': true,
+    'gateway': 'tosspayments',
+  },
 ];
 
 /// A business profile filled in the way an owner would.

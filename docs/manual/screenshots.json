@@ -252,7 +252,7 @@
   "id": "console-setup-overview",
   "app": "console",
   "chapter": "09",
-  "what": "Setup page top: title, progress, business card and first cards (fresh install)",
+  "what": "Setup page top: title, progress (12 steps; the two payment cards count as one), business card and first cards (fresh install)",
   "lang": [
    "ko",
    "en"
@@ -352,7 +352,7 @@
   "id": "console-setup-pay-methods",
   "app": "console",
   "chapter": "10",
-  "what": "Payment methods card with switches; rows showing their gateway (Gateway: PortOne / Gateway: Toss Payments) and one method showing it needs a PortOne channel key or Toss Payments",
+  "what": "Payment methods card with switches; rows showing their gateway (Gateway: PortOne / Gateway: Toss Payments) and one method showing it needs a PortOne channel key or Toss Payments with Active on",
   "lang": [
    "ko",
    "en"
@@ -362,7 +362,7 @@
   "id": "console-setup-portone",
   "app": "console",
   "chapter": "11",
-  "what": "PortOne card open: Store ID and API Secret fields, guide steps visible",
+  "what": "PortOne card open: Store ID and API Secret fields, guide steps visible (last step: PortOne is optional)",
   "lang": [
    "ko",
    "en"
@@ -410,7 +410,7 @@
   "id": "console-setup-toss",
   "app": "console",
   "chapter": "12",
-  "what": "Toss Payments card open with client key, secret key, billing keys, security key fields, webhook URL and the Active: take payments with Toss Payments switch (on by default)",
+  "what": "Toss Payments card open with client key, secret key, billing keys, security key fields, webhook URL and the Active: take payments with Toss Payments switch (before the first save; untouched it is stored off with test keys, on with live keys)",
   "lang": [
    "ko",
    "en"
