@@ -28,6 +28,12 @@ val dartDefines: Map<String, String> =
 val hasFirebaseConfig = file("google-services.json").exists()
 if (hasFirebaseConfig) apply(plugin = "com.google.gms.google-services")
 val releaseStore = signingValue("UPLOAD_KEYSTORE_PATH", "storeFile")
+// Store builds (store-apps.yml, scripts/store_brand.py) take the app id and home-screen name from the licensee's
+// server and GitHub variables; local builds keep the built-in values. APP_LINK_DOMAIN may list several hosts
+// (current domain first, then former ones): every host gets the Naver App Link.
+fun buildEnv(name: String): String? = System.getenv(name)?.trim()?.takeIf { it.isNotEmpty() }
+val appLinkHosts: List<String> =
+    (buildEnv("APP_LINK_DOMAIN") ?: dartDefines["APP_LINK_DOMAIN"].orEmpty()).split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
 
 android {
@@ -43,7 +49,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "kr.co.dahae.partner"
+        applicationId = buildEnv("APP_ID") ?: "kr.co.dahae.partner"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -57,8 +63,12 @@ android {
         versionName = flutter.versionName
         // Kakao login redirect scheme is kakao<native app key>.
         manifestPlaceholders["kakaoNativeKey"] = dartDefines["KAKAO_NATIVE_KEY"].orEmpty()
-        // Naver App Link host (https://<host>/auth/naver/callback); the Naver button is hidden without it.
-        manifestPlaceholders["appLinkHost"] = dartDefines["APP_LINK_DOMAIN"].orEmpty()
+        manifestPlaceholders["appLabel"] = buildEnv("APP_LABEL") ?: "다해 파트너"
+        // Naver App Link hosts (https://<host>/auth/naver/callback); the Naver button is hidden without one.
+        // Unused slots repeat the first host. shortcut: three hosts at most; add a slot here and in the manifest if needed.
+        manifestPlaceholders["appLinkHost"] = appLinkHosts.getOrElse(0) { "" }
+        manifestPlaceholders["appLinkHost2"] = appLinkHosts.getOrElse(1) { appLinkHosts.getOrElse(0) { "" } }
+        manifestPlaceholders["appLinkHost3"] = appLinkHosts.getOrElse(2) { appLinkHosts.getOrElse(0) { "" } }
     }
 
     signingConfigs {

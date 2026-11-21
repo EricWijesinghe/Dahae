@@ -1,9 +1,11 @@
-# Store builds for the customer (kr.co.dahae.customer) and partner (kr.co.dahae.partner) apps, on GitHub-hosted
+# Store builds for the customer (default id kr.co.dahae.customer) and partner (kr.co.dahae.partner) apps, on GitHub-hosted
 # runners. Run by hand from Actions → store-apps → Run workflow.
 #
 #   app       customer | partner | both
 #   platform  android | ios | both
 #   upload    false: build, check and keep the artifacts only.
+#   brand_from_server  true (default): the home-screen name, launcher icons and colour come from {API_BASE}/v1/brand
+#             (what the owner saved in the console); off keeps the name and icons in the repo.
 #             true : Android draft to the Play internal track (only if GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is set),
 #                    iOS build to TestFlight (App Store Connect, after Apple's processing: 10-30 min).
 #
@@ -12,8 +14,10 @@
 #
 # Environment "store" (create it in Settings → Environments; required reviewers optional; deployment branches = master).
 # Every job here runs inside it, so its secrets and variables are the only ones the build can read.
-#   Variables: API_BASE (https://<client domain>), APP_LINK_DOMAIN (bare host, optional),
-#              APPLE_TEAM_ID (the Apple Developer team ID, 10 characters).
+#   Variables: API_BASE (https://<client domain>), APP_LINK_DOMAIN (bare host, optional; after a domain move
+#              "new.host,old.host": the current one first, three at most, every one gets the Naver App Link),
+#              APPLE_TEAM_ID (the Apple Developer team ID, 10 characters),
+#              CUSTOMER_APP_ID, PARTNER_APP_ID (optional store app ids; a new id is a new store listing).
 #   Secrets:   ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD,
 #              ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_B64,
 #              KAKAO_NATIVE_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_NAME, GOOGLE_SERVER_CLIENT_ID, GOOGLE_IOS_CLIENT_ID,
@@ -49,6 +53,10 @@ on:
         description: Upload (Play internal draft, TestFlight). Off = build and keep artifacts only
         type: boolean
         default: false
+      brand_from_server:
+        description: Name, icons and colour from the server (/v1/brand). Off = the repo's name and icons
+        type: boolean
+        default: true
 
 permissions: {}
 
@@ -114,6 +122,20 @@ jobs:
       - name: Analyze
         working-directory: app
         run: dart analyze --fatal-infos
+      # The licensee's name, icons and app id (the GitHub variables CUSTOMER_APP_ID / PARTNER_APP_ID; default
+      # kr.co.dahae.<app>). Fails when /v1/brand cannot be read, so nobody ships the built-in brand by accident.
+      - name: Name, icons and app id from the server
+        env:
+          APP: ${{ matrix.app }}
+          API_BASE: ${{ vars.API_BASE }}
+          CUSTOMER_APP_ID: ${{ vars.CUSTOMER_APP_ID }}
+          PARTNER_APP_ID: ${{ vars.PARTNER_APP_ID }}
+          BRAND_FROM_SERVER: ${{ inputs.brand_from_server }}
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/brand"
+          "$RUNNER_TEMP/brand/bin/pip" install --quiet --disable-pip-version-check pillow==12.3.0
+          "$RUNNER_TEMP/brand/bin/python" -I scripts/store_brand.py "$APP" | tee -a "$GITHUB_ENV"
       - name: Firebase files and dart-define keys
         env:
           APP: ${{ matrix.app }}
@@ -156,6 +178,10 @@ jobs:
         env:
           BUILD_NAME: ${{ needs.plan.outputs.build_name }}
           BUILD_NUMBER: ${{ needs.plan.outputs.build_number }}
+          # Gradle gives every listed host the Naver App Link (the dart-define keeps the first one only).
+          APP_LINK_DOMAIN: ${{ vars.APP_LINK_DOMAIN }}
+          CUSTOMER_APP_ID: ${{ vars.CUSTOMER_APP_ID }}
+          PARTNER_APP_ID: ${{ vars.PARTNER_APP_ID }}
         run: |
           set -euo pipefail
           name_arg=()
@@ -187,7 +213,7 @@ jobs:
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: kr.co.dahae.${{ matrix.app }}
+          packageName: ${{ env.APP_ID }}
           releaseFiles: app/apps/${{ matrix.app }}/build/app/outputs/bundle/release/app-release.aab
           track: internal
           status: draft
@@ -221,6 +247,20 @@ jobs:
       - name: Analyze
         working-directory: app
         run: dart analyze --fatal-infos
+      # The licensee's name, icons and app id (the GitHub variables CUSTOMER_APP_ID / PARTNER_APP_ID; default
+      # kr.co.dahae.<app>). Fails when /v1/brand cannot be read, so nobody ships the built-in brand by accident.
+      - name: Name, icons and app id from the server
+        env:
+          APP: ${{ matrix.app }}
+          API_BASE: ${{ vars.API_BASE }}
+          CUSTOMER_APP_ID: ${{ vars.CUSTOMER_APP_ID }}
+          PARTNER_APP_ID: ${{ vars.PARTNER_APP_ID }}
+          BRAND_FROM_SERVER: ${{ inputs.brand_from_server }}
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/brand"
+          "$RUNNER_TEMP/brand/bin/pip" install --quiet --disable-pip-version-check pillow==12.3.0
+          "$RUNNER_TEMP/brand/bin/python" -I scripts/store_brand.py "$APP" | tee -a "$GITHUB_ENV"
       - name: Firebase files and dart-define keys
         env:
           APP: ${{ matrix.app }}
@@ -297,6 +337,8 @@ jobs:
         working-directory: app/apps/${{ matrix.app }}
         env:
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          CUSTOMER_APP_ID: ${{ vars.CUSTOMER_APP_ID }}
+          PARTNER_APP_ID: ${{ vars.PARTNER_APP_ID }}
         run: |
           set -euo pipefail
           # -allowProvisioningUpdates + the API key: Xcode creates the profiles (push, Sign in with Apple, associated domains).
