@@ -129,3 +129,42 @@ async fn only_the_owner_may_save_and_a_save_is_audited(db: PgPool) {
         .expect("audit");
     assert_eq!(rows, 1);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn saved_app_ids_replace_the_built_in_ones_in_both_files(db: PgPool) {
+    let app = env_app(db.clone());
+    let (token, _) = staff_token(&db, Role::StaffAdmin).await;
+    let (st, saved) = admin_put(
+        &app,
+        &token,
+        json!({
+            "android_cert_sha256": [SAVED_CERT], "apple_team_id": SAVED_TEAM,
+            "android_packages": ["com.shop.customer", "com.shop.partner"], "ios_bundle_ids": ["com.shop.customer"]
+        }),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{saved}");
+    assert_eq!(saved["android_packages"], json!(["com.shop.customer", "com.shop.partner"]));
+    let (_, android) = well_known(&app, "/.well-known/assetlinks.json").await;
+    assert_eq!(android[0]["target"]["package_name"], "com.shop.customer");
+    assert_eq!(android[1]["target"]["package_name"], "com.shop.partner");
+    let (_, aasa) = well_known(&app, "/.well-known/apple-app-site-association").await;
+    assert_eq!(aasa["webcredentials"]["apps"], json!([format!("{SAVED_TEAM}.com.shop.customer")]));
+    assert_eq!(aasa["applinks"]["details"][0]["appIDs"], aasa["webcredentials"]["apps"]);
+
+    let (st, _) = admin_put(&app, &token, json!({ "android_cert_sha256": [], "android_packages": ["not an id"] })).await;
+    assert_eq!(st, StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_row_saved_before_the_id_lists_existed_still_reads(db: PgPool) {
+    let app = env_app(db.clone());
+    sqlx::query("INSERT INTO settings (key, value) VALUES ('app_links', $1)")
+        .bind(json!({ "android_cert_sha256": [SAVED_CERT], "apple_team_id": null }))
+        .execute(&db)
+        .await
+        .expect("old row");
+    let (st, android) = well_known(&app, "/.well-known/assetlinks.json").await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(android[0]["target"]["package_name"], "kr.co.dahae.customer");
+}
