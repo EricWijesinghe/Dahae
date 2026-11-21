@@ -120,7 +120,8 @@ curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/beta/i
 | `dahae restore-offsite [이름] [--yes]` | 외부 백업 목록, 또는 내려받아 되돌리기 | 확인 문구 `yes` |
 | `dahae load 파일.tar` | 미리 받아 둔 이미지 묶음 불러오기 (인터넷 없이 업데이트) | 서명 확인을 건너뛰어요 (설치 파일이 알려 줘요) |
 | `dahae heartbeat <https 주소>\|off` | 외부 가동 확인 주소 저장, 테스트 핑 | https 만 받아요 |
-| `dahae host-approval enroll <사장님 계정 번호>\|status` | 서버 승인 코드 만들기 (인증 앱 6자리) | 버전 올리기·되돌리기 승인에 써요 |
+| `dahae domain <새 도메인> [--yes]` | 서비스 주소 바꾸기: `.env` 백업 → `DOMAIN` 변경 → api·web 다시 시작 → 새 주소로 `/health` 확인 (5분까지) | 실패하면 `.env` 를 되돌리고 종료 코드 3. 예전 주소는 계속 응답해요 |
+| `dahae host-approval enroll <사장님 계정 번호>\|status` | 서버 승인 코드 만들기 (인증 앱 6자리) | 버전 올리기·되돌리기·도메인 바꾸기 승인에 써요. 콘솔에서도 만들 수 있어요 |
 | `dahae owner-reset` | 서버 승인 코드 지우기 | 확인 문구 `초기화` |
 | `dahae applinks --android-sha256 …  --apple-team-id …` | 네이버 로그인 앱 링크 설정 | 개발자가 값을 알려 줘요 |
 | `dahae demo load [--force]` / `dahae demo clear` | 체험용 데이터 넣기 / 지우기 (실제 고객 데이터는 지우지 않아요) | `demo clear` 는 확인 문구 `yes` |
@@ -169,14 +170,32 @@ sudo dahae update vX.Y.Z     # 특정 태그 (엔지니어 지시가 있을 때)
 
 ### 서버 작업 요청 (API)
 사장님 인증을 거친 요청은 `POST /v1/admin/host/jobs` 로 들어가 작업 파일이 되고, 작업 실행기가 root 로 실행해요.
-이 저장소 브랜치의 콘솔 화면에는 이 경로를 부르는 화면이 아직 보이지 않아요. 그래서 사장님은 아래 `dahae` 명령을 쓰세요.
-허용된 종류는 다음뿐이에요: `backup-now`, `update`, `update-skip`, `channel stable|beta`, `restart api|web|db|all`, `schedule`
-(근거: [backend/crates/api/src/host_jobs.rs](../backend/crates/api/src/host_jobs.rs), root 작업 실행 스크립트 (`deploy/` 폴더)의 `job_args_ok`).
-상태 확인(`status-refresh`)을 빼면 모든 종류에 사장님의 TOTP 인증 코드가 필요해요 (`needs_owner`).
+허용된 종류는 다음뿐이에요: `backup-now`, `update`, `update-skip`, `channel stable|beta`, `restart api|web|db|all`, `schedule`,
+`heartbeat <https 주소>|off`, `domain-check <도메인>`, `domain-set <도메인>`, `host-approval-enroll`
+(근거: [backend/crates/api/src/host_jobs.rs](../backend/crates/api/src/host_jobs.rs), [deploy/agent.sh](../deploy/agent.sh) `job_args_ok`).
+상태 확인(`status-refresh`)과 DNS 확인(`domain-check`)을 빼면 모든 종류에 사장님의 TOTP 인증 코드가 필요해요 (`needs_owner`).
+`host-approval-enroll` 의 계정 번호는 서버가 요청한 사장님 번호로 채워요. 결과(DNS 확인 JSON, 인증 앱 주소)는
+`GET /v1/admin/host/jobs/{id}/output` 으로 10분 동안 읽을 수 있어요 (인증 앱 주소는 요청한 사장님만).
 
-버전을 올리거나 되돌리는 작업(`update-tag`, `rollback`)은 서버 승인 코드가 있어야 실행돼요. 승인은 10분 안에 해야 하고,
+버전을 올리거나 되돌리는 작업(`update-tag`, `rollback`)과 도메인 바꾸기(`domain-set`)는 서버 승인 코드가 있어야 실행돼요.
+콘솔은 코드를 `POST /v1/admin/host/jobs/{id}/approve` 로 보내고, 작업 실행기가 확인해요. 승인은 10분 안에 해야 하고,
 한 시간 안에 10번 틀리면 승인이 잠겨요 (`APPROVAL_TTL_SEC`, `APPROVAL_FAIL_MAX`, root 작업 실행 스크립트 (`deploy/` 폴더)).
-`update-tag` 는 설치 기록보다 낮은 버전을 거부해요 (`tag_newer`).
+`update-tag` 는 설치 기록보다 낮은 버전을 거부해요 (`tag_newer`). 승인 칸에 두지 못한 작업은 이유(승인 코드 없음,
+잠김, 다른 작업이 기다리는 중)를 상태의 `step` 에 남기고 거부돼요.
+
+**설치된 서버는 한 번 설치 줄을 다시 실행해야 해요.** 작업 실행기와 `dahae` 명령은 서버의 파일이라 `dahae update` 가 바꾸지
+않아요. 이 기능 전 서버에서 `domain-set` 은 이유 없이 `rejected` 로 끝나요. 설치 줄(웹 SSH 또는 AWS SSM Run Command)을 한 번
+다시 실행하면 데이터는 그대로 두고 새 실행기와 명령이 들어가요.
+
+### 도메인 바꾸기 · Domain move
+콘솔 설정 > 도메인에서 해요 (DNS 확인 → 사장님 코드 → 서버 승인 코드). 터미널에서는 `sudo dahae domain 새도메인`.
+- 예전 도메인은 그대로 응답해요: API, 결제 페이지, 앱 링크, 로그인 콜백, 앱 화면, 검색용 페이지. 웹사이트 페이지만 새 주소로 301.
+  설치된 앱이 POST·웹소켓·결제 완료 확인을 예전 주소로 계속 하기 때문이에요 (redirect 를 따라가지 않아요).
+- 예전 도메인의 인증서는 처음 접속할 때 Caddy 가 받아요. API 가 예전 도메인 목록에 있는 이름만 허락해요
+  (`/internal/tls-ask`, 밖에서는 404). compose 나 `.env` 에는 예전 도메인이 없어요.
+- 실패하면 `.env` 를 되돌리고 `rolled_back` 으로 끝나요. 실패한 새 주소는 예전 도메인 목록에 남아 있어도 해롭지 않아요.
+- 끝난 뒤 콘솔의 체크리스트(PortOne·토스 웹훅, PG 사이트 주소, 네이버 콜백 **추가**, 검색 등록, 스토어 주소, GitHub `store` 변수)를
+  따라 바꾸세요. 새 스토어 빌드가 나오고 최소 앱 버전을 올린 뒤에만 예전 도메인을 은퇴시키세요. DNS 의 예전 A 레코드도 그때까지 둬요.
 
 ### 데이터 구조 변경 규칙 (엔지니어)
 데이터베이스 변경은 추가만 해요 (확장 후 축소, expand/contract). 되돌리기가 이전 버전을 새 구조 위에서 돌리기 때문이에요.

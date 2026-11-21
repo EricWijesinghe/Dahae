@@ -21,7 +21,7 @@ Principle. The developer (Eric) builds, deploys and maintains everything from hi
 ## 2. 안드로이드 (Google Play) / Android
 
 **빌드 시점**
-- `store` 환경에 `API_BASE=https://<도메인>` 을 넣고 `store-apps` 를 `android` 로 실행해요 ([guide 11](guide/11-앱-직접-빌드.md) 3·8번). 빌드 자체는 서버가 떠 있지 않아도 돼요.
+- `store` 환경에 `API_BASE=https://<도메인>` 을 넣고 `store-apps` 를 `android` 로 실행해요 ([guide 11](guide/11-앱-직접-빌드.md) 3·8번). 앱 이름·아이콘은 빌드할 때 서버(콘솔에 저장한 로고)에서 받아요. 서버가 아직 없으면 `brand_from_server` 를 끄고 빌드해요.
 - 키 (카카오·네이버·구글·Firebase) 가 없으면 해당 로그인 버튼은 숨겨지고 푸시는 꺼져요. 내부 테스트에는 충분해요. 키를 추가하면 다시 빌드해요.
 - 심사 제출 전에는 서버가 반드시 떠 있어야 해요. 심사원은 데모 계정으로 로그인해요 (아래 §4-6).
 
