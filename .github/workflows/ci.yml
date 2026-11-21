@@ -172,9 +172,10 @@ jobs:
         with: { persist-credentials: false }
       - uses: ./.github/actions/flutter-setup
       - name: Widget tests
-        # store_screenshots = generated store images (scripts/store/generate.sh), not part of CI.
+        # store_screenshots / manual_screenshots = generated store and manual images (scripts/store/generate.sh,
+        # scripts/manual/shots.sh), not part of CI.
         working-directory: app/${{ matrix.package }}
-        run: flutter test --exclude-tags store_screenshots
+        run: flutter test --exclude-tags store_screenshots,manual_screenshots
 
   # Pixel comparison against baselines made on this runner (scripts/ci/goldens.sh has the rule;
   # .github/workflows/goldens.yml makes new baselines).
