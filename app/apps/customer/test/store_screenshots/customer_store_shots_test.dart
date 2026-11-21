@@ -258,7 +258,7 @@ FakeApi _richApi() {
   return fake;
 }
 
-Future<TestEnv> _env(String lang, ThemeMode mode) =>
+Future<TestEnv> storeShotEnv(String lang, ThemeMode mode) =>
     TestEnv.create(fake: _richApi(), localeCode: lang, themeMode: mode);
 
 /// One screen per store shot. [dark] picks the theme that reads best for that screen.
@@ -286,12 +286,12 @@ final _shots = <_Shot>[
   _Shot(
     '03-schedule',
     dark: false,
-    screen: () => _draftScreen((d) => ScheduleScreen(draft: d)),
+    screen: () => storeDraftScreen((d) => ScheduleScreen(draft: d)),
   ),
   _Shot(
     '04-checkout',
     dark: false,
-    screen: () => _draftScreen((d) => CheckoutScreen(draft: d)),
+    screen: () => storeDraftScreen((d) => CheckoutScreen(draft: d)),
   ),
   _Shot(
     '05-tracking',
@@ -310,7 +310,7 @@ final _shots = <_Shot>[
 ];
 
 /// A booking draft filled the way a user leaves it at the schedule step.
-Widget _draftScreen(Widget Function(BookingDraft draft) build) {
+Widget storeDraftScreen(Widget Function(BookingDraft draft) build) {
   final draft = BookingDraft(Service.fromJson(serviceJson('bathroom')))
     ..unitIndex = 1
     ..address = Address.fromJson(addressJson())
@@ -326,7 +326,7 @@ void main() {
       await tester.runAsync(loadShotFonts);
       final envs = {
         for (final mode in const [ThemeMode.light, ThemeMode.dark])
-          mode: await _env(lang, mode),
+          mode: await storeShotEnv(lang, mode),
       };
       final devices = shotDevices.where(
         (d) => shotDeviceSlugs.contains(d.slug),

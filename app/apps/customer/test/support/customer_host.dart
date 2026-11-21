@@ -19,6 +19,7 @@ class CustomerTestHost extends StatelessWidget {
     required this.app,
     required this.home,
     this.config = const RemoteConfig(),
+    this.brand = BrandConfig.placeholder,
   });
 
   final TestEnv env;
@@ -28,30 +29,36 @@ class CustomerTestHost extends StatelessWidget {
   /// Server switches (maintenance). Wraps the whole app so pushed routes see them too.
   final RemoteConfig config;
 
+  /// Business colours and name (the owner's business profile).
+  final BrandConfig brand;
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([env.locale, env.session, env.theme]),
-    builder: (context, _) => Deps(
-      app: app,
-      session: env.session,
-      locale: env.locale,
-      theme: env.theme,
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: buildTheme(BrandConfig.placeholder, Brightness.light),
-        darkTheme: buildTheme(BrandConfig.placeholder, Brightness.dark),
-        themeMode: env.theme.mode,
-        locale: env.locale.locale,
-        supportedLocales: LocaleController.supported,
-        localizationsDelegates: const [
-          T.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        builder: (context, child) =>
-            RemoteConfigScope(config: config, child: child!),
-        home: home,
+    builder: (context, _) => BrandScope(
+      brand: brand,
+      child: Deps(
+        app: app,
+        session: env.session,
+        locale: env.locale,
+        theme: env.theme,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: buildTheme(brand, Brightness.light),
+          darkTheme: buildTheme(brand, Brightness.dark),
+          themeMode: env.theme.mode,
+          locale: env.locale.locale,
+          supportedLocales: LocaleController.supported,
+          localizationsDelegates: const [
+            T.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          builder: (context, child) =>
+              RemoteConfigScope(config: config, child: child!),
+          home: home,
+        ),
       ),
     ),
   );

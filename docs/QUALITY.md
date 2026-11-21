@@ -122,7 +122,7 @@ the backup drill or `ci.yml` changed, and the app jobs unless `app/`, the action
 | `supply-chain` | cargo-deny | RustSec advisories, licences, banned crates, sources | [`backend/deny.toml`](../backend/deny.toml) |
 | `secrets` | gitleaks v8.30.1 (pinned by digest) | Secret scan with the repository's rules | [`.github/gitleaks.toml`](../.github/gitleaks.toml) |
 | `app-analyze` | Dart | `dart analyze --fatal-infos`; formatting of changed Dart files (generated `gen/` excluded) | [`flutter-setup`](../.github/actions/flutter-setup) |
-| `app-test` | Flutter | `flutter test --exclude-tags store_screenshots` for `core`, `ui`, `customer`, `partner`, `console` (matrix, fail-fast off) | `app/` |
+| `app-test` | Flutter | `flutter test --exclude-tags store_screenshots,manual_screenshots` for `core`, `ui`, `customer`, `partner`, `console` (matrix, fail-fast off) | `app/` |
 | `goldens` | Pixel | `scripts/ci/goldens.sh check`: any pixel change or missing baseline fails | [`goldens.sh`](../scripts/ci/goldens.sh) |
 | `shell` | Shell and installer | shellcheck on `deploy/install.sh`, `deploy/e2e-install.sh`, `deploy/publish-delivery.sh`, `scripts/ci/*.sh`; installer self-test; pinned versions agree (Rust, Flutter, cosign); Caddyfile parses with every installer setting; actionlint on all workflows (pinned 1.7.12) | [`check-pins.sh`](../scripts/ci/check-pins.sh), [`caddy-check.sh`](../scripts/ci/caddy-check.sh) |
 | `migrations` | Migration rules | Gate unit tests, then `check-migrations.py --base origin/<base>` | [`check-migrations.py`](../scripts/ci/check-migrations.py) |

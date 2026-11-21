@@ -149,12 +149,14 @@ Future<void> _resolveImage(ImageProvider provider) {
 }
 
 /// Renders [app] at [device] size and writes it to [path] as a PNG.
+/// [act] runs after the first settle (tap a tab, open a dialog) and the frame settles again before capture.
 Future<void> captureShot(
   WidgetTester tester,
   Widget app,
   ShotDevice device,
-  String path,
-) async {
+  String path, {
+  Future<void> Function()? act,
+}) async {
   final boundary = GlobalKey();
   tester.view.devicePixelRatio = device.dpr;
   tester.view.physicalSize = Size(
@@ -167,6 +169,11 @@ Future<void> captureShot(
   await tester.pumpWidget(RepaintBoundary(key: boundary, child: app));
   await decodeShotImages(tester);
   await shotSettle(tester);
+  if (act != null) {
+    await act();
+    await decodeShotImages(tester);
+    await shotSettle(tester);
+  }
   await tester.runAsync(() async {
     final render =
         boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;

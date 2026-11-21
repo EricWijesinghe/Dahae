@@ -119,7 +119,7 @@ List<Json> _settlements() => [
   },
 ];
 
-Future<TestEnv> _env(String lang, ThemeMode mode) {
+Future<TestEnv> storeShotEnv(String lang, ThemeMode mode) {
   final fake = FakeApi()
     ..onGet('/partner/jobs/job-1', (_) => _jobDetail())
     ..reply('GET', '/partner/settlements', _settlements());
@@ -192,7 +192,7 @@ void main() {
       await tester.runAsync(loadShotFonts);
       final envs = {
         for (final mode in const [ThemeMode.light, ThemeMode.dark])
-          mode: await _env(lang, mode),
+          mode: await storeShotEnv(lang, mode),
       };
       final devices = shotDevices.where(
         (d) => shotDeviceSlugs.contains(d.slug),
