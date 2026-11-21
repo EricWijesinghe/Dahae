@@ -49,11 +49,27 @@ void main() {
     for (final f in fields) {
       expect(g.fields[f]!.hint, isNotNull, reason: f);
     }
-    // The switch tells the owner what moves and what stays on PortOne.
+    // The switch tells the owner which methods Toss takes next to PortOne.
     final active = g.fields['active']!.hint!;
-    expect(active.ko, allOf(contains('PortOne'), contains('PASS')));
-    expect(active.en, allOf(contains('PortOne'), contains('PASS')));
+    expect(active.ko, contains('PortOne'));
+    expect(active.en, contains('PortOne'));
     expect(g.steps.map((s) => s.ko).join(), contains('DEPOSIT_CALLBACK'));
+  });
+
+  test('both payment guides say PASS needs PortOne', () {
+    for (final code in ['tosspayments', 'portone']) {
+      final steps = guides[code]!.steps;
+      for (final text in [
+        steps.map((s) => s.ko).join(),
+        steps.map((s) => s.en).join(),
+      ]) {
+        expect(
+          text,
+          allOf(contains('PortOne'), contains('PASS')),
+          reason: code,
+        );
+      }
+    }
   });
 
   test('Toss Payments setup codes get their own words', () {

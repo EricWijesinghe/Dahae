@@ -49,7 +49,7 @@ class MoreTab extends StatelessWidget {
     final t = context.t;
     final app = context.app;
     final deps = Deps.of(context);
-    final brand = BrandConfig.placeholder.name;
+    final brand = context.brandName;
     final coupons = app.coupons.where((c) => c.usable).length;
     // A member-only row shows a hint instead of its value while the guest is signed out.
     final guest = !deps.session.signedIn;
@@ -257,7 +257,7 @@ class _ProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.t;
     final c = context.colors;
-    final brand = BrandConfig.placeholder.name;
+    final brand = context.brandName;
     final guest = !Deps.of(context).session.signedIn;
     return AppCard(
       padding: EdgeInsets.zero,

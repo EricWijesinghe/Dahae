@@ -178,11 +178,11 @@ async fn toss_intent_names_the_gateway_and_its_client_key(pool: PgPool) {
     assert_eq!(intent["cash_receipts"], false, "Toss issues receipts in its own window");
     assert_eq!(checkout_state(&pool, id).await.1, "tosspayments");
 
-    set_toss(&w.env, toss::card(false)).await;
-    let (id, _, intent) = checkout(&w, "card").await;
+    // A method with a PortOne channel key goes to PortOne, Toss on or off.
+    let (id, _, intent) = checkout(&w, "transfer").await;
     assert_eq!(
         (intent["gateway"].as_str(), intent["channel_key"].as_str()),
-        (Some("portone"), Some("channel-key-card"))
+        (Some("portone"), Some("channel-key-transfer"))
     );
     assert_eq!(intent["cash_receipts"], true);
     assert_eq!(checkout_state(&pool, id).await.1, "portone");
@@ -315,7 +315,7 @@ async fn an_early_app_confirm_is_pending_not_declined(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn toss_confirm_refuses_a_portone_checkout_and_bad_keys(pool: PgPool) {
     let w = world(&pool, "010-7600-0004", false).await;
-    let (id, amount, _) = checkout(&w, "card").await;
+    let (id, amount, _) = checkout(&w, "transfer").await;
     let (st, out) = toss_confirm(&w, id, "pk_x", amount).await;
     assert_eq!((st, out["error"]["code"].as_str()), (StatusCode::BAD_REQUEST, Some("payment_not_for_checkout")));
     let (st, out) = toss_confirm(&w, id, "pk x", amount).await;
@@ -388,10 +388,10 @@ async fn the_reconciler_settles_a_done_order_we_never_confirmed(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn a_switch_never_moves_a_payment_already_made(pool: PgPool) {
+async fn a_config_change_never_moves_a_row(pool: PgPool) {
     let w = world(&pool, "010-7600-0007", false).await;
-    // Paid on PortOne, then the owner switches to Toss: the refund still goes to PortOne.
-    let (po, amount, _) = checkout(&w, "card").await;
+    // Paid on PortOne, then the owner turns Toss on: the refund still goes to PortOne.
+    let (po, amount, _) = checkout(&w, "transfer").await;
     w.portone.lock().expect("portone").payments.insert(po.to_string(), (amount, 0));
     let tok = Some(w.c.token.as_str());
     let (st, done) = call(
@@ -409,12 +409,12 @@ async fn a_switch_never_moves_a_payment_already_made(pool: PgPool) {
     assert_eq!(w.portone.lock().expect("portone").cancels, [po.to_string()]);
     assert!(w.toss.lock().expect("fake").calls_of("cancel").is_empty());
 
-    // A PortOne saved card keeps charging PortOne while Toss is live.
+    // A PortOne saved card keeps charging PortOne while Toss serves one-off methods.
     let (booking, _) = common::book(&w.env.app, &w.c, 6, None).await;
     assert_eq!(w.portone.lock().expect("portone").charges.len(), 1);
     assert_eq!(payment_provider(&pool, booking).await.0, "portone");
 
-    // Paid on Toss, then the owner switches back: the refund still goes to Toss, guarded by the balance.
+    // Paid on Toss, then the owner turns 사용 off: the refund still goes to Toss, guarded by the balance.
     let (tc, amount, _) = checkout(&w, "card").await;
     assert_eq!(toss_confirm(&w, tc, "pk_sw", amount).await.0, StatusCode::OK);
     let tc_booking = checkout_state(&pool, tc).await.2.expect("booking");
@@ -431,7 +431,7 @@ async fn a_switch_never_moves_a_payment_already_made(pool: PgPool) {
 /// Registers a card under Toss. Returns the payment method id and the customerKey (the ticket).
 async fn register_toss_card(w: &World) -> (Uuid, String) {
     let tok = Some(w.c.token.as_str());
-    let (st, setup) = call(&w.env.app, "GET", "/v1/me/payment-methods/setup", tok, None).await;
+    let (st, setup) = call(&w.env.app, "GET", "/v1/me/payment-methods/setup?gateways=portone,tosspayments", tok, None).await;
     assert_eq!(st, StatusCode::OK, "{setup}");
     assert_eq!(setup["gateway"], "tosspayments");
     assert_eq!(setup["store_id"], Value::Null);
@@ -448,7 +448,7 @@ async fn register_toss_card(w: &World) -> (Uuid, String) {
 async fn saved_cards_under_toss_use_the_billing_mid(pool: PgPool) {
     let w = world(&pool, "010-7600-0008", true).await;
     let tok = Some(w.c.token.as_str());
-    let (st, methods) = call(&w.env.app, "GET", "/v1/payments/methods", None, None).await;
+    let (st, methods) = call(&w.env.app, "GET", "/v1/payments/methods?gateways=portone,tosspayments", None, None).await;
     assert_eq!(st, StatusCode::OK);
     let flow = |code: &str| methods.as_array().expect("list").iter().find(|m| m["code"] == code).map(|m| m["flow"].clone());
     assert_eq!(flow("card"), Some(json!("billing")));
@@ -670,6 +670,11 @@ async fn the_console_card_saves_with_the_owner_code_and_tests_both_mids(pool: Pg
     let (st, overview) = call(app, "GET", "/v1/admin/setup", Some(owner.as_str()), None).await;
     assert_eq!(st, StatusCode::OK);
     assert_eq!(overview["toss_payments_webhook_url"], "http://127.0.0.1:8080/v1/webhooks/tosspayments");
+    assert_eq!(
+        overview["payment_gateways"],
+        json!([{ "code": "portone", "mode": null }]),
+        "사용 off: Toss not listed"
+    );
     assert_eq!(overview["payment_gateway"], "portone");
     let toss_card = overview["integrations"]
         .as_array()
@@ -682,16 +687,18 @@ async fn the_console_card_saves_with_the_owner_code_and_tests_both_mids(pool: Pg
     set_toss(&w.env, toss::card(true)).await;
     let (_, overview) = call(app, "GET", "/v1/admin/setup", Some(owner.as_str()), None).await;
     assert_eq!(
-        (overview["payment_gateway"].as_str(), overview["payment_gateway_mode"].as_str()),
-        (Some("tosspayments"), Some("test")),
-        "live on test keys: the console warns"
+        overview["payment_gateways"],
+        json!([{ "code": "portone", "mode": null }, { "code": "tosspayments", "mode": "test" }]),
+        "both take payments, PortOne first; Toss on test keys: the console warns"
     );
+    assert_eq!(overview["payment_gateway"], "portone", "older consoles see the first gateway");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn cash_receipts_and_tax_invoices_follow_the_gateway(pool: PgPool) {
     let w = world(&pool, "010-7600-0013", true).await;
-    let (id, amount, _) = checkout(&w, "transfer").await;
+    // PortOne serves transfer in this world, so the Toss leg uses the other cash-eligible method.
+    let (id, amount, _) = checkout(&w, "virtual_account").await;
     let body = json!({ "purpose": "PERSONAL", "identity": "01076000013" });
     let (st, out) = call(
         &w.env.app,

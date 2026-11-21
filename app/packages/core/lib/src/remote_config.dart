@@ -17,11 +17,15 @@ class RemoteConfig {
     this.flags = const {},
     this.maintenance = false,
     this.maintenanceMessage = '',
+    this.providers,
   });
 
   final Map<String, bool> flags;
   final bool maintenance;
   final String maintenanceMessage;
+
+  /// Social sign-in providers configured on the server; null when the server does not say (older servers).
+  final Set<String>? providers;
 
   bool isOn(String feature) => flags[feature] ?? true;
 
@@ -38,7 +42,13 @@ class RemoteConfig {
     final msg = m is Map && m['message'] is String
         ? (m['message'] as String).trim()
         : '';
-    return RemoteConfig(flags: flags, maintenance: on, maintenanceMessage: msg);
+    final p = json['providers'];
+    return RemoteConfig(
+      flags: flags,
+      maintenance: on,
+      maintenanceMessage: msg,
+      providers: p is List ? {...p.whereType<String>()} : null,
+    );
   }
 }
 
@@ -60,6 +70,7 @@ class RemoteConfigScope extends InheritedWidget {
   bool updateShouldNotify(RemoteConfigScope old) =>
       old.config.maintenance != config.maintenance ||
       old.config.maintenanceMessage != config.maintenanceMessage ||
+      !setEquals(old.config.providers, config.providers) ||
       !mapEquals(old.config.flags, config.flags);
 }
 
@@ -67,10 +78,18 @@ class RemoteConfigScope extends InheritedWidget {
 /// stays usable; screens that create bookings check [RemoteConfigScope] and hold their submit button.
 /// Offline or on error the app keeps working with everything on; the server still refuses new bookings.
 class RemoteConfigGate extends StatefulWidget {
-  const RemoteConfigGate({super.key, required this.api, required this.child});
+  const RemoteConfigGate({
+    super.key,
+    required this.api,
+    required this.child,
+    this.onConfig,
+  });
 
   final ApiClient api;
   final Widget child;
+
+  /// Gets every successfully loaded `/config` body (server address discovery).
+  final void Function(Json config)? onConfig;
 
   @override
   State<RemoteConfigGate> createState() => _RemoteConfigGateState();
@@ -100,6 +119,7 @@ class _RemoteConfigGateState extends State<RemoteConfigGate> {
       final body = await widget.api.get('/config');
       if (!mounted || body is! Json) return;
       setState(() => _config = RemoteConfig.fromJson(body));
+      widget.onConfig?.call(body);
     } on Exception {
       // Offline: keep the last known state.
     }

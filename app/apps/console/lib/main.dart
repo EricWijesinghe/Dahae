@@ -54,16 +54,28 @@ class _ServerGateState extends State<ServerGate> {
     final session = Session(namespace: 'console');
     final api = ApiClient(baseUrl: base, session: session);
     _errors.send = (body) async => api.post('/client-errors', body);
-    await session.restore();
+    final brand = BrandController(api: api, fallback: BrandConfig.placeholder);
+    await Future.wait([session.restore(), brand.restore()]);
     // One refresh now instead of a 401 on every first screen call.
     api.warmUp().ignore();
-    final state = ConsoleState(api, Realtime(api), session);
-    // Back to the tab or window: a fresh socket; its resync makes screens refetch.
+    brand.refresh().ignore();
+    // After a domain move the brand files live on the new address; without it they count as foreign.
+    api.get('/config').then((c) {
+      if (c is Json) api.publicBase.value = httpsBase(c['api_base']);
+    }).ignore();
+    final state = ConsoleState(api, Realtime(api), session, brand: brand);
+    // Back to the tab or window: a fresh socket (its resync makes screens refetch) and the current brand.
     _foreground?.dispose();
-    _foreground = Foreground(onResume: state.realtime.reconnect);
+    _foreground = Foreground(
+      onResume: () {
+        state.realtime.reconnect();
+        brand.refresh().ignore();
+      },
+    );
     return ConsoleApp(
       session: session,
       state: state,
+      brand: brand,
       locale: widget.locale,
       theme: widget.theme,
       onChangeServer: needsServerAddress ? _change : null,
@@ -143,9 +155,11 @@ class ConsoleApp extends StatelessWidget {
     required this.state,
     required this.locale,
     required this.theme,
+    this.brand,
     this.onChangeServer,
   });
   final VoidCallback? onChangeServer;
+  final BrandController? brand;
   final Session session;
   final ConsoleState state;
   final LocaleController locale;
@@ -153,8 +167,13 @@ class ConsoleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([locale, session, theme]),
-    builder: (context, _) => Deps(
+    listenable: Listenable.merge([locale, session, theme, brand]),
+    builder: (context, _) => _branded(brand?.brand ?? BrandConfig.placeholder),
+  );
+
+  Widget _branded(BrandConfig b) => BrandScope(
+    brand: b,
+    child: Deps(
       state: state,
       session: session,
       locale: locale,
@@ -165,10 +184,9 @@ class ConsoleApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           builder: (context, child) =>
               DesktopColumn(child: child ?? const SizedBox.shrink()),
-          onGenerateTitle: (c) =>
-              '${BrandConfig.placeholder.name} ${T.of(c).cTitle}',
-          theme: buildTheme(BrandConfig.placeholder, Brightness.light),
-          darkTheme: buildTheme(BrandConfig.placeholder, Brightness.dark),
+          onGenerateTitle: (c) => '${b.name} ${T.of(c).cTitle}',
+          theme: buildTheme(b, Brightness.light),
+          darkTheme: buildTheme(b, Brightness.dark),
           themeMode: theme.mode,
           themeAnimationDuration: const Duration(milliseconds: 280),
           themeAnimationCurve: Motion.ease,

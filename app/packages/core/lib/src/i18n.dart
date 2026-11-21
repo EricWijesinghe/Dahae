@@ -13,6 +13,9 @@ extension L10nX on BuildContext {
   T get t => T.of(this);
   String get lang => Localizations.localeOf(this).languageCode;
   String won(int amount) => formatWon(amount, lang);
+
+  /// The business name in the UI language (English name when set and English is picked).
+  String get brandName => BrandScope.of(this).nameFor(lang);
 }
 
 /// Every user-facing label that depends on a server code lives here,
@@ -111,6 +114,7 @@ extension Labels on T {
     'payout_state' => err_payout_state,
     'payout_provider' => err_payout_provider,
     'payout_in_transfer' => err_payout_in_transfer,
+    'gateway_in_use' => err_gateway_in_use,
     'payout_checked' => err_payout_checked,
     'settlement_in_transfer' => err_settlement_in_transfer,
     'checkout_not_open' => err_checkout_not_open,

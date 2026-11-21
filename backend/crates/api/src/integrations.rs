@@ -34,7 +34,7 @@ pub struct Integrations {
     /// Sign in with Apple key: code exchange at sign-in and token revocation on deletion. Optional.
     pub apple_signin: Option<AppleSignInKey>,
     pub portone: PortOne,
-    /// Toss Payments (direct). Console-only; `active` makes it the gateway for new payments.
+    /// Toss Payments (direct). Console-only; while `active` it takes new payments next to PortOne (see `gateway_for`).
     pub toss_payments: Option<TossPayments>,
     pub solapi: Option<SolapiConfig>,
     pub fcm: Option<ServiceAccount>,
@@ -60,7 +60,8 @@ pub struct TossPayments {
     pub billing: Option<(String, String)>,
     /// 보안 키 (64 hex): webhook signatures.
     pub security_key: Option<String>,
-    /// New payments and new saved cards go to Toss.
+    /// 사용 (unset: on with live keys, off with test keys): Toss takes new payments next to PortOne. Off stops only new Toss checkouts and new
+    /// saved cards; webhooks, confirms, refunds and saved-card charges keep running.
     pub active: bool,
 }
 
@@ -130,6 +131,21 @@ pub fn toss_env_enabled() -> bool {
     std::env::var(TOSS_ENV).is_ok_and(|v| v == "1")
 }
 
+/// Settings row of the owner's console switch for Toss payouts: `{"on":bool,"by":uuid,"at":rfc3339}`.
+pub const TOSS_SWITCH_KEY: &str = "payout_toss_switch";
+
+/// The env switch or the owner's console switch: either opens the Toss payouts gate.
+pub async fn toss_switch_on(db: &PgPool) -> Result<bool, sqlx::Error> {
+    if toss_env_enabled() {
+        return Ok(true);
+    }
+    let v: Option<Value> = sqlx::query_scalar("SELECT value FROM settings WHERE key = $1")
+        .bind(TOSS_SWITCH_KEY)
+        .fetch_optional(db)
+        .await?;
+    Ok(v.is_some_and(|v| v["on"] == json!(true)))
+}
+
 /// S3-compatible offsite backup target (AWS S3, Cloudflare R2, Naver Cloud Object Storage, Backblaze B2).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct S3Config {
@@ -163,13 +179,40 @@ impl Integrations {
         }
     }
 
-    /// Gateway for new payments: Toss only when its card is saved, valid and switched on.
-    pub fn gateway(&self) -> Gateway {
-        if self.toss_payments.as_ref().is_some_and(|t| t.active) {
-            Gateway::TossPayments
-        } else {
-            Gateway::Portone
+    /// PortOne takes payments: API secret and store id (env or console).
+    fn portone_ready(&self) -> bool {
+        self.has(Section::Portone)
+    }
+
+    /// The Toss card while it takes new payments: saved, valid, 사용 on (by default only with live keys).
+    pub fn toss_offered(&self) -> Option<&TossPayments> {
+        self.toss_payments.as_ref().filter(|t| t.active)
+    }
+
+    /// Where a new one-off payment with `method` goes: PortOne when it has that method's channel key, else Toss
+    /// when offered. None: no gateway serves the method, so it is not shown.
+    pub fn gateway_for(&self, method: &str) -> Option<Gateway> {
+        if self.portone_ready() && crate::routes::payments::channel_key(&self.portone.channel_keys, method).is_some() {
+            return Some(Gateway::Portone);
         }
+        self.toss_offered().map(|_| Gateway::TossPayments)
+    }
+
+    /// Where a new saved card goes: PortOne when it can save cards, else Toss when offered with its 자동결제 pair.
+    pub fn billing_gateway(&self) -> Option<Gateway> {
+        if crate::providers::portone::billing_ready(&self.portone) {
+            return Some(Gateway::Portone);
+        }
+        self.toss_offered().filter(|t| t.billing.is_some()).map(|_| Gateway::TossPayments)
+    }
+
+    /// Gateways a new payment can reach with the `enabled` methods, PortOne first.
+    pub fn payment_gateways(&self, enabled: &[String]) -> Vec<Gateway> {
+        let billing = self.billing_gateway();
+        [Gateway::Portone, Gateway::TossPayments]
+            .into_iter()
+            .filter(|g| billing == Some(*g) || enabled.iter().any(|m| self.gateway_for(m) == Some(*g)))
+            .collect()
     }
 
     /// Whether the env (not the console) already provides this section.
@@ -550,12 +593,15 @@ fn toss_payments(v: &Map<String, Value>) -> Result<TossPayments, Invalid> {
     if let Some(k) = &security_key {
         crate::providers::toss_jwe::key_bytes(k).map_err(|_| Invalid("invalid_security_key"))?;
     }
+    // Not switched yet: live keys take payments, test keys wait for the owner (a live server must not take bookings
+    // on test keys just because the keys were saved).
+    let active = toggle(v, "active")?.unwrap_or(toss_key_mode(&secret_key) == Some("live"));
     Ok(TossPayments {
         client_key,
         secret_key,
         billing,
         security_key,
-        active: toggle(v, "active")?.unwrap_or(false),
+        active,
     })
 }
 
@@ -704,6 +750,11 @@ pub fn merge(section: Section, current: &Map<String, Value>, incoming: &Map<Stri
             out.insert(field.name.to_string(), v);
         }
     }
+    // The Toss switch is stored on save, so the console shows what runs and a later key change keeps it.
+    if section == Section::TossPayments && !out.contains_key("active") {
+        let live = out.get("secret_key").and_then(Value::as_str).and_then(toss_key_mode) == Some("live");
+        out.insert("active".into(), json!(live));
+    }
     out
 }
 
@@ -767,6 +818,7 @@ pub fn preview(kind: Kind, v: &Value) -> Value {
 pub fn toggle_default(base: &Integrations, section: Section, name: &str) -> bool {
     match (section, name) {
         (Section::Portone, "cash_receipts") => base.portone.cash_receipts,
+        (Section::TossPayments, "active") => true,
         _ => false,
     }
 }
@@ -833,6 +885,7 @@ pub async fn load(db: &PgPool, config: &Config) -> Result<Integrations, sqlx::Er
         .fetch_all(db)
         .await?;
     let mut out = Integrations::from_config(config);
+    let toss_on = toss_switch_on(db).await?;
     for (code, enc, last_test) in rows {
         let Some(section) = Section::parse(&code) else { continue };
         let Some(values) = decode(&config.data_key, &enc) else {
@@ -845,7 +898,7 @@ pub async fn load(db: &PgPool, config: &Config) -> Result<Integrations, sqlx::Er
         }
         if section == Section::Payout {
             let secret = values.get("secret_key").and_then(Value::as_str).unwrap_or_default();
-            out.payout_toss_ready = toss_ready(toss_env_enabled(), last_test.as_ref(), &config.data_key, secret);
+            out.payout_toss_ready = toss_ready(toss_on, last_test.as_ref(), &config.data_key, secret);
         }
         match apply(&out, section, &values) {
             Ok(next) => out = next,

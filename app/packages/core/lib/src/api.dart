@@ -53,6 +53,12 @@ class ApiClient {
 
   final String baseUrl;
   final Session session;
+
+  /// The last `X-Brand-Version` header the server sent (any status). Brand screens refetch when it moves.
+  final brandVersion = ValueNotifier<String?>(null);
+
+  /// The server's canonical https address (`api_base` in `/v1/config`) once known; its files count as own files.
+  final publicBase = ValueNotifier<String?>(null);
   final http.Client _http;
   static const _timeout = Duration(seconds: 20);
   Future<bool>? _refreshing;
@@ -77,6 +83,22 @@ class ApiClient {
 
   Future<dynamic> get(String path, {Map<String, String?>? query}) =>
       _send('GET', path, query: query);
+
+  /// A file the server's root side publishes outside the API (`/ops-progress/<token>`): no sign-in, decoded
+  /// JSON, or null when it is missing or unreadable.
+  Future<Object?> getServerFile(String path) async {
+    try {
+      final res = await _http
+          .get(Uri.parse('$baseUrl$path'))
+          .timeout(const Duration(seconds: 10));
+      return res.statusCode == 200
+          ? jsonDecode(utf8.decode(res.bodyBytes))
+          : null;
+    } on Object catch (e) {
+      debugPrint('server file unreadable: $e');
+      return null;
+    }
+  }
 
   /// One page of a cursor list. The server sends `X-Next-Cursor` while more rows follow.
   Future<({List<dynamic> items, String? next})> getPage(
@@ -196,6 +218,8 @@ class ApiClient {
     } catch (_) {
       throw const ApiException(0, 'network');
     }
+    final brand = res.headers['x-brand-version'];
+    if (brand != null && brand.isNotEmpty) brandVersion.value = brand;
     if (res.statusCode == 401 &&
         !retried &&
         session.refreshToken != null &&

@@ -56,7 +56,7 @@ async fn make_bundle(State(s): State<AppState>, OwnerTotp(_): OwnerTotp) -> ApiR
         return Err(ApiError::Internal("keys bundle self-test failed".into()));
     }
     let body = json!({
-        "file_name": format!("dahae-keys-{}.mkk", Utc::now().format("%Y%m%d")),
+        "file_name": format!("keys-{}.mkk", Utc::now().format("%Y%m%d")),
         "bundle": STANDARD.encode(&sealed),
         "passphrase": passphrase,
     });

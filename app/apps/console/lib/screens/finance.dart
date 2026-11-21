@@ -110,7 +110,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   Future<void> _export(String kind) =>
-      _exportAt('/admin/finance/export/$kind', _periodQuery, 'dahae-$kind.csv');
+      _exportAt('/admin/finance/export/$kind', _periodQuery, '$kind.csv');
 
   Future<void> _exportAt(
     String path,
@@ -185,7 +185,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               onReExport: () => _exportAt(
                 '/admin/finance/export/tax-invoices/re-export',
                 {..._periodQuery, 'confirm': 'true'},
-                'dahae-tax-invoices-again.csv',
+                'tax-invoices-again.csv',
                 post: true,
               ),
             ),

@@ -122,6 +122,17 @@ foreach ($name in $Apps) {
     $major = if ($pubspecVersion) { [int]$pubspecVersion.Matches[0].Groups[1].Value } else { 0 }
     if ($major -lt 1 -or $major -gt 65535) { throw "$name pubspec.yaml needs 'version: <major>.<minor>.<patch>' with major 1-65535 (an MSIX version cannot start with 0)." }
     $version = "$major.$($BuildNumber -shr 16).$($BuildNumber -band 0xFFFF).0"
+    # Name and icons from the licensee's server, as the store workflow does: store_brand.py rewrites the iOS icon set
+    # that msix_config.logo_path points at and prints APP_LABEL. Without a server address the repo's name stays.
+    $label = $null
+    if ($ApiBase) {
+      $env:API_BASE = $ApiBase
+      $env:PYTHONIOENCODING = 'utf-8'
+      [Console]::OutputEncoding = [Text.Encoding]::UTF8
+      $brandOut = & python -I (Join-Path $root 'scripts\store_brand.py') $name
+      if ($LASTEXITCODE -ne 0) { throw "scripts/store_brand.py failed for $name (is $ApiBase up, with a store icon?)" }
+      $label = ($brandOut | Where-Object { $_ -like 'APP_LABEL=*' } | Select-Object -First 1) -replace '^APP_LABEL=', ''
+    }
     if (-not $SkipBuild) {
       & flutter build windows --release "--dart-define=API_BASE=$ApiBase"
       if ($LASTEXITCODE -ne 0) { throw "flutter build windows failed for $name" }
@@ -142,6 +153,7 @@ foreach ($name in $Apps) {
       '--output-path', $outDir,
       '--output-name', "malkkeum-$name"
     )
+    if ($label) { $msixArgs += @('--display-name', $label) }
     if ($Store) {
       $msixArgs += '--store'
     } else {

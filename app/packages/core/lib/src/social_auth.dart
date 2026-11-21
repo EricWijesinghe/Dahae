@@ -203,11 +203,13 @@ bool appleAvailable() {
 }
 
 /// Providers to show on a sign-in screen, in display order.
-/// Dev base: every provider with a dev stub. Otherwise: configured providers only.
+/// Dev base: every provider with a dev stub. Otherwise: providers compiled into this build and, when the
+/// server sends its list ([server], `/v1/config` providers), also configured there.
 List<SocialSignIn> socialSignInsFor({
   required String apiBase,
   required FlutterSecureStorage storage,
   Set<String>? configured,
+  Set<String>? server,
   bool? appleOk,
 }) {
   final apple = appleOk ?? appleAvailable();
@@ -221,7 +223,7 @@ List<SocialSignIn> socialSignInsFor({
     if (p == SocialProviders.apple && !apple) continue;
     if (dev) {
       out.add(DevSocialSignIn(p, storage: storage));
-    } else if (live.contains(p)) {
+    } else if (live.contains(p) && (server?.contains(p) ?? true)) {
       out.add(nativeSocialSignIn(p) ?? UnconfiguredSocialSignIn(p));
     }
   }
@@ -286,5 +288,11 @@ Future<void> attachPhone(
 }
 
 /// App-level default: the platform keystore for dev ids, the build-time provider list.
-List<SocialSignIn> defaultSocialSignIns(String apiBase) =>
-    socialSignInsFor(apiBase: apiBase, storage: const FlutterSecureStorage());
+List<SocialSignIn> defaultSocialSignIns(
+  String apiBase, {
+  Set<String>? server,
+}) => socialSignInsFor(
+  apiBase: apiBase,
+  storage: const FlutterSecureStorage(),
+  server: server,
+);

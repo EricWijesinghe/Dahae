@@ -18,6 +18,7 @@ pub mod contract;
 pub mod crypto;
 pub mod db;
 pub mod demo;
+pub mod domains;
 pub mod entropy;
 pub mod error;
 pub mod host_jobs;
@@ -90,7 +91,7 @@ pub async fn migrate(db: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
 /// Reads config, connects, migrates, seeds and serves until SIGTERM or Ctrl+C, then drains.
 pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     crate::ops::mark_started();
-    let config = Config::from_env()?;
+    let mut config = Config::from_env()?;
     // Migrations get their own single connection without the statement timeout (index builds can be slow).
     let migrate_db = db::connect(&config.database_url, &config.db.for_migrations()).await?;
     migrate(&migrate_db).await?;
@@ -110,6 +111,7 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     if config.dev_mode {
         tracing::warn!("DEV_MODE on: fake SMS, payments and push");
     }
+    domains::startup(&db, &mut config).await;
     let bind = config.bind;
     let state = build_state(db, config)?;
     routes::setup::reload(&state).await?;

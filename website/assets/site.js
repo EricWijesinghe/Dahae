@@ -1,4 +1,4 @@
-// Website behaviour: language, theme, live brand + prices from the API, card tilt,
+// Website behaviour: language, theme, store links + prices from the API, card tilt,
 // before/after slider, scroll reveal. No framework, no build step.
 const API = location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://127.0.0.1:8080' : '';
 
@@ -7,7 +7,7 @@ const LANGS = { ko: '한국어', en: 'English' };
 
 const COPY = {
   ko: {
-    proof_title: '다해 이야기', proof_homes: '이번 달 {n}집을 청소했어요', proof_rating: '평균 평점 {r}점 · 후기 {n}개',
+    proof_title: '{brand} 이야기', proof_homes: '이번 달 {n}집을 청소했어요', proof_rating: '평균 평점 {r}점 · 후기 {n}개',
     nav_services: '서비스', nav_how: '이용 방법', nav_faq: '자주 묻는 질문', nav_partner: '파트너 지원',
     eyebrow: '오늘 예약하면 내일 방문', h1a: '집안일은 맡기고,', h1b: '반짝이는 하루를.',
     lead: '검증된 청소 전문가가 욕실부터 이사 청소까지. 앱에서 가격 확인하고 1분 만에 예약하세요.',
@@ -30,7 +30,7 @@ const COPY = {
     store_soon: '곧 출시',
   },
   en: {
-    proof_title: 'Dahae in numbers', proof_homes: '{n} homes cleaned this month', proof_rating: 'Average {r} stars · {n} reviews',
+    proof_title: '{brand} in numbers', proof_homes: '{n} homes cleaned this month', proof_rating: 'Average {r} stars · {n} reviews',
     nav_services: 'Services', nav_how: 'How it works', nav_faq: 'FAQ', nav_partner: 'Become a pro',
     eyebrow: 'Book today, cleaned tomorrow', h1a: 'Hand over the chores,', h1b: 'keep the sparkle.',
     lead: 'Verified cleaning pros for everything from bathrooms to move-in cleans. See the price in the app and book in a minute.',
@@ -79,11 +79,16 @@ function applyWebCopy() {
 }
 fetch("assets/web_copy.json").then((r) => r.json()).then((j) => { webCopy = j; applyWebCopy(); }).catch(() => {});
 const text = (k) => (COPY[lang] && COPY[lang][k]) || COPY.en[k] || COPY.ko[k] || '';
+// The server writes the business name into the page (Caddy include); English uses name_en once /v1/brand answers.
+const serverName = (document.querySelector('[data-brand-name]')?.textContent || '').trim();
+let profile = null;
+const brandName = () => (lang === 'en' && profile?.name_en) || profile?.name || serverName;
 const won = (n) => new Intl.NumberFormat(lang === 'ko' ? 'ko-KR' : lang, { style: 'currency', currency: 'KRW', maximumFractionDigits: 0 }).format(n);
 
 function applyCopy() {
   document.documentElement.lang = lang;
-  document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = text(el.dataset.t); });
+  document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = text(el.dataset.t).replace('{brand}', brandName()); });
+  document.querySelectorAll('[data-brand-name]').forEach((el) => { el.textContent = brandName(); });
   renderServices();
   renderProof();
   applyWebCopy();
@@ -173,14 +178,10 @@ async function getJson(path) {
   return r.json();
 }
 
+// Name, colour and logo are already in the served HTML; only links and the English name come from here.
 function applyBrand(b) {
   if (!b) return;
-  if (b.primary_color) document.documentElement.style.setProperty('--brand', b.primary_color);
-  if (b.name) {
-    document.querySelectorAll('[data-brand-name]').forEach((el) => { el.textContent = b.name; });
-    document.title = document.title.replace(/^[^·|]+/, `${b.name} `);
-  }
-  if (b.logo_url) document.querySelectorAll('.logo-mark').forEach((el) => { el.innerHTML = ''; el.style.background = 'none'; const img = new Image(); img.alt = ''; img.src = b.logo_url; el.append(img); });
+  profile = b;
   for (const key of ['app_store_url', 'play_store_url', 'partner_play_store_url', 'partner_app_store_url']) {
     if (b[key]) document.querySelectorAll(`[data-link="${key}"]`).forEach((a) => { a.href = b[key]; a.removeAttribute('aria-disabled'); a.removeAttribute('role'); a.querySelector('[data-t="store_soon"]')?.remove(); });
   }
@@ -262,7 +263,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const [n, svc, brand] = await Promise.allSettled([fetch('/assets/services.json').then((r) => r.json()), getJson('/v1/services'), getJson('/v1/brand')]);
   if (n.status === 'fulfilled') names = n.value;
   if (svc.status === 'fulfilled' && Array.isArray(svc.value)) services = svc.value;
-  applyCopy();
   if (brand.status === 'fulfilled') applyBrand(brand.value);
+  applyCopy();
   try { proof = await getJson('/v1/public/proof'); renderProof(); } catch { /* optional section stays hidden */ }
 });

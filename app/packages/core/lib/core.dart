@@ -8,6 +8,7 @@ export 'src/action_keys.dart';
 export 'src/address_search.dart';
 export 'src/analytics.dart';
 export 'src/api.dart';
+export 'src/api_base_discovery.dart';
 export 'src/brand.dart';
 export 'src/json_cache.dart';
 export 'src/legal_notice.dart';

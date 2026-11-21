@@ -81,7 +81,7 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
         query: {'format': 'csv'},
       ),
     );
-    final saved = await saveCsv(bytes, 'dahae-customer-$id.csv');
+    final saved = await saveCsv(bytes, 'customer-$id.csv');
     if (mounted) {
       showToast(
         context,

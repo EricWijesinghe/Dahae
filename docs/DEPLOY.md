@@ -137,8 +137,8 @@ process holds port 80 or 443.
   one starts, so no old process writes a plaintext key after the seal. The old `payment_methods_billing_key_live`
   index is dropped in the contract migration of the next release.
 - **Toss Payments (migrations 0500-0502) is safe for the schema only.** A release from before Toss looks Toss
-  checkouts up at PortOne, marks them expired, and cannot refund Toss payments. Before rolling back, switch the
-  Toss card's Active off and wait until no Toss checkout is pending or awaiting deposit and no Toss refund is queued.
+  checkouts up at PortOne, marks them expired, and cannot refund Toss payments. Before rolling back, switch off the
+  Toss card's "Active: take payments with Toss Payments" (it stops only new Toss payments) and wait until no Toss checkout is pending or awaiting deposit and no Toss refund is queued.
 - **Backups, RPO and RTO.** Every server takes a `pg_dump` daily at 03:30 KST and before every
   update, kept 14 days on the server's own disk. The disk copy is sealed in the same AES-256-GCM format
   as the offsite copy (`*.sql.gz.enc`, opened again by `dahae restore`), so no plaintext dump stays on
@@ -197,7 +197,9 @@ run, GitHub-hosted runners incl. macOS, free for public repos). The apps are upl
 [guide 11](guide/11-앱-직접-빌드.md). Setup, in the repository:
 1. Settings → Environments → `store`: deployment branch `master`; required reviewers optional.
 2. Environment `store` → Variables: `API_BASE=https://<client domain>`, `APPLE_TEAM_ID` (10 characters),
-   `APP_LINK_DOMAIN` (optional, bare host).
+   `APP_LINK_DOMAIN` (optional, bare host; after a domain move `new.host,old.host`, three at most),
+   `CUSTOMER_APP_ID` / `PARTNER_APP_ID` (optional; default `kr.co.dahae.customer` / `kr.co.dahae.partner`; a licensee
+   with its own store listings sets its own ids here, before the first upload).
 3. Environment `store` → Secrets: `ANDROID_KEYSTORE_B64` (base64 of the upload keystore), `ANDROID_KEYSTORE_PASSWORD`,
    `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`; `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_B64` (App Store Connect key,
    role **Admin** (cloud signing needs it), base64 of the .p8); optional `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (Play API, *Release* permission).
@@ -216,7 +218,18 @@ run, GitHub-hosted runners incl. macOS, free for public repos). The apps are upl
    `docs/store/graphics/`. Re-run after app screen changes, then upload the folders. Captions:
    `docs/store/screenshots/captions.json`. Screen list and fake data: `app/apps/*/test/store_screenshots/`.
 
-Apps bake in `API_BASE` at build time, so a domain change means a rebuild.
+**Name, icons and app id come from the server.** Before the build, `scripts/store_brand.py` reads
+`{API_BASE}/v1/brand`: the home-screen name (`short_name`; the partner app adds ` 파트너`), the launcher icons
+(`store_1024`, adaptive foreground and themed layer from `icon_512`, background `primary_color`) and the iOS icon set
+(flattened to RGB). Gradle and `Keys.xcconfig` take `APP_LABEL` / `APP_ID` from it. The build fails when the server
+cannot be read or has no logo yet; run the workflow with `brand_from_server` off only for a build before the server is up.
+
+**Domain changes.** The owner moves the domain in the console (설정 > 도메인; [guide 04](guide/04-사장님-가이드.md)).
+The old domain keeps serving the API, payment pages, app links and the apps (only website and SEO pages get a 301, sent with no-store so browsers do not keep it), so
+installed apps keep working. Apps bake in the first `API_BASE`; builds with runtime base discovery move to the new
+address by themselves on their next start. After a move, set `API_BASE=https://<new>` and
+`APP_LINK_DOMAIN=<new>,<old>` and run a store build; retire the old domain only after those builds are live and
+`min_app_version` is raised above the last old build.
 
 ### Native keys (environment `store`, see `.github/workflows/store-apps.yml`)
 `scripts/ci/native-keys.sh <app>` turns these into `keys.json` (dart-defines), `ios/Flutter/Keys.xcconfig`
@@ -332,7 +345,9 @@ cd app/apps/customer && flutter run -d windows   # or chrome / an Android device
 
 Toss mode stays off until all of these hold. Anything else keeps payouts on `manual`.
 
-1. Env `TOSS_PAYOUTS_ENABLED=1` on the API host (read at startup and on every setup save).
+1. The payouts switch is on: the owner turns it on in the console (설정 > 지급대행, owner code), or the env
+   `TOSS_PAYOUTS_ENABLED=1` is set on the API. The env is not in the compose file the installer writes, so on an
+   installed server the console switch is the way; the env stays for development and tests.
 2. From the owner account (steps 2–4; on a client server that is the client's owner), console **Setup → Payouts**: save `secret_key` (sandbox `test_sk_...`) and `security_key` (보안 키, 64 hex) with mode `manual`.
 3. Press **Check connection** on the locked card (no unlock needed). The API calls `GET /v2/balances` with the secret key. It records `sandbox_connected` for a `test_sk_` key or `live_connected` for a `live_sk_` key, only when it returns 200, with a fingerprint of that key. A test pass never unlocks a live key. Changing the key requires testing again.
 4. Unlock the card (owner code) and save mode `toss`. Accepted only when steps 1 and 3 hold; otherwise `toss_unverified`.

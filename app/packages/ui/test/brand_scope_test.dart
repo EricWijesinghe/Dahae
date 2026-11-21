@@ -47,6 +47,75 @@ void main() {
     expect(find.text('Test Co'), findsOneWidget);
   });
 
+  testWidgets('the wordmark uses the English name in English', (tester) async {
+    const brand = BrandConfig(
+      name: '테스트',
+      nameEn: 'Test Co',
+      primary: Color(0xFF0B5D2A),
+      primaryDeep: Color(0xFF07401C),
+      fresh: Color(0xFF2E8B57),
+      sun: Color(0xFFFFD95A),
+    );
+    for (final (locale, name) in [
+      (const Locale('en'), 'Test Co'),
+      (const Locale('ko'), '테스트'),
+    ]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTheme(brand, Brightness.light),
+          home: Builder(
+            builder: (context) => Localizations.override(
+              context: context,
+              locale: locale,
+              child: const DahaeLogo(wordmark: true, brand: brand),
+            ),
+          ),
+        ),
+      );
+      expect(find.text(name), findsOneWidget, reason: '$locale');
+    }
+  });
+
+  testWidgets(
+    'an uploaded logo stands in for the flat, mono, 3D and wordmark art',
+    (tester) async {
+      const url =
+          'https://shop.test/v1/files/0123456789abcdef0123456789abcdef.png';
+      const brand = BrandConfig(
+        name: 'Test Co',
+        primary: Color(0xFF0B5D2A),
+        primaryDeep: Color(0xFF07401C),
+        fresh: Color(0xFF2E8B57),
+        sun: Color(0xFFFFD95A),
+        logoUrl: url,
+      );
+      bool showsUpload() => tester
+          .widgetList<Image>(find.byType(Image))
+          .any(
+            (i) =>
+                i.image is NetworkImage && (i.image as NetworkImage).url == url,
+          );
+      for (final v in DahaeLogoVariant.values) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: buildTheme(brand, Brightness.light),
+            home: DahaeLogo(variant: v, brand: brand, animate: true),
+          ),
+        );
+        expect(showsUpload(), isTrue, reason: v.name);
+      }
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTheme(brand, Brightness.light),
+          home: const BrandScope(brand: brand, child: Icon3D('brand_wordmark')),
+        ),
+      );
+      expect(showsUpload(), isTrue, reason: 'brand_wordmark');
+      // Network images fail in tests; the errors fall back to the built-in art.
+      await tester.pumpAndSettle();
+    },
+  );
+
   testWidgets('outside a scope the built-in brand is used', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

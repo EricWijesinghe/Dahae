@@ -79,6 +79,9 @@ async fn get_json(p: &Providers, path: &str) -> Result<Value, ProviderError> {
 pub async fn payment(p: &Providers, id: &str) -> Result<PaymentInfo, ProviderError> {
     check_id(id)?;
     let v = get_json(p, &format!("/payments/{id}")).await?;
+    if test_channel(&v["channel"]) {
+        p.observe("payment_stuck", Err("portone_test_channel")).await;
+    }
     Ok(PaymentInfo {
         status: text(&v["status"]),
         // Missing amount reads as -1, which never matches a checkout: the payment gets refunded.
@@ -238,7 +241,16 @@ pub async fn verify_billing_key(p: &Providers, key: &str, customer: &str, issue:
         return Err(ProviderError::Declined("invalid_billing_key".into()));
     }
     let info = billing_key_at(p.http(), p.portone_api(), secret, key).await?;
+    if info["channels"].as_array().is_some_and(|cs| cs.iter().any(test_channel)) {
+        p.observe("payment_stuck", Err("portone_test_channel")).await;
+    }
     bound(&info, customer, issue)
+}
+
+/// A PortOne test channel (`channel.type` TEST in the V2 API): the payment or card moves no real money, so a live
+/// server alerts the owner.
+pub fn test_channel(channel: &Value) -> bool {
+    channel["type"].as_str() == Some("TEST")
 }
 
 /// Binds a key to the customer and ticket it was issued for. Missing fields fail closed.
@@ -633,6 +645,13 @@ mod tests {
         assert_eq!(charge_at(&http, &base, auth, "fresh", body.clone()).await.expect("paid"), "fresh");
         assert!(matches!(charge_at(&http, &base, auth, "paid", body.clone()).await, Err(ProviderError::Upstream(m)) if m == "charge_already_paid"));
         assert!(matches!(charge_at(&http, &base, auth, "over", body).await, Err(ProviderError::Declined(m)) if m == "SumOfPartsExceedsTotalAmountError"));
+    }
+
+    #[test]
+    fn test_channel_reads_the_channel_type() {
+        assert!(test_channel(&json!({ "type": "TEST", "key": "channel-key-1" })));
+        assert!(!test_channel(&json!({ "type": "LIVE" })));
+        assert!(!test_channel(&Value::Null), "no channel: not flagged");
     }
 
     #[test]

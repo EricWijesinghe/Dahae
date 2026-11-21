@@ -190,6 +190,9 @@ FakeApi _stockedApi() {
       'toss_payments_webhook_url':
           'https://example.test/v1/webhooks/tosspayments',
       'payment_gateway': 'portone',
+      'payment_gateways': [
+        {'code': 'portone', 'mode': null},
+      ],
     })
     ..reply('GET', '/admin/ops/status', _ops())
     ..reply('GET', '/admin/ops/alerts', _alerts)

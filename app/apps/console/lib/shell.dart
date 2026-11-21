@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 
 import 'nav_sections.dart';
 import 'screens/bookings.dart';
+import 'server_moved_banner.dart';
 import 'state.dart';
 
 /// Linear-style: side menu on desktop, drawer on phone, Ctrl+K palette, Ctrl+1..9 to jump.
@@ -57,7 +58,9 @@ class _ConsoleShellState extends State<ConsoleShell> {
     final t = context.t;
     final c = context.console;
     final sections = _visible;
-    final page = _pages.putIfAbsent(_index, () => sections[_index].build());
+    final page = ServerMovedBanner(
+      child: _pages.putIfAbsent(_index, () => sections[_index].build()),
+    );
     final shortcuts = <ShortcutActivator, VoidCallback>{
       const SingleActivator(LogicalKeyboardKey.keyK, control: true): _palette,
       const SingleActivator(LogicalKeyboardKey.keyK, meta: true): _palette,
@@ -124,7 +127,7 @@ class _ConsoleShellState extends State<ConsoleShell> {
               const SizedBox(width: Space.xs),
               Expanded(
                 child: Text(
-                  '${BrandConfig.placeholder.name} ${t.cTitle}',
+                  '${BrandScope.of(context).name} ${t.cTitle}',
                   style: context.text.titleSmall,
                 ),
               ),
@@ -166,7 +169,7 @@ class _ConsoleShellState extends State<ConsoleShell> {
           title: Text(t.moreLicenses),
           onTap: () => showDahaeLicensePage(
             context,
-            applicationName: BrandConfig.placeholder.name,
+            applicationName: BrandScope.of(context).name,
           ),
         ),
         ListTile(

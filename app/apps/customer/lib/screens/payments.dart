@@ -29,8 +29,8 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     _billing = _loadBilling();
   }
 
-  /// Every channel the server offers. The register grid shows only the billing ones PortOne
-  /// is configured for (see [BillingSetup]).
+  /// Every channel the server offers, from every gateway set up. The register grid shows only the
+  /// billing ones the gateway that saves cards is configured for (see [BillingSetup]).
   Future<List<PayChannel>> _loadBilling() async {
     final api = context.api;
     final channels = await fetchPayChannels(api);
@@ -164,7 +164,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                 Padding(
                   padding: const EdgeInsets.all(Space.gutter),
                   child: Text(
-                    t.payCardNote(BrandConfig.placeholder.name),
+                    t.payCardNote(context.brandName),
                     style: context.text.bodySmall?.copyWith(color: c.inkSoft),
                   ),
                 ),

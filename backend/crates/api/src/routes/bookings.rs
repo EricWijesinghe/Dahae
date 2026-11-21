@@ -178,7 +178,8 @@ pub async fn charge(
     let idem = format!("{booking}:{kind}");
     // A fresh id per attempt, so a declined id is never sent again; `idem` keeps one payment per booking and kind.
     let pid = format!("{kind}-{}", Uuid::now_v7().simple());
-    match s.providers.charge_billing(&card, amount.0, &pid, order_name(kind), user).await {
+    let order = order_name(&super::setup::brand::short_brand(&s.db).await, kind);
+    match s.providers.charge_billing(&card, amount.0, &pid, &order, user).await {
         Ok(_) => {}
         Err(ProviderError::Upstream(cause)) => confirm_charge(s, provider, &pid, amount.0, &cause).await?,
         Err(e @ ProviderError::Declined(_)) => return Err(ApiError::PaymentFailed(e.to_string())),
@@ -191,13 +192,15 @@ pub async fn charge(
     Ok((provider, pid))
 }
 
-fn order_name(kind: &str) -> &'static str {
-    match kind {
-        "deposit" => "다해 예약금",
-        "balance" => "다해 잔금",
-        "tip" => "다해 팁",
-        _ => "다해 청소",
-    }
+/// What the PG shows on the receipt and card statement. The short name (12 characters at most) keeps PG limits.
+fn order_name(short: &str, kind: &str) -> String {
+    let what = match kind {
+        "deposit" => "예약금",
+        "balance" => "잔금",
+        "tip" => "팁",
+        _ => "청소",
+    };
+    format!("{short} {what}")
 }
 
 /// The charge answer was lost or unclear: ask the gateway. An unknown outcome is cancelled so nobody pays for nothing.
@@ -881,4 +884,15 @@ async fn review(State(s): State<AppState>, Customer(a): Customer, Path(id): Path
         return Err(ApiError::Conflict("already_reviewed"));
     }
     Ok(Json(json!({ "ok": true })))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn order_names_carry_the_short_brand() {
+        assert_eq!(super::order_name("반짝", "deposit"), "반짝 예약금");
+        assert_eq!(super::order_name("반짝", "balance"), "반짝 잔금");
+        assert_eq!(super::order_name("반짝", "tip"), "반짝 팁");
+        assert_eq!(super::order_name("반짝", "visit"), "반짝 청소");
+    }
 }

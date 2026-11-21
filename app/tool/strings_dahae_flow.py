@@ -133,7 +133,7 @@ ROWS = {
   "f_ac_addon_discount_bps": ["에어컨 추가 할인 (bps, 1000 = 10%)", "AC add-on discount (bps, 1000 = 10%)"],
   # Move 6/7 (p18)
   "dfQuoteMethodTitle": ["견적 방식을 확인하고\n예약을 진행해 주세요.", "Check how the quote works\nand continue."],
-  "dfSafeBooking": ["다해 안심예약", "Dahae Safe Booking"],
+  "dfSafeBooking": ["{brand} 안심예약", "{brand} Safe Booking"],
   "dfRecommended": ["추천!", "Recommended"],
   "dfEstimateVat": ["예상 견적 (VAT 포함) · 상담 후 변경될 수 있어요", "Estimate (VAT incl.) · may change after consultation"],
   "dfBenefit1": ["교육 인증을 받은 전문 청소팀이 진행", "Done by a trained, certified team"],

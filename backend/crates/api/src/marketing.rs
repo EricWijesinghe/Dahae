@@ -94,9 +94,10 @@ pub fn gate(consent: bool, sent_last_week: i64, now: DateTime<Utc>, weekly_cap: 
     }
 }
 
-/// Korean SMS advertising format. The opt-out number comes from the campaign (owner's own 080 line).
-pub fn sms_ad_text(body: &str, optout: &str) -> String {
-    format!("(광고) {body}\n무료수신거부 {optout}")
+/// Korean SMS advertising format: `(광고)` with the sender's name (정보통신망법 제50조), then the opt-out line.
+/// The opt-out number comes from the campaign (owner's own 080 line).
+pub fn sms_ad_text(sender: &str, body: &str, optout: &str) -> String {
+    format!("(광고)[{sender}] {body}\n무료수신거부 {optout}")
 }
 
 /// Opt-out numbers are digits with optional hyphens, 9 to 12 digits.
@@ -276,7 +277,10 @@ async fn deliver(s: &AppState, t: &Target, channel: &str, copy: &Copy<'_>, now: 
         }
         "sms" => s
             .providers
-            .send_sms(&t.phone, &sms_ad_text(copy.body, copy.optout))
+            .send_sms(
+                &t.phone,
+                &sms_ad_text(&crate::routes::setup::brand::short_brand(&s.db).await, copy.body, copy.optout),
+            )
             .await
             .map_err(|_| "sms_failed"),
         _ => Err("unknown_channel"),
@@ -709,7 +713,10 @@ async fn test_send(State(s): State<AppState>, Admin(st): Admin, Json(b): Json<Te
         return Err(ApiError::RateLimited);
     }
     s.providers
-        .send_sms(&phone, &sms_ad_text(&b.body, &b.optout_number))
+        .send_sms(
+            &phone,
+            &sms_ad_text(&crate::routes::setup::brand::short_brand(&s.db).await, &b.body, &b.optout_number),
+        )
         .await
         .map_err(|_| ApiError::Unavailable("sms"))?;
     audit(&s.db, "staff", Some(st.id), "campaign.test_send", "self", json!({ "channel": "sms" })).await?;
@@ -767,7 +774,10 @@ mod tests {
 
     #[test]
     fn sms_ad_text_has_prefix_and_opt_out_line() {
-        assert_eq!(sms_ad_text("이번 주 할인", "080-123-4567"), "(광고) 이번 주 할인\n무료수신거부 080-123-4567");
+        assert_eq!(
+            sms_ad_text("다해", "이번 주 할인", "080-123-4567"),
+            "(광고)[다해] 이번 주 할인\n무료수신거부 080-123-4567"
+        );
     }
 
     #[test]

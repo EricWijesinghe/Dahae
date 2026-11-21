@@ -18,18 +18,22 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="다해 운영 콘솔">
+  <!--
+    Brand values are filled in per request by the web server (Caddy templates, enabled for /admin/index.html
+    only), from the console's business profile. Attributes use single quotes: the API escapes quotes.
+  -->
+  <meta name="description" content='{{httpInclude "/v1/public/seller-info?field=name"}} 운영 콘솔'>
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="다해 관리">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <meta name="apple-mobile-web-app-title" content='{{httpInclude "/v1/public/seller-info?field=short_name"}} 관리'>
+  <link rel="apple-touch-icon" href='{{httpInclude "/v1/public/seller-info?field=apple_icon"}}'>
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href='{{httpInclude "/v1/public/seller-info?field=favicon"}}'/>
 
-  <title>다해 관리자</title>
+  <title>{{httpInclude "/v1/public/seller-info?field=name"}} 관리자</title>
   <link rel="manifest" href="manifest.json">
   <link rel="preload" href="assets/packages/ui/assets/fonts/DahaeSans-Regular.otf" as="font" type="font/otf" crossorigin>
   <link rel="preload" href="assets/packages/ui/assets/fonts/DahaeSans-Medium.otf" as="font" type="font/otf" crossorigin>

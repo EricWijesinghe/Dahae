@@ -231,7 +231,7 @@ fn invoice_csv(rows: &[ExportRow], from: NaiveDate, to: NaiveDate) -> ApiResult<
             total: r.amount,
         })
         .collect();
-    let name = format!("dahae-tax-invoices-{from}_{to}");
+    let name = format!("tax-invoices-{from}_{to}");
     csv_response(&name, finance::csv_document(&tax::tax_invoice_document(&invoice_rows)))
 }
 

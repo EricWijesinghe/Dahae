@@ -280,7 +280,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                       ),
                     ),
                     Text(
-                      t.dfSafeBooking,
+                      t.dfSafeBooking(context.brandName),
                       style: context.text.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),

@@ -149,6 +149,7 @@ pub fn router(state: AppState) -> Router {
                 .merge(site::admin_routes())
                 .merge(crate::marketing::admin_routes())
                 .merge(crate::app_links::admin_routes())
+                .merge(crate::domains::admin_routes())
                 .merge(crate::analytics::admin_routes())
                 .merge(subscriptions::admin_routes())
                 .merge(audit::admin_routes())
@@ -177,6 +178,9 @@ pub fn router(state: AppState) -> Router {
         .route("/metrics", get(metrics::handler))
         .merge(crate::app_links::routes())
         .merge(crate::seo::routes())
+        // Skips the rate limit (see ratelimit::limit). Merged here, not after the layers: a merge after them would
+        // also drop the layers from the 404 fallback.
+        .merge(crate::domains::routes())
         .nest("/v1", api)
         .layer(axum::middleware::from_fn_with_state(state.clone(), config::enforce))
         .layer(RequestBodyLimitLayer::new(BODY_LIMIT_BYTES))

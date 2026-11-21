@@ -14,6 +14,10 @@
 	<array>
 		<string>applinks:$(APP_LINK_HOST)</string>
 		<string>webcredentials:$(APP_LINK_HOST)</string>
+		<string>applinks:$(APP_LINK_HOST_2)</string>
+		<string>webcredentials:$(APP_LINK_HOST_2)</string>
+		<string>applinks:$(APP_LINK_HOST_3)</string>
+		<string>webcredentials:$(APP_LINK_HOST_3)</string>
 	</array>
 </dict>
 </plist>

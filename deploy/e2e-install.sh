@@ -8,7 +8,8 @@
 # Two image sources:
 #   registry (default)       images pushed to a local registry on :5000 (.github/workflows/e2e.yml)
 #   E2E_IMAGES_TAR=<f.tar>   `docker save` of api + web (+ postgres:17), installed offline (scripts/e2e/wsl-e2e.sh)
-# Other knobs: E2E_LOG_DIR (default: a temp dir), E2E_DOMAIN (default dahae.test).
+# Other knobs: E2E_LOG_DIR (default: a temp dir), E2E_DOMAIN (default dahae.test), E2E_NEW_DOMAIN (the domain-move
+# target, default dahae2.test; written to /etc/hosts for the run and removed at the end).
 # Needs Docker (or lets install.sh install it), root or sudo, python3 and curl. Leaves nothing behind: the last
 # step runs `dahae uninstall --purge`.
 set -euo pipefail
@@ -16,6 +17,7 @@ cd "$(dirname "$0")/.."
 
 TAG=e2e
 DOMAIN=${E2E_DOMAIN:-dahae.test}
+NEW_DOMAIN=${E2E_NEW_DOMAIN:-dahae2.test}
 TAR=${E2E_IMAGES_TAR:-}
 LOG=${E2E_LOG_DIR:-$(mktemp -d)}
 SUDO=; [ "$(id -u)" = 0 ] || SUDO=sudo
@@ -81,6 +83,11 @@ wait_until() { # wait_until 초 명령... : 명령이 성공할 때까지 기다
 api_healthy() { get /health | grep -q '"ok":true'; }
 api_version_is_test() { get /health | grep -q "\"version\":\"$TAG\""; }
 website_served() { [ "$(code /)" = 200 ] && get / | grep -qi '<html'; }
+# Every page's fragments reach the API from Caddy's own address (about 22 per home page view, 300 a minute for one
+# address): a busy minute must not turn the site into the maintenance page.
+pages_survive_a_burst() { local i; for i in $(seq 40); do [ "$(code /)" = 200 ] || return 1; done; }
+# The domain root approved, which the apps check before following a new api_base.
+approved_domain_served() { [ "$(get /.well-known/dahae-domain)" = "$DOMAIN" ]; }
 # API down: a proxied non-API path gets the static maintenance page (Caddy's 502 handler), then the API comes back.
 maintenance_page_when_api_down() {
   dc stop api >/dev/null 2>&1 || return 1
@@ -139,6 +146,17 @@ upload_marker() { dc exec -T api cat /data/uploads/e2e-marker.txt 2>/dev/null | 
 no_old_brand() { ! grep -q '말끔' "$LOG/install1.txt"; }
 rolled_back_to_pinned() { $SUDO grep -Eq '^API_IMAGE=.*(@sha256:|:keep-)' /opt/malkkeum/.env; }
 api_env_is() { [ "$(dc exec -T api printenv "$1" 2>/dev/null)" = "$2" ]; }
+# A former domain after `dahae domain`: curl to it on this machine, and what the API recorded.
+old_curl() { curl -sk --max-time 20 --resolve "$OLD_DOMAIN:443:127.0.0.1" "$@"; }
+old_code() { old_curl -o /dev/null -w '%{http_code}' "https://$OLD_DOMAIN$1"; }
+old_alias_recorded() { [ "$(dbq "select value->'aliases'->0->>'host' from settings where key = 'domains'")" = "$OLD_DOMAIN" ]; }
+old_api_served() { [ "$(old_code /v1/config)" = 200 ]; }
+old_names_new_domain() { [ "$(old_curl "https://$OLD_DOMAIN/.well-known/dahae-domain")" = "$NEW_DOMAIN" ]; }
+old_app_links_served() { old_curl "https://$OLD_DOMAIN/.well-known/assetlinks.json" | grep -q "$FINGERPRINT"; }
+old_page_moved() { [ "$(old_curl -o /dev/null -w '%{http_code} %{redirect_url}' "https://$OLD_DOMAIN/")" = "301 https://$NEW_DOMAIN/" ]; }
+stranger_refused() { ! curl -sk --max-time 20 --resolve "stranger.test:443:127.0.0.1" -o /dev/null https://stranger.test/health; }
+bad_domain_refused() { ! $SUDO env DAHAE_YES=1 /usr/local/bin/dahae domain localhost </dev/null >/dev/null 2>&1; }
+drop_hosts_line() { $SUDO sed -i '/ # dahae-e2e$/d' /etc/hosts; }
 no_dev_code() { ! post /v1/auth/otp '{"phone":"01012345678"}' | grep -q dev_code; }
 dev_api_up() { curl -fs --max-time 5 http://127.0.0.1:18080/health; }
 nothing_left() {
@@ -180,6 +198,8 @@ step "2. services answer over HTTPS"
 expect "API health" api_healthy
 expect "API reports the image version" api_version_is_test
 expect "website served" website_served
+expect "40 home page views in a row all answer 200" pages_survive_a_burst
+expect "the approved domain is served for the apps" approved_domain_served
 expect "console served at /admin/" console_served
 expect "app CSP limits connect-src to the payment gateways and forbids eval" csp_tight
 expect "website CSP allows inline scripts by hash only" site_csp_strict
@@ -305,6 +325,24 @@ dc up -d >/dev/null 2>&1
 expect "back to production config" wait_until 180 api_env_is DEV_MODE 0
 expect "API healthy in production mode" wait_until 180 api_healthy
 expect "no dev login codes in production mode" no_dev_code
+
+step "9b. domain move: the new domain serves, the old one keeps answering (apps) and sends pages over"
+OLD_DOMAIN=$DOMAIN
+# `dahae domain` checks https://<new>/health through the resolver, so the new name must resolve on this machine.
+echo "127.0.0.1 $NEW_DOMAIN # dahae-e2e" | $SUDO tee -a /etc/hosts >/dev/null
+trap drop_hosts_line EXIT
+dahae domain "$NEW_DOMAIN" --yes 2>&1 | tee "$LOG/domain.txt"
+[ "${PIPESTATUS[0]}" = 0 ] || fail "dahae domain failed"
+DOMAIN=$NEW_DOMAIN
+expect "the new domain answers" wait_until 120 api_healthy
+expect "the API took the new base" api_env_is PUBLIC_BASE_URL "https://$NEW_DOMAIN"
+expect "the old domain is recorded as an alias" old_alias_recorded
+expect "the old domain still serves the API (installed apps)" wait_until 60 old_api_served
+expect "the old domain still serves app links" old_app_links_served
+expect "the old domain names the new one for the apps" old_names_new_domain
+expect "old website pages move to the new domain (301)" old_page_moved
+expect "a stranger's host name gets no certificate" stranger_refused
+expect "a bad domain is refused" bad_domain_refused
 
 step "10. uninstall"
 expect "--purge is not skipped by --yes or DAHAE_YES" purge_needs_domain

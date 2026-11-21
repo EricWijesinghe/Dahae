@@ -385,6 +385,43 @@ void _lockedTests() {
     },
   );
 
+  testWidgets('a saved channel slot can be cleared alone and is sent as null', (
+    tester,
+  ) async {
+    final api = FakeApi()
+      ..reply('PUT', '/admin/setup/portone', _lockedPortone(unlocked: true));
+    await _pump(
+      tester,
+      _lockedPortone(unlocked: true),
+      api: api,
+      size: _fullCardSize,
+    );
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+
+    await tester.tap(find.byTooltip(koT.cSetupClearSlot));
+    await settle(tester);
+    expect(find.text(koT.cSetupSlotCleared), findsOneWidget);
+    expect(find.byTooltip(koT.cSetupUndoClearSlot), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, koT.cSetupSave));
+    await settle(tester);
+
+    final call = api.lastCall('PUT', '/admin/setup/portone')!;
+    final slots = call.json['channel_keys'] as Map;
+    expect(slots.containsKey('card'), isTrue);
+    expect(slots['card'], isNull, reason: 'null removes the saved slot');
+    expect(find.text(koT.cSetupSlotCleared), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('a locked card offers no slot clear', (tester) async {
+    await _pump(tester, _lockedPortone(), size: _fullCardSize);
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+    expect(find.byTooltip(koT.cSetupClearSlot), findsNothing);
+    await unmount(tester);
+  });
+
   testWidgets('after a save the typed values leave the boxes', (tester) async {
     final api = FakeApi()
       ..reply('PUT', '/admin/setup/portone', _lockedPortone(unlocked: true));
@@ -694,24 +731,24 @@ void _tossPaymentsTests() {
     await unmount(tester);
   });
 
-  Future<void> gatewayHeading(
+  Future<void> setupScreen(
     WidgetTester tester,
-    String? mode,
-    String expected,
-  ) async {
+    Json overview, {
+    List<Json>? cards,
+    List<Json> methods = const [],
+  }) async {
     setViewport(tester, tallPhoneSize);
     final api = FakeApi()
       ..reply('GET', '/admin/setup', {
         'business': {'name': 'Dahae'},
         'review_account': null,
-        'integrations': [_portoneCard(), _tossPaymentsCard()],
+        'integrations': cards ?? [_portoneCard(), _tossPaymentsCard()],
         'dev_mode': false,
         'webhook_url': 'https://api.example.test/v1/webhooks/portone',
         'toss_payments_webhook_url': paymentsUrl,
-        'payment_gateway': 'tosspayments',
-        'payment_gateway_mode': mode,
+        ...overview,
       })
-      ..reply('GET', '/admin/payment-methods', const <Json>[])
+      ..reply('GET', '/admin/payment-methods', methods)
       ..reply('GET', '/admin/app-links', {
         'android_cert_sha256': <String>[],
         'apple_team_id': null,
@@ -720,33 +757,159 @@ void _tossPaymentsTests() {
     final env = await TestEnv.create(fake: api, role: 'staff_admin');
     await pumpConsoleScreen(tester, env, const SetupScreen());
     await settle(tester);
+  }
 
+  Future<void> scrollTo(WidgetTester tester, Finder line) =>
+      tester.scrollUntilVisible(
+        line,
+        300,
+        scrollable: find
+            .descendant(
+              of: find.byType(SetupScreen),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+
+  Future<void> gatewayHeading(
+    WidgetTester tester,
+    Json overview,
+    String expected,
+  ) async {
+    await setupScreen(tester, overview);
     final line = find.text(expected);
-    await tester.scrollUntilVisible(
-      line,
-      300,
-      scrollable: find
-          .descendant(
-            of: find.byType(SetupScreen),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
+    await scrollTo(tester, line);
     expect(line, findsOneWidget);
     await unmount(tester);
   }
 
+  const toss = 'Toss Payments';
+  String live(String names) => koT.cSetupGatewayLive(names);
+  final testKeys = koT.cSetupGatewayTestKeys;
+
   testWidgets(
-    'the payments heading says where new payments go',
-    (tester) => gatewayHeading(tester, 'live', koT.cSetupGatewayLive('토스페이먼츠')),
+    'with no gateway set up, the heading says so',
+    (tester) => gatewayHeading(tester, {
+      'payment_gateways': <Json>[],
+      'payment_gateway': 'portone',
+    }, koT.cSetupGatewayNone),
   );
 
   testWidgets(
-    'live on test keys, the heading says no real money moves',
-    (tester) => gatewayHeading(
-      tester,
-      'test',
-      '${koT.cSetupGatewayLive('토스페이먼츠')} ${koT.cSetupGatewayTestKeys}',
-    ),
+    'PortOne alone is named in the heading',
+    (tester) => gatewayHeading(tester, {
+      'payment_gateways': [
+        {'code': 'portone', 'mode': null},
+      ],
+    }, live('PortOne')),
   );
+
+  testWidgets(
+    'Toss Payments on live keys is named without a mark',
+    (tester) => gatewayHeading(tester, {
+      'payment_gateways': [
+        {'code': 'tosspayments', 'mode': 'live'},
+      ],
+    }, live('토스페이먼츠')),
+  );
+
+  testWidgets(
+    'Toss Payments on test keys says no real money moves',
+    (tester) => gatewayHeading(tester, {
+      'payment_gateways': [
+        {'code': 'tosspayments', 'mode': 'test'},
+      ],
+    }, live('토스페이먼츠 $testKeys')),
+  );
+
+  testWidgets(
+    'both gateways are listed PortOne first, the test mark next to Toss',
+    (tester) => gatewayHeading(tester, {
+      'payment_gateways': [
+        {'code': 'portone', 'mode': null},
+        {'code': 'tosspayments', 'mode': 'test'},
+      ],
+    }, live('PortOne, 토스페이먼츠 $testKeys')),
+  );
+
+  testWidgets(
+    'an older server with one gateway field reads the same',
+    (tester) => gatewayHeading(tester, {
+      'payment_gateway': 'tosspayments',
+      'payment_gateway_mode': 'test',
+    }, live('토스페이먼츠 $testKeys')),
+  );
+
+  test('the English heading uses the English brand names', () {
+    final en = lookupT(const Locale('en'));
+    expect(
+      en.cSetupGatewayLive('PortOne, $toss ${en.cSetupGatewayTestKeys}'),
+      'Payments go to: PortOne, Toss Payments (test keys: no real money moves)',
+    );
+  });
+
+  testWidgets('a server without gateway fields shows no heading line', (
+    tester,
+  ) async {
+    await setupScreen(tester, const {});
+    expect(find.textContaining(live('').trim()), findsNothing);
+    expect(find.text(koT.cSetupGatewayNone), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('one payment gateway set up is enough to finish setup', (
+    tester,
+  ) async {
+    await setupScreen(
+      tester,
+      {
+        'payment_gateways': [
+          {'code': 'portone', 'mode': null},
+        ],
+      },
+      cards: [
+        {..._portoneCard(), 'source': 'console', 'configured': true},
+        _tossPaymentsCard(),
+      ],
+    );
+    final line = find.text(koT.cSetupProgress('2', '2'));
+    await scrollTo(tester, line);
+    expect(line, findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('each payment method row names its gateway', (tester) async {
+    await setupScreen(
+      tester,
+      {
+        'payment_gateways': [
+          {'code': 'tosspayments', 'mode': 'live'},
+        ],
+      },
+      methods: [
+        {
+          'code': 'card',
+          'flow': 'billing',
+          'enabled': true,
+          'configured': true,
+          'gateway': 'tosspayments',
+        },
+        {
+          'code': 'transfer',
+          'flow': 'checkout',
+          'enabled': false,
+          'configured': false,
+          'gateway': null,
+        },
+      ],
+    );
+    final tile = find.text(koT.cSetupPayMethods);
+    await scrollTo(tester, tile);
+    await tester.tap(tile);
+    await settle(tester);
+
+    expect(find.text(koT.cPayMethodGateway('토스페이먼츠')), findsOneWidget);
+    expect(find.text(koT.cSetupNeedsKey), findsOneWidget);
+    await unmount(tester);
+  });
 }

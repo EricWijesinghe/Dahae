@@ -88,6 +88,23 @@
         }
       }
     },
+    "/internal/tls-ask": {
+      "get": {
+        "operationId": "internalTlsAsk",
+        "tags": [
+          "ops"
+        ],
+        "summary": "Caddy on-demand TLS check: 200 when the host (or its www. form) is a former service domain, 404 otherwise. Never proxied publicly",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/openapi.json": {
       "get": {
         "operationId": "openapiSpec",
@@ -265,7 +282,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Seller details as an HTML fragment for the website (?field= for one value)",
+        "summary": "Seller details, brand values and live settings as HTML fragments for the website (?field= for one value; Caddy includes them server-side). Escaped; braces are entities so Caddy never runs them as a template",
         "security": [],
         "parameters": [
           {
@@ -283,7 +300,34 @@
                 "privacy_officer",
                 "hosting_provider",
                 "support_phone",
-                "support_email"
+                "support_email",
+                "bizcheck",
+                "name",
+                "name_en",
+                "short_name",
+                "tagline",
+                "tagline_en",
+                "base_url",
+                "primary_color",
+                "logo_img",
+                "favicon",
+                "apple_icon",
+                "og_image",
+                "ld_json",
+                "privacy_email",
+                "cancel_policy",
+                "ai_chat_retention_days",
+                "upload_orphan_days",
+                "uses_portone",
+                "uses_toss",
+                "uses_solapi",
+                "uses_fcm",
+                "uses_ai",
+                "uses_backup",
+                "uses_juso",
+                "legal_terms",
+                "legal_privacy",
+                "legal_location"
               ]
             }
           }
@@ -304,8 +348,19 @@
         "tags": [
           "public"
         ],
-        "summary": "Payment methods enabled for checkout, [{code, flow}]. Under Toss Payments `flow` is `billing` only for card and only when the billing MID keys are set; every other method is `checkout`",
+        "summary": "Payment methods offered at checkout, [{code, flow, gateway}], in catalogue order, each code once: switched on and served by a gateway. `gateway` (portone | tosspayments) is where POST /v1/checkouts sends the method now: PortOne when it has the method's channel key, else Toss Payments while its card is saved and active. Informational: the checkout intent decides the page. `flow` is `billing` only for card and only while some gateway can save cards (then `gateway` is the one that saves cards); every other method, on either gateway, is `checkout`",
         "security": [],
+        "parameters": [
+          {
+            "name": "gateways",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated gateways whose hosted pages the app opens (current apps: portone,tosspayments). Without tosspayments, Toss Payments methods and Toss card saving are left out (v1.5.1 apps open PortOne pages only)"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -355,11 +410,44 @@
         "tags": [
           "public"
         ],
-        "summary": "Brand name, colours, app-update policy and seller details (company: legal_name, ceo, registration_no, mail_order_no, address, hosting_provider; support_phone, support_email)",
+        "summary": "Brand name, colours, app-update policy and seller details (company: legal_name, ceo, registration_no, mail_order_no, address, hosting_provider; support_phone, support_email); name_en, short_name, tagline(_en), brand_assets, version (brand_version) and assets (absolute unsigned URLs of the logo and brand images). logo_url stays signed",
         "security": [],
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/brand/manifest/{app}": {
+      "get": {
+        "operationId": "brandManifest",
+        "tags": [
+          "public"
+        ],
+        "summary": "PWA manifest built from the business profile (name, short_name, description, theme_color, icons); app is site, customer or console. application/manifest+json, no-cache",
+        "security": [],
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "site",
+                "customer",
+                "console"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "unknown app"
           }
         }
       }
@@ -407,7 +495,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Feature flags for the apps. card_billing: the live gateway can save cards",
+        "summary": "Feature flags for the apps. card_billing: a gateway can save cards (PortOne first, else Toss Payments with its billing MID keys)",
         "security": [],
         "responses": {
           "200": {
@@ -675,7 +763,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Serve an uploaded photo (signed, hourly-bucketed URL)",
+        "summary": "Serve an uploaded photo (signed, hourly-bucketed URL). Without exp/sig only the current logo and brand images are served (public, max-age=31536000, immutable); anything else is 403",
         "security": [],
         "parameters": [
           {
@@ -907,6 +995,17 @@
           "customer"
         ],
         "summary": "Gateway parameters to start card registration (see BillingSetup)",
+        "parameters": [
+          {
+            "name": "gateways",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated gateways whose hosted pages the app opens (current apps: portone,tosspayments). Without tosspayments, Toss Payments methods and Toss card saving are left out (v1.5.1 apps open PortOne pages only)"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1548,7 +1647,7 @@
         },
         "responses": {
           "200": {
-            "description": "The intent the hosted pay page starts from (see CheckoutIntent). `gateway` names the hosted page: `portone` opens /pay/, `tosspayments` opens /pay/toss.html. A checkout keeps its gateway for confirm, webhooks, refunds and reconciliation even if the owner switches later",
+            "description": "The intent the hosted pay page starts from (see CheckoutIntent). `gateway` names the hosted page: `portone` opens /pay/, `tosspayments` opens /pay/toss.html. A checkout keeps its gateway for confirm, webhooks, refunds and reconciliation even if the owner changes the payment setup later",
             "content": {
               "application/json": {
                 "schema": {
@@ -3848,7 +3947,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Payment methods and their state",
+        "summary": "Payment methods and their state: [{code, flow, enabled, configured, gateway}]. gateway (portone | tosspayments | null) serves the method; configured is true in dev mode or when gateway is set",
         "responses": {
           "200": {
             "description": "OK"
@@ -3916,7 +4015,7 @@
         "summary": "Setup checklist and state",
         "responses": {
           "200": {
-            "description": "OK. Each integrations[] card carries last_test (the stored passing check, the Toss gate record), last_check (the latest check, passed or failed) and can_test (whether this viewer may run the connection test: the owner only on a locked card). Top level also has toss_payments_webhook_url (\"{public_base_url}/v1/webhooks/tosspayments\", for the Toss developer center) payment_gateway (portone | tosspayments: where new payments go) and payment_gateway_mode (test | live, or null unless Toss Payments is live: test means bookings are paid with no real money). The tosspayments card has fields client_key, secret_key, billing_client_key, billing_secret_key, security_key and active (toggle), and a mode (test | live | null) read from the secret key prefix"
+            "description": "OK. Each integrations[] card carries last_test (the stored passing check, the Toss gate record), last_check (the latest check, passed or failed) and can_test (whether this viewer may run the connection test: the owner only on a locked card). Top level also has toss_payments_webhook_url (\"{public_base_url}/v1/webhooks/tosspayments\", for the Toss developer center) payment_gateways ([{code, mode}], PortOne first: every gateway a new payment can reach, [] when none is set up; mode is test | live for tosspayments, read from the secret key prefix, test meaning bookings are paid with no real money, and null for portone), and for older consoles payment_gateway (the first entry's code, portone when the list is empty) and payment_gateway_mode (its mode). The tosspayments card has fields client_key, secret_key, billing_client_key, billing_secret_key, security_key and active (toggle, on by default), and a mode (test | live | null) read from the secret key prefix"
           }
         }
       }
@@ -3934,6 +4033,110 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/business-hours": {
+      "get": {
+        "operationId": "adminGetBusinessHours",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Business hours used by AI offline mode: {weekdays:[0..6] (0 = Monday), open:HH:MM, close:HH:MM}",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "adminPutBusinessHours",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Save business hours (open before close)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "invalid_hours"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/payout/switch": {
+      "put": {
+        "operationId": "adminPutPayoutSwitch",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner switch for Toss payouts {on:bool} (owner code required; the TOSS_PAYOUTS_ENABLED env still works). Audited",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "parameters": [
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "totp_required"
+          },
+          "403": {
+            "description": "owner only"
+          },
+          "409": {
+            "description": "payout_in_toss_mode: switch the payout card to manual first"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/store-build/ack": {
+      "post": {
+        "operationId": "adminAckStoreBuild",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner: a store build with today's name, icon, colour, app ids and domain is out; GET /v1/admin/setup store_build.changed empties. Optional {build_url} (https)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "invalid_link"
+          },
+          "403": {
+            "description": "owner only"
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -4024,7 +4227,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Store a setup section. The portone and tosspayments cards need the owner TOTP header on first save and an owner unlock afterwards. tosspayments 400 codes: missing_field, invalid_client_key, invalid_secret_key, invalid_security_key, key_mode_mismatch, invalid_toggle; 409 card_locked. Turning tosspayments `active` on sends new payments and new saved cards to Toss Payments",
+        "summary": "Store a setup section. The portone and tosspayments cards need the owner TOTP header on first save and an owner unlock afterwards. tosspayments 400 codes: missing_field, invalid_client_key, invalid_secret_key, invalid_security_key, key_mode_mismatch, invalid_toggle; 409 card_locked. tosspayments `active` (on by default) lets Toss Payments take new payments next to PortOne: methods without a PortOne channel key, and new saved cards when PortOne cannot save cards. Off stops only new Toss payments and new saved cards; webhooks, confirms, refunds and saved-card charges keep running. The setup.integration audit records `gateways`",
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
         },
@@ -4315,7 +4518,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Owner saves the app link values (overrides the env values)",
+        "summary": "Owner saves the app link values (overrides the env values; owner TOTP, logged)",
         "responses": {
           "200": {
             "description": "OK"
@@ -4659,7 +4862,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Public app configuration",
+        "summary": "Public app configuration; brand_version, api_base, install_id, providers (sign-in providers configured on the server)",
         "responses": {
           "200": {
             "description": "OK"
@@ -6464,7 +6667,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Queue one server job (backup, update, update-skip, channel, restart, schedule); needs owner TOTP and an Idempotency-Key header (admin only, logged)",
+        "summary": "Queue one server job (backup, update, update-skip, channel, restart, schedule, heartbeat, domain-check, domain-set, host-approval-enroll); owner TOTP except status-refresh and domain-check, and an Idempotency-Key header (admin only, logged)",
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
         },
@@ -6485,6 +6688,97 @@
           "admin"
         ],
         "summary": "One queued server job and its live state (admin only)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/host/jobs/{id}/approve": {
+      "post": {
+        "operationId": "adminApproveHostJob",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner hands the server approval code to a job the server holds for it (domain-set); the server checks the code (owner only, logged)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/host/jobs/{id}/output": {
+      "get": {
+        "operationId": "adminHostJobOutput",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Result text a job published (domain-check JSON, approval enrolment address), capped at 64 KB; 404 once pruned (admin; owner only for enrolment)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/domains": {
+      "get": {
+        "operationId": "adminListDomains",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Current service domain, former domains that still answer, and the after-move checklist with values (admin only)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/domains/{host}": {
+      "delete": {
+        "operationId": "adminRetireDomain",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Retire a former domain: it stops getting certificates (owner TOTP, logged)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/domains/checklist/{id}": {
+      "put": {
+        "operationId": "adminTickDomainChecklist",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Tick or untick one after-move checklist item (admin only, logged)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -7225,7 +7519,7 @@
         }
       },
       "CheckoutIntent": {
-        "description": "Parameters for the hosted payment page. New checkouts use the gateway switched on in the console (GET /v1/admin/setup `payment_gateway`).",
+        "description": "Parameters for the hosted payment page. New checkouts use the gateway that serves the chosen method: PortOne when it has the method's channel key, else Toss Payments (see GET /v1/payments/methods `gateway`).",
         "type": "object",
         "required": [
           "id",
@@ -7306,7 +7600,7 @@
         }
       },
       "BillingSetup": {
-        "description": "Card registration parameters, or {\"enabled\": false} when the live gateway cannot save cards. Under Toss Payments only `card` is offered, and only when the billing MID keys are set.",
+        "description": "Card registration parameters, or {\"enabled\": false} when no gateway can save cards. PortOne first (its billing or card channel), else Toss Payments, which saves card only, with its billing MID keys.",
         "type": "object",
         "required": [
           "enabled"

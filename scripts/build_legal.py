@@ -6,15 +6,12 @@
 # Check only (exit 1 when a page differs from the generator):  python -I scripts/build_legal.py website --check
 # Never edit the generated .html by hand: change the text here and regenerate.
 #
-# Seller details (상호, 대표, 사업자번호 ...) are not baked in here: deploy/Caddyfile fills them on the server.
-# Each page carries {{httpInclude "/v1/public/seller-info..."}} directives (templates on the website only), which
-# Caddy replaces with the owner's values from the API, so the served HTML has them without JavaScript.
-# --base-url makes canonical, og:url, og:image and JSON-LD URLs absolute in every page, index.html too:
-#   python -I scripts/build_legal.py <copy-of-website> --base-url https://DOMAIN
-import json
-import os
+# Nothing the owner can change in the console is baked in here: deploy/Caddyfile fills it on the server on every
+# request. Each page carries {{httpInclude "/v1/public/seller-info?field=..."}} directives (templates on the website
+# only), which Caddy replaces with the API's live values (backend routes/seller.rs and routes/seller/live.rs):
+# seller details, the business name, colour, icons, absolute URLs, the cancellation rules, retention days, which
+# processors are in use, and the legal text published in the console (which replaces the built-in body).
 import pathlib
-import re
 import sys
 
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
@@ -34,33 +31,37 @@ def revision_table():
 
 
 REVISION_TABLE = revision_table()
-# Retention windows shown in the policy; keep equal to the server defaults (AI_CHAT_RETENTION_DAYS, UPLOAD_ORPHAN_DAYS).
-AI_DAYS = os.environ.get("AI_CHAT_RETENTION_DAYS", "180")
-ORPHAN_DAYS = os.environ.get("UPLOAD_ORPHAN_DAYS", "30")
+def seller(field):
+    """Caddy directive: the API's value for one field (escaped), or its placeholder until the owner fills it in."""
+    return '{{httpInclude "/v1/public/seller-info?field=' + field + '"}}'
+
+
+NAME = seller("name")
 
 HEAD = """<!doctype html>
 <html lang="ko" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>다해 · {title}</title>
+  <title>{name} · {title}</title>
   <meta name="description" content="{description}">
   <meta name="theme-color" content="#0B1217">
-  <link rel="canonical" href="/{page}">
+  <link rel="canonical" href="{base}/{page}">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="다해">
+  <meta property="og:site_name" content="{name}">
   <meta property="og:locale" content="ko_KR">
-  <meta property="og:url" content="/{page}">
-  <meta property="og:title" content="다해 · {title}">
+  <meta property="og:url" content="{base}/{page}">
+  <meta property="og:title" content="{name} · {title}">
   <meta property="og:description" content="{description}">
-  <meta property="og:image" content="/assets/og-image.png">
+  <meta property="og:image" content="{og}">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <link rel="icon" href="{favicon}">
+  <link rel="apple-touch-icon" href="{apple}">
   <link rel="manifest" href="site.webmanifest">
   <link rel="preload" href="assets/fonts/DahaeSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/site.css">
   <noscript><style>.reveal {{ opacity: 1; transform: none; }}</style></noscript>
+  <style>:root {{ --brand: {color}; }}</style>
   <script>try {{ const t = localStorage.getItem('site.theme'); if (t) document.documentElement.dataset.theme = t; }} catch (e) {{}}</script>
   <script defer src="assets/site.js"></script>
 </head>
@@ -68,15 +69,17 @@ HEAD = """<!doctype html>
   <a class="skip" href="#main">본문으로 건너뛰기</a>
   <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
   <header class="nav"><div class="wrap">
-    <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span><span data-brand-name>다해</span></a>
+    <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">{logo}</span><span data-brand-name>{name}</span></a>
     <div class="tools"><select id="lang" class="lang" aria-label="언어 선택 (Language)"></select><button id="theme" class="icon-btn" type="button" aria-label="밝은 화면으로 보기" title="밝은 화면으로 보기"><span aria-hidden="true">☀️</span></button></div>
   </div></header>
   <main id="main" class="wrap doc">
 """
+HEAD_VALUES = {"name": NAME, "base": seller("base_url"), "og": seller("og_image"), "favicon": seller("favicon"),
+               "apple": seller("apple_icon"), "color": seller("primary_color"), "logo": seller("logo_img")}
 
 FOOT = """  </main>
   <footer><div class="wrap cols">
-    <div><p class="company">{{httpInclude "/v1/public/seller-info"}}</p><p>© <span id="year"></span> <span data-brand-name>다해</span></p><p class="credit">Powered by Dahae · 소프트웨어 © 2026 Eric Wijesinghe</p></div>
+    <div><p class="company">{{httpInclude "/v1/public/seller-info"}}</p><p>© <span id="year"></span> <span data-brand-name>""" + NAME + """</span></p><p class="credit">Powered by Dahae · 소프트웨어 © 2026 Eric Wijesinghe</p></div>
     <div><b data-t="f_support">고객센터</b><br>{{httpInclude "/v1/public/seller-info?field=support_phone"}}<br>{{httpInclude "/v1/public/seller-info?field=support_email"}}</div>
     <div><a href="privacy.html" data-t="f_privacy">개인정보처리방침</a><br><a href="terms.html" data-t="f_terms">이용약관</a><br><a href="location-terms.html">위치기반서비스 이용약관</a><br>
       <a href="delete-account.html" data-t="f_delete">계정 삭제 안내</a></div>
@@ -85,12 +88,7 @@ FOOT = """  </main>
 </html>
 """
 
-def seller(field):
-    """Caddy directive: the API's value for one seller field (escaped), or its placeholder until the owner fills it in."""
-    return '{{httpInclude "/v1/public/seller-info?field=' + field + '"}}'
-
-
-SVC = '<span data-brand-name>다해</span>'
+SVC = '<span data-brand-name>' + NAME + '</span>'
 CO = seller("legal_name")
 CEO = seller("ceo")
 REG_NO = seller("registration_no")
@@ -101,8 +99,23 @@ OFFICER = seller("privacy_officer")
 SUPPORT_PHONE = seller("support_phone")
 SUPPORT_EMAIL = seller("support_email")
 CONTACT = SUPPORT_EMAIL + " · " + SUPPORT_PHONE
+# The console's 개인정보 문의 이메일 (the API falls back to the support email when it is empty).
+PRIVACY_CONTACT = seller("privacy_email") + " · " + SUPPORT_PHONE
 # 공정거래위원회 통신판매사업자 조회.
 BIZCHECK = seller("bizcheck")
+# Retention windows from the console's rules screen (settings registry), live.
+AI_DAYS = seller("ai_chat_retention_days")
+ORPHAN_DAYS = seller("upload_orphan_days")
+
+
+def published(field, body):
+    """The legal text published in the console (content kind legal) when there is one, else the built-in body."""
+    return '{{$o := httpInclude "/v1/public/seller-info?field=' + field + '"}}{{if $o}}{{$o}}{{else}}' + body + '{{end}}\n'
+
+
+def status(field):
+    """Live table cell: whether the owner has the processor's card saved (이용 중 / 현재 이용하지 않음)."""
+    return "<td>" + seller(field) + "</td>"
 
 PRIVACY = f"""
     <h1>개인정보처리방침</h1>
@@ -137,21 +150,21 @@ PRIVACY = f"""
     <table><tr><th>받는 자</th><th>목적</th><th>항목</th><th>보유 기간</th></tr>
       <tr><td>배정된 청소 파트너</td><td>방문 서비스 수행</td><td>예약 정보, 주소, 이름(일부 가림), 방문 메모</td><td>작업 완료 후 30일</td></tr></table>
     <h2>5. 처리 위탁</h2>
-    <table><tr><th>수탁자</th><th>위탁 업무</th><th>처리 장소</th></tr>
-      <tr><td>PortOne 및 각 결제대행사</td><td>결제 처리, 자동결제 키 관리, 본인인증</td><td>국내</td></tr>
-      <tr><td>토스페이먼츠</td><td>결제 처리, 자동결제 키 관리</td><td>국내</td></tr>
-      <tr><td>Solapi</td><td>문자 메시지·카카오 알림톡 발송</td><td>국내</td></tr>
-      <tr><td>도로명주소 개발자센터(행정안전부, 주소 검색 API)</td><td>주소 검색</td><td>국내</td></tr>
-      <tr><td>Google LLC (Firebase Cloud Messaging)</td><td>앱 푸시 알림 발송</td><td>미국 (국외 이전, 아래 6항)</td></tr>
-      <tr><td>Anthropic, PBC</td><td>AI 상담 응답 생성</td><td>미국 (국외 이전, 아래 6항)</td></tr>
-      <tr><td>서버 호스팅 사업자</td><td>서비스 운영 데이터 보관</td><td>국내</td></tr>
-      <tr><td>백업 저장소 사업자(S3 호환)</td><td>데이터베이스 백업 보관</td><td>운영자가 설정한 저장소 위치 (국외일 수 있음, 아래 6항)</td></tr></table>
+    <table><tr><th>수탁자</th><th>위탁 업무</th><th>처리 장소</th><th>이용 여부</th></tr>
+      <tr><td>PortOne 및 각 결제대행사</td><td>결제 처리, 자동결제 키 관리, 본인인증</td><td>국내</td>{status("uses_portone")}</tr>
+      <tr><td>토스페이먼츠</td><td>결제 처리, 자동결제 키 관리</td><td>국내</td>{status("uses_toss")}</tr>
+      <tr><td>Solapi</td><td>문자 메시지·카카오 알림톡 발송</td><td>국내</td>{status("uses_solapi")}</tr>
+      <tr><td>도로명주소 개발자센터(행정안전부, 주소 검색 API)</td><td>주소 검색</td><td>국내</td>{status("uses_juso")}</tr>
+      <tr><td>Google LLC (Firebase Cloud Messaging)</td><td>앱 푸시 알림 발송</td><td>미국 (국외 이전, 아래 6항)</td>{status("uses_fcm")}</tr>
+      <tr><td>Anthropic, PBC</td><td>AI 상담 응답 생성</td><td>미국 (국외 이전, 아래 6항)</td>{status("uses_ai")}</tr>
+      <tr><td>서버 호스팅 사업자</td><td>서비스 운영 데이터 보관</td><td>국내</td><td>이용 중</td></tr>
+      <tr><td>백업 저장소 사업자(S3 호환)</td><td>데이터베이스 백업 보관</td><td>운영자가 설정한 저장소 위치 (국외일 수 있음, 아래 6항)</td>{status("uses_backup")}</tr></table>
     <p>소셜 로그인(카카오, 네이버, 구글, 애플)은 이용자가 선택한 경우에 한해 각 사에서 본인 확인을 받기 위해 사용하며, 각 사의 개인정보처리방침이 적용됩니다.</p>
     <h2>6. 개인정보의 국외 이전</h2>
-    <table><tr><th>이전받는 자</th><th>이전 국가</th><th>이전 항목</th><th>이전 목적</th><th>이전 방법·시기</th><th>보유 기간</th></tr>
-      <tr><td>Google LLC (Firebase)</td><td>미국</td><td>푸시 토큰, 알림 제목·본문</td><td>앱 푸시 알림 발송</td><td>서비스 이용 중 네트워크 전송</td><td>푸시 토큰은 앱 삭제 또는 탈퇴 시까지</td></tr>
-      <tr><td>Anthropic, PBC</td><td>미국</td><td>AI 상담 중 고객이 입력한 문장과 상담 맥락</td><td>AI 상담 응답 생성</td><td>AI 상담 이용 시 네트워크 전송</td><td>회사 보관 기간과 동일(AI 상담 보관 기간 참고). 제공자 정책에 따라 처리</td></tr>
-      <tr><td>백업 저장소 사업자</td><td>운영자 설정에 따름</td><td>데이터베이스 백업 파일(AES-256-GCM 암호화)</td><td>장애 복구</td><td>정기 백업 실행 시 전송</td><td>백업 보관 기간(운영자 설정, 기본 30일)</td></tr></table>
+    <table><tr><th>이전받는 자</th><th>이전 국가</th><th>이전 항목</th><th>이전 목적</th><th>이전 방법·시기</th><th>보유 기간</th><th>이용 여부</th></tr>
+      <tr><td>Google LLC (Firebase)</td><td>미국</td><td>푸시 토큰, 알림 제목·본문</td><td>앱 푸시 알림 발송</td><td>서비스 이용 중 네트워크 전송</td><td>푸시 토큰은 앱 삭제 또는 탈퇴 시까지</td>{status("uses_fcm")}</tr>
+      <tr><td>Anthropic, PBC</td><td>미국</td><td>AI 상담 중 고객이 입력한 문장과 상담 맥락</td><td>AI 상담 응답 생성</td><td>AI 상담 이용 시 네트워크 전송</td><td>회사 보관 기간과 동일(AI 상담 보관 기간 참고). 제공자 정책에 따라 처리</td>{status("uses_ai")}</tr>
+      <tr><td>백업 저장소 사업자</td><td>운영자 설정에 따름</td><td>데이터베이스 백업 파일(AES-256-GCM 암호화)</td><td>장애 복구</td><td>정기 백업 실행 시 전송</td><td>백업 보관 기간(운영자 설정, 기본 30일)</td>{status("uses_backup")}</tr></table>
     <p>이용자는 국외 이전에 동의하지 않을 권리가 있습니다. 동의하지 않으면 해당 기능(푸시 알림, AI 상담)을 사용할 수 없고, 필요한 경우 문자 알림이나 상담원 상담으로 대신합니다. 국외 이전 동의는 앱의 [더보기 → 계정 → 동의 관리]에서 확인하고 철회할 수 있습니다.</p>
     <h2>7. 파기</h2>
     <p>보유 기간이 끝나거나 목적이 달성된 개인정보는 복구할 수 없는 방법으로 지체 없이 파기합니다. 파기는 매일 자동으로 실행되는 정리 작업으로 처리하며, 데이터베이스 백업은 보관 기간이 지나면 자동 삭제합니다.</p>
@@ -162,31 +175,14 @@ PRIVACY = f"""
     <h2>9. 안전성 확보 조치</h2>
     <ul><li>전 구간 암호화 통신(HTTPS)</li><li>정산 계좌·연동 키 암호화 저장(AES-256-GCM), 자동결제 키와 본인확인 정보(CI) 해시 저장</li><li>관리자 비밀번호 해시 저장, 로그인 실패 잠금, 권한 최소화</li><li>직원의 고객 연락처·정산 계좌 조회 기록 보관, 정기 점검</li><li>개인정보 보관 기간이 지난 정보의 자동 파기</li></ul>
     <h2>10. 개인정보 보호책임자</h2>
-    <p>성명: {OFFICER}<br>연락처: {CONTACT}</p>
+    <p>성명: {OFFICER}<br>연락처: {PRIVACY_CONTACT}</p>
     <p>개인정보침해신고센터(privacy.kisa.or.kr, 118), 개인정보분쟁조정위원회(www.kopico.go.kr, 1833-6972)에 문의할 수도 있습니다.</p>
     <h2>11. 변경 고지</h2>
     <p>이 방침이 바뀌면 시행 7일 전부터 앱과 웹사이트에 공지합니다. 국외 이전 항목이나 필수 동의 내용이 바뀌면 다시 동의를 받습니다.</p>
 {REVISION_TABLE}"""
 
-# Cancellation tiers come from the Rust default, so the terms match what the server enforces by default.
-# Owner edits in the console are NOT reflected here: regenerate after changing the default, or render
-# the table dynamically from GET /v1/policy/cancellation on the website.
-CANCEL_POLICY = json.loads((pathlib.Path(__file__).parent.parent / "backend/crates/domain/src/cancel_policy_default.json").read_text(encoding="utf-8"))
-
-
-def cancel_rows(policy):
-    rows = []
-    for t in policy["tiers"]:
-        days, pct = t["min_days"], t["percent"]
-        # A tier applies while days-before-visit >= min_days, i.e. until the next (smaller) tier starts.
-        when = "방문 당일 취소" if days == 0 else f"방문일 {days}일 전까지 취소" if days > 0 else "방문 후"
-        if pct is None:
-            rows.append(f"<li>{when}: 앱에서 취소 불가, 상담팀 확인 후 처리</li>")
-        elif pct == 0:
-            rows.append(f"<li>{when}: 전액 환불</li>")
-        else:
-            rows.append(f"<li>{when}: 결제 금액의 {pct}% 취소 수수료 (최소 {policy['min_fee']:,}원)</li>")
-    return "".join(rows)
+# Cancellation rules: the owner's live policy (what GET /v1/policy/cancellation serves), as <li> rows.
+CANCEL_ROWS = seller("cancel_policy")
 
 
 TERMS = f"""
@@ -196,7 +192,7 @@ TERMS = f"""
     <h2>제2조 (서비스 내용)</h2><p>회사는 고객과 청소 전문가(이하 "파트너")를 연결하고 예약, 결제, 상담, 정산 기능을 제공합니다. 방문 청소는 회사의 기준으로 심사된 파트너가 수행합니다.</p>
     <h2>제3조 (회원가입)</h2><p>휴대전화 인증 또는 소셜 로그인으로 가입하며 정확한 정보를 제공해야 합니다. 만 14세 미만은 가입할 수 없습니다.</p>
     <h2>제4조 (예약과 결제)</h2><p>예약은 결제가 완료된 때 확정됩니다. 견적형 서비스(이사·입주 청소 등)는 견적 확인 후 예약금 결제로 확정되고, 잔금은 작업 완료 후 결제합니다.</p>
-    <h2>제5조 (취소와 환불)</h2><ul>{cancel_rows(CANCEL_POLICY)}<li>회사 또는 파트너 사정으로 서비스가 제공되지 못한 경우: 전액 환불</li></ul>
+    <h2>제5조 (취소와 환불)</h2><ul>{CANCEL_ROWS}<li>회사 또는 파트너 사정으로 서비스가 제공되지 못한 경우: 전액 환불</li></ul>
     <h2>제6조 (이용자의 의무)</h2><p>방문 주소와 작업 환경 정보를 정확히 제공하고 파트너가 안전하게 작업할 수 있도록 협조해야 합니다.</p>
     <h2>제7조 (손해배상)</h2><p>파트너의 고의 또는 과실로 손해가 생기면 회사는 관련 법령과 회사의 보상 기준에 따라 처리를 돕습니다. 작업 전후 사진은 확인 자료로 쓰일 수 있습니다.</p>
     <h2>제8조 (서비스 변경·중단)</h2><p>설비 점검 등 부득이한 경우 서비스를 일시 중단할 수 있으며 미리 공지합니다.</p>
@@ -244,46 +240,45 @@ LOCATION = f"""
     <h2>제5조 (이용자의 권리)</h2><p>이용자는 앱 [더보기 → 계정 → 동의 관리]에서 언제든지 동의를 철회할 수 있고, 기기 설정에서 위치 권한을 끌 수 있습니다. 동의하지 않거나 철회해도 주소를 직접 입력해 서비스를 그대로 이용할 수 있습니다. 이용자는 위치정보 이용·제공 사실 확인자료의 열람과 오류 정정을 요구할 수 있습니다.</p>
     <h2>제6조 (만 14세 미만)</h2><p>서비스는 만 14세 이상만 가입할 수 있어 만 14세 미만 아동의 위치정보는 처리하지 않습니다.</p>
     <h2>제7조 (손해배상과 분쟁 조정)</h2><p>회사가 관련 법령을 위반해 이용자에게 손해가 생기면 이용자는 배상을 청구할 수 있고, 회사는 고의나 과실이 없음을 입증하지 못하면 책임을 집니다. 위치정보와 관련한 분쟁은 방송통신위원회에 재정을, 개인정보 분쟁조정위원회에 조정을 신청할 수 있습니다.</p>
-    <h2>제8조 (위치정보관리책임자)</h2><p>{OFFICER} · {CONTACT}</p>
+    <h2>제8조 (위치정보관리책임자)</h2><p>{OFFICER} · {PRIVACY_CONTACT}</p>
     <h2>사업자 정보</h2><p>상호 {CO} · 대표 {CEO} · 주소 {ADDRESS}</p>
 {REVISION_TABLE}"""
 
 PAGES = {
-    "privacy.html": ("개인정보처리방침", "다해 개인정보처리방침: 수집 항목, 이용 목적, 보유 기간, 처리 위탁과 국외 이전, 이용자의 권리.", PRIVACY),
-    "terms.html": ("이용약관", "다해 서비스 이용약관: 예약과 결제, 취소와 환불, 이용자의 의무, 분쟁 해결, 사업자 정보.", TERMS),
-    "location-terms.html": ("위치기반서비스 이용약관", "다해 위치기반서비스 이용약관: 현재 위치로 주소 찾기 기능의 위치정보 처리 기준.", LOCATION),
-    "delete-account.html": ("계정 삭제 안내", "다해 계정 삭제 방법과 삭제·보관되는 정보 안내. How to delete your Dahae account.", DELETE),
-    "partners.html": ("파트너 지원", "다해 청소 파트너 모집: 원하는 지역과 시간에 일하고 매주 수요일 정산받으세요.", PARTNERS),
+    "privacy.html": ("개인정보처리방침", NAME + " 개인정보처리방침: 수집 항목, 이용 목적, 보유 기간, 처리 위탁과 국외 이전, 이용자의 권리.", published("legal_privacy", PRIVACY)),
+    "terms.html": ("이용약관", NAME + " 서비스 이용약관: 예약과 결제, 취소와 환불, 이용자의 의무, 분쟁 해결, 사업자 정보.", published("legal_terms", TERMS)),
+    "location-terms.html": ("위치기반서비스 이용약관", NAME + " 위치기반서비스 이용약관: 현재 위치로 주소 찾기 기능의 위치정보 처리 기준.", published("legal_location", LOCATION)),
+    "delete-account.html": ("계정 삭제 안내", NAME + " 계정 삭제 방법과 삭제·보관되는 정보 안내. How to delete your account.", DELETE),
+    "partners.html": ("파트너 지원", NAME + " 청소 파트너 모집: 원하는 지역과 시간에 일하고 매주 수요일 정산받으세요.", PARTNERS),
 }
 
-BASE_ATTRS = re.compile(r'((?:rel="canonical" href|property="og:(?:url|image)" content|name="twitter:image" content)=")/')
-JSON_LD_URLS = re.compile(r'(<script type="application/ld\+json"[^>]*>)(.*?)(</script>)', re.S)
-
-
-def absolute(page, base):
-    """Makes canonical, og:url, og:image and JSON-LD URLs absolute (--base-url)."""
-    page = BASE_ATTRS.sub(lambda m: m[1] + base + "/", page)
-    return JSON_LD_URLS.sub(lambda m: m[1] + re.sub(r'("(?:@id|url|image)": ")/', lambda n: n[1] + base + "/", m[2]) + m[3], page)
+def page_html(name, title, description, body):
+    return HEAD.format(title=title, description=description, page=name, **HEAD_VALUES) + body + FOOT
 
 
 def self_test():
-    page = HEAD.format(title="t", description="d", page="terms.html") + TERMS + FOOT
-    for field in ("legal_name", "ceo", "registration_no", "mail_order_no", "address", "hosting_provider", "support_phone", "support_email"):
+    page = page_html("terms.html", "t", "d", published("legal_terms", TERMS))
+    for field in ("legal_name", "ceo", "registration_no", "mail_order_no", "address", "hosting_provider", "support_phone",
+                  "support_email", "name", "base_url", "og_image", "favicon", "apple_icon", "primary_color", "logo_img",
+                  "cancel_policy"):
         assert 'httpInclude "/v1/public/seller-info?field=' + field + '"' in page, field
     assert '{{httpInclude "/v1/public/seller-info"}}' in page, "footer block"
     assert 'httpInclude "/v1/public/seller-info?field=bizcheck"' in page, "FTC lookup link comes from the API"
+    assert page.count("{{$o := httpInclude") == 1 and page.count("{{end}}") == 1, "one published-text switch per page"
     assert "data-fill" not in page and "data-bizcheck" not in page, "no JavaScript placeholders"
-    out = absolute('<link rel="canonical" href="/terms.html"><meta property="og:image" content="/assets/og-image.png">', "https://example.com")
-    assert out == '<link rel="canonical" href="https://example.com/terms.html"><meta property="og:image" content="https://example.com/assets/og-image.png">', out
+    assert "다해" not in page, "no built-in brand name in the served text"
+    privacy = page_html("privacy.html", "t", "d", PRIVACY)
+    for field in ("uses_portone", "uses_toss", "uses_solapi", "uses_fcm", "uses_ai", "uses_backup", "uses_juso",
+                  "ai_chat_retention_days", "upload_orphan_days", "privacy_email"):
+        assert "seller-info?field=" + field + '"' in privacy, field
 
 
 if __name__ == "__main__":
     check = "--check" in sys.argv
-    base = sys.argv[sys.argv.index("--base-url") + 1].rstrip("/") if "--base-url" in sys.argv else ""
     self_test()
     stale = []
     for name, (title, description, body) in PAGES.items():
-        page = HEAD.format(title=title, description=description, page=name) + body + FOOT
+        page = page_html(name, title, description, body)
         if not check:
             (OUT / name).write_text(page, encoding="utf-8", newline="\n")
             print("wrote", name)
@@ -291,7 +286,3 @@ if __name__ == "__main__":
             stale.append(name)
     if stale:
         sys.exit(f"out of date (edit scripts/build_legal.py, then regenerate): {', '.join(stale)}")
-    if base and not check:
-        for f in sorted(OUT.glob("*.html")):
-            f.write_text(absolute(f.read_text(encoding="utf-8"), base), encoding="utf-8", newline="\n")
-            print("absolute urls", f.name)

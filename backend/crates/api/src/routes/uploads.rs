@@ -5,6 +5,7 @@
 //! Files are never mounted publicly: `/v1/files/<name>?exp=&sig=` serves them when the HMAC (key derived
 //! from DATA_KEY) over name and expiry checks out. Stored values are `/files/<name>`; `sign_json` turns
 //! every such path in a JSON response into a fresh signed URL, so handlers never store expiring links.
+//! The one exception: the current brand files (logo, icons, share image) are served unsigned (see `serve`).
 
 use crate::entropy;
 use crate::{
@@ -45,6 +46,10 @@ const URL_BUCKET_SECS: i64 = 3600;
 const URL_BUCKETS_AHEAD: i64 = 2;
 const KEY_CONTEXT: &[u8] = b"malkkeum/file-urls/v1";
 const MAX_JSON_BYTES: usize = 16 * 1024 * 1024;
+const PRIVATE_CACHE: &str = "private, max-age=3600";
+/// The current logo and brand images are public without a signature. A changed image gets a new random
+/// name, so its URL never needs revalidating.
+const BRAND_CACHE: &str = "public, max-age=31536000, immutable";
 
 pub fn routes() -> Router<AppState> {
     Router::new().route("/uploads", post(upload)).route("/files/{name}", get(serve))
@@ -127,18 +132,26 @@ const PHOTO_KEYS: [&str; 9] = [
 
 /// Replaces every stored `/files/<name>` (or base-prefixed legacy form) under a photo key with a signed URL.
 pub fn sign_urls(config: &Config, v: &mut Value) {
-    sign_under(config, v, false);
+    sign_under(config, &config.public_base_url, v, false);
 }
 
-fn sign_under(config: &Config, v: &mut Value, photo: bool) {
+/// Links in a response point at the host the request came in on when it is one of ours (a former domain gets its
+/// own links: store apps up to 1.5.1 take a logo only from their compiled host), else at PUBLIC_BASE_URL.
+fn base_for_host(allowed: &[String], default: &str, host: Option<&str>) -> String {
+    host.map(|h| format!("https://{h}"))
+        .filter(|o| allowed.contains(o))
+        .unwrap_or_else(|| default.to_string())
+}
+
+fn sign_under(config: &Config, base: &str, v: &mut Value, photo: bool) {
     match v {
         Value::String(s) if photo => {
-            if let Some(url) = signed_for(config, s.as_str()) {
+            if let Some(url) = signed_for(config, base, s.as_str()) {
                 *s = url;
             }
         }
-        Value::Array(items) => items.iter_mut().for_each(|x| sign_under(config, x, photo)),
-        Value::Object(map) => map.iter_mut().for_each(|(k, x)| sign_under(config, x, PHOTO_KEYS.contains(&k.as_str()))),
+        Value::Array(items) => items.iter_mut().for_each(|x| sign_under(config, base, x, photo)),
+        Value::Object(map) => map.iter_mut().for_each(|(k, x)| sign_under(config, base, x, PHOTO_KEYS.contains(&k.as_str()))),
         _ => {}
     }
 }
@@ -172,7 +185,7 @@ pub async fn owned_by_team(db: &PgPool, pro: Uuid, paths: &[String]) -> ApiResul
     Ok(usize::try_from(found).is_ok_and(|n| n == names.len()))
 }
 
-fn signed_for(config: &Config, stored: &str) -> Option<String> {
+fn signed_for(config: &Config, base: &str, stored: &str) -> Option<String> {
     let path = stored.strip_prefix(config.public_base_url.as_str()).unwrap_or(stored);
     let name = path.strip_prefix("/files/")?;
     if !safe_name(name) {
@@ -180,11 +193,12 @@ fn signed_for(config: &Config, stored: &str) -> Option<String> {
     }
     let exp = expiry_bucket(Utc::now().timestamp());
     let sig = sign(&url_key(config), name, exp);
-    Some(format!("{}/v1/files/{name}?exp={exp}&sig={sig}", config.public_base_url))
+    Some(format!("{base}/v1/files/{name}?exp={exp}&sig={sig}"))
 }
 
 /// Signs upload paths in every JSON response (runs after the handler, before the bytes leave).
 pub async fn sign_json(State(s): State<AppState>, req: Request, next: Next) -> Response {
+    let host = req.headers().get(header::HOST).and_then(|h| h.to_str().ok()).map(str::to_owned);
     let res = next.run(req).await;
     let is_json = res
         .headers()
@@ -200,7 +214,8 @@ pub async fn sign_json(State(s): State<AppState>, req: Request, next: Next) -> R
     let Ok(mut value) = serde_json::from_slice::<Value>(&bytes) else {
         return Response::from_parts(parts, Body::from(bytes));
     };
-    sign_urls(&s.config, &mut value);
+    let base = base_for_host(&s.config.allowed_origins, &s.config.public_base_url, host.as_deref());
+    sign_under(&s.config, &base, &mut value, false);
     let Ok(out) = serde_json::to_vec(&value) else {
         return ApiError::Internal("re-encoding signed response".into()).into_response();
     };
@@ -218,12 +233,11 @@ async fn serve(State(s): State<AppState>, Path(name): Path<String>, Query(q): Qu
     if !safe_name(&name) {
         return Err(ApiError::NotFound);
     }
-    let (Some(exp), Some(sig)) = (q.exp, q.sig) else {
-        return Err(ApiError::Forbidden);
+    let cache = match (q.exp, q.sig) {
+        (Some(exp), Some(sig)) if verify(&url_key(&s.config), &name, exp, &sig, Utc::now().timestamp()) => PRIVATE_CACHE,
+        (None, None) if super::setup::brand::is_brand_file(&super::seller::cached_business(&s.db).await?, &name) => BRAND_CACHE,
+        _ => return Err(ApiError::Forbidden),
     };
-    if !verify(&url_key(&s.config), &name, exp, &sig, Utc::now().timestamp()) {
-        return Err(ApiError::Forbidden);
-    }
     let file = tokio::fs::File::open(s.config.upload_dir.join(&name)).await.map_err(|_| ApiError::NotFound)?;
     // Streamed in chunks so a large photo is never held whole in memory.
     let chunks = futures_util::stream::unfold(file, |mut f| async move {
@@ -240,7 +254,7 @@ async fn serve(State(s): State<AppState>, Path(name): Path<String>, Query(q): Qu
     let headers = [
         (header::CONTENT_TYPE, HeaderValue::from_static(mime(&name))),
         (header::X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff")),
-        (header::CACHE_CONTROL, HeaderValue::from_static("private, max-age=3600")),
+        (header::CACHE_CONTROL, HeaderValue::from_static(cache)),
     ];
     Ok((headers, Body::from_stream(chunks)).into_response())
 }
@@ -311,6 +325,14 @@ mod tests {
 
     const KEY: [u8; 32] = [9; 32];
     const NAME: &str = "0123456789abcdef0123456789abcdef.jpg";
+
+    #[test]
+    fn links_follow_the_request_host_only_when_it_is_ours() {
+        let allowed = ["https://new.x".to_string(), "https://old.x".to_string()];
+        assert_eq!(base_for_host(&allowed, "https://new.x", Some("old.x")), "https://old.x");
+        assert_eq!(base_for_host(&allowed, "https://new.x", Some("evil.x")), "https://new.x");
+        assert_eq!(base_for_host(&allowed, "https://new.x", None), "https://new.x");
+    }
 
     #[test]
     fn sniffs_images_only() {

@@ -12,6 +12,7 @@ Console ships only as web (website image), so it has no native store build to ch
 import base64
 import filecmp
 import hashlib
+import os
 import plistlib
 import re
 import sys
@@ -22,6 +23,12 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 APPS = REPO / "app" / "apps"
 NATIVE_APPS = ["customer", "partner"]
+
+
+def store_ids():
+    """Store app ids: the GitHub variables CUSTOMER_APP_ID / PARTNER_APP_ID (store-apps.yml), else the built-in ones."""
+    return {a: (os.environ.get(f"{a.upper()}_APP_ID") or "").strip() or f"kr.co.dahae.{a}" for a in NATIVE_APPS}
+
 ANDROID_NS = "{http://schemas.android.com/apk/res/android}"
 KAKAO_AUTH_ACTIVITY = "com.kakao.sdk.flutter.auth.AuthCodeHandlerActivity"
 NAVER_SCHEME = "dahaenaver"  # legacy iOS < 17.4 only
@@ -176,13 +183,15 @@ def check_xcconfig(app, ios):
     for name in ["Debug", "Release"]:
         text = (ios / "Flutter" / f"{name}.xcconfig").read_text(encoding="utf-8")
         inc = text.find('#include? "Keys.xcconfig"')
-        keys = ["KAKAO_URL_SCHEME", "GOOGLE_IOS_CLIENT_ID", "GOOGLE_REVERSED_CLIENT_ID", "APP_LINK_HOST"]
+        keys = ["KAKAO_URL_SCHEME", "GOOGLE_IOS_CLIENT_ID", "GOOGLE_REVERSED_CLIENT_ID", "APP_LINK_HOST", "APP_DISPLAY_NAME", "APP_BUNDLE_ID"]
         defaults = [text.find(k + " =") for k in keys]
         check(inc >= 0 and all(0 <= d < inc for d in defaults),
               f"{app} {name}.xcconfig: defaults must come before the optional #include? Keys.xcconfig")
+        check(f"APP_BUNDLE_ID = kr.co.dahae.{app}\n" in text, f"{app} {name}.xcconfig: APP_BUNDLE_ID default must be kr.co.dahae.{app}")
     writer = (REPO / "scripts" / "ci" / "native-keys.sh").read_text(encoding="utf-8")
     check('APP_LINK_HOST = ${APP_LINK_DOMAIN:-' in writer, "native-keys.sh: Keys.xcconfig must set APP_LINK_HOST")
     check('"APP_LINK_DOMAIN"' in writer, "native-keys.sh: APP_LINK_DOMAIN must be passed as a dart-define")
+    check("APP_DISPLAY_NAME = " in writer and "APP_BUNDLE_ID = " in writer, "native-keys.sh: Keys.xcconfig must set the store name and bundle id")
     check('KAKAO_URL_SCHEME = kakao${KAKAO_NATIVE_KEY' in writer,
           "native-keys.sh: KAKAO_URL_SCHEME must include the kakao prefix (Info.plist uses it as-is)")
 
@@ -224,9 +233,10 @@ def check_pbxproj(app, ios):
         check(s.get("CODE_SIGN_ENTITLEMENTS") == "Runner/Runner.entitlements",
               f"{app} pbxproj: {c['name']} lacks CODE_SIGN_ENTITLEMENTS")
         check(s.get("INFOPLIST_FILE") == "Runner/Info.plist", f"{app} pbxproj: {c['name']} INFOPLIST_FILE")
+    # The bundle id comes from APP_BUNDLE_ID (Flutter/*.xcconfig default kr.co.dahae.<app>, Keys.xcconfig in store builds).
     for c in configs:
-        check(c["buildSettings"].get("PRODUCT_BUNDLE_IDENTIFIER") == f"kr.co.dahae.{app}",
-              f"{app} pbxproj: {c['name']} PRODUCT_BUNDLE_IDENTIFIER must be kr.co.dahae.{app}")
+        check(c["buildSettings"].get("PRODUCT_BUNDLE_IDENTIFIER") == "$(APP_BUNDLE_ID)",
+              f"{app} pbxproj: {c['name']} PRODUCT_BUNDLE_IDENTIFIER must be $(APP_BUNDLE_ID)")
     # firebase_core/messaging 5/17, google_sign_in_ios and image_picker_ios need iOS 15; SwiftPM plugins follow this value.
     targets = [o["buildSettings"]["IPHONEOS_DEPLOYMENT_TARGET"] for o in objs.values()
                if o.get("isa") == "XCBuildConfiguration" and "IPHONEOS_DEPLOYMENT_TARGET" in o.get("buildSettings", {})]
@@ -289,6 +299,9 @@ def check_android(app):
     m = re.search(r"targetSdk = (\d+)", gradle)
     check(m is not None and int(m.group(1)) >= 36, f"{app} build.gradle.kts: targetSdk must be >= 36 (Play rule)")
     check('manifestPlaceholders["appLinkHost"]' in gradle, f"{app} build.gradle.kts: appLinkHost placeholder")
+    check('manifestPlaceholders["appLabel"]' in gradle and 'buildEnv("APP_ID")' in gradle,
+          f"{app} build.gradle.kts: the store name and app id must come from APP_LABEL / APP_ID")
+    check(root.find("application").get(ANDROID_NS + "label") == "${appLabel}", f"{app} AndroidManifest: android:label must be ${{appLabel}}")
     for env in ["UPLOAD_KEYSTORE_PATH", "UPLOAD_KEYSTORE_PASSWORD", "UPLOAD_KEY_ALIAS", "UPLOAD_KEY_PASSWORD"]:
         check(f'"{env}"' in gradle, f"{app} build.gradle.kts: release signing does not read {env}")
     check(not re.search(r'(storePassword|keyPassword|keyAlias)\s*=\s*"', gradle), f"{app} build.gradle.kts: literal signing secret")
@@ -489,12 +502,15 @@ def check_aab(aab):
 def check_merged_manifest(path):
     """The manifest Gradle merged from the app and every plugin (plain XML under build/app/intermediates/merged_manifests)."""
     root = ET.parse(path).getroot()
-    app = root.get("package", "").rsplit(".", 1)[-1]
+    ids = store_ids()
+    app = next((a for a, i in ids.items() if i == root.get("package", "")), "")
     check(app in NATIVE_APPS, f"{path}: package {root.get('package')} is not a store app")
+    if app not in NATIVE_APPS:
+        return
     check_android_extras(app, None, root)
     perms = {e.get(ANDROID_NS + "name") for e in root.iter("uses-permission")}
     check("android.permission.POST_NOTIFICATIONS" in perms, f"{path}: POST_NOTIFICATIONS missing")
-    allowed = MERGED_PERMS | (set(LOCATION_PERMS) if app in LOCATION_APPS else set()) | {f"kr.co.dahae.{app}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"}
+    allowed = MERGED_PERMS | (set(LOCATION_PERMS) if app in LOCATION_APPS else set()) | {f"{ids[app]}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"}
     for perm in sorted(perms - allowed):
         check(False, f"{path}: unexpected permission {perm} (a plugin added it; review, then remove it or extend MERGED_PERMS)")
     for s in root.iter("service"):
@@ -559,6 +575,7 @@ def check_web():
         check(GOOGLE_HOSTS.search(value) is None, "deploy/Caddyfile: CSP must not allow Google hosts (web builds are self-contained)")
     check_site_csp(caddy)
     check_seller_include(caddy)
+    check_former_domains(caddy)
     compose =(REPO / "deploy" / "docker-compose.yml").read_text(encoding="utf-8")
     check("ANDROID_CERT_SHA256" in compose and "APPLE_TEAM_ID" in compose,
           "deploy/docker-compose.yml: API needs ANDROID_CERT_SHA256 and APPLE_TEAM_ID")
@@ -585,6 +602,32 @@ def check_edge_log(caddy):
     check(re.sub(pattern, repl, "/v1/admin/customers?q=x") == "/v1/admin/customers?REDACTED",
           "deploy/Caddyfile: a redacted query must leave the path and a REDACTED marker")
     check(re.search(r"roll_keep_for \S+", caddy) is not None, "deploy/Caddyfile: access log needs a time-based retention (roll_keep_for)")
+
+
+def check_former_domains(caddy):
+    """A console domain move keeps the old domain serving: certificates only for hosts the API lists, the API's
+    question never reachable from outside, and only website pages redirected (installed apps cannot follow a
+    redirect for POST, websockets or the payment done page). App shells are templated on index.html only."""
+    check("ask http://api:8080/internal/tls-ask" in caddy, "deploy/Caddyfile: on_demand_tls must ask the API (/internal/tls-ask)")
+    m = re.search(r"@internal path ([^\n]+)", caddy)
+    check(m is not None and "/internal/*" in m.group(1).split(), "deploy/Caddyfile: /internal/* must be 404 at the edge")
+    # A bare `respond @internal` never runs: handle comes first in Caddy's order and the catch-all handle answers.
+    check(re.search(r"handle @internal \{\s*respond 404\s*\}", caddy) is not None, "deploy/Caddyfile: /internal/*, /ready and /metrics need `handle @internal { respond 404 }`")
+    m = re.search(r"@api path ([^\n]+)", caddy)
+    check(m is not None and not any(p.startswith("/internal") for p in m.group(1).split()), "deploy/Caddyfile: /internal must never be proxied")
+    block = re.search(r"^https:// \{\n(.*?)^\}", caddy, re.S | re.M)
+    check(block is not None, "deploy/Caddyfile: former-domain site (https://) missing")
+    if block is None:
+        return
+    body = block.group(1)
+    check("import alias-tls-{$TLS_MODE}" in body and "import site" in body, "deploy/Caddyfile: former-domain site must use on-demand TLS and the shared site")
+    m = re.search(r"@old_pages not path ([^\n]+)", body)
+    kept = m.group(1).split() if m else []
+    for want in ["/v1/*", "/health", "/.well-known/*", "/pay/*", "/auth/*", "/app/*", "/admin/*", "/ops-progress/*"]:
+        check(want in kept, f"deploy/Caddyfile: a former domain must keep serving {want} (no redirect)")
+    for app in ["console", "app"]:
+        check(f"@{app}_shell path / /index.html" in caddy and f"templates @{app}_shell" in caddy,
+              f"deploy/Caddyfile: the {app} shell is templated on index.html only")
 
 
 def check_site_csp(caddy):
@@ -665,7 +708,7 @@ def check_ipa(path):
         root = app[: -len("Info.plist")]
         info = plistlib.loads(z.read(app))
         bid = info.get("CFBundleIdentifier", "")
-        check(bid in {f"kr.co.dahae.{a}" for a in NATIVE_APPS}, f"{path}: CFBundleIdentifier {bid!r}")
+        check(bid in set(store_ids().values()), f"{path}: CFBundleIdentifier {bid!r}")
         check(float(str(info.get("MinimumOSVersion", "0")).split(".")[0]) >= IOS_MIN, f"{path}: MinimumOSVersion below {IOS_MIN}")
         check(re.fullmatch(r"\d+", str(info.get("CFBundleVersion", ""))) is not None, f"{path}: CFBundleVersion must be the rising integer build number")
         check(re.fullmatch(r"\d+\.\d+\.\d+", str(info.get("CFBundleShortVersionString", ""))) is not None, f"{path}: CFBundleShortVersionString must look like 1.2.3")
