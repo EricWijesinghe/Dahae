@@ -9,7 +9,7 @@
 S = {
   # customer home
   "dhHomeRecommended": ["추천 서비스", "Recommended"],
-  "dhHomeNews": ["다해 소식", "Dahae News"],
+  "dhHomeNews": ["{brand} 소식", "{brand} News"],
   "dhHomeAll": ["전체", "All"],
   "dhHomePick": ["{brand} PICK", "{brand} PICK"],
   "dhBadgeNew": ["N", "NEW"],

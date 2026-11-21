@@ -164,7 +164,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                 Padding(
                   padding: const EdgeInsets.all(Space.gutter),
                   child: Text(
-                    t.payCardNote(BrandConfig.placeholder.name),
+                    t.payCardNote(context.brandName),
                     style: context.text.bodySmall?.copyWith(color: c.inkSoft),
                   ),
                 ),

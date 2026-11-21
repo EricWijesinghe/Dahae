@@ -37,7 +37,7 @@ class IntroScreen extends StatelessWidget {
                         StaggerIn(
                           index: 0,
                           child: Text(
-                            BrandScope.of(context).name,
+                            context.brandName,
                             style: context.text.titleLarge?.copyWith(
                               color: context.primary,
                               fontWeight: FontWeight.w800,
@@ -350,6 +350,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                 SocialSignInRow(
                   providers: defaultSocialSignIns(
                     Deps.read(context).session.api.baseUrl,
+                    server: RemoteConfigScope.of(context).providers,
                   ),
                   busyProvider: _busyProvider,
                   devMode: isDevApiBase(Deps.read(context).session.api.baseUrl),

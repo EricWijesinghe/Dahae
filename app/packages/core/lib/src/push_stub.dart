@@ -15,4 +15,6 @@ class PushService {
   static Future<void> init() async {}
 
   static Future<void> start(ApiClient api) async {}
+
+  static Future<void> setChannelName(String name) async {}
 }

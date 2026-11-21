@@ -3064,7 +3064,9 @@ class TEn extends T {
   String get dfQuoteMethodTitle => 'Check how the quote works\nand continue.';
 
   @override
-  String get dfSafeBooking => 'Dahae Safe Booking';
+  String dfSafeBooking(String brand) {
+    return '$brand Safe Booking';
+  }
 
   @override
   String get dfRecommended => 'Recommended';
@@ -3206,7 +3208,9 @@ class TEn extends T {
   String get dhHomeRecommended => 'Recommended';
 
   @override
-  String get dhHomeNews => 'Dahae News';
+  String dhHomeNews(String brand) {
+    return '$brand News';
+  }
 
   @override
   String get dhHomeAll => 'All';
@@ -3928,7 +3932,7 @@ class TEn extends T {
 
   @override
   String get err_invalid_photos =>
-      'Only photos uploaded through Dahae can be attached';
+      'Only photos uploaded in this app can be attached';
 
   @override
   String get welcomeOfferTitle => 'First-booking offer';
@@ -6186,6 +6190,14 @@ class TEn extends T {
 
   @override
   String get quoteSizeChangeSize => 'Change size';
+
+  @override
+  String partnerAppTitle(String brand) {
+    return '$brand Partner';
+  }
+
+  @override
+  String get rbLegalOpenWeb => 'Open the web page';
 
   @override
   String get rnwTitle => 'Renewal calendar';

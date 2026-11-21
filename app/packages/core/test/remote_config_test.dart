@@ -47,6 +47,34 @@ void main() {
     expect(c.maintenance, isFalse);
   });
 
+  test('server sign-in providers: a string list, or null when not sent', () {
+    expect(
+      RemoteConfig.fromJson({
+        'providers': ['kakao', 3, 'apple'],
+      }).providers,
+      {'kakao', 'apple'},
+    );
+    expect(RemoteConfig.fromJson({'providers': []}).providers, isEmpty);
+    expect(RemoteConfig.fromJson({}).providers, isNull);
+    expect(RemoteConfig.fromJson({'providers': 'kakao'}).providers, isNull);
+  });
+
+  testWidgets('each loaded config goes to the listener', (tester) async {
+    final seen = <Json>[];
+    final api = _api({'api_base': 'https://new.test'});
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RemoteConfigGate(
+          api: api,
+          onConfig: seen.add,
+          child: const SizedBox(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(seen.single['api_base'], 'https://new.test');
+  });
+
   test('maintenance message is trimmed', () {
     final c = RemoteConfig.fromJson({
       'maintenance': {'on': true, 'message': '  곧 돌아와요  '},

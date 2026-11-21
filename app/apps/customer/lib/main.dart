@@ -21,7 +21,8 @@ Future<void> _start() async {
   final boot = Stopwatch()..start();
   WidgetsFlutterBinding.ensureInitialized();
   final session = Session(namespace: 'customer');
-  final api = ApiClient(baseUrl: defaultApiBase(), session: session);
+  // A domain move found on an earlier run applies now, at a cold start (api_base_discovery.dart).
+  final api = ApiClient(baseUrl: await resolveApiBase(), session: session);
   _errors.send = (body) async => api.post('/client-errors', body);
   final locale = LocaleController();
   final theme = ThemeController(initial: ThemeMode.system);
@@ -35,7 +36,10 @@ Future<void> _start() async {
   // One refresh now instead of a 401 on every first screen call.
   api.warmUp().ignore();
   // The business's colours and logo; the saved brand paints until this answers (and stays if offline).
+  // Later changes arrive through X-Brand-Version on any call and on coming back to the foreground.
   brand.refresh().ignore();
+  brand.followResume();
+  _followBrandInPush(brand);
   final restored = boot.elapsedMilliseconds;
   final analytics = Analytics(
     send: (body) async => api.post('/events', body),
@@ -50,6 +54,7 @@ Future<void> _start() async {
       locale: locale,
       theme: theme,
       brand: brand,
+      discovery: ApiBaseDiscovery(api: api),
     ),
   );
   analytics.start();
@@ -73,6 +78,13 @@ Future<void> _start() async {
   });
 }
 
+/// The Android notification channel carries the business's short name.
+void _followBrandInPush(BrandController brand) {
+  void sync() => PushService.setChannelName(brand.brand.short).ignore();
+  sync();
+  brand.addListener(sync);
+}
+
 /// Dynamic Type / font scale ceiling: layouts are tested up to 2.0x, beyond that they break.
 const maxTextScale = 2.0;
 
@@ -84,12 +96,16 @@ class CustomerApp extends StatelessWidget {
     required this.locale,
     required this.theme,
     this.brand,
+    this.discovery,
   });
   final Session session;
   final AppState app;
   final LocaleController locale;
   final ThemeController theme;
   final BrandController? brand;
+
+  /// Follows a domain move from `/config` (native builds; web uses its origin).
+  final ApiBaseDiscovery? discovery;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -111,13 +127,14 @@ class CustomerApp extends StatelessWidget {
                 app: 'customer',
                 child: RemoteConfigGate(
                   api: session.api,
+                  onConfig: discovery?.check,
                   child: child ?? const SizedBox.shrink(),
                 ),
               ),
             ),
           ),
           onGenerateTitle: (c) =>
-              (brand?.brand ?? BrandConfig.placeholder).name,
+              (brand?.brand ?? BrandConfig.placeholder).nameFor(c.lang),
           theme: buildTheme(
             brand?.brand ?? BrandConfig.placeholder,
             Brightness.light,
