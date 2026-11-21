@@ -93,9 +93,10 @@ struct IdentityInput {
     identity_verification_id: String,
 }
 
-/// Whether PASS can run here: dev mode always, otherwise a store id and an `identity` channel key.
+/// Whether PASS can run here: dev mode always, otherwise a store id and an `identity` channel key (env or console).
 fn identity_enabled(s: &AppState) -> bool {
-    s.config.dev_mode || (s.config.portone.store_id.is_some() && s.config.portone.channel_keys.contains_key("identity"))
+    let p = &s.providers.integ().portone;
+    s.config.dev_mode || (p.store_id.is_some() && p.channel_keys.contains_key("identity"))
 }
 
 #[derive(Serialize)]
@@ -130,9 +131,10 @@ async fn identity_session(State(s): State<AppState>, Customer(a): Customer) -> A
         .bind(a.id)
         .execute(&s.db)
         .await?;
+    let p = &s.providers.integ().portone;
     Ok(Json(IdentitySession {
-        store_id: s.config.portone.store_id.clone().unwrap_or_default(),
-        channel_key: s.config.portone.channel_keys.get("identity").cloned().unwrap_or_default(),
+        store_id: p.store_id.clone().unwrap_or_default(),
+        channel_key: p.channel_keys.get("identity").cloned().unwrap_or_default(),
         identity_verification_id: id,
     }))
 }
