@@ -56,6 +56,9 @@ class StoreBrand(unittest.TestCase):
         self.assertEqual(self.run_apply("customer", no_short), "청소왕 서비스")
         odd = dict(self.brand, short_name='A&B<"x">')
         self.assertEqual(self.run_apply("customer", odd), "ABx")
+        # A leading @ or ? would make android:label a resource reference, and the build fails.
+        self.assertEqual(self.run_apply("customer", dict(self.brand, short_name="@string/x")), "stringx")
+        self.assertEqual(self.run_apply("customer", dict(self.brand, short_name="?attr")), "attr")
 
     def test_icons_have_every_size_and_ios_is_opaque(self):
         self.run_apply("customer")
@@ -81,10 +84,17 @@ class StoreBrand(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.run_apply("customer", dict(self.brand, primary_color="teal"))
 
+    def test_only_png_bytes_are_decoded(self):
+        buf = io.BytesIO()
+        Image.new("RGB", (1024, 1024), (0, 0, 0)).save(buf, format="BMP")
+        self.files["https://x/store.png"] = buf.getvalue()
+        with self.assertRaises(SystemExit):
+            self.run_apply("customer")
+
     def test_app_ids_come_from_the_variables(self):
         self.assertEqual(store_brand.app_id("customer", {}), "kr.co.dahae.customer")
         self.assertEqual(store_brand.app_id("partner", {"PARTNER_APP_ID": " com.shop.partner "}), "com.shop.partner")
-        for bad in ("com.my-shop.app", "noDots", "com.1shop"):
+        for bad in ("com.my-shop.app", "noDots", "com.1shop", "com.my_shop.app"):
             with self.assertRaises(SystemExit):
                 store_brand.app_id("customer", {"CUSTOMER_APP_ID": bad})
 

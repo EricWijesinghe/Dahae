@@ -33,7 +33,8 @@ ADAPTIVE_SAFE = 0.44  # 108 dp canvas: only the centred 66 dp circle is never ma
 SHORT_MAX = 12
 MAX_ASSET_BYTES = 5 * 1024 * 1024
 TIMEOUT_S = 20
-APP_ID_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+")
+# One id serves as the Android applicationId and the iOS bundle id: Android refuses `-`, iOS refuses `_`.
+APP_ID_RE = re.compile(r"[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)+")
 HEX_RE = re.compile(r"#[0-9A-Fa-f]{6}")
 LANCZOS = Image.Resampling.LANCZOS
 
@@ -48,7 +49,8 @@ def app_id(app, env):
 def label(app, brand):
     """Home-screen name. Characters that would break the manifest or xcconfig are dropped."""
     name = str(brand.get("short_name") or "").strip() or str(brand.get("name") or "").strip()[:SHORT_MAX]
-    name = re.sub(r"[\x00-\x1f<>&\"'\\$/]", "", name).strip()
+    # A leading @ or ? would make android:label a resource reference.
+    name = re.sub(r"[\x00-\x1f<>&\"'\\$/]", "", name).strip().lstrip("@? ")
     if not name:
         sys.exit("/v1/brand has no name")
     return name if app == "customer" else f"{name} 파트너"
@@ -58,6 +60,8 @@ def fetch(url):
     if not url.startswith("https://"):
         sys.exit(f"refusing a non-https address: {url}")
     with urllib.request.urlopen(url, timeout=TIMEOUT_S) as resp:  # noqa: S310 (https only, checked above)
+        if not resp.url.startswith("https://"):
+            sys.exit(f"refusing a redirect off https: {url}")
         body = resp.read(MAX_ASSET_BYTES + 1)
     if len(body) > MAX_ASSET_BYTES:
         sys.exit(f"{url}: larger than {MAX_ASSET_BYTES} bytes")
@@ -68,7 +72,11 @@ def image(brand, slot, size, get):
     url = (brand.get("assets") or {}).get(slot)
     if not url:
         sys.exit(f"/v1/brand has no {slot} icon: save the logo in the console (사업자 정보) first")
-    im = Image.open(io.BytesIO(get(url)))
+    # PNG only: this job later decodes the signing keys, so no other Pillow decoder sees fetched bytes.
+    try:
+        im = Image.open(io.BytesIO(get(url)), formats=["PNG"])
+    except (OSError, SyntaxError) as e:
+        sys.exit(f"{slot}: not a PNG image ({e})")
     if im.size != (size, size):
         sys.exit(f"{slot}: expected {size}x{size}, got {im.size[0]}x{im.size[1]}")
     return im.convert("RGBA")
