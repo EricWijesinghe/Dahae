@@ -39,7 +39,7 @@ You save and test with test keys, then move to live keys. You also learn what go
 | **Security key (Optional)** | The security key on the same page | 64 characters, 0–9 and a–f | **Yes (server only)** |
 | **Active: take new payments with Toss Payments (Optional)** | (a switch) | on / off | — |
 
-> **Warning** Never enter the **widget keys** (`gck`, `gsk`). Always use the **API individual integration keys** (`ck`, `sk`). Widget keys do not open the payment window.
+> **Warning** Never enter the **widget keys** (`gck`, `gsk`). Always use the **API individual integration keys** (`ck`, `sk`). Widget keys are refused when you save.
 
 > **Warning** All four keys must be test keys (`test_`), or all live keys (`live_`). A mix cannot be saved.
 

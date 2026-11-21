@@ -113,7 +113,7 @@ A webhook is how PortOne tells our server that a payment finished.
 
 ![PortOne's V2 webhook settings](../img/ko/external-portone-webhook.png)
 
-> **Warning** The box says **(Optional)**, but fill it in. The webhook secret proves that a notice really came from PortOne.
+> **Warning** The box says **(Optional)**, but fill it in. The webhook secret proves that a notice really came from PortOne. Left empty, a real business server refuses every PortOne notice (only a test-mode server accepts them).
 
 > **Tip** A webhook never changes a payment by itself. When a notice arrives, the server asks PortOne again before acting.
 
@@ -124,8 +124,9 @@ A webhook is how PortOne tells our server that a payment finished.
 The **Issue cash receipts (Optional)** switch starts off. The help line says: **Off means no cash receipts are issued. Test in the PortOne sandbox before turning it on.**
 
 1. Leave it off for the first save.
-2. Turn it on only after a test payment issued a cash receipt (11.9).
+2. If you will issue cash receipts, turn it on while test channel keys are in place (11.9) and check a test payment gets a receipt. While it is off no receipt is issued, so test with it on.
 3. The card is locked by then, so: **[Unlock (owner code)]** → switch on → **[Save]**.
+4. If the test shows a problem, turn it off again the same way.
 
 ---
 
@@ -165,7 +166,7 @@ Test with PortOne test channel keys first, then switch to the real channel keys.
 3. In the console under **[Bookings]**, check the booking shows as paid.
 4. Make a partial refund on it (chapter 21).
 5. If you will use saved cards (recurring), save a card → pay with it → delete the card, once.
-6. If you will issue cash receipts, pay once by bank transfer or virtual account and check a receipt is issued. Then turn the switch on (11.6).
+6. If you will issue cash receipts, first turn the switch on (11.6). Then pay once by bank transfer or virtual account and check a receipt is issued.
 7. Refund every test payment.
 
 **You should now see:** the payments and refunds look the same in the console and on the PortOne site.

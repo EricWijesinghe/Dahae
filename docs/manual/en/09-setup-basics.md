@@ -22,7 +22,7 @@ Chapters 10 to 17 explain what goes into each card. The steps in this chapter wo
 
 **You should now see:** the **Get ready to launch** title, the count, and the **Business profile** card under it.
 
-- The count covers 13 items: the **Business profile** and 12 outside-service cards. It goes up when you save the service name or a card gets connected.
+- The count covers 13 items: the **Business profile** and 12 outside-service cards. It goes up when you save the service name or save values on a card. Passing the connection check does not matter here. Cards filled in when the server was installed count too.
 - When all 13 are done, the title changes to **Everything is ready!**
 - You do not need every card to open for business. See "Must do, can wait" in 9.8.
 
@@ -66,7 +66,7 @@ Cards 1 to 5 look a little different and are explained in their own chapters.
 
 **The card header (visible even when folded)**
 
-- The circle on the left shows a tick (✔) once connected, and is empty before that.
+- The circle on the left shows a tick (✔) once values are saved, and is empty before that.
 - The small labels under the card name mean:
 
 | Label | Meaning |
@@ -79,7 +79,7 @@ Cards 1 to 5 look a little different and are explained in their own chapters.
 | **Using server settings** | The card uses values set when the server was installed. Ask your developer to change them |
 | **Locked** | Saved and locked (9.5) |
 | **Locks in N min** or **Unlocked** | The owner has unlocked it (9.5) |
-| **Test** / **Live** | Whether a Toss key is a test key or moves real money (Toss cards only) |
+| **Test** / **Live** | Whether a Toss key is a test key or moves real money (only on cards with a Toss key: **Payments (Toss Payments)**, **Partner payouts**) |
 
 - The arrow (∧ / ∨) at the right opens and folds the card. Cards that are not connected start open.
 
@@ -187,7 +187,7 @@ Deletes every value saved on a card. You rarely need it.
 
 **You should now see:** the card header changes to **Not connected**.
 
-> **Warning** A disconnected card stays **Locked** and empty. To enter values again it must be unlocked, but the **[Unlock (owner code)]** button may not appear on such a card (to be confirmed). If so, ask your developer. Only disconnect when you really must.
+> **Warning** A disconnected card stays **Locked** and empty. To enter values again it must be unlocked. But the console shows **[Unlock (owner code)]** only on cards with values saved in the console, so a disconnected card has no such button and cannot be filled in again from the console. If this happens, ask your developer. Only disconnect when you really must.
 
 > **Warning** Never disconnect a payment card (PortOne, Toss Payments). Refunds for payments taken through it, and charges on cards saved with it, would fail. See chapters 11 and 12.
 
@@ -225,5 +225,5 @@ Apply early for anything slow, such as the payment provider's review, and fill i
 | **Finish two-step sign-in and saving recovery codes first** | Two-step sign-in or the recovery-code check is not finished | Finish chapter 6 and 8.5 |
 | **Fill in every required field.** | A box without **(Optional)** is empty | Fill it in |
 | **Please check the highlighted value** | A value has the wrong format | Copy it again as the line under the box says |
-| A saved card has no **Unlock** button | The card shows **Using server settings** | Its values were set when the server was installed. Ask your developer |
+| A disconnected card has no **[Unlock (owner code)]** button | The known problem in 9.7 | Ask your developer |
 | You did not save within 5 minutes | The unlock ended | Click **[Unlock (owner code)]** again |

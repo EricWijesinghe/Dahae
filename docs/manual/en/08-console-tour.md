@@ -19,7 +19,7 @@ The console has two layouts, depending on the width of the screen.
 ![The console on a computer: menu on the left, content on the right](../img/en/console-menu-desktop.png)
 
 1. Open the console address (for example `https://example.co.kr/admin/`) and sign in as in chapter 6.
-2. Look at the left side. At the top is the title **다해 Operations console** (the product name stays in Korean, see chapter 28) and a sun (or moon) button.
+2. Look at the left side. At the top is the title **다해 Operations console** (the product name stays in Korean, see chapter 28) and the theme button. Its picture shows the current mode: auto (A), sun or moon.
 3. Below it is the **[Search or jump]** box. It shows `Ctrl K` on the right.
 4. Below that, the menu items run down the side. The item you are on is highlighted.
 5. At the bottom of the menu are **[Open-source licenses]**, **[Sign out]** and the copyright line.
@@ -37,7 +37,7 @@ The console has two layouts, depending on the width of the screen.
 4. The top bar shows the name of the page you are on.
 5. The magnifier button at the top right opens the **[Search or jump]** window (8.3).
 
-> **Tip** Change light or dark mode with the sun button at the top (**[Change theme]**). Pick **[System]**, **[Light]** or **[Dark]**.
+> **Tip** Change light or dark mode with the theme button at the top (**[Change theme]**). Pick **[System]**, **[Light]** or **[Dark]**.
 
 > **Tip** The console has no language button. If your computer (browser) language is English it shows English; any other language shows Korean.
 
@@ -119,7 +119,7 @@ The owner is also an admin, so the owner sees all 20 items.
 **The window "Confirm with your authenticator"**
 
 Some actions that touch money or personal data ask for an authenticator code again, even while you are signed in.
-Examples: viewing a partner's bank account, running payouts, downloading finance data, exporting or deleting a customer's data.
+Examples: viewing a partner's bank account, showing a partner's full identifier, running payouts, downloading finance data, exporting or deleting a customer's data.
 
 ![The authenticator code window before a sensitive action](../img/en/console-stepup-prompt.png)
 

@@ -130,7 +130,10 @@ Codes used to register your website with Google and Naver search. Leave them emp
 | **Google Search Console 인증 코드** (verification code) | The site ownership code from Google Search Console |
 | **네이버 서치어드바이저 인증 코드** (verification code) | The site ownership code from Naver Search Advisor |
 
-> **Tip** On each site's ownership page, choose the HTML tag method: the code is inside `content="…"`. Paste only the value between the quotes (to be confirmed: the HTML-file method's code is also accepted).
+> **Tip** On each site's ownership page you can choose either the HTML tag method or the HTML file method.
+> - HTML tag method: paste only the value inside `content="…"`.
+> - HTML file method: paste the middle of the file name, without `google` (or `naver`) at the front and `.html` at the end. You need not upload the file: the server shows a file with that name for you.
+> - Only letters, digits, `-` and `_` are accepted, up to 128 characters. Anything else fails on save with **Please check the highlighted value**.
 
 ---
 
@@ -162,7 +165,7 @@ Under the heading **App versions** the card says: **Apps below the minimum stop 
 1. Scroll to the bottom of the card.
 2. Click **[Save]**.
 
-**You should now see:** **Saved** at the bottom of the screen, the mark next to the card title filled in, and the count at the top one higher.
+**You should now see:** **Saved** at the bottom of the screen, the shop picture next to the card title replaced by a tick (✔), and the count at the top one higher.
 
 > **Warning** If you leave for another menu item without saving, what you typed is lost.
 
