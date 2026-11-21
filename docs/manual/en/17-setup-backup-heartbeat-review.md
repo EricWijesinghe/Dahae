@@ -105,7 +105,7 @@ App store reviewers are abroad and can't receive Korean SMS codes. So you fix a 
 
 - **Only the owner** can turn it on or off. Both ask for the authenticator code.
 - It stays on for **14 days**, then switches off by itself.
-- Turning it on adds **2 sample bookings** (one upcoming, one completed) to this account, so reviewers see history without paying.
+- Turning it on adds **2 sample bookings** (one upcoming, one completed) to this account, so reviewers see history without paying. They are not added if no service is on sale in the console, or if this number already has bookings.
 
 ### Turn it on
 
@@ -121,7 +121,7 @@ You should now see: **Saved**, and **Active until (date)** under the card title.
 
 6. Write the number and the 6-digit code in the store review notes (chapter 25).
 
-> **Warning** The partner app is reviewed with the same number. A partner account sees jobs only after your team approves it. Approve the partner account for this number before you submit (chapters 25 and 20).
+> **Warning** The store review notes say the partner app is reviewed with the same number and that you approve its partner account before you submit (chapter 25). But today the server stops using the fixed code as soon as **a partner or staff account exists** on this number: it sends a real SMS code instead. Reviewers then can't sign in again, in either app. Clicking **[Turn on (14 days)]** again then shows **A customer, partner or staff member already uses this number. …** Decide with your developer how the partner app will be reviewed before you submit (**to be confirmed**).
 
 > **Tip** If review takes longer, click **[Turn on (14 days)]** again the same way. The 14 days start again from that day.
 
@@ -141,6 +141,7 @@ You should now see: the date under the card title is gone.
 | **The region isn't valid.** | Enter `auto` for R2 or `kr-standard` for Naver exactly. |
 | **The retention period is out of range.** | Enter a number from 1 to 3650, or leave it empty. |
 | Backup card shows **The key was rejected. …** | Check the token has **Object Read & Write** and the keys were copied exactly. |
+| Backup card shows **Could not reach the service. …** | The storage could not be reached, or it refused the test file. Check the account ID in the endpoint and the bucket name (and that the bucket really exists), then try again in a few minutes. |
 | Backup card shows **Please check the highlighted value** (after the check) | Uploading or deleting the test file failed. Check the bucket name and permissions. |
 | Heartbeat card stays **Not set** | Ask your developer whether the command succeeded, then reload **[Setup]**. |
 | **A customer, partner or staff member already uses this number. …** | Use a demo number that nobody uses. |

@@ -91,9 +91,9 @@ Common body (copy as is):
 | `booking.confirmed` | A booking is confirmed | 예약 확정 안내 |
 | `partner.assigned` | A cleaning team is assigned | 청소팀 배정 안내 |
 | `booking.reminder` | The day before the visit | 방문 전날 안내 |
-| `booking.arrival` | The team arrives (the server does not send this yet; optional) | 기사 도착 안내 |
+| `booking.arrival` | The team checks in on site | 기사 도착 안내 |
 | `booking.completed` | The cleaning is finished | 청소 완료 안내 |
-| `payment.receipt` | Payment receipt (the server does not send this yet; optional) | 결제 완료 안내 |
+| `payment.receipt` | A customer payment goes through | 결제 완료 안내 |
 | `booking.cancelled` | A booking is cancelled | 예약 취소 안내 |
 
 ### Step 3: enter them in the console
@@ -111,11 +111,14 @@ Common body (copy as is):
 
 ### Step 4: try it for real
 
-1. In the customer app, make a booking with a **test phone number**. Don't use a real customer's number.
-2. In the console, confirm, assign and then cancel that booking (chapter 19).
-3. Watch for AlimTalk messages on the test phone.
+The console can take only the `booking.completed` (cleaning finished) template today, so test with the **cleaning finished** message.
 
-You should now see: KakaoTalk messages shaped like `[service name] title`.
+1. In the customer app, make a booking with a **test phone number**. Don't use a real customer's number. Keep the customer app in **Korean**.
+2. In the console, confirm the booking and assign a team (chapter 19).
+3. In the partner app, take the job through to **complete**, with before and after photos (chapter 24).
+4. Watch for the AlimTalk message on the test phone.
+
+You should now see: a KakaoTalk message shaped like `[service name] 청소가 끝났어요`. The confirmed and assigned messages arrive by **SMS** until their template IDs are in. Nothing is broken.
 
 If an SMS arrives instead, check the template ID, the pfId and the variable names (`#{brand}`, `#{title}`, `#{body}`).
 

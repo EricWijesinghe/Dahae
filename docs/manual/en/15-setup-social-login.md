@@ -21,7 +21,7 @@ A sign-in button shows and works only when values are in **two places**.
 
 - If an app build lacks the values, that button does not appear on the app's sign-in screen at all.
 - The web pages and the Windows app have no social sign-in buttons.
-- On iPhone, if any other social sign-in shows, **Sign in with Apple** shows too (App Store rule).
+- The iPhone app shows **Sign in with Apple** by default. If any other social sign-in shows, Apple always shows with it (App Store rule). The Android app has no Apple button.
 
 ![Social sign-in buttons in the customer app](../img/en/customer-login-social.png)
 
@@ -135,7 +135,7 @@ You should now see: **Saved · confirm by signing in from the app**.
 
 These values let a customer return to the app after Naver sign-in instead of staying on a web page. **The developer who builds the apps gives you both values.** You only paste them.
 
-1. On **[Setup]**, find the **App links** card. It is near the top, below the business and payment method cards.
+1. On **[Setup]**, find the **App links** card. It is near the top, right below the business profile, payment methods, store review demo account and uptime heartbeat cards.
 2. The card says which values are in use: **Using the values saved in the console** or **Using the server configuration values**.
 3. Paste the developer's fingerprint into **Android signing fingerprint (SHA-256)**. **One per line**, up to 8. Each looks like `AA:BB:…`: 32 hex pairs separated by colons.
 4. Enter the Team ID in **Apple Team ID (10 characters)** (the same Team ID as in 15.4).
@@ -149,7 +149,7 @@ You should now see: **Saved**, and the line at the top changes to **Using the va
 
 > **Tip** You can fill in one side first. The empty side shows off, with the note **With no values both links are off, and Naver sign-in may not return to the app.**
 
-> **Note** Your developer can set the same values from the server terminal with `sudo dahae applinks --android-sha256 … --apple-team-id …`. The card then shows **Using the server configuration values**.
+> **Note** Your developer can set the same values from the server terminal with `sudo dahae applinks --android-sha256 … --apple-team-id …`. But once anyone has clicked **[Save]** on this card, the console values win and the command's values are not used. The card shows **Using the server configuration values** only while nothing has been saved in the console.
 
 ## 15.6 Sign in from the app yourself
 

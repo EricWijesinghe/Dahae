@@ -14,7 +14,7 @@ Automatic Toss payouts are still being built, so this chapter only shows how to 
 
 1. In the console's left menu, click **[Setup]**.
 2. Scroll down to the **Partner payouts** card.
-3. Click the card title to open it.
+3. Click the card title to open it. A card that has never been saved is already open.
 
 You should now see: two **How to set up** steps, **Webhook URL (paste into the Toss Payments developer center)**, and the boxes **Mode**, **Toss secret key (Optional)** and **security_key (Optional)**.
 
@@ -59,7 +59,7 @@ As step 2 of the card's **How to set up** says, automatic Toss payouts are still
 
 1. In the Toss Payments developer center, copy the payouts **test secret key** (starts with `test_sk_`) and the **security key** (64 characters, each 0-9 or a-f).
 2. In the console, open **[Setup]** → **Partner payouts**.
-3. If the card is locked, click **[Unlock (owner code)]** and enter the 6-digit code from your authenticator app (chapter 9). You then have 5 minutes.
+3. If the card is locked, click **[Unlock (owner code)]** and enter the 6-digit code from your authenticator app (chapter 9). You then have 5 minutes, and one save locks the card again.
 4. Type `manual` in **Mode**.
 5. Paste the test secret key into **Toss secret key (Optional)**.
 6. Paste the security key into **security_key (Optional)**.
@@ -82,9 +82,12 @@ You should now see: **Connected** and **Test** under the card title.
 
 1. Click **[Unlock (owner code)]** and enter your 6-digit code.
 2. Type `toss` in **Mode**.
-3. Click **[Save]**. If the card was not unlocked, the **Owner authenticator code** window opens. Enter the **6-digit code** and click **[Confirm]**.
+3. Click **[Save]**. (Only if the card has never been saved, the first save with `toss` opens the **Owner authenticator code** window instead of the unlock. Enter the **6-digit code** and click **[Confirm]**.)
+4. When the card has locked again, click **[Check connection]** **once more**.
 
-You should now see: **Saved**, and the card locks again.
+You should now see: **Saved**, and after the second **[Check connection]**, **Connected** under the card title.
+
+> **Warning** Every save clears the server's record of the last connection check, and Toss payouts only switch on while that record is there. So after saving `toss`, payouts stay manual until **[Check connection]** shows **Connected** again. About a minute after that, Toss payouts are on. This comes from reading the code; ask your developer to confirm it (**to be confirmed**).
 
 ### Step 4: register partners as Toss sellers, then pay
 
