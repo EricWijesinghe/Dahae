@@ -60,7 +60,7 @@ pub struct TossPayments {
     pub billing: Option<(String, String)>,
     /// 보안 키 (64 hex): webhook signatures.
     pub security_key: Option<String>,
-    /// 사용 (on by default): Toss takes new payments next to PortOne. Off stops only new Toss checkouts and new
+    /// 사용 (unset: on with live keys, off with test keys): Toss takes new payments next to PortOne. Off stops only new Toss checkouts and new
     /// saved cards; webhooks, confirms, refunds and saved-card charges keep running.
     pub active: bool,
 }
@@ -184,7 +184,7 @@ impl Integrations {
         self.has(Section::Portone)
     }
 
-    /// The Toss card while it takes new payments: saved, valid, 사용 on (the default).
+    /// The Toss card while it takes new payments: saved, valid, 사용 on (by default only with live keys).
     pub fn toss_offered(&self) -> Option<&TossPayments> {
         self.toss_payments.as_ref().filter(|t| t.active)
     }
@@ -593,12 +593,15 @@ fn toss_payments(v: &Map<String, Value>) -> Result<TossPayments, Invalid> {
     if let Some(k) = &security_key {
         crate::providers::toss_jwe::key_bytes(k).map_err(|_| Invalid("invalid_security_key"))?;
     }
+    // Not switched yet: live keys take payments, test keys wait for the owner (a live server must not take bookings
+    // on test keys just because the keys were saved).
+    let active = toggle(v, "active")?.unwrap_or(toss_key_mode(&secret_key) == Some("live"));
     Ok(TossPayments {
         client_key,
         secret_key,
         billing,
         security_key,
-        active: toggle(v, "active")?.unwrap_or(true),
+        active,
     })
 }
 
@@ -746,6 +749,11 @@ pub fn merge(section: Section, current: &Map<String, Value>, incoming: &Map<Stri
         if let Some(v) = next {
             out.insert(field.name.to_string(), v);
         }
+    }
+    // The Toss switch is stored on save, so the console shows what runs and a later key change keeps it.
+    if section == Section::TossPayments && !out.contains_key("active") {
+        let live = out.get("secret_key").and_then(Value::as_str).and_then(toss_key_mode) == Some("live");
+        out.insert("active".into(), json!(live));
     }
     out
 }

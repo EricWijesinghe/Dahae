@@ -461,9 +461,14 @@ fn toss_payments_card_checks_prefixes_pairs_modes_and_the_switch() {
         bare.as_object_mut().unwrap().remove(k);
     }
     let t = apply(&base, Section::TossPayments, &obj(bare)).unwrap().toss_payments.unwrap();
-    assert_eq!((t.billing, t.security_key, t.active), (None, None, true), "optional fields; on by default");
+    assert_eq!(
+        (t.billing, t.security_key, t.active),
+        (None, None, false),
+        "optional fields; test keys stay off"
+    );
     let live = json!({"client_key": "live_ck_w", "secret_key": "live_sk_w"});
-    assert!(apply(&base, Section::TossPayments, &obj(live)).is_ok());
+    let t = apply(&base, Section::TossPayments, &obj(live)).unwrap().toss_payments.unwrap();
+    assert!(t.active, "live keys saved without the switch take payments");
 }
 
 fn portone(keys: &[&str], secret: bool, store: bool) -> PortOne {
@@ -511,17 +516,23 @@ fn each_method_goes_to_portone_when_it_has_a_key_else_to_toss_when_offered() {
         assert_eq!((half.gateway_for("card"), half.billing_gateway()), (None, None), "keys without secret or store");
     }
 
-    let only = Integrations {
+    let untouched = Integrations {
         toss_payments: toss(None, true),
         ..Integrations::default()
     };
-    assert!(
-        ["card", "kakaopay", "transfer"].iter().all(|m| only.gateway_for(m) == Some(T)),
-        "saved without the switch = on"
+    assert_eq!(
+        (untouched.gateway_for("card"), untouched.billing_gateway()),
+        (None, None),
+        "test keys saved without the switch take no payments"
     );
+    let only = Integrations {
+        toss_payments: toss(Some(true), true),
+        ..Integrations::default()
+    };
+    assert!(["card", "kakaopay", "transfer"].iter().all(|m| only.gateway_for(m) == Some(T)));
     assert_eq!(only.billing_gateway(), Some(T));
     let no_pair = Integrations {
-        toss_payments: toss(None, false),
+        toss_payments: toss(Some(true), false),
         ..Integrations::default()
     };
     assert_eq!((no_pair.gateway_for("card"), no_pair.billing_gateway()), (Some(T), None));
@@ -555,6 +566,31 @@ fn each_method_goes_to_portone_when_it_has_a_key_else_to_toss_when_offered() {
         "an invalid card is skipped by load: Toss is not set up"
     );
     assert!(toggle_default(&Integrations::default(), Section::TossPayments, "active"), "the switch shows on");
+}
+
+#[test]
+fn toss_payments_save_stores_the_switch_live_keys_on_test_keys_off() {
+    let none = Map::new();
+    let keys = |sk: &str| obj(json!({"client_key": sk.replace("_sk_", "_ck_"), "secret_key": sk}));
+    assert_eq!(merge(Section::TossPayments, &none, &keys("test_sk_w"))["active"], json!(false));
+    assert_eq!(merge(Section::TossPayments, &none, &keys("live_sk_w"))["active"], json!(true));
+    let mut on = keys("test_sk_w");
+    on.insert("active".into(), json!(true));
+    assert_eq!(merge(Section::TossPayments, &none, &on)["active"], json!(true), "a switch the owner set wins");
+    let saved = merge(Section::TossPayments, &none, &on);
+    assert_eq!(
+        merge(Section::TossPayments, &saved, &keys("live_sk_w"))["active"],
+        json!(true),
+        "kept on later saves"
+    );
+    let mut untouched = obj(toss_card());
+    untouched.remove("active");
+    assert_eq!(
+        merge(Section::TossPayments, &untouched, &Map::new())["active"],
+        json!(false),
+        "an older card saved without it"
+    );
+    assert!(!merge(Section::Portone, &none, &obj(json!({"api_secret": "x"}))).contains_key("active"));
 }
 
 #[test]
