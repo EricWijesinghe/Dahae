@@ -44,10 +44,14 @@ class _SetupScreenState extends State<SetupScreen> {
       builder: (context, data, reload) {
         final cards = (data['integrations'] as List).cast<Json>();
         final business = (data['business'] as Json?) ?? const {};
+        // PortOne and Toss Payments are one item: either one is enough to take payments.
+        final others = cards.where((c) => !_payCards.contains(c['code']));
+        final pay = cards.where((c) => _payCards.contains(c['code']));
         final done =
-            cards.where((c) => c['configured'] == true).length +
+            others.where((c) => c['configured'] == true).length +
+            (pay.any((c) => c['configured'] == true) ? 1 : 0) +
             (business['name'] != null ? 1 : 0);
-        final total = cards.length + 1;
+        final total = others.length + (pay.isEmpty ? 0 : 1) + 1;
         return Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
@@ -88,15 +92,8 @@ class _SetupScreenState extends State<SetupScreen> {
                   const SizedBox(height: Space.md),
                   if (c['code'] == 'portone') ...[
                     Text(t.cPaymentsTitle, style: context.text.titleMedium),
-                    if (_gatewayNames[data['payment_gateway']] case final g?)
-                      Text(
-                        [
-                          t.cSetupGatewayLive(g.of(context.lang)),
-                          if (data['payment_gateway_mode'] == 'test')
-                            t.cSetupGatewayTestKeys,
-                        ].join(' '),
-                        style: context.text.bodyMedium,
-                      ),
+                    if (_gatewayLine(t, data, context.lang) case final line?)
+                      Text(line, style: context.text.bodyMedium),
                     const SizedBox(height: Space.sm),
                   ],
                   IntegrationCard(
@@ -132,11 +129,31 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 }
 
-/// Where new payments go (`payment_gateway` from the server), by brand name.
-const _gatewayNames = <Object?, Tr>{
-  'portone': Tr('PortOne', 'PortOne'),
-  'tosspayments': Tr('토스페이먼츠', 'Toss Payments'),
-};
+const _payCards = {'portone', 'tosspayments'};
+
+/// Every gateway a new payment can reach, PortOne first, each marked when it runs on test keys.
+/// A server older than `payment_gateways` sends only its one gateway; one older still (v1.5.1) sends none.
+String? _gatewayLine(T t, Json data, String lang) {
+  final gateways = switch (data['payment_gateways']) {
+    final List<Object?> list => list.cast<Json>(),
+    _ when data['payment_gateway'] != null => [
+      {'code': data['payment_gateway'], 'mode': data['payment_gateway_mode']},
+    ],
+    _ => null,
+  };
+  if (gateways == null) return null;
+  final names = [
+    for (final g in gateways)
+      if (gatewayNames[g['code']] case final name?)
+        [
+          name.of(lang),
+          if (g['mode'] == 'test') t.cSetupGatewayTestKeys,
+        ].join(' '),
+  ];
+  return names.isEmpty
+      ? t.cSetupGatewayNone
+      : t.cSetupGatewayLive(names.join(', '));
+}
 
 class _Header extends StatelessWidget {
   const _Header({
@@ -380,7 +397,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
   Future<Map<String, String>?> _ownerHeaders({required bool clearing}) async {
     // An open unlock window already carries the owner's code; the server ignores a second one.
     if (widget.card['unlock_expires_at'] != null) return const {};
-    // The first save of a payment gateway card sets where checkout money goes, so it needs the owner too.
+    // The first save of a payment gateway card adds a place checkout money goes, so it needs the owner too.
     final typedToss = !clearing && _text['mode']?.text.trim() == 'toss';
     final needsCode = _gatewayCard
         ? !clearing && !_locked

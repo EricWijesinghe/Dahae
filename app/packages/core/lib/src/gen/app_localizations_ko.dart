@@ -7174,7 +7174,7 @@ class TKo extends T {
   String get cSetupTestApiKey => 'API 키 확인';
 
   @override
-  String get cSetupNeedsKey => '채널 키를 먼저 넣어요';
+  String get cSetupNeedsKey => 'PortOne 채널 키나 토스페이먼츠가 필요해요';
 
   @override
   String get cSetupOtherMethods => '기타 결제수단';
@@ -7607,7 +7607,16 @@ class TKo extends T {
 
   @override
   String cSetupGatewayLive(String name) {
-    return '새 결제를 받는 곳: $name';
+    return '결제를 받는 곳: $name';
+  }
+
+  @override
+  String get cSetupGatewayNone =>
+      '아직 결제를 받을 곳이 없어요. PortOne, 토스페이먼츠 중 하나 또는 둘 다 설정하세요.';
+
+  @override
+  String cPayMethodGateway(String name) {
+    return '결제사: $name';
   }
 
   @override

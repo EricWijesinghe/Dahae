@@ -53,7 +53,7 @@ class _PayMethodPickerState extends State<PayMethodPicker> {
     _channels = _loadChannels();
   }
 
-  /// Saved-card channels show only when PortOne is configured for them (see [BillingSetup]).
+  /// Saved-card channels show only when a gateway can save cards (see [BillingSetup]).
   Future<List<PayChannel>> _loadChannels() async {
     final api = context.api;
     final channels = await fetchPayChannels(api);

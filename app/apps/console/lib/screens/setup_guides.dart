@@ -14,6 +14,12 @@ class Tr {
   String of(String lang) => lang == 'ko' ? ko : en;
 }
 
+/// The payment gateways by brand name, keyed by the server's gateway code.
+const gatewayNames = <Object?, Tr>{
+  'portone': Tr('PortOne', 'PortOne'),
+  'tosspayments': Tr('토스페이먼츠', 'Toss Payments'),
+};
+
 class FieldGuide {
   const FieldGuide(this.label, {this.hint, this.suggestions = const []});
   final Tr label;
@@ -114,6 +120,10 @@ final guides = <String, Guide>{
         '저장한 뒤 [API 키 확인] 을 눌러 초록색이 나오면 끝!',
         'Save, then press Check API key. Green means done!',
       ),
+      Tr(
+        'PortOne은 선택이에요. 토스페이먼츠만 써도 되지만, 본인인증(PASS)에는 PortOne 본인인증 채널이 필요해요. 토스페이먼츠와 함께 쓰면 채널 키를 넣은 결제수단만 PortOne으로 가요.',
+        'PortOne is optional: Toss Payments alone works, but identity checks (PASS) need a PortOne identity channel. With Toss Payments as well, only methods that have a PortOne channel key go to PortOne.',
+      ),
     ],
     devHelp: true,
     fields: const {
@@ -177,16 +187,20 @@ final guides = <String, Guide>{
         'In the developer center webhooks menu, register the webhook URL below on the payment-window MID with the PAYMENT_STATUS_CHANGED and DEPOSIT_CALLBACK events.',
       ),
       Tr(
-        '① 테스트 키(test_) 네 개로 저장하고 [API 키 확인] 을 눌러 초록색인지 봐요. [API 키 확인] 은 시크릿 키만 확인해요. 다른 MID의 클라이언트 키는 첫 테스트 결제에서야 드러나요.',
-        '① Save the four test keys (test_) and press Check API key: look for green. Check API key tests the secret keys only; a client key from another MID shows up only at the first test payment.',
+        '① 이미 결제를 받고 있는 서버라면 먼저 사용을 꺼요. 테스트 키(test_) 네 개로 저장하고 [API 키 확인]을 눌러 초록색인지 봐요. [API 키 확인]은 시크릿 키만 확인해요. 다른 MID의 클라이언트 키는 첫 테스트 결제에서야 드러나요.',
+        '① On a server that already takes payments, turn Active off first. Save the four test keys (test_) and press Check API key: look for green. Check API key tests the secret keys only; a client key from another MID shows up only at the first test payment.',
       ),
       Tr(
-        '② 영업을 시작하기 전에: 설정 > 결제 수단에서 토스페이먼츠와 계약·승인된 수단만 켜 두세요. 잠금을 풀고 사용을 켜고 저장한 뒤, 결제수단마다 테스트 결제와 환불을 해 보고 테스트 결제는 모두 환불하세요. 사용은 꺼진 동안 새 결제가 PortOne으로 가므로, 이 단계가 토스페이먼츠를 시험하는 유일한 방법이에요.',
-        '② Before opening for business: under Setup > Payment methods, leave on only the methods Toss Payments contracted and approved. Unlock, switch Active on and save, then make a test payment and refund per method and refund every test payment. While Active is off new payments go to PortOne, so this is the only way to try Toss Payments.',
+        '② 영업을 시작하기 전에(이미 영업 중이면 사용을 켜기 전에): 설정 > 결제 수단에서 토스페이먼츠와 계약·승인된 수단만 켜 두세요. 사용이 켜지면 PortOne 채널 키가 없는 켜진 수단이 모두 고객에게 토스페이먼츠로 보여요. 잠금을 풀고 사용을 켠 채 저장한 뒤, 결제수단마다 테스트 결제와 환불을 해 보고 테스트 결제는 모두 환불하세요.',
+        '② Before opening for business (if you are open already, before turning Active on): under Setup > Payment methods, leave on only the methods Toss Payments contracted and approved. With Active on, every switched-on method without a PortOne channel key is offered through Toss Payments. Unlock, save with Active on, make a test payment and refund per method, and refund every test payment.',
       ),
       Tr(
-        '③ 잠금을 풀고 네 키를 모두 라이브 키(live_)로 바꿔 저장한 뒤 [API 키 확인] 을 다시 눌러요. 테스트 키로 켜져 있으면 결제 연결 제목 아래에 "테스트 키"가 보여요. 그동안 받은 예약에는 실제 돈이 들어오지 않아요.',
-        '③ Unlock, replace all four keys with live keys (live_), save, and press Check API key again. While Active runs on test keys, the payments heading says "test keys": bookings made then bring in no real money.',
+        '③ 잠금을 풀고 네 키를 모두 라이브 키(live_)로 바꿔 저장한 뒤 [API 키 확인]을 다시 눌러요. 테스트 키로 받는 동안 결제 연결 제목 아래 토스페이먼츠 옆에 "테스트 키"가 보여요. 그동안 받은 예약에는 실제 돈이 들어오지 않아요.',
+        '③ Unlock, replace all four keys with live keys (live_), save, and press Check API key again. While Toss Payments takes payments on test keys, the payments heading shows "test keys" next to it: bookings made then bring in no real money.',
+      ),
+      Tr(
+        '④ PortOne과 함께 쓰면 PortOne 채널 키가 있는 결제수단은 PortOne으로, 나머지 켜진 수단은 토스페이먼츠로 가요. 설정 > 결제 수단에 수단마다 결제사가 보여요. 한 수단을 토스페이먼츠로 옮기려면 PortOne 카드에서 그 채널 키를 지워요. 본인인증(PASS)은 PortOne이 있어야 해요.',
+        '④ With PortOne as well, a method with a PortOne channel key goes to PortOne and every other switched-on method to Toss Payments. Setup > Payment methods shows each method\'s gateway. To move a method to Toss Payments, clear its channel key on the PortOne card. Identity checks (PASS) need PortOne.',
       ),
     ],
     devHelp: true,
@@ -227,13 +241,10 @@ final guides = <String, Guide>{
         ),
       ),
       'active': FieldGuide(
-        Tr(
-          '사용: 새 결제를 토스페이먼츠로 받기',
-          'Active: take new payments with Toss Payments',
-        ),
+        Tr('사용: 토스페이먼츠로 결제 받기', 'Active: take payments with Toss Payments'),
         hint: Tr(
-          '켜면 새 결제와 새로 저장하는 카드가 토스페이먼츠로 가요. 진행 중인 결제, 환불, 이미 저장된 카드는 처음 결제한 곳(PortOne 또는 토스페이먼츠)에서 계속 처리하니 두 카드를 지우지 마세요. 본인인증(PASS)도 PortOne이 필요해요. 켜기 전에 설정 > 결제 수단에서 토스페이먼츠와 계약·승인된 수단만 켜 두세요. 토스로 바꾸면 PortOne에서 숨겨졌던 수단도 고객에게 보여요.',
-          'On: new payments and newly saved cards go to Toss Payments. Payments in progress, refunds and saved cards stay where they started (PortOne or Toss Payments), so keep both cards. Identity checks (PASS) also need PortOne. Before switching on, leave on only the methods Toss Payments approved under Setup > Payment methods: under Toss, methods PortOne hid are shown to customers too.',
+          '켜 두면(기본) PortOne 채널 키가 없는 켜진 결제수단을 토스페이먼츠로 받아요. PortOne에 정기결제나 카드 채널 키가 없으면 새로 저장하는 카드도 토스페이먼츠로 가요. 끄면 새 결제와 새 카드 저장만 멈춰요. 진행 중인 결제, 환불, 저장된 카드와 정기결제는 계속 토스페이먼츠에서 처리하니 이 카드를 지우지 마세요.',
+          'On (the default): switched-on methods without a PortOne channel key are paid through Toss Payments. New cards are saved with Toss Payments too when PortOne has no billing or card channel key. Off stops only new payments and new saved cards. Payments in progress, refunds, saved cards and subscriptions keep running on Toss Payments, so keep this card.',
         ),
       ),
     },
