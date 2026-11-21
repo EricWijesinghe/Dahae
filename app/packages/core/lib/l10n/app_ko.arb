@@ -3514,7 +3514,7 @@
   }
  },
  "cSetupTestApiKey": "API 키 확인",
- "cSetupNeedsKey": "채널 키를 먼저 넣어요",
+ "cSetupNeedsKey": "PortOne 채널 키나 토스페이먼츠가 필요해요",
  "cSetupOtherMethods": "기타 결제수단",
  "cSlotHintCard": "PortOne 콘솔의 채널 목록에서 일반결제(카드) 채널 키를 복사하세요",
  "cSlotHintBilling": "정기결제(빌링키) 채널 키예요. 비워 두면 카드 채널 키를 써요",
@@ -3675,8 +3675,17 @@
  "tTaxBusiness": "사업자 등록 (원천징수 없음)",
  "tReceiptSettings": "영수증 설정",
  "cIntTossPayments": "결제 (토스페이먼츠)",
- "cSetupGatewayLive": "새 결제를 받는 곳: {name}",
+ "cSetupGatewayLive": "결제를 받는 곳: {name}",
  "@cSetupGatewayLive": {
+  "placeholders": {
+   "name": {
+    "type": "String"
+   }
+  }
+ },
+ "cSetupGatewayNone": "아직 결제를 받을 곳이 없어요. PortOne, 토스페이먼츠 중 하나 또는 둘 다 설정하세요.",
+ "cPayMethodGateway": "결제사: {name}",
+ "@cPayMethodGateway": {
   "placeholders": {
    "name": {
     "type": "String"

@@ -69,6 +69,7 @@ flowchart LR
 | 기능 | 한 줄 설명 | 사용자 | 주요 파일 |
 |---|---|---|---|
 | 결제 수단 목록 | 10가지 결제 수단(카드, 간편결제, 삼성·애플페이, 계좌이체, 가상계좌, 휴대폰)을 목록으로 관리하고 사장님이 켜고 꺼요. | 고객, 사장님 | [`routes/payments.rs`](../backend/crates/api/src/routes/payments.rs) |
+| 결제사: PortOne, 토스페이먼츠, 또는 둘 다 | 둘 다 선택이에요. 고객은 설정된 결제사의 결제수단을 모두 봐요. 결제수단마다 PortOne 에 채널 키가 있으면 PortOne, 없으면 토스페이먼츠로 가고, 결제·저장 카드·환불은 시작한 결제사에 남아요. | 고객, 사장님 | [`integrations.rs`](../backend/crates/api/src/integrations.rs) (`gateway_for`, `billing_gateway`), [`routes/payments.rs`](../backend/crates/api/src/routes/payments.rs) |
 | 일회성 결제 (체크아웃) | 결제 의도를 만들고, 결제 후 서버가 PortOne에서 결제를 확인해 예약을 만들어요. 체크아웃은 30분 뒤 만료돼요. | 고객 | [`routes/checkouts.rs`](../backend/crates/api/src/routes/checkouts.rs), [`routes/checkout_policy.rs`](../backend/crates/api/src/routes/checkout_policy.rs) |
 | 결제 확인 원칙 | 결제 금액과 상태가 맞을 때만 예약을 만들어요. 맞지 않으면 결제를 환불해요. | 시스템 | [`routes/checkouts.rs`](../backend/crates/api/src/routes/checkouts.rs) (`settle`, `give_back`) |
 | 가상계좌 입금 | 가상계좌를 발급받고 입금 대기 상태를 보여 줘요. | 고객 | [`routes/checkouts.rs`](../backend/crates/api/src/routes/checkouts.rs), `app/apps/customer/lib/screens/virtual_account.dart` |
@@ -270,7 +271,7 @@ flowchart LR
 | 연결 테스트 | 카드마다 [연결 확인] (PortOne 은 [API 키 확인]) 을 눌러 연결을 확인해요. 잠긴 카드도 저장된 값으로 확인할 수 있어요. 결과는 저장돼요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/{section}/test`) |
 | 사업자 정보 | 상호, 고객센터 연락처, 운영 시간 등 판매자 정보를 입력해요. 공개 사이트의 판매자 정보 블록에 나와요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/business`), [`routes/seller.rs`](../backend/crates/api/src/routes/seller.rs) |
 | 앱 링크 | 안드로이드 지문과 애플 팀 ID를 넣으면 네이버 로그인 복귀 주소를 앱으로 연결해요. | 사장님 | [`app_links.rs`](../backend/crates/api/src/app_links.rs), [`setup_app_links.dart`](../app/apps/console/lib/screens/setup_app_links.dart) |
-| 결제 수단 설정 | 결제 수단별 채널 키를 넣고 켜요. 실제 게이트웨이에서는 채널 키가 없으면 켤 수 없어요. | 사장님 | [`routes/payments.rs`](../backend/crates/api/src/routes/payments.rs), [`setup_pay_methods.dart`](../app/apps/console/lib/screens/setup_pay_methods.dart) |
+| 결제 수단 설정 | 결제 수단을 켜고 꺼요. 수단마다 결제사가 보이고, PortOne 채널 키도 토스페이먼츠도 없으면 켤 수 없어요. | 사장님 | [`routes/payments.rs`](../backend/crates/api/src/routes/payments.rs), [`setup_pay_methods.dart`](../app/apps/console/lib/screens/setup_pay_methods.dart) |
 | 심사용 계정 | 앱스토어 심사용 계정과 샘플 데이터를 만들고 기간을 정해요. | 사장님 | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`setup/review`) |
 | 설정 안내 글 | 마법사 각 단계의 안내 글과 서식을 보여 줘요. | 사장님 | [`setup_guides.dart`](../app/apps/console/lib/screens/setup_guides.dart), [`setup_formats.dart`](../app/apps/console/lib/screens/setup_formats.dart) |
 
@@ -594,7 +595,7 @@ This is Dahae's **customer support helper**. The owner turns it on in the setup 
 | Upload checks | File type from magic bytes, random names, served only through short signed links. | System | [`routes/uploads.rs`](../backend/crates/api/src/routes/uploads.rs), [`image_meta.rs`](../backend/crates/api/src/image_meta.rs) |
 | Breached-password check | Passwords on a breached list are refused. | System | [`auth.rs`](../backend/crates/api/src/auth.rs) (`BREACHED_PASSWORDS`) |
 | Sessions | Devices and sessions can be listed and ended; sign out everywhere is available. | All users | [`routes/auth.rs`](../backend/crates/api/src/routes/auth.rs), [`routes/owner.rs`](../backend/crates/api/src/routes/owner.rs) (`sign-out-all`) |
-| Integration-key lock | Each integration card locks after saving; the owner unlocks it for five minutes. The PortOne card and a Toss payout card also need the owner's TOTP code on the first save. Locks and unlocks are audited. | Owner | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`unlock`, `lock`, `UNLOCK_TTL_SECS`) |
+| Integration-key lock | Each integration card locks after saving; the owner unlocks it for five minutes. The PortOne card, the Toss Payments card and a Toss payout card also need the owner's TOTP code on the first save. Locks and unlocks are audited. | Owner | [`routes/setup.rs`](../backend/crates/api/src/routes/setup.rs) (`unlock`, `lock`, `UNLOCK_TTL_SECS`) |
 | Keys bundle | The two keys a restore needs (`DATA_KEY`, `JWT_SECRET`) sealed under a passphrase with PBKDF2 at 600,000 iterations. | Owner | [`keys_bundle.rs`](../backend/crates/api/src/keys_bundle.rs), [`routes/keys.rs`](../backend/crates/api/src/routes/keys.rs) |
 | Edge headers and blocked paths | Content Security Policy, tokens and signatures redacted from logs; `/metrics` and `/ready` are not public. | System | [`deploy/Caddyfile`](../deploy/Caddyfile) |
 | Hardened containers | Read-only root filesystem, no privilege gain, all Linux capabilities dropped unless listed. | System | [`deploy/docker-compose.yml`](../deploy/docker-compose.yml) |

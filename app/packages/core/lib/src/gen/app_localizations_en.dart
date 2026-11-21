@@ -7403,7 +7403,7 @@ class TEn extends T {
   String get cSetupTestApiKey => 'Check API key';
 
   @override
-  String get cSetupNeedsKey => 'Add the channel key first';
+  String get cSetupNeedsKey => 'Needs a PortOne channel key or Toss Payments';
 
   @override
   String get cSetupOtherMethods => 'Other payment methods';
@@ -7857,7 +7857,16 @@ class TEn extends T {
 
   @override
   String cSetupGatewayLive(String name) {
-    return 'New payments go to: $name';
+    return 'Payments go to: $name';
+  }
+
+  @override
+  String get cSetupGatewayNone =>
+      'No payment gateway is set up yet. Set up PortOne, Toss Payments, or both.';
+
+  @override
+  String cPayMethodGateway(String name) {
+    return 'Gateway: $name';
   }
 
   @override
