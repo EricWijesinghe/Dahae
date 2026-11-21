@@ -13,13 +13,13 @@
 
 ## 27.1 What is backed up, when and where
 
-This happens by itself. There is nothing for you to press.
+The on-server backup and the offsite backup happen by themselves. There is nothing for you to press. Only the secret key copy is made by a person (27.4).
 
 | What | When | Where | Kept for |
 |---|---|---|---|
 | **On-server backup** (customer and booking data + photo files) | Every day at 3:30 in the morning (Korea time). Also once right before every update, rollback and restore | The backup folder on the server disk | 14 days |
 | **Offsite backup** (a copy of the on-server backup) | Right after the on-server backup | The S3-compatible store you connected in chapter 17 (for example Cloudflare R2, Naver Cloud Object Storage, AWS S3) | The card's retention (starts at 30 days, 1 to 3650 days) |
-| **Secret key copy** | Once right after install, and again whenever the keys change | Off the server (password manager, USB stick) | Kept by you |
+| **Secret key copy** | Not automatic. The developer makes one right after install, and again whenever the keys change | Off the server (password manager, USB stick) | Kept by you |
 
 - Every backup file is **encrypted**. No unencrypted backup stays on the server disk either.
 - Backups run once a day, so in the worst case you can lose **one day of data** (bookings that came in after the last backup).
@@ -74,7 +74,7 @@ A server installed on AWS (chapters 3–4) has one more layer: **disk snapshots*
 
 Today the console cannot make or download the secret key copy. Ask your developer (installer).
 
-1. Tell your developer: **"Please make a copy of the security keys."**
+1. Tell your developer: **"Please make a secret key copy."**
 2. The developer makes the copy file on the server and sets a **lock password** (12 characters or more). The file name looks like `keys-date-time.env.enc`.
 3. Receive the file. Do not receive it pasted into KakaoTalk or an email body. Receive the file itself, on a USB stick or through a password manager.
 4. Store the file in a **password manager** or on a **USB stick**. It must be somewhere other than the server.
@@ -85,7 +85,7 @@ You are done when: running `sudo dahae status` on the server shows `✔ 비밀 �
 
 > **Warning** If you lose **both** the copy file and the lock password, offsite backups cannot be opened. If someone else gets both, they can learn the server's secret key. Keep the two apart and safe.
 
-> **Tip** Add a **Secret key copy check** entry in the console's **[Renewal calendar]** so you do not forget to check it regularly (chapter 23).
+> **Tip** In the console's **[Renewal calendar]**, click **[Add a renewal]**, choose **Type** **Other**, name it `Secret key copy check` and set a date one year ahead, so you do not forget to check it (chapter 23).
 
 **When to make a new one:** after the developer changes the server's keys, make and store a new copy. Once a new copy exists, stop using the old one.
 
@@ -122,11 +122,9 @@ A restore **puts the data back to the moment of a backup**. Bookings and custome
 
 1. Click **[Setup]** in the left menu.
 2. Find the **Offsite backup (S3-compatible)** card.
-3. If the card is locked, click **[Unlock (owner code)]** and enter the 6 digits from your authenticator app (chapter 9).
-4. Click **[Check connection]**.
-5. Green **Connected** means it works. The server uploads a small test file to the store and deletes it straight away.
-6. Click **[Lock now]** to lock the card again.
-7. Ask your developer: "Please check that last night's file is in the offsite backup list." The developer checks the list on the server.
+3. Click **[Check connection]**. With the owner account you can click it on a locked card without unlocking. Other admins do not see this button on a locked card, so the owner does this check.
+4. Green **Connected** means it works. The server uploads a small test file to the store and deletes it straight away.
+5. Ask your developer: "Please check that last night's file is in the offsite backup list." The developer checks the list on the server.
 
 A **real restore practice** is done on a **separate test server**, not the live one. Practising on the live server changes real data. The test-server practice follows the same steps as 27.7, and the developer does it. Agree with your developer how many times a year to do it.
 
@@ -165,7 +163,7 @@ There is no documented procedure yet for changing the domain (site address) (**t
 >
 > - **The Automatic backup card is red** → Tell your developer: "The automatic backup has stopped, please check." The server disk may be full, so look at the **Server disk** card too.
 > - **Offsite backup says Not set up** → Fill the **Offsite backup (S3-compatible)** card as in chapter 17.
-> - **The offsite backup row is red** → In **[Setup]**, unlock the offsite backup card and click **[Check connection]**. If it says the key is wrong, make a new key in the store and enter it.
+> - **The offsite backup row is red** → In **[Setup]**, click **[Check connection]** on the offsite backup card (the owner does not need to unlock it). If it says the key is wrong, unlock the card, enter a new key made in the store and click **[Save]**.
 > - **I forgot the key copy's lock password** → That copy cannot be used. While the server still works, ask your developer to make a new copy straight away.
 > - **After the restore, recent bookings are missing** → That is expected. Bookings after the backup moment are lost. Contact those customers and take the bookings again.
-> - **After the restore the customer app still shows maintenance** → Check that you turned **Maintenance mode** off and clicked **[Save]**, then wait 30 seconds.
+> - **After the restore the customer app still shows the maintenance banner** → Check that you turned **Maintenance mode** off and clicked **[Save]**. Wait 30 seconds, then close the app completely and open it again.

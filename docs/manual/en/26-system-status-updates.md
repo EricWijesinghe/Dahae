@@ -16,7 +16,7 @@
 2. The title **System status** shows at the top of the page.
 3. The round arrow button to the right of the title (**Refresh**) loads the latest status. On a phone you can also pull the page down to refresh.
 
-You should now see: the **Server status** card at the top, then **Checks**, **Background jobs**, **Server update**, **External services**, **Alert settings**, **Feature switches** and **App error reports**, in that order.
+You should now see: the **Server status** card at the top, then **Checks**, **Booking flow (last 30 days)**, **Background jobs**, **Server update**, **External services**, **Alert settings**, **Feature switches** and **App error reports**, in that order.
 
 ![Top of System status: server status and checks](../img/en/console-ops-overview.png)
 
@@ -36,7 +36,7 @@ Every item on the page has a small dot in front of it. Read the colour and the w
 
 ## 26.2 The Server status card
 
-The top card shows four things on one line.
+The top card shows three things on one line.
 
 - **Server status**: the overall colour and word (**OK** / **Check** / **Action needed**).
 - **Version**: the Dahae version installed on the server now (for example `Version 1.5.1`).
@@ -108,16 +108,16 @@ Read the second line of each row like this.
 |---|---|---|
 | **Not set up** | No key entered in Setup yet. Under it: **Not set up yet. Enter the keys in Setup.** | Yellow |
 | **No traffic yet** | A key is saved but has not been used yet | Green |
-| **Last success (date time)** | The last time it worked | Green |
-| **Last failure (date time) (error code)** | The last failure and a short error code | Red if it failed in the last 24 hours with no success since; yellow if a success came after the failure |
+| **Last success (date time)** | The last time it worked | Green. Yellow if it failed in the last 24 hours but worked again after that |
+| **Last failure (date time) (error code)** | No success since the last failure. Shows when it failed and a short error code | Red if the failure was in the last 24 hours, green if it is older |
 
 When a row is red, it says **This connection is failing. Check the keys in Setup and press Check connection.** Then:
 
 1. Click **[Setup]** in the left menu.
 2. Find the card of the service that was red.
-3. If the card is locked, click **[Unlock (owner code)]** and enter the 6 digits from your authenticator app (chapter 9).
-4. Click **[Check connection]**. On the Payments (PortOne) card it is **[Check API key]**.
-5. If it says **Connected**, you are done. If not, copy the key again from the company's site, paste it, click **[Save]** and check again.
+3. Click **[Check connection]**. On the **Payments (PortOne)** and **Payments (Toss Payments)** cards it is **[Check API key]**. With the owner account you can click it on a locked card without unlocking. Other admins do not see this button on a locked card.
+4. If it says **Connected**, you are done.
+5. If not, copy the key again from the company's site. If the card is locked, click **[Unlock (owner code)]** and enter the 6 digits from your authenticator app (chapter 9). Paste the key, click **[Save]** and check again.
 6. Go back to **[System status]** and refresh.
 
 > **Tip** **Offsite photo backup (S3-compatible)** has no card of its own. Fill the one **Offsite backup (S3-compatible)** card and the database and photos both go off the server (chapter 17).
@@ -159,7 +159,7 @@ When something goes wrong, the server leaves an alert in the **Inbox** and texts
 
 ### Set quiet hours
 
-Quiet hours stop texts at night. The starting value is **22:00 to 7:00** (Korea time). Problems that happen during these hours are sent in one message after they end.
+Quiet hours stop alerts at night: texts, inbox alerts and app push all pause. The starting value is **22:00 to 7:00** (Korea time). When quiet hours end, you are told about problems that are still there. Problems that cleared by themselves in between are not sent.
 
 1. Under **Quiet hours**, click the **From** box and choose a time (for example **22:00**).
 2. Click the **To** box and choose a time (for example **7:00**).
@@ -177,7 +177,7 @@ Quiet hours stop texts at night. The starting value is **22:00 to 7:00** (Korea 
 
 You should now see: **Alert settings saved** briefly at the bottom of the screen. If you see **Could not save. Check the values.**, check the phone number again.
 
-> **Tip** The alert texts in this chapter go to the number in **Alert settings** here. The **[My account]** page also has an **Alert phone** box (chapter 8), but it is stored separately. Which texts use that box is **to be confirmed**. Putting the same number in both avoids confusion.
+> **Tip** The alert texts in this chapter go to the number in **Alert settings** here. The **[My account]** page also has an **Alert phone** box (chapter 8), but it is stored separately, and the alerts in this chapter do not use that number. Putting the same number in both avoids confusion.
 
 ---
 
@@ -193,11 +193,13 @@ When to use them:
 - **Payments**: the gateway has a problem and you want to stop payments for a while.
 - **Chat**: nobody can answer and you want to close chat for a while.
 - **AI assistant**: you want to switch the AI assistant off for a while.
-- **Bookings**: you want to stop taking new bookings for a while.
+- **Bookings**: you want to pause the whole booking feature for a while.
+
+> **Warning** Turning a switch off stops that whole feature. For example, with **Bookings** off, customers cannot even see their own bookings, not only make new ones. To pause only new bookings, use **Maintenance mode** below.
 
 ### Maintenance mode
 
-When **Maintenance mode** is on, the customer and partner apps show a maintenance screen. The console keeps working. New bookings, new subscriptions and starting a booking payment are blocked. Viewing or cancelling existing bookings still works.
+When **Maintenance mode** is on, the customer and partner apps show a **We are under maintenance** banner with your maintenance message at the top of the screen. The text under the switch says "maintenance screen", but it is a banner at the top, not a screen that blocks the app. The apps and the console keep working. New bookings, new subscriptions and starting a booking payment are blocked. Viewing or cancelling existing bookings still works.
 
 To turn maintenance mode on:
 
@@ -205,13 +207,13 @@ To turn maintenance mode on:
 2. In **Maintenance message**, write what customers should see (up to 200 characters). For example: `We are doing maintenance from 11 pm to midnight tonight. Please come back shortly.`
 3. Click **[Save]** at the bottom of the card.
 4. **Alert settings saved** shows briefly at the bottom. (This card uses the same saved message. Your switches are saved.)
-5. Wait about 30 seconds, then open the customer app and check that the maintenance screen shows. The apps read changed settings within 30 seconds.
+5. After about 30 seconds the server blocks new bookings. Close the customer app completely, open it again and check that the maintenance banner shows at the top. An app that was already open reads the new setting when it is opened again, or when you come back to it after more than 10 minutes in other apps.
 
 To turn maintenance mode off:
 
 1. Click the **Maintenance mode** switch again to turn it off.
 2. Click **[Save]**.
-3. After 30 seconds, check that bookings work again in the customer app.
+3. After 30 seconds, close the customer app completely, open it again and check that bookings work again.
 
 > **Warning** While maintenance mode is on, customers cannot book. Turn it off and click **[Save]** when you are done.
 
@@ -233,7 +235,7 @@ With no errors it says **No recent errors**.
 
 ## 26.9 Server update (with one button)
 
-The server updates itself to the new version **every Monday at 4:00 in the morning** (the default). It takes a backup first and, if the new version does not answer within 3 minutes, goes back to the previous version by itself. So normally you do nothing.
+The server updates itself to the new version **every Monday at 4:00 in the morning** (the default). It takes a backup first and, if the new version does not answer within 3 minutes, goes back to the previous version by itself. So normally you do nothing. When a new stable version comes out, the automatic update does not take it at once: it takes it on the next run more than 24 hours after first seeing it. So a new version can take 1 to 2 weeks to arrive.
 
 Update by hand, as below, only when your developer tells you a new version is out and you do not want to wait until Monday.
 
@@ -248,9 +250,11 @@ Update by hand, as below, only when your developer tells you a new version is ou
 
 You should now see: **Update started. You can follow its progress below** at the bottom of the screen, and `Update · Waiting` at the top of **Recent server jobs**. The **[Update now]** button cannot be pressed until the update ends.
 
+> **Tip** When you press the button, the phone registered on the owner account gets the text **서버 작업이 요청됐어요: 업데이트. 본인이 요청하지 않았다면 바로 확인하세요.** ("A server job was requested: update. If you did not ask for it, check straight away.") This needs **SMS & KakaoTalk (Solapi)** to be connected. If you pressed it yourself, ignore it.
+
 ![Server update card while an update is running](../img/en/console-ops-update-running.png)
 
-7. Every 1 to 2 minutes, click the **Refresh** button at the top right to see progress. If the list does not change, click **[System status]** in the left menu again to reopen the page.
+7. Every 1 to 2 minutes, click another page in the left menu (for example **[Dashboard]**), then click **[System status]** again to see progress. The **Refresh** button next to the title does not reload this card's **Recent server jobs** list.
 8. If the connection drops for a moment, wait a few minutes and open the console address in the browser again. If you see the sign-in screen, sign in again.
 
 Status words in **Recent server jobs**:

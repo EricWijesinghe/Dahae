@@ -44,7 +44,7 @@ Secrets are passwords, payment and SMS keys, webhook secrets, recovery codes, se
 2. Give only the access people need. Staff who handle only bookings and chat are **Consultant**; only people who must change settings are **Admin**.
 3. If your developer needs an admin account, create a separate one in **[Staff]**. When the work is done, **[Deactivate]** it.
 4. On a PC that several people use, click **[Sign out]** when you finish.
-5. Lock setup cards with **[Lock now]** as soon as you finish. Only the owner can unlock, and cards lock again by themselves after 5 minutes (chapter 9).
+5. Saved setup cards lock by themselves, and only the owner can unlock them. If you unlocked one, lock it with **[Lock now]** as soon as you finish. Even if you do not, it locks again by itself after 5 minutes (chapter 9).
 6. Actions with money or personal data (payouts, showing an account, customer data copies, account deletion) ask for the authenticator code again. This is normal, even if it feels slow. It checks that the person really is who they say.
 7. Sensitive values such as a partner's bank account or resident number are **logged every time they are viewed**. Open them only when you must (chapters 20, 21).
 
@@ -100,7 +100,7 @@ The server and installer protect you in these ways without you doing anything.
 - Keys saved in the console and values such as partner bank accounts are stored encrypted.
 - **[Activity log]** and consent records cannot be edited or deleted.
 - Personal data whose keeping period has ended is deleted automatically.
-- The server gets a firewall (only 22, 80 and 443 open), automatic security updates and intrusion blocking.
+- The server gets automatic security updates and SSH intrusion blocking (fail2ban). The server firewall (only 22, 80 and 443 open) is turned on automatically by the AWS install; on other clouds the installer asks (the default answer is "no"). If it is off, open only 22, 80 and 443 in the cloud's firewall screen (chapter 7).
 - Backups are encrypted.
 
 ---

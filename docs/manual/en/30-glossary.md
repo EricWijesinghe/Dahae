@@ -41,7 +41,7 @@ Words in bold are names that appear on the console screen exactly as written.
 |---|---|---|---|
 | Setup card | 설정 카드 | A box on the **[Setup]** page that connects one company service | 9 |
 | **Locked** / **Unlock (owner code)** | **잠김** / **잠금 해제 (소유자 코드)** | Saved cards lock. Only the owner can unlock them, for 5 minutes | 9 |
-| **Check connection** | **연결 확인** | Tests whether the key you entered really connects to the company's service | 9 |
+| **Check connection** | **연결 확인** | Tests whether the saved key really connects to the company's service. On the payment cards it is **Check API key** | 9 |
 | **Test** / **Live** | **테스트** / **실거래** | A test key is for trials and moves no money; a live key moves real money | 11, 12 |
 | Key | 키 | A long secret string that lets a company's service recognise our server | 9 |
 
@@ -104,7 +104,7 @@ Words in bold are names that appear on the console screen exactly as written.
 | Stable / beta channel | 안정 / 베타 채널 | The line a server takes updates from. Servers that serve customers use stable | 33 |
 | **System status** | **시스템 상태** | The console page that shows whether the server and connected services are healthy | 26 |
 | **Uptime heartbeat** | **업타임 하트비트** | The server sends an "I am alive" signal to an outside service, which warns you when it stops | 17 |
-| **Maintenance mode** | **점검 모드** | A switch that shows a maintenance screen in the apps and stops new bookings. The console keeps working | 26 |
+| **Maintenance mode** | **점검 모드** | A switch that shows a maintenance banner at the top of the apps and stops new bookings. The apps and the console keep working | 26 |
 | **Feature switches** | **기능 스위치** | Switches that turn bookings, chat, AI assistant and payments off and on separately | 26 |
 | **Background jobs** | **백그라운드 작업** | Work the server does out of sight at set intervals | 26 |
 

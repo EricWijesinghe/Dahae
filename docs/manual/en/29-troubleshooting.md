@@ -26,7 +26,7 @@
 
 Your developer normally types the server commands. Do it yourself only when the developer asks you to type a command on the server screen.
 
-- **AWS server:** AWS console **EC2 > Instances** → select the server → **Connect** → **Session Manager** → **Connect** (chapter 5, 5.5).
+- **AWS server:** AWS console **EC2 > Instances** → select the server → **Connect** → **Session Manager** tab → **Connect** (chapter 5, 5.5).
 - **Other clouds:** a button like **Connect via browser SSH** on the server company's screen (chapter 7).
 
 When the black screen opens:
@@ -83,7 +83,7 @@ Reading `sudo dahae status` (the server prints Korean; the meaning is on the rig
 - **Where:** console, server
 
 1. Check whether the console (`https://domain/admin/`) opens.
-2. If it opens, check whether **Maintenance mode** is on under **[System status]**. If it is, turn it off and click **[Save]** (26.7). Open the app again after 30 seconds.
+2. If it opens, check whether **Maintenance mode** is on under **[System status]**. If it is, turn it off and click **[Save]** (26.7). After 30 seconds, close the app completely and open it again.
 3. If the console does not open either, the server program has stopped. Tell your developer. They find the cause with `sudo dahae status` and `sudo dahae logs`. The disk may be full, or a recent update may be the cause.
 
 ### The console opens but every page shows an error
@@ -94,7 +94,7 @@ Reading `sudo dahae status` (the server prints Korean; the meaning is on the rig
 
 ### Settings I changed in the console (colour, text, switches) do not show in the app
 
-1. Wait about 30 seconds, then close the app completely and open it again. The apps read changed settings within 30 seconds.
+1. Wait about 30 seconds, then close the app completely and open it again. The server sends out changed settings within 30 seconds, and the app reads them when it opens.
 2. The apps remember the last main colour and logo, so these may change the next time the app opens (chapter 28).
 
 ---
@@ -206,7 +206,7 @@ If you see **Only the owner can unlock**, this account is not the owner. Chapter
 1. Copy the key again from the company's site (the card's **[Open site]**).
 2. Paste it with no space before or after. Pasting it into Notepad first helps you check.
 3. Check that you did not mix test keys and live keys.
-4. **[Save]** → **[Check connection]** (on PortOne, **[Check API key]**).
+4. If the card is locked, unlock it first (above), then **[Save]** → **[Check connection]** (on the payment cards, **[Check API key]**).
 
 ### "Could not reach the service. Try again shortly"
 
@@ -248,28 +248,28 @@ Some cards, such as the social sign-in cards, cannot be tested from the server. 
 1. Check that the webhook address entered on the gateway's screen matches the address shown on the card **character for character**.
    - PortOne: `https://domain/v1/webhooks/portone`
    - Toss Payments (payments): `https://domain/v1/webhooks/tosspayments`
-   - Toss payouts: `https://domain/v1/webhooks/toss`
 2. Copy the secret (security key) again on the gateway's screen.
 3. In the console's **[Setup]**, unlock that card, paste it and click **[Save]**.
    - PortOne: the webhook secret on the **Payments (PortOne)** card
    - Toss Payments (payments): the security key on the **Payments (Toss Payments)** card
-   - Toss payouts: the security key on the **Partner payouts** card
 4. If the gateway's screen can **resend** failed notifications, use it. The server handles the same notification twice safely.
+
+> **Tip** This card counts only PortOne and Toss Payments payment notifications. Signature failures on Toss payout notifications (`https://domain/v1/webhooks/toss`, the security key on the **Partner payouts** card) do not show here. If payout results are late, see "A partner payout failed" below.
 
 ### "Payments to check" in System status is red / a customer paid but there is no booking
 
 - **Who:** you
 - **Where:** console, the PortOne or Toss Payments admin screen
 
-1. Wait 1–2 minutes. The server compares with the gateway every minute and creates the booking.
+1. Wait about 3 minutes. Every minute the server compares with the gateway, finds payments older than 2 minutes that have no booking, and creates the booking.
 2. In the console's **[Bookings]**, search by the customer's phone number.
 3. If it is still missing, check in the gateway's admin screen that the payment is **paid**.
 4. If it is paid but there is no booking, **refund it yourself** in the gateway's admin screen and tell the customer.
-5. If it is paid and no booking appears for more than 2 hours, send the payment number and time to your developer.
+5. If the booking never appears, or you refunded it yourself, send the payment number and time to your developer.
 
 ### Many customers say payment does not work
 
-1. **[Setup]** → the **Payments (PortOne)** card → **[Check API key]** (if you use Toss Payments, **[Check connection]** on that card).
+1. **[Setup]** → the **Payments (PortOne)** card → **[Check API key]** (if you use Toss Payments, **[Check API key]** on the **Payments (Toss Payments)** card).
 2. In **[System status]** → **Feature switches**, check that **Payments** is on and **Maintenance mode** is off.
 3. In **[Setup]** → the **Payment methods** card, check that the method the customer wants is on (chapter 10).
 4. If the payment row in **External services** shows an error code, take a screenshot and send it to your developer.
@@ -369,7 +369,7 @@ A server cannot report that it is down by itself. Connect an **uptime heartbeat*
 2. **[My account]** → **[Change password]** to change your password.
 3. In **[Staff]**, do **[Reset password]** for each staff member. **[Deactivate]** anyone who has left.
 4. For every key that may have leaked (payments, SMS, push, social sign-in, Toss security key, offsite backup), **issue a new key** on that company's site and **revoke** the old one there.
-5. Put the new key in each card in **[Setup]**, then **[Save]** → **[Check connection]** (on PortOne, **[Check API key]**).
+5. Put the new key in each card in **[Setup]**, then **[Save]** → **[Check connection]** (on the payment cards, **[Check API key]**).
 6. In **[Activity log]**, look at recent sign-ins and setting changes, and take screenshots of anything you do not recognise.
 7. **Always contact your developer.** The keys inside the server (sign-in token key, data key, database passwords) must be changed by the developer, not by you. After the keys change, make a new secret key copy too (27.4).
 

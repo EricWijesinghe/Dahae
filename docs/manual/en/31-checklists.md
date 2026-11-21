@@ -15,9 +15,9 @@
 
 - [ ] The server is in the Seoul region and runs Ubuntu 24.04 (chapters 4, 7).
 - [ ] The domain's A record points to the server's public IP. On Cloudflare the cloud is grey (DNS only) (chapter 5).
-- [ ] Opening `https://domain/health` in a browser shows `{"ok":true}` (chapter 5).
+- [ ] Opening `https://domain/health` in a browser shows text that contains `"ok":true` (chapter 5).
 - [ ] The developer's `sudo dahae status` shows `✔ 앱 정상` (app OK) and `✔ HTTPS 정상` (HTTPS OK) (chapter 29).
-- [ ] Only ports 22, 80 and 443 are open in the cloud firewall (chapter 7).
+- [ ] Only the needed ports are open in the cloud firewall: on AWS only 80 and 443 (22 stays closed, chapter 4), on other clouds only 22, 80 and 443 (chapter 7).
 
 ### Owner account and security
 
@@ -31,7 +31,7 @@
 
 - [ ] **Business profile**: service name, main colour, logo, business details, support number (chapter 10).
 - [ ] **Payment methods**: only contracted methods are on (chapter 10).
-- [ ] **Payments (PortOne)** or **Payments (Toss Payments)**: keys saved, **Connected** on **[Check API key]** / **[Check connection]** (chapters 11, 12).
+- [ ] **Payments (PortOne)** or **Payments (Toss Payments)**: keys saved, **Connected** on **[Check API key]** (chapters 11, 12).
 - [ ] The webhook address is entered on the gateway's screen (chapters 11, 12).
 - [ ] **Partner payouts**: manual transfer or Toss payouts chosen (chapter 13).
 - [ ] **SMS & KakaoTalk (Solapi)**: **Connected**, sender number approved, AlimTalk templates approved (chapter 14).
@@ -40,7 +40,7 @@
 - [ ] **Address search (juso.go.kr)** is filled (chapter 16).
 - [ ] **Offsite backup (S3-compatible)**: **Connected** on **[Check connection]** (chapter 17).
 - [ ] The **Uptime heartbeat** card says connected (ask your developer) (chapter 17).
-- [ ] Finished cards are locked with **[Lock now]** (chapter 9).
+- [ ] Saved cards lock by themselves. Any card you unlocked is locked again with **[Lock now]** (chapter 9).
 
 ### Test payments (test keys, no money moves)
 
@@ -59,7 +59,7 @@
 - [ ] No red (**Action needed**) in **[System status]** (chapter 26).
 - [ ] Staff accounts created and roles (**Admin** / **Consultant**) set (chapter 20).
 - [ ] You read the default values in **[Operating rules]** once (chapter 23).
-- [ ] **[Renewal calendar]** has dates for the domain, hosting, Apple developer account, Solapi, offsite backup storage and the secret key copy check (chapter 23).
+- [ ] **[Renewal calendar]** has dates for the domain, hosting, Apple developer account, Solapi, offsite backup storage and the secret key copy check (type **Other**) (chapters 23, 27).
 
 ### Store release (chapter 25)
 
@@ -90,7 +90,7 @@
 
 ## 31.4 Monthly (30 minutes)
 
-- [ ] Offsite backup check: on the **Offsite backup (S3-compatible)** card, unlock → **[Check connection]** → **Connected** → **[Lock now]** (chapter 27).
+- [ ] Offsite backup check: with the owner account, **[Check connection]** on the **Offsite backup (S3-compatible)** card → **Connected**. No need to unlock (chapter 27).
 - [ ] Ask your developer to check that last night's file is in the offsite backup list (chapter 27).
 - [ ] In **[Renewal calendar]**, check what renews this month and next (chapter 23).
 - [ ] Skim last month in **[Activity log]** and ask your developer about anything you do not recognise (chapter 23).

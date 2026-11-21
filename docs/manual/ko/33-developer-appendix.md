@@ -42,7 +42,9 @@
 **자동 예약 작업** (설치 프로그램이 `/etc/cron.d/malkkeum` 에 써요):
 - 매일 03:30 `dahae backup` (실패하면 `dahae alert backup`).
 - 기본 매주 월요일 04:00 자동 업데이트 (`update-schedule` 로 바꿈).
-- 외부 가동 확인 핑 (주소가 있을 때).
+- 5분마다 외부 가동 확인 핑 (주소가 있을 때).
+- WAL 보관을 켰으면 매주 일요일 02:15 전체 백업 (33.8).
+- 자동 업데이트(`dahae auto-update`)는 `update-skip` 표시가 있거나 기다리는 서버 작업이 있으면 건너뛰어요. 안정 채널에서는 새 `stable` 이미지를 처음 본 뒤 24시간이 지나야 받아요.
 
 **사장님 2단계 인증 초기화:** 사장님이 인증 앱과 복구 코드를 모두 잃었을 때는 API 프로그램의 `owner-reset` 명령(`api owner-reset`)이 한 시간짜리 일회용 코드를 출력해요. 컨테이너에서 실행하는 정확한 명령줄과, 그 코드를 넣는 화면(콘솔에는 아직 없음)은 **확인 필요** 예요. 서버 경로는 `POST /v1/auth/staff/owner-reset` 이에요.
 
@@ -65,7 +67,7 @@
 | `JWT_SECRET` | 로그인 토큰 서명. 교체는 개발자만 |
 | `DB_PASSWORD`, `API_DB_PASSWORD` | 데이터베이스 관리 계정과 앱 계정 비밀번호 |
 | `DOMAIN` | 서비스 도메인 |
-| `VERSION` | 업데이트 채널 태그 (`stable`/`beta`) |
+| `VERSION` | 업데이트 채널 태그 (`stable`/`beta`). `dahae update 태그` 로 올리면 그 태그로 고정돼요 |
 | `API_IMAGE`, `WEB_IMAGE`, `PREV_API_IMAGE`, `PREV_WEB_IMAGE` | 지금 이미지와 되돌리기용 이전 이미지. 이전 이미지는 지우지 마세요 |
 | `SETUP_CODE`, `SETUP_CODE_AT` | 설치 코드와 처음 보인 시각 |
 | `HEARTBEAT_URL` | 외부 가동 확인 주소 |
@@ -142,7 +144,7 @@ sudo dahae restore-offsite db-20261110-033000.sql.gz.enc
 
 ## 33.5 콘솔의 서버 작업과 서버 에이전트
 
-콘솔 **[시스템 상태]** 의 **서버 업데이트** 카드는 `POST /admin/host/jobs` 에 `kind=update` 작업을 넣어요. 소유자 인증 앱 코드(`X-Owner-Totp`)가 요청마다 필요하고, 업데이트가 대기 중·진행 중이면 버튼이 꺼져요. 서버의 작업 실행기(`deploy/agent.sh`)가 작업 파일을 읽어 실행해요.
+콘솔 **[시스템 상태]** 의 **서버 업데이트** 카드는 `POST /admin/host/jobs` 에 `kind=update` 작업을 넣어요. 소유자 인증 앱 코드(`X-Owner-Totp`)가 요청마다 필요하고, 업데이트가 대기 중·진행 중이면 버튼이 꺼져요. 서버의 작업 실행기(`deploy/agent.sh`)가 작업 파일을 읽어 실행해요. 작업을 넣으면 요청한 소유자 계정의 휴대폰으로 "서버 작업이 요청됐어요: 업데이트. …" 문자가 가요.
 
 | 에이전트 작업 종류 | 콘솔에 버튼 | 메모 |
 |---|---|---|

@@ -42,7 +42,9 @@ The install folder on the server is `/opt/malkkeum`. `sudo dahae help` prints th
 **Scheduled jobs** (the installer writes `/etc/cron.d/malkkeum`):
 - Daily 03:30 `dahae backup` (on failure, `dahae alert backup`).
 - Automatic update, by default every Monday 04:00 (change with `update-schedule`).
-- Outside uptime ping (when a URL is set).
+- Outside uptime ping every 5 minutes (when a URL is set).
+- With WAL archiving on, a full backup every Sunday at 02:15 (33.8).
+- The automatic update (`dahae auto-update`) is skipped when an `update-skip` mark or a queued server job is there. On the stable channel it takes a new `stable` image only 24 hours after first seeing it.
 
 **Resetting the owner's two-step sign-in:** when the owner has lost both the authenticator app and the recovery codes, the API program's `owner-reset` command (`api owner-reset`) prints a one-hour, one-time code. The exact command line to run it in the container, and the screen to enter the code (not in the console yet), are **to be confirmed**. The server route is `POST /v1/auth/staff/owner-reset`.
 
@@ -65,7 +67,7 @@ Main keys in `.env` (no values shown):
 | `JWT_SECRET` | Signs sign-in tokens. Only the developer rotates it |
 | `DB_PASSWORD`, `API_DB_PASSWORD` | Database admin and app account passwords |
 | `DOMAIN` | The service domain |
-| `VERSION` | The update channel tag (`stable`/`beta`) |
+| `VERSION` | The update channel tag (`stable`/`beta`). After `dahae update <tag>` it stays pinned to that tag |
 | `API_IMAGE`, `WEB_IMAGE`, `PREV_API_IMAGE`, `PREV_WEB_IMAGE` | Current images and the previous ones for rollback. Do not delete the previous images |
 | `SETUP_CODE`, `SETUP_CODE_AT` | The setup code and when it was first shown |
 | `HEARTBEAT_URL` | The outside uptime URL |
@@ -142,7 +144,7 @@ sudo dahae restore-offsite db-20261110-033000.sql.gz.enc
 
 ## 33.5 Console server jobs and the server agent
 
-The **Server update** card on the console's **[System status]** page queues a `kind=update` job with `POST /admin/host/jobs`. Every request needs the owner's authenticator code (`X-Owner-Totp`), and the button is off while an update is queued or running. The server's job runner (`deploy/agent.sh`) reads the job file and runs it.
+The **Server update** card on the console's **[System status]** page queues a `kind=update` job with `POST /admin/host/jobs`. Every request needs the owner's authenticator code (`X-Owner-Totp`), and the button is off while an update is queued or running. The server's job runner (`deploy/agent.sh`) reads the job file and runs it. Queuing a job texts the requesting owner account's phone "서버 작업이 요청됐어요: 업데이트. …" (a server job was requested).
 
 | Agent job kind | Console button | Note |
 |---|---|---|
