@@ -38,7 +38,6 @@ class PartnerIntro extends StatelessWidget {
                   wordmark: true,
                   onDark: true,
                   animate: true,
-                  brand: partnerBrand,
                 ),
                 // Teal tint on ink (6.5:1) in both theme modes; this screen is always ink.
                 DecoratedBox(
@@ -245,6 +244,7 @@ class _PhoneScreenState extends State<_PhoneScreen> {
             SocialSignInRow(
               providers: defaultSocialSignIns(
                 Deps.read(context).session.api.baseUrl,
+                server: RemoteConfigScope.of(context).providers,
               ),
               busyProvider: _busyProvider,
               devMode: isDevApiBase(Deps.read(context).session.api.baseUrl),

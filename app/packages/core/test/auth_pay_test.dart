@@ -270,6 +270,38 @@ void main() {
       },
     );
 
+    test(
+      'production shows only providers both compiled in and on the server',
+      () {
+        final storage = _MemStorage();
+        List<String> shown(Set<String>? server) => socialSignInsFor(
+          apiBase: 'https://api.example.com',
+          storage: storage,
+          configured: const {'kakao', 'naver', 'google'},
+          server: server,
+          appleOk: false,
+        ).map((p) => p.provider).toList();
+
+        expect(shown({'kakao', 'apple'}), ['kakao']);
+        expect(shown(const {}), isEmpty, reason: 'cards cleared on the server');
+        expect(shown(null), [
+          'kakao',
+          'naver',
+          'google',
+        ], reason: 'an older server sends no list');
+        expect(
+          socialSignInsFor(
+            apiBase: 'http://127.0.0.1:8080',
+            storage: storage,
+            server: const {},
+            appleOk: false,
+          ).length,
+          3,
+          reason: 'dev stubs stay for local testing',
+        );
+      },
+    );
+
     test('dev base detection', () {
       expect(isDevApiBase('http://127.0.0.1:8080'), isTrue);
       expect(isDevApiBase('http://10.0.2.2:8080'), isTrue);
