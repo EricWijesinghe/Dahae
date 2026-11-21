@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -6028,7 +6027,7 @@ class TKo extends T {
   String get cRbNameEn => '영문 이름';
 
   @override
-  String get cRbShortName => '짧은 이름 (12자 이내: 문자 앞머리, 홈 화면 이름)';
+  String get cRbShortName => '짧은 이름 (12자 이내: 문자 맨 앞 [ ] 안의 이름, 홈 화면 이름)';
 
   @override
   String get cRbTagline => '한 줄 소개';
@@ -6160,7 +6159,8 @@ class TKo extends T {
   String get cRbDomainNew => '새 도메인 (예: example.co.kr)';
 
   @override
-  String get cRbDomainInvalid => '도메인 형식이 아니거나 지금 주소와 같아요';
+  String get cRbDomainInvalid =>
+      '도메인 형식이 아니거나 지금 주소와 같아요. https:// 없이 example.co.kr 처럼 넣어 주세요. 한글 도메인은 xn--로 시작하는 주소로 넣어 주세요';
 
   @override
   String get cRbDomainCheck => 'DNS 확인';
@@ -6189,7 +6189,7 @@ class TKo extends T {
 
   @override
   String get cRbDomainWhatList =>
-      '· 홈페이지와 웹 앱 주소가 새 도메인으로 옮겨가요\n· 서비스가 30초쯤 멈춰요\n· 설치된 앱은 예전 주소로 계속 작동해요. 1.x 이후 버전은 다음 실행 때 새 주소로 자동으로 옮겨가요\n· 바깥 서비스(결제·로그인·검색)에 새 주소를 넣어야 해요. 옮긴 뒤 목록을 보여 드려요\n· 예전 주소는 직접 닫을 때까지 계속 연결돼요\n· 웹에서는 새 주소에서 다시 로그인해야 해요';
+      '· 홈페이지와 웹 앱 주소가 새 도메인으로 옮겨가요\n· 서비스가 30초쯤 멈춰요\n· 설치된 앱은 예전 주소로 계속 작동해요. 다음 스토어 빌드부터 나오는 앱은 다음 실행 때 새 주소로 자동으로 옮겨가요\n· 바깥 서비스(결제·로그인·검색)에 새 주소를 넣어야 해요. 옮긴 뒤 목록을 보여 드려요\n· 예전 주소는 직접 닫을 때까지 계속 연결돼요\n· 웹에서는 새 주소에서 다시 로그인해야 해요';
 
   @override
   String get cRbDomainApply => '바꾸기';
@@ -6222,7 +6222,7 @@ class TKo extends T {
 
   @override
   String get cRbDomainOldAgent =>
-      '서버 프로그램이 예전 버전이에요. 설치 명령을 한 번 다시 실행한 뒤 바꿔 주세요.';
+      '서버 프로그램이 예전 버전이에요. 설치 명령을 한 번 다시 실행한 뒤 바꿔 주세요 (클라우드 콘솔의 브라우저 SSH에서, 설치 안내서 00번 명령. 데이터는 그대로예요).';
 
   @override
   String get cRbDomainNoReason => '이유를 받지 못했어요';
@@ -6296,13 +6296,14 @@ class TKo extends T {
       '네이버 서치어드바이저: 새 사이트, 인증 코드는 사업자 정보에';
 
   @override
-  String get cRbCheck_app_store_urls => 'App Store Connect: 개인정보·지원 주소';
+  String get cRbCheck_app_store_urls => 'App Store Connect: 개인정보·계정 삭제 주소';
 
   @override
   String get cRbCheck_play_urls => 'Play Console: 개인정보·계정 삭제 주소';
 
   @override
-  String get cRbCheck_ms_store_urls => 'Microsoft Partner Center: 개인정보·지원 주소';
+  String get cRbCheck_ms_store_urls =>
+      'Microsoft Partner Center: 개인정보·계정 삭제 주소';
 
   @override
   String get cRbCheck_github_store_vars => 'GitHub store 환경 변수, 그다음 스토어 빌드';

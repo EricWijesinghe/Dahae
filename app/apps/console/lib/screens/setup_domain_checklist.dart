@@ -86,9 +86,34 @@ class _DomainChecklistState extends State<DomainChecklist> {
             padding: const EdgeInsets.symmetric(vertical: Space.sm),
             child: Text(label, style: context.text.labelLarge),
           )
-        : CopyRow(label: label, value: value);
+        : _values(label, value.split('\n'));
+  }
+
+  /// One copy button per line, so each paste fills one field. A `KEY=value` line is a variable: the key is
+  /// its label and only the value is copied. A URL line is labelled by its page name.
+  Widget _values(String label, List<String> lines) {
+    if (lines.length == 1) return CopyRow(label: label, value: lines.first);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: Space.sm),
+          child: Text(label, style: context.text.labelLarge),
+        ),
+        for (final l in lines)
+          if (_variable.firstMatch(l) case final m?)
+            CopyRow(label: m[1]!, value: m[2]!)
+          else
+            CopyRow(
+              label: Uri.tryParse(l)?.pathSegments.lastOrNull ?? '',
+              value: l,
+            ),
+      ],
+    );
   }
 }
+
+final _variable = RegExp(r'^([A-Z][A-Z0-9_]*)=(.*)$');
 
 /// An old address that still answers, with [닫기]: owner code, after the owner confirms the store builds
 /// with the new address are out (the dialog shows the current minimum app versions).

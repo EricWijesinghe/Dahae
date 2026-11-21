@@ -11475,7 +11475,7 @@ abstract class T {
   /// No description provided for @cRbShortName.
   ///
   /// In ko, this message translates to:
-  /// **'짧은 이름 (12자 이내: 문자 앞머리, 홈 화면 이름)'**
+  /// **'짧은 이름 (12자 이내: 문자 맨 앞 [ ] 안의 이름, 홈 화면 이름)'**
   String get cRbShortName;
 
   /// No description provided for @cRbTagline.
@@ -11715,7 +11715,7 @@ abstract class T {
   /// No description provided for @cRbDomainInvalid.
   ///
   /// In ko, this message translates to:
-  /// **'도메인 형식이 아니거나 지금 주소와 같아요'**
+  /// **'도메인 형식이 아니거나 지금 주소와 같아요. https:// 없이 example.co.kr 처럼 넣어 주세요. 한글 도메인은 xn--로 시작하는 주소로 넣어 주세요'**
   String get cRbDomainInvalid;
 
   /// No description provided for @cRbDomainCheck.
@@ -11763,7 +11763,7 @@ abstract class T {
   /// No description provided for @cRbDomainWhatList.
   ///
   /// In ko, this message translates to:
-  /// **'· 홈페이지와 웹 앱 주소가 새 도메인으로 옮겨가요\n· 서비스가 30초쯤 멈춰요\n· 설치된 앱은 예전 주소로 계속 작동해요. 1.x 이후 버전은 다음 실행 때 새 주소로 자동으로 옮겨가요\n· 바깥 서비스(결제·로그인·검색)에 새 주소를 넣어야 해요. 옮긴 뒤 목록을 보여 드려요\n· 예전 주소는 직접 닫을 때까지 계속 연결돼요\n· 웹에서는 새 주소에서 다시 로그인해야 해요'**
+  /// **'· 홈페이지와 웹 앱 주소가 새 도메인으로 옮겨가요\n· 서비스가 30초쯤 멈춰요\n· 설치된 앱은 예전 주소로 계속 작동해요. 다음 스토어 빌드부터 나오는 앱은 다음 실행 때 새 주소로 자동으로 옮겨가요\n· 바깥 서비스(결제·로그인·검색)에 새 주소를 넣어야 해요. 옮긴 뒤 목록을 보여 드려요\n· 예전 주소는 직접 닫을 때까지 계속 연결돼요\n· 웹에서는 새 주소에서 다시 로그인해야 해요'**
   String get cRbDomainWhatList;
 
   /// No description provided for @cRbDomainApply.
@@ -11811,7 +11811,7 @@ abstract class T {
   /// No description provided for @cRbDomainOldAgent.
   ///
   /// In ko, this message translates to:
-  /// **'서버 프로그램이 예전 버전이에요. 설치 명령을 한 번 다시 실행한 뒤 바꿔 주세요.'**
+  /// **'서버 프로그램이 예전 버전이에요. 설치 명령을 한 번 다시 실행한 뒤 바꿔 주세요 (클라우드 콘솔의 브라우저 SSH에서, 설치 안내서 00번 명령. 데이터는 그대로예요).'**
   String get cRbDomainOldAgent;
 
   /// No description provided for @cRbDomainNoReason.
@@ -11943,7 +11943,7 @@ abstract class T {
   /// No description provided for @cRbCheck_app_store_urls.
   ///
   /// In ko, this message translates to:
-  /// **'App Store Connect: 개인정보·지원 주소'**
+  /// **'App Store Connect: 개인정보·계정 삭제 주소'**
   String get cRbCheck_app_store_urls;
 
   /// No description provided for @cRbCheck_play_urls.
@@ -11955,7 +11955,7 @@ abstract class T {
   /// No description provided for @cRbCheck_ms_store_urls.
   ///
   /// In ko, this message translates to:
-  /// **'Microsoft Partner Center: 개인정보·지원 주소'**
+  /// **'Microsoft Partner Center: 개인정보·계정 삭제 주소'**
   String get cRbCheck_ms_store_urls;
 
   /// No description provided for @cRbCheck_github_store_vars.

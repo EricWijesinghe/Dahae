@@ -142,8 +142,18 @@ class _DomainBodyState extends State<_DomainBody> {
         if (code == null || !mounted) return;
         setState(() => _phase = MovePhase.running);
         await api.post('/admin/host/jobs/$id/approve', {'code': code});
-        // A wrong code leaves the job on hold: ask again, until the agent locks it (rejected).
-        job = await waitHostJob(api, id, until: {'awaiting_approval'});
+        // The job stays on hold until the agent reads the code, so wait for it to start. Still on hold after
+        // that means a wrong code: ask again, until the agent cancels the job.
+        job = await waitHostJob(
+          api,
+          id,
+          until: {'running'},
+          limit: const Duration(seconds: 60),
+        );
+      }
+      // A move waits up to 10 minutes for the new address, then may roll back (agent run limit 30 minutes).
+      if (job['state'] == 'running') {
+        job = await waitHostJob(api, id, limit: const Duration(minutes: 30));
       }
       if (mounted) _finish(job);
     } catch (e) {
@@ -192,7 +202,8 @@ class _DomainBodyState extends State<_DomainBody> {
           ],
           const SizedBox(height: Space.sm),
           ..._moveSection(t),
-          if (checklist.isNotEmpty) ...[
+          // The server always sends the list; it only matters after a move.
+          if (checklist.isNotEmpty && aliases.isNotEmpty) ...[
             const SizedBox(height: Space.md),
             DomainChecklist(items: checklist),
           ],

@@ -15,16 +15,19 @@ const _dnsOk =
     '{"domain":"new.example","server_ip":"1.2.3.4","a":["1.2.3.4"],"aaaa":[],"match":true,"aaaa_ok":true}';
 
 /// A server that runs the DNS check, holds `domain-set` for the approval code and then ends in [end].
+/// Like the agent, it stays on hold for one poll after the code is sent, then runs for one poll.
 FakeApi _server({
   required Json end,
   List<Json> checklist = const [],
+  List<Json> aliases = const [],
   String dns = _dnsOk,
 }) {
   var approved = false;
+  var polls = 0;
   return FakeApi()
     ..reply('GET', '/admin/domains', {
       'current': 'old.example',
-      'aliases': <Json>[],
+      'aliases': aliases,
       'checklist': checklist,
     })
     ..on(
@@ -39,7 +42,11 @@ FakeApi _server({
     ..on(
       'GET',
       '/admin/host/jobs/set',
-      (_) => approved ? end : {'id': 'set', 'state': 'awaiting_approval'},
+      (_) => switch (approved ? ++polls : 0) {
+        0 || 1 => {'id': 'set', 'state': 'awaiting_approval'},
+        2 => {'id': 'set', 'state': 'running'},
+        _ => end,
+      },
     )
     ..on('POST', '/admin/host/jobs/set/approve', (_) {
       approved = true;
@@ -106,6 +113,11 @@ void main() {
       expect(fake.lastCall('POST', '/admin/host/jobs/set/approve')!.body, {
         'code': '222222',
       });
+      expect(
+        fake.callsTo('POST', '/admin/host/jobs/set/approve'),
+        hasLength(1),
+        reason: 'the hold before the agent reads the code asks for nothing',
+      );
       expect(find.text(koT.cRbDomainDone('new.example')), findsOneWidget);
       expect(find.text(koT.cRbDomainOpenNew), findsOneWidget);
       await unmount(tester);
@@ -177,6 +189,20 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('no checklist before any move', (tester) async {
+    await _pump(
+      tester,
+      _server(
+        end: const {},
+        checklist: [
+          {'id': 'portone_webhook', 'value': 'https://x', 'done': false},
+        ],
+      ),
+    );
+    expect(find.text(koT.cRbChecklistTitle), findsNothing);
+    await unmount(tester);
+  });
+
   testWidgets(
     'checklist copy buttons copy the exact API values, and ticks are saved',
     (tester) async {
@@ -203,6 +229,9 @@ void main() {
         tester,
         _server(
           end: const {},
+          aliases: [
+            {'host': 'old.example', 'since': '2026-11-01T00:00:00Z'},
+          ],
           checklist: [
             {'id': 'portone_webhook', 'value': url, 'done': false},
             {'id': 'github_store_vars', 'value': vars, 'done': true},
@@ -210,11 +239,14 @@ void main() {
         )..reply('PUT', '/admin/domains/checklist/portone_webhook', null),
       );
       expect(find.text(koT.cRbCheck_portone_webhook), findsOneWidget);
+      expect(find.text('APP_LINK_DOMAIN'), findsOneWidget);
 
-      await tester.tap(find.byTooltip(koT.cCopy).first);
-      await tester.tap(find.byTooltip(koT.cCopy).last);
+      // One button per value: each variable's value alone, never two lines at once.
+      for (final b in find.byTooltip(koT.cCopy).evaluate().toList()) {
+        await tester.tap(find.byWidget(b.widget));
+      }
       await settle(tester);
-      expect(copied, [url, vars]);
+      expect(copied, [url, 'https://new.example', 'new.example,old.example']);
 
       await tester.tap(find.byType(Checkbox).first);
       await settle(tester);

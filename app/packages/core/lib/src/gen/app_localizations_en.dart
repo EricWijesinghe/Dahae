@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -6205,7 +6204,7 @@ class TEn extends T {
 
   @override
   String get cRbShortName =>
-      'Short name (up to 12 characters: SMS prefix, home screen label)';
+      'Short name (up to 12 characters: the name in [ ] at the start of text messages, home screen label)';
 
   @override
   String get cRbTagline => 'Tagline';
@@ -6341,7 +6340,7 @@ class TEn extends T {
 
   @override
   String get cRbDomainInvalid =>
-      'Not a domain name, or the same as the current one';
+      'Not a domain name, or the same as the current one. Enter it without https://, like example.com. Enter a non-Latin domain in its xn-- form';
 
   @override
   String get cRbDomainCheck => 'Check DNS';
@@ -6371,7 +6370,7 @@ class TEn extends T {
 
   @override
   String get cRbDomainWhatList =>
-      '· The website and web apps move to the new domain\n· The service pauses for about 30 seconds\n· Installed apps keep working on the old address. Versions after 1.x move by themselves on their next start\n· Outside services (payments, sign-in, search) need the new address. A list follows the move\n· The old address keeps answering until you retire it\n· On the web, people sign in again on the new address';
+      '· The website and web apps move to the new domain\n· The service pauses for about 30 seconds\n· Installed apps keep working on the old address. Apps from the next store build on move by themselves on their next start\n· Outside services (payments, sign-in, search) need the new address. A list follows the move\n· The old address keeps answering until you retire it\n· On the web, people sign in again on the new address';
 
   @override
   String get cRbDomainApply => 'Change';
@@ -6405,7 +6404,7 @@ class TEn extends T {
 
   @override
   String get cRbDomainOldAgent =>
-      'The server agent is out of date. Re-run the install line once, then try again.';
+      'The server agent is out of date. Re-run the install line once, then try again (in the cloud console\'s browser SSH, the command from install guide 00; your data stays).';
 
   @override
   String get cRbDomainNoReason => 'no reason was given';
@@ -6486,7 +6485,7 @@ class TEn extends T {
 
   @override
   String get cRbCheck_app_store_urls =>
-      'App Store Connect: privacy and support URLs';
+      'App Store Connect: privacy and account deletion URLs';
 
   @override
   String get cRbCheck_play_urls =>
@@ -6494,7 +6493,7 @@ class TEn extends T {
 
   @override
   String get cRbCheck_ms_store_urls =>
-      'Microsoft Partner Center: privacy and support URLs';
+      'Microsoft Partner Center: privacy and account deletion URLs';
 
   @override
   String get cRbCheck_github_store_vars =>

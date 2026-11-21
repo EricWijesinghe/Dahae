@@ -81,6 +81,9 @@ class _SetupScreenState extends State<SetupScreen> {
                 const AppLinksCard(),
                 const SizedBox(height: Space.md),
                 DomainCard(business: business),
+                // A domain move needs the server approval code, so it can be made here too.
+                const SizedBox(height: Space.md),
+                const AppCard(child: ApprovalEnrollCard()),
                 for (final c in cards) ...[
                   const SizedBox(height: Space.md),
                   if (c['code'] == 'portone') ...[
@@ -107,8 +110,12 @@ class _SetupScreenState extends State<SetupScreen> {
                   ),
                 ],
                 const SizedBox(height: Space.md),
+                // `env`: TOSS_PAYOUTS_ENABLED on the server turns payouts on whatever the saved switch says.
                 TossPayoutSwitchCard(
-                  on: (data['payout_toss_switch'] as Json?)?['on'] == true,
+                  on: switch (data['payout_toss_switch']) {
+                    {'on': true} || {'env': true} => true,
+                    _ => false,
+                  },
                 ),
                 const SizedBox(height: Space.xl),
                 Text(
