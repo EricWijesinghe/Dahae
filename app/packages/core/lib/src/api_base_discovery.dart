@@ -11,6 +11,8 @@ import 'api.dart';
 import 'models.dart';
 
 /// Secure-storage key of the server address found by [ApiBaseDiscovery], used from the next cold start on.
+/// The value is `<compiled base>|<found base>`: a later build of the same app id with another compiled
+/// address (staging, another server) ignores it.
 const apiBaseOverrideKey = 'api_base_override';
 
 /// `https://host[:port]` for a plain https server address, else null (no path, query, fragment or user info).
@@ -38,8 +40,12 @@ Future<String> resolveApiBase({
 }) async {
   if (!web) {
     try {
-      final saved = httpsBase(await storage.read(key: apiBaseOverrideKey));
-      if (saved != null) return saved;
+      final value = await storage.read(key: apiBaseOverrideKey) ?? '';
+      final i = value.lastIndexOf('|');
+      final saved = httpsBase(value.substring(i + 1));
+      if (i > 0 && value.substring(0, i) == compiled() && saved != null) {
+        return saved;
+      }
     } on Exception catch (e) {
       debugPrint('saved server address unreadable: $e');
     }
@@ -58,12 +64,16 @@ class ApiBaseDiscovery {
     http.Client? client,
     this.web = kIsWeb,
     this.timeout = const Duration(seconds: 10),
+    this.compiled = defaultApiBase,
   }) : _storage = storage,
        _http = client ?? http.Client();
 
   final ApiClient api;
   final bool web;
   final Duration timeout;
+
+  /// The build's own address, saved with the found one (see [apiBaseOverrideKey]).
+  final String Function() compiled;
   final FlutterSecureStorage _storage;
   final http.Client _http;
   String? _tried;
@@ -84,7 +94,10 @@ class ApiBaseDiscovery {
     api.publicBase.value = next;
     if (web) return;
     try {
-      await _storage.write(key: apiBaseOverrideKey, value: next);
+      await _storage.write(
+        key: apiBaseOverrideKey,
+        value: '${compiled()}|$next',
+      );
     } on Exception catch (e) {
       debugPrint('new server address not saved: $e');
     }

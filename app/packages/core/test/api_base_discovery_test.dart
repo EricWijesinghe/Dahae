@@ -82,6 +82,7 @@ http.Client _probe({
       client: probe,
       web: web,
       timeout: const Duration(milliseconds: 50),
+      compiled: () => _old,
     ),
     storage: storage,
     api: api,
@@ -103,7 +104,7 @@ void main() {
       await s.discovery.check(_config(_new));
 
       expect(seen.single.toString(), '$_new/v1/config');
-      expect(s.storage.data[apiBaseOverrideKey], _new);
+      expect(s.storage.data[apiBaseOverrideKey], '$_old|$_new');
       expect(s.api.baseUrl, _old, reason: 'never switched mid-session');
       expect(s.api.publicBase.value, _new);
       expect(
@@ -201,7 +202,7 @@ void main() {
     await s.discovery.check(_config(_new));
 
     expect(s.storage.data, isEmpty);
-    final saved = _MemStorage({apiBaseOverrideKey: _new});
+    final saved = _MemStorage({apiBaseOverrideKey: '$_old|$_new'});
     expect(
       await resolveApiBase(storage: saved, web: true, compiled: () => _old),
       _old,
@@ -213,7 +214,10 @@ void main() {
     () async {
       for (final saved in [
         <String, String>{},
-        {apiBaseOverrideKey: 'http://evil.test'},
+        {apiBaseOverrideKey: '$_old|http://evil.test'},
+        // Saved by a build with another compiled address (staging, another server) on this device.
+        {apiBaseOverrideKey: 'https://staging.test|$_new'},
+        {apiBaseOverrideKey: _new},
       ]) {
         expect(
           await resolveApiBase(
