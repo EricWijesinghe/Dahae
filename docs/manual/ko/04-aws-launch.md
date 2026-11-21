@@ -25,14 +25,16 @@
 
 **이렇게 보이면 성공:** AWS 콘솔 첫 화면이 보이고, 오른쪽 위에 `dahae-deployer` 와 **서울** 이 보여요.
 
-## 4.2 명령 한 줄 붙여 넣기
+## 4.2 명령 붙여 넣기 (세 줄)
 
 1. 화면 위쪽 막대의 **CloudShell** 아이콘(`>_`)을 눌러요.
 2. 검은 화면에 `$` 표시가 나올 때까지 기다려요.
-3. 아래 줄을 메모장에 붙여 넣고, `example.co.kr` 과 `owner@example.co.kr` 을 **실제 도메인과 이메일로** 바꿔요.
+3. 아래 세 줄을 메모장에 붙여 넣고, 마지막 줄의 `example.co.kr` 과 `owner@example.co.kr` 을 **실제 도메인과 이메일로** 바꿔요.
 
    ```
-   curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --domain example.co.kr --email owner@example.co.kr
+   R=https://raw.githubusercontent.com/EricWijesinghe
+   curl -fsSLO $R/Dahae/master/deploy/aws/launch.sh
+   bash launch.sh --domain example.co.kr --email owner@example.co.kr
    ```
 
 4. 바꾼 줄 전체를 복사해요.

@@ -162,7 +162,9 @@ sudo dahae restore-offsite db-20261110-033000.sql.gz.enc
 **한 번에 만들기 (권장):** CloudShell 에서 (4장)
 
 ```
-curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --domain example.co.kr --email owner@example.co.kr
+R=https://raw.githubusercontent.com/EricWijesinghe
+curl -fsSLO $R/Dahae/master/deploy/aws/launch.sh
+bash launch.sh --domain example.co.kr --email owner@example.co.kr
 ```
 
 옵션: `--version vX.Y.Z` (기본: 최신 릴리스), `--stack dahae-main`, `--instance-type t3.medium`, `--hosted-zone-id Z…` (Route 53 A 레코드), `--vpc vpc-… --subnet subnet-…` (기본: 기본 VPC 의 공개 서브넷), `--region ap-northeast-2`, `--ref master`, `--dry-run`. 정책 만들기는 `--admin`. 이미 있는 스택은 건드리지 않아요. 릴리스의 `install.sh` 를 `SHA256SUMS` 와 대조한 뒤 지문을 템플릿에 고정해요.

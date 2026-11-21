@@ -25,14 +25,16 @@ The developer usually does this, because the deployer account's MFA is on the de
 
 **You should now see:** the AWS console home, with `dahae-deployer` and **Seoul** at the top right.
 
-## 4.2 Paste the one command
+## 4.2 Paste the command (three lines)
 
 1. Click the **CloudShell** icon (`>_`) in the top bar.
 2. Wait until the black window shows a `$` mark.
-3. Paste the line below into Notepad, and replace `example.co.kr` and `owner@example.co.kr` with **your real domain and email**.
+3. Paste the three lines below into Notepad, and in the last line replace `example.co.kr` and `owner@example.co.kr` with **your real domain and email**.
 
    ```
-   curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --domain example.co.kr --email owner@example.co.kr
+   R=https://raw.githubusercontent.com/EricWijesinghe
+   curl -fsSLO $R/Dahae/master/deploy/aws/launch.sh
+   bash launch.sh --domain example.co.kr --email owner@example.co.kr
    ```
 
 4. Copy the whole edited line.

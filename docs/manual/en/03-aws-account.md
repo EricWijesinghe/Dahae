@@ -41,14 +41,16 @@ This takes about 20–30 minutes. The last step (MFA) is done **on a call with t
 
 ## 3.2 Create the two policies (fast way: one command)
 
-Paste one line into **CloudShell** (the black command window inside the AWS console) and both policies are created at once. This is the recommended way. Use the manual way in 3.3 only if you cannot use CloudShell.
+Paste three short lines into **CloudShell** (the black command window inside the AWS console) and both policies are created at once. This is the recommended way. Use the manual way in 3.3 only if you cannot use CloudShell.
 
 1. In the bar at the top, click the **CloudShell** icon (it looks like `>_`). It sits near the right of the search box.
 2. A black window opens at the bottom (or in a new tab). The first time, it can take 1–2 minutes to get ready. Wait until you see a line where you can type (a `$` mark).
-3. Copy this whole line.
+3. Copy all three lines. You can paste them together.
 
    ```
-   curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --admin
+   R=https://raw.githubusercontent.com/EricWijesinghe
+   curl -fsSLO $R/Dahae/master/deploy/aws/launch.sh
+   bash launch.sh --admin
    ```
 
 4. Click once in the black CloudShell window.
@@ -172,7 +174,7 @@ MFA is already set up on the developer's phone in 3.6.
 |---|---|
 | You cannot see the CloudShell icon | Check the region is Seoul. On a narrow screen the icon can hide; widen the browser window, or type **CloudShell** in the search box |
 | CloudShell shows `AccessDenied` | Check you signed in as an administrator of the company account. A user with fewer permissions cannot create policies |
-| You pasted and nothing happened | Check you pressed **Enter**, and that the whole command landed on one line |
+| You pasted and nothing happened | Check you pressed **Enter**, and that all three lines were pasted |
 | You typed a policy name wrong | Delete the wrong policy from the **Policies** list and create it again with the exact name |
 | You attached `dahae-boundary` to the user | On the user's **Permissions** tab, **Remove** `dahae-boundary` |
 | The MFA codes are rejected | Check the developer's phone clock is set to automatic, then get two new consecutive numbers |

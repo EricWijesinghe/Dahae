@@ -162,7 +162,9 @@ The **Server update** card on the console's **[System status]** page queues a `k
 **One command (recommended):** in CloudShell (chapter 4)
 
 ```
-curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --domain example.co.kr --email owner@example.co.kr
+R=https://raw.githubusercontent.com/EricWijesinghe
+curl -fsSLO $R/Dahae/master/deploy/aws/launch.sh
+bash launch.sh --domain example.co.kr --email owner@example.co.kr
 ```
 
 Options: `--version vX.Y.Z` (default: latest release), `--stack dahae-main`, `--instance-type t3.medium`, `--hosted-zone-id Z…` (Route 53 A record), `--vpc vpc-… --subnet subnet-…` (default: the default VPC's public subnet), `--region ap-northeast-2`, `--ref master`, `--dry-run`. `--admin` creates the policies. It never touches an existing stack. It checks the release's `install.sh` against `SHA256SUMS`, then pins its hash in the template.
