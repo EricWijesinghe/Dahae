@@ -3,39 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>다해 · 믿을 수 있는 홈클리닝</title>
+  <title>{{httpInclude "/v1/public/seller-info?field=name"}} · 믿을 수 있는 홈클리닝</title>
   <meta name="description" content="검증된 청소 전문가가 욕실부터 이사 청소까지. 앱에서 가격을 확인하고 1분 만에 예약하세요.">
   <meta name="theme-color" content="#0B1217">
-  <!-- Relative URLs: scripts/build_legal.py --base-url makes canonical, og:url and og:image absolute at deploy. -->
-  <link rel="canonical" href="/">
+  <!-- Brand values and absolute URLs are filled on the server by Caddy (backend routes/seller/live.rs). -->
+  <link rel="canonical" href="{{httpInclude "/v1/public/seller-info?field=base_url"}}/">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="다해">
+  <meta property="og:site_name" content="{{httpInclude "/v1/public/seller-info?field=name"}}">
   <meta property="og:locale" content="ko_KR">
-  <meta property="og:url" content="/">
-  <meta property="og:title" content="다해 · 믿을 수 있는 홈클리닝">
+  <meta property="og:url" content="{{httpInclude "/v1/public/seller-info?field=base_url"}}/">
+  <meta property="og:title" content="{{httpInclude "/v1/public/seller-info?field=name"}} · 믿을 수 있는 홈클리닝">
   <meta property="og:description" content="검증된 청소 전문가, 투명한 가격, 1분 예약.">
-  <meta property="og:image" content="/assets/og-image.png">
+  <meta property="og:image" content="{{httpInclude "/v1/public/seller-info?field=og_image"}}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="다해 · 믿을 수 있는 홈클리닝">
+  <meta property="og:image:alt" content="{{httpInclude "/v1/public/seller-info?field=name"}} · 믿을 수 있는 홈클리닝">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="다해 · 믿을 수 있는 홈클리닝">
+  <meta name="twitter:title" content="{{httpInclude "/v1/public/seller-info?field=name"}} · 믿을 수 있는 홈클리닝">
   <meta name="twitter:description" content="검증된 청소 전문가, 투명한 가격, 1분 예약.">
-  <meta name="twitter:image" content="/assets/og-image.png">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <meta name="twitter:image" content="{{httpInclude "/v1/public/seller-info?field=og_image"}}">
+  <link rel="icon" href="{{httpInclude "/v1/public/seller-info?field=favicon"}}">
+  <link rel="apple-touch-icon" href="{{httpInclude "/v1/public/seller-info?field=apple_icon"}}">
   <link rel="manifest" href="site.webmanifest">
   <link rel="preload" href="assets/fonts/DahaeSans-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/DahaeSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/site.css">
   <noscript><style>.reveal { opacity: 1; transform: none; }</style></noscript>
-  <script type="application/ld+json" id="ld-business">
-  {"@context": "https://schema.org", "@graph": [
-    {"@type": "WebSite", "@id": "/#website", "name": "다해", "url": "/", "inLanguage": ["ko", "en"]},
-    {"@type": "LocalBusiness", "@id": "/#business", "name": "다해", "url": "/", "image": "/assets/icon-512.png", "description": "검증된 청소 전문가가 욕실부터 이사 청소까지. 앱에서 가격을 확인하고 1분 만에 예약하세요.", "areaServed": {"@type": "AdministrativeArea", "name": "서울특별시"}, "priceRange": "₩₩"},
-    {"@type": "Service", "name": "홈클리닝", "serviceType": "가정 청소", "areaServed": {"@type": "AdministrativeArea", "name": "서울특별시"}, "provider": {"@id": "/#business"}, "url": "/#services"}
-  ]}
-  </script>
+  {{httpInclude "/v1/public/seller-info?field=ld_json"}}
+  <style>:root { --brand: {{httpInclude "/v1/public/seller-info?field=primary_color"}}; }</style>
   <script>
     // Theme before first paint: no flash of the wrong theme.
     try { const t = localStorage.getItem('site.theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
@@ -48,7 +43,7 @@
 
   <header class="nav">
     <div class="wrap">
-      <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span><span data-brand-name>다해</span></a>
+      <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">{{httpInclude "/v1/public/seller-info?field=logo_img"}}</span><span data-brand-name>{{httpInclude "/v1/public/seller-info?field=name"}}</span></a>
       <nav class="nav-links" aria-label="주요 메뉴">
         <a href="#services" data-t="nav_services">서비스</a>
         <a href="#how" data-t="nav_how">이용 방법</a>
@@ -131,7 +126,7 @@
 
     <section id="proof" aria-labelledby="proof-title" hidden>
       <div class="wrap">
-        <div class="section-head reveal"><h2 id="proof-title" data-t="proof_title">다해 이야기</h2></div>
+        <div class="section-head reveal"><h2 id="proof-title" data-t="proof_title">{{httpInclude "/v1/public/seller-info?field=name"}} 이야기</h2></div>
         <p id="proof-homes"></p>
         <p id="proof-rating"></p>
         <ul id="proof-reviews"></ul>
@@ -167,9 +162,9 @@
   <footer>
     <div class="wrap cols">
       <div>
-        <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span><span data-brand-name>다해</span></a>
+        <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">{{httpInclude "/v1/public/seller-info?field=logo_img"}}</span><span data-brand-name>{{httpInclude "/v1/public/seller-info?field=name"}}</span></a>
         <p class="company">{{httpInclude "/v1/public/seller-info"}}</p>
-        <p>© <span id="year"></span> <span data-brand-name>다해</span></p><p class="credit">Powered by Dahae · 소프트웨어 © 2026 Eric Wijesinghe</p>
+        <p>© <span id="year"></span> <span data-brand-name>{{httpInclude "/v1/public/seller-info?field=name"}}</span></p><p class="credit">Powered by Dahae · 소프트웨어 © 2026 Eric Wijesinghe</p>
       </div>
       <div>
         <b data-t="f_support">고객센터</b><br>
