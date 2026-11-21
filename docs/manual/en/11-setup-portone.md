@@ -117,6 +117,8 @@ A webhook is how PortOne tells our server that a payment finished.
 
 > **Tip** A webhook never changes a payment by itself. When a notice arrives, the server asks PortOne again before acting.
 
+> **Tip** If you later change the domain, this webhook address changes with it. The **After the move** list on the console's **Domain** card shows the new address with a copy button (chapter 28, 28.8.6).
+
 ---
 
 ## 11.6 The Issue cash receipts switch

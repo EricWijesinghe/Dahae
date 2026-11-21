@@ -228,8 +228,9 @@ developer-only material lives in chapter 33.
 - 17.1 Offsite backup card `cIntBackup` (`BACKUP_FIELDS`): Cloudflare R2 steps and NCP Object Storage steps
   (endpoint, region `auto`/`kr-standard`, bucket, keys, retention default 30); check uploads/deletes a small file;
   encryption tied to `DATA_KEY` (keep keys backup).
-- 17.2 Uptime heartbeat card `oHeartbeat` (`HeartbeatCard` in `setup.dart`): `oHeartbeatOff`/`oHeartbeatOn`;
-  set by developer (`dahae heartbeat <url>`, guide 07 §8); healthchecks.io.
+- 17.2 Uptime heartbeat card `oHeartbeat` (`HeartbeatCard` in `host_controls.dart`): `cRbHeartbeatOff`/`oHeartbeatOn`,
+  URL field `cRbHeartbeatUrl` (owner code, `heartbeat` job); healthchecks.io.
+- 17.4 Business hours card (`BusinessHoursCard` in `setup_operator.dart`, `cRbHours*`), used by the AI offline mode.
 - 17.3 Store review demo account card (`setup_review.dart`): `cReviewTitle`, `cReviewHint`, `cReviewEnable`,
   `cReviewPhone`, `cReviewCode`, `cReviewActiveUntil`, auto switch-off; link to ch. 25.
 - Screenshots: `console-setup-backup`, `console-setup-heartbeat`, `console-setup-review-account`, `external-r2-token`.
@@ -352,18 +353,30 @@ developer-only material lives in chapter 33.
 - 27.3 The keys backup and why restore fails without it (`DATA_KEY`, `/opt/malkkeum/.env`).
 - 27.4 Restore: done by the installer/developer with `dahae restore` / `restore-offsite` (guide 07 §4, guide 02 §6);
   what the owner tells them; restore drill (guide 08 6-6) — monthly checklist item.
-- 27.5 Moving to a new server (guide 08 8-2), changing domain (8-3: no documented procedure → 확인 필요).
+- 27.5 Moving to a new server (guide 08 8-2); changing domain now points to ch. 28.8 (console domain card).
 - Screenshots: `console-ops-backup-check`, `aws-ssm-status`.
 
 ## Part 7. 브랜드 · Brand
 
-### 28. 이름, 로고, 색 (현재 방식) · Name, logo and colours today — `28-brand-today`
-- 28.1 What the owner can change today in the console: service name, main colour (contrast warning), logo
-  (business card, ch. 10); where it shows (apps, site, notifications; apps cache last colour).
-- 28.2 What needs the developer today: app names/icons/bundle IDs in the store builds, store listings
-  (`docs/REBRAND-CHECKLIST.md` 2–3), legal checks before store submission (§1), terms text (§4).
-- 28.3 Note: a one-click rebranding edition will follow; until then use this chapter.
-- Screenshots: `console-setup-business`, `customer-home-branded`.
+### 28. 브랜드 바꾸기: 이름, 로고, 색, 도메인 · Rebranding: name, logo, colours and domain — `28-brand-today`
+(2nd edition; file name kept so links stay valid. Source: `app/apps/console/lib/screens/setup_business.dart`,
+`brand_assets.dart`, `brand_preview.dart`, `setup_store_build.dart`, `setup_domain.dart`, `setup_domain_checklist.dart`,
+`host_controls.dart` (approval enrolment), labels `cRb*` in `app/tool/strings_rebrand_console.py`.)
+- 28.1 What changes when (`cRbAppliedList`).
+- 28.2 Names: service name, `cRbNameEn`, `cRbShortName` (12), `cRbTagline`, `cRbTaglineEn` (60).
+- 28.3 Logo once; 7 slots made by the console; letter logo `cRbLetterMark`, `cRbNoLogoWarn`.
+- 28.4 Colour (partner app: accent only). 28.5 Company details + `cRbPrivacyEmail`.
+- 28.6 Save: preview `cRbPreviewTitle`, upload progress, `cRbAppliedTitle`; website and legal pages fill in live.
+- 28.7 Store app build card (`cRbStore*`, owner ack).
+- 28.8 Domain move: approval code enrolment (`cRbEnroll*`), DNS, check (`cRbDomainDns*`), change with owner code +
+  approval code, rollback and refusals, the `cRbCheck_*` checklist with values from `domains.rs::checklist_items`,
+  retire (`cRbRetire*`), `cRbServerMoved` banner.
+- 28.9 Outside consoles and legal checks (`docs/REBRAND-CHECKLIST.md`). 28.10 What does not change.
+- Screenshots: `console-setup-business-names`, `console-setup-business-letter-logo`, `console-brand-preview`,
+  `console-brand-applied`, `console-setup-store-build`, `console-ops-approval-enrol`, `console-setup-domain-dns-ok`,
+  `console-setup-domain-dns-bad`, `console-domain-approval-code`, `console-setup-domain-done`,
+  `console-setup-domain-checklist`, `console-domain-retire-dialog`, `console-server-moved-banner`,
+  `console-setup-business-color-warning`.
 
 ## Part 8. 문제 해결 · Troubleshooting
 

@@ -78,14 +78,21 @@ The developer builds the apps. You create the store accounts in your company's n
 
 **You should now see:** the developer in the user list with the **Admin** role.
 
-### App IDs (already fixed)
+### App IDs (decide before the first upload)
 
-| App | App ID |
+The built-in app IDs are below. If you publish under your own company in the stores, you can agree other IDs with the developer **before** the first upload.
+
+| App | Built-in app ID |
 |---|---|
 | Customer app | `kr.co.dahae.customer` |
 | Partner app | `kr.co.dahae.partner` |
 
-> **Warning** An app ID **cannot be changed** once the app is in a store. If you need different IDs, agree them with the developer **before** the first upload.
+If you chose other IDs, put **the same values** in two places.
+
+1. **[Developer]** Set the new IDs in the GitHub `store` environment variables `CUSTOMER_APP_ID` and `PARTNER_APP_ID`, and register the apps in Firebase with the same IDs.
+2. **[Owner]** On the console **[Setup]** → **App links** card, enter the same IDs in **Android package names (one per line)** and **iOS bundle IDs (one per line)** and click **[Save]** (chapter 15, 15.5). With the built-in IDs, leave both boxes empty.
+
+> **Warning** An app ID **cannot be changed** once the app is in a store. A new ID is a new store app. If the ID of a published app changes, existing customers get no update to it.
 
 ### Keeping the secret files safe
 
@@ -104,7 +111,7 @@ Not your task, but good to know. Details are in chapter 33 (developer appendix).
 1. Registers both apps in both stores (the app IDs above).
 2. Creates the upload keys (Apple API key, Play service account, Android upload key).
 3. Adds app push (Firebase) and social sign-in keys (chapters 15 and 16).
-4. Runs the `store-apps` job on GitHub to build the apps.
+4. Runs the `store-apps` job on GitHub to build the apps. The app name on the phone's home screen (customer app: **Short name**, partner app: **(short name) 파트너**), the app icon and the colour are read from the server at build time: the values saved in the console's **Business profile** (chapter 28).
 5. For Android, uploads the very first file to Play Console by hand; after that, builds go to **Internal testing** as drafts automatically.
 6. For iPhone, builds go to **TestFlight**.
 7. After the first upload, puts the Play app-signing fingerprints (SHA-1, SHA-256) into the Kakao and Google consoles and into your console **[Setup]** → **App links** (chapter 15).
@@ -215,6 +222,8 @@ After the review, click **[Disconnect]** on the **Store review demo account** ca
 
 ### App updates
 
+> **Note** If you changed the name, logo, colour, app IDs or domain in the console, the **Store app build** card on **[Setup]** lists what changed. Those values reach the apps only through a new build. Ask your developer for one, and click **[I built it]** once the new apps are in the stores (chapter 28, 28.7).
+
 1. The developer tags a new version (for example `v1.5.2`) and runs `store-apps` again.
 2. Android: check the draft in Play Console and release it. iPhone: check it in TestFlight and send it to review.
 3. Once approved, customers' phones update automatically.
@@ -237,4 +246,5 @@ After the review, click **[Disconnect]** on the **Store review demo account** ca
 | The reviewer asks how to delete an account | In the app: **More** → **Account** → **Delete account**. On the web: `https://your-domain/delete-account.html`. |
 | Rejected over in-app purchase | Add the English text in `docs/store/review-notes.md` section 4 (cleaning is a physical service) to the review notes and resubmit. |
 | Kakao or Google sign-in fails on Android | The Play app-signing SHA-1 must be registered in the Kakao and Google consoles. Tell the developer (chapter 15). |
+| The developer says the build stopped because it could not read the server brand | Check that a logo (or a letter logo) is saved on the console's **Business profile**. Without a logo on the server, the build stops (chapter 28, 28.3). |
 | Old apps stopped after an update | The **Minimum version** went up too early. Lower it, click **[Save]**, and raise it again once the new version is in both stores. |

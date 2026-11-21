@@ -39,7 +39,7 @@
 - [ ] **App push (Firebase)** is filled (chapter 16).
 - [ ] **Address search (juso.go.kr)** is filled (chapter 16).
 - [ ] **Offsite backup (S3-compatible)**: **Connected** on **[Check connection]** (chapter 17).
-- [ ] The **Uptime heartbeat** card says connected (ask your developer) (chapter 17).
+- [ ] The **Uptime heartbeat** card says connected (chapter 17, 17.2).
 - [ ] Saved cards lock by themselves. Any card you unlocked is locked again with **[Lock now]** (chapter 9).
 
 ### Test payments (test keys, no money moves)

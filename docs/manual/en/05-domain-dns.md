@@ -137,6 +137,8 @@ Lines marked `!` are things still to do. Right after install, these lines showin
 
 > **Tip** If the **Connect** button is grey or the connection fails, check the instance state is **Running**, and try again in 2–3 minutes.
 
+> **Note** To move to another domain later, you do not need a new server. Change it on the console's **[Setup]** → **Domain** card (chapter 28, 28.8).
+
 ## If something goes wrong
 
 | If this happens | Do this |

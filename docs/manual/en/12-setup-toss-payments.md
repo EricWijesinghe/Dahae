@@ -96,6 +96,8 @@ You save and test with test keys, then move to live keys. You also learn what go
 
 > **Warning** Do not mix it up with the partner-payout webhook (`…/v1/webhooks/toss`, chapter 13). This card's address ends in `tosspayments`.
 
+> **Tip** If you later change the domain, this webhook address changes with it. The **After the move** list on the console's **Domain** card shows the new address with a copy button (chapter 28, 28.8.6).
+
 ---
 
 ## 12.6 Choose payment methods (before switching on)
@@ -168,6 +170,12 @@ Under Toss Payments, methods that PortOne hid for lack of a channel key are show
 - Without an auto-billing contract, no card can be saved under Toss Payments. Customers with no card saved through PortOne cannot start a new recurring visit.
 
 > **Warning** So **keep both cards.** The PortOne card is needed for refunds of PortOne payments, for cards saved through PortOne and for identity checks. The Toss Payments card is needed while any Toss payments or saved cards exist. Removing a card makes its refunds fail and raises an alert.
+
+### What follows a gateway switch by itself
+
+- The processor table in the website privacy policy: the **토스페이먼츠** (Toss Payments) row shows **이용 중** (in use) once the card is saved. Nothing to edit by hand (chapter 28, 28.6).
+- When a saved card is charged, the order name sent to the payment company uses the **Short name** from **Business profile** (for example `ShortName 예약금` for a deposit, `ShortName 잔금` for a balance). This is the same on either gateway (chapter 28, 28.2).
+- The merchant name on card statements is set in the payment company's admin pages. Check the merchant name in the Toss Payments admin pages too (chapter 28, 28.9).
 
 ---
 

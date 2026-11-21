@@ -28,7 +28,8 @@ The install folder on the server is `/opt/malkkeum`. `sudo dahae help` prints th
 | `dahae update-schedule mon@04:00\|off` | Automatic update day and time. `off` turns automatic updates off (days: mon, tue, wed, thu, fri, sat, sun) |
 | `dahae load file.tar` | Load pre-downloaded images (offline update, demos) |
 | `dahae heartbeat <https url>\|off` | Set the outside uptime ping URL (for example healthchecks.io; period 5 min, grace 15 min suggested) |
-| `dahae host-approval enroll <number>\|status` | Create the server approval code / show its status (used to approve version changes and rollbacks) |
+| `dahae domain <new domain> [--yes]` | Move the service address: back up `.env` → set `DOMAIN` → restart api and web → check `/health` on the new address (up to 5 minutes). On failure it restores `.env` and exits with code 3. Normally done in the console (chapter 28, 28.8) |
+| `dahae host-approval enroll <number>\|status` | Create the server approval code / show its status (used to approve version changes, rollbacks and domain moves; the console can create it too) |
 | `dahae owner-reset` | Deletes the **server approval code** (asks for a confirmation word). It does not reset the owner's two-step sign-in |
 | `dahae applinks --android-sha256 fp[,fp] --apple-team-id TEAMID` | Set up app links |
 | `dahae demo load [--force]` / `demo clear` | Load / clear demo data |
@@ -149,11 +150,17 @@ The **Server update** card on the console's **[System status]** page queues a `k
 | Agent job kind | Console button | Note |
 |---|---|---|
 | `update` | Yes (**[Update now]**) | Runs `dahae update` |
+| `channel`, `schedule`, `backup-now`, `update-skip`, `restart` (`all`) | Yes (**Server settings**, chapter 26) | Owner code. `channel` updates at once, like `dahae channel`. `schedule` takes `mon@04:00` or `off` |
+| `heartbeat` | Yes (**Uptime heartbeat** card, chapter 17) | Owner code. An `https://` URL or `off`. The agent runs `dahae heartbeat` (restarts api, sends a test ping) |
+| `domain-check` | Yes (**[Check DNS]** on the **Domain** card, chapter 28) | Admin session only. The result JSON is readable for 10 minutes at `GET /admin/host/jobs/{id}/output` |
+| `domain-set` | Yes (**[Change]** on the **Domain** card, chapter 28) | Owner code plus the server approval code (`POST /admin/host/jobs/{id}/approve`). Runs `dahae domain`; on failure it restores `.env` and ends `rolled_back` |
+| `host-approval-enroll` | Yes (**Server approval code** → **[Set up]**, chapter 28, 28.8.1) | Owner code. The server fills in the account id; only the requesting owner can read the authenticator link. Fails if one exists |
 | `update-tag`, `rollback` | No | Need the server approval code (TOTP). Approve within 10 minutes; 5 wrong codes cancel the job; 10 wrong codes in an hour lock approvals |
-| `status-refresh`, `backup-now`, `update-skip`, `channel`, `schedule`, `restart`, `heartbeat`, `logs`, `offsite-list`, `domain-check`, `host-approval-enroll` | No | The agent accepts them, but the console does not send them today |
+| `status-refresh`, `logs`, `offsite-list` | No | The agent accepts them, but the console does not send them today |
 
-- Job states in the console: `queued` **Waiting**, `running` **In progress**, `ok` **Done**, `failed` **Failed**, `rolled_back` **Failed, so it went back to the previous version**, anything else **Needs a check**.
-- Create the server approval code with `dahae host-approval enroll <owner account number>`; if it leaked, run `dahae owner-reset` and create it again.
+- Job states in the console: `queued` **Waiting**, `running` **In progress**, `ok` **Done**, `failed` **Failed**, `rolled_back` **Failed, so it went back to the previous version**, `awaiting_approval` **Waiting for the approval code**, `rejected` **Refused**, anything else **Needs a check**.
+- A server installed before this feature needs the install line run once more to get the new job runner and `dahae domain` (`dahae update` swaps images only). Until then `domain-set` ends `rejected` with no reason.
+- Create the server approval code in the console (chapter 28, 28.8.1) or with `dahae host-approval enroll <owner account number>`; if it leaked, run `dahae owner-reset` and create it again.
 
 ---
 
@@ -232,10 +239,14 @@ The full steps are in `docs/guide/11-앱-직접-빌드.md`.
 - Every secret lives only in the Secrets of the GitHub environment **`store`**. Keys, `.p8` files and keystores never go in the repository.
 - A written licence agreement must be in place before starting (`LICENSE` §1.4, §3.1).
 - The first AAB must be uploaded by hand in Play Console. After that, uploads go through the API.
+- Before the build, `scripts/store_brand.py` reads the home-screen name (`short_name`; the partner app adds ` 파트너`), the icons (`store_1024`, `icon_512`) and the colour from `{API_BASE}/v1/brand`. The build stops when the server cannot be read or has no logo. Turn the workflow input `brand_from_server` off only for a build before the server is up.
+- `store` environment variables: `API_BASE`, `APPLE_TEAM_ID`, `APP_LINK_DOMAIN` (after a domain move `new.host,old.host`, three at most), optional `CUSTOMER_APP_ID`, `PARTNER_APP_ID` (default `kr.co.dahae.customer`, `kr.co.dahae.partner`; decide before the first upload; same values as the app ID boxes on the console's **App links** card).
+- When the build is out, the owner clicks **[I built it]** on the console's **Store app build** card to record it (chapter 28, 28.7).
 
 | Symptom | Cause and fix |
 |---|---|
 | The app does not reach the server | `API_BASE` missing or wrong. Fix it and rebuild |
+| Stops with `/v1/brand has no store_1024 icon` | Save a logo (or a letter logo) on the console's **Business profile**, then build again |
 | iOS signing fails | One of the App ID capabilities is off |
 | Play upload permission error | Check the service account has release manager rights on both apps |
 | Kakao or Google sign-in fails (Android) | The Play app signing SHA-1 is missing from the Kakao or Google console |

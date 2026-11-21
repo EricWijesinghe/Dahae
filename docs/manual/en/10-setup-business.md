@@ -32,6 +32,10 @@ You also meet the store-link and app-version boxes, and turn the customer paymen
 | Box | What to enter | Where it shows |
 |---|---|---|
 | **Service name** | The name customers see (required) | App header, website, notifications |
+| **English name** | The name in English (up to 60 characters, may stay empty) | English screens |
+| **Short name (up to 12 characters: SMS prefix, home screen label)** | A short name of 12 characters or fewer (empty means the first 12 characters of the service name) | SMS prefix, payment names, home screen app name |
+| **Tagline** | Your service in one sentence (up to 60 characters) | Share image, web app description |
+| **English tagline** | The tagline in English (up to 60 characters) | English screens |
 | **Support phone** | The number customers call | Apps and website |
 | **Support email** | The address customers write to | Apps and website |
 | **Support hours** | For example `Mon–Fri 09:00–18:00` | Apps and website |
@@ -40,6 +44,8 @@ You also meet the store-link and app-version boxes, and turn the customer paymen
 2. Type the number into **Support phone**.
 3. Type the address into **Support email**.
 4. Type the hours into **Support hours**.
+
+> **Note** The **English name**, **Short name**, **Tagline** and **English tagline** boxes sit right under the service name. Chapter 28, 28.2 explains where each is used.
 
 > **Warning** With **Service name** empty, saving fails with **Please check the highlighted value**. The other boxes may stay empty. Each box takes up to 200 characters.
 
@@ -56,11 +62,13 @@ You also meet the store-link and app-version boxes, and turn the customer paymen
 
 > **Tip** A large image is scaled down to 1024 pixels wide when it is uploaded.
 
+> **Tip** Without a logo file, **[Make a letter logo]** under the picture box makes a logo from the first letter of the name. When you save, the console makes 7 icons and share images from the logo (chapter 28, 28.3).
+
 ---
 
 ## 10.4 Pick the brand colour
 
-The brand colour is the colour of buttons and headers in the customer and partner apps.
+The brand colour is the colour of buttons and headers in the customer app. The partner app uses it for highlights only (chapter 28, 28.4).
 
 1. Under **Brand color**, click one of the 8 round swatches. The swatch gets a dark ring and the preview strip changes colour.
 2. If none fits, type a colour code into the **#RRGGBB** box. Example: `#187A8F` (`#` and 6 digits or letters A–F).
@@ -72,7 +80,7 @@ The brand colour is the colour of buttons and headers in the customer and partne
 > **Warning** If red text under the colours says **White text on this colour is hard to read, so the apps will not use it. Choose a darker colour.**, choose a darker colour.
 > If you save anyway, the apps ignore that colour. This keeps the white text on buttons readable.
 
-> **Tip** The customer and partner apps fetch the saved colour and logo from the server. Without internet they keep the last colour they received. Chapter 28 shows how the name and logo appear today.
+> **Tip** The customer and partner apps fetch the saved colour and logo from the server. Without internet they keep the last colour they received. Chapter 28 explains what changes when.
 
 ---
 
@@ -89,6 +97,7 @@ These are the boxes under **Company details (shown in app and website footer)**.
 | **Business address** | The business address on the registration |
 | **Hosting provider** | The company you rent the server from |
 | **Privacy officer** | The person you chose as privacy officer |
+| **Privacy contact email** | The address customers write to about their personal data |
 
 1. Click each box in the order of the table and type the value.
 2. Copy it exactly as it appears on the document.
@@ -164,10 +173,14 @@ Under the heading **App versions** the card says: **Apps below the minimum stop 
 
 1. Scroll to the bottom of the card.
 2. Click **[Save]**.
+3. If you changed the logo, brand colour, service name or tagline, the **This is how it looks** window opens. Check the icons and share image it made and click **[Save]** (chapter 28, 28.6).
+4. Read the **Saved. This is where it shows** window and click **[OK]**.
 
 **You should now see:** **Saved** at the bottom of the screen, the shop picture next to the card title replaced by a tick (✔), and the count at the top one higher.
 
 > **Warning** If you leave for another menu item without saving, what you typed is lost.
+
+> **Note** Right under the **Business profile** card are the **Store app build** card (chapter 28, 28.7) and the **Business hours** card (chapter 17, 17.4).
 
 ---
 
@@ -177,7 +190,7 @@ Turn the payment methods in the customer app on or off. Each switch applies at o
 
 ![The Payment methods card: one switch per method](../img/en/console-setup-pay-methods.png)
 
-1. Open the **Payment methods** card right under **Business profile**.
+1. Open the **Payment methods** card, under **Business profile** and right after the **Business hours** card.
 2. The top line says **Turn the methods customers see on or off. Applies instantly.** The number under the card title (for example `4 / 10`) is how many are on out of all.
 3. There are 10 methods: **Credit & debit card**, **KakaoPay**, **NaverPay**, **TossPay**, **PAYCO**, **Samsung Pay**, **Apple Pay**, **Bank transfer**, **Virtual account**, **Mobile bill**.
 4. To turn one on, click the switch at the right of its row so it moves right.
@@ -207,6 +220,7 @@ Turn the payment methods in the customer app on or off. Each switch applies at o
 | **[Save]** shows **Please check the highlighted value** | The service name is empty, a link does not start with `https://`, or a version or colour has the wrong format | Check the service name, links, versions (`1.2.0`) and colour (`#187A8F`) |
 | You picked a logo but the apps do not show it | You did not click **[Save]** | Click **[Save]** at the bottom of the card |
 | The logo upload fails | The file type is not supported | Use a JPG, PNG or WEBP file |
+| **Could not make images from this logo. Try another PNG or JPG file.** | The console could not make icons from that logo | Use a PNG or JPG file |
 | You changed the colour but the apps did not | The colour is too light for white text | Pick a darker colour (the warning goes away) and save |
 | No app download buttons on the website | No store links yet | Add them after release (10.6) and save |
 | A payment method switch is grey | That method has no channel key | Add the PortOne channel key (chapter 11) |

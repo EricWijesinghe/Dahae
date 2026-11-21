@@ -42,10 +42,10 @@ Before signing in, people can still see services and prices (**See prices withou
 
 ![Customer app home](../img/en/customer-home.png)
 
-1. Top left: your logo and name. Top right: the **All** / **다해 PICK** switch (**다해 PICK** is fixed text that does not follow the service name, chapter 28).
+1. Top left: your logo and name. Top right: the **All** / **(service name) PICK** switch (**다해 PICK** in the sample data; it follows the service name when you change it, chapter 28).
 2. Below it are four large menus (on a new install: Move-in / move-out cleaning, Living-space cleaning, Appliance and furniture cleaning, Pest control and disinfection). Their names, order and pictures come from the service groups in the console **[Catalog & prices]** (chapter 18).
 3. If the customer has a booking, an upcoming booking card shows.
-4. Below that come recommended services, the banner and **Dahae News**. Banners and news are made in **[Coupons & content]** → **Content** (chapter 22).
+4. Below that come recommended services, the banner and **(service name) News**. Banners and news are made in **[Coupons & content]** → **Content** (chapter 22).
 
 ### Booking a fixed-price service
 
@@ -124,7 +124,7 @@ What happens next:
 
 ![More tab](../img/en/customer-more.png)
 
-The **More** tab has **What's included**, **Payment methods**, **Coupons**, **Points**, **Payment history**, **Regular cleaning**, **Account**, **Addresses**, **Notices**, **다해 tips** (fixed text), **FAQ**, **Chat with us**, **Partnerships**, **Language**, **Theme**, **Privacy policy**, **Terms of service**, **Open-source licenses** and **Version**.
+The **More** tab has **What's included**, **Payment methods**, **Coupons**, **Points**, **Payment history**, **Regular cleaning**, **Account**, **Addresses**, **Notices**, **(service name) tips**, **FAQ**, **Chat with us**, **Partnerships**, **Language**, **Theme**, **Privacy policy**, **Terms of service**, **Open-source licenses** and **Version**.
 
 - **Regular cleaning** → **Start a subscription**: choose **How often** (**Every week**, **Every 2 weeks**, **Every 4 weeks**), **Day of week** and **Arrival time**. Each visit is charged the day before, to the saved card.
 - **Account** lets the customer:

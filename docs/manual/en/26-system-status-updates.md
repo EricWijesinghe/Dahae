@@ -235,7 +235,7 @@ With no errors it says **No recent errors**.
 
 ## 26.9 Server update (with one button)
 
-The server updates itself to the new version **every Monday at 4:00 in the morning** (the default). It takes a backup first and, if the new version does not answer within 3 minutes, goes back to the previous version by itself. So normally you do nothing. When a new stable version comes out, the automatic update does not take it at once: it takes it on the next run more than 24 hours after first seeing it. So a new version can take 1 to 2 weeks to arrive.
+The server updates itself to the new version **every Monday at 4:00 in the morning** (the default). It takes a backup first and, if the new version does not answer within 3 minutes, goes back to the previous version by itself. So normally you do nothing. The day and time can be changed under **Server settings** below. When a new stable version comes out, the automatic update does not take it at once: it takes it on the next run more than 24 hours after first seeing it. So a new version can take 1 to 2 weeks to arrive.
 
 Update by hand, as below, only when your developer tells you a new version is out and you do not want to wait until Monday.
 
@@ -276,13 +276,68 @@ Status words in **Recent server jobs**:
 
 If the update succeeded but a screen or feature looks wrong, tell your developer. The developer goes back to the previous version on the server (rollback). The console has no rollback button. A rollback does not delete data (chapter 33).
 
+### Server settings (owner only)
+
+Below **[Update now]** on the **Server update** card are the **Server settings**. Jobs that used to need the server terminal are done here. Only the **Owner** account sees them.
+
+![Server settings: update channel, automatic update, back up now, skip, restart](../img/en/console-ops-server-settings.png)
+
+Every button works the same way.
+
+1. Click the button.
+2. In the **Enter your code** window, type the 6 digits from your authenticator app and click **[Continue]**.
+3. **Requested. See it under Recent server jobs** appears.
+4. The job appears under **Recent server jobs** below (for example `Back up now · Waiting`). The owner's phone also gets the text **서버 작업이 요청됐어요: (job name). 본인이 요청하지 않았다면 바로 확인하세요.** ("A server job was requested: (job name). If it was not you, check at once.")
+
+> **Note** These boxes do not show the values stored on the server now. Each time the page opens they start at **Stable**, **Mon** and `04:00`. Check the result by the **Done** under **Recent server jobs**.
+
+**Update channel**
+
+1. Click **Stable** or **Beta**. A server that serves customers uses **Stable**.
+2. Click **[Apply]** on the right and enter your code.
+
+You should now see: `Update channel · Done` under **Recent server jobs**.
+
+> **Warning** Changing the channel makes the server update **at once** to the newest version on that channel. The site may drop briefly, so do it at a quiet time. Choose **Beta** only when your developer tells you to.
+
+**Automatic update**
+
+1. Click the day box and pick a day from **Mon** to **Sun**. To turn automatic updates off altogether, pick **Off**.
+2. Type the time into **Time (HH:MM)**, in Korea time and 24-hour format (for example `04:00`). With **Off** picked, this box disappears.
+3. Click **[Apply]** on the right and enter your code.
+
+You should now see: `Update schedule · Done` under **Recent server jobs**.
+
+> **Tip** A time such as `4:00` shows **Use the HH:MM format**. Use two digits each, as in `04:00`.
+
+> **Warning** With automatic updates off, fixed versions no longer arrive by themselves. While they are off, use **[Update now]** whenever your developer tells you a new version is out.
+
+**The other buttons**
+
+| Button | What it does |
+|---|---|
+| **[Back up now]** | Backs up the database and photos once, now. If offsite backup (chapter 17) is on, a copy goes there too. Useful before a big change (chapter 27) |
+| **[Skip the next automatic update]** | Skips the next scheduled automatic update **once**. The one after that runs as usual |
+| **[Restart the service]** | Turns the service off and on. In the **Restart the service? It drops for about a minute.** window you click **[Restart the service]** once more. Use it only when your developer tells you to |
+
+Job names under **Recent server jobs**: **Update**, **Back up now**, **Skip update**, **Update channel**, **Restart**, **Update schedule**, **Heartbeat** (chapter 17), **DNS check**, **Domain change**, **Approval code setup** (chapter 28). Besides the states in the table above, there are two more.
+
+| Screen text | Meaning | What to do |
+|---|---|---|
+| **Waiting for the approval code** | It runs only after the server approval code is entered (domain change) | Chapter 28, 28.8.4 |
+| **Refused** | The server did not accept this job | See the reasons in chapter 28, 28.8.5 |
+
+### Server approval code
+
+Below **Server settings** is **Server approval code**: a second 6-digit code the server checks itself for big jobs such as a domain change. Chapter 28, 28.8.1 shows how to set it up. You do it once.
+
 ---
 
 ## 26.10 If your server is on AWS
 
 A server installed on AWS (chapters 3–4) can use the same **[Update now]** button. On top of that, when the developer releases a new stable version it reaches the server through an automatic GitHub deploy. If DODA wants, a deploy approver can be set on GitHub; then a deploy goes in only after approval. The details are in the developer appendix (chapter 33).
 
-- AWS servers also have the Monday 04:00 automatic update on by default. If you want updates only through GitHub deploys, ask your developer to turn the automatic update off.
+- AWS servers also have the Monday 04:00 automatic update on by default. If you want updates only through GitHub deploys, pick **Off** under **Automatic update** in **Server settings** and click **[Apply]** (26.9).
 - Beta versions are never deployed automatically. Servers that serve customers get stable versions only.
 
 ---
@@ -293,6 +348,8 @@ A server installed on AWS (chapters 3–4) can use the same **[Update now]** but
 >
 > - **I cannot see [Update now]** → Check that you signed in with the owner account. Other admins do not see the button.
 > - **[Update now] is grey and cannot be pressed** → An update is already **Waiting** or **In progress**. Wait for it to end.
+> - **A Server settings button shows Something went wrong. Please try again.** → Check that you are signed in with the owner account. If **That code is wrong. Enter the 6-digit code shown in your app** shows, enter the number your authenticator shows **now**.
+> - **A recent server job ends as Refused** → The server may have been installed before this feature. Ask your developer to run the install line once more (your data stays).
 > - **The alert switches are grey** → This is a **Consultant** account. Sign in with an **Admin** account.
 > - **Alert texts do not arrive** → Check **Phone for alerts** and **Quiet hours**, then click **[Check connection]** on the **SMS & KakaoTalk (Solapi)** card in **[Setup]**.
 > - **Server status stays yellow** → Look for the yellow rows in **External services**. If they are unused services marked **Not set up**, that is fine.

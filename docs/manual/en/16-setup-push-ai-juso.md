@@ -57,7 +57,7 @@ The AI answers customer messages in the **Inbox** first. Chapter 19 shows the In
 2. Paste the key into **API key**.
 3. Leave **Model (Optional)** empty. Empty means the default model (`claude-opus-5-5`).
 4. Type one of these into **Mode (Optional)**:
-   - `offline`: the AI answers only when staff are away. This is the default if empty.
+   - `offline`: the AI answers only when staff are away, and also outside business hours (business hours: chapter 17, 17.4). This is the default if empty.
    - `always_first`: the AI always answers first; staff take over by replying or pausing the chat.
 5. Leave the three limit boxes empty at first. Empty means the defaults below.
 6. Click **[Save]**.

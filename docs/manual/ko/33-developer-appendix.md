@@ -28,7 +28,8 @@
 | `dahae update-schedule mon@04:00\|off` | 자동 업데이트 요일·시각. `off` 는 자동 업데이트 끄기 (요일: mon, tue, wed, thu, fri, sat, sun) |
 | `dahae load 파일.tar` | 미리 받아 둔 이미지 불러오기 (인터넷 없이 업데이트, 체험용) |
 | `dahae heartbeat <https 주소>\|off` | 외부 가동 확인 핑 주소 설정 (예: healthchecks.io, 주기 5분·유예 15분 권장) |
-| `dahae host-approval enroll <번호>\|status` | 서버 승인 코드 만들기 / 상태 (버전 올리기·되돌리기 승인에 써요) |
+| `dahae domain <새 도메인> [--yes]` | 서비스 주소 바꾸기: `.env` 백업 → `DOMAIN` 변경 → api·web 다시 시작 → 새 주소로 `/health` 확인 (5분까지). 실패하면 `.env` 를 되돌리고 종료 코드 3. 보통은 콘솔(28장 28.8)에서 해요 |
+| `dahae host-approval enroll <번호>\|status` | 서버 승인 코드 만들기 / 상태 (버전 올리기·되돌리기·도메인 바꾸기 승인에 써요. 콘솔에서도 만들어요) |
 | `dahae owner-reset` | **서버 승인 코드**를 지워요 (확인 글자 입력 필요). 사장님 2단계 인증 초기화가 아니에요 |
 | `dahae applinks --android-sha256 지문[,지문] --apple-team-id 팀ID` | 앱 링크 설정 |
 | `dahae demo load [--force]` / `demo clear` | 체험용 데이터 넣기 / 지우기 |
@@ -149,11 +150,17 @@ sudo dahae restore-offsite db-20261110-033000.sql.gz.enc
 | 에이전트 작업 종류 | 콘솔에 버튼 | 메모 |
 |---|---|---|
 | `update` | 있음 (**[지금 업데이트]**) | `dahae update` 실행 |
+| `channel`, `schedule`, `backup-now`, `update-skip`, `restart` (`all`) | 있음 (**서버 설정**, 26장) | 소유자 코드. `channel` 은 `dahae channel` 처럼 바로 업데이트해요. `schedule` 값은 `mon@04:00` 또는 `off` |
+| `heartbeat` | 있음 (**업타임 하트비트** 카드, 17장) | 소유자 코드. `https://` 주소 또는 `off`. 에이전트가 `dahae heartbeat` 를 실행해요 (api 다시 시작, 테스트 핑) |
+| `domain-check` | 있음 (**도메인** 카드의 **[DNS 확인]**, 28장) | 관리자 세션만. 결과 JSON 은 `GET /admin/host/jobs/{id}/output` 으로 10분 동안 읽어요 |
+| `domain-set` | 있음 (**도메인** 카드의 **[바꾸기]**, 28장) | 소유자 코드 + 서버 승인 코드 (`POST /admin/host/jobs/{id}/approve`). `dahae domain` 실행, 실패하면 `.env` 를 되돌리고 `rolled_back` |
+| `host-approval-enroll` | 있음 (**서버 승인 코드** → **[등록하기]**, 28장 28.8.1) | 소유자 코드. 계정 번호는 서버가 채워요. 인증 앱 주소는 요청한 소유자만 읽어요. 이미 있으면 실패 |
 | `update-tag`, `rollback` | 없음 | 서버 승인 코드(TOTP)가 필요한 작업. 승인 칸에서 10분 안에 승인, 5번 틀리면 취소, 1시간에 10번 틀리면 잠김 |
-| `status-refresh`, `backup-now`, `update-skip`, `channel`, `schedule`, `restart`, `heartbeat`, `logs`, `offsite-list`, `domain-check`, `host-approval-enroll` | 없음 | 에이전트는 받지만 지금 콘솔에서는 보내지 않아요 |
+| `status-refresh`, `logs`, `offsite-list` | 없음 | 에이전트는 받지만 지금 콘솔에서는 보내지 않아요 |
 
-- 콘솔의 작업 상태 표시: `queued` **대기 중**, `running` **진행 중**, `ok` **완료**, `failed` **실패**, `rolled_back` **실패해서 이전 버전으로 되돌렸어요**, 그 밖 **확인이 필요해요**.
-- 서버 승인 코드는 `dahae host-approval enroll <사장님 계정 번호>` 로 만들고, 새어 나갔으면 `dahae owner-reset` 후 다시 만들어요.
+- 콘솔의 작업 상태 표시: `queued` **대기 중**, `running` **진행 중**, `ok` **완료**, `failed` **실패**, `rolled_back` **실패해서 이전 버전으로 되돌렸어요**, `awaiting_approval` **승인 코드를 기다려요**, `rejected` **거절됨**, 그 밖 **확인이 필요해요**.
+- 이 기능 전에 설치한 서버는 설치 줄을 한 번 다시 실행해야 새 작업 실행기와 `dahae domain` 이 들어가요 (`dahae update` 는 이미지만 바꿔요). 그 전에는 `domain-set` 이 이유 없이 `rejected` 로 끝나요.
+- 서버 승인 코드는 콘솔(28장 28.8.1) 또는 `dahae host-approval enroll <사장님 계정 번호>` 로 만들고, 새어 나갔으면 `dahae owner-reset` 후 다시 만들어요.
 
 ---
 
@@ -232,10 +239,14 @@ bash launch.sh --domain example.co.kr --email owner@example.co.kr
 - 모든 비밀 값은 GitHub 환경 **`store`** 의 Secrets 에만 넣어요. 키, `.p8`, keystore 는 저장소에 올리지 않아요.
 - 시작 전에 서면 라이선스 계약이 있어야 해요 (`LICENSE` §1.4·§3.1).
 - 첫 AAB 는 Play Console 에서 직접 올려야 해요. 그다음부터 API 로 올라가요.
+- 빌드 전에 `scripts/store_brand.py` 가 `{API_BASE}/v1/brand` 에서 홈 화면 이름(`short_name`, 파트너 앱은 뒤에 ` 파트너`), 아이콘(`store_1024`, `icon_512`), 색을 받아요. 서버에 연결되지 않거나 로고가 없으면 빌드가 멈춰요. 서버를 켜기 전 빌드만 워크플로 입력 `brand_from_server` 를 꺼요.
+- `store` 환경 변수: `API_BASE`, `APPLE_TEAM_ID`, `APP_LINK_DOMAIN` (도메인을 옮긴 뒤에는 `새도메인,예전도메인`, 세 개까지), 선택 `CUSTOMER_APP_ID`, `PARTNER_APP_ID` (기본 `kr.co.dahae.customer`, `kr.co.dahae.partner`, 첫 업로드 전에 정해요. 콘솔 **앱 링크** 카드의 앱 ID 칸과 같은 값).
+- 빌드가 끝나면 사장님이 콘솔 **스토어 앱 빌드** 카드에서 **[빌드했어요]** 를 눌러 기록해요 (28장 28.7).
 
 | 증상 | 원인과 해결 |
 |---|---|
 | 앱이 서버에 연결되지 않음 | `API_BASE` 변수가 없거나 틀림. 고친 뒤 다시 빌드 |
+| `/v1/brand has no store_1024 icon` 으로 멈춤 | 콘솔 **사업장 정보** 에 로고(또는 글자 로고)를 저장한 뒤 다시 빌드 |
 | iOS 서명 실패 | App ID 기능 중 하나가 꺼져 있음 |
 | Play 업로드 권한 오류 | 서비스 계정에 두 앱의 출시 관리자 권한이 있는지 확인 |
 | 카카오·구글 로그인 실패 (Android) | Play 앱 서명 SHA-1 이 카카오·구글 콘솔에 없음 |

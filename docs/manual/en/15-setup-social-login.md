@@ -135,19 +135,22 @@ You should now see: **Saved · confirm by signing in from the app**.
 
 These values let a customer return to the app after Naver sign-in instead of staying on a web page. **The developer who builds the apps gives you both values.** You only paste them.
 
-1. On **[Setup]**, find the **App links** card. It is near the top, right below the business profile, payment methods, store review demo account and uptime heartbeat cards.
+1. On **[Setup]**, find the **App links** card. It is near the top, right below the **Uptime heartbeat** card and right above the **Domain** card (chapter 9, 9.2).
 2. The card says which values are in use: **Using the values saved in the console** or **Using the server configuration values**.
 3. Paste the developer's fingerprint into **Android signing fingerprint (SHA-256)**. **One per line**, up to 8. Each looks like `AA:BB:…`: 32 hex pairs separated by colons.
 4. Enter the Team ID in **Apple Team ID (10 characters)** (the same Team ID as in 15.4).
-5. Click **[Check]**. It tests without saving.
-6. Read the result: **Android app links: on** and **iPhone app links: on**, then **Checked. Not saved yet.**
-7. Click **[Save]**.
+5. The boxes below, **Android package names (one per line)** and **iOS bundle IDs (one per line)**, normally stay **empty**. The note under them says **Leave empty for the built-in app IDs. If you change them, use the same values in the store build.** Fill them, one ID per line, only when you agreed with your developer to publish under other app IDs (chapter 25, 25.2).
+6. Click **[Check]**. It tests without saving.
+7. Read the result: **Android app links: on** and **iPhone app links: on**, then **Checked. Not saved yet.**
+8. Click **[Save]**.
 
 You should now see: **Saved**, and the line at the top changes to **Using the values saved in the console**. Saving applies the values right away.
 
 ![App links card](../img/en/console-setup-app-links.png)
 
 > **Tip** You can fill in one side first. The empty side shows off, with the note **With no values both links are off, and Naver sign-in may not return to the app.**
+
+> **Warning** Changing the app ID boxes makes the **Store app build** card show **app IDs** as changed (chapter 28, 28.7). Each box takes up to 4 IDs, with two or more parts split by dots, such as `kr.co.example.app`. Each part starts with a letter and holds only letters, digits and `_` (iOS bundle IDs may also use `-`). A malformed ID shows **Something went wrong. Please try again.** on save.
 
 > **Note** Your developer can set the same values from the server terminal with `sudo dahae applinks --android-sha256 … --apple-team-id …`. But once anyone has clicked **[Save]** on this card, the console values win and the command's values are not used. The card shows **Using the server configuration values** only while nothing has been saved in the console.
 

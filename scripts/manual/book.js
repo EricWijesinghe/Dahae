@@ -21,7 +21,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const MANUAL = path.join(ROOT, 'docs', 'manual');
 const FONTS = path.join(ROOT, 'app', 'packages', 'ui', 'assets', 'fonts');
 const LOGO = path.join(ROOT, 'website', 'assets', 'favicon.svg');
-const VERSION = '1.5.1';
+const EDITION = { ko: '제2판', en: '2nd edition' };
 const COPYRIGHT = '© 2026 Eric Wijesinghe. All rights reserved.';
 const PAGE_PLACEHOLDER = '000';
 const MM = 96 / 25.4;
@@ -34,7 +34,7 @@ const TEXT = {
   ko: {
     title: '다해 사용 설명서',
     subtitle: '설치부터 매일 운영까지, 화면 그대로 따라 하는 안내서',
-    edition: `v${VERSION} 판`,
+    edition: EDITION.ko,
     contents: '차례',
     missing: '그림 없음 · 위의 글 순서대로 따라 하세요',
     parts: ['1부 시작하기', '2부 서버 설치', '3부 관리자 콘솔', '4부 사업 운영', '5부 앱과 스토어',
@@ -46,7 +46,7 @@ const TEXT = {
   en: {
     title: 'Dahae User Manual',
     subtitle: 'From installing the server to running the business every day, step by step',
-    edition: `Version ${VERSION} edition`,
+    edition: EDITION.en,
     contents: 'Contents',
     missing: 'No picture here · follow the written steps',
     parts: ['Part 1 Getting started', 'Part 2 Server install', 'Part 3 Admin console', 'Part 4 Running the business',

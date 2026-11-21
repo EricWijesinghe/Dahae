@@ -6,7 +6,8 @@ This book shows how to install, set up and run Dahae, the booking, payment and p
 
 | Item | Details |
 |---|---|
-| Version covered | Dahae v1.5.1 (released 2026-11-17). One later addition appears in this book: the one-command AWS install (chapter 4) |
+| Edition | 2nd edition |
+| Version covered | Dahae v1.5.1 (released 2026-11-17), plus these later additions that appear in this book: the one-command AWS install (chapter 4), rebranding in the console (name, logo, colours, the Store app build card) and the domain move (chapter 28), and the server settings, uptime heartbeat, business hours, Toss payouts switch and app IDs now in the console (chapters 13, 15, 17 and 26). The version number of the release that carries them is **to be confirmed** |
 | Who it is for | The owner and admins of the company that uses Dahae. No technical knowledge needed |
 | Developer material | Collected in chapter 33 (developer appendix) |
 | Copyright | © 2026 Eric Wijesinghe. All rights reserved |
@@ -61,7 +62,7 @@ When you start, read in this order.
 | 4 | Part 4 Running the business (ch. 18–23) | Set services and prices; handle bookings, partners and payouts every day | Owner, admins, consultants |
 | 5 | Part 5 Apps and stores (ch. 24–25) | Learn the customer and partner apps; release them to the stores | Owner + developer |
 | 6 | Part 6 Updates, backups, monitoring (ch. 26–27) | Watch system status, update, check backups | Owner |
-| 7 | Part 7 Brand (ch. 28) | Change the company name, logo and colours | Owner |
+| 7 | Part 7 Brand (ch. 28) | Change the company name, logo, colours and domain | Owner |
 | 8 | Part 8 Troubleshooting (ch. 29) | Look things up when something goes wrong | Anyone |
 | 9 | Part 9 Appendices (ch. 30–33) | Glossary, checklists, security rules, developer appendix | Anyone / developer |
 

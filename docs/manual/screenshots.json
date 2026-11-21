@@ -312,7 +312,7 @@
   "id": "console-setup-business",
   "app": "console",
   "chapter": "10",
-  "what": "Business profile card filled with sample data, colour preview at the top",
+  "what": "Business profile card filled with sample data, colour preview at the top, name, English name, short name and tagline fields",
   "lang": [
    "ko",
    "en"
@@ -465,6 +465,16 @@
   ]
  },
  {
+  "id": "console-setup-payout-switch",
+  "app": "console",
+  "chapter": "13",
+  "what": "Bottom of Setup: the Turn on Toss payouts card with its switch and hint (owner account)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
   "id": "console-setup-solapi",
   "app": "console",
   "chapter": "14",
@@ -546,7 +556,7 @@
   "id": "console-setup-app-links",
   "app": "console",
   "chapter": "15",
-  "what": "App links card with team ID and Android fingerprint fields and Check button",
+  "what": "App links card with team ID and Android fingerprint fields, Android package names and iOS bundle IDs boxes with their hint, and Check button",
   "lang": [
    "ko",
    "en"
@@ -606,7 +616,7 @@
   "id": "console-setup-heartbeat",
   "app": "console",
   "chapter": "17",
-  "what": "Uptime heartbeat card (Not set state, and Connected state)",
+  "what": "Uptime heartbeat card: Not set state with the Heartbeat URL (https://...) field and Save; Connected state with the Off button",
   "lang": [
    "ko",
    "en"
@@ -629,6 +639,16 @@
   "what": "Cloudflare R2 API token creation with Object Read & Write permission",
   "lang": [
    "ko"
+  ]
+ },
+ {
+  "id": "console-setup-business-hours",
+  "app": "console",
+  "chapter": "17",
+  "what": "Business hours card: weekday chips Mon-Fri selected, Opens 09:00, Closes 18:00, Save button",
+  "lang": [
+   "ko",
+   "en"
   ]
  },
  {
@@ -1252,6 +1272,16 @@
   ]
  },
  {
+  "id": "console-ops-server-settings",
+  "app": "console",
+  "chapter": "26",
+  "what": "Server update card as owner: Server settings with Update channel Stable/Beta + Apply, Automatic update day dropdown + Time (HH:MM) + Apply, Back up now, Skip the next automatic update, Restart the service",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
   "id": "console-ops-backup-check",
   "app": "console",
   "chapter": "27",
@@ -1266,6 +1296,136 @@
   "app": "customer",
   "chapter": "28",
   "what": "Customer app home after changing the main colour and logo",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-business-names",
+  "app": "console",
+  "chapter": "28",
+  "what": "Business profile card top: preview strip with sample logo and name, then Service name, English name, Short name, Tagline, English tagline fields filled with sample values",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-business-letter-logo",
+  "app": "console",
+  "chapter": "28",
+  "what": "Business profile card with no logo: red no-logo warning under the preview and the Make a letter logo button",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-brand-preview",
+  "app": "console",
+  "chapter": "28",
+  "what": "This is how it looks dialog after Save: browser tab, app icon, home screen icon and share card made from the sample logo, Cancel and Save buttons",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-brand-applied",
+  "app": "console",
+  "chapter": "28",
+  "what": "Saved. This is where it shows dialog with the five lines (right away, next time they open, next request, after a store build, by hand) and OK",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-store-build",
+  "app": "console",
+  "chapter": "28",
+  "what": "Store app build card showing Changed since the last build: name, icon, the Build page address field, Open the build page and I built it buttons, both lists folded",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-ops-approval-enrol",
+  "app": "console",
+  "chapter": "28",
+  "what": "Server update card, Server approval code section: Set up button; second state after setup with Setup key and Authenticator link rows (values blurred) and the done note",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-domain-dns-ok",
+  "app": "console",
+  "chapter": "28",
+  "what": "Domain card in edit mode: new domain typed, green The A record points to this server line, What changes list and the Change button",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-domain-dns-bad",
+  "app": "console",
+  "chapter": "28",
+  "what": "Domain card after Check DNS with the red Point the A record to this server line (IP masked)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-domain-approval-code",
+  "app": "console",
+  "chapter": "28",
+  "what": "Server approval code dialog (6-digit field, Cancel and Continue) over the Domain card",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-domain-done",
+  "app": "console",
+  "chapter": "28",
+  "what": "Domain card after a move: Moved to <new domain> with Open on the new address, current address and the old address under Old addresses with Retire",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-domain-checklist",
+  "app": "console",
+  "chapter": "28",
+  "what": "After the move checklist on the Domain card: webhook, Naver, search, store and GitHub rows with values (sample domain) and copy buttons, two rows ticked",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-domain-retire-dialog",
+  "app": "console",
+  "chapter": "28",
+  "what": "Retire <old domain> dialog: warning text with current minimum app versions, the confirm checkbox ticked, Cancel and Retire",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-server-moved-banner",
+  "app": "console",
+  "chapter": "28",
+  "what": "Console with a typed-in server address showing the The server moved to ... banner with Change server address",
   "lang": [
    "ko",
    "en"

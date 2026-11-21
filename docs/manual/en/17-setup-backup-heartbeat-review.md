@@ -1,13 +1,13 @@
-# 17. Offsite backup, heartbeat, review demo account
+# 17. Offsite backup, heartbeat, review demo account, business hours
 
 **In this chapter**
 You turn on **offsite backup**, so your data survives even if the server breaks.
-You check the **uptime heartbeat**, so an outside service tells you when the server is down.
-And you learn to turn on the **store review demo account**, so app store reviewers can sign in.
+You connect the **uptime heartbeat**, so an outside service tells you when the server is down.
+And you learn to turn on the **store review demo account**, so app store reviewers can sign in, and to set the **business hours** the AI assistant uses.
 
 > **Before you start**
 > - Offsite backup: a Cloudflare account (R2) or a Naver Cloud account (Object Storage). Cost depends on storage used; see each provider's price list.
-> - Heartbeat: an account with an uptime service such as healthchecks.io, and someone who can open the server terminal (your developer, or Session Manager from chapter 5)
+> - Heartbeat: an account with an uptime service such as healthchecks.io, the owner account and its authenticator app
 > - Demo account: one mobile number nobody uses, and the authenticator app on the owner's phone (chapter 6)
 
 ## 17.1 Offsite backup (S3-compatible)
@@ -73,31 +73,34 @@ You should now see: **Connected** in green.
 
 A server can't report that it is down. So every few minutes the server sends an "I'm fine" signal to an outside service, and when the signals stop, that service alerts you by email or similar.
 
-This card is **read-only**. You don't type anything here.
+You can now enter the address right on this card. No server terminal is needed. Use the **Owner** account.
 
 | Card text | Meaning |
 |---|---|
-| **Not set: ask your developer to connect the uptime heartbeat.** | Not connected yet. |
+| **Not set: paste the heartbeat URL from your uptime service and save.** | Not connected yet. |
 | **Connected. An outside service is notified while the server is up.** | Connected. |
 
 ![Uptime heartbeat card](../img/en/console-setup-heartbeat.png)
 
-### How to connect it (your developer, or anyone who can open the server terminal)
+### How to connect it
 
 1. Sign up with an uptime service such as healthchecks.io.
 2. Create a **Check** with Period **5 minutes** and Grace **15 minutes**.
 3. Copy the **ping URL** it shows (`https://hc-ping.com/…`).
-4. Open the server terminal (on AWS, Session Manager from chapter 5).
-5. Type this and press Enter:
-   ```
-   sudo dahae heartbeat https://hc-ping.com/your-copied-address
-   ```
-6. When `✔ 외부 가동 확인을 켰어요. 테스트 핑을 보냈어요.` ("Uptime check on. Test ping sent.") appears, you are done.
-7. Reload the console's **[Setup]** page.
+4. On the console's **[Setup]** page, find the **Uptime heartbeat** card.
+5. Paste the address into **Heartbeat URL (https://...)**.
+6. Click **[Save]**.
+7. The **Enter your code** window opens. Type the 6 digits your authenticator app shows into **6-digit code** and click **[Continue]**.
+8. **Requested. See it under Recent server jobs** appears. The server saves the address and sends one test signal.
+9. After about a minute, reload the **[Setup]** page.
 
-You should now see: the card says **Connected. An outside service is notified while the server is up.**
+You should now see: the card says **Connected. An outside service is notified while the server is up.** The first signal also shows on healthchecks.io.
 
-> **Tip** The URL must start with `https://`. To turn it off, type `sudo dahae heartbeat off`.
+> **Tip** The URL must start with `https://`. Otherwise you see **Enter an address that starts with https://**.
+
+> **Tip** To turn it off, click **[Off]** on the card and enter your authenticator code. **[Off]** shows only while it is connected.
+
+> **Note** Progress shows under **Recent server jobs** on the **[System status]** → **Server update** card, for example `Heartbeat · Done` (chapter 26). The developer can do the same on the server terminal with `sudo dahae heartbeat https://…`.
 
 ## 17.3 Store review demo account
 
@@ -132,6 +135,28 @@ You should now see: **Saved**, and **Active until (date)** under the card title.
 
 You should now see: the date under the card title is gone.
 
+## 17.4 Business hours
+
+The **Business hours** card is used when the AI assistant (chapter 16) tells customers you are closed. The card says: **Used when the AI chat tells customers you are closed.**
+
+![Business hours card](../img/en/console-setup-business-hours.png)
+
+1. On the console's **[Setup]** page, find the **Business hours** card under **Business profile**.
+2. Click the days you are open (**Mon**, **Tue**, **Wed**, **Thu**, **Fri**, **Sat**, **Sun**). A chosen day is filled in. Click it again to remove it.
+3. Type the opening time into **Opens (HH:MM)**. Example: `09:00`
+4. Type the closing time into **Closes (HH:MM)**. Example: `18:00`
+5. Click **[Save]**.
+
+You should now see: **Saved** at the bottom of the screen.
+
+- Times are Korea time, in 24-hour format with two digits each (`09:00`, not `9:00`).
+- The closing time must be later than the opening time. Hours that run past midnight (for example `22:00` to `02:00`) cannot be entered.
+- At first no day is chosen and the boxes hold `09:00` and `18:00`. Nothing is saved yet at that point.
+
+> **Note** When the AI assistant's **operating mode** is `offline` (the default), the AI answers when no staff member is online or when you are closed. If business hours were never saved, it always counts as closed (chapter 16).
+
+> **Tip** Any admin can change this card. On a consultant account **[Save]** cannot be clicked.
+
 ## If something goes wrong
 
 | You see | Do this |
@@ -143,7 +168,8 @@ You should now see: the date under the card title is gone.
 | Backup card shows **The key was rejected. …** | Check the token has **Object Read & Write** and the keys were copied exactly. |
 | Backup card shows **Could not reach the service. …** | The storage could not be reached, or it refused the test file. Check the account ID in the endpoint and the bucket name (and that the bucket really exists), then try again in a few minutes. |
 | Backup card shows **Please check the highlighted value** (after the check) | Uploading or deleting the test file failed. Check the bucket name and permissions. |
-| Heartbeat card stays **Not set** | Ask your developer whether the command succeeded, then reload **[Setup]**. |
+| Heartbeat card stays **Not set** | On **[System status]**, check that the `Heartbeat` job under **Recent server jobs** is **Done**, then reload **[Setup]**. If it **Failed**, copy the address in again. |
+| Business hours shows **Pick at least one day, and a closing time after the opening time.** | Pick at least one day, use two-digit times such as `09:00`, and make the closing time later. |
 | **A customer, partner or staff member already uses this number. …** | Use a demo number that nobody uses. |
 | Demo account shows **Please check the highlighted value** | Check the number is a mobile number (010…) and the code is exactly 6 digits. |
 | The code is refused | Enter the code your app shows **now**. A used code can't be reused; wait about 30 seconds for the next one. |

@@ -149,11 +149,12 @@ These steps are for when the server broke or you move to another company's serve
 
 ## 27.8 If you want to change the domain
 
-There is no documented procedure yet for changing the domain (site address) (**to be confirmed**). Always talk to your developer before you change it. When it changes, these must change too:
+The domain (site address) is now changed on the console's **[Setup]** → **Domain** card. You do not need a new server or a restore from backup. Chapter 28, 28.8 has every step and warning.
 
-- Customer and partner apps: the server address is built into the apps, so the apps must be rebuilt and uploaded to the stores again (chapter 25).
-- Payment webhook addresses: the addresses entered on the PortOne and Toss screens must be changed to the new domain (chapters 11–13).
-- Social sign-in: addresses registered with Kakao, Naver, Google and Apple may need to change too (chapter 15).
+- Before you start, clicking **[Back up now]** on the **[System status]** → **Server update** card gives you peace of mind (chapter 26).
+- If the new address does not answer, the server puts the old settings back by itself.
+- The old domain keeps answering, so apps installed on phones keep working.
+- Change the payment webhooks, social sign-in addresses and store addresses by following the **After the move** list the console shows.
 
 ---
 

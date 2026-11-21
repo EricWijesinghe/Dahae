@@ -36,27 +36,31 @@ From top to bottom, the Setup page shows:
 
 | # | Card | Chapter |
 |---|---|---|
-| 1 | **Business profile** | 10 |
-| 2 | **Payment methods** | 10 |
-| 3 | **Store review demo account** | 17 |
-| 4 | **Uptime heartbeat** (view only) | 17 |
-| 5 | **App links** | 15 |
+| 1 | **Business profile** | 10, 28 |
+| 2 | **Store app build** | 28 |
+| 3 | **Business hours** | 17 |
+| 4 | **Payment methods** | 10 |
+| 5 | **Store review demo account** | 17 |
+| 6 | **Uptime heartbeat** | 17 |
+| 7 | **App links** | 15 |
+| 8 | **Domain** | 28 |
 | — | **Payments** (heading) | 11–12 |
-| 6 | **Payments (PortOne)** | 11 |
-| 7 | **Payments (Toss Payments)** | 12 |
-| 8 | **SMS & KakaoTalk (Solapi)** | 14 |
-| 9 | **App push (Firebase)** | 16 |
-| 10 | **Kakao login** | 15 |
-| 11 | **Naver login** | 15 |
-| 12 | **Google login** | 15 |
-| 13 | **Apple login** | 15 |
-| 14 | **AI assistant** | 16 |
-| 15 | **Offsite backup (S3-compatible)** | 17 |
-| 16 | **Partner payouts** | 13 |
-| 17 | **Address search (juso.go.kr)** | 16 |
+| 9 | **Payments (PortOne)** | 11 |
+| 10 | **Payments (Toss Payments)** | 12 |
+| 11 | **SMS & KakaoTalk (Solapi)** | 14 |
+| 12 | **App push (Firebase)** | 16 |
+| 13 | **Kakao login** | 15 |
+| 14 | **Naver login** | 15 |
+| 15 | **Google login** | 15 |
+| 16 | **Apple login** | 15 |
+| 17 | **AI assistant** | 16 |
+| 18 | **Offsite backup (S3-compatible)** | 17 |
+| 19 | **Partner payouts** | 13 |
+| 20 | **Address search (juso.go.kr)** | 16 |
+| 21 | **Turn on Toss payouts** (one switch) | 13 |
 
-Cards 6 to 17 are the "outside-service cards". Sections 9.3 to 9.7 describe these 12 cards.
-Cards 1 to 5 look a little different and are explained in their own chapters.
+Cards 9 to 20 are the "outside-service cards". Sections 9.3 to 9.7 describe these 12 cards.
+Cards 1 to 8 and 21 look a little different and are explained in their own chapters.
 
 ---
 

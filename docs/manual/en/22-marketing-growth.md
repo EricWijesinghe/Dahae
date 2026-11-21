@@ -62,9 +62,9 @@ Create and edit the notices, news, tips, FAQ, home banners and the terms and pri
 
    | Kind | Where it shows |
    |---|---|
-   | **Notice** | Customer app **More** → **Notices**, and the **Dahae News** row on the home screen |
-   | **News** | The **Dahae News** row on the home screen |
-   | **Tip** | Customer app **More** → **다해 tips**, and the **Dahae News** row on the home screen |
+   | **Notice** | Customer app **More** → **Notices**, and the **(service name) News** row on the home screen |
+   | **News** | The **(service name) News** row on the home screen |
+   | **Tip** | Customer app **More** → **(service name) tips**, and the **(service name) News** row on the home screen |
    | **FAQ** | Customer app **More** → **FAQ** |
    | **Banner** | The large banner card on the customer home screen (with a `service/…` link it shows in the home recommendations instead) |
    | **Legal** | Customer app **More** → **Terms of service** and **Privacy policy** |

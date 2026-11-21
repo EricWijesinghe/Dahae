@@ -77,7 +77,11 @@ Words in bold are names that appear on the console screen exactly as written.
 | Term | Korean | Meaning | Chapter |
 |---|---|---|---|
 | Server | 서버 | A computer on the internet that holds the Dahae program and data | 3–7 |
-| Domain | 도메인 | The site address (for example `example.co.kr`) | 5 |
+| Domain | 도메인 | The site address (for example `example.co.kr`). It can be changed in the console | 5, 28 |
+| **Old addresses** | **예전 주소** | Former domains that keep answering after a domain move. Installed apps keep using them until you retire them | 28 |
+| **Server approval code** | **서버 승인 코드** | A second 6-digit code, checked by the server itself, entered on top of the owner code for big jobs such as a domain move | 26, 28 |
+| **Short name** | **짧은 이름** | The service name in 12 characters or fewer, used for the SMS prefix, payment names and the app name on the phone's home screen | 28 |
+| **Store app build** | **스토어 앱 빌드** | The card that tells you what is built into the store apps (app name, icon, app IDs) and so needs a new build to change | 25, 28 |
 | DNS | DNS | The internet's phone book that turns a domain into a server IP | 5 |
 | A record | A 레코드 | One line in DNS that says "this domain is this IP" | 5 |
 | Public IP | 공인 IP | The number address that finds the server on the internet (for example `203.0.113.10`) | 4, 5 |
