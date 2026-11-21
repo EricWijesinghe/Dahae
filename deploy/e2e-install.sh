@@ -83,6 +83,11 @@ wait_until() { # wait_until 초 명령... : 명령이 성공할 때까지 기다
 api_healthy() { get /health | grep -q '"ok":true'; }
 api_version_is_test() { get /health | grep -q "\"version\":\"$TAG\""; }
 website_served() { [ "$(code /)" = 200 ] && get / | grep -qi '<html'; }
+# Every page's fragments reach the API from Caddy's own address (about 22 per home page view, 300 a minute for one
+# address): a busy minute must not turn the site into the maintenance page.
+pages_survive_a_burst() { local i; for i in $(seq 40); do [ "$(code /)" = 200 ] || return 1; done; }
+# The domain root approved, which the apps check before following a new api_base.
+approved_domain_served() { [ "$(get /.well-known/dahae-domain)" = "$DOMAIN" ]; }
 # API down: a proxied non-API path gets the static maintenance page (Caddy's 502 handler), then the API comes back.
 maintenance_page_when_api_down() {
   dc stop api >/dev/null 2>&1 || return 1
@@ -146,8 +151,9 @@ old_curl() { curl -sk --max-time 20 --resolve "$OLD_DOMAIN:443:127.0.0.1" "$@"; 
 old_code() { old_curl -o /dev/null -w '%{http_code}' "https://$OLD_DOMAIN$1"; }
 old_alias_recorded() { [ "$(dbq "select value->'aliases'->0->>'host' from settings where key = 'domains'")" = "$OLD_DOMAIN" ]; }
 old_api_served() { [ "$(old_code /v1/config)" = 200 ]; }
+old_names_new_domain() { [ "$(old_curl "https://$OLD_DOMAIN/.well-known/dahae-domain")" = "$NEW_DOMAIN" ]; }
 old_app_links_served() { old_curl "https://$OLD_DOMAIN/.well-known/assetlinks.json" | grep -q "$FINGERPRINT"; }
-old_page_moved() { [ "$(old_curl -o /dev/null -w '%{http_code} %{redirect_url}' "https://$OLD_DOMAIN/")" = "302 https://$NEW_DOMAIN/" ]; }
+old_page_moved() { [ "$(old_curl -o /dev/null -w '%{http_code} %{redirect_url}' "https://$OLD_DOMAIN/")" = "301 https://$NEW_DOMAIN/" ]; }
 stranger_refused() { ! curl -sk --max-time 20 --resolve "stranger.test:443:127.0.0.1" -o /dev/null https://stranger.test/health; }
 bad_domain_refused() { ! $SUDO env DAHAE_YES=1 /usr/local/bin/dahae domain localhost </dev/null >/dev/null 2>&1; }
 drop_hosts_line() { $SUDO sed -i '/ # dahae-e2e$/d' /etc/hosts; }
@@ -192,6 +198,8 @@ step "2. services answer over HTTPS"
 expect "API health" api_healthy
 expect "API reports the image version" api_version_is_test
 expect "website served" website_served
+expect "40 home page views in a row all answer 200" pages_survive_a_burst
+expect "the approved domain is served for the apps" approved_domain_served
 expect "console served at /admin/" console_served
 expect "app CSP limits connect-src to the payment gateways and forbids eval" csp_tight
 expect "website CSP allows inline scripts by hash only" site_csp_strict
@@ -331,7 +339,8 @@ expect "the API took the new base" api_env_is PUBLIC_BASE_URL "https://$NEW_DOMA
 expect "the old domain is recorded as an alias" old_alias_recorded
 expect "the old domain still serves the API (installed apps)" wait_until 60 old_api_served
 expect "the old domain still serves app links" old_app_links_served
-expect "old website pages move to the new domain (302)" old_page_moved
+expect "the old domain names the new one for the apps" old_names_new_domain
+expect "old website pages move to the new domain (301)" old_page_moved
 expect "a stranger's host name gets no certificate" stranger_refused
 expect "a bad domain is refused" bad_domain_refused
 
