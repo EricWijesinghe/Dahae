@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <application
-        android:label="다해"
+        android:label="${appLabel}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
@@ -62,6 +62,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="${appLinkHost}" android:path="/auth/naver/callback" />
+                <data android:scheme="https" android:host="${appLinkHost2}" android:path="/auth/naver/callback" />
+                <data android:scheme="https" android:host="${appLinkHost3}" android:path="/auth/naver/callback" />
             </intent-filter>
         </activity>
     </application>

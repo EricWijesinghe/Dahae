@@ -4,5 +4,10 @@ KAKAO_URL_SCHEME = kakao-unset
 GOOGLE_IOS_CLIENT_ID = google-unset
 GOOGLE_REVERSED_CLIENT_ID = google-unset
 APP_LINK_HOST = app-link-unset
+APP_LINK_HOST_2 = $(APP_LINK_HOST)
+APP_LINK_HOST_3 = $(APP_LINK_HOST)
+// Store builds set these from the server and GitHub variables (scripts/store_brand.py via native-keys.sh).
+APP_DISPLAY_NAME = 다해
+APP_BUNDLE_ID = kr.co.dahae.customer
 #include? "Keys.xcconfig"
 #include "Generated.xcconfig"

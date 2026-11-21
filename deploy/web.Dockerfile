@@ -34,6 +34,12 @@ RUN python3 -I tool/gen_arb.py \
  && (cd packages/core && flutter gen-l10n) \
  && cd apps/console && flutter build web --release --wasm --no-web-resources-cdn --base-href /admin/ \
  && cd ../customer && flutter build web --release --wasm --no-web-resources-cdn --base-href /app/
+# The shells take the business name and icons from the API at serve time (Caddy templates + httpInclude). Fail the
+# image if the web build ever drops those includes from index.html; the fix would be to inject them here instead.
+RUN for a in console customer; do \
+      if grep -q 'httpInclude' "apps/$a/web/index.html"; then grep -q 'httpInclude' "apps/$a/build/web/index.html" \
+        || { echo "the web build dropped the httpInclude lines from apps/$a/build/web/index.html" >&2; exit 1; }; fi; \
+    done
 
 FROM --platform=$BUILDPLATFORM caddy:2.11.9-builder@sha256:345264d8c6b50f44f4a4d507d4e6b6bcae40eef2f210d70f76e717fd8cc31baf AS caddy
 # The stock 2.11.9 binary ships golang.org/x/net and klauspost/compress with fixed HIGH advisories

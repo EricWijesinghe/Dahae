@@ -88,6 +88,23 @@
         }
       }
     },
+    "/internal/tls-ask": {
+      "get": {
+        "operationId": "internalTlsAsk",
+        "tags": [
+          "ops"
+        ],
+        "summary": "Caddy on-demand TLS check: 200 when the host (or its www. form) is a former service domain, 404 otherwise. Never proxied publicly",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/openapi.json": {
       "get": {
         "operationId": "openapiSpec",
@@ -6464,7 +6481,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Queue one server job (backup, update, update-skip, channel, restart, schedule); needs owner TOTP and an Idempotency-Key header (admin only, logged)",
+        "summary": "Queue one server job (backup, update, update-skip, channel, restart, schedule, heartbeat, domain-check, domain-set, host-approval-enroll); owner TOTP except status-refresh and domain-check, and an Idempotency-Key header (admin only, logged)",
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
         },
@@ -6485,6 +6502,97 @@
           "admin"
         ],
         "summary": "One queued server job and its live state (admin only)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/host/jobs/{id}/approve": {
+      "post": {
+        "operationId": "adminApproveHostJob",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner hands the server approval code to a job the server holds for it (domain-set); the server checks the code (owner only, logged)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/host/jobs/{id}/output": {
+      "get": {
+        "operationId": "adminHostJobOutput",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Result text a job published (domain-check JSON, approval enrolment address), capped at 64 KB; 404 once pruned (admin; owner only for enrolment)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/domains": {
+      "get": {
+        "operationId": "adminListDomains",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Current service domain, former domains that still answer, and the after-move checklist with values (admin only)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/domains/{host}": {
+      "delete": {
+        "operationId": "adminRetireDomain",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Retire a former domain: it stops getting certificates (owner TOTP, logged)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/domains/checklist/{id}": {
+      "put": {
+        "operationId": "adminTickDomainChecklist",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Tick or untick one after-move checklist item (admin only, logged)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
         "responses": {
           "200": {
             "description": "OK"
