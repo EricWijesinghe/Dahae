@@ -161,7 +161,8 @@ pub fn valid_heartbeat_url(url: &str) -> bool {
     let (host, port) = authority.split_once(':').map_or((authority, None), |(h, p)| (h, Some(p)));
     let host_ok = !host.is_empty() && host.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-');
     let port_ok = port.is_none_or(|p| (1..=5).contains(&p.len()) && p.bytes().all(|c| c.is_ascii_digit()));
-    let path_ok = path.bytes().all(|c| c.is_ascii_alphanumeric() || b"._~%/:@+=?-".contains(&c));
+    // No '=': the agent's job_parse refuses it in any value (agent.sh), so the job would fail after the owner code.
+    let path_ok = path.bytes().all(|c| c.is_ascii_alphanumeric() || b"._~%/:@+?-".contains(&c));
     host_ok && port_ok && path_ok
 }
 
@@ -237,9 +238,10 @@ mod tests {
     fn heartbeat_takes_off_or_an_https_url() {
         assert!(validate("heartbeat", "off").is_ok());
         assert!(validate("heartbeat", "https://hc-ping.com/1f2e-aaaa").is_ok());
-        assert!(validate("heartbeat", "https://x.io:8443/a?b=1").is_ok());
+        assert!(validate("heartbeat", "https://x.io:8443/a?b").is_ok());
         for bad in [
             "",
+            "https://x.io:8443/a?b=1",
             "http://hc-ping.com/x",
             "https://x.io/a?b=1&c=2",
             "https://x.io/$(id)",

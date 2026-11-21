@@ -173,7 +173,12 @@ class _HeartbeatCardState extends State<HeartbeatCard> {
 
   Future<void> _save(String arg) async {
     final u = Uri.tryParse(arg);
-    if (arg != 'off' && (u == null || u.scheme != 'https' || u.host.isEmpty)) {
+    // The root agent reads jobs as key=value lines and refuses any '=' in a value.
+    if (arg != 'off' &&
+        (u == null ||
+            u.scheme != 'https' ||
+            u.host.isEmpty ||
+            arg.contains('='))) {
       setState(() => _invalid = true);
       return;
     }
