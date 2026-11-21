@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -6198,6 +6199,487 @@ class TEn extends T {
 
   @override
   String get rbLegalOpenWeb => 'Open the web page';
+
+  @override
+  String get cRbNameEn => 'English name';
+
+  @override
+  String get cRbShortName =>
+      'Short name (up to 12 characters: SMS prefix, home screen label)';
+
+  @override
+  String get cRbTagline => 'Tagline';
+
+  @override
+  String get cRbTaglineEn => 'English tagline';
+
+  @override
+  String get cRbPrivacyEmail => 'Privacy contact email';
+
+  @override
+  String get cRbLetterMark => 'Make a letter logo';
+
+  @override
+  String get cRbNoLogoWarn =>
+      'There is no logo, so the built-in mark shows. Upload a logo or make a letter logo from the first letter of the name.';
+
+  @override
+  String get cRbPreviewTitle => 'This is how it looks';
+
+  @override
+  String get cRbPreviewBody =>
+      'Saving uploads these images and applies them on every screen at once.';
+
+  @override
+  String get cRbSlotFavicon => 'Browser tab';
+
+  @override
+  String get cRbSlotAppIcon => 'App icon';
+
+  @override
+  String get cRbSlotMaskable => 'Home screen icon';
+
+  @override
+  String get cRbSlotShare => 'Share card';
+
+  @override
+  String get cRbMaking => 'Making the images';
+
+  @override
+  String cRbUploading(String done, String total) {
+    return 'Uploading images ($done/$total)';
+  }
+
+  @override
+  String get cRbDeriveFailed =>
+      'Could not make images from this logo. Try another PNG or JPG file.';
+
+  @override
+  String get cRbAppliedTitle => 'Saved. This is where it shows';
+
+  @override
+  String get cRbAppliedList =>
+      '· Right away: SMS, AlimTalk and payment names, search pages\n· Next time they open: website, legal pages, icons, share image\n· On their next request: customer, partner and console apps (web and installed)\n· After a store build: app name, icon, app IDs (Store app build card)\n· By hand: PG merchant name, Kakao channel name, store listings';
+
+  @override
+  String get cRbStoreTitle => 'Store app build';
+
+  @override
+  String get cRbStoreBody =>
+      'The app name, icon, app IDs and the Naver sign-in address change only with a new store build.';
+
+  @override
+  String get cRbStoreNone => 'Nothing has changed since the last build';
+
+  @override
+  String cRbStoreChanged(String items) {
+    return 'Changed since the last build: $items';
+  }
+
+  @override
+  String get cRbStoreItemName => 'name';
+
+  @override
+  String get cRbStoreItemIcon => 'icon';
+
+  @override
+  String get cRbStoreItemColor => 'colour';
+
+  @override
+  String get cRbStoreItemAppIds => 'app IDs';
+
+  @override
+  String get cRbStoreItemDomain => 'domain';
+
+  @override
+  String get cRbStoreBuildUrl => 'Build page address';
+
+  @override
+  String get cRbStoreOpen => 'Open the build page';
+
+  @override
+  String get cRbStoreAck => 'I built it';
+
+  @override
+  String get cRbStoreAcked => 'Recorded as built';
+
+  @override
+  String cRbStoreLastAck(String date) {
+    return 'Last build recorded: $date';
+  }
+
+  @override
+  String get cRbStoreBuildTimeTitle => 'Changes only with a new build';
+
+  @override
+  String get cRbStoreBuildTimeList =>
+      '· App IDs (a new ID is a new store app)\n· Home screen name, launcher icon, launch screen\n· Store listing text, screenshots, privacy URLs\n· Signing keys and Apple team\n· Firebase config files (same project as the console\'s FCM key)\n· Kakao, Naver and Google app keys\n· App link hosts (Naver sign-in)\n· The first server address (later moves are followed by the app)\n· The built-in brand shown on first open\n· Languages built into the app';
+
+  @override
+  String get cRbStoreOutsideTitle => 'Change by hand in other consoles';
+
+  @override
+  String get cRbStoreOutsideList =>
+      '· Merchant name on card statements (PortOne, Toss)\n· Kakao channel name and AlimTalk wording (Kakao approval)\n· SMS sender number registration\n· App name on social sign-in consent screens\n· Store listing names';
+
+  @override
+  String get cRbDomainTitle => 'Domain';
+
+  @override
+  String cRbDomainCurrent(String host) {
+    return 'Current address: $host';
+  }
+
+  @override
+  String get cRbDomainAliases => 'Old addresses (still answer)';
+
+  @override
+  String get cRbDomainChange => 'Change domain';
+
+  @override
+  String get cRbDomainNew => 'New domain (e.g. example.com)';
+
+  @override
+  String get cRbDomainInvalid =>
+      'Not a domain name, or the same as the current one';
+
+  @override
+  String get cRbDomainCheck => 'Check DNS';
+
+  @override
+  String get cRbDomainChecking => 'Checking DNS';
+
+  @override
+  String cRbDomainDnsOk(String ip) {
+    return 'The A record points to this server ($ip)';
+  }
+
+  @override
+  String cRbDomainDnsBad(String ip, String found) {
+    return 'Point the A record to this server\'s IP $ip. Now: $found';
+  }
+
+  @override
+  String get cRbDomainDnsAaaa =>
+      'The AAAA record points elsewhere. Remove it or point it to this server.';
+
+  @override
+  String get cRbDomainDnsNone => 'none';
+
+  @override
+  String get cRbDomainWhatTitle => 'What changes';
+
+  @override
+  String get cRbDomainWhatList =>
+      '· The website and web apps move to the new domain\n· The service pauses for about 30 seconds\n· Installed apps keep working on the old address. Versions after 1.x move by themselves on their next start\n· Outside services (payments, sign-in, search) need the new address. A list follows the move\n· The old address keeps answering until you retire it\n· On the web, people sign in again on the new address';
+
+  @override
+  String get cRbDomainApply => 'Change';
+
+  @override
+  String get cRbDomainRunning =>
+      'Changing. The service pauses for about 30 seconds.';
+
+  @override
+  String cRbDomainDone(String domain) {
+    return 'Moved to $domain';
+  }
+
+  @override
+  String get cRbDomainOpenNew => 'Open on the new address';
+
+  @override
+  String cRbDomainRolledBack(String reason) {
+    return 'Rolled back: $reason';
+  }
+
+  @override
+  String cRbDomainRejected(String reason) {
+    return 'The server refused: $reason';
+  }
+
+  @override
+  String cRbDomainFailed(String reason) {
+    return 'Could not change it: $reason';
+  }
+
+  @override
+  String get cRbDomainOldAgent =>
+      'The server agent is out of date. Re-run the install line once, then try again.';
+
+  @override
+  String get cRbDomainNoReason => 'no reason was given';
+
+  @override
+  String get cRbDomainRetire => 'Retire';
+
+  @override
+  String cRbRetireTitle(String host) {
+    return 'Retire $host';
+  }
+
+  @override
+  String cRbRetireBody(String customer, String partner) {
+    return 'After this, apps that use this address no longer connect. Current minimum app versions: customer $customer, partner $partner.';
+  }
+
+  @override
+  String get cRbRetireConfirm =>
+      'Store builds with the new address are out and the minimum version is raised';
+
+  @override
+  String get cRbRetired => 'Old address retired';
+
+  @override
+  String get cRbApprovalTitle => 'Server approval code';
+
+  @override
+  String get cRbApprovalBody =>
+      'Enter the 6 digits of the server approval entry in your authenticator. It is not your owner code.';
+
+  @override
+  String get cRbApprovalEnter => 'Enter approval code';
+
+  @override
+  String get cRbChecklistTitle => 'After the move';
+
+  @override
+  String get cRbChecklistHint =>
+      'Copy each value into its outside service, then tick it.';
+
+  @override
+  String get cRbCheck_portone_webhook => 'PortOne console → webhook URL';
+
+  @override
+  String get cRbCheck_toss_payments_webhook =>
+      'Toss Payments developer center → webhook';
+
+  @override
+  String get cRbCheck_toss_payouts_webhook => 'Toss payouts webhook';
+
+  @override
+  String get cRbCheck_pg_site_url =>
+      'Site URL in the PG contract (may be reviewed again)';
+
+  @override
+  String get cRbCheck_naver_callback =>
+      'Naver Developers → add Callback URL (keep the old one while old apps exist)';
+
+  @override
+  String get cRbCheck_naver_service_url => 'Naver Developers → service URL';
+
+  @override
+  String get cRbCheck_kakao_site_domain =>
+      'Kakao Developers → Platform → Web (if registered)';
+
+  @override
+  String get cRbCheck_google_consent =>
+      'Google Cloud consent screen: homepage and privacy links (if set)';
+
+  @override
+  String get cRbCheck_search_console =>
+      'Google Search Console: new property, token in Business profile';
+
+  @override
+  String get cRbCheck_naver_search_advisor =>
+      'Naver Search Advisor: new site, token in Business profile';
+
+  @override
+  String get cRbCheck_app_store_urls =>
+      'App Store Connect: privacy and support URLs';
+
+  @override
+  String get cRbCheck_play_urls =>
+      'Play Console: privacy and account deletion URLs';
+
+  @override
+  String get cRbCheck_ms_store_urls =>
+      'Microsoft Partner Center: privacy and support URLs';
+
+  @override
+  String get cRbCheck_github_store_vars =>
+      'GitHub store environment variables, then a store build';
+
+  @override
+  String get cRbCheck_alimtalk_links =>
+      'AlimTalk templates with web link buttons (need approval again)';
+
+  @override
+  String get cRbCheck_dns_keep_old =>
+      'Keep the old A/AAAA records until retiring; add www.<new>';
+
+  @override
+  String get cRbCheck_version_floor =>
+      'After the new store builds are live: raise the minimum app version in Business profile';
+
+  @override
+  String cRbServerMoved(String base) {
+    return 'The server moved to $base. Change this app\'s server address too.';
+  }
+
+  @override
+  String get cRbServerMovedAction => 'Change server address';
+
+  @override
+  String get cRbHostTitle => 'Server settings';
+
+  @override
+  String get cRbChannel => 'Update channel';
+
+  @override
+  String get cRbChannelStable => 'Stable';
+
+  @override
+  String get cRbChannelBeta => 'Beta';
+
+  @override
+  String get cRbSchedule => 'Automatic update';
+
+  @override
+  String get cRbOff => 'Off';
+
+  @override
+  String get cRbDays => 'Mon,Tue,Wed,Thu,Fri,Sat,Sun';
+
+  @override
+  String get cRbTime => 'Time (HH:MM)';
+
+  @override
+  String get cRbInvalidTime => 'Use the HH:MM format';
+
+  @override
+  String get cRbApply => 'Apply';
+
+  @override
+  String get cRbBackupNow => 'Back up now';
+
+  @override
+  String get cRbRestart => 'Restart the service';
+
+  @override
+  String get cRbRestartConfirm =>
+      'Restart the service? It drops for about a minute.';
+
+  @override
+  String get cRbSkipUpdate => 'Skip the next automatic update';
+
+  @override
+  String get cRbJobQueued => 'Requested. See it under Recent server jobs';
+
+  @override
+  String get cRbHeartbeatUrl => 'Heartbeat URL (https://...)';
+
+  @override
+  String get cRbHeartbeatInvalid =>
+      'Enter an address that starts with https://';
+
+  @override
+  String get cRbHeartbeatOff =>
+      'Not set: paste the heartbeat URL from your uptime service and save.';
+
+  @override
+  String get cRbKindStatusRefresh => 'Status refresh';
+
+  @override
+  String get cRbKindBackupNow => 'Back up now';
+
+  @override
+  String get cRbKindUpdateSkip => 'Skip update';
+
+  @override
+  String get cRbKindChannel => 'Update channel';
+
+  @override
+  String get cRbKindRestart => 'Restart';
+
+  @override
+  String get cRbKindSchedule => 'Update schedule';
+
+  @override
+  String get cRbKindHeartbeat => 'Heartbeat';
+
+  @override
+  String get cRbKindDomainCheck => 'DNS check';
+
+  @override
+  String get cRbKindDomainSet => 'Domain change';
+
+  @override
+  String get cRbKindEnroll => 'Approval code setup';
+
+  @override
+  String get cRbStateAwaiting => 'Waiting for the approval code';
+
+  @override
+  String get cRbStateRejected => 'Refused';
+
+  @override
+  String get cRbEnrollTitle => 'Server approval code';
+
+  @override
+  String get cRbEnrollBody =>
+      'Big jobs such as a domain change need this second code, checked by the server itself. Add it to your authenticator once.';
+
+  @override
+  String get cRbEnrollStart => 'Set up';
+
+  @override
+  String get cRbEnrollWaiting => 'The server is making the code';
+
+  @override
+  String get cRbEnrollSecret => 'Setup key';
+
+  @override
+  String get cRbEnrollUri => 'Authenticator link';
+
+  @override
+  String get cRbEnrollDone =>
+      'Once it is in your authenticator you are done. It cannot be shown again after you leave.';
+
+  @override
+  String cRbEnrollFailed(String reason) {
+    return 'Could not set it up: $reason';
+  }
+
+  @override
+  String get cRbPayoutSwitch => 'Turn on Toss payouts';
+
+  @override
+  String get cRbPayoutSwitchHint =>
+      'When on, settlements go to partners\' accounts through Toss payouts. Each change needs your owner code.';
+
+  @override
+  String get cRbPayoutOn => 'Toss payouts turned on';
+
+  @override
+  String get cRbPayoutOff => 'Toss payouts turned off';
+
+  @override
+  String get cRbHoursTitle => 'Business hours';
+
+  @override
+  String get cRbHoursHint =>
+      'Used when the AI chat tells customers you are closed.';
+
+  @override
+  String get cRbHoursOpen => 'Opens (HH:MM)';
+
+  @override
+  String get cRbHoursClose => 'Closes (HH:MM)';
+
+  @override
+  String get cRbHoursInvalid =>
+      'Pick at least one day, and a closing time after the opening time.';
+
+  @override
+  String get cRbAndroidPackages => 'Android package names (one per line)';
+
+  @override
+  String get cRbIosBundles => 'iOS bundle IDs (one per line)';
+
+  @override
+  String get cRbAppIdsHint =>
+      'Leave empty for the built-in app IDs. If you change them, use the same values in the store build.';
 
   @override
   String get rnwTitle => 'Renewal calendar';

@@ -114,7 +114,7 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const DahaeLogo(size: 40),
+                const Icon(Icons.dns_rounded, size: 40),
                 const SizedBox(height: Space.xl),
                 Text(t.cServerTitle, style: context.text.headlineMedium),
                 const SizedBox(height: Space.sm),

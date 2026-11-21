@@ -38,25 +38,38 @@ class _AppLinksFormState extends State<_AppLinksForm> {
   late final _team = TextEditingController(
     text: (widget.initial['apple_team_id'] as String?) ?? '',
   );
+  // Store app IDs (assetlinks package names, AASA bundle IDs). Empty means the built-in IDs.
+  late final _packages = _lines('android_packages');
+  late final _bundles = _lines('ios_bundle_ids');
   Json? _checked;
   late bool _fromDb = widget.initial['source'] == 'database';
+
+  TextEditingController _lines(String key) => TextEditingController(
+    text: ((widget.initial[key] as List?) ?? const []).join('\n'),
+  );
+
+  static List<String> _split(TextEditingController c) => c.text
+      .split('\n')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
 
   @override
   void dispose() {
     _certs.dispose();
     _team.dispose();
+    _packages.dispose();
+    _bundles.dispose();
     super.dispose();
   }
 
   Json _body() {
     final team = _team.text.trim();
     return {
-      'android_cert_sha256': _certs.text
-          .split('\n')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList(),
+      'android_cert_sha256': _split(_certs),
       'apple_team_id': team.isEmpty ? null : team,
+      'android_packages': _split(_packages),
+      'ios_bundle_ids': _split(_bundles),
     };
   }
 
@@ -114,6 +127,24 @@ class _AppLinksFormState extends State<_AppLinksForm> {
           TextField(
             controller: _team,
             decoration: InputDecoration(labelText: t.cAppLinkTeamLabel),
+          ),
+          const SizedBox(height: Space.sm),
+          TextField(
+            controller: _packages,
+            minLines: 1,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: t.cRbAndroidPackages,
+              helperText: t.cRbAppIdsHint,
+              helperMaxLines: 3,
+            ),
+          ),
+          const SizedBox(height: Space.sm),
+          TextField(
+            controller: _bundles,
+            minLines: 1,
+            maxLines: 4,
+            decoration: InputDecoration(labelText: t.cRbIosBundles),
           ),
           if (_checked != null) ...[
             const SizedBox(height: Space.md),

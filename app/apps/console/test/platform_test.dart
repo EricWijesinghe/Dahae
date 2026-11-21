@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
 import 'package:console/screens/platform.dart';
-import 'package:console/screens/setup.dart';
+import 'package:console/screens/host_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:test_support/test_support.dart';
@@ -128,7 +128,7 @@ void main() {
     );
     await settle(tester);
 
-    expect(find.text(koT.oHeartbeatOff), findsOneWidget);
+    expect(find.text(koT.cRbHeartbeatOff), findsOneWidget);
     expect(find.text(koT.oHeartbeatOn), findsNothing);
     await unmount(tester);
   });

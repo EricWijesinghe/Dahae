@@ -6,13 +6,16 @@ import 'package:flutter/widgets.dart';
 
 /// Console-wide state: who is signed in, live counters, last event for toasts.
 class ConsoleState extends ChangeNotifier {
-  ConsoleState(this.api, this.realtime, this.session) {
+  ConsoleState(this.api, this.realtime, this.session, {this.brand}) {
     realtime.events.listen(_onEvent);
   }
 
   final ApiClient api;
   final Realtime realtime;
   final Session session;
+
+  /// The business brand the console paints with; Save in the business profile refreshes it.
+  final BrandController? brand;
 
   /// Null until the first answer: "not loaded" must never read as "0 jobs today".
   Json? dashboard;

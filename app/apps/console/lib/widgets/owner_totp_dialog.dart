@@ -11,10 +11,14 @@ import 'package:ui/ui.dart';
 const ownerTotpHeader = 'X-Owner-Totp';
 
 /// Asks for the owner's own 6-digit code for one owner-only request. Resolves to the code, or null when
-/// cancelled.
-Future<String?> askOwnerTotp(BuildContext context) => showDialog<String>(
+/// cancelled. [title] and [body] reuse the prompt for another 6-digit code (the server approval code).
+Future<String?> askOwnerTotp(
+  BuildContext context, {
+  String? title,
+  String? body,
+}) => showDialog<String>(
   context: context,
-  builder: (_) => const _OwnerTotpDialog(),
+  builder: (_) => _OwnerTotpDialog(title: title, body: body),
 );
 
 /// Headers for one owner request. Keep the code out of logs and URLs: it travels only in this header.
@@ -40,7 +44,9 @@ Future<dynamic> runOwnerAction(
 }
 
 class _OwnerTotpDialog extends StatefulWidget {
-  const _OwnerTotpDialog();
+  const _OwnerTotpDialog({this.title, this.body});
+  final String? title;
+  final String? body;
 
   @override
   State<_OwnerTotpDialog> createState() => _OwnerTotpDialogState();
@@ -69,12 +75,12 @@ class _OwnerTotpDialogState extends State<_OwnerTotpDialog> {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
-      title: Text(t.oaTotpTitle),
+      title: Text(widget.title ?? t.oaTotpTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.oaTotpBody),
+          Text(widget.body ?? t.oaTotpBody),
           const SizedBox(height: Space.sm),
           TextField(
             controller: _code,

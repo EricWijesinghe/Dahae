@@ -5,18 +5,22 @@ import 'dart:async';
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../state.dart';
+import '../widgets/copy_row.dart';
+import 'host_controls.dart';
 import 'setup_app_links.dart';
 import 'setup_business.dart';
+import 'setup_domain.dart';
 import 'setup_formats.dart';
 import 'setup_guides.dart';
+import 'setup_operator.dart';
 import 'setup_owner_code.dart';
 import 'setup_pay_methods.dart';
 import 'setup_review.dart';
+import 'setup_store_build.dart';
 
 /// Owner's launch checklist: business profile plus one card per external service.
 /// Keys are typed here (never in config files), saved encrypted, and tested on the spot.
@@ -58,6 +62,12 @@ class _SetupScreenState extends State<SetupScreen> {
                 ),
                 const SizedBox(height: Space.lg),
                 BusinessCard(initial: business, onSaved: _reload),
+                if (data['store_build'] case final Json build) ...[
+                  const SizedBox(height: Space.md),
+                  StoreBuildCard(data: build, onAcked: _reload),
+                ],
+                const SizedBox(height: Space.md),
+                const BusinessHoursCard(),
                 const SizedBox(height: Space.md),
                 const PayMethodsCard(),
                 const SizedBox(height: Space.md),
@@ -69,6 +79,8 @@ class _SetupScreenState extends State<SetupScreen> {
                 HeartbeatCard(configured: data['heartbeat_configured'] == true),
                 const SizedBox(height: Space.md),
                 const AppLinksCard(),
+                const SizedBox(height: Space.md),
+                DomainCard(business: business),
                 for (final c in cards) ...[
                   const SizedBox(height: Space.md),
                   if (c['code'] == 'portone') ...[
@@ -94,6 +106,10 @@ class _SetupScreenState extends State<SetupScreen> {
                     onChanged: _reload,
                   ),
                 ],
+                const SizedBox(height: Space.md),
+                TossPayoutSwitchCard(
+                  on: (data['payout_toss_switch'] as Json?)?['on'] == true,
+                ),
                 const SizedBox(height: Space.xl),
                 Text(
                   t.cSetupProgress('$done', '$total'),
@@ -523,15 +539,15 @@ class _IntegrationCardState extends State<IntegrationCard> {
           children: [
             _Steps(guide: _guide),
             if (_code == 'portone' && widget.webhookUrl != null)
-              _CopyRow(label: t.cSetupWebhook, value: widget.webhookUrl!),
+              CopyRow(label: t.cSetupWebhook, value: widget.webhookUrl!),
             if (_code == 'payout' && widget.tossWebhookUrl != null)
-              _CopyRow(
+              CopyRow(
                 label: t.cSetupTossWebhook,
                 value: widget.tossWebhookUrl!,
               ),
             if (_code == 'tosspayments' &&
                 widget.tossPaymentsWebhookUrl != null)
-              _CopyRow(
+              CopyRow(
                 label: t.cSetupTossWebhook,
                 value: widget.tossPaymentsWebhookUrl!,
               ),
@@ -778,65 +794,6 @@ class _Steps extends StatelessWidget {
             child: Text(shot.of(context.lang), style: context.text.bodySmall),
           ),
       ],
-    );
-  }
-}
-
-class _CopyRow extends StatelessWidget {
-  const _CopyRow({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: Space.sm),
-    child: ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(label, style: context.text.labelLarge),
-      subtitle: SelectableText(value),
-      trailing: IconButton(
-        tooltip: context.t.cCopy,
-        icon: const Icon(Icons.copy_rounded),
-        onPressed: () async {
-          await Clipboard.setData(ClipboardData(text: value));
-          if (context.mounted) showToast(context, context.t.cCopied);
-        },
-      ),
-    ),
-  );
-}
-
-/// Read-only checklist item: the uptime ping URL is set by install.sh, never typed in the console.
-class HeartbeatCard extends StatelessWidget {
-  const HeartbeatCard({super.key, required this.configured});
-  final bool configured;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.t;
-    final color = configured ? context.colors.fresh : context.colors.sun;
-    return AppCard(
-      child: Row(
-        children: [
-          Icon(
-            configured ? Icons.favorite_rounded : Icons.heart_broken_rounded,
-            color: color,
-          ),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(t.oHeartbeat, style: context.text.titleSmall),
-                Text(
-                  configured ? t.oHeartbeatOn : t.oHeartbeatOff,
-                  style: context.text.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
