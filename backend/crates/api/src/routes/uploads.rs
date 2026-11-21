@@ -132,18 +132,26 @@ const PHOTO_KEYS: [&str; 9] = [
 
 /// Replaces every stored `/files/<name>` (or base-prefixed legacy form) under a photo key with a signed URL.
 pub fn sign_urls(config: &Config, v: &mut Value) {
-    sign_under(config, v, false);
+    sign_under(config, &config.public_base_url, v, false);
 }
 
-fn sign_under(config: &Config, v: &mut Value, photo: bool) {
+/// Links in a response point at the host the request came in on when it is one of ours (a former domain gets its
+/// own links: store apps up to 1.5.1 take a logo only from their compiled host), else at PUBLIC_BASE_URL.
+fn base_for_host(allowed: &[String], default: &str, host: Option<&str>) -> String {
+    host.map(|h| format!("https://{h}"))
+        .filter(|o| allowed.contains(o))
+        .unwrap_or_else(|| default.to_string())
+}
+
+fn sign_under(config: &Config, base: &str, v: &mut Value, photo: bool) {
     match v {
         Value::String(s) if photo => {
-            if let Some(url) = signed_for(config, s.as_str()) {
+            if let Some(url) = signed_for(config, base, s.as_str()) {
                 *s = url;
             }
         }
-        Value::Array(items) => items.iter_mut().for_each(|x| sign_under(config, x, photo)),
-        Value::Object(map) => map.iter_mut().for_each(|(k, x)| sign_under(config, x, PHOTO_KEYS.contains(&k.as_str()))),
+        Value::Array(items) => items.iter_mut().for_each(|x| sign_under(config, base, x, photo)),
+        Value::Object(map) => map.iter_mut().for_each(|(k, x)| sign_under(config, base, x, PHOTO_KEYS.contains(&k.as_str()))),
         _ => {}
     }
 }
@@ -177,7 +185,7 @@ pub async fn owned_by_team(db: &PgPool, pro: Uuid, paths: &[String]) -> ApiResul
     Ok(usize::try_from(found).is_ok_and(|n| n == names.len()))
 }
 
-fn signed_for(config: &Config, stored: &str) -> Option<String> {
+fn signed_for(config: &Config, base: &str, stored: &str) -> Option<String> {
     let path = stored.strip_prefix(config.public_base_url.as_str()).unwrap_or(stored);
     let name = path.strip_prefix("/files/")?;
     if !safe_name(name) {
@@ -185,11 +193,12 @@ fn signed_for(config: &Config, stored: &str) -> Option<String> {
     }
     let exp = expiry_bucket(Utc::now().timestamp());
     let sig = sign(&url_key(config), name, exp);
-    Some(format!("{}/v1/files/{name}?exp={exp}&sig={sig}", config.public_base_url))
+    Some(format!("{base}/v1/files/{name}?exp={exp}&sig={sig}"))
 }
 
 /// Signs upload paths in every JSON response (runs after the handler, before the bytes leave).
 pub async fn sign_json(State(s): State<AppState>, req: Request, next: Next) -> Response {
+    let host = req.headers().get(header::HOST).and_then(|h| h.to_str().ok()).map(str::to_owned);
     let res = next.run(req).await;
     let is_json = res
         .headers()
@@ -205,7 +214,8 @@ pub async fn sign_json(State(s): State<AppState>, req: Request, next: Next) -> R
     let Ok(mut value) = serde_json::from_slice::<Value>(&bytes) else {
         return Response::from_parts(parts, Body::from(bytes));
     };
-    sign_urls(&s.config, &mut value);
+    let base = base_for_host(&s.config.allowed_origins, &s.config.public_base_url, host.as_deref());
+    sign_under(&s.config, &base, &mut value, false);
     let Ok(out) = serde_json::to_vec(&value) else {
         return ApiError::Internal("re-encoding signed response".into()).into_response();
     };
@@ -315,6 +325,14 @@ mod tests {
 
     const KEY: [u8; 32] = [9; 32];
     const NAME: &str = "0123456789abcdef0123456789abcdef.jpg";
+
+    #[test]
+    fn links_follow_the_request_host_only_when_it_is_ours() {
+        let allowed = ["https://new.x".to_string(), "https://old.x".to_string()];
+        assert_eq!(base_for_host(&allowed, "https://new.x", Some("old.x")), "https://old.x");
+        assert_eq!(base_for_host(&allowed, "https://new.x", Some("evil.x")), "https://new.x");
+        assert_eq!(base_for_host(&allowed, "https://new.x", None), "https://new.x");
+    }
 
     #[test]
     fn sniffs_images_only() {

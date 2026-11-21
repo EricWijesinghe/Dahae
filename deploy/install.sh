@@ -1024,10 +1024,11 @@ domain_dns_ok() { # domain_dns_ok 도메인 : A 에 이 서버의 공인 IPv4 �
   done
 }
 
-domain_https_ok() { # domain_https_ok 도메인 : 실제 DNS 로 https://<도메인>/health 를 10초마다 봐요 (인증서 발급을 기다려요)
+domain_https_ok() { # domain_https_ok 도메인 : 이 서버의 443 으로 https://<도메인>/health 를 10초마다 봐요 (인증서 발급을 기다려요)
   local waited=0 k=()
   [ "$(env_get TLS_MODE)" != internal ] || k=(-k)
-  until curl -fsS ${k[@]+"${k[@]}"} --max-time 10 -o /dev/null "https://$1/health" 2>/dev/null; do
+  # A 레코드는 domain_dns_ok 가 봤어요. 공인 IP 로 돌아 들어오지 않아도(NAT 루프백 없음) 인증서는 그대로 검사해요
+  until curl -fsS ${k[@]+"${k[@]}"} --max-time 10 --resolve "$1:443:127.0.0.1" -o /dev/null "https://$1/health" 2>/dev/null; do
     [ "$waited" -lt "$DOMAIN_WAIT_SECS" ] || return 1
     sleep 10; waited=$((waited + 10))
   done
@@ -1042,6 +1043,14 @@ cmd_domain() { # dahae domain <새 도메인> [--yes] : .env 를 백업하고 DO
   [ "$new" != "$old" ] || die "지금 쓰는 도메인이에요: $new"
   domain_dns_ok "$new" || die "$new 이 아직 이 서버를 가리키지 않아요. A 레코드를 이 서버의 IP 로 맞춘 뒤 다시 해 주세요. 지금 서비스는 그대로예요."
   confirm "서비스 주소를 $old 에서 $new 로 바꿀까요? 30초쯤 멈춰요. 예전 주소도 계속 응답해요." "$new"
+  # 바꾸기 전에 새 주소를 https 로 확인해요: API 가 이 파일(읽기 전용)을 보고 15분 동안 인증서를 허락하고, Caddy 는
+  # 받은 인증서를 바꾼 뒤에도 그대로 써요. 응답하지 않으면 아무것도 바꾸지 않고 끝나요
+  mkdir -p jobs/out && printf '%s\n' "$new" > jobs/out/domain-pending || die "새 주소를 확인하지 못해서 바꾸지 않았어요. 지금 서비스는 그대로예요."
+  if ! domain_https_ok "$new"; then
+    rm -f jobs/out/domain-pending
+    die "$new 이 https 로 응답하지 않아서 바꾸지 않았어요. DNS 와 방화벽(80·443)을 확인하고 다시 해 주세요. 지금 서비스는 그대로예요."
+  fi
+  rm -f jobs/out/domain-pending
   mkdir -p backups
   backup="backups/env-before-domain-$(date +%Y%m%d-%H%M%S)"
   (umask 077; cp -- .env "$backup") || die ".env 를 백업하지 못해서 바꾸지 않았어요."
@@ -1056,6 +1065,8 @@ cmd_domain() { # dahae domain <새 도메인> [--yes] : .env 를 백업하고 DO
   fi
   warn "$new 가 응답하지 않아서 예전 설정으로 되돌려요."
   cat -- "$backup" > .env
+  # API 가 다시 켜질 때 이 주소를 예전 도메인으로 남기지 않게 알려 줘요
+  printf '%s\n' "$new" > jobs/out/domain-rolled-back || warn "되돌린 주소를 API 에 알리지 못했어요"
   trap - TERM INT HUP
   # 되돌린 서비스가 응답할 때만 rolled_back 이에요. 아니면 실패로 끝나서 콘솔이 "되돌렸어요" 라고 하지 않아요
   { dc up -d api web >/dev/null 2>&1 && wait_healthy; } || die "되돌렸지만 서비스가 응답하지 않아요. 'dahae status' 를 확인하세요."

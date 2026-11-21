@@ -116,6 +116,17 @@ pub fn with_current(mut d: Domains, host: &str, now: DateTime<Utc>) -> Domains {
     d
 }
 
+/// As [with_current] after `dahae domain` moved back from `failed`: the failed host never becomes a former domain
+/// (no certificate, no app link host, no CORS, no "domain changed" on the store build card).
+pub fn after_rollback(d: Domains, host: &str, failed: &str, now: DateTime<Utc>) -> Domains {
+    let was_failed = d.current.as_deref() == Some(failed);
+    let mut d = with_current(d, host, now);
+    if was_failed {
+        d.aliases.retain(|a| a.host != failed);
+    }
+    d
+}
+
 /// Moves `host` from the aliases to the retired list. `None` when it is not an alias.
 pub fn without_alias(mut d: Domains, host: &str, now: DateTime<Utc>) -> Option<Domains> {
     let i = d.aliases.iter().position(|a| a.host == host)?;
@@ -126,6 +137,24 @@ pub fn without_alias(mut d: Domains, host: &str, now: DateTime<Utc>) -> Option<D
         at: now,
     });
     Some(d)
+}
+
+/// `dahae domain` writes the host it is about to move to here (root-owned, mounted read-only into the API) and checks
+/// it over HTTPS before it switches anything, so a move that would fail never takes the service off its address.
+const PENDING_FILE: &str = "out/domain-pending";
+/// Longer than the CLI's whole HTTPS wait (about 10 minutes); a file left behind by a stopped move ends with it.
+const PENDING_TTL: Duration = Duration::from_secs(15 * 60);
+
+/// The pending host (or its `www.` form) may get a certificate while the file is fresh.
+fn pending_allows(content: &str, age: Duration, domain: &str) -> bool {
+    let host = content.trim();
+    age < PENDING_TTL && valid_domain(host) && ask_allows(&[host.to_string()], domain)
+}
+
+fn pending_allowed(jobs_dir: &std::path::Path, domain: &str) -> bool {
+    let path = jobs_dir.join(PENDING_FILE);
+    let age = std::fs::metadata(&path).and_then(|m| m.modified()).ok().and_then(|t| t.elapsed().ok());
+    age.is_some_and(|a| pending_allows(&std::fs::read_to_string(&path).unwrap_or_default(), a, domain))
 }
 
 /// Caddy may get a certificate for an alias or its `www.` form. The current, retired and unknown hosts are refused.
@@ -146,8 +175,17 @@ pub async fn startup(db: &PgPool, config: &mut Config) {
     let Some(host) = base_host(&config.public_base_url) else {
         return;
     };
-    match record_current(db, &host).await {
+    let failed = rolled_back_from(&config.host_jobs_dir);
+    match update(db, |d| {
+        Ok(match &failed {
+            Some(f) => after_rollback(d, &host, f, Utc::now()),
+            None => with_current(d, &host, Utc::now()),
+        })
+    })
+    .await
+    {
         Ok(d) => {
+            let _ = crate::util::FORMER_BASES.set(alias_origins(&d));
             for o in alias_origins(&d) {
                 if !config.allowed_origins.contains(&o) {
                     config.allowed_origins.push(o);
@@ -158,8 +196,14 @@ pub async fn startup(db: &PgPool, config: &mut Config) {
     }
 }
 
-pub async fn record_current(db: &PgPool, host: &str) -> ApiResult<Domains> {
-    update(db, |d| Ok(with_current(d, host, Utc::now()))).await
+/// `dahae domain` writes the host it tried here before it moves back (root-owned, read-only in the API).
+const ROLLED_BACK_FILE: &str = "out/domain-rolled-back";
+
+fn rolled_back_from(jobs_dir: &std::path::Path) -> Option<String> {
+    let path = jobs_dir.join(ROLLED_BACK_FILE);
+    let age = std::fs::metadata(&path).and_then(|m| m.modified()).ok()?.elapsed().ok()?;
+    let host = std::fs::read_to_string(&path).ok()?.trim().to_string();
+    (age < PENDING_TTL && valid_domain(&host)).then_some(host)
 }
 
 pub async fn load(db: &PgPool) -> sqlx::Result<Domains> {
@@ -225,6 +269,9 @@ async fn alias_hosts(db: &PgPool) -> sqlx::Result<Vec<String>> {
 }
 
 async fn tls_ask(State(s): State<AppState>, Query(q): Query<Ask>) -> StatusCode {
+    if pending_allowed(&s.config.host_jobs_dir, &q.domain) {
+        return StatusCode::OK;
+    }
     match alias_hosts(&s.db).await {
         Ok(hosts) if ask_allows(&hosts, &q.domain) => StatusCode::OK,
         Ok(_) => StatusCode::NOT_FOUND,
@@ -351,6 +398,25 @@ mod tests {
     }
 
     #[test]
+    fn a_move_back_never_lists_the_failed_host() {
+        let d = with_current(with_current(Domains::default(), "a.co.kr", t(1)), "b.co.kr", t(2));
+        let back = after_rollback(d.clone(), "a.co.kr", "b.co.kr", t(3));
+        assert_eq!(back.current.as_deref(), Some("a.co.kr"));
+        assert!(back.aliases.is_empty(), "{:?}", back.aliases);
+        let later = after_rollback(back.clone(), "a.co.kr", "b.co.kr", t(4));
+        assert_eq!(later, back, "a restart after the move back changes nothing");
+        let other = after_rollback(d, "c.co.kr", "x.co.kr", t(5));
+        assert_eq!(
+            other,
+            with_current(
+                with_current(with_current(Domains::default(), "a.co.kr", t(1)), "b.co.kr", t(2)),
+                "c.co.kr",
+                t(5)
+            )
+        );
+    }
+
+    #[test]
     fn retire_moves_an_alias_and_refuses_anything_else() {
         let d = with_current(with_current(Domains::default(), "a.co.kr", t(1)), "b.co.kr", t(2));
         assert!(without_alias(d.clone(), "b.co.kr", t(3)).is_none(), "current is not an alias");
@@ -376,6 +442,16 @@ mod tests {
         assert!(!ask_allows(&aliases, "x.old.co.kr"));
         assert!(!ask_allows(&aliases, "www.www.old.co.kr"));
         assert!(!ask_allows(&[], "old.co.kr"));
+    }
+
+    #[test]
+    fn a_pending_move_gets_a_certificate_for_fifteen_minutes_only() {
+        let min = |m: u64| Duration::from_secs(m * 60);
+        assert!(pending_allows("new.co.kr\n", min(1), "new.co.kr"));
+        assert!(pending_allows("new.co.kr\n", min(1), "www.new.co.kr"));
+        assert!(!pending_allows("new.co.kr\n", min(15), "new.co.kr"), "stale file");
+        assert!(!pending_allows("new.co.kr\n", min(1), "other.co.kr"));
+        assert!(!pending_allows("", min(1), ""), "an empty file allows nothing");
     }
 
     #[test]
