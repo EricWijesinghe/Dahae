@@ -7278,6 +7278,15 @@ class TEn extends T {
   String get cSetupKeepValue => 'Saved (type only to replace)';
 
   @override
+  String get cSetupClearSlot => 'Clear this slot';
+
+  @override
+  String get cSetupUndoClearSlot => 'Keep this slot';
+
+  @override
+  String get cSetupSlotCleared => 'This key is removed when you save';
+
+  @override
   String get cSetupGuide => 'How to set up';
 
   @override

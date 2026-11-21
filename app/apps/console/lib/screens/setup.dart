@@ -254,6 +254,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
   final _toggles = <String, bool?>{};
   // Secret fields the owner has asked to see while typing (show/hide).
   final _revealed = <String>{};
+  // Saved map slots (channel keys) the owner asked to remove: sent as null, which the server deletes.
+  final _clearedSlots = <String>{};
   bool _busy = false;
   // The latest connection check, passed or not.
   Json? _result;
@@ -355,7 +357,10 @@ class _IntegrationCardState extends State<IntegrationCard> {
     for (final e in _map.entries)
       e.key: {
         for (final m in e.value.entries)
-          if (m.value.text.trim().isNotEmpty) m.key: m.value.text.trim(),
+          if (m.value.text.trim().isNotEmpty)
+            m.key: m.value.text.trim()
+          else if (_clearedSlots.contains(m.key))
+            m.key: null,
       },
   };
 
@@ -430,6 +435,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
         }
       }
       _revealed.clear();
+      _clearedSlots.clear();
       // The save clears the server-side test results, so the old ones must not show.
       _result = null;
       _lastPass = null;
@@ -652,6 +658,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
   ) {
     final t = context.t;
     final hint = _slotHint(t, e.key);
+    final cleared = _clearedSlots.contains(e.key);
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.xs),
       child: TextField(
@@ -660,9 +667,27 @@ class _IntegrationCardState extends State<IntegrationCard> {
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
           labelText: slotLabels[e.key]?.of(context.lang) ?? e.key,
-          helperText: saved ? '${t.cSetupKeepValue} · $hint' : hint,
+          helperText: !saved
+              ? hint
+              : cleared
+              ? t.cSetupSlotCleared
+              : '${t.cSetupKeepValue} · $hint',
           isDense: true,
           errorText: _errorFor('channel_keys', e.value.text),
+          // A saved slot can be removed alone (e.g. to move that method to Toss Payments).
+          suffixIcon: saved && !_locked
+              ? IconButton(
+                  tooltip: cleared ? t.cSetupUndoClearSlot : t.cSetupClearSlot,
+                  icon: Icon(
+                    cleared ? Icons.undo_rounded : Icons.delete_outline_rounded,
+                  ),
+                  onPressed: () => setState(
+                    () => cleared
+                        ? _clearedSlots.remove(e.key)
+                        : _clearedSlots.add(e.key),
+                  ),
+                )
+              : null,
         ),
       ),
     );

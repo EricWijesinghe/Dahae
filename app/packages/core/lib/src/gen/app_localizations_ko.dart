@@ -7056,6 +7056,15 @@ class TKo extends T {
   String get cSetupKeepValue => '저장된 값 유지 (바꿀 때만 입력)';
 
   @override
+  String get cSetupClearSlot => '이 칸 지우기';
+
+  @override
+  String get cSetupUndoClearSlot => '지우지 않기';
+
+  @override
+  String get cSetupSlotCleared => '저장하면 이 칸의 키를 지워요';
+
+  @override
   String get cSetupGuide => '따라 하기';
 
   @override

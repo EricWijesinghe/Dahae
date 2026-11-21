@@ -385,6 +385,43 @@ void _lockedTests() {
     },
   );
 
+  testWidgets('a saved channel slot can be cleared alone and is sent as null', (
+    tester,
+  ) async {
+    final api = FakeApi()
+      ..reply('PUT', '/admin/setup/portone', _lockedPortone(unlocked: true));
+    await _pump(
+      tester,
+      _lockedPortone(unlocked: true),
+      api: api,
+      size: _fullCardSize,
+    );
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+
+    await tester.tap(find.byTooltip(koT.cSetupClearSlot));
+    await settle(tester);
+    expect(find.text(koT.cSetupSlotCleared), findsOneWidget);
+    expect(find.byTooltip(koT.cSetupUndoClearSlot), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, koT.cSetupSave));
+    await settle(tester);
+
+    final call = api.lastCall('PUT', '/admin/setup/portone')!;
+    final slots = call.json['channel_keys'] as Map;
+    expect(slots.containsKey('card'), isTrue);
+    expect(slots['card'], isNull, reason: 'null removes the saved slot');
+    expect(find.text(koT.cSetupSlotCleared), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('a locked card offers no slot clear', (tester) async {
+    await _pump(tester, _lockedPortone(), size: _fullCardSize);
+    await tester.tap(find.byType(ExpansionTile));
+    await settle(tester);
+    expect(find.byTooltip(koT.cSetupClearSlot), findsNothing);
+    await unmount(tester);
+  });
+
   testWidgets('after a save the typed values leave the boxes', (tester) async {
     final api = FakeApi()
       ..reply('PUT', '/admin/setup/portone', _lockedPortone(unlocked: true));

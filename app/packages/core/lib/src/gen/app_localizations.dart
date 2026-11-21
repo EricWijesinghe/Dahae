@@ -13398,6 +13398,24 @@ abstract class T {
   /// **'저장된 값 유지 (바꿀 때만 입력)'**
   String get cSetupKeepValue;
 
+  /// No description provided for @cSetupClearSlot.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 칸 지우기'**
+  String get cSetupClearSlot;
+
+  /// No description provided for @cSetupUndoClearSlot.
+  ///
+  /// In ko, this message translates to:
+  /// **'지우지 않기'**
+  String get cSetupUndoClearSlot;
+
+  /// No description provided for @cSetupSlotCleared.
+  ///
+  /// In ko, this message translates to:
+  /// **'저장하면 이 칸의 키를 지워요'**
+  String get cSetupSlotCleared;
+
   /// No description provided for @cSetupGuide.
   ///
   /// In ko, this message translates to:

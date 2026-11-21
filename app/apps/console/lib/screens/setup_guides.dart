@@ -199,8 +199,8 @@ final guides = <String, Guide>{
         '③ Unlock, replace all four keys with live keys (live_), save with Active on, and press Check API key again. While Toss Payments takes payments on test keys, the payments heading shows "test keys" next to it: bookings made then bring in no real money.',
       ),
       Tr(
-        '④ PortOne과 함께 쓰면 PortOne 채널 키가 있는 결제수단은 PortOne으로, 나머지 켜진 수단은 토스페이먼츠로 가요. 설정 > 결제 수단에 수단마다 결제사가 보여요. 한 수단을 토스페이먼츠로 옮기려면 PortOne 카드에서 그 채널 키를 지워요. 본인인증(PASS)은 PortOne이 있어야 해요.',
-        '④ With PortOne as well, a method with a PortOne channel key goes to PortOne and every other switched-on method to Toss Payments. Setup > Payment methods shows each method\'s gateway. To move a method to Toss Payments, clear its channel key on the PortOne card. Identity checks (PASS) need PortOne.',
+        '④ PortOne과 함께 쓰면 PortOne 채널 키가 있는 결제수단은 PortOne으로, 나머지 켜진 수단은 토스페이먼츠로 가요. 설정 > 결제 수단에 수단마다 결제사가 보여요. 한 수단을 토스페이먼츠로 옮기려면 잠금을 풀고 PortOne 카드에서 그 채널 키 칸의 [이 칸 지우기]를 누른 뒤 저장해요. PortOne에 정기결제(빌링키)나 일반결제(카드) 키가 있는 동안 카드는 PortOne에 저장되니, 카드를 토스페이먼츠로 옮기려면 두 칸을 모두 지워요. 본인인증(PASS)은 PortOne이 있어야 해요.',
+        '④ With PortOne as well, a method with a PortOne channel key goes to PortOne and every other switched-on method to Toss Payments. Setup > Payment methods shows each method\'s gateway. To move a method to Toss Payments, unlock the PortOne card, press Clear this slot on that channel key and save. Cards are saved on PortOne while it has the Recurring billing key or Card payment key, so to move card to Toss Payments clear both slots. Identity checks (PASS) need PortOne.',
       ),
     ],
     devHelp: true,
