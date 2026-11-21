@@ -536,7 +536,7 @@ pub(super) fn csv_response(name: &str, body: String) -> ApiResult<Response> {
 }
 
 pub(super) fn export_name(kind: &str, from: NaiveDate, to: NaiveDate) -> String {
-    format!("dahae-{kind}-{from}_{to}")
+    format!("{kind}-{from}_{to}")
 }
 
 #[derive(FromRow)]
@@ -784,9 +784,6 @@ mod tests {
     #[test]
     fn export_files_carry_the_brand_prefix() {
         let day = |s| NaiveDate::parse_from_str(s, "%Y-%m-%d").expect("date");
-        assert_eq!(
-            export_name("ledger", day("2026-11-01"), day("2026-11-30")),
-            "dahae-ledger-2026-11-01_2026-11-30"
-        );
+        assert_eq!(export_name("ledger", day("2026-11-01"), day("2026-11-30")), "ledger-2026-11-01_2026-11-30");
     }
 }

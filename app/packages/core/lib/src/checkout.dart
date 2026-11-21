@@ -20,8 +20,11 @@ class PayChannel {
   );
 }
 
+/// The hosted pages this app opens; servers leave a gateway out for apps that do not name it (v1.5.1: PortOne only).
+const appGateways = {'gateways': 'portone,tosspayments'};
+
 Future<List<PayChannel>> fetchPayChannels(ApiClient api) async {
-  final list = await api.get('/payments/methods') as List;
+  final list = await api.get('/payments/methods', query: appGateways) as List;
   return list.map((e) => PayChannel.fromJson(e as Json)).toList();
 }
 

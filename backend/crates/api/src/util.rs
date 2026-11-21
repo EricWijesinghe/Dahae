@@ -12,7 +12,11 @@ use crate::{
 use chrono::{NaiveDate, Utc};
 use serde_json::{Value, json};
 use sqlx::PgConnection;
-use std::{collections::BTreeMap, future::Future, sync::Mutex};
+use std::{
+    collections::BTreeMap,
+    future::Future,
+    sync::{Mutex, OnceLock},
+};
 use uuid::Uuid;
 
 /// Business dates are Korean dates, whatever timezone the server or DB runs in.
@@ -299,10 +303,22 @@ pub fn sanitize_notes(v: &Value) -> Option<Value> {
 
 pub const IMAGE_EXTS: [&str; 4] = ["jpg", "png", "webp", "heic"];
 
+/// Origins of the former domains, set once at start (domains.rs). A signed URL keeps the host it was signed with, so
+/// a photo uploaded or a page loaded before a move still sends one of ours.
+pub static FORMER_BASES: OnceLock<Vec<String>> = OnceLock::new();
+
 /// Stored form of one of our upload URLs (`/files/<32 hex>.<ext>`), or None for anything else.
-/// Accepts the relative or base-prefixed form, with `/v1` and a signed query string; no traversal, no foreign hosts.
+/// Accepts the relative or base-prefixed form (current or former domain), with `/v1` and a signed query string; no
+/// traversal, no foreign hosts.
 pub fn own_upload(base: &str, url: &str) -> Option<String> {
-    let path = url.strip_prefix(base).unwrap_or(url);
+    own_upload_in(base, FORMER_BASES.get().map_or(&[], Vec::as_slice), url)
+}
+
+fn own_upload_in(base: &str, former: &[String], url: &str) -> Option<String> {
+    let path = url
+        .strip_prefix(base)
+        .or_else(|| former.iter().find_map(|b| url.strip_prefix(b.as_str())))
+        .unwrap_or(url);
     let path = path.strip_prefix("/v1").unwrap_or(path);
     let name = path.strip_prefix("/files/")?.split('?').next()?;
     let (stem, ext) = name.split_once('.')?;
@@ -359,5 +375,12 @@ mod tests {
         assert!(own_upload(b, &format!("https://evil.x/files/{stem}.jpg")).is_none());
         assert!(own_upload(b, &format!("https://api.x.evil/files/{stem}.jpg")).is_none());
         assert!(own_upload(b, &format!("https://api.x/files/{stem}.svg")).is_none());
+        let former = ["https://old.x".to_string()];
+        assert_eq!(
+            own_upload_in(b, &former, &format!("https://old.x/v1/files/{stem}.png?exp=5&sig=ab")).as_deref(),
+            Some(&*format!("/files/{stem}.png")),
+            "signed before a domain move"
+        );
+        assert!(own_upload_in(b, &former, &format!("https://old.x.evil/files/{stem}.png")).is_none());
     }
 }

@@ -14,7 +14,7 @@ use crate::{
     error::{ApiError, ApiResult},
     integrations::{self, Invalid, Kind, LockState, Section},
     owner,
-    providers::{fcm, portone, sms, toss_payments},
+    providers::{Gateway, fcm, portone, sms, toss_payments},
     state::AppState,
 };
 use axum::{
@@ -31,6 +31,9 @@ use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
+
+pub mod brand;
+mod operator;
 
 const MAX_FIELD_CHARS: usize = 200;
 const SETUP_CODE_LEN: usize = 12;
@@ -55,13 +58,17 @@ pub fn public_routes() -> Router<AppState> {
     Router::new()
         .route("/setup", get(state))
         .route("/setup/admin", post(create_admin))
-        .route("/brand", get(brand))
+        .route("/brand", get(brand::get_brand))
+        .route("/brand/manifest/{app}", get(brand::get_manifest))
 }
 
 pub fn admin_routes() -> Router<AppState> {
     Router::new()
         .route("/setup", get(overview))
         .route("/setup/business", put(put_business))
+        .route("/setup/business-hours", get(operator::get_hours).put(operator::put_hours))
+        .route("/setup/payout/switch", put(operator::put_payout_switch))
+        .route("/setup/store-build/ack", post(operator::ack_store_build))
         .route("/setup/review", put(put_review).delete(clear_review))
         .route("/setup/{section}", put(put_section).delete(clear_section))
         .route("/setup/{section}/test", post(test_section))
@@ -377,14 +384,7 @@ async fn review_summary(db: &PgPool) -> Result<Value, sqlx::Error> {
 
 /// Shop name from the business profile, sent as the `#{brand}` AlimTalk variable.
 pub async fn brand_name(db: &PgPool) -> String {
-    const DEFAULT_BRAND: &str = "다해";
-    match business(db).await {
-        Ok(v) => v["name"].as_str().map(str::trim).filter(|s| !s.is_empty()).unwrap_or(DEFAULT_BRAND).to_owned(),
-        Err(e) => {
-            tracing::warn!(error = %e, "brand lookup failed; using default brand");
-            DEFAULT_BRAND.to_owned()
-        }
-    }
+    brand::brand_name_for(db, "ko").await
 }
 
 async fn business(db: &PgPool) -> Result<Value, sqlx::Error> {
@@ -393,11 +393,6 @@ async fn business(db: &PgPool) -> Result<Value, sqlx::Error> {
         .fetch_optional(db)
         .await?;
     Ok(v.unwrap_or_else(|| json!({})))
-}
-
-/// Public business profile: app header, website footer (사업자 정보), support contact.
-async fn brand(State(s): State<AppState>) -> ApiResult<Json<Value>> {
-    Ok(Json(business(&s.db).await?))
 }
 
 const BUSINESS_TEXT: [&str; 4] = ["name", "support_phone", "support_email", "support_hours"];
@@ -525,19 +520,41 @@ pub fn clean_business(base: &str, input: &Value) -> Result<Value, ApiError> {
     if let Some(apps) = input.get("app_versions") {
         out.insert("app_versions".into(), clean_app_versions(apps)?);
     }
+    brand::clean_extra(base, input, &mut out)?;
     if !out.contains_key("name") {
         return Err(ApiError::BadRequest("missing_field"));
     }
     Ok(Value::Object(out))
 }
 
+/// Rebrand fields an older console does not send (a sideloaded build, a tab open across `dahae update`). The current
+/// console sends every key, empty or null to clear one, so only an absent key keeps the stored value.
+const KEPT_WHEN_ABSENT: [&str; 5] = ["brand_assets", "name_en", "short_name", "tagline", "tagline_en"];
+
+fn keep_absent(stored: &Value, input: &Value, mut out: Value) -> Value {
+    for k in KEPT_WHEN_ABSENT {
+        if input.get(k).is_none() && !stored[k].is_null() {
+            out[k] = stored[k].clone();
+        }
+    }
+    let company_sent = input.get("company").and_then(|c| c.get("privacy_email")).is_some();
+    if !company_sent && !stored["company"]["privacy_email"].is_null() {
+        if !out["company"].is_object() {
+            out["company"] = json!({});
+        }
+        out["company"]["privacy_email"] = stored["company"]["privacy_email"].clone();
+    }
+    out
+}
+
 async fn put_business(State(s): State<AppState>, Admin(a): Admin, Json(input): Json<Value>) -> ApiResult<Json<Value>> {
-    let value = clean_business(&s.config.public_base_url, &input)?;
+    let value = keep_absent(&business(&s.db).await?, &input, clean_business(&s.config.public_base_url, &input)?);
     if let Some(logo) = value["logo_url"].as_str().filter(|l| l.starts_with("/files/"))
         && !uploads::owned(&s.db, None, &[logo.to_string()]).await?
     {
         return Err(ApiError::BadRequest("invalid_logo"));
     }
+    brand::check_assets(&s, &value).await?;
     sqlx::query("INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()")
         .bind(BUSINESS_KEY)
         .bind(&value)
@@ -653,8 +670,12 @@ async fn overview(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<
     )
     .fetch_one(&s.db)
     .await?;
+    let gateways = payment_gateways(&s).await?;
     Ok(Json(json!({
         "business": business(&s.db).await?,
+        "store_build": operator::store_build(&s).await?,
+        // The console shows the switch on when either is true; `env` means TOSS_PAYOUTS_ENABLED forces it on.
+        "payout_toss_switch": { "on": integrations::toss_switch_on(&s.db).await?, "env": integrations::toss_env_enabled() },
         "review_account": review_summary(&s.db).await?,
         "integrations": cards,
         "counts": { "staff": counts.0, "verified_pros": counts.1, "active_services": counts.2, "bookings": counts.3 },
@@ -665,10 +686,30 @@ async fn overview(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<
         "webhook_url": format!("{}/v1/webhooks/portone", s.config.public_base_url.trim_end_matches('/')),
         "toss_webhook_url": format!("{}/v1/webhooks/toss", s.config.public_base_url.trim_end_matches('/')),
         "toss_payments_webhook_url": format!("{}/v1/webhooks/tosspayments", s.config.public_base_url.trim_end_matches('/')),
-        "payment_gateway": s.providers.integ().gateway().code(),
-        // "test" while Toss takes payments on test keys: bookings get paid with no money behind them.
-        "payment_gateway_mode": s.providers.integ().toss_payments.as_ref().filter(|t| t.active).and_then(|t| integrations::toss_key_mode(&t.secret_key)),
+        // Every gateway a new payment can reach, PortOne first; `payment_gateway(_mode)` is the first one, for
+        // consoles built before both could run.
+        "payment_gateways": gateways,
+        "payment_gateway": gateways.first().map_or(json!("portone"), |g| g["code"].clone()),
+        "payment_gateway_mode": gateways.first().map_or(Value::Null, |g| g["mode"].clone()),
     })))
+}
+
+/// `payment_gateways` of the overview: `[{code, mode}]`, `mode` "test" while Toss takes payments on test keys
+/// (bookings get paid with no money behind them), null for PortOne (its ids carry no mode).
+async fn payment_gateways(s: &AppState) -> ApiResult<Vec<Value>> {
+    let enabled = super::payments::enabled_codes(&s.db).await?;
+    let integ = s.providers.integ();
+    Ok(integ
+        .payment_gateways(&enabled)
+        .into_iter()
+        .map(|g| {
+            let mode = match g {
+                Gateway::Portone => None,
+                Gateway::TossPayments => integ.toss_payments.as_ref().and_then(|t| integrations::toss_key_mode(&t.secret_key)),
+            };
+            json!({ "code": g.code(), "mode": mode })
+        })
+        .collect())
 }
 
 /// Recomputes the live keys from env + every saved section and hands them to the providers.
@@ -699,7 +740,7 @@ async fn put_section(
     let incoming = input.as_object().ok_or(ApiError::BadRequest("invalid_input"))?;
     let current = integrations::load_section(&s.db, &s.config.data_key, sec).await?;
     let merged = integrations::merge(sec, &current, incoming);
-    // The first save of a card that moves money needs the owner's code: the PortOne card sets where checkout
+    // The first save of a card that moves money needs the owner's code: either payment card adds a place checkout
     // money goes, and Toss payouts move real money. An unlock already checked it. The code is checked now and
     // spent only once the values validate, so a typo does not cost a code.
     let money_card = match sec {
@@ -735,8 +776,8 @@ async fn put_section(
         Some(a.id),
         "setup.integration",
         sec.code(),
-        // The live gateway is on record with every save, so each switch is audited.
-        json!({ "fields": merged.keys().collect::<Vec<_>>(), "gateway": s.providers.integ().gateway().code() }),
+        // The gateways new payments reach after the save are on record, so each switch is audited.
+        json!({ "fields": merged.keys().collect::<Vec<_>>(), "gateways": payment_gateways(&s).await?.iter().map(|g| g["code"].clone()).collect::<Vec<_>>() }),
     )
     .await?;
     Ok(Json(card(&s, sec, None).await?))
@@ -764,6 +805,18 @@ async fn clear_section(State(s): State<AppState>, Admin(a): Admin, Path(code): P
     if sec == Section::Payout && crate::payout_sync::toss_transfers_open(&s.db).await? {
         return Err(ApiError::Conflict("payout_in_transfer"));
     }
+    // Either payment card is optional, but its keys still serve the rows on it; the env copy (PortOne) would stay.
+    let gateway = match sec {
+        Section::Portone => Some((Gateway::Portone, vec![Gateway::Portone.code()])),
+        Section::TossPayments => Some((Gateway::TossPayments, vec![Gateway::TossPayments.code(), crate::providers::TOSS_BILLING])),
+        _ => None,
+    };
+    if let Some((gw, refunds)) = gateway
+        && !integrations::Integrations::from_config(&s.config).has(sec)
+        && gateway_in_use(&s.db, gw, &refunds).await?
+    {
+        return Err(ApiError::Conflict("gateway_in_use"));
+    }
     // The row stays, locked and empty: a non-owner admin cannot re-save the card without an unlock.
     if !integrations::save_section(&s.db, &s.config.data_key, sec, &Map::new(), a.id).await? {
         return Err(ApiError::Conflict("card_locked"));
@@ -771,6 +824,19 @@ async fn clear_section(State(s): State<AppState>, Admin(a): Admin, Path(code): P
     reload(&s).await?;
     audit(&s.db, a.role.as_str(), Some(a.id), "setup.integration_cleared", sec.code(), json!({})).await?;
     Ok(Json(card(&s, sec, None).await?))
+}
+
+/// Open checkouts, live saved cards or queued refunds on `gw`: clearing its card would strand them.
+async fn gateway_in_use(db: &PgPool, gw: Gateway, refund_providers: &[&str]) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM checkouts WHERE gateway = $1 AND status IN ('pending', 'awaiting_deposit'))
+             OR EXISTS (SELECT 1 FROM payment_methods WHERE gateway = $1 AND deleted_at IS NULL AND billing_key <> '')
+             OR EXISTS (SELECT 1 FROM refund_queue WHERE done_at IS NULL AND provider = ANY($2))",
+    )
+    .bind(gw.code())
+    .bind(refund_providers)
+    .fetch_one(db)
+    .await
 }
 
 /// Owner unlock of a saved card for `UNLOCK_TTL_SECS`. Every outcome is audited; no secret is in the record.
@@ -941,7 +1007,7 @@ async fn toss_payments_probe(s: &AppState, t: &integrations::TossPayments) -> (b
     }
 }
 
-/// Whether the Toss gate is open for these payout values: env switch on and the saved test passed for this key.
+/// Whether the Toss gate is open for these payout values: env or console switch on and the saved test passed for this key.
 async fn payout_toss_ready(s: &AppState, values: &serde_json::Map<String, Value>) -> ApiResult<bool> {
     let last: Option<Value> = sqlx::query_scalar("SELECT last_test FROM integration_settings WHERE section = $1")
         .bind(Section::Payout.code())
@@ -950,7 +1016,7 @@ async fn payout_toss_ready(s: &AppState, values: &serde_json::Map<String, Value>
         .flatten();
     let secret = values.get("secret_key").and_then(Value::as_str).unwrap_or_default();
     Ok(integrations::toss_ready(
-        integrations::toss_env_enabled(),
+        integrations::toss_switch_on(&s.db).await?,
         last.as_ref(),
         &s.config.data_key,
         secret,
@@ -1027,6 +1093,25 @@ async fn test_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Pa
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_older_console_save_keeps_the_rebrand_fields_it_does_not_know() {
+        let stored = json!({"name": "a", "short_name": "s", "brand_assets": {"icon_512": "/files/x.png"},
+                            "company": {"ceo": "c", "privacy_email": "p@x.kr"}});
+        let old = json!({"name": "b", "company": {"ceo": "d"}});
+        let out = keep_absent(&stored, &old, json!({"name": "b", "company": {"ceo": "d"}}));
+        assert_eq!(out["short_name"], "s");
+        assert_eq!(out["brand_assets"]["icon_512"], "/files/x.png");
+        assert_eq!(out["company"], json!({"ceo": "d", "privacy_email": "p@x.kr"}));
+        assert_eq!(out["name"], "b");
+        let new = json!({"name": "b", "short_name": "", "brand_assets": null, "company": {"privacy_email": ""}});
+        let cleared = keep_absent(&stored, &new, json!({"name": "b", "company": {}}));
+        assert!(
+            cleared.get("short_name").is_none() && cleared.get("brand_assets").is_none(),
+            "sent empty clears"
+        );
+        assert_eq!(cleared["company"], json!({}));
+    }
 
     #[test]
     fn only_the_owner_tests_a_locked_or_open_card() {

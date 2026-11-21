@@ -48,7 +48,7 @@ class TaxSection extends StatelessWidget {
                 onPressed: () => onExport(
                   '/admin/finance/export/withholding',
                   periodQuery,
-                  'dahae-withholding.csv',
+                  'withholding.csv',
                 ),
                 icon: const Icon(Icons.download_rounded),
                 label: Text(t.tExportWithholding),
@@ -57,7 +57,7 @@ class TaxSection extends StatelessWidget {
                 onPressed: () => onExport(
                   '/admin/finance/export/tax-invoices',
                   periodQuery,
-                  'dahae-tax-invoices.csv',
+                  'tax-invoices.csv',
                 ),
                 icon: const Icon(Icons.download_rounded),
                 label: Text(t.tExportTaxInvoices),
@@ -154,7 +154,7 @@ class _VatExportCardState extends State<_VatExportCard> {
     widget.onExport('/admin/finance/export/vat', {
       'year': '$year',
       'quarter': '$quarter',
-    }, 'dahae-vat-$year-Q$quarter.csv');
+    }, 'vat-$year-Q$quarter.csv');
   }
 }
 

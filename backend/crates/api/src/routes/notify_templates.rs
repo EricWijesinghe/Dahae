@@ -104,8 +104,8 @@ fn checked_pair(ev: &Event, title: &str, body: &str, brand: &str) -> ApiResult<(
 
 async fn preview(State(s): State<AppState>, _admin: Admin, Json(p): Json<PreviewInput>) -> ApiResult<Json<Value>> {
     let ev = event_for(&p.kind)?;
-    locale_for(&p.locale)?;
-    let brand = crate::routes::setup::brand_name(&s.db).await;
+    let lang = locale_for(&p.locale)?;
+    let brand = crate::routes::setup::brand::brand_name_for(&s.db, lang).await;
     let (title, body) = checked_pair(ev, p.title.trim(), p.body.trim(), &brand)?;
     Ok(Json(json!({ "title": title, "body": body })))
 }
@@ -118,7 +118,7 @@ async fn save_template(
 ) -> ApiResult<Json<Value>> {
     let ev = event_for(&kind)?;
     let lang = locale_for(&locale)?;
-    let brand = crate::routes::setup::brand_name(&s.db).await;
+    let brand = crate::routes::setup::brand::brand_name_for(&s.db, lang).await;
     let (title, body) = (t.title.trim(), t.body.trim());
     checked_pair(ev, title, body, &brand)?;
     sqlx::query(

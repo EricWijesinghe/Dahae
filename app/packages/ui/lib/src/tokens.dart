@@ -24,9 +24,35 @@ class BrandConfig {
     required this.sun,
     this.ink = const Color(0xFF17232C),
     this.logoUrl,
+    this.nameEn,
+    this.shortName,
+    this.tagline,
+    this.taglineEn,
+    this.version,
   });
 
   final String name;
+
+  /// English service name; null uses [name] in English too.
+  final String? nameEn;
+
+  /// Up to 12 characters for tight places (notification channel, home-screen label); null uses [name].
+  final String? shortName;
+
+  /// Profile slogans; null means the app's built-in tagline.
+  final String? tagline;
+  final String? taglineEn;
+
+  /// `brand_version` of the profile this brand came from (null for the built-in brand).
+  final String? version;
+
+  /// The name for UI language [lang] (`en` takes [nameEn] when set).
+  String nameFor(String? lang) => lang == 'en' ? (nameEn ?? name) : name;
+
+  /// The profile slogan for [lang], or null when the profile has none.
+  String? taglineFor(String? lang) => lang == 'en' ? taglineEn : tagline;
+
+  String get short => shortName ?? name;
 
   /// Dark teal: primary actions, links, selection. Text-safe on light surfaces.
   final Color primary;

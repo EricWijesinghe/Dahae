@@ -87,7 +87,8 @@ async fn enrol_start(State(s): State<AppState>, Json(req): Json<MfaInput>) -> Ap
         .await?;
     Ok(Json(json!({
         "secret": totp::encode_secret(&secret),
-        "otpauth_uri": totp::otpauth_uri("Dahae staff", &email, &secret),
+        // Only new enrolments get the current name; an authenticator keeps the label it was given.
+        "otpauth_uri": totp::otpauth_uri(&format!("{} staff", super::setup::brand_name(&s.db).await), &email, &secret),
     })))
 }
 

@@ -38,7 +38,7 @@ S = {
   "err_already_referred": ["이미 추천 코드를 등록했어요", "A referral code is already applied"],
   "err_invalid_referral_code": ["추천 코드를 확인해 주세요", "Check the referral code"],
   "err_referral_disabled": ["지금은 친구 추천을 받지 않아요", "Referrals are paused right now"],
-  "err_invalid_photos": ["사진은 다해에 올린 파일만 첨부할 수 있어요", "Only photos uploaded through Dahae can be attached"],
+  "err_invalid_photos": ["사진은 이 앱에서 올린 파일만 첨부할 수 있어요", "Only photos uploaded in this app can be attached"],
   # console: welcome offer, referral settings, review moderation, dashboard tiles
   "welcomeOfferTitle": ["첫 예약 할인", "First-booking offer"],
   "welcomeOfferBody": ["신규 고객의 첫 예약에 자동으로 적용돼요. 쿠폰과는 중복되지 않아요.", "Applied automatically to a new customer's first booking. Not combined with coupons."],

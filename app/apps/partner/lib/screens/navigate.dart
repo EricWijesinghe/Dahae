@@ -3,6 +3,7 @@
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:ui/ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -15,7 +16,8 @@ class NavOption {
 }
 
 /// Kakao, Naver and T map search links for a visit address. Only the address leaves the app.
-List<NavOption> navOptions(String address) {
+/// [appName]: this app's package id, which Naver Map asks for.
+List<NavOption> navOptions(String address, {required String appName}) {
   final q = Uri.encodeComponent(address);
   return [
     NavOption(
@@ -25,7 +27,9 @@ List<NavOption> navOptions(String address) {
     ),
     NavOption(
       'Naver Map',
-      Uri.parse('nmap://search?query=$q&appname=kr.co.dahae.partner'),
+      Uri.parse(
+        'nmap://search?query=$q&appname=${Uri.encodeComponent(appName)}',
+      ),
       Uri.parse('https://map.naver.com/v5/search/$q'),
     ),
     // T map has no public web search page, so its web fallback is Google Maps.
@@ -43,36 +47,39 @@ Future<void> openNavOption(NavOption o) async {
   if (!opened) await launchUrl(o.web, mode: LaunchMode.externalApplication);
 }
 
-Future<void> showNavigateSheet(BuildContext context, String address) =>
-    showAppSheet<void>(
-      context,
-      title: context.t.pNavigate,
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Space.gutter,
-              0,
-              Space.gutter,
-              Space.sm,
-            ),
-            child: Text(ctx.t.pNavHint, style: ctx.text.bodyMedium),
+Future<void> showNavigateSheet(BuildContext context, String address) async {
+  final appName = (await PackageInfo.fromPlatform()).packageName;
+  if (!context.mounted) return;
+  await showAppSheet<void>(
+    context,
+    title: context.t.pNavigate,
+    builder: (ctx) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Space.gutter,
+            0,
+            Space.gutter,
+            Space.sm,
           ),
-          for (final o in navOptions(address))
-            ListTile(
-              leading: const Icon(Icons.map_rounded),
-              title: Text(o.name),
-              trailing: const Icon(Icons.open_in_new_rounded),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _open(context, o);
-              },
-            ),
-        ],
-      ),
-    );
+          child: Text(ctx.t.pNavHint, style: ctx.text.bodyMedium),
+        ),
+        for (final o in navOptions(address, appName: appName))
+          ListTile(
+            leading: const Icon(Icons.map_rounded),
+            title: Text(o.name),
+            trailing: const Icon(Icons.open_in_new_rounded),
+            onTap: () {
+              Navigator.of(ctx).pop();
+              _open(context, o);
+            },
+          ),
+      ],
+    ),
+  );
+}
 
 Future<void> _open(BuildContext context, NavOption o) async {
   try {

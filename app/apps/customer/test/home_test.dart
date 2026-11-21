@@ -246,7 +246,7 @@ void main() {
         _top(tester, koT.dhHomeRecommended),
         _top(tester, _pick),
         _top(tester, _hero),
-        _top(tester, koT.dhHomeNews),
+        _top(tester, koT.dhHomeNews(_brand)),
         _top(tester, _notice),
         _top(tester, _news),
         _top(tester, _tip),
@@ -417,7 +417,7 @@ void main() {
       expect(find.text(koT.feedWhySummer), findsOneWidget);
       expect(find.text(_appliance), findsNothing);
       expect(find.text(_hero), findsNothing);
-      expect(find.text(koT.dhHomeNews), findsNothing);
+      expect(find.text(koT.dhHomeNews(_brand)), findsNothing);
 
       // Opening a feed card waits for its haptic; the test shell has no platform to answer it.
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
@@ -459,7 +459,7 @@ void main() {
       await pumpUntilFound(tester, find.text(_appliance));
       await settle(tester);
 
-      expect(find.text(koT.dhHomeNews), findsNothing);
+      expect(find.text(koT.dhHomeNews(_brand)), findsNothing);
       expect(find.text(koT.dhHomeRecommended), findsNothing);
       expect(
         find.byType(BannerCarousel),

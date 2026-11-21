@@ -227,7 +227,7 @@ pub fn can_settle(status: &str) -> bool {
 
 async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Json<CreateBody>) -> ApiResult<Json<CheckoutIntent>> {
     let CreateBody { req, points } = body;
-    ensure_enabled(&s, req.method()).await?;
+    let gw = ensure_enabled(&s, req.method()).await?;
     if matches!(req, CheckoutRequest::Booking { .. }) && super::config::maintenance_on(&s.db, &s.config).await? {
         return Err(ApiError::Unavailable("maintenance"));
     }
@@ -284,14 +284,16 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
     };
     let method = req.method();
     let integ = s.providers.integ();
-    let gw = integ.gateway();
-    // Checked before the row exists: a method without a channel key must not leave a pending checkout behind.
-    // The fake provider takes no channel key; the real gateway needs one (`ensure_enabled` checked it above).
-    // Toss starts every method from its one client key.
-    let key = match (gw, &integ.toss_payments) {
-        (Gateway::TossPayments, Some(t)) => t.client_key.clone(),
-        _ if s.providers.dev() => channel_key(&integ.portone.channel_keys, method).unwrap_or_default(),
-        _ => channel_key_for(&integ.portone.channel_keys, method)?,
+    // Checked before the row exists: a gateway that lost its key since `ensure_enabled` must not leave a pending
+    // checkout behind. The fake provider takes no channel key; Toss starts every method from its one client key.
+    let key = match gw {
+        Gateway::TossPayments => integ
+            .toss_payments
+            .as_ref()
+            .map(|t| t.client_key.clone())
+            .ok_or(ApiError::Unavailable("provider_not_configured"))?,
+        Gateway::Portone if s.providers.dev() => channel_key(&integ.portone.channel_keys, method).unwrap_or_default(),
+        Gateway::Portone => channel_key_for(&integ.portone.channel_keys, method)?,
     };
     let id = Uuid::now_v7();
     sqlx::query("INSERT INTO checkouts (id, user_id, kind, booking_id, draft, method, amount, points, status, expires_at, gateway) VALUES ($1,$2,$3,$4,$5,$6,$7,$9,'pending',$8,$10)")

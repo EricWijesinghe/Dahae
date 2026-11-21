@@ -5,18 +5,22 @@ import 'dart:async';
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../state.dart';
+import '../widgets/copy_row.dart';
+import 'host_controls.dart';
 import 'setup_app_links.dart';
 import 'setup_business.dart';
+import 'setup_domain.dart';
 import 'setup_formats.dart';
 import 'setup_guides.dart';
+import 'setup_operator.dart';
 import 'setup_owner_code.dart';
 import 'setup_pay_methods.dart';
 import 'setup_review.dart';
+import 'setup_store_build.dart';
 
 /// Owner's launch checklist: business profile plus one card per external service.
 /// Keys are typed here (never in config files), saved encrypted, and tested on the spot.
@@ -40,10 +44,14 @@ class _SetupScreenState extends State<SetupScreen> {
       builder: (context, data, reload) {
         final cards = (data['integrations'] as List).cast<Json>();
         final business = (data['business'] as Json?) ?? const {};
+        // PortOne and Toss Payments are one item: either one is enough to take payments.
+        final others = cards.where((c) => !_payCards.contains(c['code']));
+        final pay = cards.where((c) => _payCards.contains(c['code']));
         final done =
-            cards.where((c) => c['configured'] == true).length +
+            others.where((c) => c['configured'] == true).length +
+            (pay.any((c) => c['configured'] == true) ? 1 : 0) +
             (business['name'] != null ? 1 : 0);
-        final total = cards.length + 1;
+        final total = others.length + (pay.isEmpty ? 0 : 1) + 1;
         return Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
@@ -58,6 +66,12 @@ class _SetupScreenState extends State<SetupScreen> {
                 ),
                 const SizedBox(height: Space.lg),
                 BusinessCard(initial: business, onSaved: _reload),
+                if (data['store_build'] case final Json build) ...[
+                  const SizedBox(height: Space.md),
+                  StoreBuildCard(data: build, onAcked: _reload),
+                ],
+                const SizedBox(height: Space.md),
+                const BusinessHoursCard(),
                 const SizedBox(height: Space.md),
                 const PayMethodsCard(),
                 const SizedBox(height: Space.md),
@@ -69,19 +83,17 @@ class _SetupScreenState extends State<SetupScreen> {
                 HeartbeatCard(configured: data['heartbeat_configured'] == true),
                 const SizedBox(height: Space.md),
                 const AppLinksCard(),
+                const SizedBox(height: Space.md),
+                DomainCard(business: business),
+                // A domain move needs the server approval code, so it can be made here too.
+                const SizedBox(height: Space.md),
+                const AppCard(child: ApprovalEnrollCard()),
                 for (final c in cards) ...[
                   const SizedBox(height: Space.md),
                   if (c['code'] == 'portone') ...[
                     Text(t.cPaymentsTitle, style: context.text.titleMedium),
-                    if (_gatewayNames[data['payment_gateway']] case final g?)
-                      Text(
-                        [
-                          t.cSetupGatewayLive(g.of(context.lang)),
-                          if (data['payment_gateway_mode'] == 'test')
-                            t.cSetupGatewayTestKeys,
-                        ].join(' '),
-                        style: context.text.bodyMedium,
-                      ),
+                    if (_gatewayLine(t, data, context.lang) case final line?)
+                      Text(line, style: context.text.bodyMedium),
                     const SizedBox(height: Space.sm),
                   ],
                   IntegrationCard(
@@ -94,6 +106,14 @@ class _SetupScreenState extends State<SetupScreen> {
                     onChanged: _reload,
                   ),
                 ],
+                const SizedBox(height: Space.md),
+                // `env`: TOSS_PAYOUTS_ENABLED on the server turns payouts on whatever the saved switch says.
+                TossPayoutSwitchCard(
+                  on: switch (data['payout_toss_switch']) {
+                    {'on': true} || {'env': true} => true,
+                    _ => false,
+                  },
+                ),
                 const SizedBox(height: Space.xl),
                 Text(
                   t.cSetupProgress('$done', '$total'),
@@ -109,11 +129,31 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 }
 
-/// Where new payments go (`payment_gateway` from the server), by brand name.
-const _gatewayNames = <Object?, Tr>{
-  'portone': Tr('PortOne', 'PortOne'),
-  'tosspayments': Tr('토스페이먼츠', 'Toss Payments'),
-};
+const _payCards = {'portone', 'tosspayments'};
+
+/// Every gateway a new payment can reach, PortOne first, each marked when it runs on test keys.
+/// A server older than `payment_gateways` sends only its one gateway; one older still (v1.5.1) sends none.
+String? _gatewayLine(T t, Json data, String lang) {
+  final gateways = switch (data['payment_gateways']) {
+    final List<Object?> list => list.cast<Json>(),
+    _ when data['payment_gateway'] != null => [
+      {'code': data['payment_gateway'], 'mode': data['payment_gateway_mode']},
+    ],
+    _ => null,
+  };
+  if (gateways == null) return null;
+  final names = [
+    for (final g in gateways)
+      if (gatewayNames[g['code']] case final name?)
+        [
+          name.of(lang),
+          if (g['mode'] == 'test') t.cSetupGatewayTestKeys,
+        ].join(' '),
+  ];
+  return names.isEmpty
+      ? t.cSetupGatewayNone
+      : t.cSetupGatewayLive(names.join(', '));
+}
 
 class _Header extends StatelessWidget {
   const _Header({
@@ -214,6 +254,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
   final _toggles = <String, bool?>{};
   // Secret fields the owner has asked to see while typing (show/hide).
   final _revealed = <String>{};
+  // Saved map slots (channel keys) the owner asked to remove: sent as null, which the server deletes.
+  final _clearedSlots = <String>{};
   bool _busy = false;
   // The latest connection check, passed or not.
   Json? _result;
@@ -315,7 +357,10 @@ class _IntegrationCardState extends State<IntegrationCard> {
     for (final e in _map.entries)
       e.key: {
         for (final m in e.value.entries)
-          if (m.value.text.trim().isNotEmpty) m.key: m.value.text.trim(),
+          if (m.value.text.trim().isNotEmpty)
+            m.key: m.value.text.trim()
+          else if (_clearedSlots.contains(m.key))
+            m.key: null,
       },
   };
 
@@ -357,7 +402,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
   Future<Map<String, String>?> _ownerHeaders({required bool clearing}) async {
     // An open unlock window already carries the owner's code; the server ignores a second one.
     if (widget.card['unlock_expires_at'] != null) return const {};
-    // The first save of a payment gateway card sets where checkout money goes, so it needs the owner too.
+    // The first save of a payment gateway card adds a place checkout money goes, so it needs the owner too.
     final typedToss = !clearing && _text['mode']?.text.trim() == 'toss';
     final needsCode = _gatewayCard
         ? !clearing && !_locked
@@ -390,6 +435,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
         }
       }
       _revealed.clear();
+      _clearedSlots.clear();
       // The save clears the server-side test results, so the old ones must not show.
       _result = null;
       _lastPass = null;
@@ -523,15 +569,15 @@ class _IntegrationCardState extends State<IntegrationCard> {
           children: [
             _Steps(guide: _guide),
             if (_code == 'portone' && widget.webhookUrl != null)
-              _CopyRow(label: t.cSetupWebhook, value: widget.webhookUrl!),
+              CopyRow(label: t.cSetupWebhook, value: widget.webhookUrl!),
             if (_code == 'payout' && widget.tossWebhookUrl != null)
-              _CopyRow(
+              CopyRow(
                 label: t.cSetupTossWebhook,
                 value: widget.tossWebhookUrl!,
               ),
             if (_code == 'tosspayments' &&
                 widget.tossPaymentsWebhookUrl != null)
-              _CopyRow(
+              CopyRow(
                 label: t.cSetupTossWebhook,
                 value: widget.tossPaymentsWebhookUrl!,
               ),
@@ -612,6 +658,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
   ) {
     final t = context.t;
     final hint = _slotHint(t, e.key);
+    final cleared = _clearedSlots.contains(e.key);
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.xs),
       child: TextField(
@@ -620,9 +667,27 @@ class _IntegrationCardState extends State<IntegrationCard> {
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
           labelText: slotLabels[e.key]?.of(context.lang) ?? e.key,
-          helperText: saved ? '${t.cSetupKeepValue} · $hint' : hint,
+          helperText: !saved
+              ? hint
+              : cleared
+              ? t.cSetupSlotCleared
+              : '${t.cSetupKeepValue} · $hint',
           isDense: true,
           errorText: _errorFor('channel_keys', e.value.text),
+          // A saved slot can be removed alone (e.g. to move that method to Toss Payments).
+          suffixIcon: saved && !_locked
+              ? IconButton(
+                  tooltip: cleared ? t.cSetupUndoClearSlot : t.cSetupClearSlot,
+                  icon: Icon(
+                    cleared ? Icons.undo_rounded : Icons.delete_outline_rounded,
+                  ),
+                  onPressed: () => setState(
+                    () => cleared
+                        ? _clearedSlots.remove(e.key)
+                        : _clearedSlots.add(e.key),
+                  ),
+                )
+              : null,
         ),
       ),
     );
@@ -778,65 +843,6 @@ class _Steps extends StatelessWidget {
             child: Text(shot.of(context.lang), style: context.text.bodySmall),
           ),
       ],
-    );
-  }
-}
-
-class _CopyRow extends StatelessWidget {
-  const _CopyRow({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: Space.sm),
-    child: ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(label, style: context.text.labelLarge),
-      subtitle: SelectableText(value),
-      trailing: IconButton(
-        tooltip: context.t.cCopy,
-        icon: const Icon(Icons.copy_rounded),
-        onPressed: () async {
-          await Clipboard.setData(ClipboardData(text: value));
-          if (context.mounted) showToast(context, context.t.cCopied);
-        },
-      ),
-    ),
-  );
-}
-
-/// Read-only checklist item: the uptime ping URL is set by install.sh, never typed in the console.
-class HeartbeatCard extends StatelessWidget {
-  const HeartbeatCard({super.key, required this.configured});
-  final bool configured;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.t;
-    final color = configured ? context.colors.fresh : context.colors.sun;
-    return AppCard(
-      child: Row(
-        children: [
-          Icon(
-            configured ? Icons.favorite_rounded : Icons.heart_broken_rounded,
-            color: color,
-          ),
-          const SizedBox(width: Space.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(t.oHeartbeat, style: context.text.titleSmall),
-                Text(
-                  configured ? t.oHeartbeatOn : t.oHeartbeatOff,
-                  style: context.text.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

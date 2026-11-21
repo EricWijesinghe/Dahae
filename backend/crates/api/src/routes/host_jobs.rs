@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
 //! Owner-queued server jobs (`/admin/host/jobs`). An accepted request writes one job file into the agent's
-//! inbox and records a row; the live state is read back from the agent's status files.
+//! inbox and records a row; the live state is read back from the agent's status files. A job the agent holds for
+//! the server approval code (`domain-set`) gets its code through `approve`; a job that publishes a result
+//! (`domain-check`, `host-approval-enroll`) is read back through `output`.
 
 use crate::{
     auth::Admin,
@@ -18,23 +20,37 @@ use axum::{
     extract::{ConnectInfo, Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{FromRow, PgPool};
-use std::{fs::OpenOptions, io::Write, net::SocketAddr, path::Path as FsPath};
+use std::{
+    fs::{File, OpenOptions},
+    io::{Read, Write},
+    net::SocketAddr,
+    path::Path as FsPath,
+};
 use uuid::Uuid;
 
 const LIST_LIMIT: i64 = 50;
 /// A job with no status file this long after it was queued never reached the agent.
 const QUEUED_WINDOW_MIN: i64 = 10;
+/// Results in `out/<token>` are root-written text; the console never needs more than this.
+const MAX_OUTPUT_BYTES: u64 = 64 * 1024;
 
 pub fn admin_routes() -> Router<AppState> {
     Router::new()
         .route("/host/jobs", idempotency::replayable(get(list).post(enqueue)))
         .route("/host/jobs/{id}", get(detail))
+        .route("/host/jobs/{id}/approve", post(approve))
+        .route("/host/jobs/{id}/output", get(output))
+}
+
+#[derive(Deserialize)]
+struct ApproveBody {
+    code: String,
 }
 
 #[derive(Deserialize)]
@@ -61,7 +77,10 @@ async fn enqueue(
     Json(body): Json<EnqueueBody>,
 ) -> ApiResult<impl IntoResponse> {
     let key = idempotency_key(&headers)?;
-    let spec = host_jobs::validate(&body.kind, &body.arg).map_err(ApiError::BadRequest)?;
+    let mut spec = host_jobs::validate(&body.kind, &body.arg).map_err(ApiError::BadRequest)?;
+    if spec.kind == Kind::HostApprovalEnroll {
+        spec.arg = a.id.hyphenated().to_string();
+    }
     // Checked before the TOTP is spent, so a missing inbox does not burn the owner's code.
     let dir = jobs_dir(&s)?;
     if spec.kind.needs_owner() {
@@ -161,12 +180,64 @@ async fn list(State(s): State<AppState>, Admin(_): Admin) -> ApiResult<Json<Valu
 }
 
 async fn detail(State(s): State<AppState>, Admin(_): Admin, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
-    let row: JobRow = sqlx::query_as("SELECT id, kind, arg, progress_token, created_at FROM host_jobs WHERE id = $1")
-        .bind(id)
-        .fetch_optional(&s.db)
-        .await?
-        .ok_or(ApiError::NotFound)?;
+    let row = job_row(&s.db, id).await?;
     Ok(Json(job_json(&dir_status(&s, id), &row)))
+}
+
+async fn job_row(db: &PgPool, id: Uuid) -> ApiResult<JobRow> {
+    sqlx::query_as("SELECT id, kind, arg, progress_token, created_at FROM host_jobs WHERE id = $1")
+        .bind(id)
+        .fetch_optional(db)
+        .await?
+        .ok_or(ApiError::NotFound)
+}
+
+/// Owner only. Hands the server approval code to the agent as `inbox/<id>.approve` (`code=NNNNNN`, one line).
+/// The agent checks the code, counts wrong ones and locks; the API only checks its shape.
+async fn approve(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<Uuid>, Json(body): Json<ApproveBody>) -> ApiResult<StatusCode> {
+    if !owner::is_owner(&s.db, a.id).await? {
+        return Err(ApiError::Forbidden);
+    }
+    let code = body.code.trim();
+    if code.len() != 6 || !code.bytes().all(|b| b.is_ascii_digit()) {
+        return Err(ApiError::BadRequest("invalid_approval_code"));
+    }
+    let row = job_row(&s.db, id).await?;
+    let waiting = Kind::parse(&row.kind).is_some_and(Kind::needs_approval) && dir_status(&s, id).is_some_and(|st| st.state == "awaiting_approval");
+    if !waiting {
+        return Err(ApiError::Conflict("job_not_awaiting_approval"));
+    }
+    let dir = jobs_dir(&s)?;
+    if let Err(e) = write_inbox(dir, &format!("{}.approve", id.hyphenated()), &format!("code={code}\n")) {
+        tracing::error!(error = %e, "approval file not written");
+        return Err(ApiError::Unavailable("host_queue_unwritable"));
+    }
+    crate::routes::audit(&s.db, "staff", Some(a.id), "host_job.approve", &id.to_string(), json!({ "kind": row.kind })).await?;
+    Ok(StatusCode::ACCEPTED)
+}
+
+/// The job's result file (`out/<token>`), capped and read as untrusted text. The approval enrolment result holds
+/// the new secret, so only the owner who asked for it may read it. 404 once the agent has pruned it.
+async fn output(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
+    let row = job_row(&s.db, id).await?;
+    if row.kind == Kind::HostApprovalEnroll.name() && (row.arg != a.id.hyphenated().to_string() || !owner::is_owner(&s.db, a.id).await?) {
+        return Err(ApiError::Forbidden);
+    }
+    let text = read_output(&s.config.host_jobs_dir, &row.progress_token).ok_or(ApiError::NotFound)?;
+    Ok(Json(json!({ "text": text })))
+}
+
+fn read_output(dir: &FsPath, token: &str) -> Option<String> {
+    if token.len() != 32 || !token.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    File::open(dir.join("out").join(token))
+        .ok()?
+        .take(MAX_OUTPUT_BYTES)
+        .read_to_end(&mut bytes)
+        .ok()?;
+    Some(String::from_utf8_lossy(&bytes).into_owned())
 }
 
 fn jobs_dir(s: &AppState) -> ApiResult<&FsPath> {
@@ -203,15 +274,20 @@ fn state_of(status: &Option<HostStatus>, created_at: DateTime<Utc>) -> &str {
     }
 }
 
-/// Writes `inbox/<id>.tmp` exclusively, then renames it to `<id>.job`, so the agent never reads a partial file.
 fn write_job_file(dir: &FsPath, id: Uuid, spec: &JobSpec, token: &str) -> std::io::Result<()> {
+    write_inbox(dir, &format!("{}.job", id.hyphenated()), &host_jobs::job_file(id, spec, token))
+}
+
+/// Writes a uniquely named temp file exclusively, then renames it to `inbox/<name>`, so the agent (which reads
+/// only `*.job` and `*.approve`) never sees a partial file.
+fn write_inbox(dir: &FsPath, name: &str, body: &str) -> std::io::Result<()> {
     let inbox = dir.join("inbox");
-    let tmp = inbox.join(format!("{}.tmp", id.hyphenated()));
+    let tmp = inbox.join(format!("{name}.{}.tmp", &host_jobs::new_progress_token()[..8]));
     let result = (|| {
         let mut f = OpenOptions::new().write(true).create_new(true).open(&tmp)?;
-        f.write_all(host_jobs::job_file(id, spec, token).as_bytes())?;
+        f.write_all(body.as_bytes())?;
         f.sync_all()?;
-        std::fs::rename(&tmp, inbox.join(format!("{}.job", id.hyphenated())))
+        std::fs::rename(&tmp, inbox.join(name))
     })();
     if result.is_err() {
         let _ = std::fs::remove_file(&tmp);

@@ -9,9 +9,16 @@
 #   https://DOMAIN/.well-known/assetlinks.json, apple-app-site-association   App Links, served by the API from env
 #   https://www.DOMAIN/*     permanent redirect to https://DOMAIN/* (needs a www DNS record; harmless without one)
 #   https://DOMAIN/auth/naver/callback   Naver login: the app takes this URL (App Link); the page is only the browser fallback
+#   https://OLD/*            a former domain after a console domain change: everything is served as on DOMAIN (installed
+#                            apps keep working), only website pages get a 302 to DOMAIN. The API decides which hosts
+#                            (crates/api/src/domains.rs); nothing about them is in compose or .env.
 {
 	# Quoted: an empty ACME_EMAIL (the installer allows it) is then one empty argument, not a parse error.
 	email "{$ACME_EMAIL}"
+	# Certificates for former domains are fetched on the first visit, only for hosts the API answers 200 for.
+	on_demand_tls {
+		ask http://api:8080/internal/tls-ask
+	}
 }
 
 # TLS_MODE picks one of these (`import tls-{$TLS_MODE}`): empty = automatic public HTTPS, internal = Caddy's
@@ -21,10 +28,20 @@
 (tls-internal) {
 	tls internal
 }
+# The same choice for former domains, with certificates on demand.
+(alias-tls-) {
+	tls {
+		on_demand
+	}
+}
+(alias-tls-internal) {
+	tls internal {
+		on_demand
+	}
+}
 
-{$DOMAIN} {
-	# TLS_MODE: see the tls- snippets above.
-	import tls-{$TLS_MODE}
+# Everything the main domain serves. Imported by the main site and by the former-domain site below.
+(site) {
 	encode zstd gzip
 
 	# JSON access log in the caddylogs volume: 10 MB per file, 14 files kept, 3 months at most (the retention rule in docs/privacy-retention.md). Every query string is
@@ -89,12 +106,36 @@
 	# (scripts/ci/check-native.py fails when a page's inline script has no hash here). No PG, no frames.
 	header @site_csp Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-BAOxqSXTXY0xct7XpdRWh4Q+kVwbxikbI09LZ/Tqsqg=' 'sha256-UtC0U60paHl4CC9DOzN7OY+bZaNnUQ9p4kyLhFax6ts='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
-	# Probes and metrics are for the container runtime and the scraper on the server, never the internet.
-	@internal path /ready /metrics
-	respond @internal 404
+	# Probes, metrics and the certificate question are for the server itself, never the internet.
+	# A handle block, not a bare respond: handle runs before respond, so the catch-all handle below would answer first.
+	@internal path /ready /metrics /internal/*
+	handle @internal {
+		respond 404
+	}
+
+	# The domain root approved (DOMAIN in the root-written .env). The apps check it before following a new
+	# api_base from /v1/config, because a hijacked API could name any host there (api_base_discovery.dart).
+	handle /.well-known/dahae-domain {
+		header Cache-Control "no-store"
+		respond "{$DOMAIN}"
+	}
 
 	@api path /v1/* /health /.well-known/assetlinks.json /.well-known/apple-app-site-association
 	handle @api {
+		reverse_proxy api:8080
+	}
+
+	# Web app manifests carry the business name, colour and icons: the API renders them from the brand profile.
+	handle /site.webmanifest {
+		rewrite * /v1/brand/manifest/site
+		reverse_proxy api:8080
+	}
+	handle /app/manifest.json {
+		rewrite * /v1/brand/manifest/customer
+		reverse_proxy api:8080
+	}
+	handle /admin/manifest.json {
+		rewrite * /v1/brand/manifest/console
 		reverse_proxy api:8080
 	}
 
@@ -132,11 +173,15 @@
 	# Flutter web output has no content hashes in its file names (main.dart.js, main.dart.wasm, canvaskit/,
 	# assets/), so a cached copy can be older than the bootstrap that loads it and break the app after a
 	# deploy. Everything revalidates (ETag -> 304 when unchanged); only /webfonts/ above is immutable.
+	# The shell page (index.html) takes the business name and icons from the API with {{httpInclude}}. Only that page
+	# is templated: other Flutter output (assets/NOTICES) can hold "{{" and must be served as it is.
 	redir /admin /admin/
 	handle_path /admin/* {
 		root * /srv/console
 		try_files {path} /index.html
 		header Cache-Control "no-cache"
+		@console_shell path / /index.html
+		templates @console_shell
 		file_server
 	}
 
@@ -145,6 +190,8 @@
 		root * /srv/app
 		try_files {path} /index.html
 		header Cache-Control "no-cache"
+		@app_shell path / /index.html
+		templates @app_shell
 		file_server
 	}
 
@@ -180,10 +227,30 @@
 	}
 }
 
+{$DOMAIN} {
+	# TLS_MODE: see the tls- snippets above.
+	import tls-{$TLS_MODE}
+	import site
+}
+
 # www -> apex. HSTS above covers subdomains, so without this site a visitor typing www gets a TLS error.
 # Without a www DNS record Caddy only logs failed certificate attempts for www; the main site is unaffected.
 www.{$DOMAIN} {
 	import tls-{$TLS_MODE}
 	header -Server
 	redir https://{$DOMAIN}{uri} permanent
+}
+
+# Former domains: any other host name, but a certificate only for the hosts the API lists (on_demand_tls above), so
+# a stranger's DNS name pointed here gets no certificate. Website and SEO pages move to DOMAIN for search engines;
+# the API, payment pages, app links, sign-in callbacks and the apps answer here as before, because installed apps do
+# not follow redirects for POST, websockets or the payment done page.
+https:// {
+	import alias-tls-{$TLS_MODE}
+	@old_pages not path /v1/* /health /.well-known/* /pay /pay/* /auth/* /app /app/* /admin /admin/* /robots.txt /webfonts/* /ops-progress/*
+	# 301 for Google's Change of Address and Naver's 사이트 이전; no-store so browsers do not keep it for good, and a
+	# rolled-back or repeated move cannot loop.
+	header @old_pages Cache-Control "no-store"
+	redir @old_pages https://{$DOMAIN}{uri} 301
+	import site
 }

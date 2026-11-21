@@ -6,16 +6,17 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="다해 - 검증된 청소 전문가를 1분 만에 예약하세요.">
+  <!-- Brand values are filled in on every request by Caddy templates (deploy/Caddyfile, this file only). -->
+  <meta name="description" content="{{httpInclude "/v1/public/seller-info?field=name"}} - 검증된 청소 전문가를 1분 만에 예약하세요.">
   <meta name="theme-color" content="#0B1217">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="다해">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="apple-mobile-web-app-title" content="{{httpInclude "/v1/public/seller-info?field=short_name"}}">
+  <link rel="apple-touch-icon" href="{{httpInclude "/v1/public/seller-info?field=apple_icon"}}">
+  <link rel="icon" href="{{httpInclude "/v1/public/seller-info?field=favicon"}}">
   <link rel="manifest" href="manifest.json">
-  <title>다해</title>
+  <title>{{httpInclude "/v1/public/seller-info?field=name"}}</title>
 
   <!-- The bundled Korean face the app paints with: fetched early so date pickers and headers never show
        boxes while it loads. Same files as the ui package's Dahae Sans family (pubspec.yaml). -->
@@ -32,7 +33,7 @@
       transition: opacity .3s ease; z-index: 1; }
     #splash.done { opacity: 0; pointer-events: none; }
     #splash .wrap { text-align: center; }
-    #splash .mark { display: block; margin: 0 auto 14px; }
+    #splash .mark, #splash .wrap > img { display: block; width: 72px; height: 72px; object-fit: contain; margin: 0 auto 14px; }
     #splash .word { font-size: 32px; font-weight: 800; letter-spacing: -.02em; }
     #splash .dot { width: 8px; height: 8px; margin: 18px auto 0; border-radius: 50%; background: #FFD95A; animation: pulse 1.1s ease-in-out infinite; }
     @keyframes pulse { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
@@ -42,7 +43,7 @@
   </style>
 </head>
 <body>
-  <div id="splash" aria-hidden="true"><div class="wrap"><svg class="mark" viewBox="0 0 1024 1024" width="72" height="72" aria-hidden="true"><path d="M150 470 512 175 874 470V890a40 40 0 0 1-40 40H190a40 40 0 0 1-40-40Z" fill="#1E9EBA"/><path d="M110 440 512 110 914 440" fill="none" stroke="#187A8F" stroke-width="110" stroke-linecap="round" stroke-linejoin="round"/><path d="M345 650 455 760 690 520" fill="none" stroke="#FFD95A" stroke-width="105" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="word">다해</div><div class="dot"></div></div></div>
+  <div id="splash" aria-hidden="true"><div class="wrap">{{$logo := httpInclude "/v1/public/seller-info?field=logo_img"}}{{if $logo}}{{$logo}}{{else}}<svg class="mark" viewBox="0 0 1024 1024" width="72" height="72" aria-hidden="true"><path d="M150 470 512 175 874 470V890a40 40 0 0 1-40 40H190a40 40 0 0 1-40-40Z" fill="#1E9EBA"/><path d="M110 440 512 110 914 440" fill="none" stroke="#187A8F" stroke-width="110" stroke-linecap="round" stroke-linejoin="round"/><path d="M345 650 455 760 690 520" fill="none" stroke="#FFD95A" stroke-width="105" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}<div class="word">{{httpInclude "/v1/public/seller-info?field=name"}}</div><div class="dot"></div></div></div>
   <script>
     // Hide the splash once the home has its first data (the app's dahae-ready event). A safety timeout
     // covers a stalled load so a dead network never holds the splash forever.

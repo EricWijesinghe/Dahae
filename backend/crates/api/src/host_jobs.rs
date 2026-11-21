@@ -19,6 +19,10 @@ pub enum Kind {
     Channel,
     Restart,
     Schedule,
+    DomainCheck,
+    DomainSet,
+    Heartbeat,
+    HostApprovalEnroll,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,6 +41,10 @@ impl Kind {
             "channel" => Self::Channel,
             "restart" => Self::Restart,
             "schedule" => Self::Schedule,
+            "domain-check" => Self::DomainCheck,
+            "domain-set" => Self::DomainSet,
+            "heartbeat" => Self::Heartbeat,
+            "host-approval-enroll" => Self::HostApprovalEnroll,
             _ => return None,
         })
     }
@@ -50,6 +58,10 @@ impl Kind {
             Self::Channel => "channel",
             Self::Restart => "restart",
             Self::Schedule => "schedule",
+            Self::DomainCheck => "domain-check",
+            Self::DomainSet => "domain-set",
+            Self::Heartbeat => "heartbeat",
+            Self::HostApprovalEnroll => "host-approval-enroll",
         }
     }
 
@@ -63,12 +75,22 @@ impl Kind {
             Self::Channel => "업데이트 채널 변경",
             Self::Restart => "서버 재시작",
             Self::Schedule => "자동 작업 일정 변경",
+            Self::DomainCheck => "도메인 확인",
+            Self::DomainSet => "도메인 바꾸기",
+            Self::Heartbeat => "외부 가동 확인 주소 변경",
+            Self::HostApprovalEnroll => "서버 승인 코드 만들기",
         }
     }
 
-    /// Owner kinds need the owner's TOTP on the request. The read-only status refresh needs only an admin session.
+    /// Owner kinds need the owner's TOTP on the request. The read-only status refresh and DNS check need only
+    /// an admin session.
     pub fn needs_owner(self) -> bool {
-        self != Self::StatusRefresh
+        !matches!(self, Self::StatusRefresh | Self::DomainCheck)
+    }
+
+    /// The agent holds these until the server approval code arrives (`agent.sh::is_high_kind`).
+    pub fn needs_approval(self) -> bool {
+        self == Self::DomainSet
     }
 }
 
@@ -80,6 +102,10 @@ pub fn validate(kind: &str, arg: &str) -> Result<JobSpec, &'static str> {
         Kind::Channel => matches!(arg, "stable" | "beta"),
         Kind::Restart => matches!(arg, "api" | "web" | "db" | "all"),
         Kind::Schedule => valid_schedule(arg),
+        Kind::DomainCheck | Kind::DomainSet => valid_domain(arg),
+        Kind::Heartbeat => arg == "off" || valid_heartbeat_url(arg),
+        // The server fills in the caller's staff id; a client never chooses whose code it is.
+        Kind::HostApprovalEnroll => arg.is_empty(),
     };
     if ok {
         Ok(JobSpec { kind, arg: arg.to_string() })
@@ -100,6 +126,44 @@ fn valid_schedule(arg: &str) -> bool {
         return false;
     };
     DAYS.contains(&day) && two_digits(hh).is_some_and(|h| h <= 23) && two_digits(mm).is_some_and(|m| m <= 59)
+}
+
+/// The agent's `DOMAIN_RE`: lowercase labels of letters, digits and inner hyphens; the last label letters only,
+/// or an `xn--` label. At most 253 characters, never `.local`.
+pub fn valid_domain(d: &str) -> bool {
+    let labels: Vec<&str> = d.split('.').collect();
+    let Some((tld, rest)) = labels.split_last() else {
+        return false;
+    };
+    d.len() <= 253 && !rest.is_empty() && rest.iter().all(|l| valid_label(l)) && valid_tld(tld)
+}
+
+fn valid_label(l: &str) -> bool {
+    let b = l.as_bytes();
+    let inner = |c: &u8| c.is_ascii_lowercase() || c.is_ascii_digit();
+    (1..=63).contains(&b.len()) && inner(&b[0]) && inner(&b[b.len() - 1]) && b.iter().all(|c| inner(c) || *c == b'-')
+}
+
+fn valid_tld(l: &str) -> bool {
+    match l.strip_prefix("xn--") {
+        Some(p) => (1..=59).contains(&p.len()) && p.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-'),
+        None => (2..=63).contains(&l.len()) && l.bytes().all(|c| c.is_ascii_lowercase()) && l != "local",
+    }
+}
+
+/// The agent's `HB_URL_RE`: `https://host[:port][/path]`, with no `&`, quotes or spaces. The agent also checks
+/// that the host resolves to public addresses only.
+pub fn valid_heartbeat_url(url: &str) -> bool {
+    let Some(rest) = url.strip_prefix("https://") else {
+        return false;
+    };
+    let (authority, path) = rest.find('/').map_or((rest, ""), |i| rest.split_at(i));
+    let (host, port) = authority.split_once(':').map_or((authority, None), |(h, p)| (h, Some(p)));
+    let host_ok = !host.is_empty() && host.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-');
+    let port_ok = port.is_none_or(|p| (1..=5).contains(&p.len()) && p.bytes().all(|c| c.is_ascii_digit()));
+    // No '=': the agent's job_parse refuses it in any value (agent.sh), so the job would fail after the owner code.
+    let path_ok = path.bytes().all(|c| c.is_ascii_alphanumeric() || b"._~%/:@+?-".contains(&c));
+    host_ok && port_ok && path_ok
 }
 
 fn two_digits(s: &str) -> Option<u8> {
@@ -144,6 +208,59 @@ mod tests {
         for bad in ["mon@24:00", "mon@12:60", "mon@1:00", "mon@+1:00", "funday@04:00", "mon@04-00", "mon04:00"] {
             assert_eq!(validate("schedule", bad), Err("invalid_job_arg"), "{bad}");
         }
+    }
+
+    #[test]
+    fn domain_kinds_take_a_domain_like_the_agent() {
+        for good in ["myshop.co.kr", "a-b.example.com", "shop.xn--3e0b707e", "x1.io"] {
+            assert!(validate("domain-check", good).is_ok(), "{good}");
+            assert!(validate("domain-set", good).is_ok(), "{good}");
+        }
+        let long = format!("{}.co.kr", "a".repeat(64));
+        for bad in [
+            "",
+            "localhost",
+            "1.2.3.4",
+            "a..b",
+            "x.local",
+            "MyShop.co.kr",
+            "-a.com",
+            "a-.com",
+            "a.com;id",
+            "a.c",
+            &long,
+        ] {
+            assert_eq!(validate("domain-set", bad), Err("invalid_job_arg"), "{bad}");
+        }
+    }
+
+    #[test]
+    fn heartbeat_takes_off_or_an_https_url() {
+        assert!(validate("heartbeat", "off").is_ok());
+        assert!(validate("heartbeat", "https://hc-ping.com/1f2e-aaaa").is_ok());
+        assert!(validate("heartbeat", "https://x.io:8443/a?b").is_ok());
+        for bad in [
+            "",
+            "https://x.io:8443/a?b=1",
+            "http://hc-ping.com/x",
+            "https://x.io/a?b=1&c=2",
+            "https://x.io/$(id)",
+            "https://",
+            "https://x.io:123456/",
+            "https://x .io",
+        ] {
+            assert_eq!(validate("heartbeat", bad), Err("invalid_job_arg"), "{bad}");
+        }
+    }
+
+    #[test]
+    fn enrol_never_takes_an_id_from_the_client_and_only_domain_set_waits_for_approval() {
+        assert!(validate("host-approval-enroll", "").is_ok());
+        assert_eq!(validate("host-approval-enroll", "0190a6f2-1111-7000-8000-000000000001"), Err("invalid_job_arg"));
+        assert!(!Kind::DomainCheck.needs_owner());
+        assert!(Kind::DomainSet.needs_owner() && Kind::Heartbeat.needs_owner() && Kind::HostApprovalEnroll.needs_owner());
+        assert!(Kind::DomainSet.needs_approval());
+        assert!(!Kind::Update.needs_approval() && !Kind::DomainCheck.needs_approval());
     }
 
     #[test]

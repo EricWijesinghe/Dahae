@@ -316,6 +316,56 @@ const WEBHOOK_SECRET: &str = "whsec_ZmFrZS13ZWJob29rLWtleS0wMDAwMDA=";
 const BILLING_CHANNEL: &str = "channel-key-11111111-1111-1111-1111-111111111111";
 const IDENTITY_CHANNEL: &str = "channel-key-22222222-2222-2222-2222-222222222222";
 
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_payment_card_with_open_payments_cannot_be_cleared(db: PgPool) {
+    let app = common::app(db.clone());
+    let (owner, _) = enrolled_owner(&db).await;
+    save(&app, &owner, SECRET).await;
+    assert_eq!(unlock(&app, &owner, &code_now()).await.0, StatusCode::OK);
+    let c = common::customer(&app, &db, "010-7100-0900").await; // with a saved PortOne card
+    let open: Uuid = sqlx::query_scalar(
+        "INSERT INTO checkouts (user_id, kind, method, amount, status, expires_at, gateway)
+         VALUES ($1, 'booking', 'card', 9000, 'pending', now() + interval '1 hour', 'portone') RETURNING id",
+    )
+    .bind(c.user)
+    .fetch_one(&db)
+    .await
+    .expect("checkout");
+    let (st, body) = common::call_owner(&app, "DELETE", PORTONE, &owner, None, Value::Null).await;
+    assert_eq!((st, body["error"]["code"].as_str()), (StatusCode::CONFLICT, Some("gateway_in_use")), "{body}");
+    let (st, body) = common::call_owner(&app, "DELETE", "/v1/admin/setup/tosspayments", &owner, None, Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "an unsaved Toss card has nothing to guard: {body}");
+
+    sqlx::query("UPDATE checkouts SET gateway = 'tosspayments' WHERE id = $1")
+        .bind(open)
+        .execute(&db)
+        .await
+        .expect("move");
+    let (st, body) = common::call_owner(&app, "DELETE", PORTONE, &owner, None, Value::Null).await;
+    assert_eq!(
+        (st, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("gateway_in_use")),
+        "a saved card: {body}"
+    );
+    sqlx::query("UPDATE payment_methods SET deleted_at = now()")
+        .execute(&db)
+        .await
+        .expect("card deleted");
+    sqlx::query("INSERT INTO refund_queue (provider, tx_id, amount, cancellable) VALUES ('portone', 'tx-1', 100, 100)")
+        .execute(&db)
+        .await
+        .expect("refund");
+    let (st, body) = common::call_owner(&app, "DELETE", PORTONE, &owner, None, Value::Null).await;
+    assert_eq!(
+        (st, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("gateway_in_use")),
+        "a queued refund: {body}"
+    );
+    sqlx::query("UPDATE refund_queue SET done_at = now()").execute(&db).await.expect("done");
+    let (st, body) = common::call_owner(&app, "DELETE", PORTONE, &owner, None, Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "nothing left on PortOne: {body}");
+}
+
 /// Saves the PortOne card with these channel keys as the owner (the card must be unlocked first if already saved).
 async fn save_channels(app: &Router, token: &str, channels: Value) {
     let body = json!({ "store_id": "store-00000000-0000-0000-0000-000000000000", "api_secret": SECRET, "channel_keys": channels });

@@ -236,7 +236,8 @@ async fn set_alert_phone(
 /// Best-effort SMS to the number being replaced. `false` when it could not be sent (logged, never fatal).
 async fn notify_old_number(s: &AppState, old: &str, new_phone: &str) -> bool {
     let text = format!(
-        "[다해] 소유자 알림 번호가 {}(으)로 바뀌었어요. 본인이 아니라면 바로 알려 주세요.",
+        "[{}] 소유자 알림 번호가 {}(으)로 바뀌었어요. 본인이 아니라면 바로 알려 주세요.",
+        super::setup::brand::short_brand(&s.db).await,
         owner::mask_phone(new_phone)
     );
     match s.providers.send_sms(old, &text).await {

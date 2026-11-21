@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import 'setup_guides.dart';
 
 /// Which payment methods customers can pick. Each switch saves immediately.
 class PayMethodsCard extends StatefulWidget {
@@ -95,19 +96,26 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
               )
             else
               for (final m in methods)
-                // Without a channel key customers would not see the method, so it cannot be switched on yet.
+                // Without a gateway that serves it customers would not see the method, so it cannot be switched on yet.
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  secondary: PayBrandBadge(
-                    code: m['code'] as String,
-                    height: 32,
+                  // The badge centres its wordmark, so on its own it fills the whole leading width.
+                  secondary: IntrinsicWidth(
+                    child: PayBrandBadge(code: m['code'] as String, height: 32),
                   ),
                   title: Text(t.payMethod(m['code'] as String)),
-                  subtitle: m['configured'] == true
-                      ? null
-                      : m['enabled'] == true
-                      ? Text(t.cPayMethodNoKey, style: context.text.bodySmall)
-                      : Text(t.cSetupNeedsKey),
+                  subtitle: switch (gatewayNames[m['gateway']]) {
+                    final g? => Text(
+                      t.cPayMethodGateway(g.of(context.lang)),
+                      style: context.text.bodySmall,
+                    ),
+                    _ when m['configured'] == true => null,
+                    _ when m['enabled'] == true => Text(
+                      t.cPayMethodNoKey,
+                      style: context.text.bodySmall,
+                    ),
+                    _ => Text(t.cSetupNeedsKey),
+                  },
                   value: m['enabled'] == true,
                   onChanged:
                       _busy || (m['configured'] != true && m['enabled'] != true)

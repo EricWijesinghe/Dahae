@@ -205,7 +205,7 @@ class MoreTab extends StatelessWidget {
                     if (!context.mounted) return;
                     showDahaeLicensePage(
                       context,
-                      applicationName: BrandConfig.placeholder.name,
+                      applicationName: context.brandName,
                       applicationVersion: info.version,
                     );
                   },

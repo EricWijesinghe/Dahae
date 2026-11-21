@@ -85,7 +85,7 @@ bool _roomy(BuildContext context) =>
     _pillMinWidth;
 
 String _teamName(BuildContext context, T t) =>
-    '${BrandScope.of(context).name} ${t.chatTeam}';
+    '${context.brandName} ${t.chatTeam}';
 
 /// Tab-root title: large, bold and left-aligned (design p03, p05).
 Widget tabRootTitle(BuildContext context, String title) => Text(

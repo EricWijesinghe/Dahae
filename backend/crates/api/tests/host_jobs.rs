@@ -280,3 +280,144 @@ async fn unknown_job_id_is_not_found(db: PgPool) {
     let (st, _) = send(&h.app, "GET", &format!("/v1/admin/host/jobs/{}", Uuid::now_v7()), &admin, None, None, None).await;
     assert_eq!(st, StatusCode::NOT_FOUND);
 }
+
+/// Queues one job as `token` (owner code attached) and returns its JSON.
+async fn queue_job(h: &Host, token: &str, body: Value) -> Value {
+    let key = Uuid::now_v7().to_string();
+    let (st, job) = send(&h.app, "POST", "/v1/admin/host/jobs", token, Some(&code_now()), Some(&key), Some(body)).await;
+    assert_eq!(st, StatusCode::ACCEPTED, "{job}");
+    job
+}
+
+fn write_status(h: &Host, id: &str, state: &str) {
+    std::fs::write(h.dir.join("status").join(format!("{id}.json")), format!(r#"{{"state":"{state}"}}"#)).expect("status file");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn domain_check_needs_only_an_admin_and_carries_the_domain(db: PgPool) {
+    let h = host(db.clone());
+    let (admin, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
+    let (st, job) = send(
+        &h.app,
+        "POST",
+        "/v1/admin/host/jobs",
+        &admin,
+        None,
+        Some(KEY),
+        Some(json!({ "kind": "domain-check", "arg": "new.co.kr" })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::ACCEPTED, "{job}");
+    let text = std::fs::read_to_string(&job_files(&h.dir)[0]).expect("job file");
+    assert!(text.contains("\nkind=domain-check\narg=new.co.kr\ntoken="), "{text}");
+    let key = Uuid::now_v7().to_string();
+    let (st, _) = send(
+        &h.app,
+        "POST",
+        "/v1/admin/host/jobs",
+        &admin,
+        None,
+        Some(&key),
+        Some(json!({ "kind": "domain-check", "arg": "localhost" })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn enrolment_takes_the_callers_id_never_the_clients(db: PgPool) {
+    let h = host(db.clone());
+    let admin = enrolled_admin(&db).await;
+    let other = Uuid::now_v7().to_string();
+    let (st, _) = send(
+        &h.app,
+        "POST",
+        "/v1/admin/host/jobs",
+        &admin,
+        Some(&code_now()),
+        Some(KEY),
+        Some(json!({ "kind": "host-approval-enroll", "arg": other })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "a client-chosen id is refused");
+    let job = queue_job(&h, &admin, json!({ "kind": "host-approval-enroll" })).await;
+    let me: Uuid = sqlx::query_scalar("SELECT id FROM staff WHERE is_owner").fetch_one(&db).await.expect("owner");
+    assert_eq!(job["arg"], me.hyphenated().to_string());
+    let text = std::fs::read_to_string(&job_files(&h.dir)[0]).expect("job file");
+    assert!(text.contains(&format!("\narg={}\n", me.hyphenated())), "{text}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn approve_writes_exactly_the_code_line_for_a_waiting_domain_move(db: PgPool) {
+    let h = host(db.clone());
+    let admin = enrolled_admin(&db).await;
+    let job = queue_job(&h, &admin, json!({ "kind": "domain-set", "arg": "new.co.kr" })).await;
+    let id = job["id"].as_str().expect("id").to_string();
+    let uri = format!("/v1/admin/host/jobs/{id}/approve");
+    let approve_file = h.dir.join("inbox").join(format!("{id}.approve"));
+
+    let (st, _) = send(&h.app, "POST", &uri, &admin, None, None, Some(json!({ "code": "123456" }))).await;
+    assert_eq!(st, StatusCode::CONFLICT, "not waiting yet");
+    write_status(&h, &id, "awaiting_approval");
+    for bad in ["12345", "1234567", "12a456", "123456\nx=1"] {
+        let (st, _) = send(&h.app, "POST", &uri, &admin, None, None, Some(json!({ "code": bad }))).await;
+        assert_eq!(st, StatusCode::BAD_REQUEST, "{bad:?}");
+    }
+    let (other, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
+    let (st, _) = send(&h.app, "POST", &uri, &other, None, None, Some(json!({ "code": "123456" }))).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "an admin who is not the owner");
+    assert!(!approve_file.exists());
+
+    let (st, _) = send(&h.app, "POST", &uri, &admin, None, None, Some(json!({ "code": "654321" }))).await;
+    assert_eq!(st, StatusCode::ACCEPTED);
+    assert_eq!(std::fs::read(&approve_file).expect("approve file"), b"code=654321\n");
+    let inbox: Vec<_> = job_files(&h.dir).into_iter().filter(|p| p.extension().is_some_and(|e| e == "tmp")).collect();
+    assert!(inbox.is_empty(), "no temp file left: {inbox:?}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn approve_refuses_kinds_that_never_wait(db: PgPool) {
+    let h = host(db.clone());
+    let admin = enrolled_admin(&db).await;
+    let job = queue_job(&h, &admin, json!({ "kind": "backup-now" })).await;
+    let id = job["id"].as_str().expect("id").to_string();
+    write_status(&h, &id, "awaiting_approval");
+    let (st, _) = send(
+        &h.app,
+        "POST",
+        &format!("/v1/admin/host/jobs/{id}/approve"),
+        &admin,
+        None,
+        None,
+        Some(json!({ "code": "123456" })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::CONFLICT);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn output_is_capped_and_the_enrolment_result_is_the_owners_only(db: PgPool) {
+    let h = host(db.clone());
+    std::fs::create_dir_all(h.dir.join("out")).expect("out");
+    let admin = enrolled_admin(&db).await;
+    let (other, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
+
+    let check = queue_job(&h, &admin, json!({ "kind": "domain-check", "arg": "new.co.kr" })).await;
+    let uri = format!("/v1/admin/host/jobs/{}/output", check["id"].as_str().expect("id"));
+    let (st, _) = send(&h.app, "GET", &uri, &other, None, None, None).await;
+    assert_eq!(st, StatusCode::NOT_FOUND, "not written yet, or pruned");
+    let token = check["progress_token"].as_str().expect("token");
+    std::fs::write(h.dir.join("out").join(token), "x".repeat(70 * 1024)).expect("out file");
+    let (st, out) = send(&h.app, "GET", &uri, &other, None, None, None).await;
+    assert_eq!(st, StatusCode::OK, "any admin reads a DNS check");
+    assert_eq!(out["text"].as_str().map(str::len), Some(64 * 1024));
+
+    let enrol = queue_job(&h, &admin, json!({ "kind": "host-approval-enroll" })).await;
+    std::fs::write(h.dir.join("out").join(enrol["progress_token"].as_str().expect("token")), "otpauth://totp/x").expect("out file");
+    let uri = format!("/v1/admin/host/jobs/{}/output", enrol["id"].as_str().expect("id"));
+    let (st, _) = send(&h.app, "GET", &uri, &other, None, None, None).await;
+    assert_eq!(st, StatusCode::FORBIDDEN);
+    let (st, out) = send(&h.app, "GET", &uri, &admin, None, None, None).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(out["text"], "otpauth://totp/x");
+}

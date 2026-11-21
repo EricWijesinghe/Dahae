@@ -30,5 +30,6 @@ async fn put_group(State(s): State<AppState>, Admin(a): Admin, Path(group): Path
     let saved = settings_registry::save_group(&s.db, &s.config, &group, a.id, &body.values).await?;
     // The ops group holds the maintenance switch that the public config document reads.
     super::config::invalidate();
+    super::seller::live::invalidate_fragments();
     Ok(Json(saved))
 }

@@ -9,6 +9,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:ui/ui.dart' show BrandConfig;
 
 import 'api.dart';
 import 'push_registrar.dart';
@@ -16,7 +17,6 @@ import 'push_target.dart';
 
 /// Matches the default channel id in AndroidManifest.xml (FCM background messages use it).
 const _channelId = 'malkkeum_default';
-const _channelName = '다해';
 
 /// Firebase push for both apps. Local builds have no google-services.json / GoogleService-Info.plist,
 /// so every step checks for its config and turns push off instead of crashing.
@@ -27,6 +27,24 @@ class PushService {
   static final _local = FlutterLocalNotificationsPlugin();
   static final _taps = StreamController<PushTarget>.broadcast();
   static PushTarget? _pending;
+
+  /// The channel name Android shows in the system settings: the business's short name.
+  static String _channelName = BrandConfig.placeholder.name;
+
+  /// Renames the notification channel (same id, so FCM background messages keep landing in it).
+  /// Before [init] it only sets the name the channel is created with. Never throws.
+  static Future<void> setChannelName(String name) async {
+    if (name == _channelName) return;
+    _channelName = name;
+    final ready = _initDone;
+    if (ready == null || !Platform.isAndroid) return;
+    try {
+      await ready;
+      await _createChannel();
+    } catch (e) {
+      debugPrint('notification channel not renamed: $e');
+    }
+  }
 
   /// Notification taps while the app runs. Use [takePending] for a tap that opened the app.
   static Stream<PushTarget> get taps => _taps.stream;
@@ -125,12 +143,17 @@ class PushService {
       ),
       onDidReceiveNotificationResponse: (r) => _emitFromPayload(r.payload),
     );
+    await _createChannel();
+  }
+
+  /// Creating an existing channel again updates its name.
+  static Future<void> _createChannel() async {
     await _local
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.createNotificationChannel(
-          const AndroidNotificationChannel(
+          AndroidNotificationChannel(
             _channelId,
             _channelName,
             importance: Importance.high,
@@ -166,7 +189,7 @@ class PushService {
       id: message.messageId.hashCode,
       title: n.title,
       body: n.body,
-      notificationDetails: const NotificationDetails(
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           _channelName,

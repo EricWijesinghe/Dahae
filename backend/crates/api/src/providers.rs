@@ -67,7 +67,8 @@ pub const TOSS: &str = "tosspayments";
 /// `payments.provider` of a saved-card charge through Toss: it is made on the 자동결제 (billing) MID.
 pub const TOSS_BILLING: &str = "tosspayments_billing";
 
-/// The payment gateway a checkout or saved card is pinned to. New ones follow `Integrations::gateway`.
+/// The payment gateway a checkout or saved card is pinned to. New ones follow `Integrations::gateway_for`
+/// (checkouts) and `Integrations::billing_gateway` (saved cards); rows never move.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Gateway {
     Portone,
@@ -351,13 +352,9 @@ impl Providers {
         deleted
     }
 
-    /// Whether the live gateway can save cards: PortOne's billing channel, or Toss's 자동결제 key pair.
+    /// Whether some gateway can save cards: PortOne's billing channel, or Toss (offered) with its 자동결제 key pair.
     pub fn billing_ready(&self) -> bool {
-        let integ = self.integ();
-        match integ.gateway() {
-            Gateway::Portone => portone::billing_ready(&integ.portone),
-            Gateway::TossPayments => integ.toss_payments.as_ref().is_some_and(|t| t.billing.is_some()),
-        }
+        self.integ().billing_gateway().is_some()
     }
 
     /// Refunds (or cancels) a payment at the gateway that took it.
