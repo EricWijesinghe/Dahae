@@ -33,7 +33,7 @@ Everything is on the console **[Setup]** → **Business profile** card. Chapter 
 
 ![The warning for a light colour](../img/en/console-setup-business-color-warning.png)
 
-> **Warning** A very light colour shows, in red: **White text on this colour is hard to read, so the apps will not use it. Choose a darker colour.** The colour is saved, but the apps ignore it and keep the previous colour. Choose a darker one.
+> **Warning** A very light colour shows, in red: **White text on this colour is hard to read, so the apps will not use it. Choose a darker colour.** The colour is saved, but the apps ignore it and use the built-in default colour. Choose a darker one.
 
 > **Tip** The Dahae default colour on a new install is `#187A8F`. On a server where another name or colour was saved earlier, the saved values win, so save the new name and colour yourself.
 
@@ -43,7 +43,7 @@ Everything is on the console **[Setup]** → **Business profile** card. Chapter 
 
 | What you changed | Where it shows |
 |---|---|
-| **Service name** | Top of the customer app, the **More** greeting (**Leave today's chores to (name).**), **(name) tips**, **(name) PICK**, the website, `{업체명}` in notification texts, the `[name]` at the start of operations texts, `#{brand}` in AlimTalk templates |
+| **Service name** | The name next to the logo at the top of the customer app, the customer app's first screen, **(name) Support team** on the chat screen, the website, `{업체명}` in notification texts, the `[name]` at the start of operations texts, `#{brand}` in AlimTalk templates |
 | Logo (**[Upload logo]**) | Top of the customer app (only once a logo file is uploaded to the server) |
 | **Brand color** | Buttons and highlights in the customer and partner apps |
 | **Support hours** | **Chat hours** on the customer app's chat screen |
@@ -74,9 +74,9 @@ These cannot be changed in the console. Ask the developer; some need the apps re
 | App name and icon on the phone's home screen | 다해 / 다해 파트너 (Dahae / Dahae Partner) | The developer rebuilds the apps and uploads them (chapter 25) |
 | App IDs | `kr.co.dahae.customer`, `kr.co.dahae.partner` | Cannot change once in a store |
 | Store app name, listing text, store screenshots | `docs/store/listing-*.md`, store screenshots | The developer edits them and updates the stores |
-| Text fixed inside the apps | **Dahae News** on Home, **Dahae Safe Booking**, the copyright line, **2 welcome coupons are in your wallet** after sign-up | The developer changes the app text and rebuilds |
+| Text fixed inside the apps | **Dahae News** and **다해 PICK** on Home, **Dahae Safe Booking**, **다해 tips** and the greeting (**Leave today's chores to 다해.**) in **More**, the copyright line, **2 welcome coupons are in your wallet** after sign-up | The developer changes the app text and rebuilds |
 | Website privacy policy and terms pages | Generated documents (service name "다해") | The developer regenerates them (`scripts/build_legal.py`) |
-| Name when the console is installed as an app | 다해 관리자 | Ask the developer (**to be confirmed**) |
+| Name when the console is installed as an app | 다해 관리자 (short name: 다해 관리) | The developer edits the console's settings file (`app/apps/console/web/manifest.json`) and rebuilds the console |
 | Name shown in staff authenticator apps | Dahae staff | Ask the developer |
 
 > **Warning** Changing the cancellation rules in the console (chapter 18) does not update article 5 (cancellation and refunds) of the website terms. After changing the rules, ask the developer to regenerate the terms.

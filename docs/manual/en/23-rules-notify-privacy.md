@@ -178,6 +178,8 @@ Make sure the person really is that customer. The usual check is the registered 
 2. Type the number in **Customer phone number**.
 3. Click **[Find]**.
 
+> **Note** A **Consultant** account also sees this menu, but finding a customer, the data copy and deletion all work only with an **Admin** account.
+
 **You should now see:** the customer's name · phone number and **Bookings N**, with the **[Download a copy of the data (CSV)]** and **[Delete account]** buttons below. An unknown number shows **No customer is registered with this number.**
 
 ### Give a copy of the data (CSV)

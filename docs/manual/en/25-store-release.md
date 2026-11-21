@@ -23,7 +23,7 @@ The developer builds the apps. You create the store accounts in your company's n
 | Join the Apple Developer Program as an **organisation**, accept the agreements, **request access** to the App Store Connect API (once) | You (only the account holder can) |
 | Invite the developer to both stores as **Admin** | You invite, the developer accepts |
 | Register the apps, create keys, build, upload, submit for review | The developer |
-| Switch on the review demo account in the console, approve the partner review account | You |
+| Switch on the review demo account in the console (customer app) | You |
 | Install the test builds and try them | You and the developer |
 | Enter the store links in the console after approval | You |
 
@@ -149,22 +149,21 @@ Reviewers cannot receive Korean text messages, so one review-only number gets a 
 3. In **Fixed sign-in code (6 digits)**, choose six digits.
 4. Click **[Turn on (14 days)]**. If asked for the owner code, enter the number from your authenticator app.
 
-**You should now see:** **Active until (date)** on the card. Signing in to the customer app with this number shows two sample bookings (one upcoming, one completed).
+**You should now see:** **Active until (date)** on the card. Signing in to the customer app with this number shows two sample bookings (one upcoming, one completed), as long as at least one service is switched on.
 
 > **Warning** It switches off by itself after 14 days. If the review takes longer, switch it on again. A number already used by a customer, partner or staff member gives **A customer, partner or staff member already uses this number. Enter a number nobody uses.**
 
-### Approve the partner review account
+### Partner app review account (to be confirmed)
 
-1. Open the partner app and sign up with the demo number and fixed code (24.2). Use clear names such as `Review`.
-2. In the console **[Partners]**, find the account, fill the **Verification checklist** and click **[Approve]** (chapter 20).
+> **Warning** The fixed sign-in code works **only in the customer app**. In the partner app the demo number gets no text, and the fixed code is refused as a wrong code. The server blocks it on purpose.
 
-**You should now see:** the partner app moves past **Your account is under review** to the **Jobs** tab.
-
-> **Note** (**To be confirmed**) Switching on the demo account only creates the customer account. The partner account has to be signed up by hand as above. Saving the demo account card again after that sign-up may give the "already uses this number" error, so check with the developer first if you need to save the card again.
+- So today you cannot make a partner app review account from the console alone. How the partner app reviewer gets in is **to be confirmed**. Settle it with the developer before you submit.
+- Do not register a partner or staff member on the demo number. If you do, saving the demo account card again gives **A customer, partner or staff member already uses this number. Enter a number nobody uses.**
+- `docs/store/review-notes.md` says the partner app signs in with the same number and code, but that does not match the server today. Have the developer fix that line before you paste it.
 
 ### Review notes and addresses (with the developer)
 
-1. In `docs/store/review-notes.md`, replace `<REVIEW_PHONE>`, `<REVIEW_CODE>` and `<도메인>` (your domain) with the real values.
+1. In `docs/store/review-notes.md`, replace `<REVIEW_PHONE>`, `<REVIEW_CODE>`, `<도메인>`, `<domain>` and `<API_DOMAIN>` (your domain) with the real values.
 2. Paste the text into Play Console **App access** and App Store Connect **App Review Information > Notes**.
 3. Privacy policy address: `https://your-domain/privacy.html`
 4. Account deletion address: `https://your-domain/delete-account.html` (both pages are created automatically when the server is installed)
@@ -174,7 +173,7 @@ Reviewers cannot receive Korean text messages, so one review-only number gets a 
 ### Last check before submission (owner checklist)
 
 - [ ] The review demo account is on and stays on for the whole review.
-- [ ] The partner review account is **approved**.
+- [ ] You and the developer have settled how the partner app reviewer gets in (25.5, **to be confirmed**).
 - [ ] Every `<…>` in the review notes is filled.
 - [ ] **[Coupons & content]** → **Growth** → **Review reports** has nothing waiting (chapter 22). Handle anything that arrives during review at once.
 - [ ] The customer app's **Terms of service** and **Privacy policy** screens show text (chapter 22, **Legal** content).
@@ -234,7 +233,7 @@ After the review, click **[Disconnect]** on the **Store review demo account** ca
 | The developer cannot create the Apple API key | Check that you (the account holder) clicked **Request Access** for the **App Store Connect API**. |
 | The developer did not get the invitation | Check the email spelling and invite again. Check the spam folder too. |
 | Rejected because the reviewer could not sign in | The demo account may have switched off (14 days). Switch it on again and check the number and code match the review notes. |
-| The reviewer could not see the jobs screen in the partner app | **[Approve]** the partner review account in **[Partners]**. |
+| The reviewer could not get into the partner app | The fixed code works only in the customer app. Settle the partner app review with the developer (25.5, **to be confirmed**). |
 | The reviewer asks how to delete an account | In the app: **More** → **Account** → **Delete account**. On the web: `https://your-domain/delete-account.html`. |
 | Rejected over in-app purchase | Add the English text in `docs/store/review-notes.md` section 4 (cleaning is a physical service) to the review notes and resubmit. |
 | Kakao or Google sign-in fails on Android | The Play app-signing SHA-1 must be registered in the Kakao and Google consoles. Tell the developer (chapter 15). |

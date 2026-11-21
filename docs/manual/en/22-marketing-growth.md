@@ -64,9 +64,9 @@ Create and edit the notices, news, tips, FAQ, home banners and the terms and pri
    |---|---|
    | **Notice** | Customer app **More** → **Notices**, and the **Dahae News** row on the home screen |
    | **News** | The **Dahae News** row on the home screen |
-   | **Tip** | Customer app **More** → **(business name) tips**, and the **Dahae News** row on the home screen |
+   | **Tip** | Customer app **More** → **다해 tips**, and the **Dahae News** row on the home screen |
    | **FAQ** | Customer app **More** → **FAQ** |
-   | **Banner** | The large banner card on the customer home screen |
+   | **Banner** | The large banner card on the customer home screen (with a `service/…` link it shows in the home recommendations instead) |
    | **Legal** | Customer app **More** → **Terms of service** and **Privacy policy** |
 
 4. Fill **Slug (legal: privacy / terms)** only for the **Legal** kind.
@@ -162,13 +162,13 @@ When a customer refers a friend and the friend's first booking is **completed an
 
 **You should now see:** **Saved**.
 
-> **Note** **Both** the referrer and the friend get a coupon of that amount (valid 14 days). If the points programme is on, they get points instead of coupons (points: chapter 20).
+> **Note** **Both** the referrer and the friend get a coupon of that amount (valid 14 days). If the points programme is on, they get points instead of coupons (points: chapter 20; the points amount comes from the points settings).
 
 ---
 
 ## 22.5 Review reports
 
-Customers can tap **Report** on someone else's review in the app. When enough people report a review (3 on a new install), it is hidden automatically and appears in this queue.
+Customers can tap **Report** on someone else's review in the app. When enough people report a review (3 on a new install), it appears in this queue. The review **stays visible** in the app until you act on it.
 
 ![Review reports](../img/en/console-review-reports.png)
 
@@ -176,7 +176,7 @@ Customers can tap **Report** on someone else's review in the app. When enough pe
 2. **No reports waiting** means there is nothing to do.
 3. Each reported review shows its text and **N reports**.
 4. Read it and click one button.
-   - **[Keep]**: the review is fine. It shows again.
+   - **[Keep]**: the review is fine. It stays visible and its reports are cleared.
    - **[Hide]**: hide it in the app. The record stays.
    - **[Delete]**: delete the review.
 5. If the same person keeps writing bad reviews, click **[Restrict author]**. They can no longer write reviews. To undo it, click **[Lift restriction]** in the same place.
@@ -237,6 +237,7 @@ Send an ad by app push or SMS to customers who agreed to marketing messages.
 - No ads between 9 pm and 8 am Korean time. A send that reaches this window pauses and **continues at 8 am**.
 - Each customer gets a limited number of ads per week (2 on a new install; you can only lower it in **[Operating rules]** → **Advertising**).
 - SMS ads automatically start with `(광고)` and end with a `무료수신거부 080…` (free opt-out) line, as Korean law requires.
+- App push ads also get `(광고)` before the title and a line on how to switch ads off at the end of the text (the preview does not show these).
 
 ### Create a campaign
 
@@ -249,7 +250,7 @@ Send an ad by app push or SMS to customers who agreed to marketing messages.
 4. Under **Channel**, choose **App push** or **SMS**.
 5. Type a **Title**. The campaign log also shows it under this name.
 6. Type the text in **Message**.
-7. For SMS, type your company's 080 opt-out number in **Opt-out number (080)**. If it is empty or wrong, **SMS needs an 080 opt-out number** shows in red.
+7. For SMS, type your company's 080 opt-out number in **Opt-out number (080)**. If the number is wrong, **SMS needs an 080 opt-out number** shows in red. If it is empty there is no red text, but the send buttons stay off.
 8. Check **Preview** to see what customers get. For SMS it shows the `(광고)` prefix and the opt-out line.
 
 **You should now see:** with title and message filled (and a valid 080 number for SMS), the **[Send at]** and **[Send now]** buttons can be clicked.
@@ -258,12 +259,12 @@ Send an ad by app push or SMS to customers who agreed to marketing messages.
 
 1. Type your mobile number in **Send a test to my phone**.
 2. Click the **[Send a test to my phone]** button.
-3. Check that the text arrives on your phone.
+3. Check that the text arrives on your phone. The console shows no success or error message for a test.
 
 > **Warning** A test always goes as **SMS**, and all of these must be true:
 > - The number is the same as the one saved in **[System status]** → **Alert settings** → **Phone for alerts**.
-> - **Opt-out number (080)** is filled in correctly (even for an app push campaign).
-> - At most **5 tests per hour** per person. Each test is a real, paid text.
+> - **Opt-out number (080)** is filled in correctly (even for an app push campaign). The field shows only when **SMS** is picked, so switch to **SMS** for a moment, type the number, then switch back to **App push**.
+> - At most **5 tests per hour** per console login. Each test is a real, paid text.
 
 ### Send
 

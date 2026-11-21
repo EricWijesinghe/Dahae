@@ -17,12 +17,12 @@ Keep this chapter open when you answer customer questions or train your teams. A
 ### First start and sign-in
 
 1. The first screen has a **Continue with phone number** button.
-2. Tap it. The consent items appear:
+2. Tap it. The **What's your mobile number?** screen opens. The consent items are below the number field:
    - **Terms of service** (required)
    - **Personal data collection and use** (required)
    - **Transfer of personal data abroad** (required)
    - **Marketing messages** (optional)
-3. Agree to the required items, enter the number on **What's your mobile number?** and tap **[Send code]**.
+3. Enter the number, tick the three required items, then tap **[Send code]** at the bottom. The button stays off until the required items are ticked.
 4. Enter the texted code on **Enter the 6-digit code** and tap **[Verify]**. If no text comes, tap **[Resend]**.
 5. On first sign-up, type a name on **What should we call you?** and tap **[Get started]**.
 
@@ -42,8 +42,8 @@ Before signing in, people can still see services and prices (**See prices withou
 
 ![Customer app home](../img/en/customer-home.png)
 
-1. Top left: your logo and name. Top right: the **All** / **(business name) PICK** switch.
-2. Below it are four large menus. Their names, order and pictures come from the service groups in the console **[Catalog & prices]** (chapter 18).
+1. Top left: your logo and name. Top right: the **All** / **다해 PICK** switch (**다해 PICK** is fixed text that does not follow the service name, chapter 28).
+2. Below it are four large menus (on a new install: Move-in / move-out cleaning, Living-space cleaning, Appliance and furniture cleaning, Pest control and disinfection). Their names, order and pictures come from the service groups in the console **[Catalog & prices]** (chapter 18).
 3. If the customer has a booking, an upcoming booking card shows.
 4. Below that come recommended services, the banner and **Dahae News**. Banners and news are made in **[Coupons & content]** → **Content** (chapter 22).
 
@@ -124,7 +124,7 @@ What happens next:
 
 ![More tab](../img/en/customer-more.png)
 
-The **More** tab has **What's included**, **Payment methods**, **Coupons**, **Points**, **Payment history**, **Regular cleaning**, **Account**, **Addresses**, **Notices**, **(business name) tips**, **FAQ**, **Chat with us**, **Partnerships**, **Language**, **Theme**, **Privacy policy**, **Terms of service**, **Open-source licenses** and **Version**.
+The **More** tab has **What's included**, **Payment methods**, **Coupons**, **Points**, **Payment history**, **Regular cleaning**, **Account**, **Addresses**, **Notices**, **다해 tips** (fixed text), **FAQ**, **Chat with us**, **Partnerships**, **Language**, **Theme**, **Privacy policy**, **Terms of service**, **Open-source licenses** and **Version**.
 
 - **Regular cleaning** → **Start a subscription**: choose **How often** (**Every week**, **Every 2 weeks**, **Every 4 weeks**), **Day of week** and **Arrival time**. Each visit is charged the day before, to the saved card.
 - **Account** lets the customer:
@@ -147,7 +147,7 @@ The **More** tab has **What's included**, **Payment methods**, **Coupons**, **Po
 2. Enter the number and tap **[Send code]**, then enter the code and tap **[Verify]**.
 3. On **Tell us about you**, fill **Your name**, **Team name**, **Services you offer** and **Where you work**, then tap **[Apply]**.
 4. **Your account is under review** appears. It asks the partner to add a **Payout account** in the meantime.
-5. You (or an admin) fill the **Verification checklist** in the console **[Partners]** and click **[Approve]** (chapter 20).
+5. You (or an admin) click **[Approve]** on that partner in the console **[Partners]**, tick every item in the **Verification checklist**, then click **[Approve as active]** (chapter 20).
 
 **You should now see:** after approval, the partner app shows the **Jobs**, **My quotes**, **Schedule**, **Chat** and **More** tabs.
 
@@ -210,20 +210,20 @@ The partner app's **More** tab has **Earnings**, **Reviews**, **Quality score**,
 Run one full round yourself before you open. Do this **only with payments connected on test keys** (chapters 11 and 12).
 
 1. **Partner sign-up**: sign up in the partner app with the partner number (24.2).
-2. **Approve the partner**: in the console **[Partners]**, fill that partner's **Verification checklist** and click **[Approve]** (chapter 20).
+2. **Approve the partner**: in the console **[Partners]**, click **[Approve]** on that partner, fill the **Verification checklist** and click **[Approve as active]** (chapter 20).
 3. **Customer booking**: sign up in the customer app with the customer number and book one fixed-price service. Pay with the payment company's **test card**.
 4. **Check the console**: the new booking shows on **[Dashboard]** and **[Bookings]** (chapter 19).
 5. **Partner accepts**: in the partner app **Jobs**, open the booking and tap **[Accept job]**.
 6. **Act out the visit**: in the partner app, **[Check in]** → **[Complete job]** → add photos → tick the checklist → **[Mark complete]**.
 7. **Customer check**: the customer's booking shows **Before** / **After** photos and lets them leave a review. If a balance is due, try **[Pay balance]** too.
-8. **Payout check**: the job appears as due in the console **[Settlements]**. Follow chapter 21 from the payout request onwards.
+8. **Payout check**: the job appears as **Scheduled** in the console **[Settlements]**. Follow chapter 21 from **[Run payouts]** onwards.
 9. **Cancel and refund test**: make one more booking the same way, cancel it in the customer app with **[Cancel booking]**, and check the refund amount.
 
 **You should now see:** booking → assignment → completion → payout runs without a break, and notifications reach both phones.
 
 > **Warning** After switching to live keys (`live_…`), a test moves real money. If you paid by mistake, refund it in the console straight away (chapter 21).
 
-> **Tip** Afterwards, remove the test customer in the console **[Account deletion and data requests]** (chapter 23) and suspend the test partner in **[Partners]**.
+> **Tip** Afterwards, remove the test customer in the console **[Account deletion and data requests]** (chapter 23) and click **[Suspend]** on the test partner in **[Partners]** (chapter 20).
 
 ---
 
@@ -236,7 +236,7 @@ Run one full round yourself before you open. Do this **only with payments connec
 | The large home menus or prices look wrong | Fix them in **[Catalog & prices]** (chapter 18). Saved changes show in the apps at once. |
 | Every time slot says **Full** | Raise the bookings allowed per time slot (chapter 18). |
 | The terms or privacy screens are empty | Create **Legal** items in **Content** (chapter 22). |
-| The partner app stays on **Your account is under review** | All four **Verification checklist** items must be ticked before **[Approve]** works (chapter 20). |
+| The partner app stays on **Your account is under review** | All four **Verification checklist** items must be ticked before **[Approve as active]** works (chapter 20). |
 | The partner's **Jobs** list is empty (**No matching jobs right now**) | Ask the partner to widen **Services & areas** and **Work schedule**. |
 | **[Mark complete]** does not work | Add at least one before and one after photo and tick all four items (**Add at least one photo each and tick every item**). |
 | A customer cannot find how to delete their account | It is **More** → **Account** → **Delete account**. |
