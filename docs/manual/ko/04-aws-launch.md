@@ -37,7 +37,7 @@
    bash launch.sh --domain example.co.kr --email owner@example.co.kr
    ```
 
-4. 바꾼 줄 전체를 복사해요.
+4. 바꾼 세 줄을 모두 복사해요.
 5. CloudShell 검은 화면을 한 번 누르고 붙여 넣어요.
 6. **Enter** 를 눌러요.
 7. 한 줄이 먼저 나와요. 예:
