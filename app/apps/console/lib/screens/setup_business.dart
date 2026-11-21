@@ -1,12 +1,16 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
+import 'dart:typed_data';
+
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ui/ui.dart';
 
+import '../brand_assets.dart';
 import '../state.dart';
+import 'brand_preview.dart';
 
 /// Brand colours offered as one-tap swatches; any #RRGGBB can still be typed.
 const _swatches = [
@@ -40,6 +44,10 @@ class BusinessCard extends StatefulWidget {
 class _BusinessCardState extends State<BusinessCard> {
   static const _top = [
     'name',
+    'name_en',
+    'short_name',
+    'tagline',
+    'tagline_en',
     'support_phone',
     'support_email',
     'support_hours',
@@ -52,6 +60,7 @@ class _BusinessCardState extends State<BusinessCard> {
     'address',
     'hosting_provider',
     'privacy_officer',
+    'privacy_email',
   ];
   static const _links = [
     'app_store_url',
@@ -74,6 +83,11 @@ class _BusinessCardState extends State<BusinessCard> {
   late final Map<String, TextEditingController> _c;
   late final TextEditingController _color;
   String? _logo;
+  // A picked file or a letter mark, not uploaded until Save.
+  Uint8List? _logoBytes;
+  String _logoFile = 'logo.png';
+  late Json? _assets = widget.initial['brand_assets'] as Json?;
+  String? _progress;
   bool _busy = false;
 
   @override
@@ -125,6 +139,11 @@ class _BusinessCardState extends State<BusinessCard> {
     'company.mail_order_no' => t.cSetupMailOrderNo,
     'company.address' => t.cSetupAddress,
     'company.hosting_provider' => t.cSetupHostingProvider,
+    'company.privacy_email' => t.cRbPrivacyEmail,
+    'name_en' => t.cRbNameEn,
+    'short_name' => t.cRbShortName,
+    'tagline' => t.cRbTagline,
+    'tagline_en' => t.cRbTaglineEn,
     'app_store_url' => 'App Store · ${t.cSetupCustomerApp}',
     'play_store_url' => 'Google Play · ${t.cSetupCustomerApp}',
     'partner_app_store_url' => 'App Store · ${t.cSetupPartnerApp}',
@@ -147,48 +166,157 @@ class _BusinessCardState extends State<BusinessCard> {
       source: ImageSource.gallery,
       maxWidth: 1024,
     );
-    if (file == null || !mounted) return;
-    final api = context.api;
-    setState(() => _busy = true);
-    try {
-      final url = await api.upload(await file.readAsBytes(), file.name);
-      if (mounted) setState(() => _logo = url);
-    } catch (e) {
-      if (mounted) showToast(context, context.t.error(e));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _logoBytes = bytes;
+      _logoFile = file.name;
+    });
   }
 
+  Future<void> _letterMark() async {
+    final color = parseHex(_color.text) ?? BrandConfig.placeholder.primary;
+    final bytes = await letterMark(_c['name']!.text, color);
+    if (!mounted) return;
+    setState(() {
+      _logoBytes = bytes;
+      _logoFile = 'logo.png';
+    });
+  }
+
+  Json _body() => {
+    for (final k in _top) k: _c[k]!.text,
+    for (final k in _links) k: _c[k]!.text,
+    for (final k in _seo) k: _c[k]!.text,
+    'primary_color': _color.text,
+    'logo_url': _logo,
+    'brand_assets': _assets,
+    'company': {for (final k in _company) k: _c['company.$k']!.text},
+    'app_versions': {
+      for (final app in ['customer', 'partner'])
+        app: {
+          'min_app_version': _c['$app.min_app_version']!.text,
+          'latest_app_version': _c['$app.latest_app_version']!.text,
+        },
+    },
+  };
+
+  /// Draws the slot images from the new or the saved logo. Null when there is no logo to draw from.
+  Future<Map<String, Uint8List>?> _derive() async {
+    final bytes = _logoBytes, saved = _logo;
+    if (bytes == null && saved == null) return null;
+    final logo = bytes != null
+        ? await decodeLogo(bytes)
+        : await loadLogo(
+            Uri.parse(context.api.baseUrl).resolve(saved!).toString(),
+          );
+    return deriveBrandAssets(
+      logo: logo,
+      color: parseHex(_color.text) ?? BrandConfig.placeholder.primary,
+      name: _c['name']!.text.trim(),
+      tagline: _c['tagline']!.text.trim(),
+    );
+  }
+
+  /// Logo first (it is the source), then the seven slots. Updates [_logo] and [_assets] as they land.
+  Future<void> _upload(Map<String, Uint8List> files) async {
+    final api = context.api, t = context.t;
+    if (_logoBytes case final bytes?) {
+      final url = await api.upload(bytes, _logoFile);
+      setState(() {
+        _logo = url;
+        _logoBytes = null;
+      });
+    }
+    final urls = await uploadBrandAssets(
+      api,
+      files,
+      onProgress: (done, total) {
+        if (mounted) {
+          setState(() => _progress = t.cRbUploading('$done', '$total'));
+        }
+      },
+    );
+    setState(() => _assets = urls);
+  }
+
+  /// Logo -> images -> preview -> upload -> one PUT. The images are made again only when the logo,
+  /// colour, name or tagline changed (or none exist yet).
   Future<void> _save() async {
     final t = context.t;
-    setState(() => _busy = true);
+    final newLogo = _logoBytes != null;
+    final remake = needsBrandRemake(widget.initial, {
+      ..._body(),
+      if (newLogo) 'logo_url': 'new',
+    }, newLogo: newLogo);
+    setState(() {
+      _busy = true;
+      _progress = remake ? t.cRbMaking : null;
+    });
     try {
-      await context.api.put('/admin/setup/business', {
-        for (final k in _top) k: _c[k]!.text,
-        for (final k in _links) k: _c[k]!.text,
-        for (final k in _seo) k: _c[k]!.text,
-        'primary_color': _color.text,
-        'logo_url': _logo,
-        'company': {for (final k in _company) k: _c['company.$k']!.text},
-        'app_versions': {
-          for (final app in ['customer', 'partner'])
-            app: {
-              'min_app_version': _c['$app.min_app_version']!.text,
-              'latest_app_version': _c['$app.latest_app_version']!.text,
-            },
-        },
-      });
-      if (!mounted) return;
-      showToast(context, t.cSetupSaved);
-      widget.onSaved();
+      if (remake) {
+        final Map<String, Uint8List>? files;
+        try {
+          files = await _derive();
+        } catch (_) {
+          if (mounted) showToast(context, t.cRbDeriveFailed);
+          return;
+        }
+        if (files == null || !mounted) return;
+        if (!await confirmBrandPreview(context, files) || !mounted) return;
+        await _upload(files);
+      }
+      await _put();
     } on ApiException catch (e) {
       if (mounted) {
         showToast(context, e.status == 400 ? t.cInvalidValue : t.error(e));
       }
+    } catch (e) {
+      if (mounted) showToast(context, t.error(e));
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+      }
     }
+  }
+
+  Future<void> _put() async {
+    await context.api.put('/admin/setup/business', _body());
+    if (!mounted) return;
+    showToast(context, context.t.cSetupSaved);
+    context.consoleRead.brand?.refresh().ignore();
+    await showBrandApplied(context);
+    widget.onSaved();
+  }
+
+  /// The letter-mark offer, and a warning while a renamed business would still show the built-in mark.
+  List<Widget> _logoHelp(T t) {
+    if (_logo != null || _logoBytes != null) return const [];
+    final name = _c['name']!.text.trim();
+    return [
+      if (name.isNotEmpty && name != BrandConfig.placeholder.name)
+        Padding(
+          padding: const EdgeInsets.only(top: Space.sm),
+          child: Text(
+            t.cRbNoLogoWarn,
+            style: context.text.bodySmall?.copyWith(
+              color: context.colors.danger,
+            ),
+          ),
+        ),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: _busy || name.isEmpty ? null : _letterMark,
+          icon: const Icon(Icons.abc_rounded),
+          label: Text(t.cRbLetterMark),
+        ),
+      ),
+    ];
   }
 
   @override
@@ -230,9 +358,11 @@ class _BusinessCardState extends State<BusinessCard> {
               name: _c['name']!.text,
               color: brand,
               logo: _logo,
+              logoBytes: _logoBytes,
               onPick: _busy ? null : _pickLogo,
               pickLabel: t.cSetupLogo,
             ),
+            ..._logoHelp(t),
             const SizedBox(height: Space.md),
             for (final k in _top) field(k),
             Text(t.cSetupColor, style: context.text.labelLarge),
@@ -314,6 +444,11 @@ class _BusinessCardState extends State<BusinessCard> {
                 label: Text(t.cSetupSave),
               ),
             ),
+            if (_progress case final p?)
+              Padding(
+                padding: const EdgeInsets.only(top: Space.xs),
+                child: Text(p, style: context.text.bodySmall),
+              ),
           ],
         ),
       ),
@@ -327,12 +462,14 @@ class _Preview extends StatelessWidget {
     required this.name,
     required this.color,
     required this.logo,
+    required this.logoBytes,
     required this.onPick,
     required this.pickLabel,
   });
   final String name;
   final Color color;
   final String? logo;
+  final Uint8List? logoBytes;
   final VoidCallback? onPick;
   final String pickLabel;
 
@@ -374,7 +511,9 @@ class _Preview extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: logo == null
+                child: logoBytes != null
+                    ? Image.memory(logoBytes!, fit: BoxFit.cover)
+                    : logo == null
                     ? Icon(Icons.add_photo_alternate_rounded, color: onColor)
                     : Image.network(
                         logo!,

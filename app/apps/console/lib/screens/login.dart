@@ -87,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: Space.xl),
                         Text(
-                          '${BrandConfig.placeholder.name} ${t.cTitle}',
+                          '${BrandScope.of(context).name} ${t.cTitle}',
                           style: context.text.headlineMedium,
                         ),
                         const SizedBox(height: Space.xl),
