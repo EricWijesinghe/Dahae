@@ -59,6 +59,10 @@ class _ServerGateState extends State<ServerGate> {
     // One refresh now instead of a 401 on every first screen call.
     api.warmUp().ignore();
     brand.refresh().ignore();
+    // After a domain move the brand files live on the new address; without it they count as foreign.
+    api.get('/config').then((c) {
+      if (c is Json) api.publicBase.value = httpsBase(c['api_base']);
+    }).ignore();
     final state = ConsoleState(api, Realtime(api), session, brand: brand);
     // Back to the tab or window: a fresh socket (its resync makes screens refetch) and the current brand.
     _foreground?.dispose();

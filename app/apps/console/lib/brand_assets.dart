@@ -24,10 +24,14 @@ const brandSlots = <String, (int, int)>{
 /// Slots drawn on the brand colour (opaque). The others keep the logo's own transparency.
 const _filled = {'apple_180', 'maskable_512', 'og_1200', 'store_1024'};
 
-/// Share of the canvas the logo may take, per filled slot. Maskable icons keep it inside the centre 60 %.
-const _logoShare = {'apple_180': 0.8, 'maskable_512': 0.6, 'store_1024': 0.7};
+/// Share of the canvas the logo may take, per filled slot.
+/// Maskable: 0.56 (0.8 / sqrt 2) keeps a square logo's corners inside the safe circle (radius 0.4).
+const _logoShare = {'apple_180': 0.8, 'maskable_512': 0.56, 'store_1024': 0.7};
 
-const _font = 'Dahae Sans';
+/// dart:ui takes package fonts by their registered name (packages/ui/pubspec.yaml): a bare family falls back
+/// to a system or downloaded font, which the /admin CSP blocks on the web.
+const _font = 'packages/ui/Dahae Sans';
+const _fontFull = 'packages/ui/Dahae Sans Full';
 
 /// Width and height from a PNG's IHDR chunk (bytes 16-24), or null when the data is too short.
 (int, int)? pngSize(Uint8List png) {
@@ -44,6 +48,14 @@ Future<ui.Image> decodeLogo(Uint8List bytes) async {
 }
 
 /// Loads an uploaded logo by URL (same origin as the console) for re-drawing the slots.
+/// [current] (the `/brand` logo address) when it names the same file as [saved], else [saved].
+String freshLogoUrl(String saved, String? current) {
+  final name = Uri.tryParse(saved)?.pathSegments.lastOrNull;
+  return current != null && name != null && current.contains(name)
+      ? current
+      : saved;
+}
+
 Future<ui.Image> loadLogo(String url) {
   final done = Completer<ui.Image>();
   final stream = NetworkImage(url).resolve(ImageConfiguration.empty);
@@ -192,7 +204,13 @@ ui.Paragraph _paragraph(
             ellipsis: '…',
           ),
         )
-        ..pushStyle(ui.TextStyle(color: Colors.white))
+        ..pushStyle(
+          ui.TextStyle(
+            color: Colors.white,
+            fontFamily: _font,
+            fontFamilyFallback: const [_fontFull],
+          ),
+        )
         ..addText(text);
   return b.build()..layout(ui.ParagraphConstraints(width: width));
 }

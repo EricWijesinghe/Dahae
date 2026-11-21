@@ -62,6 +62,37 @@ void main() {
     },
   );
 
+  testWidgets('a square logo keeps its corners inside the maskable safe circle', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      const red = Color(0xFFFF0000);
+      final logo = await decodeLogo(await letterMark('A', red));
+      final assets = await deriveBrandAssets(
+        logo: logo,
+        color: teal,
+        name: 'x',
+      );
+      final icon = await decodeLogo(assets['maskable_512']!);
+      final rgba = await icon.toByteData(format: ui.ImageByteFormat.rawRgba);
+      // On the diagonal, just outside the circle of radius 0.4 x 512 round the centre: brand colour only.
+      const at = 256 - 146;
+      final i = (at * 512 + at) * 4;
+      expect(rgba!.getUint8(i), (teal.r * 255).round(), reason: 'red');
+      expect(rgba.getUint8(i + 1), (teal.g * 255).round(), reason: 'green');
+    });
+  });
+
+  test('the saved logo is read from the fresh address of the same file', () {
+    const saved = '/v1/files/logo-1.png?exp=1&sig=old';
+    expect(
+      freshLogoUrl(saved, '/v1/files/logo-1.png?exp=9&sig=new'),
+      '/v1/files/logo-1.png?exp=9&sig=new',
+    );
+    expect(freshLogoUrl(saved, '/v1/files/logo-2.png?sig=x'), saved);
+    expect(freshLogoUrl(saved, null), saved);
+  });
+
   test('remaking is needed when a brand input changed or no images exist', () {
     const saved = {
       'name': '다해',

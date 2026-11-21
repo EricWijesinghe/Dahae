@@ -208,15 +208,30 @@ class _BusinessCardState extends State<BusinessCard> {
     if (bytes == null && saved == null) return null;
     final logo = bytes != null
         ? await decodeLogo(bytes)
-        : await loadLogo(
-            Uri.parse(context.api.baseUrl).resolve(saved!).toString(),
-          );
+        : await loadLogo(await _savedLogoUrl(saved!));
     return deriveBrandAssets(
       logo: logo,
       color: parseHex(_color.text) ?? BrandConfig.placeholder.primary,
       name: _c['name']!.text.trim(),
       tagline: _c['tagline']!.text.trim(),
     );
+  }
+
+  static const _maxLength = {
+    'short_name': 12,
+    'name_en': 60,
+    'tagline': 60,
+    'tagline_en': 60,
+  };
+
+  /// The saved logo's address, fresh from `/brand`: the one loaded with the form is signed and expires.
+  Future<String> _savedLogoUrl(String saved) async {
+    final api = context.api;
+    final brand = await api.get('/brand');
+    final current = brand is Json ? brand['logo_url'] as String? : null;
+    return Uri.parse(
+      api.baseUrl,
+    ).resolve(freshLogoUrl(saved, current)).toString();
   }
 
   /// Logo first (it is the source), then the seven slots. Updates [_logo] and [_assets] as they land.
@@ -328,6 +343,7 @@ class _BusinessCardState extends State<BusinessCard> {
       padding: const EdgeInsets.only(bottom: Space.sm),
       child: TextField(
         controller: _c[k],
+        maxLength: _maxLength[k], // the server's caps (brand profile)
         decoration: InputDecoration(labelText: _label(t, k)),
       ),
     );
