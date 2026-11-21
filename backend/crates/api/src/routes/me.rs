@@ -442,9 +442,14 @@ async fn register_method(State(s): State<AppState>, Customer(a): Customer, Json(
     if !matches!(r.provider.as_str(), "card" | "kakaopay" | "naverpay" | "tosspay" | "payco") || r.display_name.chars().count() > MAX_NAME_LEN {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
-    // A card registers with the gateway that saves cards now (none: PortOne, which then fails NotConfigured).
-    // Toss 자동결제 saves cards only.
-    let gw = s.providers.integ().billing_gateway().unwrap_or(Gateway::Portone);
+    // A card registers with the gateway that saves cards now; none (the owner switched card saving off after the
+    // ticket was issued) refuses, dev mode keeps its fake. Toss 자동결제 saves cards only.
+    let gw = s
+        .providers
+        .integ()
+        .billing_gateway()
+        .or(s.providers.dev().then_some(Gateway::Portone))
+        .ok_or(ApiError::Unavailable("provider_not_configured"))?;
     if gw == Gateway::TossPayments && r.provider != "card" {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }

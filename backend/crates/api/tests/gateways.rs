@@ -247,3 +247,17 @@ async fn easy_pay_on_portone_is_paid_once_and_card_shows_where_it_is_saved(pool:
         (json!("portone"), json!("portone"), json!("tosspayments"))
     );
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn no_card_is_saved_once_no_gateway_saves_cards(pool: PgPool) {
+    let (env, _, c) = env(&pool, "010-7700-0007", portone(&["transfer"]), Some(toss::card(true))).await;
+    assert_eq!(setup(&env, &c).await["gateway"], "tosspayments", "the ticket is issued while Toss saves cards");
+    set_toss(&env, toss::card(false)).await;
+    let body = json!({ "provider": "card", "auth_key": "auth_1", "display_name": "카드" });
+    let (st, out) = call(&env.app, "POST", "/v1/me/payment-methods", Some(c.token.as_str()), Some(body)).await;
+    assert_eq!(
+        (st, out["error"]["code"].as_str()),
+        (StatusCode::SERVICE_UNAVAILABLE, Some("provider_not_configured")),
+        "PortOne has its secret but no billing channel: {out}"
+    );
+}
