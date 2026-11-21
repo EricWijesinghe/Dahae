@@ -208,6 +208,7 @@ async fn put_cancel_policy(State(s): State<AppState>, Admin(a): Admin, Json(p): 
         .bind(sqlx::types::Json(&p))
         .execute(&s.db)
         .await?;
+    super::seller::live::invalidate_fragments();
     audit(&s.db, "staff", Some(a.id), "cancel_policy.update", "cancel_policy", json!(p)).await?;
     Ok(Json(json!({ "ok": true })))
 }
@@ -383,6 +384,7 @@ async fn create_content(State(s): State<AppState>, Admin(st): Admin, Json(c): Js
         .bind(&c.kind).bind(&c.slug).bind(&c.title).bind(&c.body).bind(c.stored_image(&s.config.public_base_url)).bind(&c.link).bind(c.sort_order).bind(c.starts_at).bind(c.ends_at).bind(c.active)
         .fetch_one(&s.db)
         .await?;
+    super::seller::live::invalidate_fragments();
     audit(&s.db, "staff", Some(st.id), "content.create", &id.to_string(), json!({ "kind": c.kind })).await?;
     Ok(Json(json!({ "id": id })))
 }
@@ -405,12 +407,14 @@ async fn update_content(State(s): State<AppState>, Admin(st): Admin, Path(id): P
     .bind(c.active)
     .execute(&s.db)
     .await?;
+    super::seller::live::invalidate_fragments();
     audit(&s.db, "staff", Some(st.id), "content.update", &id.to_string(), json!({})).await?;
     Ok(Json(json!({ "ok": true })))
 }
 
 async fn delete_content(State(s): State<AppState>, Admin(st): Admin, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
     sqlx::query("DELETE FROM content_items WHERE id = $1").bind(id).execute(&s.db).await?;
+    super::seller::live::invalidate_fragments();
     audit(&s.db, "staff", Some(st.id), "content.delete", &id.to_string(), json!({})).await?;
     Ok(Json(json!({ "ok": true })))
 }

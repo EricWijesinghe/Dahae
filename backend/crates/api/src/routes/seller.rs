@@ -30,7 +30,7 @@ pub mod live;
 /// Short cache: the owner changes these rarely, and the fragment is cheap to rebuild.
 const CACHE_CONTROL: &str = "public, max-age=300";
 /// Every website page includes several fragments, so the business setting is read from memory for this long.
-const BUSINESS_TTL: Duration = Duration::from_secs(60);
+pub(crate) const BUSINESS_TTL: Duration = Duration::from_secs(60);
 const BIZ_NO_DIGITS: usize = 10;
 const FTC_LOOKUP: &str = "https://www.ftc.go.kr/bizCommPop.do";
 

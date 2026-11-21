@@ -297,6 +297,12 @@ impl Gate {
     }
 }
 
+/// Caddy's own `{{httpInclude}}` sub-requests: they all come from 127.0.0.1, so one shared bucket would turn a busy
+/// website into 429s and every page into the maintenance page. A visitor cannot send loopback: Caddy overwrites XFF.
+fn caddy_include(ip: IpAddr, path: &str) -> bool {
+    ip.to_canonical().is_loopback() && path == "/v1/public/seller-info"
+}
+
 /// Axum middleware: 429 `rate_limited` once a client exceeds its bucket.
 pub async fn limit(State(gate): State<Arc<Gate>>, req: Request, next: Next) -> Response {
     if req.uri().path() == crate::domains::TLS_ASK_PATH {
@@ -305,6 +311,9 @@ pub async fn limit(State(gate): State<Arc<Gate>>, req: Request, next: Next) -> R
     let peer = req.extensions().get::<ConnectInfo<SocketAddr>>().map(|c| c.0.ip());
     let forwarded = req.headers().get(FORWARDED_FOR).and_then(|v| v.to_str().ok());
     let ip = client_ip(peer, forwarded, gate.trusted_proxy);
+    if caddy_include(ip, req.uri().path()) {
+        return next.run(req).await;
+    }
     let bucket = bucket_for(req.uri().path());
     let now = Instant::now();
     // A poisoned lock only means another request panicked mid-update: keep limiting.
@@ -324,6 +333,18 @@ pub async fn limit(State(gate): State<Arc<Gate>>, req: Request, next: Next) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_caddy_fragment_includes_skip_the_limit() {
+        let lo: IpAddr = "127.0.0.1".parse().expect("ip");
+        assert!(caddy_include(lo, "/v1/public/seller-info"));
+        assert!(caddy_include("::ffff:127.0.0.1".parse().expect("ip"), "/v1/public/seller-info"));
+        assert!(!caddy_include(lo, "/v1/auth/otp"), "other paths from loopback stay limited");
+        assert!(
+            !caddy_include("203.0.113.9".parse().expect("ip"), "/v1/public/seller-info"),
+            "visitors stay limited"
+        );
+    }
 
     #[test]
     fn networks_are_ipv4_slash_24_and_ipv6_slash_64() {

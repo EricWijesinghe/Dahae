@@ -7,6 +7,7 @@
 
 use crate::{error::ApiResult, integrations::Section, routes::setup::brand, seo::escape_html, settings_registry, state::AppState};
 use serde_json::{Value, json};
+use std::{collections::BTreeMap, sync::Mutex, time::Instant};
 
 const USED: &str = "이용 중";
 const NOT_USED: &str = "현재 이용하지 않음";
@@ -167,11 +168,50 @@ fn used(s: &AppState, sec: Section) -> String {
     (if s.providers.integ().has(sec) { USED } else { NOT_USED }).to_owned()
 }
 
+/// Database-read fragments by (database, field). A page view includes many and pages are not rate limited, so a
+/// page flood must not become a database flood; edits show within the same 60 s as the business row.
+static DB_FRAGMENTS: Mutex<BTreeMap<(String, String), (Instant, String)>> = Mutex::new(BTreeMap::new());
+
+fn fresh_fragment(db: &str, field: &str) -> Option<String> {
+    let c = DB_FRAGMENTS.lock().ok()?;
+    c.get(&(db.to_owned(), field.to_owned()))
+        .filter(|(t, _)| t.elapsed() < super::BUSINESS_TTL)
+        .map(|(_, v)| v.clone())
+}
+
+fn remember_fragment(db: &str, field: &str, html: &str) {
+    if let Ok(mut c) = DB_FRAGMENTS.lock() {
+        c.insert((db.to_owned(), field.to_owned()), (Instant::now(), html.to_owned()));
+    }
+}
+
+/// Forget every cached fragment; called when the owner saves legal texts, the cancel policy or a settings group.
+pub(crate) fn invalidate_fragments() {
+    if let Ok(mut c) = DB_FRAGMENTS.lock() {
+        c.clear();
+    }
+}
+
+async fn from_db(s: &AppState, field: &str) -> ApiResult<String> {
+    let db = s.db.connect_options().get_database().unwrap_or_default().to_string();
+    if let Some(html) = fresh_fragment(&db, field) {
+        return Ok(html);
+    }
+    let html = match field {
+        "cancel_policy" => cancel_rows(&super::super::bookings::load_cancel_policy(&s.db).await?.0),
+        "legal_terms" => legal(s, "terms").await?,
+        "legal_privacy" => legal(s, "privacy").await?,
+        "legal_location" => legal(s, "location-terms").await?,
+        _ => settings_registry::get(&s.db, &s.config, field).await?.to_string(),
+    };
+    remember_fragment(&db, field, &html);
+    Ok(html)
+}
+
 /// Fields that read live settings. `None` for a field this module does not know.
 pub async fn live_fragment(s: &AppState, field: &str) -> ApiResult<Option<String>> {
     Ok(Some(match field {
-        "cancel_policy" => cancel_rows(&super::super::bookings::load_cancel_policy(&s.db).await?.0),
-        "ai_chat_retention_days" | "upload_orphan_days" => settings_registry::get(&s.db, &s.config, field).await?.to_string(),
+        "cancel_policy" | "ai_chat_retention_days" | "upload_orphan_days" | "legal_terms" | "legal_privacy" | "legal_location" => from_db(s, field).await?,
         "uses_portone" => used(s, Section::Portone),
         "uses_toss" => used(s, Section::TossPayments),
         "uses_solapi" => used(s, Section::Solapi),
@@ -179,9 +219,6 @@ pub async fn live_fragment(s: &AppState, field: &str) -> ApiResult<Option<String
         "uses_ai" => used(s, Section::Ai),
         "uses_backup" => used(s, Section::Backup),
         "uses_juso" => used(s, Section::Juso),
-        "legal_terms" => legal(s, "terms").await?,
-        "legal_privacy" => legal(s, "privacy").await?,
-        "legal_location" => legal(s, "location-terms").await?,
         _ => return Ok(None),
     }))
 }
@@ -191,6 +228,15 @@ mod tests {
     use super::*;
 
     const BASE: &str = "https://shop.example";
+
+    #[test]
+    fn database_fragments_are_cached_per_database() {
+        assert_eq!(fresh_fragment("live-db", "legal_terms"), None);
+        remember_fragment("live-db", "legal_terms", "<h1>약관</h1>");
+        assert_eq!(fresh_fragment("live-db", "legal_terms").as_deref(), Some("<h1>약관</h1>"));
+        assert_eq!(fresh_fragment("other-db", "legal_terms"), None, "another database never reads this entry");
+        assert_eq!(fresh_fragment("live-db", "legal_privacy"), None);
+    }
 
     #[test]
     fn brand_fields_are_escaped_and_fall_back() {
