@@ -7640,6 +7640,10 @@ class TKo extends T {
       '클라이언트 키는 test_ck_ 또는 live_ck_로 시작해야 해요.';
 
   @override
+  String get err_gateway_in_use =>
+      '이 결제사에 진행 중인 결제, 저장된 카드나 남은 환불이 있어 연결을 끊을 수 없어요. 새 결제만 멈추려면 토스페이먼츠는 사용을 끄고, PortOne은 채널 키 칸을 지우세요.';
+
+  @override
   String get err_key_mode_mismatch =>
       '테스트 키와 라이브 키를 섞을 수 없어요. 같은 종류의 키를 넣어 주세요.';
 

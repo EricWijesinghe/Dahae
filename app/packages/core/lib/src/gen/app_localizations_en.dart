@@ -7890,6 +7890,10 @@ class TEn extends T {
       'The client key starts with test_ck_ or live_ck_.';
 
   @override
+  String get err_gateway_in_use =>
+      'This gateway still has payments in progress, saved cards or refunds, so it can\'t be disconnected. To stop new payments only, turn Toss Payments\' Active off, or clear PortOne\'s channel key slots.';
+
+  @override
   String get err_key_mode_mismatch =>
       'Test and live keys can\'t be mixed. Use keys of one kind.';
 

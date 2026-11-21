@@ -14520,6 +14520,12 @@ abstract class T {
   /// **'클라이언트 키는 test_ck_ 또는 live_ck_로 시작해야 해요.'**
   String get err_invalid_client_key;
 
+  /// No description provided for @err_gateway_in_use.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 결제사에 진행 중인 결제, 저장된 카드나 남은 환불이 있어 연결을 끊을 수 없어요. 새 결제만 멈추려면 토스페이먼츠는 사용을 끄고, PortOne은 채널 키 칸을 지우세요.'**
+  String get err_gateway_in_use;
+
   /// No description provided for @err_key_mode_mismatch.
   ///
   /// In ko, this message translates to:

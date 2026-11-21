@@ -785,6 +785,18 @@ async fn clear_section(State(s): State<AppState>, Admin(a): Admin, Path(code): P
     if sec == Section::Payout && crate::payout_sync::toss_transfers_open(&s.db).await? {
         return Err(ApiError::Conflict("payout_in_transfer"));
     }
+    // Either payment card is optional, but its keys still serve the rows on it; the env copy (PortOne) would stay.
+    let gateway = match sec {
+        Section::Portone => Some((Gateway::Portone, vec![Gateway::Portone.code()])),
+        Section::TossPayments => Some((Gateway::TossPayments, vec![Gateway::TossPayments.code(), crate::providers::TOSS_BILLING])),
+        _ => None,
+    };
+    if let Some((gw, refunds)) = gateway
+        && !integrations::Integrations::from_config(&s.config).has(sec)
+        && gateway_in_use(&s.db, gw, &refunds).await?
+    {
+        return Err(ApiError::Conflict("gateway_in_use"));
+    }
     // The row stays, locked and empty: a non-owner admin cannot re-save the card without an unlock.
     if !integrations::save_section(&s.db, &s.config.data_key, sec, &Map::new(), a.id).await? {
         return Err(ApiError::Conflict("card_locked"));
@@ -792,6 +804,19 @@ async fn clear_section(State(s): State<AppState>, Admin(a): Admin, Path(code): P
     reload(&s).await?;
     audit(&s.db, a.role.as_str(), Some(a.id), "setup.integration_cleared", sec.code(), json!({})).await?;
     Ok(Json(card(&s, sec, None).await?))
+}
+
+/// Open checkouts, live saved cards or queued refunds on `gw`: clearing its card would strand them.
+async fn gateway_in_use(db: &PgPool, gw: Gateway, refund_providers: &[&str]) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM checkouts WHERE gateway = $1 AND status IN ('pending', 'awaiting_deposit'))
+             OR EXISTS (SELECT 1 FROM payment_methods WHERE gateway = $1 AND deleted_at IS NULL AND billing_key <> '')
+             OR EXISTS (SELECT 1 FROM refund_queue WHERE done_at IS NULL AND provider = ANY($2))",
+    )
+    .bind(gw.code())
+    .bind(refund_providers)
+    .fetch_one(db)
+    .await
 }
 
 /// Owner unlock of a saved card for `UNLOCK_TTL_SECS`. Every outcome is audited; no secret is in the record.

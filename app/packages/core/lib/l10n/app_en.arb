@@ -2403,6 +2403,7 @@
  "cSetupGatewayTestKeys": "(test keys: no real money moves)",
  "cSetupBillingInvalidKey": "The billing keys were rejected. Check the billing MID's keys",
  "err_invalid_client_key": "The client key starts with test_ck_ or live_ck_.",
+ "err_gateway_in_use": "This gateway still has payments in progress, saved cards or refunds, so it can't be disconnected. To stop new payments only, turn Toss Payments' Active off, or clear PortOne's channel key slots.",
  "err_key_mode_mismatch": "Test and live keys can't be mixed. Use keys of one kind.",
  "reviewRuleLine": "No insults, personal information, fake or promotional content. Reported reviews are hidden.",
  "reportAction": "Report",
