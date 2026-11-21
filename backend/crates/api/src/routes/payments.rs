@@ -54,56 +54,62 @@ pub fn channel_key(channel_keys: &HashMap<String, String>, code: &str) -> Option
     channel_keys.get(code).map(|k| k.trim()).filter(|k| !k.is_empty()).map(str::to_string)
 }
 
-/// Methods offered to customers: switched on by an admin and, on the real PortOne gateway, given a channel key.
-/// Toss opens every method from its one client key, so under Toss every enabled method is offered. The dev fake
+/// Methods offered to customers, with the gateway each one goes to: switched on by an admin and served by a
+/// gateway (`Integrations::gateway_for`: PortOne with its channel key, else Toss while offered). The dev fake
 /// provider takes no keys, so every enabled method is offered there (a local demo can pay).
-pub async fn offered_codes(s: &AppState) -> ApiResult<Vec<String>> {
+pub async fn offered(s: &AppState) -> ApiResult<Vec<(String, Gateway)>> {
     let on = enabled_codes(&s.db).await?;
     let integ = s.providers.integ();
-    if s.providers.dev() || integ.gateway() == Gateway::TossPayments {
-        return Ok(on);
-    }
-    Ok(on.into_iter().filter(|c| channel_key(&integ.portone.channel_keys, c).is_some()).collect())
+    let dev = s.providers.dev();
+    Ok(on
+        .into_iter()
+        .filter_map(|c| integ.gateway_for(&c).or(dev.then_some(Gateway::Portone)).map(|g| (c, g)))
+        .collect())
 }
 
-/// A method's flow on the live gateway. Toss saves cards only (자동결제, card only) and only with a billing key
-/// pair, so under Toss every other method is a one-off checkout. The app hides billing methods it cannot register.
-pub fn flow(gw: Gateway, code: &str, catalogue_flow: &'static str, toss_billing: bool) -> &'static str {
+/// A method's flow on its gateway. Toss saves cards only (자동결제, card only), so on Toss every other method is
+/// a one-off checkout, and card is a saved-card tile only while some gateway can save cards.
+pub fn flow(gw: Gateway, code: &str, catalogue_flow: &'static str, card_billing: bool) -> &'static str {
     match gw {
         Gateway::Portone => catalogue_flow,
-        Gateway::TossPayments if code == "card" && toss_billing => "billing",
+        Gateway::TossPayments if code == "card" && card_billing => "billing",
         Gateway::TossPayments => "checkout",
     }
 }
 
-/// Rejects unknown, switched-off or unconfigured methods before any intent is created.
-pub async fn ensure_enabled(s: &AppState, code: &str) -> ApiResult<()> {
+/// Rejects unknown, switched-off or unserved methods before any intent is created; returns the method's gateway.
+pub async fn ensure_enabled(s: &AppState, code: &str) -> ApiResult<Gateway> {
     if !METHODS.iter().any(|m| m.0 == code) {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
-    if !offered_codes(s).await?.iter().any(|c| c == code) {
-        return Err(ApiError::BadRequest("payment_method_disabled"));
-    }
-    Ok(())
+    offered(s)
+        .await?
+        .into_iter()
+        .find_map(|(c, g)| (c == code).then_some(g))
+        .ok_or(ApiError::BadRequest("payment_method_disabled"))
 }
 
 #[derive(Serialize)]
 struct Method {
     code: &'static str,
     flow: &'static str,
+    /// Where `POST /checkouts` sends this method right now. Informational: the intent decides the page.
+    gateway: &'static str,
 }
 
 async fn enabled(State(s): State<AppState>) -> ApiResult<Json<Vec<Method>>> {
-    let on = offered_codes(&s).await?;
-    let integ = s.providers.integ();
-    let toss_billing = integ.toss_payments.as_ref().is_some_and(|t| t.billing.is_some());
+    let on = offered(&s).await?;
+    let card_billing = s.providers.integ().billing_gateway().is_some();
     Ok(Json(
         METHODS
             .iter()
-            .filter(|(code, _)| on.iter().any(|c| c == code))
-            .map(|&(code, f)| Method {
-                code,
-                flow: flow(integ.gateway(), code, f, toss_billing),
+            .filter_map(|&(code, f)| {
+                let gw = on.iter().find_map(|(c, g)| (c == code).then_some(*g))?;
+                Some(Method {
+                    code,
+                    flow: flow(gw, code, f, card_billing),
+                    gateway: gw.code(),
+                })
             })
             .collect(),
     ))
@@ -115,22 +121,27 @@ struct AdminMethod {
     flow: &'static str,
     /// Switched on by an admin.
     enabled: bool,
-    /// Has a PortOne channel key (always true under Toss); without one the method is never shown even when enabled.
+    /// Served by a gateway (or dev mode); without one the method is never shown even when enabled.
     configured: bool,
+    /// The gateway that serves the method: `portone`, `tosspayments`, or null when none does.
+    gateway: Option<&'static str>,
 }
 
 async fn admin_view(s: &AppState) -> ApiResult<Vec<AdminMethod>> {
     let on = enabled_codes(&s.db).await?;
     let integ = s.providers.integ();
-    let fake = s.providers.dev() || integ.gateway() == Gateway::TossPayments;
-    let keys = &integ.portone.channel_keys;
+    let dev = s.providers.dev();
     Ok(METHODS
         .iter()
-        .map(|&(code, flow)| AdminMethod {
-            code,
-            flow,
-            enabled: on.iter().any(|c| c == code),
-            configured: fake || channel_key(keys, code).is_some(),
+        .map(|&(code, flow)| {
+            let gateway = integ.gateway_for(code).map(Gateway::code);
+            AdminMethod {
+                code,
+                flow,
+                enabled: on.iter().any(|c| c == code),
+                configured: dev || gateway.is_some(),
+                gateway,
+            }
         })
         .collect())
 }

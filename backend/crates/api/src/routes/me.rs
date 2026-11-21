@@ -372,14 +372,14 @@ struct MethodRow {
     created_at: DateTime<Utc>,
 }
 
-/// What the app needs to open the live gateway's card registration page. Hidden (`enabled: false`) until that
-/// gateway can save cards (PortOne's billing channel, or Toss's 자동결제 keys).
+/// What the app needs to open the card registration page of the gateway that saves cards
+/// (`Integrations::billing_gateway`). Hidden (`enabled: false`) while no gateway can save cards.
 async fn billing_setup(State(s): State<AppState>, Customer(a): Customer) -> ApiResult<Json<Value>> {
     let integ = s.providers.integ();
     let p = &integ.portone;
-    if !s.providers.billing_ready() {
+    let Some(gw) = integ.billing_gateway() else {
         return Ok(Json(json!({ "enabled": false })));
-    }
+    };
     // The ticket is stored so register_method can require it (single use, 30 minutes). Random (v4): Toss binds the
     // card to it as the customerKey, which must not be guessable.
     let mut random = [0u8; 16];
@@ -389,7 +389,6 @@ async fn billing_setup(State(s): State<AppState>, Customer(a): Customer) -> ApiR
         .bind(a.id)
         .fetch_one(&s.db)
         .await?;
-    let gw = integ.gateway();
     if let (Gateway::TossPayments, Some(t)) = (gw, &integ.toss_payments) {
         let card = t.billing.as_ref().map(|(ck, _)| ck.clone());
         return Ok(Json(json!({
@@ -441,8 +440,9 @@ async fn register_method(State(s): State<AppState>, Customer(a): Customer, Json(
     if !matches!(r.provider.as_str(), "card" | "kakaopay" | "naverpay" | "tosspay" | "payco") || r.display_name.chars().count() > MAX_NAME_LEN {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
-    // A card registers with the live gateway; Toss 자동결제 saves cards only.
-    let gw = s.providers.integ().gateway();
+    // A card registers with the gateway that saves cards now (none: PortOne, which then fails NotConfigured).
+    // Toss 자동결제 saves cards only.
+    let gw = s.providers.integ().billing_gateway().unwrap_or(Gateway::Portone);
     if gw == Gateway::TossPayments && r.provider != "card" {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }

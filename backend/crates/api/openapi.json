@@ -348,7 +348,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Payment methods enabled for checkout, [{code, flow}]. Under Toss Payments `flow` is `billing` only for card and only when the billing MID keys are set; every other method is `checkout`",
+        "summary": "Payment methods offered at checkout, [{code, flow, gateway}], in catalogue order, each code once: switched on and served by a gateway. `gateway` (portone | tosspayments) is where POST /v1/checkouts sends the method now: PortOne when it has the method's channel key, else Toss Payments while its card is saved and active. Informational: the checkout intent decides the page. On Toss Payments `flow` is `billing` only for card and only when some gateway can save cards; every other method is `checkout`",
         "security": [],
         "responses": {
           "200": {
@@ -484,7 +484,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Feature flags for the apps. card_billing: the live gateway can save cards",
+        "summary": "Feature flags for the apps. card_billing: a gateway can save cards (PortOne first, else Toss Payments with its billing MID keys)",
         "security": [],
         "responses": {
           "200": {
@@ -1625,7 +1625,7 @@
         },
         "responses": {
           "200": {
-            "description": "The intent the hosted pay page starts from (see CheckoutIntent). `gateway` names the hosted page: `portone` opens /pay/, `tosspayments` opens /pay/toss.html. A checkout keeps its gateway for confirm, webhooks, refunds and reconciliation even if the owner switches later",
+            "description": "The intent the hosted pay page starts from (see CheckoutIntent). `gateway` names the hosted page: `portone` opens /pay/, `tosspayments` opens /pay/toss.html. A checkout keeps its gateway for confirm, webhooks, refunds and reconciliation even if the owner changes the payment setup later",
             "content": {
               "application/json": {
                 "schema": {
@@ -3925,7 +3925,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Payment methods and their state",
+        "summary": "Payment methods and their state: [{code, flow, enabled, configured, gateway}]. gateway (portone | tosspayments | null) serves the method; configured is true in dev mode or when gateway is set",
         "responses": {
           "200": {
             "description": "OK"
@@ -3993,7 +3993,7 @@
         "summary": "Setup checklist and state",
         "responses": {
           "200": {
-            "description": "OK. Each integrations[] card carries last_test (the stored passing check, the Toss gate record), last_check (the latest check, passed or failed) and can_test (whether this viewer may run the connection test: the owner only on a locked card). Top level also has toss_payments_webhook_url (\"{public_base_url}/v1/webhooks/tosspayments\", for the Toss developer center) payment_gateway (portone | tosspayments: where new payments go) and payment_gateway_mode (test | live, or null unless Toss Payments is live: test means bookings are paid with no real money). The tosspayments card has fields client_key, secret_key, billing_client_key, billing_secret_key, security_key and active (toggle), and a mode (test | live | null) read from the secret key prefix"
+            "description": "OK. Each integrations[] card carries last_test (the stored passing check, the Toss gate record), last_check (the latest check, passed or failed) and can_test (whether this viewer may run the connection test: the owner only on a locked card). Top level also has toss_payments_webhook_url (\"{public_base_url}/v1/webhooks/tosspayments\", for the Toss developer center) payment_gateways ([{code, mode}], PortOne first: every gateway a new payment can reach, [] when none is set up; mode is test | live for tosspayments, read from the secret key prefix, test meaning bookings are paid with no real money, and null for portone), and for older consoles payment_gateway (the first entry's code, portone when the list is empty) and payment_gateway_mode (its mode). The tosspayments card has fields client_key, secret_key, billing_client_key, billing_secret_key, security_key and active (toggle, on by default), and a mode (test | live | null) read from the secret key prefix"
           }
         }
       }
@@ -4205,7 +4205,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Store a setup section. The portone and tosspayments cards need the owner TOTP header on first save and an owner unlock afterwards. tosspayments 400 codes: missing_field, invalid_client_key, invalid_secret_key, invalid_security_key, key_mode_mismatch, invalid_toggle; 409 card_locked. Turning tosspayments `active` on sends new payments and new saved cards to Toss Payments",
+        "summary": "Store a setup section. The portone and tosspayments cards need the owner TOTP header on first save and an owner unlock afterwards. tosspayments 400 codes: missing_field, invalid_client_key, invalid_secret_key, invalid_security_key, key_mode_mismatch, invalid_toggle; 409 card_locked. tosspayments `active` (on by default) lets Toss Payments take new payments next to PortOne: methods without a PortOne channel key, and new saved cards when PortOne cannot save cards. Off stops only new Toss payments and new saved cards; webhooks, confirms, refunds and saved-card charges keep running. The setup.integration audit records `gateways`",
         "requestBody": {
           "$ref": "#/components/requestBodies/Object"
         },
@@ -7497,7 +7497,7 @@
         }
       },
       "CheckoutIntent": {
-        "description": "Parameters for the hosted payment page. New checkouts use the gateway switched on in the console (GET /v1/admin/setup `payment_gateway`).",
+        "description": "Parameters for the hosted payment page. New checkouts use the gateway that serves the chosen method: PortOne when it has the method's channel key, else Toss Payments (see GET /v1/payments/methods `gateway`).",
         "type": "object",
         "required": [
           "id",
@@ -7578,7 +7578,7 @@
         }
       },
       "BillingSetup": {
-        "description": "Card registration parameters, or {\"enabled\": false} when the live gateway cannot save cards. Under Toss Payments only `card` is offered, and only when the billing MID keys are set.",
+        "description": "Card registration parameters, or {\"enabled\": false} when no gateway can save cards. PortOne first (its billing or card channel), else Toss Payments, which saves card only, with its billing MID keys.",
         "type": "object",
         "required": [
           "enabled"

@@ -461,28 +461,100 @@ fn toss_payments_card_checks_prefixes_pairs_modes_and_the_switch() {
         bare.as_object_mut().unwrap().remove(k);
     }
     let t = apply(&base, Section::TossPayments, &obj(bare)).unwrap().toss_payments.unwrap();
-    assert_eq!((t.billing, t.security_key, t.active), (None, None, false), "optional fields; off by default");
+    assert_eq!((t.billing, t.security_key, t.active), (None, None, true), "optional fields; on by default");
     let live = json!({"client_key": "live_ck_w", "secret_key": "live_sk_w"});
     assert!(apply(&base, Section::TossPayments, &obj(live)).is_ok());
 }
 
+fn portone(keys: &[&str], secret: bool, store: bool) -> PortOne {
+    PortOne {
+        api_secret: secret.then(|| FAKE_API_SECRET.to_string()),
+        store_id: store.then(|| "store-1".to_string()),
+        channel_keys: keys.iter().map(|k| (k.to_string(), format!("channel-key-{k}"))).collect(),
+        ..PortOne::default()
+    }
+}
+
+fn toss(active: Option<bool>, pair: bool) -> Option<TossPayments> {
+    let mut c = toss_card();
+    let m = c.as_object_mut().unwrap();
+    match active {
+        Some(a) => m.insert("active".into(), json!(a)),
+        None => m.remove("active"),
+    };
+    if !pair {
+        m.remove("billing_client_key");
+        m.remove("billing_secret_key");
+    }
+    apply(&Integrations::default(), Section::TossPayments, m).unwrap().toss_payments
+}
+
 #[test]
-fn gateway_is_toss_only_when_its_card_is_saved_and_on() {
+fn each_method_goes_to_portone_when_it_has_a_key_else_to_toss_when_offered() {
+    use Gateway::{Portone as P, TossPayments as T};
+    let all: Vec<String> = ["card", "kakaopay", "transfer"].map(String::from).to_vec();
     let mut integ = Integrations::default();
-    assert_eq!(integ.gateway(), Gateway::Portone, "no card");
-    let mut off = toss_card();
-    off["active"] = json!(false);
-    integ = apply(&integ, Section::TossPayments, &obj(off)).unwrap();
-    assert_eq!(integ.gateway(), Gateway::Portone, "saved but off");
-    integ = apply(&integ, Section::TossPayments, &obj(toss_card())).unwrap();
-    assert_eq!(integ.gateway(), Gateway::TossPayments);
+    assert_eq!((integ.gateway_for("card"), integ.billing_gateway()), (None, None), "nothing set up");
+    assert!(integ.payment_gateways(&all).is_empty());
+
+    integ.portone = portone(&["card", "kakaopay"], true, true);
+    assert_eq!(integ.gateway_for("card"), Some(P));
+    assert_eq!(integ.gateway_for("kakaopay"), Some(P));
+    assert_eq!(integ.gateway_for("transfer"), None);
+    assert_eq!(integ.billing_gateway(), Some(P), "the legacy card key saves cards");
+    assert_eq!(integ.payment_gateways(&all), vec![P]);
+    for (secret, store) in [(false, true), (true, false)] {
+        let half = Integrations {
+            portone: portone(&["card"], secret, store),
+            ..Integrations::default()
+        };
+        assert_eq!((half.gateway_for("card"), half.billing_gateway()), (None, None), "keys without secret or store");
+    }
+
+    let only = Integrations {
+        toss_payments: toss(None, true),
+        ..Integrations::default()
+    };
+    assert!(
+        ["card", "kakaopay", "transfer"].iter().all(|m| only.gateway_for(m) == Some(T)),
+        "saved without the switch = on"
+    );
+    assert_eq!(only.billing_gateway(), Some(T));
+    let no_pair = Integrations {
+        toss_payments: toss(None, false),
+        ..Integrations::default()
+    };
+    assert_eq!((no_pair.gateway_for("card"), no_pair.billing_gateway()), (Some(T), None));
+    let off = Integrations {
+        toss_payments: toss(Some(false), true),
+        ..Integrations::default()
+    };
+    assert_eq!((off.gateway_for("card"), off.billing_gateway()), (None, None), "사용 off hides Toss");
+    assert!(off.payment_gateways(&all).is_empty());
+
+    let mut both = Integrations {
+        portone: portone(&["card", "kakaopay"], true, true),
+        toss_payments: toss(Some(true), true),
+        ..Integrations::default()
+    };
+    assert_eq!(
+        (both.gateway_for("card"), both.gateway_for("transfer"), both.billing_gateway()),
+        (Some(P), Some(T), Some(P))
+    );
+    assert_eq!(both.payment_gateways(&all), vec![P, T], "PortOne first");
+    assert_eq!(both.payment_gateways(&all[..2]), vec![P], "PortOne serves every enabled method and saves cards");
+    both.portone = portone(&["kakaopay"], true, true);
+    assert_eq!(
+        (both.gateway_for("card"), both.gateway_for("kakaopay"), both.billing_gateway()),
+        (Some(T), Some(P), Some(T))
+    );
     let mut bad = toss_card();
     bad["secret_key"] = json!("nope");
     assert!(
         apply(&Integrations::default(), Section::TossPayments, &obj(bad)).is_err(),
-        "an invalid card is skipped by load: PortOne stays"
+        "an invalid card is skipped by load: Toss is not set up"
     );
-    assert!(!toggle_default(&Integrations::default(), Section::TossPayments, "active"));
+    assert!(toggle_default(&Integrations::default(), Section::TossPayments, "active"), "the switch shows on");
 }
 
 #[test]

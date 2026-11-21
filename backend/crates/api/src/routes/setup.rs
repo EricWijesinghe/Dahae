@@ -14,7 +14,7 @@ use crate::{
     error::{ApiError, ApiResult},
     integrations::{self, Invalid, Kind, LockState, Section},
     owner,
-    providers::{fcm, portone, sms, toss_payments},
+    providers::{Gateway, fcm, portone, sms, toss_payments},
     state::AppState,
 };
 use axum::{
@@ -650,6 +650,7 @@ async fn overview(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<
     )
     .fetch_one(&s.db)
     .await?;
+    let gateways = payment_gateways(&s).await?;
     Ok(Json(json!({
         "business": business(&s.db).await?,
         "store_build": operator::store_build(&s).await?,
@@ -665,10 +666,30 @@ async fn overview(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<
         "webhook_url": format!("{}/v1/webhooks/portone", s.config.public_base_url.trim_end_matches('/')),
         "toss_webhook_url": format!("{}/v1/webhooks/toss", s.config.public_base_url.trim_end_matches('/')),
         "toss_payments_webhook_url": format!("{}/v1/webhooks/tosspayments", s.config.public_base_url.trim_end_matches('/')),
-        "payment_gateway": s.providers.integ().gateway().code(),
-        // "test" while Toss takes payments on test keys: bookings get paid with no money behind them.
-        "payment_gateway_mode": s.providers.integ().toss_payments.as_ref().filter(|t| t.active).and_then(|t| integrations::toss_key_mode(&t.secret_key)),
+        // Every gateway a new payment can reach, PortOne first; `payment_gateway(_mode)` is the first one, for
+        // consoles built before both could run.
+        "payment_gateways": gateways,
+        "payment_gateway": gateways.first().map_or(json!("portone"), |g| g["code"].clone()),
+        "payment_gateway_mode": gateways.first().map_or(Value::Null, |g| g["mode"].clone()),
     })))
+}
+
+/// `payment_gateways` of the overview: `[{code, mode}]`, `mode` "test" while Toss takes payments on test keys
+/// (bookings get paid with no money behind them), null for PortOne (its ids carry no mode).
+async fn payment_gateways(s: &AppState) -> ApiResult<Vec<Value>> {
+    let enabled = super::payments::enabled_codes(&s.db).await?;
+    let integ = s.providers.integ();
+    Ok(integ
+        .payment_gateways(&enabled)
+        .into_iter()
+        .map(|g| {
+            let mode = match g {
+                Gateway::Portone => None,
+                Gateway::TossPayments => integ.toss_payments.as_ref().and_then(|t| integrations::toss_key_mode(&t.secret_key)),
+            };
+            json!({ "code": g.code(), "mode": mode })
+        })
+        .collect())
 }
 
 /// Recomputes the live keys from env + every saved section and hands them to the providers.
@@ -699,7 +720,7 @@ async fn put_section(
     let incoming = input.as_object().ok_or(ApiError::BadRequest("invalid_input"))?;
     let current = integrations::load_section(&s.db, &s.config.data_key, sec).await?;
     let merged = integrations::merge(sec, &current, incoming);
-    // The first save of a card that moves money needs the owner's code: the PortOne card sets where checkout
+    // The first save of a card that moves money needs the owner's code: either payment card adds a place checkout
     // money goes, and Toss payouts move real money. An unlock already checked it. The code is checked now and
     // spent only once the values validate, so a typo does not cost a code.
     let money_card = match sec {
@@ -735,8 +756,8 @@ async fn put_section(
         Some(a.id),
         "setup.integration",
         sec.code(),
-        // The live gateway is on record with every save, so each switch is audited.
-        json!({ "fields": merged.keys().collect::<Vec<_>>(), "gateway": s.providers.integ().gateway().code() }),
+        // The gateways new payments reach after the save are on record, so each switch is audited.
+        json!({ "fields": merged.keys().collect::<Vec<_>>(), "gateways": payment_gateways(&s).await?.iter().map(|g| g["code"].clone()).collect::<Vec<_>>() }),
     )
     .await?;
     Ok(Json(card(&s, sec, None).await?))
