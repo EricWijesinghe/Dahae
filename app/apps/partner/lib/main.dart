@@ -12,14 +12,14 @@ import 'screens/shell.dart';
 import 'outbox.dart';
 import 'state.dart';
 
-/// The partner app shares the Dahae palette but leads with ink (customer app: dark teal),
-/// so pros never confuse the two.
-const partnerBrand = BrandConfig(
-  name: '다해 파트너',
-  primary: Color(0xFF17232C),
-  primaryDeep: Color(0xFF0B1217),
-  fresh: Color(0xFF1E9EBA),
-  sun: Color(0xFFFFD95A),
+/// The partner app shares the palette but leads with ink (customer app: dark teal), so pros never confuse
+/// the two. The business colour becomes its accent; the window title is `partnerAppTitle`.
+final partnerBrand = BrandConfig(
+  name: BrandConfig.placeholder.name,
+  primary: const Color(0xFF17232C),
+  primaryDeep: const Color(0xFF0B1217),
+  fresh: const Color(0xFF1E9EBA),
+  sun: const Color(0xFFFFD95A),
 );
 
 /// Kept for the app's lifetime (client_errors.rs APPS: partner_android, partner_ios).
@@ -30,11 +30,16 @@ void main() => ErrorReporter.run(_errors, _start);
 Future<void> _start() async {
   WidgetsFlutterBinding.ensureInitialized();
   final session = Session(namespace: 'partner');
-  final api = ApiClient(baseUrl: defaultApiBase(), session: session);
+  // A domain move found on an earlier run applies now, at a cold start (api_base_discovery.dart).
+  final api = ApiClient(baseUrl: await resolveApiBase(), session: session);
   _errors.send = (body) async => api.post('/client-errors', body);
   final locale = LocaleController();
   final theme = ThemeController();
-  final brand = BrandController(api: api, fallback: partnerBrand);
+  final brand = BrandController(
+    api: api,
+    fallback: partnerBrand,
+    accentOnly: true,
+  );
   await Future.wait([
     session.restore(),
     locale.restore(),
@@ -44,7 +49,12 @@ Future<void> _start() async {
   // One refresh now instead of a 401 on every first screen call.
   api.warmUp().ignore();
   // The business's colours and logo; the saved brand paints until this answers (and stays if offline).
+  // Later changes arrive through X-Brand-Version on any call and on coming back to the foreground.
   brand.refresh().ignore();
+  brand.followResume();
+  void pushName() => PushService.setChannelName(brand.brand.short).ignore();
+  pushName();
+  brand.addListener(pushName);
   final app = PartnerState(
     api,
     Realtime(api),
@@ -57,6 +67,7 @@ Future<void> _start() async {
       locale: locale,
       theme: theme,
       brand: brand,
+      discovery: ApiBaseDiscovery(api: api),
     ),
   );
   // Back from the background: a fresh socket; its resync reloads jobs and drains the outbox.
@@ -76,12 +87,16 @@ class PartnerApp extends StatelessWidget {
     required this.locale,
     required this.theme,
     this.brand,
+    this.discovery,
   });
   final Session session;
   final PartnerState app;
   final LocaleController locale;
   final ThemeController theme;
   final BrandController? brand;
+
+  /// Follows a domain move from `/config` (native builds; web uses its origin).
+  final ApiBaseDiscovery? discovery;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -101,11 +116,14 @@ class PartnerApp extends StatelessWidget {
               app: 'partner',
               child: RemoteConfigGate(
                 api: session.api,
+                onConfig: discovery?.check,
                 child: child ?? const SizedBox.shrink(),
               ),
             ),
           ),
-          onGenerateTitle: (_) => (brand?.brand ?? partnerBrand).name,
+          onGenerateTitle: (c) => c.t.partnerAppTitle(
+            (brand?.brand ?? partnerBrand).nameFor(c.lang),
+          ),
           theme: buildTheme(brand?.brand ?? partnerBrand, Brightness.light),
           darkTheme: buildTheme(brand?.brand ?? partnerBrand, Brightness.dark),
           themeMode: theme.mode,

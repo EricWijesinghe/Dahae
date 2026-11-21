@@ -6,7 +6,7 @@ import 'package:partner/screens/navigate.dart';
 
 void main() {
   const address = '서울 강남구 테헤란로 123 4층';
-  final options = navOptions(address);
+  final options = navOptions(address, appName: 'kr.example.partner');
 
   test(
     'each map app opens its own scheme with the address as the search text',
@@ -21,8 +21,8 @@ void main() {
     },
   );
 
-  test('Naver needs the bundle id as appname', () {
-    expect(options[1].app.queryParameters['appname'], 'kr.co.dahae.partner');
+  test('Naver gets the package id of this build as appname', () {
+    expect(options[1].app.queryParameters['appname'], 'kr.example.partner');
   });
 
   test('every option has an https web fallback that carries the address', () {

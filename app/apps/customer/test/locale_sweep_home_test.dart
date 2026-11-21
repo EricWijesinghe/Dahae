@@ -153,7 +153,10 @@ void main() {
           ); // start in the gutter, on no tile
           await settle(tester, duration: const Duration(milliseconds: 300));
           sawBanner |= find.byType(BannerCarousel).evaluate().isNotEmpty;
-          sawNews |= find.text(t.dhHomeNews).evaluate().isNotEmpty;
+          sawNews |= find
+              .text(t.dhHomeNews(BrandConfig.placeholder.name))
+              .evaluate()
+              .isNotEmpty;
         }
         FlutterError.onError = saved;
         final where = RegExp(

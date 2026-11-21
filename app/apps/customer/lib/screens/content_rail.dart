@@ -62,7 +62,10 @@ class NewsList extends StatelessWidget {
             Expanded(
               child: Semantics(
                 header: true,
-                child: Text(t.dhHomeNews, style: context.text.titleLarge),
+                child: Text(
+                  t.dhHomeNews(context.brandName),
+                  style: context.text.titleLarge,
+                ),
               ),
             ),
             // An icon, not a text button: "see all" is long in several languages and the heading
@@ -72,8 +75,10 @@ class NewsList extends StatelessWidget {
               icon: const Icon(Icons.chevron_right_rounded),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) =>
-                      ContentListScreen(kind: 'news', title: t.dhHomeNews),
+                  builder: (_) => ContentListScreen(
+                    kind: 'news',
+                    title: t.dhHomeNews(context.brandName),
+                  ),
                 ),
               ),
             ),

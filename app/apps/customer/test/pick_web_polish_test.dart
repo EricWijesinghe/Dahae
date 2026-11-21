@@ -49,6 +49,20 @@ void main() {
     },
   );
 
+  test('the web shell takes name, icons and splash logo from the profile', () {
+    final html = File('web/index.html').readAsStringSync();
+    String include(String field) =>
+        '{{httpInclude "/v1/public/seller-info?field=$field"}}';
+
+    expect(html, contains('<title>${include('name')}</title>'));
+    for (final f in ['short_name', 'apple_icon', 'favicon', 'logo_img']) {
+      expect(html, contains('field=$f"'), reason: f);
+    }
+    // The built-in mark stays only as the fallback when no logo is uploaded.
+    expect(html, contains('{{else}}<svg class="mark"'));
+    expect(html, isNot(contains('>다해<')));
+  });
+
   test('the web build preloads the Medium weight the first screens use', () {
     final html = File('web/index.html').readAsStringSync();
 

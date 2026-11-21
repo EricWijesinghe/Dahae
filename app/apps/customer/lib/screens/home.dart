@@ -426,10 +426,7 @@ class _HeaderTitle extends StatelessWidget {
                 child: SegmentedControl<_HomeView>(
                   segments: [
                     (_HomeView.all, t.dhHomeAll),
-                    (
-                      _HomeView.pick,
-                      t.dhHomePick(BrandConfig.placeholder.name),
-                    ),
+                    (_HomeView.pick, t.dhHomePick(context.brandName)),
                   ],
                   selected: view,
                   onChanged: onView,
