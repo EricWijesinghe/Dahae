@@ -111,7 +111,7 @@ If you lose your phone or the authenticator app is deleted, one recovery code si
 ## 6.6 Signing in next time
 
 1. Open `https://example.co.kr/admin/`.
-2. The **(company name) Operations console** sign-in screen appears.
+2. The **다해 Operations console** sign-in screen appears. (The "다해" in this title stays the same even after you change the company name.)
 
 ![Sign-in screen](../img/en/console-login.png)
 
@@ -137,7 +137,9 @@ If you lose your phone or the authenticator app is deleted, one recovery code si
 - After signing in, get new codes with **[Make new recovery codes]** under **[My account]** (chapter 8).
 - To go back to the authenticator code, click **[Use an authenticator code instead]**. To start over, click **[Back to sign-in]**.
 
-### If the installed console app asks "Enter your server address"
+### If you see "Enter your server address"
+
+The console is web-only, so the browser and the console installed as in 6.8 never ask for a server address. This screen appears only in a separate console program that the developer builds.
 
 1. On the **Enter your server address** screen, type the server address starting with `https://`, such as `https://example.co.kr`.
 2. Click **[Save and continue]**.
@@ -187,7 +189,7 @@ The console opens in a browser with nothing to install, and can be **installed l
 2. Tap the **Share** button at the bottom.
 3. Tap **Add to Home Screen**.
 
-**You should now see:** a console icon on the phone's home screen that opens the sign-in screen.
+**You should now see:** a console icon on the phone's home screen (it may show the short name "다해 관리") that opens the sign-in screen.
 
 > **Tip** After an update, close the installed console app once and open it again.
 
@@ -196,6 +198,7 @@ The console opens in a browser with nothing to install, and can be **installed l
 | What the screen says | Meaning and fix |
 |---|---|
 | **That setup code is not right** | Check the code again. Codes never use the digits 0 and 1 or the letters O, I and L, so a look-alike is a different character |
+| `sudo dahae setup-code` on the server screen shows **설치 코드 기간(7일)이 지났어요. 새로 받으려면: dahae setup-code --renew** (the setup code's 7 days are over; get a new one with --renew) | Type `sudo dahae setup-code --renew` to get a new code |
 | **This setup code expired (valid for 7 days). …** | Get a new code with `sudo dahae setup-code --renew` on the server screen, or ask the developer for one |
 | **Password needs at least 12 characters** | Make the password 12 characters or longer |
 | **Please check the highlighted value** | Check the email is well formed, the name is not empty, and the password is not a very common one |

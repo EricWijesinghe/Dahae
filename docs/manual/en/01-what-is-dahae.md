@@ -40,7 +40,7 @@ Everything runs on one server. You do not rent a separate database.
 
 | Piece | What it does |
 |---|---|
-| Web server (Caddy) | Receives connections from outside. Gets and renews the HTTPS security certificate automatically. Only ports 80 and 443 are open to the outside |
+| Web server (Caddy) | Receives connections from outside. Gets and renews the HTTPS security certificate automatically. Web traffic comes in on ports 80 and 443 |
 | API | The brain used by the customer app, partner app and console. Handles bookings, payments, payouts and chat |
 | Database (PostgreSQL 17) | Stores every record. Reachable only from inside the server |
 | Backup | Makes a backup on the server every day at 03:30 (kept 14 days). Can also send copies to outside storage (chapter 17) |
@@ -113,7 +113,7 @@ In the same order as the console's side menu. Each menu is explained in chapter 
 
 ### Payments and payouts
 - PortOne V2 checkout: cards, easy-pay, bank transfer, virtual account (turned on and off per channel)
-- Toss Payments checkout (optional, used next to PortOne)
+- Toss Payments checkout (optional: PortOne stays as it is and only new payments go to Toss Payments; you can switch back to PortOne at any time)
 - Payment reconciliation that finds payments that do not match
 - Cash receipts and tax invoices
 - Points and coupons

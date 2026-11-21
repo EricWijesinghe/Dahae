@@ -141,4 +141,4 @@ When the command stops, it prints a line starting with `error:`. Find that line 
 | `error: stack dahae-main already exists; …` | The server already exists. You do not need a new one. For updates, see chapter 26 |
 | `AccessDenied` or another permission error | Check you signed in with the MFA code, and that both policies are attached to the deployer account (3.5, 3.6) |
 | Status `ROLLBACK_COMPLETE` or `CREATE_FAILED` | Creating the server failed. Take a screenshot of the **Events** tab in CloudFormation and send it to the developer |
-| The CloudShell window closed | AWS keeps creating the server. Check as in 4.4 |
+| The CloudShell window closed | If the screen had already shown `Waiting for stack create/update to complete`, AWS keeps creating the server. Check as in 4.4. If the stack stays at `REVIEW_IN_PROGRESS`, creation never started. Running the command again stops with `already exists`, so ask the developer to delete that stack and run it again |

@@ -141,4 +141,4 @@ CloudShell 을 쓸 수 없을 때는 CloudFormation 화면에서 템플릿 파�
 | `error: stack dahae-main already exists; …` | 이미 서버가 있어요. 새로 만들 필요가 없어요. 업데이트는 26장을 보세요 |
 | `AccessDenied` 나 권한 오류 | MFA 코드를 넣고 로그인했는지, 담당 계정에 정책 두 개가 붙어 있는지 확인하세요 (3.5, 3.6) |
 | 상태가 `ROLLBACK_COMPLETE` 나 `CREATE_FAILED` 예요 | 서버 만들기가 실패했어요. CloudFormation 의 **이벤트** 탭 화면을 캡처해 개발자에게 보내세요 |
-| CloudShell 창이 닫혔어요 | 서버 만들기는 AWS 에서 계속돼요. 4.4 로 확인하세요 |
+| CloudShell 창이 닫혔어요 | 화면에 `Waiting for stack create/update to complete` 가 나온 뒤라면 서버 만들기는 AWS 에서 계속돼요. 4.4 로 확인하세요. 스택 상태가 `REVIEW_IN_PROGRESS` 에서 멈춰 있으면 만들기가 시작되지 않은 거예요. 다시 실행하면 `already exists` 로 멈추니, 개발자에게 이 스택을 지우고 다시 실행해 달라고 하세요 |

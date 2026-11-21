@@ -81,7 +81,7 @@ DNS changes usually spread in a few minutes, sometimes up to an hour. The instal
 2. In the browser address bar, type `https://example.co.kr/health` (with your domain).
 3. Press Enter.
 
-![The browser showing /health](../img/ko/browser-health-ok.png)
+![The browser showing /health](../img/en/browser-health-ok.png)
 
 **You should now see:** text starting with `{"ok":true` (a version number follows).
 
