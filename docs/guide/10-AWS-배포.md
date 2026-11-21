@@ -39,6 +39,11 @@
 
 AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 뒤 진행하세요.
 
+> **빠른 방법 (3·7번을 명령 한 줄로):** 지역을 서울로 바꾼 뒤 콘솔 위쪽의 **CloudShell** 아이콘(`>_`)을 누르고 아래 한 줄을 붙여 넣으면 정책 두 개(`dahae-boundary`, `dahae-deployer-policy`)가 만들어져요. 그다음 4·5·8–11번만 하면 돼요.
+> ```
+> curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --admin
+> ```
+
 1. 오른쪽 위 지역을 **아시아 태평양(서울) ap-northeast-2** 로 바꿉니다.
 2. 검색창에 **IAM** 을 입력해 엽니다.
 3. **권한 한도 정책 먼저 (한 번만):** 왼쪽 **정책 > 정책 생성 > JSON** 을 누르고, 다해 저장소의 `deploy/aws/dahae-boundary-policy.json` 내용을 전부 붙여 넣습니다. **다음**, 정책 이름: **정확히 `dahae-boundary`**, **정책 생성**. 이 정책은 사용자에게 붙이지 **않아요.** 템플릿이 만드는 서버 역할들이 이 한도 안에서만 움직이고, 담당 계정은 이 한도가 없는 역할을 만들 수 없고 이 정책을 고칠 수도 없어요. 이름이 다르면 B 단계의 스택 만들기가 실패해요.
@@ -46,7 +51,7 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 5. 암호는 **사용자 지정 암호** 를 고르고 강한 암호를 만듭니다. 비밀번호 관리 앱에 저장하세요. "다음 로그인 시 암호 재설정 필요" 는 체크를 해제해도 되고 켜도 됩니다.
 6. **권한 설정** 에서 **직접 정책 연결** 을 고르고 **정책 생성** 을 누릅니다 (새 탭이 열려요).
 7. **JSON** 탭을 누르고, 다해 저장소의 `deploy/aws/deployer-iam-policy.json` 내용을 전부 붙여 넣습니다. **다음**, 정책 이름: `dahae-deployer-policy`, **정책 생성**.
-8. 이전 탭으로 돌아와 목록을 새로 고침하고 `dahae-deployer-policy` 를 체크한 뒤 **다음 > 사용자 생성**. (`dahae-boundary` 는 체크하지 마세요.)
+8. 이전 탭으로 돌아와 목록을 새로 고침하고 `dahae-deployer-policy` 와 AWS 관리형 정책 **`AWSCloudShellFullAccess`** (B 단계의 명령 한 줄에 필요) 를 체크한 뒤 **다음 > 사용자 생성**. (`dahae-boundary` 는 체크하지 마세요.)
 9. 사용자 목록에서 방금 만든 사용자를 눌러 **보안 자격 증명 > 다단계 인증(MFA) 할당** 을 누르고 **인증 앱** 을 고릅니다.
 10. 이 단계는 **개발자와 통화하며** 해요: 개발자가 화면의 QR 코드를 자기 휴대폰 인증 앱으로 읽고, 나온 코드 두 개를 불러 주면 입력합니다. (담당 계정의 정책은 스스로 MFA 를 등록할 권한이 없어서 DODA 가 등록해 줘야 해요. 인증 앱은 개발자 휴대폰에 있어요.)
    - MFA 를 켜기 전에는 이 계정으로 서버 관련 작업이 거부돼요. 정책이 MFA 없이는 막도록 되어 있어요. 이건 의도된 동작입니다.
@@ -60,6 +65,13 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 ## B. 서버 만들기 (CloudFormation)
 
 개발자가 위 계정으로 로그인하고 MFA 코드를 넣습니다. 지역이 **서울(ap-northeast-2)** 인지 다시 확인하세요.
+
+> **한 번에 만들기 (권장):** 콘솔 위쪽의 **CloudShell** 아이콘(`>_`)을 누르고, 도메인과 이메일만 바꿔서 아래 한 줄을 붙여 넣어요. 최신 릴리스의 설치 스크립트를 릴리스의 `SHA256SUMS` 와 대조한 뒤 템플릿에 고정하고, 기본 VPC 의 공개 서브넷을 찾아 스택 `dahae-main` 을 만들고, 끝나면 서버 IP 와 다음 할 일을 보여 줘요 (약 5–10분). 그다음 B-3 (도메인) 부터 하면 돼요. 아래 B-1·B-2 는 같은 일을 손으로 하는 방법이에요.
+> ```
+> curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --domain example.co.kr --email owner@example.co.kr
+> ```
+> - Route 53 에 도메인이 있으면 `--hosted-zone-id <ID>` 를 붙이면 A 레코드도 만들어요. 사양은 `--instance-type t3.large` 처럼 바꿔요. 실행 전 확인만 하려면 `--dry-run`.
+> - 이미 있는 스택은 건드리지 않아요. 새 버전 설치는 C 단계의 GitHub 배포로 해요.
 
 ### B-1. 템플릿 파일 준비 (개발자)
 
@@ -260,7 +272,8 @@ sudo dahae setup-code
 
 This guide sets up one Dahae server on AWS (Seoul) and connects the developer's GitHub Actions (github.com/EricWijesinghe/Dahae), so that a stable release is installed on the server with `dahae update`, optionally after a DODA reviewer approves. A non-specialist can finish the server part from the AWS console.
 
-1. **Deployer account (DODA, for the developer):** first create the customer-managed policy `dahae-boundary` (exact name) from `deploy/aws/dahae-boundary-policy.json` and attach it to nobody; it is the permissions boundary of the template's roles. Then create an IAM user with console access for the developer and attach only `deploy/aws/deployer-iam-policy.json` (as a second customer-managed policy). Assign its MFA on a call: the developer scans the QR code with the developer's own phone and reads back the two codes. Create no access keys. Send the sign-in URL and user name through a separate channel from the password.
+0. **Fastest path (AWS CloudShell, the `>_` icon in the console, region Seoul):** DODA's admin runs `curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --admin` once (creates both policies), then creates the user below with `dahae-deployer-policy` and `AWSCloudShellFullAccess` attached. The developer, signed in as that user, runs `curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --domain example.co.kr --email owner@example.co.kr`: it checks the latest release's install.sh against the release SHA256SUMS, pins it into the template, finds the default VPC's public subnet, creates stack `dahae-main` and prints the outputs (options: `--hosted-zone-id`, `--instance-type`, `--dry-run`). It never touches an existing stack; new versions go through C. Steps 1–2 below are the manual equivalent.
+1. **Deployer account (DODA, for the developer):** first create the customer-managed policy `dahae-boundary` (exact name) from `deploy/aws/dahae-boundary-policy.json` and attach it to nobody; it is the permissions boundary of the template's roles. Then create an IAM user with console access for the developer and attach `deploy/aws/deployer-iam-policy.json` (as a second customer-managed policy) and the AWS managed policy `AWSCloudShellFullAccess`. Assign its MFA on a call: the developer scans the QR code with the developer's own phone and reads back the two codes. Create no access keys. Send the sign-in URL and user name through a separate channel from the password.
 2. **Template (developer):** do not use the `dahae-aws.yaml` attached to the v1.5.1 Release; it predates the permissions boundary, GitHub's immutable OIDC subject and the 6-hour deploy fix, so deploys to it would fail. On a `master` checkout, download `install.sh`, `SHA256SUMS` and `SHA256SUMS.bundle` of v1.5.1 (`gh release download v1.5.1 -R EricWijesinghe/Dahae -p install.sh -p SHA256SUMS -p SHA256SUMS.bundle -D rel-v1.5.1`), check them (`scripts/release/verify-blob.sh rel-v1.5.1/SHA256SUMS EricWijesinghe/Dahae` when cosign is installed, then `sha256sum -c --ignore-missing SHA256SUMS`), and, with `dist=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install` (the public delivery repo), run `bash scripts/release/build-aws-template.sh rel-v1.5.1/install.sh "$dist/v1.5.1/install.sh" out`. It writes `out/dahae-aws.yaml` and prints the install.sh SHA-256 (`fe451ef20b85c19c44906978c73bffe56d58577bb276f85a160689a92cb6f14f` for v1.5.1). Releases after v1.5.1 attach a template with these fixes.
 3. **Launch (developer, signed in as the deployer user):** in CloudFormation (region ap-northeast-2), create a stack from that `dahae-aws.yaml`. Keep `GitHubRepo` (`EricWijesinghe/Dahae`) and `GitHubRepoIds` (`EricWijesinghe@48539716/Dahae@1452913067`) at their defaults. The stack name must start with `dahae-`. Fill Domain, Email, and optionally HostedZoneId (Route 53). Leave SshCidr empty. Acknowledge IAM and create. Wait for CREATE_COMPLETE, then about 20 minutes for the installer.
 4. **DNS (developer, Cloudflare):** add an A record for the domain pointing to the `PublicIp` output, DNS only (grey cloud). For a bare domain such as `example.co.kr`, add two: `@` and `www`. With Route 53 (HostedZoneId) the stack writes the `Domain` record only.

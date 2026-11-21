@@ -139,7 +139,51 @@ t  "delivery: re-run keeps the main commit" [ "$(published refs/heads/main)" = "
 t  "delivery: re-run keeps the tag on its commit" [ "$(published 'v9.9.9^{commit}')" = "$tag1" ]
 t  "delivery: re-run ships the same signature" [ "$(cat "$pd/assets/SHA256SUMS.bundle")" = "$bundle1" ]
 
+# ---- deploy/aws/launch.sh (CloudShell one-command launch), with fake aws and curl ----
+L="$SB/launch"; mkdir -p "$L/bin" "$L/files"
+printf 'echo hi\n' > "$L/files/install.sh"
+printf '%s  install.sh\n' "$(sha256sum "$L/files/install.sh" | cut -d' ' -f1)" > "$L/files/SHA256SUMS"
+cp "$ROOT/deploy/aws/dahae.cfn.yaml" "$L/files/dahae.cfn.yaml"
+cat > "$L/bin/curl" <<'EOF'
+#!/usr/bin/env bash
+out=""; url=""
+while [ $# -gt 0 ]; do case "$1" in -o) out=$2; shift ;; -*) ;; *) url=$1 ;; esac; shift; done
+case "$url" in
+  */install.sh) f=install.sh ;; */SHA256SUMS) f=SHA256SUMS ;; */dahae.cfn.yaml) f=dahae.cfn.yaml ;;
+  */releases/latest) echo '{"tag_name": "v9.9.9"}'; exit 0 ;; *) exit 22 ;;
+esac
+if [ -n "$out" ]; then cp "$LAUNCH_FILES/$f" "$out"; else cat "$LAUNCH_FILES/$f"; fi
+EOF
+cat > "$L/bin/aws" <<'EOF'
+#!/usr/bin/env bash
+echo "$*" >> "$LAUNCH_LOG"
+case "$*" in
+  *describe-vpcs*) echo vpc-1 ;; *describe-subnets*) echo subnet-1 ;; *get-caller-identity*) echo 123456789012 ;;
+  *get-open-id-connect-provider*) [ -n "${LAUNCH_OIDC:-}" ] ;;
+  *describe-stacks*Outputs*) echo "PublicIp 203.0.113.7" ;;
+  *describe-stacks*) [ -n "${LAUNCH_STACK:-}" ] ;;
+  *"cloudformation deploy"*) t=$(echo "$*" | sed -n 's/.*--template-file \([^ ]*\).*/\1/p'); cp "$t" "$LAUNCH_FILES/deployed.yaml" ;;
+esac
+EOF
+chmod +x "$L/bin/curl" "$L/bin/aws"
+launch() { PATH="$L/bin:$PATH" LAUNCH_FILES="$L/files" LAUNCH_LOG="$L/log" bash "$ROOT/deploy/aws/launch.sh" "$@"; }
+: > "$L/log"
+t  "launch: creates the stack with the default VPC and subnet" launch --domain example.co.kr --email o@example.co.kr
+t  "launch: template pins the release install.sh hash" grep -q "$(cut -d' ' -f1 "$L/files/SHA256SUMS")" "$L/files/deployed.yaml"
+nt "launch: no placeholder left" grep -q '__INSTALL_' "$L/files/deployed.yaml"
+t  "launch: latest release, Seoul, the found network" grep -q "region ap-northeast-2 cloudformation deploy --stack-name dahae-main .*VpcId=vpc-1 SubnetId=subnet-1 CreateGitHubOidcProvider=true" "$L/log"
+: > "$L/log"
+t  "launch: existing GitHub OIDC provider is reused" env LAUNCH_OIDC=1 PATH="$L/bin:$PATH" LAUNCH_FILES="$L/files" LAUNCH_LOG="$L/log" bash "$ROOT/deploy/aws/launch.sh" --domain example.co.kr --email o@example.co.kr
+t  "launch: ...so it is not created again" grep -q "CreateGitHubOidcProvider=false" "$L/log"
+nt "launch: an existing stack is never updated" env LAUNCH_STACK=1 PATH="$L/bin:$PATH" LAUNCH_FILES="$L/files" LAUNCH_LOG="$L/log" bash "$ROOT/deploy/aws/launch.sh" --domain example.co.kr --email o@example.co.kr
+nt "launch: a domain is required" launch --email o@example.co.kr
+nt "launch: stack names stay dahae-*" launch --domain example.co.kr --email o@example.co.kr --stack prod
+cp "$L/files/install.sh" "$L/files/install.ok"; printf 'echo evil\n' > "$L/files/install.sh"
+nt "launch: an install.sh that differs from SHA256SUMS is refused" launch --domain example.co.kr --email o@example.co.kr
+mv "$L/files/install.ok" "$L/files/install.sh"
+
 # ---- syntax ----
+t "syntax: launch.sh" bash -n "$ROOT/deploy/aws/launch.sh"
 for s in make-manifest.sh verify-manifest.sh sign-blob.sh verify-blob.sh build-install-page.sh build-aws-template.sh installer-pin.sh test-release-tools.sh; do
   t "syntax: $s" bash -n "$R/$s"
 done

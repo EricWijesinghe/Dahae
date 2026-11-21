@@ -62,7 +62,7 @@ Principle. The developer (Eric) builds, deploys and maintains everything from hi
 DODA 의 서비스가 모두 AWS 에 있으니 **DODA 의 AWS 서울 리전(ap-northeast-2)** 에 올려요. 계정은 DODA 것이고, 개발자는 접근 권한으로 배포해요. 클릭 순서 전체는 [guide 10](guide/10-AWS-배포.md) 에 있어요.
 
 1. **DODA: 배포용 IAM 사용자 만들기.** 먼저 권한 한도 정책 `dahae-boundary` 를 만들어요 (누구에게도 붙이지 않아요, [guide 10](guide/10-AWS-배포.md) A 3번). 그다음 관리자 권한 대신 [`deploy/aws/deployer-iam-policy.json`](../deploy/aws/deployer-iam-policy.json) 정책만 붙이고 MFA 를 켜요. 액세스 키는 만들지 않아요. 로그인 주소와 사용자 이름은 비밀번호와 따로 개발자에게 전달해요.
-2. **개발자: CloudFormation 템플릿 한 번 실행** (배포용 IAM 사용자로 로그인, [guide 10](guide/10-AWS-배포.md) B). 개발자가 B-1 에서 만든 `dahae-aws.yaml` 을 CloudFormation 에 올리고, 도메인·이메일·VPC·서브넷을 고르면 만들어져요. `GitHubRepo` 는 기본값 `EricWijesinghe/Dahae` 를 그대로 둬요 (개발자 저장소의 배포 워크플로만 이 서버에 배포할 권한을 받아요):
+2. **개발자: CloudFormation 템플릿 한 번 실행** (배포용 IAM 사용자로 로그인, [guide 10](guide/10-AWS-배포.md) B). 가장 쉬운 방법은 AWS CloudShell 에서 명령 한 줄 (`deploy/aws/launch.sh`, guide 10 B 맨 위) 이에요. 손으로 할 때는 개발자가 B-1 에서 만든 `dahae-aws.yaml` 을 CloudFormation 에 올리고, 도메인·이메일·VPC·서브넷을 고르면 만들어져요. `GitHubRepo` 는 기본값 `EricWijesinghe/Dahae` 를 그대로 둬요 (개발자 저장소의 배포 워크플로만 이 서버에 배포할 권한을 받아요):
    - Ubuntu 24.04 서버 1대 (기본 t3.medium, 디스크 50 GB 암호화), 고정 IP (Elastic IP), 80/443 만 열린 보안 그룹 (SSH 22 는 기본으로 닫혀 있고, 접속은 브라우저의 Session Manager 로 해요)
    - 설치 프로그램 자동 실행 (SHA-256 로 확인한 install.sh): PostgreSQL, Caddy (자동 HTTPS), 방화벽, 자동 백업
    - 매일 디스크 스냅샷 (7일 보관), AWS 하드웨어 고장 시 자동 복구, 실수로 지우지 못하게 종료 보호
@@ -160,7 +160,7 @@ Audience: DODA (operator of the Dahae service) and the developer (Eric). Step-by
 All of DODA's services run on AWS, so the server goes to **DODA's AWS Seoul region (ap-northeast-2)**. The account belongs to DODA; the developer deploys with granted access. Full click path: [guide 10](guide/10-AWS-배포.md).
 
 1. **DODA: create a deployer IAM user.** First create the permissions-boundary policy `dahae-boundary` and attach it to nobody ([guide 10](guide/10-AWS-배포.md) A, step 3). Then attach only [`deploy/aws/deployer-iam-policy.json`](../deploy/aws/deployer-iam-policy.json), turn on MFA, create no access keys. Send the sign-in URL and user name to the developer separately from the password.
-2. **Developer: run the CloudFormation template once**, signed in as the deployer IAM user ([guide 10](guide/10-AWS-배포.md) B). Use the `dahae-aws.yaml` the developer builds in B-1. Keep `GitHubRepo` at its default `EricWijesinghe/Dahae`: only the developer's deploy workflow in that repository is trusted by the server's AWS role. It creates:
+2. **Developer: run the CloudFormation template once**, signed in as the deployer IAM user ([guide 10](guide/10-AWS-배포.md) B). Easiest: one command in AWS CloudShell (`deploy/aws/launch.sh`, top of guide 10 B). Manually: use the `dahae-aws.yaml` the developer builds in B-1. Keep `GitHubRepo` at its default `EricWijesinghe/Dahae`: only the developer's deploy workflow in that repository is trusted by the server's AWS role. It creates:
    - One Ubuntu 24.04 server (default t3.medium, 50 GB encrypted disk), an Elastic IP, a security group open only on 80/443 (SSH 22 closed by default; shell access through Session Manager in the browser)
    - The installer, run automatically and checked by SHA-256: PostgreSQL, Caddy with automatic HTTPS, firewall, automatic backups
    - Daily disk snapshots kept 7 days, auto-recovery on AWS hardware failure, termination protection

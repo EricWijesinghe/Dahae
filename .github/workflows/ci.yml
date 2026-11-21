@@ -196,7 +196,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
       - name: Installer and scripts pass shellcheck
-        run: shellcheck deploy/install.sh deploy/e2e-install.sh deploy/publish-delivery.sh scripts/ci/*.sh
+        run: shellcheck deploy/install.sh deploy/e2e-install.sh deploy/publish-delivery.sh deploy/aws/launch.sh scripts/ci/*.sh
       - name: Installer self-test (pure functions, embedded CLI, compose parity; no root)
         run: bash scripts/ci/installer-selftest.sh
       - name: Pinned versions agree (Rust, Flutter, cosign)
