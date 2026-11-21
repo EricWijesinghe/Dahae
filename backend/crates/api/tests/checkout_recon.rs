@@ -48,10 +48,12 @@ async fn list(Query(q): Query<HashMap<String, String>>) -> Json<Value> {
     }
 }
 
-/// `GET /payments/{id}`: ids ending in `failed` are failed at PortOne, the rest are paid.
+/// `GET /payments/{id}`: ids ending in `failed` are failed at PortOne, the rest are paid; ids ending in `test` were
+/// paid on a PortOne test channel.
 async fn one(Path(id): Path<String>) -> Json<Value> {
     let status = if id.ends_with("failed") { "FAILED" } else { "PAID" };
-    Json(json!({ "status": status, "amount": { "total": 9000, "cancelled": 0 }, "currency": "KRW" }))
+    let kind = if id.ends_with("test") { "TEST" } else { "LIVE" };
+    Json(json!({ "status": status, "amount": { "total": 9000, "cancelled": 0 }, "currency": "KRW", "channel": { "type": kind } }))
 }
 
 async fn start_gateway() -> String {
@@ -193,4 +195,15 @@ async fn stale_sweep_covers_only_unfinished_checkouts_inside_its_window(pool: Pg
     assert!(!claimed(&pool, "fresh_paid").await, "under 24 h is the open sweep's job");
     assert!(!claimed(&pool, "stale_settled").await, "already settled checkouts are not re-polled");
     assert_eq!(stuck_alert(&pool).await.as_deref(), Some("paid_unfulfilled_after_day"));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_payment_on_a_portone_test_channel_alerts_the_owner(pool: PgPool) {
+    let base = start_gateway().await;
+    let state = state_for(pool.clone(), &base);
+    api::providers::portone::payment(&state.providers, "pay-live").await.expect("live payment");
+    assert_eq!(stuck_alert(&pool).await, None, "a live channel is quiet");
+    let paid = api::providers::portone::payment(&state.providers, "pay-test").await.expect("test payment");
+    assert_eq!(paid.status, "PAID", "the payment itself still reads as paid");
+    assert_eq!(stuck_alert(&pool).await.as_deref(), Some("portone_test_channel"));
 }
