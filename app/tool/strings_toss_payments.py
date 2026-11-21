@@ -5,7 +5,7 @@
 S = {
   "cIntTossPayments": ["결제 (토스페이먼츠)", "Payments (Toss Payments)"],
   "cSetupGatewayLive": ["결제를 받는 곳: {name}", "Payments go to: {name}"],
-  "cSetupGatewayNone": ["아직 결제를 받을 곳이 없어요. PortOne, 토스페이먼츠 중 하나 또는 둘 다 설정하세요.", "No payment gateway is set up yet. Set up PortOne, Toss Payments, or both."],
+  "cSetupGatewayNone": ["지금 결제를 받는 곳이 없어요. PortOne이나 토스페이먼츠를 설정하거나, 토스페이먼츠의 사용을 켜세요.", "No gateway takes payments right now. Set up PortOne or Toss Payments, or turn Toss Payments' Active on."],
   "cPayMethodGateway": ["결제사: {name}", "Gateway: {name}"],
   "cSetupGatewayTestKeys": ["(테스트 키: 실제 돈이 오가지 않아요)", "(test keys: no real money moves)"],
   "cSetupBillingInvalidKey": ["자동결제(빌링) 키가 올바르지 않아요. 빌링 MID의 키를 확인해 주세요", "The billing keys were rejected. Check the billing MID's keys"],

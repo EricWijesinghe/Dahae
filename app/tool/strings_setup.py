@@ -105,7 +105,7 @@ S = {
   "cSetupNothingSaved": ["저장된 값이 없어요. 먼저 저장한 뒤 잠금을 풀어 주세요", "Nothing is saved yet. Save first, then unlock"],
   "cSetupUnlockLeft": ["{minutes}분 후 잠겨요", "Locks in {minutes} min"],
   "cSetupTestApiKey": ["API 키 확인", "Check API key"],
-  "cSetupNeedsKey": ["PortOne 채널 키나 토스페이먼츠가 필요해요", "Needs a PortOne channel key or Toss Payments"],
+  "cSetupNeedsKey": ["PortOne 채널 키나 토스페이먼츠(사용 켜짐)가 필요해요", "Needs a PortOne channel key or Toss Payments with Active on"],
   "cSetupOtherMethods": ["기타 결제수단", "Other payment methods"],
   "cSlotHintCard": ["PortOne 콘솔의 채널 목록에서 일반결제(카드) 채널 키를 복사하세요", "Copy the card payment channel key from the channel list in the PortOne console"],
   "cSlotHintBilling": ["정기결제(빌링키) 채널 키예요. 비워 두면 카드 채널 키를 써요", "Channel key for recurring billing. Left blank, the card channel key is used"],

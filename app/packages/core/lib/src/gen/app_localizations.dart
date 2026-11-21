@@ -13647,7 +13647,7 @@ abstract class T {
   /// No description provided for @cSetupNeedsKey.
   ///
   /// In ko, this message translates to:
-  /// **'PortOne 채널 키나 토스페이먼츠가 필요해요'**
+  /// **'PortOne 채널 키나 토스페이먼츠(사용 켜짐)가 필요해요'**
   String get cSetupNeedsKey;
 
   /// No description provided for @cSetupOtherMethods.
@@ -14493,7 +14493,7 @@ abstract class T {
   /// No description provided for @cSetupGatewayNone.
   ///
   /// In ko, this message translates to:
-  /// **'아직 결제를 받을 곳이 없어요. PortOne, 토스페이먼츠 중 하나 또는 둘 다 설정하세요.'**
+  /// **'지금 결제를 받는 곳이 없어요. PortOne이나 토스페이먼츠를 설정하거나, 토스페이먼츠의 사용을 켜세요.'**
   String get cSetupGatewayNone;
 
   /// No description provided for @cPayMethodGateway.

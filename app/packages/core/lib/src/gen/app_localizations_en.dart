@@ -7412,7 +7412,8 @@ class TEn extends T {
   String get cSetupTestApiKey => 'Check API key';
 
   @override
-  String get cSetupNeedsKey => 'Needs a PortOne channel key or Toss Payments';
+  String get cSetupNeedsKey =>
+      'Needs a PortOne channel key or Toss Payments with Active on';
 
   @override
   String get cSetupOtherMethods => 'Other payment methods';
@@ -7871,7 +7872,7 @@ class TEn extends T {
 
   @override
   String get cSetupGatewayNone =>
-      'No payment gateway is set up yet. Set up PortOne, Toss Payments, or both.';
+      'No gateway takes payments right now. Set up PortOne or Toss Payments, or turn Toss Payments\' Active on.';
 
   @override
   String cPayMethodGateway(String name) {
