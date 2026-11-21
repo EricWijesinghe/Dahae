@@ -117,6 +117,18 @@ async fn tls_ask_answers_for_aliases_only(db: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn a_flood_of_asks_is_not_rate_limited(db: PgPool) {
+    let (_, mut cfg) = moved(&db).await;
+    cfg.rate_general_per_min = 2;
+    let app = routes::router(api::build_state(db.clone(), cfg).expect("state"));
+    // Caddy asks from one address; random SNI names must not use up the answer for a real alias.
+    for i in 0..5 {
+        assert_eq!(ask(&app, &format!("x{i}.example")).await, StatusCode::NOT_FOUND);
+    }
+    assert_eq!(ask(&app, "old.co.kr").await, StatusCode::OK);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn retiring_needs_the_owner_code_and_an_alias(db: PgPool) {
     let (app, _) = moved(&db).await;
     let (admin, _) = staff_token(&db, Role::StaffAdmin).await;

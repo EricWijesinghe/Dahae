@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/owner_totp_dialog.dart';
 
 /// Owner-editable app link values for Naver sign-in. Saved values replace the server's env values as a set.
 class AppLinksCard extends StatelessWidget {
@@ -85,17 +86,16 @@ class _AppLinksFormState extends State<_AppLinksForm> {
     }
   }
 
+  /// Owner code: the app ids pick the app that receives the Naver login callback.
   Future<void> _save() async {
-    final t = context.t;
-    try {
-      await context.api.put('/admin/app-links', _body());
-      if (!mounted) return;
-      setState(() => _fromDb = true);
-      showToast(context, t.cSaved);
-      await widget.onSaved();
-    } catch (e) {
-      if (mounted) showToast(context, t.error(e));
-    }
+    final api = context.api;
+    final ok = await runOwnerAction(context, (h) async {
+      await api.put('/admin/app-links', _body(), h);
+      return true;
+    }, done: context.t.cSaved);
+    if (ok != true || !mounted) return;
+    setState(() => _fromDb = true);
+    await widget.onSaved();
   }
 
   @override

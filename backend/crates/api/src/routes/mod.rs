@@ -177,7 +177,6 @@ pub fn router(state: AppState) -> Router {
         .route("/ready", get(lifecycle::ready))
         .route("/metrics", get(metrics::handler))
         .merge(crate::app_links::routes())
-        .merge(crate::domains::routes())
         .merge(crate::seo::routes())
         .nest("/v1", api)
         .layer(axum::middleware::from_fn_with_state(state.clone(), config::enforce))
@@ -186,6 +185,9 @@ pub fn router(state: AppState) -> Router {
         .layer(cors)
         .layer(axum::middleware::from_fn_with_state(state.clone(), uploads::sign_json))
         .layer(axum::middleware::from_fn_with_state(gate, crate::ratelimit::limit))
+        // Below the rate limit: Caddy's ask calls share one address, and a flood of random SNI names must not
+        // starve real aliases of certificates. The answer is cached and only Caddy can reach it.
+        .merge(crate::domains::routes())
         // Span records the path only: query strings can carry tokens (/v1/ws?ticket=... or the old ?token=...).
         .layer(TraceLayer::new_for_http().make_span_with(|req: &axum::http::Request<_>| {
             let request_id = req.extensions().get::<telemetry::RequestId>().map_or("", |r| r.0.as_str());

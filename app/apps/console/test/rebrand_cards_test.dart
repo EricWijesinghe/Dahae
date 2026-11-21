@@ -239,33 +239,44 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('the app links card saves the store app IDs as lists', (
-    tester,
-  ) async {
-    setViewport(tester, wideSize);
-    final fake = FakeApi()
-      ..reply('GET', '/admin/app-links', {
-        'android_cert_sha256': <String>[],
-        'apple_team_id': null,
-        'android_packages': ['kr.example.app'],
-        'ios_bundle_ids': <String>[],
-        'source': 'database',
-      })
-      ..reply('PUT', '/admin/app-links', null);
-    final env = await TestEnv.create(fake: fake, role: 'staff_admin');
-    await pumpConsoleScreen(tester, env, _scrolled(const AppLinksCard()));
-    await settle(tester);
-    await tester.enterText(
-      find.widgetWithText(TextField, koT.cRbIosBundles),
-      'kr.example.app\n kr.example.partner ',
-    );
-    await tester.tap(find.widgetWithText(FilledButton, koT.save));
-    await settle(tester);
-    final body = fake.lastCall('PUT', '/admin/app-links')!.body as Json;
-    expect(body['android_packages'], ['kr.example.app']);
-    expect(body['ios_bundle_ids'], ['kr.example.app', 'kr.example.partner']);
-    await unmount(tester);
-  });
+  testWidgets(
+    'the app links card saves the store app IDs as lists, with the owner code',
+    (tester) async {
+      setViewport(tester, wideSize);
+      final fake = FakeApi()
+        ..reply('GET', '/admin/app-links', {
+          'android_cert_sha256': <String>[],
+          'apple_team_id': null,
+          'android_packages': ['kr.example.app'],
+          'ios_bundle_ids': <String>[],
+          'source': 'database',
+        })
+        ..reply('PUT', '/admin/app-links', null);
+      final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+      await pumpConsoleScreen(tester, env, _scrolled(const AppLinksCard()));
+      await settle(tester);
+      await tester.enterText(
+        find.widgetWithText(TextField, koT.cRbIosBundles),
+        'kr.example.app\n kr.example.partner ',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, koT.save));
+      await settle(tester);
+      expect(
+        fake.lastCall('PUT', '/admin/app-links'),
+        isNull,
+        reason: 'no code yet',
+      );
+      await tester.enterText(find.byType(TextField).last, '123456');
+      await tester.tap(find.widgetWithText(FilledButton, koT.oaContinue));
+      await settle(tester);
+      final put = fake.lastCall('PUT', '/admin/app-links')!;
+      expect(put.headers['x-owner-totp'], '123456');
+      final body = put.body as Json;
+      expect(body['android_packages'], ['kr.example.app']);
+      expect(body['ios_bundle_ids'], ['kr.example.app', 'kr.example.partner']);
+      await unmount(tester);
+    },
+  );
 
   test('a moved server is an https origin other than the saved one', () {
     const saved = 'https://old.example';

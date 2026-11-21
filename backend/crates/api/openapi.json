@@ -4332,7 +4332,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Owner saves the app link values (overrides the env values)",
+        "summary": "Owner saves the app link values (overrides the env values; owner TOTP, logged)",
         "responses": {
           "200": {
             "description": "OK"

@@ -10,18 +10,20 @@ use crate::{
     auth::{Admin, Staff},
     config,
     error::{ApiError, ApiResult},
+    owner,
     routes::audit,
     state::AppState,
 };
 use axum::{
     Json, Router,
-    extract::State,
-    http::StatusCode,
+    extract::{ConnectInfo, State},
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::net::SocketAddr;
 
 /// Built-in store app ids (app/apps/customer, app/apps/partner): Android applicationId and iOS bundle identifier.
 /// Store builds take others from the GitHub variables `CUSTOMER_APP_ID`/`PARTNER_APP_ID`.
@@ -123,9 +125,17 @@ async fn get_links(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Valu
     Ok(Json(preview(&links, source)))
 }
 
-/// Owner-only. Validated before it replaces the values; the audit row keeps the fingerprints (public values).
-async fn put_links(State(s): State<AppState>, Admin(a): Admin, Json(input): Json<Links>) -> ApiResult<Json<Value>> {
+/// Owner code. The package ids decide which app receives the Naver login callback, so another admin may not.
+/// Validated before the code is spent; the audit row keeps the fingerprints (public values).
+async fn put_links(
+    State(s): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Admin(a): Admin,
+    Json(input): Json<Links>,
+) -> ApiResult<Json<Value>> {
     let links = clean(input).map_err(ApiError::BadRequest)?;
+    owner::verify_owner(&s, a, &headers, Some(peer.ip()), true).await?;
     sqlx::query("INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = now()")
         .bind(SETTINGS_KEY)
         .bind(sqlx::types::Json(&links))
@@ -162,7 +172,7 @@ pub fn clean(input: Links) -> Result<Links, &'static str> {
 }
 
 /// Trimmed, deduplicated in order, at most four. Android: dot-separated segments that start with a letter and
-/// hold letters, digits and `_`. iOS bundle ids also allow `-`. At least two segments, 150 characters at most.
+/// hold letters, digits and `_`. iOS bundle ids take `-` instead of `_`. At least two segments, 150 characters at most.
 fn clean_ids(input: Vec<String>, ios: bool) -> Result<Vec<String>, &'static str> {
     if input.len() > MAX_APP_IDS {
         return Err("app_link_too_many_ids");
@@ -180,8 +190,9 @@ fn clean_ids(input: Vec<String>, ios: bool) -> Result<Vec<String>, &'static str>
 }
 
 fn valid_app_id(id: &str, ios: bool) -> bool {
-    let segment =
-        |s: &str| s.chars().next().is_some_and(|c| c.is_ascii_alphabetic()) && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || (ios && c == '-'));
+    let segment = |s: &str| {
+        s.chars().next().is_some_and(|c| c.is_ascii_alphabetic()) && s.chars().all(|c| c.is_ascii_alphanumeric() || (c == '_' && !ios) || (ios && c == '-'))
+    };
     id.len() <= 150 && id.split('.').count() >= 2 && id.split('.').all(segment)
 }
 
@@ -351,7 +362,13 @@ mod tests {
 
     #[test]
     fn clean_refuses_bad_app_ids() {
-        let cases: [(&[&str], &[&str]); 4] = [(&["noDots"], &[]), (&["com.1shop"], &[]), (&["com.my-app"], &[]), (&[], &["com.a b"])];
+        let cases: [(&[&str], &[&str]); 5] = [
+            (&["noDots"], &[]),
+            (&["com.1shop"], &[]),
+            (&["com.my-app"], &[]),
+            (&[], &["com.a b"]),
+            (&[], &["com.my_app"]),
+        ];
         for (android, ios) in cases {
             let input = Links {
                 android_packages: android.iter().map(|s| s.to_string()).collect(),
