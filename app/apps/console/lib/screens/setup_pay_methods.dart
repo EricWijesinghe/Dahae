@@ -101,10 +101,7 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
                   contentPadding: EdgeInsets.zero,
                   // The badge centres its wordmark, so on its own it fills the whole leading width.
                   secondary: IntrinsicWidth(
-                    child: PayBrandBadge(
-                      code: m['code'] as String,
-                      height: 32,
-                    ),
+                    child: PayBrandBadge(code: m['code'] as String, height: 32),
                   ),
                   title: Text(t.payMethod(m['code'] as String)),
                   subtitle: switch (gatewayNames[m['gateway']]) {
