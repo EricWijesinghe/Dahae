@@ -79,7 +79,8 @@ struct Tick {
 pub const TLS_ASK_PATH: &str = "/internal/tls-ask";
 
 pub fn routes() -> Router<AppState> {
-    Router::new().route(TLS_ASK_PATH, get(tls_ask))
+    // The literal (not TLS_ASK_PATH) lets tests/api_contract.rs find the route.
+    Router::new().route("/internal/tls-ask", get(tls_ask))
 }
 
 /// Owner console (mounted under `/admin`).
