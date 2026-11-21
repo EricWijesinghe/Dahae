@@ -5,6 +5,7 @@
 //! Files are never mounted publicly: `/v1/files/<name>?exp=&sig=` serves them when the HMAC (key derived
 //! from DATA_KEY) over name and expiry checks out. Stored values are `/files/<name>`; `sign_json` turns
 //! every such path in a JSON response into a fresh signed URL, so handlers never store expiring links.
+//! The one exception: the current brand files (logo, icons, share image) are served unsigned (see `serve`).
 
 use crate::entropy;
 use crate::{
@@ -45,6 +46,10 @@ const URL_BUCKET_SECS: i64 = 3600;
 const URL_BUCKETS_AHEAD: i64 = 2;
 const KEY_CONTEXT: &[u8] = b"malkkeum/file-urls/v1";
 const MAX_JSON_BYTES: usize = 16 * 1024 * 1024;
+const PRIVATE_CACHE: &str = "private, max-age=3600";
+/// The current logo and brand images are public without a signature. A changed image gets a new random
+/// name, so its URL never needs revalidating.
+const BRAND_CACHE: &str = "public, max-age=31536000, immutable";
 
 pub fn routes() -> Router<AppState> {
     Router::new().route("/uploads", post(upload)).route("/files/{name}", get(serve))
@@ -218,12 +223,11 @@ async fn serve(State(s): State<AppState>, Path(name): Path<String>, Query(q): Qu
     if !safe_name(&name) {
         return Err(ApiError::NotFound);
     }
-    let (Some(exp), Some(sig)) = (q.exp, q.sig) else {
-        return Err(ApiError::Forbidden);
+    let cache = match (q.exp, q.sig) {
+        (Some(exp), Some(sig)) if verify(&url_key(&s.config), &name, exp, &sig, Utc::now().timestamp()) => PRIVATE_CACHE,
+        (None, None) if super::setup::brand::is_brand_file(&super::seller::cached_business(&s.db).await?, &name) => BRAND_CACHE,
+        _ => return Err(ApiError::Forbidden),
     };
-    if !verify(&url_key(&s.config), &name, exp, &sig, Utc::now().timestamp()) {
-        return Err(ApiError::Forbidden);
-    }
     let file = tokio::fs::File::open(s.config.upload_dir.join(&name)).await.map_err(|_| ApiError::NotFound)?;
     // Streamed in chunks so a large photo is never held whole in memory.
     let chunks = futures_util::stream::unfold(file, |mut f| async move {
@@ -240,7 +244,7 @@ async fn serve(State(s): State<AppState>, Path(name): Path<String>, Query(q): Qu
     let headers = [
         (header::CONTENT_TYPE, HeaderValue::from_static(mime(&name))),
         (header::X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff")),
-        (header::CACHE_CONTROL, HeaderValue::from_static("private, max-age=3600")),
+        (header::CACHE_CONTROL, HeaderValue::from_static(cache)),
     ];
     Ok((headers, Body::from_stream(chunks)).into_response())
 }

@@ -265,7 +265,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Seller details as an HTML fragment for the website (?field= for one value)",
+        "summary": "Seller details, brand values and live settings as HTML fragments for the website (?field= for one value; Caddy includes them server-side). Escaped; braces are entities so Caddy never runs them as a template",
         "security": [],
         "parameters": [
           {
@@ -283,7 +283,34 @@
                 "privacy_officer",
                 "hosting_provider",
                 "support_phone",
-                "support_email"
+                "support_email",
+                "bizcheck",
+                "name",
+                "name_en",
+                "short_name",
+                "tagline",
+                "tagline_en",
+                "base_url",
+                "primary_color",
+                "logo_img",
+                "favicon",
+                "apple_icon",
+                "og_image",
+                "ld_json",
+                "privacy_email",
+                "cancel_policy",
+                "ai_chat_retention_days",
+                "upload_orphan_days",
+                "uses_portone",
+                "uses_toss",
+                "uses_solapi",
+                "uses_fcm",
+                "uses_ai",
+                "uses_backup",
+                "uses_juso",
+                "legal_terms",
+                "legal_privacy",
+                "legal_location"
               ]
             }
           }
@@ -355,11 +382,44 @@
         "tags": [
           "public"
         ],
-        "summary": "Brand name, colours, app-update policy and seller details (company: legal_name, ceo, registration_no, mail_order_no, address, hosting_provider; support_phone, support_email)",
+        "summary": "Brand name, colours, app-update policy and seller details (company: legal_name, ceo, registration_no, mail_order_no, address, hosting_provider; support_phone, support_email); name_en, short_name, tagline(_en), brand_assets, version (brand_version) and assets (absolute unsigned URLs of the logo and brand images). logo_url stays signed",
         "security": [],
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/brand/manifest/{app}": {
+      "get": {
+        "operationId": "brandManifest",
+        "tags": [
+          "public"
+        ],
+        "summary": "PWA manifest built from the business profile (name, short_name, description, theme_color, icons); app is site, customer or console. application/manifest+json, no-cache",
+        "security": [],
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "site",
+                "customer",
+                "console"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "unknown app"
           }
         }
       }
@@ -675,7 +735,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Serve an uploaded photo (signed, hourly-bucketed URL)",
+        "summary": "Serve an uploaded photo (signed, hourly-bucketed URL). Without exp/sig only the current logo and brand images are served (public, max-age=31536000, immutable); anything else is 403",
         "security": [],
         "parameters": [
           {
@@ -3941,6 +4001,110 @@
         }
       }
     },
+    "/v1/admin/setup/business-hours": {
+      "get": {
+        "operationId": "adminGetBusinessHours",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Business hours used by AI offline mode: {weekdays:[0..6] (0 = Monday), open:HH:MM, close:HH:MM}",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "adminPutBusinessHours",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Save business hours (open before close)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "invalid_hours"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/payout/switch": {
+      "put": {
+        "operationId": "adminPutPayoutSwitch",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner switch for Toss payouts {on:bool} (owner code required; the TOSS_PAYOUTS_ENABLED env still works). Audited",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "parameters": [
+          {
+            "name": "X-Owner-Totp",
+            "in": "header",
+            "required": true,
+            "description": "The owner's current authenticator code (one use per request)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "totp_required"
+          },
+          "403": {
+            "description": "owner only"
+          },
+          "409": {
+            "description": "payout_in_toss_mode: switch the payout card to manual first"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/store-build/ack": {
+      "post": {
+        "operationId": "adminAckStoreBuild",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner: a store build with today's name, icon, colour, app ids and domain is out; GET /v1/admin/setup store_build.changed empties. Optional {build_url} (https)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "invalid_link"
+          },
+          "403": {
+            "description": "owner only"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/setup/review": {
       "put": {
         "operationId": "adminPutReviewAccount",
@@ -4659,7 +4823,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Public app configuration",
+        "summary": "Public app configuration; brand_version, api_base, install_id, providers (sign-in providers configured on the server)",
         "responses": {
           "200": {
             "description": "OK"

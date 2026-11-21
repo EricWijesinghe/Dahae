@@ -178,6 +178,8 @@ pub struct Brand {
     pub phone: Option<String>,
     pub address: Option<String>,
     pub logo: Option<String>,
+    /// The console-made 1200x630 share card (`og_1200`), absolute. Link previews ignore the SVG fallback.
+    pub og: Option<String>,
     /// Brand colour for generated images; the console validates it as #RRGGBB.
     pub color: String,
     pub company: Vec<(&'static str, String)>,
@@ -194,7 +196,9 @@ impl Brand {
             name,
             phone: text(v, "support_phone"),
             address: text(&v["company"], "address"),
-            logo: text(v, "logo_url").map(|l| if l.starts_with('/') { format!("{base}{l}") } else { l }),
+            // Brand files are public at /v1/files/<name> (routes/uploads.rs); /files/ is not served at all.
+            logo: text(v, "logo_url").map(|l| crate::routes::setup::brand::public_url(base, &l)),
+            og: v["brand_assets"]["og_1200"].as_str().map(|p| crate::routes::setup::brand::public_url(base, p)),
             color: text(v, "primary_color")
                 .filter(|c| crate::routes::setup::is_hex_color(c))
                 .unwrap_or_else(|| DEFAULT_COLOR.into()),
@@ -250,7 +254,7 @@ impl ServicePage {
     }
 
     fn og_url(&self) -> String {
-        format!("{}{}/og.svg", self.base, self.path())
+        self.brand.og.clone().unwrap_or_else(|| format!("{}{}/og.svg", self.base, self.path()))
     }
 
     fn cta(&self) -> String {
@@ -687,6 +691,7 @@ mod tests {
             phone: Some("02-1234-5678".into()),
             address: Some("서울 강남구 테헤란로 1".into()),
             logo: Some("https://example.com/logo.png".into()),
+            og: None,
             color: DEFAULT_COLOR.into(),
             company: vec![("상호", "테스트 주식회사".into())],
         }
@@ -880,9 +885,20 @@ mod tests {
     }
 
     #[test]
-    fn brand_needs_a_name_and_absolute_logo() {
+    fn brand_needs_a_name_and_a_public_logo_url() {
         assert!(Brand::from_value("https://x", &json!({})).is_none());
         let b = Brand::from_value("https://x", &json!({"name": "다해", "logo_url": "/files/a.png"})).unwrap();
-        assert_eq!(b.logo.as_deref(), Some("https://x/files/a.png"));
+        assert_eq!(b.logo.as_deref(), Some("https://x/v1/files/a.png"), "served unsigned at /v1/files, not /files");
+        assert!(b.og.is_none());
+    }
+
+    #[test]
+    fn share_image_uses_the_brand_card_when_set() {
+        let mut p = page(None, 0);
+        assert!(p.og_url().ends_with("/og.svg"), "SVG fallback");
+        let v = json!({"name": "다해", "brand_assets": {"og_1200": "/files/b.png"}});
+        p.brand = Brand::from_value("https://example.com", &v).unwrap();
+        assert_eq!(p.og_url(), "https://example.com/v1/files/b.png");
+        assert!(render_service_page(&p).contains("<meta property=\"og:image\" content=\"https://example.com/v1/files/b.png\">"));
     }
 }

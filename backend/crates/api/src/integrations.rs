@@ -130,6 +130,21 @@ pub fn toss_env_enabled() -> bool {
     std::env::var(TOSS_ENV).is_ok_and(|v| v == "1")
 }
 
+/// Settings row of the owner's console switch for Toss payouts: `{"on":bool,"by":uuid,"at":rfc3339}`.
+pub const TOSS_SWITCH_KEY: &str = "payout_toss_switch";
+
+/// The env switch or the owner's console switch: either opens the Toss payouts gate.
+pub async fn toss_switch_on(db: &PgPool) -> Result<bool, sqlx::Error> {
+    if toss_env_enabled() {
+        return Ok(true);
+    }
+    let v: Option<Value> = sqlx::query_scalar("SELECT value FROM settings WHERE key = $1")
+        .bind(TOSS_SWITCH_KEY)
+        .fetch_optional(db)
+        .await?;
+    Ok(v.is_some_and(|v| v["on"] == json!(true)))
+}
+
 /// S3-compatible offsite backup target (AWS S3, Cloudflare R2, Naver Cloud Object Storage, Backblaze B2).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct S3Config {
@@ -833,6 +848,7 @@ pub async fn load(db: &PgPool, config: &Config) -> Result<Integrations, sqlx::Er
         .fetch_all(db)
         .await?;
     let mut out = Integrations::from_config(config);
+    let toss_on = toss_switch_on(db).await?;
     for (code, enc, last_test) in rows {
         let Some(section) = Section::parse(&code) else { continue };
         let Some(values) = decode(&config.data_key, &enc) else {
@@ -845,7 +861,7 @@ pub async fn load(db: &PgPool, config: &Config) -> Result<Integrations, sqlx::Er
         }
         if section == Section::Payout {
             let secret = values.get("secret_key").and_then(Value::as_str).unwrap_or_default();
-            out.payout_toss_ready = toss_ready(toss_env_enabled(), last_test.as_ref(), &config.data_key, secret);
+            out.payout_toss_ready = toss_ready(toss_on, last_test.as_ref(), &config.data_key, secret);
         }
         match apply(&out, section, &values) {
             Ok(next) => out = next,

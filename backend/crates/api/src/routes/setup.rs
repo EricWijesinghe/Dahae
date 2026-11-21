@@ -32,6 +32,9 @@ use std::net::{IpAddr, SocketAddr};
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
+pub mod brand;
+mod operator;
+
 const MAX_FIELD_CHARS: usize = 200;
 const SETUP_CODE_LEN: usize = 12;
 /// No 0/O/1/I/L: the code is read off a screen and typed by hand.
@@ -55,13 +58,17 @@ pub fn public_routes() -> Router<AppState> {
     Router::new()
         .route("/setup", get(state))
         .route("/setup/admin", post(create_admin))
-        .route("/brand", get(brand))
+        .route("/brand", get(brand::get_brand))
+        .route("/brand/manifest/{app}", get(brand::get_manifest))
 }
 
 pub fn admin_routes() -> Router<AppState> {
     Router::new()
         .route("/setup", get(overview))
         .route("/setup/business", put(put_business))
+        .route("/setup/business-hours", get(operator::get_hours).put(operator::put_hours))
+        .route("/setup/payout/switch", put(operator::put_payout_switch))
+        .route("/setup/store-build/ack", post(operator::ack_store_build))
         .route("/setup/review", put(put_review).delete(clear_review))
         .route("/setup/{section}", put(put_section).delete(clear_section))
         .route("/setup/{section}/test", post(test_section))
@@ -377,14 +384,7 @@ async fn review_summary(db: &PgPool) -> Result<Value, sqlx::Error> {
 
 /// Shop name from the business profile, sent as the `#{brand}` AlimTalk variable.
 pub async fn brand_name(db: &PgPool) -> String {
-    const DEFAULT_BRAND: &str = "다해";
-    match business(db).await {
-        Ok(v) => v["name"].as_str().map(str::trim).filter(|s| !s.is_empty()).unwrap_or(DEFAULT_BRAND).to_owned(),
-        Err(e) => {
-            tracing::warn!(error = %e, "brand lookup failed; using default brand");
-            DEFAULT_BRAND.to_owned()
-        }
-    }
+    brand::brand_name_for(db, "ko").await
 }
 
 async fn business(db: &PgPool) -> Result<Value, sqlx::Error> {
@@ -393,11 +393,6 @@ async fn business(db: &PgPool) -> Result<Value, sqlx::Error> {
         .fetch_optional(db)
         .await?;
     Ok(v.unwrap_or_else(|| json!({})))
-}
-
-/// Public business profile: app header, website footer (사업자 정보), support contact.
-async fn brand(State(s): State<AppState>) -> ApiResult<Json<Value>> {
-    Ok(Json(business(&s.db).await?))
 }
 
 const BUSINESS_TEXT: [&str; 4] = ["name", "support_phone", "support_email", "support_hours"];
@@ -525,6 +520,7 @@ pub fn clean_business(base: &str, input: &Value) -> Result<Value, ApiError> {
     if let Some(apps) = input.get("app_versions") {
         out.insert("app_versions".into(), clean_app_versions(apps)?);
     }
+    brand::clean_extra(base, input, &mut out)?;
     if !out.contains_key("name") {
         return Err(ApiError::BadRequest("missing_field"));
     }
@@ -538,6 +534,7 @@ async fn put_business(State(s): State<AppState>, Admin(a): Admin, Json(input): J
     {
         return Err(ApiError::BadRequest("invalid_logo"));
     }
+    brand::check_assets(&s, &value).await?;
     sqlx::query("INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()")
         .bind(BUSINESS_KEY)
         .bind(&value)
@@ -655,6 +652,7 @@ async fn overview(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<
     .await?;
     Ok(Json(json!({
         "business": business(&s.db).await?,
+        "store_build": operator::store_build(&s).await?,
         "review_account": review_summary(&s.db).await?,
         "integrations": cards,
         "counts": { "staff": counts.0, "verified_pros": counts.1, "active_services": counts.2, "bookings": counts.3 },
@@ -941,7 +939,7 @@ async fn toss_payments_probe(s: &AppState, t: &integrations::TossPayments) -> (b
     }
 }
 
-/// Whether the Toss gate is open for these payout values: env switch on and the saved test passed for this key.
+/// Whether the Toss gate is open for these payout values: env or console switch on and the saved test passed for this key.
 async fn payout_toss_ready(s: &AppState, values: &serde_json::Map<String, Value>) -> ApiResult<bool> {
     let last: Option<Value> = sqlx::query_scalar("SELECT last_test FROM integration_settings WHERE section = $1")
         .bind(Section::Payout.code())
@@ -950,7 +948,7 @@ async fn payout_toss_ready(s: &AppState, values: &serde_json::Map<String, Value>
         .flatten();
     let secret = values.get("secret_key").and_then(Value::as_str).unwrap_or_default();
     Ok(integrations::toss_ready(
-        integrations::toss_env_enabled(),
+        integrations::toss_switch_on(&s.db).await?,
         last.as_ref(),
         &s.config.data_key,
         secret,
