@@ -709,6 +709,40 @@ backup_warn_after() { ( api_backup() { case "$*" in backup-seal*) [ -f "${2#/}" 
 t  "photo offsite failure sets the warning"  eq "$(backup_warn_after)" 1
 rm -f .env backups/db-p07.sql.gz* backups/uploads-* 2>/dev/null
 
+# ---- dahae domain: .env backed up, DOMAIN set, health over the new name; no answer restores .env and exits 3 ----
+# domain_run 응답(ok|fail) 도메인 : 가짜 dc·curl·getent 로 cmd_domain 을 돌려요. 종료 코드를 돌려줘요
+# shellcheck disable=SC2034 # DOMAIN_WAIT_SECS and YES are read by the sourced CLI
+domain_run() {
+  ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; YES=1; DOMAIN_WAIT_SECS=0; HEALTH=$1
+    dc() { printf '%s\n' "$*" >> "$SB/dc.log"; }
+    wait_healthy() { return 0; }
+    curl() { case "$*" in *api.ipify.org*) echo 203.0.113.7 ;; *"/health"*) [ "$HEALTH" = ok ] ;; *) return 1 ;; esac; }
+    getent() { [ "$1" != ahostsv4 ] || echo "${DNS_IP:-203.0.113.7}  STREAM $2"; }
+    cmd_domain "$2" ) >/dev/null 2>&1
+}
+domain_env() { printf 'DOMAIN=old.co.kr\nJWT_SECRET=keep\n' > "$SB/.env"; chmod 600 "$SB/.env"; rm -f "$SB"/backups/env-before-domain-* "$SB/dc.log"; }
+domain_env; domain_run ok new.co.kr; rc=$?
+t  "domain: success exits 0"               eq "$rc" 0
+t  "domain: DOMAIN is the new one"         grep -qx 'DOMAIN=new.co.kr' "$SB/.env"
+t  "domain: other keys stay"               grep -qx 'JWT_SECRET=keep' "$SB/.env"
+t  "domain: .env backed up first"          grep -qx 'DOMAIN=old.co.kr' "$SB"/backups/env-before-domain-*
+t  "domain: backup is root-only"           eq "$(stat -c %a "$SB"/backups/env-before-domain-*)" 600
+t  "domain: api and web recreated"         grep -qx 'up -d api web' "$SB/dc.log"
+domain_env; domain_run fail new.co.kr; rc=$?
+t  "domain: no answer exits 3 (rolled back)" eq "$rc" 3
+t  "domain: .env restored"                 grep -qx 'DOMAIN=old.co.kr' "$SB/.env"
+t  "domain: restarted twice"               eq "$(grep -c 'up -d api web' "$SB/dc.log")" 2
+domain_env; domain_run ok old.co.kr; rc=$?
+t  "domain: the current one is refused"    eq "$rc" 1
+nt "domain: refusal makes no backup"       ls "$SB"/backups/env-before-domain-* >/dev/null 2>&1
+domain_env; domain_run ok localhost; rc=$?
+t  "domain: a bad name is refused"         eq "$rc" 1
+domain_env; DNS_IP=198.51.100.9 domain_run ok new.co.kr; rc=$?
+t  "domain: DNS elsewhere is refused"      eq "$rc" 1
+t  "domain: .env untouched on refusal"     grep -qx 'DOMAIN=old.co.kr' "$SB/.env"
+nt "domain: no restart on refusal"         test -e "$SB/dc.log"
+rm -f "$SB/.env" "$SB"/backups/env-before-domain-* "$SB/dc.log"
+
 bash "$ROOT/scripts/ci/agent-selftest.sh" >/dev/null || { FAIL=$((FAIL + 1)); echo "FAIL: agent self-test (run scripts/ci/agent-selftest.sh)"; }
 
 echo "installer self-test: $PASS passed, $FAIL failed"

@@ -390,12 +390,37 @@ idI=$(uuid7); submit "$idI" "id=$idI\nkind=host-approval-enroll\narg=$STAFF\ntok
 t  "enroll job ends ok"                    eq "$(state "$idI")" ok
 t  "enroll writes a 32-character key"      eq "$(wc -c < "$HOST_DIR/approval.key" | tr -d ' ')" 33
 t  "enroll records the owner"              grep -qF "\"staff_id\":\"$STAFF\"" "$HOST_DIR/owner.json"
-t  "enroll publishes the address"          grep -q 'otpauth://totp/Dahae:server?secret=' "$DAHAE_JOBS/out/$TOK5"
+t  "enroll publishes the address"          grep -q 'otpauth://totp/myshop.co.kr:server?secret=' "$DAHAE_JOBS/out/$TOK5"
+t  "the issuer is this server's domain"    grep -q '&issuer=myshop.co.kr&' "$DAHAE_JOBS/out/$TOK5"
 idJ=$(uuid7); submit "$idJ" "id=$idJ\nkind=host-approval-enroll\narg=$STAFF\ntoken=$TOK5\n"
 t  "second enroll fails"                   eq "$(state "$idJ")" failed
 id=$(uuid7); t  "enroll without a token refused" refuse "$id" "id=$id\nkind=host-approval-enroll\narg=$STAFF\n"
 id=$(uuid7); t  "enroll with a bad owner id refused" refuse "$id" "id=$id\nkind=host-approval-enroll\narg=not-a-uuid\ntoken=$TOK5\n"
 printf '%s\n' "$SECRET" > "$HOST_DIR/approval.key"
+
+# G: domain-set waits for the server approval code, then runs `dahae domain`; a refusal says why in the step text
+printf '0\n' > "$HOST_DIR/approval.last-step"; rm -f "$HOST_DIR/approval.fails"
+idK=$(uuid7); before=$(argv_lines)
+submit "$idK" "id=$idK\nkind=domain-set\narg=new.co.kr\ntoken=$TOK2\n"
+t  "domain-set waits for approval"         eq "$(state "$idK")" awaiting_approval
+t  "domain-set summary names the domain"   grep -q '"summary":"도메인을 new.co.kr 로 바꿔요' "$DAHAE_JOBS/public/$TOK2.json"
+t  "nothing ran before approval"           eq "$(argv_lines)" "$before"
+idL=$(uuid7); submit "$idL" "id=$idL\nkind=domain-set\narg=other.co.kr\ntoken=$TOK3\n"
+t  "a second move is refused while one waits" eq "$(state "$idL")" rejected
+t  "...and the status says why"            grep -q '"step":"다른 작업이 서버 승인을 기다리고 있어요"' "$DAHAE_JOBS/status/$idL.json"
+t  "...and so does the step log"           grep -q '다른 작업이 서버 승인을 기다리고' "$DAHAE_JOBS/status/$idL.log"
+ap "$idK" "$(totp_at "$SECRET" "$(date +%s)")"
+t  "approved move runs dahae domain"       argv_has "domain new.co.kr YES=1"
+t  "approved move ends ok"                 eq "$(state "$idK")" ok
+id=$(uuid7); t  "domain-set without a token refused"  refuse "$id" "id=$id\nkind=domain-set\narg=new.co.kr\n"
+id=$(uuid7); t  "domain-set to localhost refused"     refuse "$id" "id=$id\nkind=domain-set\narg=localhost\ntoken=$TOK3\n"
+id=$(uuid7); t  "domain-set with shell chars refused" refuse "$id" "id=$id\nkind=domain-set\narg=a.com;id\ntoken=$TOK3\n"
+mv "$HOST_DIR/approval.key" "$HOST_DIR/approval.key.off"
+idM=$(uuid7); submit "$idM" "id=$idM\nkind=domain-set\narg=new.co.kr\ntoken=$TOK3\n"
+t  "no approval key: domain-set refused"   eq "$(state "$idM")" rejected
+t  "...with the reason in the status"      grep -q '"step":"서버 승인 코드가 없어요' "$DAHAE_JOBS/status/$idM.json"
+t  "...and the status is still JSON"       python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$DAHAE_JOBS/status/$idM.json"
+mv "$HOST_DIR/approval.key.off" "$HOST_DIR/approval.key"
 
 # ---- results written to out/<token>: logs are masked, read-only folders, 10 minutes ----
 cat > "$SB/logs.txt" <<'LOG'
