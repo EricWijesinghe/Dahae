@@ -225,7 +225,7 @@ run, GitHub-hosted runners incl. macOS, free for public repos). The apps are upl
 cannot be read or has no logo yet; run the workflow with `brand_from_server` off only for a build before the server is up.
 
 **Domain changes.** The owner moves the domain in the console (설정 > 도메인; [guide 04](guide/04-사장님-가이드.md)).
-The old domain keeps serving the API, payment pages, app links and the apps (only website pages get a 302), so
+The old domain keeps serving the API, payment pages, app links and the apps (only website and SEO pages get a 301, sent with no-store so browsers do not keep it), so
 installed apps keep working. Apps bake in the first `API_BASE`; builds with runtime base discovery move to the new
 address by themselves on their next start. After a move, set `API_BASE=https://<new>` and
 `APP_LINK_DOMAIN=<new>,<old>` and run a store build; retire the old domain only after those builds are live and

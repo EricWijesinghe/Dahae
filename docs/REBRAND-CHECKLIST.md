@@ -1,7 +1,8 @@
 # 이름·로고·도메인 바꾸기 — 콘솔 안내 / Rebrand from the console
 
 이름, 로고, 색, 도메인, 결제·문자 연결과 운영 설정은 모두 **콘솔에서** 바꿔요. 터미널도 코드 수정도 필요 없어요.
-저장하면 서버가 보내는 문자·결제 이름, 웹사이트, 약관 페이지, 웹 앱, 설치된 고객·파트너 앱이 한 번에 바뀌어요.
+저장하면 서버가 보내는 문자·결제 이름, 웹사이트, 약관 페이지, 웹 앱, 설치된 고객·파트너 앱이 한 번에 바뀌어요
+(이번 버전보다 예전 스토어 앱은 다음에 앱을 열 때).
 그렇게 바뀔 수 없는 것(스토어 앱 빌드, 바깥 회사의 관리 화면)은 콘솔이 무엇을 해야 하는지 목록으로 알려 줘요.
 아래는 그 순서와, 사장님이 바깥 사이트에서 직접 해야 하는 일이에요.
 
@@ -9,13 +10,14 @@
 
 | 무엇 | 콘솔 위치 | 언제 보이나요 |
 |---|---|---|
-| 서비스 이름, 영문 이름, 짧은 이름(12자), 한 줄 소개, 대표 색 | 설정 > 사업자 정보 | 문자·알림톡·결제 이름은 바로, 웹사이트·약관은 다음 페이지 열 때, 앱은 다음 요청 때 |
-| 로고 | 설정 > 사업자 정보 | 저장하면 콘솔이 아이콘·공유 이미지 7가지를 만들어 올려요. 로고가 없으면 이름 첫 글자 마크를 만들어요 |
+| 서비스 이름, 영문 이름, 짧은 이름(12자), 한 줄 소개, 대표 색 | 설정 > 사업자 정보 | 문자·알림톡·결제 이름은 바로, 웹사이트·약관은 다음 페이지 열 때, 웹 앱과 이번 버전 이후 앱은 다음 요청 때, 예전 버전 앱은 다음에 열 때 |
+| 로고 | 설정 > 사업자 정보 | 저장하면 콘솔이 아이콘·공유 이미지 7가지를 만들어 올려요. 로고가 없으면 [글자 로고 만들기] 로 이름 첫 글자 마크를 만들 수 있어요 |
 | 사업자 정보(상호, 대표, 사업자번호, 통신판매, 주소, 개인정보 책임자·이메일, 호스팅) | 설정 > 사업자 정보 | 웹사이트 바닥글·약관 (전자상거래법) |
 | 결제(PortOne·토스페이먼츠), 문자(Solapi), 푸시, 소셜 로그인, AI, 외부 백업, 주소 검색 | 설정의 각 카드 | 저장 즉시. 약관의 "처리 위탁" 칸도 켠 카드에 맞춰 바뀌어요 |
 | 지급대행(토스) 켜기 | 설정 > 지급대행 (사장님 인증) | 저장 즉시 |
 | 영업시간 (AI 상담 꺼짐 시간) | 설정 > 영업시간 | 저장 즉시 |
-| 업데이트 채널·자동 업데이트 시각·지금 백업·재시작·외부 가동 확인 주소 | 시스템 > 서버 | 서버 작업으로 실행 (사장님 인증) |
+| 업데이트 채널·자동 업데이트 시각·지금 백업·재시작 | 시스템 상태 | 서버 작업으로 실행 (사장님 인증) |
+| 외부 가동 확인 주소 (하트비트) | 설정 > 업타임 하트비트 | 서버 작업으로 실행 (사장님 인증) |
 | 앱 링크 (Android 지문, Apple 팀 ID, 스토어 앱 ID) | 설정 > 앱 링크 (사장님 코드) | `/.well-known/*` 파일이 바로 바뀌어요 |
 | 도메인 | 설정 > 도메인 | 2번 참고 |
 
@@ -23,14 +25,17 @@
 
 ## 2. 도메인 바꾸기
 
+0. 처음 한 번: 설정 > 서버 승인 코드 → [등록하기] 로 인증 앱에 서버 승인 코드를 추가해요. 이것 없이 바꾸면 사장님 인증
+   코드를 쓴 뒤에 서버가 거절해요.
 1. 새 도메인의 A 레코드(그리고 `www.새도메인`)를 서버 IP 로 넣어요. **예전 도메인의 레코드는 지우지 마세요.**
 2. 설정 > 도메인 → 새 도메인 → [DNS 확인] → [바꾸기] → 사장님 인증 코드 → 서버 승인 코드.
-3. 30초쯤 멈췄다가 새 주소로 돌아와요. 새 주소가 응답하지 않으면 서버가 스스로 되돌리고 이유를 보여 줘요.
+3. 서버가 먼저 새 주소를 https 로 확인해요. 응답하지 않으면 아무것도 바꾸지 않고 이유를 보여 줘요. 응답하면 30초쯤 멈췄다가
+   새 주소로 돌아와요.
 4. 예전 주소는 계속 응답해요. 설치된 앱은 예전 주소로 계속 작동하고, 새 버전 앱은 다음 실행 때 새 주소로 옮겨 가요.
-   웹사이트 페이지만 새 주소로 넘어가요(검색 엔진용).
+   웹사이트·검색용 페이지만 새 주소로 넘어가요(301, 검색 엔진 주소 이전용).
 5. 화면의 체크리스트를 복사 버튼으로 하나씩 처리해요: PortOne·토스 웹훅, PG 계약의 사이트 주소(PG 가 다시 심사할 수 있어요),
    네이버 콜백 **추가**(예전 것은 남겨 둬요), 네이버 서비스 URL, 카카오 사이트 도메인, Google 동의 화면 링크, 검색 등록(Search Console·
-   Search Advisor), 스토어의 개인정보·계정 삭제 주소, GitHub `store` 변수(`API_BASE`, `APP_LINK_DOMAIN=새,예전`), 알림톡 웹 링크 버튼.
+   Search Advisor), Apple 로그인 서버 알림 주소, 스토어의 지원·개인정보·계정 삭제 주소, GitHub `store` 변수(`API_BASE`, `APP_LINK_DOMAIN=새,예전`), 알림톡 웹 링크 버튼.
 6. 새 스토어 빌드가 나오면 사업자 정보의 최소 앱 버전을 올리고, 그 다음에만 예전 주소를 **은퇴**시켜요.
 
 처음 한 번: 이 기능 전에 설치한 서버는 설치 줄을 한 번 다시 실행해야 해요 ([guide 08](guide/08-클라우드-배포.md) 8-3).
@@ -43,11 +48,15 @@
 
 - 스토어 앱 ID (`CUSTOMER_APP_ID`, `PARTNER_APP_ID`): 새 ID 는 새 스토어 앱이에요. 첫 업로드 전에 정하세요.
   Firebase 앱도 같은 ID 로 등록해야 해요.
+- 앱 ID 를 바꾸면: 설정 > 애플 로그인의 번들 ID, 카카오·네이버·Google 콘솔의 패키지·번들 ID(Android 키 해시 포함)도 새
+  값으로 등록하세요. 안 하면 그 로그인이 거절돼요 (Apple 로그인은 서버가 번들 ID 를 확인해요).
 - 홈 화면 이름, 아이콘, 시작 화면, 스토어 설명·스크린샷·개인정보 주소
 - 서명 키와 Apple 팀, Firebase 파일, 카카오·네이버·Google 의 앱 키
 - 앱 링크 도메인 (네이버 로그인)
 - **Windows 패키지 게시자 (스토어 업로드 전)**: 빌드 기본값은 임시 `CN=Dahae` / `Dahae` 예요. Partner Center 의 실제 게시자 값은
-  `scripts/store/msix.local.psd1` 에 넣으세요 (Git 에 올리지 않아요).
+  `scripts/store/msix.local.psd1` 에 넣으세요 (Git 에 올리지 않아요). `-ApiBase` 를 주면 `build-msix.ps1` 이 서버에서
+  앱 이름과 아이콘을 받아 패키지에 넣어요. 창 제목줄과 실행 파일 정보(작업 관리자에 보이는 이름)는 아직 `다해` 로 남아요:
+  바꾸려면 `windows/runner/main.cpp` 의 창 제목과 `Runner.rc` 의 이름을 직접 고쳐서 빌드하세요.
 
 ## 4. 바깥 사이트에서 직접 바꾸는 것
 
@@ -71,7 +80,7 @@
 Everything an operator configures (name, English and short name, tagline, colour, logo, company details, gateways,
 SMS, push, social, AI, backup, payouts switch, business hours, server jobs, app links, domain) is changed in the
 console and reaches the server texts, the website and legal pages, the web apps and installed apps at once.
-A domain move keeps the old domain serving everything except website pages (302), so installed apps keep working;
+A domain move keeps the old domain serving everything except website and SEO pages (301, not kept by browsers), so installed apps keep working;
 the console then lists the outside consoles to update with copy buttons, and the old domain is retired only after
 new store builds are live and `min_app_version` is raised. Store builds read the name and icons from the server and the app ids
 from the GitHub `store` variables (keep them equal to the app ids in the console's app links card); the console's store build card says when one is needed. Servers installed before this feature need the
