@@ -31,8 +31,10 @@
 
 - [ ] **Business profile**: service name, main colour, logo, business details, support number (chapter 10).
 - [ ] **Payment methods**: only contracted methods are on (chapter 10).
-- [ ] **Payments (PortOne)** or **Payments (Toss Payments)**: keys saved, **Connected** on **[Check API key]** (chapters 11, 12).
-- [ ] The webhook address is entered on the gateway's screen (chapters 11, 12).
+- [ ] At least one of **Payments (PortOne)** / **Payments (Toss Payments)**: keys saved, **Connected** on **[Check API key]** (chapters 11, 12).
+- [ ] The webhook address is entered on the screen of each gateway you use (chapters 11, 12).
+- [ ] **Payment methods**: each switched-on row shows the gateway you expect (**Gateway: …**) (chapter 10, 10.9).
+- [ ] If you use identity checks (PASS): the PortOne **Identity verification** channel key is saved, and identity sign-in works in the app (chapter 11, 11.12).
 - [ ] **Partner payouts**: manual transfer or Toss payouts chosen (chapter 13).
 - [ ] **SMS & KakaoTalk (Solapi)**: **Connected**, sender number approved, AlimTalk templates approved (chapter 14).
 - [ ] The social sign-in cards you use (Kakao, Naver, Google, Apple) are filled, and you signed in from the app yourself (chapter 15).
@@ -44,7 +46,7 @@
 
 ### Test payments (test keys, no money moves)
 
-- [ ] One payment with each payment method (chapter 12).
+- [ ] One payment with each payment method. If you use both gateways, do this round on each (chapters 11, 12).
 - [ ] One full refund and one partial refund (chapters 12, 21).
 - [ ] Closing the payment window brings the app back to a cancelled payment (chapter 12).
 - [ ] On Android and iPhone, going to a card or easy-pay app and back to our app works (chapter 12).

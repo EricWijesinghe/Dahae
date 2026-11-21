@@ -177,16 +177,17 @@ developer-only material lives in chapter 33.
 - Fields: `PORTONE_FIELDS` in `backend/crates/api/src/integrations.rs`.
 - Screenshots: `console-setup-portone`, `console-setup-portone-channels`, `console-setup-portone-webhook`, `external-portone-store-id`, `external-portone-webhook`.
 
-### 12. 결제 (토스페이먼츠)와 결제사 바꾸기 · Toss Payments and switching gateways — `12-setup-toss-payments`
+### 12. 결제 (토스페이먼츠) · Payments (Toss Payments) — `12-setup-toss-payments`
 - 12.1 Contracts needed (payment window; auto-billing for saved cards/subscriptions) — `payments-setup.md` 6.
 - 12.2 Keys from developers.tosspayments.com: API individual integration keys `test_ck_`/`test_sk_` (not widget `gck/gsk`),
   optional billing MID keys and 64-char security key; fields `TOSS_PAYMENTS_FIELDS`.
 - 12.3 Webhook `cSetupTossWebhook` (`…/v1/webhooks/tosspayments`), events `PAYMENT_STATUS_CHANGED`, `DEPOSIT_CALLBACK`.
 - 12.4 Save test keys (owner code) → **[API 키 확인]** (checks secret key only).
-- 12.5 Switch: unlock → **사용** toggle (`active`) → save; what moves and what stays (started payments, refunds,
-  saved cards stay on their first gateway; PASS identity stays on PortOne) — `payments-setup.md` 전환 규칙.
+- 12.5 PortOne, Toss Payments or both: each method goes to PortOne when it has a channel key, else to Toss while
+  **사용** (`active`, on by default) is on; what stays (started payments, refunds, saved cards stay on their first
+  gateway; PASS identity stays on PortOne) — `multi-gateway-design.md` §2, `payments-setup.md` §6.
 - 12.6 Test each method, refund all tests; then unlock → live keys → check; the "(테스트 키…)" note disappears.
-- 12.7 Roll back: unlock → turn **사용** off → save.
+- 12.7 Pause Toss: unlock → turn **사용** off → save (only new Toss payments and new saved cards stop).
 - Sources: `docs/guide/02` §2-1, `payments-setup.md` 6, `guides['tosspayments']`, CHANGELOG Toss entries.
 - Screenshots: `console-setup-toss`, `console-setup-toss-active`, `console-payments-header-test-keys`, `external-toss-api-keys`, `external-toss-webhook`.
 

@@ -49,7 +49,7 @@ Words in bold are names that appear on the console screen exactly as written.
 
 | Term | Korean | Meaning | Chapter |
 |---|---|---|---|
-| Payment gateway | PG (결제대행사) | A company that takes card and easy-pay payments for you. Dahae uses PortOne and Toss Payments | 11, 12 |
+| Payment gateway | PG (결제대행사) | A company that takes card and easy-pay payments for you. Dahae works with PortOne, Toss Payments, or both | 11, 12 |
 | Channel key | 채널 키 | A PortOne key for each payment method (card company and so on). Starts with `channel-key-` | 11 |
 | Webhook | 웹훅 | An automatic message from the gateway to our server saying "this was paid" | 11, 12, 29 |
 | Webhook secret / Security key | 웹훅 시크릿 / 보안 키 | A secret value that proves the message really came from the gateway | 11, 12, 13 |

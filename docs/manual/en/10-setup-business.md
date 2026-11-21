@@ -202,14 +202,15 @@ Turn the payment methods in the customer app on or off. Each switch applies at o
 
 | Text | Meaning | What to do |
 |---|---|---|
-| **Add the channel key first** | PortOne has no channel key for this method, so it cannot be turned on (the switch is grey) | Add the channel key in the **Payments (PortOne)** card (chapter 11) |
-| **This payment channel is not connected yet, so customers can't see it. Ask whoever manages your setup.** | It is on, but without a channel key customers do not see it | Add the channel key (chapter 11), or switch it off |
+| **Gateway: PortOne** or **Gateway: Toss Payments** | Customers see this method, and its payments go to that gateway | Nothing. To move a method from PortOne to Toss Payments, see chapter 11, 11.12 |
+| **Needs a PortOne channel key or Toss Payments** | No gateway takes this method: PortOne has no channel key for it, and Toss Payments is not set up or its **Active** switch is off. It cannot be turned on (the switch is grey) | Add the channel key in the **Payments (PortOne)** card (chapter 11), or set up Toss Payments (chapter 12) |
+| **This payment channel is not connected yet, so customers can't see it. Ask whoever manages your setup.** | It is on, but no gateway takes it, so customers do not see it | Add the channel key (chapter 11) or set up Toss Payments (chapter 12), or switch it off |
 
 > **Warning** You cannot turn every method off. Turning off the last one shows **Keep at least one payment method on. With none on, customers can't pay.** and nothing is saved.
 
-> **Warning** Once payments go to Toss Payments (chapter 12), methods hidden for lack of a channel key are shown to customers if they are on. Before switching, leave on only the methods Toss Payments contracted and approved.
+> **Warning** While Toss Payments is set up with its **Active** switch on (chapter 12), every switched-on method without a PortOne channel key is offered to customers through Toss Payments. Before you save Toss Payments, leave on only the methods Toss Payments contracted and approved, or that PortOne has a channel key for.
 
-> **Tip** On a new install all 10 methods are on. Customers still see only the methods that have a channel key.
+> **Tip** On a new install all 10 methods are on. Customers still see only the methods some gateway takes: with PortOne only, the ones that have a channel key; with Toss Payments, every switched-on method.
 
 ---
 
@@ -223,5 +224,5 @@ Turn the payment methods in the customer app on or off. Each switch applies at o
 | **Could not make images from this logo. Try another PNG or JPG file.** | The console could not make icons from that logo | Use a PNG or JPG file |
 | You changed the colour but the apps did not | The colour is too light for white text | Pick a darker colour (the warning goes away) and save |
 | No app download buttons on the website | No store links yet | Add them after release (10.6) and save |
-| A payment method switch is grey | That method has no channel key | Add the PortOne channel key (chapter 11) |
+| A payment method switch is grey | No gateway takes that method | Add the PortOne channel key (chapter 11), or set up Toss Payments (chapter 12) |
 | Customers are stuck on an "update" screen | **Minimum version** is higher than the version in the stores | Fix or empty **Minimum version** and save |

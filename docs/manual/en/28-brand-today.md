@@ -321,8 +321,8 @@ At the bottom of the **Domain** card is the **After the move** list: **Copy each
 
 | Screen line | Value to paste (example new domain `new.co.kr`) | Why |
 |---|---|---|
-| **PortOne console → webhook URL** | `https://new.co.kr/v1/webhooks/portone` | PortOne payment results come to the new address (chapter 11, 11.5) |
-| **Toss Payments developer center → webhook** | `https://new.co.kr/v1/webhooks/tosspayments` | Toss Payments results and virtual-account deposit notices (chapter 12, 12.5) |
+| **PortOne console → webhook URL** | `https://new.co.kr/v1/webhooks/portone` | PortOne payment results come to the new address (chapter 11, 11.5). Skip it if you do not use PortOne |
+| **Toss Payments developer center → webhook** | `https://new.co.kr/v1/webhooks/tosspayments` | Toss Payments results and virtual-account deposit notices (chapter 12, 12.5). Skip it if you do not use Toss Payments |
 | **Toss payouts webhook** | `https://new.co.kr/v1/webhooks/toss` | Only if you use Toss payouts (chapter 13) |
 | **Site URL in the PG contract (may be reviewed again)** | `https://new.co.kr` | The site address in the payment company contract. The payment company may review it again; whether it really does differs by company and is **to be confirmed**. Ask their sales contact first |
 | **Naver Developers → add Callback URL (keep the old one while old apps exist)** | `https://new.co.kr/auth/naver/callback` | Where Naver sign-in returns. Do **not** delete the old address; **add** the new one. Whether Naver accepts several addresses is **to be confirmed** (chapter 15) |

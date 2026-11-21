@@ -113,7 +113,7 @@ In the same order as the console's side menu. Each menu is explained in chapter 
 
 ### Payments and payouts
 - PortOne V2 checkout: cards, easy-pay, bank transfer, virtual account (turned on and off per channel)
-- Toss Payments checkout (optional: PortOne stays as it is and only new payments go to Toss Payments; you can switch back to PortOne at any time)
+- Toss Payments checkout (optional: PortOne, Toss Payments or both; customers see the methods of every gateway you set up)
 - Payment reconciliation that finds payments that do not match
 - Cash receipts and tax invoices
 - Points and coupons

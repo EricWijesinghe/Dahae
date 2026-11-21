@@ -30,8 +30,8 @@ Create every account **in the company's (business) name**. Give the developer ad
 | ☐ | **AWS account** (payment method added) | Renting the server | Owner | Before install | 3 |
 | ☐ | **Domain** (e.g. `example.co.kr`) | The address customers and staff use | Owner and developer decide together (registration and DNS can be done in a Cloudflare account) | Before install | 5 |
 | ☐ | **Authenticator app** | Console two-step sign-in | Owner's phone | Right after install | 6 |
-| ☐ | **PortOne** (payments) + PG contract | Customer payments, identity checks | Owner | Before opening (review takes long) | 11 |
-| ☐ | **Toss Payments** (optional) | Payments, automatic partner payouts | Owner | When you want it | 12, 13 |
+| ☐ | **PortOne** (payments) + PG contract | Customer payments (PortOne and/or Toss Payments: at least one), identity checks (PASS needs PortOne) | Owner | Before opening (review takes long) | 11 |
+| ☐ | **Toss Payments** (optional) | Payments (alone or next to PortOne), automatic partner payouts | Owner | Before opening, if you take payments with it | 12, 13 |
 | ☐ | **Solapi** (SMS) + sender number | SMS, AlimTalk | Owner | Before opening (sender number registration takes long) | 14 |
 | ☐ | **KakaoTalk channel** (AlimTalk, optional) | KakaoTalk AlimTalk | Owner | When using AlimTalk | 14 |
 | ☐ | **Firebase** (Google account) | App push notifications | Owner (gives the developer access) | Before app release | 16 |
@@ -75,8 +75,9 @@ This book lists no prices, because providers change them often. Check them where
 
 These wait on another company's review and can take days. **Apply before you install.** You can install and set up other things while you wait.
 
-1. Sign up for **PortOne and apply for the PG review**. (Time depends on the company.)
-2. Apply for the **Toss Payments electronic payment contract** (only if you use it). For saved cards or recurring visits, also apply for the **automatic payment (자동결제) contract**.
+1. Decide how you take payments: PortOne, Toss Payments, or both. You need at least one. Identity checks (PASS) need PortOne.
+   - For PortOne: sign up for **PortOne and apply for the PG review**. (Time depends on the company.)
+2. For Toss Payments: apply for the **Toss Payments electronic payment contract**. For saved cards or recurring visits, also apply for the **automatic payment (자동결제) contract**.
 3. Sign up for **Solapi and register a sender number**.
 4. Open a **KakaoTalk channel** and submit the AlimTalk templates for review (chapter 14). Kakao's review usually takes a few business days.
 5. Apply for the **D-U-N-S number, the Google Play organization and the Apple organization**.
@@ -89,7 +90,7 @@ This is the sample timeline from the launch plan. Real times depend on each comp
 
 | Day | Who | Task |
 |---|---|---|
-| Day 0 | Owner | Sign the license agreement, choose the domain, create the AWS deployer account (chapter 3), register the Play and Apple organizations, invite the developer as admin, sign up for Firebase, Kakao, PortOne and Solapi |
+| Day 0 | Owner | Sign the license agreement, choose the domain, create the AWS deployer account (chapter 3), register the Play and Apple organizations, invite the developer as admin, sign up for Firebase, Kakao, PortOne and/or Toss Payments, and Solapi |
 | Day 0 | Developer | Confirm the license agreement, prepare deployment |
 | Day 0–1 | Developer · owner | Create the server (chapter 4, developer); owner account and setup (chapter 6 and Part 3, done by the owner with the developer guiding on a call) |
 | Day 1 | Developer | Build the apps and make the first uploads |

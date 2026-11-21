@@ -352,7 +352,7 @@
   "id": "console-setup-pay-methods",
   "app": "console",
   "chapter": "10",
-  "what": "Payment methods card with switches; one method showing it needs a key",
+  "what": "Payment methods card with switches; rows showing their gateway (Gateway: PortOne / Gateway: Toss Payments) and one method showing it needs a PortOne channel key or Toss Payments",
   "lang": [
    "ko",
    "en"
@@ -410,7 +410,7 @@
   "id": "console-setup-toss",
   "app": "console",
   "chapter": "12",
-  "what": "Toss Payments card open with client key, secret key, billing keys, security key fields and webhook URL",
+  "what": "Toss Payments card open with client key, secret key, billing keys, security key fields, webhook URL and the Active: take payments with Toss Payments switch (on by default)",
   "lang": [
    "ko",
    "en"
@@ -420,7 +420,7 @@
   "id": "console-setup-toss-active",
   "app": "console",
   "chapter": "12",
-  "what": "Toss Payments card unlocked with the Use switch on, before saving",
+  "what": "Toss Payments card unlocked with the Active: take payments with Toss Payments switch on, before saving",
   "lang": [
    "ko",
    "en"
@@ -430,7 +430,7 @@
   "id": "console-payments-header-test-keys",
   "app": "console",
   "chapter": "12",
-  "what": "Payments heading with New payments go to: Toss Payments and the test-keys note",
+  "what": "Payments heading with Payments go to: PortOne, Toss Payments and the test-keys note next to Toss Payments",
   "lang": [
    "ko",
    "en"

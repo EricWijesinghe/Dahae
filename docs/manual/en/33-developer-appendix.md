@@ -138,7 +138,7 @@ sudo dahae restore-offsite db-20261110-033000.sql.gz.enc
 - `dahae rollback` swaps the program only. Migrations are not undone. To go back in time for data as well, use `dahae restore`.
 - **Saved cards (migration 0326):** on first start the server seals saved billing keys. Rolling back past it breaks saved-card charges and key cleanup on account deletion. Roll forward, or restore the pre-update backup.
 - **Toss payouts (0472, 0473):** do not roll 1.5 back to 1.4 while a payout waits on Toss. `dahae rollback` stops and prints the count if any such payout exists or it cannot check. Settle them with **[Check status]** in the console's **[Settlements]** first.
-- **Toss Payments payments (0500–0502):** before rolling back to a version without Toss, turn off **Active: take new payments with Toss Payments** on the **Payments (Toss Payments)** card, and wait until no Toss payment is in progress or waiting for a deposit and no Toss refund is queued.
+- **Toss Payments payments (0500–0502):** before rolling back to a version without Toss, turn off **Active: take payments with Toss Payments** on the **Payments (Toss Payments)** card (this stops only new Toss payments and new saved cards), and wait until no Toss payment is in progress or waiting for a deposit and no Toss refund is queued.
 - When a failed update rolls back by itself, `dahae update` exits with code 3, and the console shows **Failed, so it went back to the previous version**.
 
 ---
@@ -268,6 +268,13 @@ Not yet verified: automatic certificate and profile creation, returning from car
 
 - Webhooks never change payment state directly. The server looks the payment up at the gateway again.
 - Reconciliation runs every `reconcile_interval_secs` (default 60 seconds).
+- **PortOne, Toss Payments, or both.** PortOne is configured with an API secret and a store id (env or console) and serves a method only when that method has a channel key. Toss Payments is configured when its card is saved and valid, and is offered while `active` is on (the default).
+  - Each method goes to one gateway: PortOne if it serves the method, else Toss Payments if offered, else the method is hidden. Methods keep catalogue order; where gateways are listed, PortOne comes first.
+  - New saved cards: PortOne if it can save cards (`card_billing` or the legacy `card` key), else Toss Payments with its billing key pair, else card saving is off.
+  - Rows never move: `checkouts`, `payment_methods` and `payments` keep the `gateway` they name, so refunds, webhooks, reconciliation and subscription charges follow the row. `active` off stops only new Toss checkouts and new saved cards.
+  - `GET /v1/payments/methods` and `GET`/`PUT /v1/admin/payment-methods` return `gateway` per method. `GET /v1/admin/setup` returns `payment_gateways: [{code, mode}]`; the old `payment_gateway` and `payment_gateway_mode` stay for older consoles. No request fields were added and there is no migration.
+  - A PortOne channel key set in env without an API secret or store id is no longer listed (it could never be paid).
+  - **To be confirmed:** PASS reads the PortOne config from env only (`routes/me.rs`), so a PortOne identity channel saved in the console may not turn PASS on until that read uses the console values.
 - Not yet verified: real PortOne card decline codes, the cash receipt issue response, a measured Toss webhook signature, the Toss payout creation response wrapper (`payments-setup.md` section 5).
 
 ---

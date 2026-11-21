@@ -2,6 +2,7 @@
 
 **In this chapter:** connect PortOne so customers can pay by card and easy-pay apps.
 You take four things from the PortOne site (store ID, V2 API secret, channel keys, webhook secret), put them into the **Payments (PortOne)** card in the console, and check with a test payment.
+PortOne is optional: you can use PortOne only, Toss Payments only (chapter 12), or both. Identity checks (PASS) always need PortOne.
 
 > **Before you start**
 > - Business registration certificate (needed for PortOne sign-up and the payment provider's review)
@@ -9,6 +10,8 @@ You take four things from the PortOne site (store ID, V2 API secret, channel key
 > - A contract and review with the payment providers (PGs). You apply through PortOne; the provider sets the review time.
 > - The owner account and authenticator app (the first save needs the owner code)
 > - The card basics from chapter 9
+
+> **Note** If you take payments with Toss Payments only, you need this card only for identity checks (PASS): fill in **Store ID**, **V2 API Secret** and the **Identity verification** channel key. How PortOne and Toss Payments share the work is in 11.12.
 
 > **Warning** This card carries the **Needs a developer the first time** badge. For a first contract and channel setup, do it together with your developer.
 
@@ -140,7 +143,7 @@ The **Issue cash receipts (Optional)** switch starts off. The help line says: **
 4. Click **[Confirm]**.
 
 **You should now see:** **Saved**, and the labels **Saved** and **Locked** on the card header.
-Under the **Payments** heading you see **New payments go to: PortOne**.
+Under the **Payments** heading you see **Payments go to: PortOne**. If Toss Payments is also set up and takes some methods, it reads **Payments go to: PortOne, Toss Payments**.
 
 > **Warning** Only the owner can make the first save. It decides where payment money goes.
 
@@ -195,13 +198,44 @@ Test with PortOne test channel keys first, then switch to the real channel keys.
 
 ## 11.11 Never remove the PortOne card
 
-Even when new payments go to Toss Payments later (chapter 12), keep the PortOne card as it is.
+Even if you add Toss Payments later (chapter 12), keep the PortOne card as it is while any of the following remain.
 
 - Refunds of payments taken through PortOne use the PortOne card.
 - Cards saved through PortOne, and their recurring charges, use PortOne.
 - Identity verification (PASS) always uses PortOne.
 
 > **Warning** Clicking **[Disconnect]** on the PortOne card makes all of the above fail.
+
+---
+
+## 11.12 PortOne and Toss Payments together
+
+You can take payments with PortOne only, Toss Payments only (chapter 12), or both. Customers see the methods of every gateway that is set up.
+
+**How the two share the methods**
+
+- A method that has a PortOne channel key goes to PortOne.
+- Every other switched-on method goes to Toss Payments, while the **Active** switch on the **Payments (Toss Payments)** card is on.
+- A method is never offered twice. The **Payment methods** card (10.9) shows each method's gateway, for example **Gateway: PortOne**.
+- New saved cards go to PortOne when it has the **Recurring billing key** or **Card payment** channel key. Otherwise they go to Toss Payments, if it has billing keys.
+- Payments, refunds, saved cards and recurring visits that already exist stay on the gateway they started on.
+
+**Move one method from PortOne to Toss Payments**
+
+1. Check that Toss Payments approved this method, and that the **Payments (Toss Payments)** card is saved with **Active** on (chapter 12).
+2. Only for **Card payment**, and only if new saved cards should stay on PortOne: first put the saved-card channel key into **Recurring billing key** (unlock, paste, save). Without it, clearing **Card payment** also sends new saved cards to Toss Payments, or stops card saving when Toss Payments has no billing keys.
+3. Clear that method's channel key on the PortOne card.
+4. Open **Payment methods** (10.9). The row now shows **Gateway: Toss Payments**.
+
+> **To be confirmed** On this card an empty box keeps its saved value (11.10), so the console may not yet have a way to clear a single channel key. Ask your developer to clear it. Do not click **[Disconnect]** for this: it removes the whole card.
+
+To move the method back to PortOne, put its channel key in again (11.4).
+
+**Identity checks (PASS)**
+
+- PASS needs PortOne with the **Identity verification** channel key, even when every payment goes to Toss Payments.
+
+> **To be confirmed** In this release, PASS may turn on only from the PortOne keys your developer put on the server at install, not from keys saved on this card. After saving the identity channel, try identity sign-in in the customer app. If it does not appear, ask your developer.
 
 ---
 
@@ -217,5 +251,6 @@ Even when new payments go to Toss Payments later (chapter 12), keep the PortOne 
 | **Only the owner can unlock** | An admin who is not the owner tried the first save | Sign in as the owner and save |
 | **The key was rejected. Check the value you copied** | PortOne refused the V2 API secret | Create a new secret in PortOne, then unlock, paste, save |
 | **Could not reach the service. Try again shortly** | PortOne did not answer | Check again in a few minutes |
-| A payment method is missing in the customer app | No channel key for it, or it is off under **Payment methods** | Add the channel key (11.4) and switch it on (10.9) |
+| A payment method is missing in the customer app | No gateway takes it (no PortOne channel key, and no Toss Payments), or it is off under **Payment methods** | Add the channel key (11.4) or set up Toss Payments (chapter 12), and switch it on (10.9) |
+| A method you expected on PortOne shows **Gateway: Toss Payments** | PortOne has no channel key for it | Add its channel key (11.4) |
 | A payment went through but the console does not show it as paid | The webhook address or secret may be wrong | Check 11.5 again and tell your developer |

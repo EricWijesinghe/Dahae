@@ -16,14 +16,14 @@ Chapters 10 to 17 explain what goes into each card. The steps in this chapter wo
 
 1. Click **[Setup]** in the left menu. (Only admins see it.)
 2. The top card is titled **Get ready to launch**.
-3. To the right of the title is a count such as **0 of 13 done**, with a progress bar under it.
+3. To the right of the title is a count such as **0 of 12 done**, with a progress bar under it.
 
 ![Top of the Setup page: Get ready to launch and the progress bar](../img/en/console-setup-overview.png)
 
 **You should now see:** the **Get ready to launch** title, the count, and the **Business profile** card under it.
 
-- The count covers 13 items: the **Business profile** and 12 outside-service cards. It goes up when you save the service name or save values on a card. Passing the connection check does not matter here. Cards filled in when the server was installed count too.
-- When all 13 are done, the title changes to **Everything is ready!**
+- The count covers 12 items: the **Business profile**, one payments item and 10 other outside-service cards. **Payments (PortOne)** and **Payments (Toss Payments)** count as one item: saving either one is enough. It goes up when you save the service name or save values on a card. Passing the connection check does not matter here. Cards filled in when the server was installed count too.
+- When all 12 are done, the title changes to **Everything is ready!**
 - You do not need every card to open for business. See "Must do, can wait" in 9.8.
 
 > **Warning** If the line **Test mode: no real payments or messages are sent** appears under the progress bar, the server runs in test mode. If you see it on your real business server, tell your developer.
@@ -204,8 +204,8 @@ Apply early for anything slow, such as the payment provider's review, and fill i
 | Order | Card | You need | Time | When |
 |---|---|---|---|---|
 | 1 | **Business profile** | Business registration, mail-order registration, logo image | 10 min | Must, first |
-| 2 | **Payments (PortOne)** | Business registration, PortOne account and the PG review | Review time (set by the company) | Must (to take payments) |
-| 2-1 | **Payments (Toss Payments)** | Toss Payments online-payment contract (and auto-billing for saved cards) | Review time (set by the company) | Optional |
+| 2 | **Payments (PortOne)** | Business registration, PortOne account and the PG review | Review time (set by the company) | At least one of 2 / 2-1 (to take payments). PASS needs 2 |
+| 2-1 | **Payments (Toss Payments)** | Toss Payments online-payment contract (and auto-billing for saved cards) | Review time (set by the company) | At least one of 2 / 2-1 (to take payments) |
 | 3 | **SMS & KakaoTalk (Solapi)** | Sender-number registration documents | Set by the company | Must |
 | 4 | **App push (Firebase)** | A Google account | 10 min | Before app release |
 | 5 | **Kakao / Naver / Google / Apple login** | A developer account for each | 10–20 min each | Before app release |

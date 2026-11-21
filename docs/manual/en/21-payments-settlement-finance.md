@@ -47,7 +47,7 @@ Refunds are made in two places:
 
 Good to know:
 
-1. Money goes back through the gateway the customer paid with (PortOne or Toss Payments). After you switch gateways, older payments still refund through the old one, so never delete the old gateway's setup card ([chapter 12](12-setup-toss-payments.md)).
+1. Money goes back through the gateway the customer paid with (PortOne or Toss Payments). This stays true after you add a gateway or pause one, so never delete a gateway's setup card while its payments or saved cards remain ([chapter 12](12-setup-toss-payments.md)).
 2. Cancelling a booking puts its partner settlement **On hold**.
 3. A full refund automatically cancels a tax invoice request that has not been exported yet. If it was already exported or issued on 홈택스, cancel it yourself on 홈택스 with an amended tax invoice. A partial refund leaves the request as it is.
 4. A cash receipt is cancelled automatically on a full refund. What to do on a partial refund is **to be confirmed** with your accountant.

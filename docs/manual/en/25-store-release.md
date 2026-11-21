@@ -216,6 +216,8 @@ Reviewers cannot receive Korean text messages, so one review-only number gets a 
 
 > **Warning** Raise the **Minimum version** only after the new version can be downloaded from **both** stores. Raising it earlier stops the apps of customers who cannot update yet.
 
+> **Warning** Customer apps from the stores that are older than the first release with Toss Payments cannot open Toss Payments, so methods that go to Toss Payments fail for them (no money moves). Before Toss Payments takes payments (chapter 12), publish the new apps and, once they are in both stores, raise the customer app's **Minimum version** to that release. Which version number that is, is **to be confirmed** with your developer. The web app is always up to date.
+
 ### Switch off the review demo account
 
 After the review, click **[Disconnect]** on the **Store review demo account** card. If you leave it, it switches off by itself after 14 days.
