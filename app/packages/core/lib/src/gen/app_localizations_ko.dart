@@ -6012,6 +6012,460 @@ class TKo extends T {
   String get quoteSizeChangeSize => '평수 고치기';
 
   @override
+  String get cRbNameEn => '영문 이름';
+
+  @override
+  String get cRbShortName => '짧은 이름 (12자 이내: 문자 앞머리, 홈 화면 이름)';
+
+  @override
+  String get cRbTagline => '한 줄 소개';
+
+  @override
+  String get cRbTaglineEn => '영문 한 줄 소개';
+
+  @override
+  String get cRbPrivacyEmail => '개인정보 문의 이메일';
+
+  @override
+  String get cRbLetterMark => '글자 로고 만들기';
+
+  @override
+  String get cRbNoLogoWarn =>
+      '로고가 없어서 기본 로고가 보여요. 로고를 올리거나 이름 첫 글자로 글자 로고를 만드세요.';
+
+  @override
+  String get cRbPreviewTitle => '이렇게 보여요';
+
+  @override
+  String get cRbPreviewBody => '저장하면 이 이미지들을 올리고 모든 화면에 바로 적용해요.';
+
+  @override
+  String get cRbSlotFavicon => '브라우저 탭';
+
+  @override
+  String get cRbSlotAppIcon => '앱 아이콘';
+
+  @override
+  String get cRbSlotMaskable => '홈 화면 아이콘';
+
+  @override
+  String get cRbSlotShare => '공유 카드';
+
+  @override
+  String get cRbMaking => '이미지를 만들고 있어요';
+
+  @override
+  String cRbUploading(String done, String total) {
+    return '이미지 올리는 중 ($done/$total)';
+  }
+
+  @override
+  String get cRbDeriveFailed => '로고로 이미지를 만들지 못했어요. 다른 PNG나 JPG 파일로 해 보세요.';
+
+  @override
+  String get cRbAppliedTitle => '저장했어요. 이렇게 적용돼요';
+
+  @override
+  String get cRbAppliedList =>
+      '· 바로: 문자·알림톡·결제 이름, 검색 페이지\n· 다음에 열 때: 홈페이지·약관 페이지, 아이콘, 공유 이미지\n· 다음 요청 때: 고객·파트너·관리 앱 (웹과 설치된 앱)\n· 스토어 빌드 후: 앱 이름·아이콘·앱 ID (스토어 앱 빌드 카드)\n· 직접 바꿔야 해요: PG 가맹점 이름, 카카오 채널 이름, 스토어 등록 정보';
+
+  @override
+  String get cRbStoreTitle => '스토어 앱 빌드';
+
+  @override
+  String get cRbStoreBody => '앱 이름·아이콘·앱 ID·네이버 로그인 주소는 스토어에 새 빌드를 올려야 바뀌어요.';
+
+  @override
+  String get cRbStoreNone => '마지막 빌드 이후 바뀐 것이 없어요';
+
+  @override
+  String cRbStoreChanged(String items) {
+    return '마지막 빌드 이후 바뀐 것: $items';
+  }
+
+  @override
+  String get cRbStoreItemName => '이름';
+
+  @override
+  String get cRbStoreItemIcon => '아이콘';
+
+  @override
+  String get cRbStoreItemColor => '색';
+
+  @override
+  String get cRbStoreItemAppIds => '앱 ID';
+
+  @override
+  String get cRbStoreItemDomain => '도메인';
+
+  @override
+  String get cRbStoreBuildUrl => '빌드 페이지 주소';
+
+  @override
+  String get cRbStoreOpen => '빌드 페이지 열기';
+
+  @override
+  String get cRbStoreAck => '빌드했어요';
+
+  @override
+  String get cRbStoreAcked => '빌드했다고 기록했어요';
+
+  @override
+  String cRbStoreLastAck(String date) {
+    return '마지막 빌드 기록: $date';
+  }
+
+  @override
+  String get cRbStoreBuildTimeTitle => '새 빌드를 올려야 바뀌는 것';
+
+  @override
+  String get cRbStoreBuildTimeList =>
+      '· 앱 ID (새 ID는 새 스토어 앱이에요)\n· 홈 화면 이름, 앱 아이콘, 시작 화면\n· 스토어 등록 문구, 스크린샷, 개인정보 주소\n· 서명 키와 애플 팀\n· Firebase 설정 파일 (콘솔의 FCM 키와 같은 프로젝트)\n· 카카오·네이버·구글 앱 키\n· 앱 링크 주소 (네이버 로그인)\n· 처음 접속하는 서버 주소 (이후 이동은 앱이 알아서 따라가요)\n· 처음 열 때 잠깐 보이는 기본 브랜드\n· 앱에 들어 있는 언어';
+
+  @override
+  String get cRbStoreOutsideTitle => '다른 곳에서 직접 바꿔야 하는 것';
+
+  @override
+  String get cRbStoreOutsideList =>
+      '· 카드 명세서의 가맹점 이름 (포트원·토스)\n· 카카오 채널 이름과 알림톡 문구 (카카오 승인)\n· 문자 발신번호 등록\n· 소셜 로그인 동의 화면의 앱 이름\n· 스토어 등록 이름';
+
+  @override
+  String get cRbDomainTitle => '도메인';
+
+  @override
+  String cRbDomainCurrent(String host) {
+    return '지금 주소: $host';
+  }
+
+  @override
+  String get cRbDomainAliases => '예전 주소 (계속 연결돼요)';
+
+  @override
+  String get cRbDomainChange => '도메인 바꾸기';
+
+  @override
+  String get cRbDomainNew => '새 도메인 (예: example.co.kr)';
+
+  @override
+  String get cRbDomainInvalid => '도메인 형식이 아니거나 지금 주소와 같아요';
+
+  @override
+  String get cRbDomainCheck => 'DNS 확인';
+
+  @override
+  String get cRbDomainChecking => 'DNS를 확인하고 있어요';
+
+  @override
+  String cRbDomainDnsOk(String ip) {
+    return 'A 레코드가 이 서버($ip)를 가리켜요';
+  }
+
+  @override
+  String cRbDomainDnsBad(String ip, String found) {
+    return 'A 레코드를 이 서버 IP $ip로 바꿔 주세요. 지금 값: $found';
+  }
+
+  @override
+  String get cRbDomainDnsAaaa => 'AAAA 레코드가 다른 곳을 가리켜요. 지우거나 이 서버 주소로 바꿔 주세요.';
+
+  @override
+  String get cRbDomainDnsNone => '없음';
+
+  @override
+  String get cRbDomainWhatTitle => '무엇이 바뀌나요';
+
+  @override
+  String get cRbDomainWhatList =>
+      '· 홈페이지와 웹 앱 주소가 새 도메인으로 옮겨가요\n· 서비스가 30초쯤 멈춰요\n· 설치된 앱은 예전 주소로 계속 작동해요. 1.x 이후 버전은 다음 실행 때 새 주소로 자동으로 옮겨가요\n· 바깥 서비스(결제·로그인·검색)에 새 주소를 넣어야 해요. 옮긴 뒤 목록을 보여 드려요\n· 예전 주소는 직접 닫을 때까지 계속 연결돼요\n· 웹에서는 새 주소에서 다시 로그인해야 해요';
+
+  @override
+  String get cRbDomainApply => '바꾸기';
+
+  @override
+  String get cRbDomainRunning => '바꾸는 중이에요. 서비스가 30초쯤 멈춰요.';
+
+  @override
+  String cRbDomainDone(String domain) {
+    return '$domain(으)로 바꿨어요';
+  }
+
+  @override
+  String get cRbDomainOpenNew => '새 주소로 열기';
+
+  @override
+  String cRbDomainRolledBack(String reason) {
+    return '되돌렸어요: $reason';
+  }
+
+  @override
+  String cRbDomainRejected(String reason) {
+    return '서버가 거절했어요: $reason';
+  }
+
+  @override
+  String cRbDomainFailed(String reason) {
+    return '바꾸지 못했어요: $reason';
+  }
+
+  @override
+  String get cRbDomainOldAgent =>
+      '서버 프로그램이 예전 버전이에요. 설치 명령을 한 번 다시 실행한 뒤 바꿔 주세요.';
+
+  @override
+  String get cRbDomainNoReason => '이유를 받지 못했어요';
+
+  @override
+  String get cRbDomainRetire => '닫기';
+
+  @override
+  String cRbRetireTitle(String host) {
+    return '$host 닫기';
+  }
+
+  @override
+  String cRbRetireBody(String customer, String partner) {
+    return '닫으면 이 주소로 접속하는 앱이 더는 연결되지 않아요. 지금 최소 앱 버전: 고객 $customer, 파트너 $partner.';
+  }
+
+  @override
+  String get cRbRetireConfirm => '새 주소로 만든 스토어 앱이 나왔고 최소 앱 버전을 올렸어요';
+
+  @override
+  String get cRbRetired => '예전 주소를 닫았어요';
+
+  @override
+  String get cRbApprovalTitle => '서버 승인 코드';
+
+  @override
+  String get cRbApprovalBody => '인증 앱의 서버 승인 코드 6자리를 넣으세요. 사장님 코드와 달라요.';
+
+  @override
+  String get cRbApprovalEnter => '승인 코드 넣기';
+
+  @override
+  String get cRbChecklistTitle => '옮긴 뒤 할 일';
+
+  @override
+  String get cRbChecklistHint => '바깥 서비스마다 새 값을 복사해 넣고 체크하세요.';
+
+  @override
+  String get cRbCheck_portone_webhook => '포트원 콘솔 → 웹훅 주소';
+
+  @override
+  String get cRbCheck_toss_payments_webhook => '토스페이먼츠 개발자센터 → 웹훅';
+
+  @override
+  String get cRbCheck_toss_payouts_webhook => '토스 지급대행 웹훅';
+
+  @override
+  String get cRbCheck_pg_site_url => 'PG 계약의 사이트 주소 (다시 심사할 수 있어요)';
+
+  @override
+  String get cRbCheck_naver_callback =>
+      '네이버 개발자센터 → Callback URL 추가 (예전 앱이 있는 동안 예전 값도 두세요)';
+
+  @override
+  String get cRbCheck_naver_service_url => '네이버 개발자센터 → 서비스 URL';
+
+  @override
+  String get cRbCheck_kakao_site_domain => '카카오 개발자센터 → 플랫폼 → Web (등록했다면)';
+
+  @override
+  String get cRbCheck_google_consent =>
+      'Google Cloud 동의 화면: 홈페이지·개인정보 주소 (설정했다면)';
+
+  @override
+  String get cRbCheck_search_console =>
+      'Google Search Console: 새 속성, 인증 코드는 사업자 정보에';
+
+  @override
+  String get cRbCheck_naver_search_advisor =>
+      '네이버 서치어드바이저: 새 사이트, 인증 코드는 사업자 정보에';
+
+  @override
+  String get cRbCheck_app_store_urls => 'App Store Connect: 개인정보·지원 주소';
+
+  @override
+  String get cRbCheck_play_urls => 'Play Console: 개인정보·계정 삭제 주소';
+
+  @override
+  String get cRbCheck_ms_store_urls => 'Microsoft Partner Center: 개인정보·지원 주소';
+
+  @override
+  String get cRbCheck_github_store_vars => 'GitHub store 환경 변수, 그다음 스토어 빌드';
+
+  @override
+  String get cRbCheck_alimtalk_links => '웹 링크 버튼이 있는 알림톡 템플릿 (다시 승인 받아야 해요)';
+
+  @override
+  String get cRbCheck_dns_keep_old => '예전 A/AAAA 레코드는 닫을 때까지 두고, www.새도메인 추가';
+
+  @override
+  String get cRbCheck_version_floor => '새 스토어 앱이 나온 뒤: 사업자 정보에서 최소 앱 버전 올리기';
+
+  @override
+  String cRbServerMoved(String base) {
+    return '서버 주소가 $base(으)로 바뀌었어요. 이 앱의 서버 주소도 바꿔 주세요.';
+  }
+
+  @override
+  String get cRbServerMovedAction => '서버 주소 바꾸기';
+
+  @override
+  String get cRbHostTitle => '서버 설정';
+
+  @override
+  String get cRbChannel => '업데이트 채널';
+
+  @override
+  String get cRbChannelStable => '안정';
+
+  @override
+  String get cRbChannelBeta => '베타';
+
+  @override
+  String get cRbSchedule => '자동 업데이트';
+
+  @override
+  String get cRbOff => '끄기';
+
+  @override
+  String get cRbDays => '월,화,수,목,금,토,일';
+
+  @override
+  String get cRbTime => '시각 (HH:MM)';
+
+  @override
+  String get cRbInvalidTime => 'HH:MM 형식으로 넣어 주세요';
+
+  @override
+  String get cRbApply => '적용';
+
+  @override
+  String get cRbBackupNow => '지금 백업';
+
+  @override
+  String get cRbRestart => '서비스 다시 시작';
+
+  @override
+  String get cRbRestartConfirm => '서비스를 다시 시작할까요? 1분쯤 접속이 끊겨요.';
+
+  @override
+  String get cRbSkipUpdate => '다음 자동 업데이트 건너뛰기';
+
+  @override
+  String get cRbJobQueued => '요청했어요. 최근 서버 작업에서 볼 수 있어요';
+
+  @override
+  String get cRbHeartbeatUrl => '하트비트 주소 (https://...)';
+
+  @override
+  String get cRbHeartbeatInvalid => 'https:// 로 시작하는 주소를 넣어 주세요';
+
+  @override
+  String get cRbHeartbeatOff => '설정 필요: 업타임 서비스에서 받은 하트비트 주소를 넣고 저장하세요.';
+
+  @override
+  String get cRbKindStatusRefresh => '상태 새로고침';
+
+  @override
+  String get cRbKindBackupNow => '지금 백업';
+
+  @override
+  String get cRbKindUpdateSkip => '업데이트 건너뛰기';
+
+  @override
+  String get cRbKindChannel => '업데이트 채널';
+
+  @override
+  String get cRbKindRestart => '다시 시작';
+
+  @override
+  String get cRbKindSchedule => '자동 업데이트 일정';
+
+  @override
+  String get cRbKindHeartbeat => '하트비트';
+
+  @override
+  String get cRbKindDomainCheck => 'DNS 확인';
+
+  @override
+  String get cRbKindDomainSet => '도메인 바꾸기';
+
+  @override
+  String get cRbKindEnroll => '승인 코드 등록';
+
+  @override
+  String get cRbStateAwaiting => '승인 코드를 기다려요';
+
+  @override
+  String get cRbStateRejected => '거절됨';
+
+  @override
+  String get cRbEnrollTitle => '서버 승인 코드';
+
+  @override
+  String get cRbEnrollBody =>
+      '도메인 바꾸기 같은 큰 작업은 서버가 이 두 번째 코드를 직접 확인해요. 인증 앱에 한 번만 등록하세요.';
+
+  @override
+  String get cRbEnrollStart => '등록하기';
+
+  @override
+  String get cRbEnrollWaiting => '서버가 코드를 만들고 있어요';
+
+  @override
+  String get cRbEnrollSecret => '설정 키';
+
+  @override
+  String get cRbEnrollUri => '인증 앱 주소';
+
+  @override
+  String get cRbEnrollDone => '인증 앱에 추가했으면 끝이에요. 이 화면을 떠나면 다시 볼 수 없어요.';
+
+  @override
+  String cRbEnrollFailed(String reason) {
+    return '등록하지 못했어요: $reason';
+  }
+
+  @override
+  String get cRbPayoutSwitch => '토스 지급대행 켜기';
+
+  @override
+  String get cRbPayoutSwitchHint =>
+      '켜면 정산금이 토스 지급대행으로 파트너 계좌에 나가요. 바꿀 때마다 사장님 코드가 필요해요.';
+
+  @override
+  String get cRbPayoutOn => '토스 지급대행을 켰어요';
+
+  @override
+  String get cRbPayoutOff => '토스 지급대행을 껐어요';
+
+  @override
+  String get cRbHoursTitle => '영업시간';
+
+  @override
+  String get cRbHoursHint => 'AI 상담이 영업시간이 아니라고 안내할 때 써요.';
+
+  @override
+  String get cRbHoursOpen => '여는 시각 (HH:MM)';
+
+  @override
+  String get cRbHoursClose => '닫는 시각 (HH:MM)';
+
+  @override
+  String get cRbHoursInvalid => '요일을 하나 이상 고르고, 닫는 시각을 여는 시각보다 늦게 넣어 주세요.';
+
+  @override
+  String get cRbAndroidPackages => '안드로이드 패키지 이름 (한 줄에 하나)';
+
+  @override
+  String get cRbIosBundles => 'iOS 번들 ID (한 줄에 하나)';
+
+  @override
+  String get cRbAppIdsHint => '비워 두면 기본 앱 ID를 써요. 바꾸면 스토어 빌드에도 같은 값을 넣으세요.';
+
+  @override
   String get rnwTitle => '갱신 일정';
 
   @override
