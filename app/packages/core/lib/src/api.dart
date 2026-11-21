@@ -53,6 +53,12 @@ class ApiClient {
 
   final String baseUrl;
   final Session session;
+
+  /// The last `X-Brand-Version` header the server sent (any status). Brand screens refetch when it moves.
+  final brandVersion = ValueNotifier<String?>(null);
+
+  /// The server's canonical https address (`api_base` in `/v1/config`) once known; its files count as own files.
+  final publicBase = ValueNotifier<String?>(null);
   final http.Client _http;
   static const _timeout = Duration(seconds: 20);
   Future<bool>? _refreshing;
@@ -196,6 +202,8 @@ class ApiClient {
     } catch (_) {
       throw const ApiException(0, 'network');
     }
+    final brand = res.headers['x-brand-version'];
+    if (brand != null && brand.isNotEmpty) brandVersion.value = brand;
     if (res.statusCode == 401 &&
         !retried &&
         session.refreshToken != null &&

@@ -13,6 +13,9 @@ extension L10nX on BuildContext {
   T get t => T.of(this);
   String get lang => Localizations.localeOf(this).languageCode;
   String won(int amount) => formatWon(amount, lang);
+
+  /// The business name in the UI language (English name when set and English is picked).
+  String get brandName => BrandScope.of(this).nameFor(lang);
 }
 
 /// Every user-facing label that depends on a server code lives here,

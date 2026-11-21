@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
+import '../brand_scope.dart';
 import '../theme.dart';
 import '../tokens.dart';
 import 'icon3d_registry.dart';
@@ -311,9 +312,13 @@ class _Icon3DArt extends StatelessWidget {
   final bool idle;
   final bool enabled;
 
+  /// The business's uploaded logo replaces the built-in wordmark art.
+  static const _brandArt = 'brand_wordmark';
+
   @override
   Widget build(BuildContext context) {
     final spec = Icon3DRegistry.of(id);
+    final logo = id == _brandArt ? BrandScope.of(context).logoUrl : null;
     final dimIdle = idle && spec.hasIdle;
     final plate = Clay3DPlate(
       icon: spec.icon,
@@ -336,7 +341,17 @@ class _Icon3DArt extends StatelessWidget {
     );
     final active = Icon3DRegistry.assetFor(id, size: size);
     // No grey idle file for this id: the active art, greyed, before the plate.
-    Widget art = dimIdle
+    Widget art = logo != null
+        ? Image.network(
+            logo,
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            gaplessPlayback: true,
+            excludeFromSemantics: true,
+            errorBuilder: (_, _, _) => image(active, () => plate),
+          )
+        : dimIdle
         ? image(
             Icon3DRegistry.assetFor(id, idle: true, size: size),
             () => _greyed(image(active, () => plate)),

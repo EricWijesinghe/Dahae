@@ -90,7 +90,8 @@ class _DahaeLogoState extends State<DahaeLogo>
       c.value = 1;
       return;
     }
-    if (widget.variant == DahaeLogoVariant.threeD) {
+    final uploaded = (widget.brand ?? BrandScope.of(context)).logoUrl != null;
+    if (widget.variant == DahaeLogoVariant.threeD && !uploaded) {
       // Decode every frame up front so the sequence never shows a gap.
       for (var i = 0; i < DahaeLogo.frameCount; i++) {
         precacheImage(
@@ -128,8 +129,11 @@ class _DahaeLogoState extends State<DahaeLogo>
     );
     final onDark = w.onDark ?? context.colors.isDark;
     final tagline = w.tagline;
+    final name = brand.nameFor(
+      Localizations.maybeLocaleOf(context)?.languageCode,
+    );
     final words = Text(
-      brand.name,
+      name,
       style: TextStyle(
         fontFamily: 'Dahae Sans',
         package: 'ui',
@@ -176,7 +180,7 @@ class _DahaeLogoState extends State<DahaeLogo>
           )
         : mark;
     return Semantics(
-      label: w.semanticLabel ?? brand.name,
+      label: w.semanticLabel ?? name,
       image: true,
       excludeSemantics: true,
       child: body,
@@ -206,6 +210,8 @@ class _DahaeLogoState extends State<DahaeLogo>
       const Interval(0.35, 1).transform(t),
     );
     final flat = CustomPaint(painter: DahaeMarkPainter(brand, checkT: checkT));
+    // An uploaded logo stands in for every variant: the mono and 3D art are the built-in brand's.
+    if (brand.logoUrl != null) return _uploadedOr(brand, flat);
     return switch (w.variant) {
       DahaeLogoVariant.flat => _uploadedOr(brand, flat),
       DahaeLogoVariant.mono => CustomPaint(
