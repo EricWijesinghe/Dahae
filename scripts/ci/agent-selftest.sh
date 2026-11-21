@@ -331,8 +331,11 @@ before=$(argv_lines)
 ap "$id2" "$good"
 t  "reused code refused"                  eq "$(argv_lines)" "$before"
 t  "reused code keeps the slot"           test -e "$HOST_DIR/awaiting.job"
+s0=$(( $(date +%s) / 30 ))
 for w in 000001 000002 000003 000004; do ap "$id2" "$w"; done
 t  "five wrong codes cancel the job"      eq "$(state "$id2")" cancelled
+t  "cancel burns every code still valid"  test "$(last_step)" -ge $((s0 + 1))
+t  "cancel replaces the public summary"   grep -q '"state":"cancelled"' "$DAHAE_JOBS/public/$TOK2.json"
 t  "cancel empties the slot"              test ! -e "$HOST_DIR/awaiting.job"
 
 # C: an unanswered job expires after its time is up
@@ -375,6 +378,7 @@ rm -f "$HOST_DIR/approval.fails"; intake_all
 t  "waiting job held before the lock"      eq "$(state "$idH")" awaiting_approval
 : > "$HOST_DIR/approval.fails"
 for _ in 1 2 3 4 5 6 7 8 9 10; do date +%s >> "$HOST_DIR/approval.fails"; done
+printf '0\n' > "$HOST_DIR/approval.last-step"       # the two cancels above burned the current codes
 good=$(totp_at "$SECRET" $(( $(date +%s) + 30 )))   # the next 30-second step: not used yet
 before=$(argv_lines)
 ap "$idH" "$good"

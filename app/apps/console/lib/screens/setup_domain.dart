@@ -106,8 +106,9 @@ class _DomainBodyState extends State<_DomainBody> {
   }
 
   Future<void> _move() async {
-    final d = _dns?['domain'] as String?;
-    if (d == null) return;
+    // What the owner typed, not what the API echoed back: the check result only has to agree with it.
+    final d = _typed();
+    if (d == null || _dns?['domain'] != d) return;
     final api = context.api;
     final job = await runOwnerAction(
       context,
@@ -134,10 +135,16 @@ class _DomainBodyState extends State<_DomainBody> {
         if (!mounted) return;
         setState(() => _phase = MovePhase.awaiting);
         final t = context.t;
+        final summary = await _serverSummary(api, job);
+        if (!mounted) return;
+        if (summary == null) {
+          showToast(context, t.cRbApprovalNoSummary);
+          return;
+        }
         final code = await askOwnerTotp(
           context,
           title: t.cRbApprovalTitle,
-          body: t.cRbApprovalBody,
+          body: '${t.cRbApprovalBody}\n\n$summary',
         );
         if (code == null || !mounted) return;
         setState(() => _phase = MovePhase.running);
@@ -161,6 +168,23 @@ class _DomainBodyState extends State<_DomainBody> {
       setState(() => _phase = MovePhase.awaiting);
       showToast(context, context.t.error(e));
     }
+  }
+
+  /// The root agent's own summary of the held job, which the API cannot write (Caddy serves it from the agent's
+  /// public folder). Null unless it says the domain moves to what the owner typed: then do not approve.
+  Future<String?> _serverSummary(ApiClient api, Json job) async {
+    final token = job['progress_token'], moved = _moved;
+    if (token is! String || moved == null) return null;
+    // The agent writes the hold state a moment before the summary.
+    for (var i = 0; i < 5; i++) {
+      final p = await api.getServerFile('/ops-progress/$token');
+      final s = p is Map ? p['summary'] : null;
+      if (p is Map && p['state'] == 'awaiting_approval' && s is String) {
+        return s.contains('도메인을 $moved 로') ? s : null;
+      }
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+    return null;
   }
 
   void _finish(Json job) {

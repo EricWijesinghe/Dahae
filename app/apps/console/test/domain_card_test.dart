@@ -14,13 +14,17 @@ import 'support/console_host.dart';
 const _dnsOk =
     '{"domain":"new.example","server_ip":"1.2.3.4","a":["1.2.3.4"],"aaaa":[],"match":true,"aaaa_ok":true}';
 
+const _token = '0123456789abcdef0123456789abcdef';
+
 /// A server that runs the DNS check, holds `domain-set` for the approval code and then ends in [end].
 /// Like the agent, it stays on hold for one poll after the code is sent, then runs for one poll.
+/// [summary] is what the root agent wrote to `/ops-progress/<token>` for the held job.
 FakeApi _server({
   required Json end,
   List<Json> checklist = const [],
   List<Json> aliases = const [],
   String dns = _dnsOk,
+  String summary = '도메인을 new.example 로 바꿔요 (예전 주소도 계속 응답해요)',
 }) {
   var approved = false;
   var polls = 0;
@@ -35,16 +39,25 @@ FakeApi _server({
       '/admin/host/jobs',
       (c) => ApiReply(202, {
         'id': (c.body as Json)['kind'] == 'domain-check' ? 'chk' : 'set',
+        'progress_token': _token,
       }),
     )
+    ..reply('GET', '/ops-progress/$_token', {
+      'state': 'awaiting_approval',
+      'summary': summary,
+    })
     ..reply('GET', '/admin/host/jobs/chk', {'id': 'chk', 'state': 'ok'})
     ..reply('GET', '/admin/host/jobs/chk/output', {'text': dns})
     ..on(
       'GET',
       '/admin/host/jobs/set',
       (_) => switch (approved ? ++polls : 0) {
-        0 || 1 => {'id': 'set', 'state': 'awaiting_approval'},
-        2 => {'id': 'set', 'state': 'running'},
+        0 || 1 => {
+          'id': 'set',
+          'state': 'awaiting_approval',
+          'progress_token': _token,
+        },
+        2 => {'id': 'set', 'state': 'running', 'progress_token': _token},
         _ => end,
       },
     )
@@ -72,8 +85,8 @@ Future<void> _code(WidgetTester tester, String code) async {
   await settle(tester);
 }
 
-/// Domain typed, DNS checked, owner code and server approval code given.
-Future<void> _move(WidgetTester tester) async {
+/// Domain typed, DNS checked, owner code given; the approval dialog is not answered yet.
+Future<void> _toApproval(WidgetTester tester) async {
   await tester.tap(find.text(koT.cRbDomainChange));
   await settle(tester);
   await tester.enterText(find.byType(TextField), 'New.Example');
@@ -84,7 +97,13 @@ Future<void> _move(WidgetTester tester) async {
   await tester.tap(find.text(koT.cRbDomainApply));
   await settle(tester);
   await _code(tester, '111111'); // owner code
-  expect(find.text(koT.cRbApprovalBody), findsOneWidget);
+}
+
+/// Domain typed, DNS checked, owner code and server approval code given.
+Future<void> _move(WidgetTester tester) async {
+  await _toApproval(tester);
+  expect(find.textContaining(koT.cRbApprovalBody), findsOneWidget);
+  expect(find.textContaining('도메인을 new.example 로 바꿔요'), findsOneWidget);
   await _code(tester, '222222'); // server approval code
 }
 
@@ -120,6 +139,21 @@ void main() {
       );
       expect(find.text(koT.cRbDomainDone('new.example')), findsOneWidget);
       expect(find.text(koT.cRbDomainOpenNew), findsOneWidget);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'a server summary naming another domain stops before the approval code',
+    (tester) async {
+      final fake = await _pump(
+        tester,
+        _server(end: const {}, summary: '도메인을 evil.example 로 바꿔요'),
+      );
+      await _toApproval(tester);
+      expect(find.text(koT.cRbApprovalNoSummary), findsOneWidget);
+      expect(find.textContaining(koT.cRbApprovalBody), findsNothing);
+      expect(fake.callsTo('POST', '/admin/host/jobs/set/approve'), isEmpty);
       await unmount(tester);
     },
   );

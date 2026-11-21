@@ -253,6 +253,8 @@ cancel_slot() { # cancel_slot 이유 : 승인 칸의 작업을 취소로 남기�
   if ! job_parse "$SLOT_JOB"; then clear_slot; return 0; fi
   say_step "!" "$reason"
   set_state cancelled || warn "취소 상태를 못 남겼어요"
+  # 지금 맞는 코드는 모두 써 버린 것으로 해요: API 가 받아 둔 코드로 다음에 올린 작업을 승인하지 못해요
+  write_file "$APPROVAL_STEP" "$(( $(date +%s) / 30 + 1 ))" || warn "승인 단계를 못 남겼어요"
   clear_slot
 }
 

@@ -84,6 +84,22 @@ class ApiClient {
   Future<dynamic> get(String path, {Map<String, String?>? query}) =>
       _send('GET', path, query: query);
 
+  /// A file the server's root side publishes outside the API (`/ops-progress/<token>`): no sign-in, decoded
+  /// JSON, or null when it is missing or unreadable.
+  Future<Object?> getServerFile(String path) async {
+    try {
+      final res = await _http
+          .get(Uri.parse('$baseUrl$path'))
+          .timeout(const Duration(seconds: 10));
+      return res.statusCode == 200
+          ? jsonDecode(utf8.decode(res.bodyBytes))
+          : null;
+    } on Object catch (e) {
+      debugPrint('server file unreadable: $e');
+      return null;
+    }
+  }
+
   /// One page of a cursor list. The server sends `X-Next-Cursor` while more rows follow.
   Future<({List<dynamic> items, String? next})> getPage(
     String path, {
