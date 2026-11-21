@@ -16,7 +16,7 @@
 | 지급대행(토스) 켜기 | 설정 > 지급대행 (사장님 인증) | 저장 즉시 |
 | 영업시간 (AI 상담 꺼짐 시간) | 설정 > 영업시간 | 저장 즉시 |
 | 업데이트 채널·자동 업데이트 시각·지금 백업·재시작·외부 가동 확인 주소 | 시스템 > 서버 | 서버 작업으로 실행 (사장님 인증) |
-| 앱 링크 (Android 지문, Apple 팀 ID, 스토어 앱 ID) | 설정 > 앱 링크 | `/.well-known/*` 파일이 바로 바뀌어요 |
+| 앱 링크 (Android 지문, Apple 팀 ID, 스토어 앱 ID) | 설정 > 앱 링크 (사장님 코드) | `/.well-known/*` 파일이 바로 바뀌어요 |
 | 도메인 | 설정 > 도메인 | 2번 참고 |
 
 여러 서버를 쓰는 경우에도 다른 서버는 1분 안에 따라와요.
@@ -38,7 +38,8 @@
 ## 3. 새 스토어 빌드가 있어야 바뀌는 것
 
 콘솔의 **스토어 앱 빌드** 카드가 바뀐 항목(이름, 아이콘, 색, 앱 ID, 도메인)을 보여 줘요. 빌드는 [guide 11](guide/11-앱-직접-빌드.md).
-빌드가 이름·아이콘·앱 ID 를 서버에서 받아 오므로 저장소를 고칠 필요는 없어요.
+빌드가 이름·아이콘을 서버에서 받아 오므로 저장소를 고칠 필요는 없어요. 앱 ID 는 GitHub `store` 변수에서 받아요.
+콘솔 앱 링크의 앱 ID 와 같게 넣으세요 (다르면 네이버 로그인 앱 링크가 확인되지 않아요).
 
 - 스토어 앱 ID (`CUSTOMER_APP_ID`, `PARTNER_APP_ID`): 새 ID 는 새 스토어 앱이에요. 첫 업로드 전에 정하세요.
   Firebase 앱도 같은 ID 로 등록해야 해요.
@@ -70,8 +71,8 @@
 Everything an operator configures (name, English and short name, tagline, colour, logo, company details, gateways,
 SMS, push, social, AI, backup, payouts switch, business hours, server jobs, app links, domain) is changed in the
 console and reaches the server texts, the website and legal pages, the web apps and installed apps at once.
-A domain move keeps the old domain serving everything except website pages (301), so installed apps keep working;
+A domain move keeps the old domain serving everything except website pages (302), so installed apps keep working;
 the console then lists the outside consoles to update with copy buttons, and the old domain is retired only after
-new store builds are live and `min_app_version` is raised. Store builds read the name, icons and app ids from the
-server; the console's store build card says when one is needed. Servers installed before this feature need the
+new store builds are live and `min_app_version` is raised. Store builds read the name and icons from the server and the app ids
+from the GitHub `store` variables (keep them equal to the app ids in the console's app links card); the console's store build card says when one is needed. Servers installed before this feature need the
 install line run once (new job runner and CLI). The licensor credit stays on every page.

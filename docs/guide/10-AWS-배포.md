@@ -227,6 +227,7 @@ sudo dahae setup-code
 콘솔의 도메인 바꾸기처럼 서버 쪽 명령이 새로 생기면, 이미 만든 서버는 설치 줄을 한 번 다시 실행해야 해요 (`dahae update` 는 앱 이미지만 바꿔요).
 AWS 콘솔 → **Systems Manager > Run Command > AWS-RunShellScript** → 대상 인스턴스를 고르고, 명령에 설치 줄을 그대로 넣어 실행해요
 (같은 도메인, 데이터는 그대로예요). B-5 의 웹 SSH 로 실행해도 돼요.
+도메인을 옮긴 뒤에는 `MALKKEUM_DOMAIN` 을 빼고 실행하세요 (.env 의 도메인을 써요). 넣으면 그 도메인으로 다시 옮겨 가요.
 
 ---
 
