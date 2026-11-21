@@ -49,13 +49,18 @@ const _old = 'https://old.test';
 const _new = 'https://new.test';
 const _id = '0011223344556677';
 
-/// `/v1/config` on the probed host answers with [installId]; [hang] never answers.
+/// `/v1/config` on the probed host answers with [installId]; [hang] never answers. The current host's
+/// `/.well-known/dahae-domain` (written by Caddy from the root-owned DOMAIN) answers [approved].
 http.Client _probe({
   String? installId = _id,
   bool hang = false,
   List<Uri>? seen,
+  String approved = 'new.test',
 }) => MockClient((req) async {
   seen?.add(req.url);
+  if (req.url.path == '/.well-known/dahae-domain') {
+    return http.Response('$approved\n', 200);
+  }
   if (hang) await Completer<void>().future;
   return http.Response(
     jsonEncode({'install_id': installId}),
@@ -103,7 +108,10 @@ void main() {
 
       await s.discovery.check(_config(_new));
 
-      expect(seen.single.toString(), '$_new/v1/config');
+      expect(seen.map((u) => '$u'), [
+        '$_old/.well-known/dahae-domain',
+        '$_new/v1/config',
+      ]);
       expect(s.storage.data[apiBaseOverrideKey], '$_old|$_new');
       expect(s.api.baseUrl, _old, reason: 'never switched mid-session');
       expect(s.api.publicBase.value, _new);
@@ -193,8 +201,30 @@ void main() {
     await s.discovery.check(_config(_new));
     await s.discovery.check(_config(_new));
 
-    expect(seen, hasLength(1));
+    expect(seen, hasLength(2));
   });
+
+  test(
+    'a base the server root did not approve is never probed or saved',
+    () async {
+      for (final probe in [
+        _probe(approved: 'evil.test'),
+        _probe(approved: ''),
+        MockClient(
+          (req) async => req.url.path == '/.well-known/dahae-domain'
+              ? http.Response('not found', 404)
+              : http.Response(jsonEncode({'install_id': _id}), 200),
+        ),
+      ]) {
+        final s = _setup(probe: probe);
+
+        await s.discovery.check(_config(_new));
+
+        expect(s.storage.data, isEmpty);
+        expect(s.api.publicBase.value, isNull);
+      }
+    },
+  );
 
   test('web never saves an override and never reads one', () async {
     final s = _setup(probe: _probe(), web: true);

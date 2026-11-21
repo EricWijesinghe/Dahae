@@ -54,7 +54,9 @@ Future<String> resolveApiBase({
 }
 
 /// Follows a domain move: after a `/v1/config` answer whose `api_base` differs from the current address,
-/// asks that address for its `/v1/config` and keeps it only when it reports the same `install_id`.
+/// asks that address for its `/v1/config` and keeps it only when it reports the same `install_id`. First the
+/// current server's Caddy must name that host as the domain root approved (`/.well-known/dahae-domain`, from the
+/// root-written DOMAIN): `api_base` and `install_id` both come from the API, which alone proves nothing.
 /// The saved address applies at the next cold start, never mid-session (payments, sockets).
 /// The address is only ever taken from `/v1/config`, never from a deep link or a push.
 class ApiBaseDiscovery {
@@ -90,6 +92,7 @@ class ApiBaseDiscovery {
     }
     if (id is! String || id.isEmpty || next == _tried) return;
     _tried = next;
+    if (!await _rootApproved(current, next)) return;
     if (!await _sameInstall(next, id)) return;
     api.publicBase.value = next;
     if (web) return;
@@ -100,6 +103,19 @@ class ApiBaseDiscovery {
       );
     } on Exception catch (e) {
       debugPrint('new server address not saved: $e');
+    }
+  }
+
+  Future<bool> _rootApproved(String current, String next) async {
+    try {
+      final res = await _http
+          .get(Uri.parse('$current/.well-known/dahae-domain'))
+          .timeout(timeout);
+      return res.statusCode == 200 &&
+          utf8.decode(res.bodyBytes).trim() == Uri.parse(next).host;
+    } on Object catch (e) {
+      debugPrint('approved domain unreadable: $e');
+      return false;
     }
   }
 

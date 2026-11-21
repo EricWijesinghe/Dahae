@@ -113,6 +113,13 @@
 		respond 404
 	}
 
+	# The domain root approved (DOMAIN in the root-written .env). The apps check it before following a new
+	# api_base from /v1/config, because a hijacked API could name any host there (api_base_discovery.dart).
+	handle /.well-known/dahae-domain {
+		header Cache-Control "no-store"
+		respond "{$DOMAIN}"
+	}
+
 	@api path /v1/* /health /.well-known/assetlinks.json /.well-known/apple-app-site-association
 	handle @api {
 		reverse_proxy api:8080
