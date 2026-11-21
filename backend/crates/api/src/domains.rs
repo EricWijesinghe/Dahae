@@ -235,7 +235,8 @@ async fn tls_ask(State(s): State<AppState>, Query(q): Query<Ask>) -> StatusCode 
 pub fn checklist_items(cur: &str, aliases: &[Alias]) -> Vec<(&'static str, String)> {
     let base = format!("https://{cur}");
     let old: Vec<&str> = aliases.iter().map(|a| a.host.as_str()).collect();
-    let link_hosts = std::iter::once(cur).chain(old.iter().copied()).collect::<Vec<_>>().join(",");
+    // native-keys.sh takes at most three hosts: the current one and the two newest former ones.
+    let link_hosts = std::iter::once(cur).chain(old.iter().rev().take(2).copied()).collect::<Vec<_>>().join(",");
     // shortcut: the API does not know the server IP, so this lists the hosts whose records to keep or add; the
     // console shows the IP from the domain-check result.
     let keep = old.iter().map(|h| h.to_string()).chain([format!("www.{cur}")]).collect::<Vec<_>>().join(", ");
@@ -396,5 +397,19 @@ mod tests {
         assert_eq!(items["github_store_vars"], "API_BASE=https://new.co.kr\nAPP_LINK_DOMAIN=new.co.kr,old.co.kr");
         assert_eq!(items["dns_keep_old"], "old.co.kr, www.new.co.kr");
         assert_eq!(items.len(), 17);
+    }
+
+    #[test]
+    fn app_link_hosts_stay_within_the_three_a_store_build_takes() {
+        let aliases: Vec<Alias> = ["a.kr", "b.kr", "c.kr"]
+            .iter()
+            .map(|h| Alias {
+                host: (*h).into(),
+                since: t(1),
+            })
+            .collect();
+        let items: BTreeMap<_, _> = checklist_items("new.kr", &aliases).into_iter().collect();
+        // scripts/ci/native-keys.sh refuses more than three hosts; the newest former hosts stay.
+        assert_eq!(items["github_store_vars"], "API_BASE=https://new.kr\nAPP_LINK_DOMAIN=new.kr,c.kr,b.kr");
     }
 }
