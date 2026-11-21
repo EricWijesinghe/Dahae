@@ -6027,7 +6027,8 @@ class TKo extends T {
   String get cRbNameEn => '영문 이름';
 
   @override
-  String get cRbShortName => '짧은 이름 (12자 이내: 문자 맨 앞 [ ] 안의 이름, 홈 화면 이름)';
+  String get cRbShortName =>
+      '짧은 이름 (12자 이내: 문자 맨 앞 [ ] 안의 이름, 결제 이름(○○ 예약금)·알림 채널 이름, 홈 화면 이름)';
 
   @override
   String get cRbTagline => '한 줄 소개';
@@ -6079,7 +6080,7 @@ class TKo extends T {
 
   @override
   String get cRbAppliedList =>
-      '· 바로: 문자·알림톡·결제 이름, 검색 페이지\n· 다음에 열 때: 홈페이지·약관 페이지, 아이콘, 공유 이미지\n· 다음 요청 때: 고객·파트너·관리 앱 (웹과 설치된 앱)\n· 스토어 빌드 후: 앱 이름·아이콘·앱 ID (스토어 앱 빌드 카드)\n· 직접 바꿔야 해요: PG 가맹점 이름, 카카오 채널 이름, 스토어 등록 정보';
+      '· 바로: 문자·알림톡·결제 이름, 검색 페이지\n· 다음에 열 때: 홈페이지·약관 페이지, 아이콘, 공유 이미지, 예전 버전 앱\n· 다음 요청 때: 웹 앱과 이번 버전 이후 앱 (고객·파트너·관리)\n· 스토어 빌드 후: 앱 이름·아이콘·앱 ID (스토어 앱 빌드 카드)\n· 직접 바꿔야 해요: PG 가맹점 이름, 카카오 채널 이름, 스토어 등록 정보';
 
   @override
   String get cRbStoreTitle => '스토어 앱 빌드';
@@ -6253,6 +6254,10 @@ class TKo extends T {
   String get cRbApprovalBody => '인증 앱의 서버 승인 코드 6자리를 넣으세요. 사장님 코드와 달라요.';
 
   @override
+  String get cRbApprovalNoSummary =>
+      '서버가 쓴 작업 내용을 읽지 못했거나 입력한 도메인과 달라요. 승인하지 마세요.';
+
+  @override
   String get cRbApprovalEnter => '승인 코드 넣기';
 
   @override
@@ -6296,7 +6301,11 @@ class TKo extends T {
       '네이버 서치어드바이저: 새 사이트, 인증 코드는 사업자 정보에';
 
   @override
-  String get cRbCheck_app_store_urls => 'App Store Connect: 개인정보·계정 삭제 주소';
+  String get cRbCheck_apple_notifications =>
+      'Apple Developer → Sign in with Apple → 서버 알림 주소 (설정했다면)';
+
+  @override
+  String get cRbCheck_app_store_urls => 'App Store Connect: 지원·개인정보·계정 삭제 주소';
 
   @override
   String get cRbCheck_play_urls => 'Play Console: 개인정보·계정 삭제 주소';
@@ -6374,7 +6383,7 @@ class TKo extends T {
   String get cRbHeartbeatUrl => '하트비트 주소 (https://...)';
 
   @override
-  String get cRbHeartbeatInvalid => 'https:// 로 시작하는 주소를 넣어 주세요';
+  String get cRbHeartbeatInvalid => 'https:// 로 시작하고 = 이 없는 주소를 넣어 주세요';
 
   @override
   String get cRbHeartbeatOff => '설정 필요: 업타임 서비스에서 받은 하트비트 주소를 넣고 저장하세요.';
@@ -6477,7 +6486,8 @@ class TKo extends T {
   String get cRbIosBundles => 'iOS 번들 ID (한 줄에 하나)';
 
   @override
-  String get cRbAppIdsHint => '비워 두면 기본 앱 ID를 써요. 바꾸면 스토어 빌드에도 같은 값을 넣으세요.';
+  String get cRbAppIdsHint =>
+      '비워 두면 기본 앱 ID를 써요. 바꾸면 스토어 빌드에도 같은 값을 넣고, 설정 > 애플 로그인의 번들 ID와 카카오·네이버·Google 콘솔의 패키지·번들 ID(키 해시)도 새 값으로 등록하세요. 안 하면 그 로그인이 막혀요.';
 
   @override
   String get rnwTitle => '갱신 일정';

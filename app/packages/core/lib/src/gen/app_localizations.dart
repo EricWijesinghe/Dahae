@@ -11475,7 +11475,7 @@ abstract class T {
   /// No description provided for @cRbShortName.
   ///
   /// In ko, this message translates to:
-  /// **'짧은 이름 (12자 이내: 문자 맨 앞 [ ] 안의 이름, 홈 화면 이름)'**
+  /// **'짧은 이름 (12자 이내: 문자 맨 앞 [ ] 안의 이름, 결제 이름(○○ 예약금)·알림 채널 이름, 홈 화면 이름)'**
   String get cRbShortName;
 
   /// No description provided for @cRbTagline.
@@ -11571,7 +11571,7 @@ abstract class T {
   /// No description provided for @cRbAppliedList.
   ///
   /// In ko, this message translates to:
-  /// **'· 바로: 문자·알림톡·결제 이름, 검색 페이지\n· 다음에 열 때: 홈페이지·약관 페이지, 아이콘, 공유 이미지\n· 다음 요청 때: 고객·파트너·관리 앱 (웹과 설치된 앱)\n· 스토어 빌드 후: 앱 이름·아이콘·앱 ID (스토어 앱 빌드 카드)\n· 직접 바꿔야 해요: PG 가맹점 이름, 카카오 채널 이름, 스토어 등록 정보'**
+  /// **'· 바로: 문자·알림톡·결제 이름, 검색 페이지\n· 다음에 열 때: 홈페이지·약관 페이지, 아이콘, 공유 이미지, 예전 버전 앱\n· 다음 요청 때: 웹 앱과 이번 버전 이후 앱 (고객·파트너·관리)\n· 스토어 빌드 후: 앱 이름·아이콘·앱 ID (스토어 앱 빌드 카드)\n· 직접 바꿔야 해요: PG 가맹점 이름, 카카오 채널 이름, 스토어 등록 정보'**
   String get cRbAppliedList;
 
   /// No description provided for @cRbStoreTitle.
@@ -11862,6 +11862,12 @@ abstract class T {
   /// **'인증 앱의 서버 승인 코드 6자리를 넣으세요. 사장님 코드와 달라요.'**
   String get cRbApprovalBody;
 
+  /// No description provided for @cRbApprovalNoSummary.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버가 쓴 작업 내용을 읽지 못했거나 입력한 도메인과 달라요. 승인하지 마세요.'**
+  String get cRbApprovalNoSummary;
+
   /// No description provided for @cRbApprovalEnter.
   ///
   /// In ko, this message translates to:
@@ -11940,10 +11946,16 @@ abstract class T {
   /// **'네이버 서치어드바이저: 새 사이트, 인증 코드는 사업자 정보에'**
   String get cRbCheck_naver_search_advisor;
 
+  /// No description provided for @cRbCheck_apple_notifications.
+  ///
+  /// In ko, this message translates to:
+  /// **'Apple Developer → Sign in with Apple → 서버 알림 주소 (설정했다면)'**
+  String get cRbCheck_apple_notifications;
+
   /// No description provided for @cRbCheck_app_store_urls.
   ///
   /// In ko, this message translates to:
-  /// **'App Store Connect: 개인정보·계정 삭제 주소'**
+  /// **'App Store Connect: 지원·개인정보·계정 삭제 주소'**
   String get cRbCheck_app_store_urls;
 
   /// No description provided for @cRbCheck_play_urls.
@@ -12093,7 +12105,7 @@ abstract class T {
   /// No description provided for @cRbHeartbeatInvalid.
   ///
   /// In ko, this message translates to:
-  /// **'https:// 로 시작하는 주소를 넣어 주세요'**
+  /// **'https:// 로 시작하고 = 이 없는 주소를 넣어 주세요'**
   String get cRbHeartbeatInvalid;
 
   /// No description provided for @cRbHeartbeatOff.
@@ -12291,7 +12303,7 @@ abstract class T {
   /// No description provided for @cRbAppIdsHint.
   ///
   /// In ko, this message translates to:
-  /// **'비워 두면 기본 앱 ID를 써요. 바꾸면 스토어 빌드에도 같은 값을 넣으세요.'**
+  /// **'비워 두면 기본 앱 ID를 써요. 바꾸면 스토어 빌드에도 같은 값을 넣고, 설정 > 애플 로그인의 번들 ID와 카카오·네이버·Google 콘솔의 패키지·번들 ID(키 해시)도 새 값으로 등록하세요. 안 하면 그 로그인이 막혀요.'**
   String get cRbAppIdsHint;
 
   /// No description provided for @rnwTitle.

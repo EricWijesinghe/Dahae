@@ -7,7 +7,7 @@
 S = {
   # Business profile
   "cRbNameEn": ["영문 이름", "English name"],
-  "cRbShortName": ["짧은 이름 (12자 이내: 문자 맨 앞 [ ] 안의 이름, 홈 화면 이름)", "Short name (up to 12 characters: the name in [ ] at the start of text messages, home screen label)"],
+  "cRbShortName": ["짧은 이름 (12자 이내: 문자 맨 앞 [ ] 안의 이름, 결제 이름(○○ 예약금)·알림 채널 이름, 홈 화면 이름)", "Short name (up to 12 characters: the name in [ ] at the start of text messages, the payment name (○○ deposit) and notification channel name, home screen label)"],
   "cRbTagline": ["한 줄 소개", "Tagline"],
   "cRbTaglineEn": ["영문 한 줄 소개", "English tagline"],
   "cRbPrivacyEmail": ["개인정보 문의 이메일", "Privacy contact email"],
@@ -24,8 +24,8 @@ S = {
   "cRbDeriveFailed": ["로고로 이미지를 만들지 못했어요. 다른 PNG나 JPG 파일로 해 보세요.", "Could not make images from this logo. Try another PNG or JPG file."],
   "cRbAppliedTitle": ["저장했어요. 이렇게 적용돼요", "Saved. This is where it shows"],
   "cRbAppliedList": [
-    "· 바로: 문자·알림톡·결제 이름, 검색 페이지\n· 다음에 열 때: 홈페이지·약관 페이지, 아이콘, 공유 이미지\n· 다음 요청 때: 고객·파트너·관리 앱 (웹과 설치된 앱)\n· 스토어 빌드 후: 앱 이름·아이콘·앱 ID (스토어 앱 빌드 카드)\n· 직접 바꿔야 해요: PG 가맹점 이름, 카카오 채널 이름, 스토어 등록 정보",
-    "· Right away: SMS, AlimTalk and payment names, search pages\n· Next time they open: website, legal pages, icons, share image\n· On their next request: customer, partner and console apps (web and installed)\n· After a store build: app name, icon, app IDs (Store app build card)\n· By hand: PG merchant name, Kakao channel name, store listings",
+    "· 바로: 문자·알림톡·결제 이름, 검색 페이지\n· 다음에 열 때: 홈페이지·약관 페이지, 아이콘, 공유 이미지, 예전 버전 앱\n· 다음 요청 때: 웹 앱과 이번 버전 이후 앱 (고객·파트너·관리)\n· 스토어 빌드 후: 앱 이름·아이콘·앱 ID (스토어 앱 빌드 카드)\n· 직접 바꿔야 해요: PG 가맹점 이름, 카카오 채널 이름, 스토어 등록 정보",
+    "· Right away: SMS, AlimTalk and payment names, search pages\n· Next time they open: website, legal pages, icons, share image, apps from older versions\n· On their next request: the web apps and apps from this version on (customer, partner, console)\n· After a store build: app name, icon, app IDs (Store app build card)\n· By hand: PG merchant name, Kakao channel name, store listings",
   ],
   # Store build card
   "cRbStoreTitle": ["스토어 앱 빌드", "Store app build"],
@@ -86,6 +86,7 @@ S = {
   "cRbRetired": ["예전 주소를 닫았어요", "Old address retired"],
   "cRbApprovalTitle": ["서버 승인 코드", "Server approval code"],
   "cRbApprovalBody": ["인증 앱의 서버 승인 코드 6자리를 넣으세요. 사장님 코드와 달라요.", "Enter the 6 digits of the server approval entry in your authenticator. It is not your owner code."],
+  "cRbApprovalNoSummary": ["서버가 쓴 작업 내용을 읽지 못했거나 입력한 도메인과 달라요. 승인하지 마세요.", "Could not read the server's own job summary, or it names another domain. Do not approve."],
   "cRbApprovalEnter": ["승인 코드 넣기", "Enter approval code"],
   "cRbChecklistTitle": ["옮긴 뒤 할 일", "After the move"],
   "cRbChecklistHint": ["바깥 서비스마다 새 값을 복사해 넣고 체크하세요.", "Copy each value into its outside service, then tick it."],
@@ -99,7 +100,8 @@ S = {
   "cRbCheck_google_consent": ["Google Cloud 동의 화면: 홈페이지·개인정보 주소 (설정했다면)", "Google Cloud consent screen: homepage and privacy links (if set)"],
   "cRbCheck_search_console": ["Google Search Console: 새 속성, 인증 코드는 사업자 정보에", "Google Search Console: new property, token in Business profile"],
   "cRbCheck_naver_search_advisor": ["네이버 서치어드바이저: 새 사이트, 인증 코드는 사업자 정보에", "Naver Search Advisor: new site, token in Business profile"],
-  "cRbCheck_app_store_urls": ["App Store Connect: 개인정보·계정 삭제 주소", "App Store Connect: privacy and account deletion URLs"],
+  "cRbCheck_apple_notifications": ["Apple Developer → Sign in with Apple → 서버 알림 주소 (설정했다면)", "Apple Developer → Sign in with Apple → server-to-server notification URL (if set)"],
+  "cRbCheck_app_store_urls": ["App Store Connect: 지원·개인정보·계정 삭제 주소", "App Store Connect: support, privacy and account deletion URLs"],
   "cRbCheck_play_urls": ["Play Console: 개인정보·계정 삭제 주소", "Play Console: privacy and account deletion URLs"],
   "cRbCheck_ms_store_urls": ["Microsoft Partner Center: 개인정보·계정 삭제 주소", "Microsoft Partner Center: privacy and account deletion URLs"],
   "cRbCheck_github_store_vars": ["GitHub store 환경 변수, 그다음 스토어 빌드", "GitHub store environment variables, then a store build"],
@@ -125,7 +127,7 @@ S = {
   "cRbSkipUpdate": ["다음 자동 업데이트 건너뛰기", "Skip the next automatic update"],
   "cRbJobQueued": ["요청했어요. 최근 서버 작업에서 볼 수 있어요", "Requested. See it under Recent server jobs"],
   "cRbHeartbeatUrl": ["하트비트 주소 (https://...)", "Heartbeat URL (https://...)"],
-  "cRbHeartbeatInvalid": ["https:// 로 시작하는 주소를 넣어 주세요", "Enter an address that starts with https://"],
+  "cRbHeartbeatInvalid": ["https:// 로 시작하고 = 이 없는 주소를 넣어 주세요", "Enter an address that starts with https:// and has no ="],
   "cRbHeartbeatOff": ["설정 필요: 업타임 서비스에서 받은 하트비트 주소를 넣고 저장하세요.", "Not set: paste the heartbeat URL from your uptime service and save."],
   "cRbKindStatusRefresh": ["상태 새로고침", "Status refresh"],
   "cRbKindBackupNow": ["지금 백업", "Back up now"],
@@ -162,5 +164,5 @@ S = {
   # App IDs (app links card)
   "cRbAndroidPackages": ["안드로이드 패키지 이름 (한 줄에 하나)", "Android package names (one per line)"],
   "cRbIosBundles": ["iOS 번들 ID (한 줄에 하나)", "iOS bundle IDs (one per line)"],
-  "cRbAppIdsHint": ["비워 두면 기본 앱 ID를 써요. 바꾸면 스토어 빌드에도 같은 값을 넣으세요.", "Leave empty for the built-in app IDs. If you change them, use the same values in the store build."],
+  "cRbAppIdsHint": ["비워 두면 기본 앱 ID를 써요. 바꾸면 스토어 빌드에도 같은 값을 넣고, 설정 > 애플 로그인의 번들 ID와 카카오·네이버·Google 콘솔의 패키지·번들 ID(키 해시)도 새 값으로 등록하세요. 안 하면 그 로그인이 막혀요.", "Leave empty for the built-in app IDs. If you change them, use the same values in the store build, and register the new IDs in Settings > Apple login (bundle IDs) and in the Kakao, Naver and Google consoles (package and bundle IDs, key hash). Otherwise those sign-ins are refused."],
 }

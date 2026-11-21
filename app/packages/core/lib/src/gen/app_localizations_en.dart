@@ -6204,7 +6204,7 @@ class TEn extends T {
 
   @override
   String get cRbShortName =>
-      'Short name (up to 12 characters: the name in [ ] at the start of text messages, home screen label)';
+      'Short name (up to 12 characters: the name in [ ] at the start of text messages, the payment name (○○ deposit) and notification channel name, home screen label)';
 
   @override
   String get cRbTagline => 'Tagline';
@@ -6258,7 +6258,7 @@ class TEn extends T {
 
   @override
   String get cRbAppliedList =>
-      '· Right away: SMS, AlimTalk and payment names, search pages\n· Next time they open: website, legal pages, icons, share image\n· On their next request: customer, partner and console apps (web and installed)\n· After a store build: app name, icon, app IDs (Store app build card)\n· By hand: PG merchant name, Kakao channel name, store listings';
+      '· Right away: SMS, AlimTalk and payment names, search pages\n· Next time they open: website, legal pages, icons, share image, apps from older versions\n· On their next request: the web apps and apps from this version on (customer, partner, console)\n· After a store build: app name, icon, app IDs (Store app build card)\n· By hand: PG merchant name, Kakao channel name, store listings';
 
   @override
   String get cRbStoreTitle => 'Store app build';
@@ -6437,6 +6437,10 @@ class TEn extends T {
       'Enter the 6 digits of the server approval entry in your authenticator. It is not your owner code.';
 
   @override
+  String get cRbApprovalNoSummary =>
+      'Could not read the server\'s own job summary, or it names another domain. Do not approve.';
+
+  @override
   String get cRbApprovalEnter => 'Enter approval code';
 
   @override
@@ -6484,8 +6488,12 @@ class TEn extends T {
       'Naver Search Advisor: new site, token in Business profile';
 
   @override
+  String get cRbCheck_apple_notifications =>
+      'Apple Developer → Sign in with Apple → server-to-server notification URL (if set)';
+
+  @override
   String get cRbCheck_app_store_urls =>
-      'App Store Connect: privacy and account deletion URLs';
+      'App Store Connect: support, privacy and account deletion URLs';
 
   @override
   String get cRbCheck_play_urls =>
@@ -6570,7 +6578,7 @@ class TEn extends T {
 
   @override
   String get cRbHeartbeatInvalid =>
-      'Enter an address that starts with https://';
+      'Enter an address that starts with https:// and has no =';
 
   @override
   String get cRbHeartbeatOff =>
@@ -6678,7 +6686,7 @@ class TEn extends T {
 
   @override
   String get cRbAppIdsHint =>
-      'Leave empty for the built-in app IDs. If you change them, use the same values in the store build.';
+      'Leave empty for the built-in app IDs. If you change them, use the same values in the store build, and register the new IDs in Settings > Apple login (bundle IDs) and in the Kakao, Naver and Google consoles (package and bundle IDs, key hash). Otherwise those sign-ins are refused.';
 
   @override
   String get rnwTitle => 'Renewal calendar';
