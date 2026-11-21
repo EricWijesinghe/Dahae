@@ -527,8 +527,28 @@ pub fn clean_business(base: &str, input: &Value) -> Result<Value, ApiError> {
     Ok(Value::Object(out))
 }
 
+/// Rebrand fields an older console does not send (a sideloaded build, a tab open across `dahae update`). The current
+/// console sends every key, empty or null to clear one, so only an absent key keeps the stored value.
+const KEPT_WHEN_ABSENT: [&str; 5] = ["brand_assets", "name_en", "short_name", "tagline", "tagline_en"];
+
+fn keep_absent(stored: &Value, input: &Value, mut out: Value) -> Value {
+    for k in KEPT_WHEN_ABSENT {
+        if input.get(k).is_none() && !stored[k].is_null() {
+            out[k] = stored[k].clone();
+        }
+    }
+    let company_sent = input.get("company").and_then(|c| c.get("privacy_email")).is_some();
+    if !company_sent && !stored["company"]["privacy_email"].is_null() {
+        if !out["company"].is_object() {
+            out["company"] = json!({});
+        }
+        out["company"]["privacy_email"] = stored["company"]["privacy_email"].clone();
+    }
+    out
+}
+
 async fn put_business(State(s): State<AppState>, Admin(a): Admin, Json(input): Json<Value>) -> ApiResult<Json<Value>> {
-    let value = clean_business(&s.config.public_base_url, &input)?;
+    let value = keep_absent(&business(&s.db).await?, &input, clean_business(&s.config.public_base_url, &input)?);
     if let Some(logo) = value["logo_url"].as_str().filter(|l| l.starts_with("/files/"))
         && !uploads::owned(&s.db, None, &[logo.to_string()]).await?
     {
@@ -1027,6 +1047,25 @@ async fn test_section(State(s): State<AppState>, Admin(a): Admin, Path(code): Pa
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_older_console_save_keeps_the_rebrand_fields_it_does_not_know() {
+        let stored = json!({"name": "a", "short_name": "s", "brand_assets": {"icon_512": "/files/x.png"},
+                            "company": {"ceo": "c", "privacy_email": "p@x.kr"}});
+        let old = json!({"name": "b", "company": {"ceo": "d"}});
+        let out = keep_absent(&stored, &old, json!({"name": "b", "company": {"ceo": "d"}}));
+        assert_eq!(out["short_name"], "s");
+        assert_eq!(out["brand_assets"]["icon_512"], "/files/x.png");
+        assert_eq!(out["company"], json!({"ceo": "d", "privacy_email": "p@x.kr"}));
+        assert_eq!(out["name"], "b");
+        let new = json!({"name": "b", "short_name": "", "brand_assets": null, "company": {"privacy_email": ""}});
+        let cleared = keep_absent(&stored, &new, json!({"name": "b", "company": {}}));
+        assert!(
+            cleared.get("short_name").is_none() && cleared.get("brand_assets").is_none(),
+            "sent empty clears"
+        );
+        assert_eq!(cleared["company"], json!({}));
+    }
 
     #[test]
     fn only_the_owner_tests_a_locked_or_open_card() {
