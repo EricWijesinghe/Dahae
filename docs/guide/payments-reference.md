@@ -45,10 +45,10 @@ Basis: official docs and OpenAPI spec (2026-11). `[verified]` = read in the orig
 
 ---
 
-## 1b. 토스페이먼츠 결제 (직접 연동, PortOne 대신 고를 수 있음)
+## 1b. 토스페이먼츠 결제 (직접 연동, 단독 또는 PortOne과 함께)
 
-콘솔 **결제 (토스페이먼츠)** 카드의 **사용** 스위치를 켜면 새 결제와 새로 저장하는 카드가 토스페이먼츠로 가요. 이미 시작한 결제, 환불, 저장된 카드는 처음 처리한 곳을 따라가요 ([설정 가이드 6절](payments-setup.md#6-토스페이먼츠로-결제받기)).
-With the Toss Payments card's switch "Active: take new payments with Toss Payments" on, new payments and newly saved cards go to Toss Payments; existing payments, refunds and saved cards stay on their gateway.
+PortOne 과 토스페이먼츠는 둘 다 선택이에요. 콘솔 **결제 (토스페이먼츠)** 카드의 **사용: 토스페이먼츠로 결제 받기** 스위치는 기본으로 켜져 있어요. 켜져 있으면 PortOne 채널 키가 없는 켜진 결제수단이 토스페이먼츠로 가고, PortOne 이 카드를 저장할 수 없으면 새 카드도 토스페이먼츠에 저장돼요. 끄면 새 토스 결제와 새 토스 카드 저장만 멈춰요. 이미 시작한 결제, 환불, 저장된 카드는 처음 처리한 곳을 따라가요 ([설정 가이드 6절](payments-setup.md#6-토스페이먼츠로-결제받기-단독-또는-portone과-함께)).
+PortOne and Toss Payments are both optional. The Toss Payments card's switch "Active: take payments with Toss Payments" is on by default: switched-on methods without a PortOne channel key go to Toss Payments, and new cards are saved there when PortOne cannot save cards. Off stops only new Toss payments and card saves; existing payments, refunds and saved cards stay on their gateway.
 
 ### 키와 인증 · Keys and authentication
 - **API 개별 연동 키**만 써요: 클라이언트 키 `test_ck_` / `live_ck_`(브라우저 SDK), 시크릿 키 `test_sk_` / `live_sk_`(서버). 위젯 키(`gck`/`gsk`)는 주문번호 조회와 부가 API를 못 써서 받지 않아요 `[확인]`
@@ -226,6 +226,6 @@ Confirm these in a test store with test keys before any live use.
 
 # Payment integration reference (English headings)
 
-Section 1 covers PortOne V2 (customer payments, billing, cash receipts, identity). Section 1b covers Toss Payments payments (direct integration, chosen in the console instead of PortOne for new payments; identity stays on PortOne). Section 2 covers Toss Payments payouts, called directly from the server. Section 3 lists the contracts and values the owner must provide. Section 4 is the sandbox checklist above.
+Section 1 covers PortOne V2 (customer payments, billing, cash receipts, identity). Section 1b covers Toss Payments payments (direct integration, alone or next to PortOne: each method goes to PortOne when it has that method's channel key, otherwise to Toss Payments; identity stays on PortOne). Section 2 covers Toss Payments payouts, called directly from the server. Section 3 lists the contracts and values the owner must provide. Section 4 is the sandbox checklist above.
 
 Rules that never change: secret keys and security keys stay on the server; browsers only receive the PortOne store id and channel keys, or the Toss Payments client key; `test_` and `live_` keys are never mixed; changing a key means running the connection test again; webhooks never move money by themselves, the server re-reads the provider first.
