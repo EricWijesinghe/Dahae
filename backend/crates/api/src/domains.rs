@@ -303,7 +303,9 @@ pub fn checklist_items(cur: &str, aliases: &[Alias]) -> Vec<(&'static str, Strin
         ("google_consent", format!("{base}/privacy.html")),
         ("search_console", base.clone()),
         ("naver_search_advisor", base.clone()),
-        ("app_store_urls", store.clone()),
+        // Sign in with Apple sends account deletions here (App Store Review 5.1.1(v)); DEPLOY.md has owners set it.
+        ("apple_notifications", format!("{base}/v1/auth/apple/notifications")),
+        ("app_store_urls", format!("{base}/\n{store}")),
         ("play_urls", store.clone()),
         ("ms_store_urls", store),
         ("github_store_vars", format!("API_BASE={base}\nAPP_LINK_DOMAIN={link_hosts}")),
@@ -476,7 +478,9 @@ mod tests {
         assert_eq!(items["naver_callback"], "https://new.co.kr/auth/naver/callback");
         assert_eq!(items["github_store_vars"], "API_BASE=https://new.co.kr\nAPP_LINK_DOMAIN=new.co.kr,old.co.kr");
         assert_eq!(items["dns_keep_old"], "old.co.kr, www.new.co.kr");
-        assert_eq!(items.len(), 17);
+        assert_eq!(items["apple_notifications"], "https://new.co.kr/v1/auth/apple/notifications");
+        assert!(items["app_store_urls"].starts_with("https://new.co.kr/\n"), "support URL first");
+        assert_eq!(items.len(), 18);
     }
 
     #[test]

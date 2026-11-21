@@ -21,6 +21,7 @@ String checklistLabel(T t, String id) => switch (id) {
   'google_consent' => t.cRbCheck_google_consent,
   'search_console' => t.cRbCheck_search_console,
   'naver_search_advisor' => t.cRbCheck_naver_search_advisor,
+  'apple_notifications' => t.cRbCheck_apple_notifications,
   'app_store_urls' => t.cRbCheck_app_store_urls,
   'play_urls' => t.cRbCheck_play_urls,
   'ms_store_urls' => t.cRbCheck_ms_store_urls,
