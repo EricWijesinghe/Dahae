@@ -1045,15 +1045,20 @@ cmd_domain() { # dahae domain <새 도메인> [--yes] : .env 를 백업하고 DO
   mkdir -p backups
   backup="backups/env-before-domain-$(date +%Y%m%d-%H%M%S)"
   (umask 077; cp -- .env "$backup") || die ".env 를 백업하지 못해서 바꾸지 않았어요."
+  # 바꾸는 도중에 끊기면(작업 시간 제한, Ctrl+C) 새 DOMAIN 을 .env 에 남기지 않아요
+  # shellcheck disable=SC2064 # 지금의 백업 경로를 넣어 둬요
+  trap "cat -- $(printf '%q' "$backup") > .env; exit 143" TERM INT HUP
   env_set DOMAIN "$new"
   if dc up -d api web >/dev/null 2>&1 && wait_healthy && domain_https_ok "$new"; then
+    trap - TERM INT HUP
     ok "서비스 주소를 $new 로 바꿨어요. 예전 주소 $old 도 계속 응답해요 (콘솔 설정 > 도메인에서 은퇴시켜요)."
     return 0
   fi
   warn "$new 가 응답하지 않아서 예전 설정으로 되돌려요."
   cat -- "$backup" > .env
-  dc up -d api web >/dev/null 2>&1 || warn "서비스를 다시 띄우지 못했어요. 'dahae status' 를 확인하세요."
-  wait_healthy || warn "되돌린 뒤에도 앱이 응답하지 않아요. 'dahae logs' 를 확인하세요."
+  trap - TERM INT HUP
+  # 되돌린 서비스가 응답할 때만 rolled_back 이에요. 아니면 실패로 끝나서 콘솔이 "되돌렸어요" 라고 하지 않아요
+  { dc up -d api web >/dev/null 2>&1 && wait_healthy; } || die "되돌렸지만 서비스가 응답하지 않아요. 'dahae status' 를 확인하세요."
   die_rolled_back "도메인을 바꾸지 못해서 $old 로 되돌렸어요. DNS 와 방화벽(80·443)을 확인하고 다시 해 주세요."
 }
 

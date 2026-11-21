@@ -23,6 +23,7 @@ JOB_RAN=""
 OWNER_UID=${DAHAE_OWNER_UID:-0}     # 상태·작업·호스트 폴더의 주인: 관리자(root)만 쓸 수 있어야 해요
 JOB_RUNNING=""
 JOB_TOKEN=""
+JOB_WHY=""                          # 실패 이유(이 파일의 고정 문장만): 콘솔에 상태와 함께 보여요
 MAX_JOB_BYTES=4096
 ID_WINDOW_MS=900000                 # 작업 번호(UUIDv7)의 시각은 15분 안이어야 해요
 MAX_JOB_LINES=8
@@ -69,8 +70,10 @@ say_step() { # say_step 기호 내용 : 단계 줄을 덧붙여요 (기록이 �
   [ ! -L "$log" ] && printf '%s %s\n' "$1" "$2" >> "$log" || warn "단계 기록을 못 했어요"
 }
 
-set_state() { # set_state 상태 : status/<id>.json 을 쓰고, 공개 토큰이 있으면 public/<토큰>.json 에도 상태만 써요
-  write_file "$JOBS/status/$JOB_ID.json" "$(printf '{"id":"%s","kind":"%s","state":"%s"}' "$JOB_ID" "$JOB_KIND" "$1")" || return 1
+set_state() { # set_state 상태 [이유] : status/<id>.json 을 쓰고, 공개 토큰이 있으면 public/<토큰>.json 에도 상태만 써요. 이유는 고정 문장만 받아요
+  local step=""
+  [ -z "${2:-}" ] || step=$(printf ',"step":"%s"' "$2")
+  write_file "$JOBS/status/$JOB_ID.json" "$(printf '{"id":"%s","kind":"%s","state":"%s"%s}' "$JOB_ID" "$JOB_KIND" "$1" "$step")" || return 1
   [ -z "$JOB_TOKEN" ] || write_file "$JOBS/public/$JOB_TOKEN.json" "$(printf '{"state":"%s"}' "$1")" || warn "공개 진행 상태를 못 남겼어요"
 }
 
@@ -346,7 +349,7 @@ approve_one() { # approve_one 경로 : 승인 코드 파일 하나를 받아요.
 
 approval_enroll() { # 승인 코드를 처음 한 번만 만들어요 (이미 있으면 실패). 사장님 계정 번호와 인증 앱 주소를 남겨요
   local secret
-  [ ! -e "$APPROVAL_KEY" ] && [ ! -L "$APPROVAL_KEY" ] || { warn "이미 서버 승인 코드가 있어요"; return 1; }
+  [ ! -e "$APPROVAL_KEY" ] && [ ! -L "$APPROVAL_KEY" ] || { JOB_WHY="이미 서버 승인 코드가 있어요"; warn "$JOB_WHY"; return 1; }
   secret=$(head -c 20 /dev/urandom | base32 | tr -d '=\n')
   [ "${#secret}" = 32 ] || return 1
   write_file "$OWNER_FILE" "$(printf '{"staff_id":"%s"}' "$JOB_ARG")" || return 1
@@ -427,7 +430,7 @@ domain_check() { # 도메인이 이 서버를 가리키는지 봐요 (서버 IP 
   ip=$(server_ip 4) || { warn "서버 IP 를 확인하지 못했어요"; return 1; }
   ip6=$(server_ip 6) || ip6=""   # IPv6 가 없는 서버는 빈 값이에요
   a=$(getent ahostsv4 "$JOB_ARG" 2>/dev/null | awk '{ print $1 }' | grep -E "$IP_CHARS_RE" | sort -u || true)
-  aaaa=$(getent ahostsv6 "$JOB_ARG" 2>/dev/null | awk '{ print $1 }' | grep -E "$IP_CHARS_RE" | sort -u || true)
+  aaaa=$(getent ahostsv6 "$JOB_ARG" 2>/dev/null | awk '$1 ~ /:/ && $1 !~ /^::ffff:/ { print $1 }' | grep -E "$IP_CHARS_RE" | sort -u || true)
   grep -qxF "$ip" <<< "$a" && a_ok=true
   if [ -z "$aaaa" ]; then aaaa_ok=true
   elif [ -n "$ip6" ] && [ -z "$(grep -vxF "$ip6" <<< "$aaaa" || true)" ]; then aaaa_ok=true; fi
@@ -504,16 +507,23 @@ dispatch() { # 종류에 맞는 명령 하나만 실행해요. 종료 코드를 
   esac
 }
 
+fail_reason() { # fail_reason 종료코드 : 도메인 바꾸기가 끝나지 못한 이유 (관리 명령의 출력은 버려서, 종료 코드로 정해요)
+  case "$JOB_KIND:$1" in
+    domain-set:"$RC_ROLLED_BACK") echo "새 주소가 5분 안에 응답하지 않아 예전 도메인으로 되돌렸어요 (DNS·방화벽 80/443 확인)" ;;
+    domain-set:*) echo "도메인을 바꾸지 못했어요: 새 도메인 A 레코드가 이 서버를 가리키는지 확인하세요" ;;
+  esac
+}
+
 run_job() { # 작업 하나를 실행하고 결과(완료·되돌림·실패)를 상태에 남겨요 (잠금 안에서 한 번만 받은 작업이라, 기록이 실패해도 실행해요)
-  local rc=0
-  JOB_RUNNING=1; JOB_RAN=1
+  local rc=0 why
+  JOB_RUNNING=1; JOB_RAN=1; JOB_WHY=""
   set_state running || warn "진행 상태를 못 남겼어요"
   say_step "▶" "$JOB_KIND"
   if dispatch; then rc=0; else rc=$?; fi
   case "$rc" in
     0) say_step "✔" "완료"; set_state ok || warn "완료 상태를 못 남겼어요" ;;
-    "$RC_ROLLED_BACK") say_step "!" "이전 버전으로 되돌렸어요"; set_state rolled_back || warn "되돌림 상태를 못 남겼어요" ;;
-    *) say_step "✘" "실패"; set_state failed || warn "실패 상태를 못 남겼어요" ;;
+    "$RC_ROLLED_BACK") why=$(fail_reason "$rc"); say_step "!" "${why:-이전 버전으로 되돌렸어요}"; set_state rolled_back "$why" || warn "되돌림 상태를 못 남겼어요" ;;
+    *) why=${JOB_WHY:-$(fail_reason "$rc")}; say_step "✘" "${why:-실패}"; set_state failed "$why" || warn "실패 상태를 못 남겼어요" ;;
   esac
   JOB_RUNNING=""
 }

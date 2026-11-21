@@ -585,6 +585,7 @@ t  "Caddy access log keeps 3 months at most" grep -qF "roll_keep_for 2160h" "$RO
 t  "Caddy access log drops the owner code header" grep -qF "request>headers>X-Owner-Totp delete" "$ROOT/deploy/Caddyfile"
 t  "Caddy access log drops Referer"     grep -qF "request>headers>Referer delete" "$ROOT/deploy/Caddyfile"
 t  "Caddy /ready and /metrics answer 404" grep -qF "@internal path /ready /metrics" "$ROOT/deploy/Caddyfile"
+t  "Caddy answers 404 for them in a handle block" grep -qF "handle @internal {" "$ROOT/deploy/Caddyfile"
 t  "uptime-kuma is opt-in and loopback-only" grep -qF 'profiles: [monitoring]' "$ROOT/deploy/docker-compose.yml"
 t  "embedded compose has the access log volume" grep -qF "caddylogs:/var/log/caddy" "$SB/compose/docker-compose.yml"
 # the agent is installed on a fresh install and on an update: install_agent is called from main, not from a branch
@@ -715,8 +716,10 @@ rm -f .env backups/db-p07.sql.gz* backups/uploads-* 2>/dev/null
 domain_run() {
   ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; YES=1; DOMAIN_WAIT_SECS=0; HEALTH=$1
     dc() { printf '%s\n' "$*" >> "$SB/dc.log"; }
-    wait_healthy() { return 0; }
-    curl() { case "$*" in *api.ipify.org*) echo 203.0.113.7 ;; *"/health"*) [ "$HEALTH" = ok ] ;; *) return 1 ;; esac; }
+    # BROKEN_RESTORE: the stack put back on the old domain does not come up
+    wait_healthy() { [ -z "${BROKEN_RESTORE:-}" ] || ! grep -qx 'DOMAIN=old.co.kr' .env; }
+    # term: the job is stopped while it waits for the new name
+    curl() { case "$*" in *api.ipify.org*) echo 203.0.113.7 ;; *"/health"*) [ "$HEALTH" = term ] && kill -TERM "$BASHPID"; [ "$HEALTH" = ok ] ;; *) return 1 ;; esac; }
     getent() { [ "$1" != ahostsv4 ] || echo "${DNS_IP:-203.0.113.7}  STREAM $2"; }
     cmd_domain "$2" ) >/dev/null 2>&1
 }
@@ -732,6 +735,12 @@ domain_env; domain_run fail new.co.kr; rc=$?
 t  "domain: no answer exits 3 (rolled back)" eq "$rc" 3
 t  "domain: .env restored"                 grep -qx 'DOMAIN=old.co.kr' "$SB/.env"
 t  "domain: restarted twice"               eq "$(grep -c 'up -d api web' "$SB/dc.log")" 2
+domain_env; BROKEN_RESTORE=1 domain_run fail new.co.kr; rc=$?
+t  "domain: a restore that does not answer is a failure, not rolled back" eq "$rc" 1
+t  "...and .env is still restored"         grep -qx 'DOMAIN=old.co.kr' "$SB/.env"
+domain_env; domain_run term new.co.kr; rc=$?
+t  "domain: stopped mid-move exits 143"    eq "$rc" 143
+t  "domain: stopped mid-move restores .env" grep -qx 'DOMAIN=old.co.kr' "$SB/.env"
 domain_env; domain_run ok old.co.kr; rc=$?
 t  "domain: the current one is refused"    eq "$rc" 1
 nt "domain: refusal makes no backup"       ls "$SB"/backups/env-before-domain-* >/dev/null 2>&1

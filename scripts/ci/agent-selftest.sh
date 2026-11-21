@@ -18,12 +18,13 @@ eq() { [ "$1" = "$2" ] || { echo "   got [$1] want [$2]"; return 1; }; }
 export DAHAE_JOBS="$SB/jobs" DAHAE_HOST_DIR="$SB/host" DAHAE_LOCK="$SB/lock" DAHAE_DIR="$SB"
 export DAHAE_CLI="$SB/dahae"
 mkdir -p "$DAHAE_JOBS/inbox" "$DAHAE_JOBS/work/done" "$DAHAE_JOBS/status" "$DAHAE_JOBS/public" "$DAHAE_JOBS/out" "$DAHAE_HOST_DIR"
-# fake dahae: `update` exits 3 (rolled back) once after `touch $SB/rollback-next`, or 1 after `touch $SB/fail-next`
+# fake dahae: `update` or `domain` exits 3 (rolled back) once after `touch $SB/rollback-next`, or 1 after `touch $SB/fail-next`
 cat > "$DAHAE_CLI" <<EOF
 #!/usr/bin/env bash
 printf '%s YES=%s\n' "\$*" "\${DAHAE_YES:-}" >> "$SB/argv.log"
-if [ "\$1" = update ] && [ -e "$SB/rollback-next" ]; then rm -f "$SB/rollback-next"; exit 3; fi
-if [ "\$1" = update ] && [ -e "$SB/fail-next" ]; then rm -f "$SB/fail-next"; exit 1; fi
+case "\$1" in update|domain) ;; *) exit 0 ;; esac
+if [ -e "$SB/rollback-next" ]; then rm -f "$SB/rollback-next"; exit 3; fi
+if [ -e "$SB/fail-next" ]; then rm -f "$SB/fail-next"; exit 1; fi
 exit 0
 EOF
 printf 'DOMAIN=myshop.co.kr\nCHANNEL=stable\nVERSION=stable\n' > "$DAHAE_DIR/.env"
@@ -42,12 +43,14 @@ cat > "$SB/bin/curl" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in *" -6 "*) echo 2001:db8::1 ;; *) echo 203.0.113.7 ;; esac
 EOF
-# a file named stray-aaaa next to this script adds an AAAA record that points elsewhere
+# a file named stray-aaaa next to this script adds an AAAA record that points elsewhere; a4-only gives the
+# IPv4-mapped answer glibc returns for a domain with no AAAA record
 cat > "$SB/bin/getent" <<'EOF'
 #!/usr/bin/env bash
 case "$1" in
   ahostsv4) echo "203.0.113.7  STREAM myshop.co.kr" ;;
-  ahostsv6) if [ -e "$(dirname "$0")/stray-aaaa" ]; then echo "2001:db8::99  STREAM myshop.co.kr"; else echo "2001:db8::1  STREAM myshop.co.kr"; fi ;;
+  ahostsv6) if [ -e "$(dirname "$0")/a4-only" ]; then echo "::ffff:203.0.113.7  STREAM myshop.co.kr"
+            elif [ -e "$(dirname "$0")/stray-aaaa" ]; then echo "2001:db8::99  STREAM myshop.co.kr"; else echo "2001:db8::1  STREAM myshop.co.kr"; fi ;;
 esac
 EOF
 # fake timeout: records the limit it was given, then runs the command
@@ -394,6 +397,7 @@ t  "enroll publishes the address"          grep -q 'otpauth://totp/myshop.co.kr:
 t  "the issuer is this server's domain"    grep -q '&issuer=myshop.co.kr&' "$DAHAE_JOBS/out/$TOK5"
 idJ=$(uuid7); submit "$idJ" "id=$idJ\nkind=host-approval-enroll\narg=$STAFF\ntoken=$TOK5\n"
 t  "second enroll fails"                   eq "$(state "$idJ")" failed
+t  "...and the status says why"            grep -q '"step":"이미 서버 승인 코드가 있어요"' "$DAHAE_JOBS/status/$idJ.json"
 id=$(uuid7); t  "enroll without a token refused" refuse "$id" "id=$id\nkind=host-approval-enroll\narg=$STAFF\n"
 id=$(uuid7); t  "enroll with a bad owner id refused" refuse "$id" "id=$id\nkind=host-approval-enroll\narg=not-a-uuid\ntoken=$TOK5\n"
 printf '%s\n' "$SECRET" > "$HOST_DIR/approval.key"
@@ -412,6 +416,18 @@ t  "...and so does the step log"           grep -q '다른 작업이 서버 승�
 ap "$idK" "$(totp_at "$SECRET" "$(date +%s)")"
 t  "approved move runs dahae domain"       argv_has "domain new.co.kr YES=1"
 t  "approved move ends ok"                 eq "$(state "$idK")" ok
+nt "...with no reason"                     grep -q '"step"' "$DAHAE_JOBS/status/$idK.json"
+# a move the CLI reverted (exit 3) or refused says why, in the domain's own words
+printf '0\n' > "$HOST_DIR/approval.last-step"; touch "$SB/rollback-next"
+idN=$(uuid7); submit "$idN" "id=$idN\nkind=domain-set\narg=new.co.kr\ntoken=$TOK2\n"; ap "$idN" "$(totp_at "$SECRET" "$(date +%s)")"
+t  "reverted move ends rolled_back"        eq "$(state "$idN")" rolled_back
+t  "...and says the new address did not answer" grep -q '"step":"새 주소가 5분 안에 응답하지 않아 예전 도메인으로 되돌렸어요' "$DAHAE_JOBS/status/$idN.json"
+nt "...not the update's wording"           grep -q '이전 버전으로' "$DAHAE_JOBS/status/$idN.log"
+printf '0\n' > "$HOST_DIR/approval.last-step"; touch "$SB/fail-next"
+idO=$(uuid7); submit "$idO" "id=$idO\nkind=domain-set\narg=new.co.kr\ntoken=$TOK2\n"; ap "$idO" "$(totp_at "$SECRET" "$(date +%s)")"
+t  "refused move ends failed"              eq "$(state "$idO")" failed
+t  "...and points at the A record"         grep -q '"step":"도메인을 바꾸지 못했어요: 새 도메인 A 레코드가' "$DAHAE_JOBS/status/$idO.json"
+t  "...and the status is still JSON"       python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$DAHAE_JOBS/status/$idO.json"
 id=$(uuid7); t  "domain-set without a token refused"  refuse "$id" "id=$id\nkind=domain-set\narg=new.co.kr\n"
 id=$(uuid7); t  "domain-set to localhost refused"     refuse "$id" "id=$id\nkind=domain-set\narg=localhost\ntoken=$TOK3\n"
 id=$(uuid7); t  "domain-set with shell chars refused" refuse "$id" "id=$id\nkind=domain-set\narg=a.com;id\ntoken=$TOK3\n"
@@ -471,6 +487,11 @@ id=$(uuid7); submit "$id" "id=$id\nkind=domain-check\narg=myshop.co.kr\ntoken=$T
 t  "stray AAAA elsewhere: aaaa_ok false"  grep -q '"aaaa_ok":false' "$DAHAE_JOBS/out/$TOK5"
 t  "stray AAAA elsewhere: match false"    grep -q '"match":false' "$DAHAE_JOBS/out/$TOK5"
 rm -f "$SB/bin/stray-aaaa"
+touch "$SB/bin/a4-only"
+id=$(uuid7); submit "$id" "id=$id\nkind=domain-check\narg=myshop.co.kr\ntoken=$TOK5\n"
+t  "A record only: the mapped address is no AAAA" grep -q '"aaaa":\[\]' "$DAHAE_JOBS/out/$TOK5"
+t  "A record only: match true"            grep -q '"match":true' "$DAHAE_JOBS/out/$TOK5"
+rm -f "$SB/bin/a4-only"
 id=$(uuid7); t  "domain-check takes a domain only" refuse "$id" "id=$id\nkind=domain-check\narg=localhost\ntoken=$TOK5\n"
 
 # offsite-list, heartbeat
