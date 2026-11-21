@@ -1,0 +1,1284 @@
+[
+ {
+  "id": "aws-region-seoul",
+  "app": "aws",
+  "chapter": "03",
+  "what": "AWS console top bar with region menu open, Asia Pacific (Seoul) ap-northeast-2 selected",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "aws-cloudshell-admin",
+  "app": "aws",
+  "chapter": "03",
+  "what": "CloudShell after the --admin command: created policy dahae-boundary, created policy dahae-deployer-policy, Next: IAM > Users line",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "aws-iam-create-user",
+  "app": "aws",
+  "chapter": "03",
+  "what": "IAM > Users > Create user: name dahae-deployer, console access checked, custom password",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "aws-iam-attach-policies",
+  "app": "aws",
+  "chapter": "03",
+  "what": "Set permissions > Attach policies directly: dahae-deployer-policy and AWSCloudShellFullAccess checked, dahae-boundary not checked",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "aws-iam-mfa",
+  "app": "aws",
+  "chapter": "03",
+  "what": "User > Security credentials > Assign MFA device: Authenticator app chosen, QR code step (QR blurred)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "aws-cloudshell-launch",
+  "app": "aws",
+  "chapter": "04",
+  "what": "CloudShell after the launch command: Dahae vX -> stack dahae-main line and the printed outputs with PublicIp (IP masked)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "aws-cfn-stack-complete",
+  "app": "aws",
+  "chapter": "04",
+  "what": "CloudFormation > Stacks: dahae-main in CREATE_COMPLETE",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "aws-cfn-outputs",
+  "app": "aws",
+  "chapter": "04",
+  "what": "Stack dahae-main Outputs tab showing PublicIp (masked)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "cloudflare-dns-a-record",
+  "app": "cloudflare",
+  "chapter": "05",
+  "what": "Cloudflare DNS > Add record: type A, name @, IPv4 address, proxy status DNS only (grey cloud)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "browser-health-ok",
+  "app": "browser",
+  "chapter": "05",
+  "what": "Browser at https://example.co.kr/health showing {\"ok\":true}",
+  "lang": [
+   "ko"
+  ]
+ },
+ {
+  "id": "aws-ssm-connect",
+  "app": "aws",
+  "chapter": "05",
+  "what": "EC2 > Instances > Connect > Session Manager tab with the Connect button",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "aws-ssm-status",
+  "app": "aws",
+  "chapter": "05",
+  "what": "Session Manager terminal after sudo dahae status (all lines OK)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-first-run",
+  "app": "console",
+  "chapter": "06",
+  "what": "First-run screen (cFirstRunTitle) with setup code, name, email, password fields empty",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-login",
+  "app": "console",
+  "chapter": "06",
+  "what": "Sign-in screen with email and password",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-mfa-enrol",
+  "app": "console",
+  "chapter": "06",
+  "what": "Two-step sign-in setup: QR code, setup key and 6-digit code field (secret blurred)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-mfa-recovery-codes",
+  "app": "console",
+  "chapter": "06",
+  "what": "Save your recovery codes screen with Copy / Save to file / Continue buttons (codes blurred)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-mfa-signin",
+  "app": "console",
+  "chapter": "06",
+  "what": "Two-step sign-in prompt at login with the Use recovery code link",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-pwa-install",
+  "app": "console",
+  "chapter": "06",
+  "what": "Chrome/Edge address bar with the Install app icon and the install dialog for the console",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "install-page-form",
+  "app": "install",
+  "chapter": "07",
+  "what": "dahae-install-page.html filled with domain and email, both checks ticked, after Make install file (code blurred)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "install-finish-terminal",
+  "app": "install",
+  "chapter": "07",
+  "what": "Terminal finish screen with the admin URL and setup code (code blurred)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-menu-desktop",
+  "app": "console",
+  "chapter": "08",
+  "what": "Whole console on desktop, owner signed in, side menu fully visible",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-menu-phone",
+  "app": "console",
+  "chapter": "08",
+  "what": "Console at phone width with the menu drawer open",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-palette",
+  "app": "console",
+  "chapter": "08",
+  "what": "Ctrl+K command palette open with a search typed",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-my-account",
+  "app": "console",
+  "chapter": "08",
+  "what": "My account screen for the owner: owner badge, alert phone, password, recovery codes, transfer owner",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-stepup-prompt",
+  "app": "console",
+  "chapter": "08",
+  "what": "Authenticator code prompt shown before a sensitive action",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-overview",
+  "app": "console",
+  "chapter": "09",
+  "what": "Setup page top: title, progress, business card and first cards (fresh install)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-card-guide-open",
+  "app": "console",
+  "chapter": "09",
+  "what": "An integration card with How to set up steps expanded and the Open site button",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-card-locked",
+  "app": "console",
+  "chapter": "09",
+  "what": "A saved payment card showing the Locked badge and Unlock (owner code) button",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-owner-code",
+  "app": "console",
+  "chapter": "09",
+  "what": "Owner authenticator code dialog during unlock",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-test-ok",
+  "app": "console",
+  "chapter": "09",
+  "what": "Card after Check connection with green Connected",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-test-invalid",
+  "app": "console",
+  "chapter": "09",
+  "what": "Card after Check connection with the key-rejected message",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-business",
+  "app": "console",
+  "chapter": "10",
+  "what": "Business profile card filled with sample data, colour preview at the top",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-business-color-warning",
+  "app": "console",
+  "chapter": "10",
+  "what": "Business card with a light colour picked and the contrast warning under it",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-store-links",
+  "app": "console",
+  "chapter": "10",
+  "what": "Store links section with customer and partner app link fields",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-app-versions",
+  "app": "console",
+  "chapter": "10",
+  "what": "App versions section: latest version and minimum version fields",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-pay-methods",
+  "app": "console",
+  "chapter": "10",
+  "what": "Payment methods card with switches; one method showing it needs a key",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-portone",
+  "app": "console",
+  "chapter": "11",
+  "what": "PortOne card open: Store ID and API Secret fields, guide steps visible",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-portone-channels",
+  "app": "console",
+  "chapter": "11",
+  "what": "PortOne card channel key slots (card, billing, KakaoPay, NaverPay, TossPay, virtual account, identity, cash receipt) and Other methods",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-portone-webhook",
+  "app": "console",
+  "chapter": "11",
+  "what": "PortOne card webhook URL row with copy button and webhook secret field",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "external-portone-store-id",
+  "app": "external",
+  "chapter": "11",
+  "what": "admin.portone.io screen where the Store ID is shown (IDs blurred)",
+  "lang": [
+   "ko"
+  ]
+ },
+ {
+  "id": "external-portone-webhook",
+  "app": "external",
+  "chapter": "11",
+  "what": "admin.portone.io V2 webhook settings with the pasted URL (secret blurred)",
+  "lang": [
+   "ko"
+  ]
+ },
+ {
+  "id": "console-setup-toss",
+  "app": "console",
+  "chapter": "12",
+  "what": "Toss Payments card open with client key, secret key, billing keys, security key fields and webhook URL",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-toss-active",
+  "app": "console",
+  "chapter": "12",
+  "what": "Toss Payments card unlocked with the Use switch on, before saving",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-payments-header-test-keys",
+  "app": "console",
+  "chapter": "12",
+  "what": "Payments heading with New payments go to: Toss Payments and the test-keys note",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "external-toss-api-keys",
+  "app": "external",
+  "chapter": "12",
+  "what": "developers.tosspayments.com API keys page, API individual integration keys (keys blurred)",
+  "lang": [
+   "ko"
+  ]
+ },
+ {
+  "id": "external-toss-webhook",
+  "app": "external",
+  "chapter": "12",
+  "what": "Toss developer center webhook registration with PAYMENT_STATUS_CHANGED and DEPOSIT_CALLBACK",
+  "lang": [
+   "ko"
+  ]
+ },
+ {
+  "id": "console-setup-payout",
+  "app": "console",
+  "chapter": "13",
+  "what": "Partner payouts card with mode, secret key and security key fields",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-solapi",
+  "app": "console",
+  "chapter": "14",
+  "what": "Solapi card with API Key, API Secret, sender number, pfId fields",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-solapi-templates",
+  "app": "console",
+  "chapter": "14",
+  "what": "Solapi card AlimTalk template id map with the event keys",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "external-solapi-apikey",
+  "app": "external",
+  "chapter": "14",
+  "what": "console.solapi.com API key creation page (keys blurred)",
+  "lang": [
+   "ko"
+  ]
+ },
+ {
+  "id": "external-kakao-alimtalk-template",
+  "app": "external",
+  "chapter": "14",
+  "what": "Kakao business AlimTalk template registration with body #{body}",
+  "lang": [
+   "ko"
+  ]
+ },
+ {
+  "id": "console-setup-kakao",
+  "app": "console",
+  "chapter": "15",
+  "what": "Kakao login card with app ID and admin key",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-naver",
+  "app": "console",
+  "chapter": "15",
+  "what": "Naver login card with client ID and client secret",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-google",
+  "app": "console",
+  "chapter": "15",
+  "what": "Google login card with the client IDs list",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-apple",
+  "app": "console",
+  "chapter": "15",
+  "what": "Apple login card with client IDs, team ID, key ID and private key file",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-app-links",
+  "app": "console",
+  "chapter": "15",
+  "what": "App links card with team ID and Android fingerprint fields and Check button",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "customer-login-social",
+  "app": "customer",
+  "chapter": "15",
+  "what": "Customer app sign-in screen showing the Kakao/Naver/Google/Apple buttons",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-push",
+  "app": "console",
+  "chapter": "16",
+  "what": "App push (Firebase) card with the service account JSON box",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-ai",
+  "app": "console",
+  "chapter": "16",
+  "what": "AI assistant card with API key, model, mode and the three cap fields",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-juso",
+  "app": "console",
+  "chapter": "16",
+  "what": "Address search (juso.go.kr) card with the approval key field",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-backup",
+  "app": "console",
+  "chapter": "17",
+  "what": "Offsite backup card filled for Cloudflare R2 (endpoint, region auto, bucket, keys blurred, retention)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-heartbeat",
+  "app": "console",
+  "chapter": "17",
+  "what": "Uptime heartbeat card (Not set state, and Connected state)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-setup-review-account",
+  "app": "console",
+  "chapter": "17",
+  "what": "Store review demo account card switched on with phone, code and active-until date",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "external-r2-token",
+  "app": "external",
+  "chapter": "17",
+  "what": "Cloudflare R2 API token creation with Object Read & Write permission",
+  "lang": [
+   "ko"
+  ]
+ },
+ {
+  "id": "console-catalog-pricing",
+  "app": "console",
+  "chapter": "18",
+  "what": "Catalog & prices > Pricing tab with the services list",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-catalog-new-service",
+  "app": "console",
+  "chapter": "18",
+  "what": "New service dialog (code, name, fixed price vs quote)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-catalog-groups",
+  "app": "console",
+  "chapter": "18",
+  "what": "Product groups tab with a group open (title KO/EN, order, chooser, members)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-catalog-capacity",
+  "app": "console",
+  "chapter": "18",
+  "what": "Slot capacity tab",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-catalog-formula",
+  "app": "console",
+  "chapter": "18",
+  "what": "Estimate formula tab with the base price fields",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-catalog-peak",
+  "app": "console",
+  "chapter": "18",
+  "what": "Peak pricing tab (weekend, evening, holiday, lunar holiday, cap)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-catalog-quality",
+  "app": "console",
+  "chapter": "18",
+  "what": "Quality standards tab (warning and auto-pause thresholds)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-catalog-cancel-policy",
+  "app": "console",
+  "chapter": "18",
+  "what": "Cancellation policy tab with the default banner",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-catalog-counts",
+  "app": "console",
+  "chapter": "18",
+  "what": "Count-priced items editor with preview total",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-dashboard",
+  "app": "console",
+  "chapter": "19",
+  "what": "Dashboard with sample data: today's jobs, open quotes, unassigned, unread chats, 30-day numbers",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-bookings-list",
+  "app": "console",
+  "chapter": "19",
+  "what": "Bookings list with filters and search",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-booking-detail",
+  "app": "console",
+  "chapter": "19",
+  "what": "Booking detail panel with assign team, confirm, change status, mark done",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-booking-refund",
+  "app": "console",
+  "chapter": "19",
+  "what": "Cancel & refund dialog with refund amount field",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-quote-desk",
+  "app": "console",
+  "chapter": "19",
+  "what": "Quote desk with a request selected, estimate, final price and Send quote",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-inbox",
+  "app": "console",
+  "chapter": "19",
+  "what": "Inbox with customer/partner tabs and an open conversation",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-inbox-ai",
+  "app": "console",
+  "chapter": "19",
+  "what": "Inbox conversation answered by AI with the AI badge and Pause AI button",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-subscriptions",
+  "app": "console",
+  "chapter": "19",
+  "what": "Subscriptions list with one subscription's edit schedule dialog",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-partners-list",
+  "app": "console",
+  "chapter": "20",
+  "what": "Partners list with pending, verified and suspended partners and the approve button",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-partner-profile-checklist",
+  "app": "console",
+  "chapter": "20",
+  "what": "Staff profile & verification: checklist tab",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-customers",
+  "app": "console",
+  "chapter": "20",
+  "what": "Customers list with search",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-points-ledger",
+  "app": "console",
+  "chapter": "20",
+  "what": "Points ledger page with the adjust form",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-staff-list",
+  "app": "console",
+  "chapter": "20",
+  "what": "Staff list with roles, pending invite, reset password",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-staff-invite",
+  "app": "console",
+  "chapter": "20",
+  "what": "Invite staff dialog (name, email, phone, role, send by SMS or copy)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "partner-signup",
+  "app": "partner",
+  "chapter": "20",
+  "what": "Partner app sign-up / waiting-for-approval screen",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-settlements",
+  "app": "console",
+  "chapter": "21",
+  "what": "Settlements tab with statuses and Run payouts",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-payout-account-reveal",
+  "app": "console",
+  "chapter": "21",
+  "what": "Transfer details dialog after Show account, with the audit note (account masked)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-payouts-toss",
+  "app": "console",
+  "chapter": "21",
+  "what": "Payouts tab with Toss rows: Send via Toss, Check status, Retry",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-finance-overview",
+  "app": "console",
+  "chapter": "21",
+  "what": "Finance page with period chips and KPI cards",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-finance-exports",
+  "app": "console",
+  "chapter": "21",
+  "what": "Accounting exports section (ledger CSV, monthly summary CSV, settlements CSV)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-finance-tax",
+  "app": "console",
+  "chapter": "21",
+  "what": "Tax section: cash receipts, tax invoice queue, withholding CSV, VAT CSV",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "customer-checkout",
+  "app": "customer",
+  "chapter": "21",
+  "what": "Customer checkout with deposit, balance and payment method picker",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-coupons",
+  "app": "console",
+  "chapter": "22",
+  "what": "Issue coupon tab filled",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-content-editor",
+  "app": "console",
+  "chapter": "22",
+  "what": "Content tab with the New content dialog (kind, title, body, link)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-growth-offers",
+  "app": "console",
+  "chapter": "22",
+  "what": "Growth tab: first-booking offer, welcome coupons, referral reward",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-review-reports",
+  "app": "console",
+  "chapter": "22",
+  "what": "Review report queue with Keep / Hide / Delete / Block author",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-cases",
+  "app": "console",
+  "chapter": "22",
+  "what": "Case inbox with an open case: refund, settlement hold, reassign, internal note",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-campaign-new",
+  "app": "console",
+  "chapter": "22",
+  "what": "Campaign tab: audience, channel, opt-out number, consent count, preview, test send",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-funnel",
+  "app": "console",
+  "chapter": "22",
+  "what": "Funnel tab (last 30 days)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-rules",
+  "app": "console",
+  "chapter": "23",
+  "what": "Operating rules with groups, source badges and apply modes",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-notify-templates",
+  "app": "console",
+  "chapter": "23",
+  "what": "Notification text editor with variables, preview and restore default",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-audit",
+  "app": "console",
+  "chapter": "23",
+  "what": "Activity log with who/what/period filters and a detail open",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-privacy-requests",
+  "app": "console",
+  "chapter": "23",
+  "what": "Account deletion and data requests: phone search result with Export and Delete",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-renewals",
+  "app": "console",
+  "chapter": "23",
+  "what": "Renewal calendar with domain, hosting and Apple items and days left",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "customer-home",
+  "app": "customer",
+  "chapter": "24",
+  "what": "Customer app home with the four big service groups",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "customer-service",
+  "app": "customer",
+  "chapter": "24",
+  "what": "Service screen with price and the book button",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "customer-booking-flow",
+  "app": "customer",
+  "chapter": "24",
+  "what": "Booking flow: address and date/time pick",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "customer-quote-flow",
+  "app": "customer",
+  "chapter": "24",
+  "what": "Quote request flow (move-in/move-out questions)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "customer-booking-detail",
+  "app": "customer",
+  "chapter": "24",
+  "what": "Booking detail with status, cancel and reschedule",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "customer-chat",
+  "app": "customer",
+  "chapter": "24",
+  "what": "Customer chat room",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "customer-more",
+  "app": "customer",
+  "chapter": "24",
+  "what": "More tab with account, privacy and delete account",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "partner-jobs",
+  "app": "partner",
+  "chapter": "24",
+  "what": "Partner app jobs list",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "partner-job-detail",
+  "app": "partner",
+  "chapter": "24",
+  "what": "Partner job detail with navigate and site actions",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "partner-complete",
+  "app": "partner",
+  "chapter": "24",
+  "what": "Job completion with photos",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "partner-earnings",
+  "app": "partner",
+  "chapter": "24",
+  "what": "Partner earnings screen",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "external-play-console-users",
+  "app": "external",
+  "chapter": "25",
+  "what": "Google Play Console > Users and permissions: inviting the developer",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "external-appstore-users",
+  "app": "external",
+  "chapter": "25",
+  "what": "App Store Connect > Users and Access: adding the developer",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-ops-overview",
+  "app": "console",
+  "chapter": "26",
+  "what": "System status top: overall level, checks, uptime and version",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-ops-integrations",
+  "app": "console",
+  "chapter": "26",
+  "what": "System status external services list with last success / failure",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-ops-alerts",
+  "app": "console",
+  "chapter": "26",
+  "what": "Alert settings: rule switches, alert phone, quiet hours",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-ops-flags",
+  "app": "console",
+  "chapter": "26",
+  "what": "Feature switches and maintenance mode with message",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-ops-update",
+  "app": "console",
+  "chapter": "26",
+  "what": "Server update card with Update now and recent jobs",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-ops-update-running",
+  "app": "console",
+  "chapter": "26",
+  "what": "Server update card while an update is running",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-ops-backup-check",
+  "app": "console",
+  "chapter": "27",
+  "what": "System status Automatic backup check showing the last backup hours ago",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "customer-home-branded",
+  "app": "customer",
+  "chapter": "28",
+  "what": "Customer app home after changing the main colour and logo",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
+  "id": "console-ops-red",
+  "app": "console",
+  "chapter": "29",
+  "what": "System status with a red item and its action text",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ }
+]
