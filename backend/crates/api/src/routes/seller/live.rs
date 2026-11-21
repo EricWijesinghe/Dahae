@@ -85,7 +85,11 @@ pub fn brand_fragment(base: &str, b: &Value, field: &str) -> Option<String> {
         "apple_icon" => escape_html(&asset_path(b, "apple_180", DEFAULT_APPLE)),
         "og_image" => escape_html(&format!("{base}{}", asset_path(b, "og_1200", DEFAULT_OG))),
         "ld_json" => ld_json(base, b),
-        "privacy_email" => escape_html(text(&b["company"], "privacy_email").unwrap_or("[개인정보 보호 이메일]")),
+        "privacy_email" => escape_html(
+            text(&b["company"], "privacy_email")
+                .or_else(|| text(b, "support_email"))
+                .unwrap_or("[개인정보 보호 이메일]"),
+        ),
         _ => return None,
     })
 }
@@ -256,6 +260,14 @@ mod tests {
         );
         assert_eq!(brand_fragment(BASE, &json!({}), "favicon").unwrap(), DEFAULT_FAVICON);
         assert_eq!(brand_fragment(BASE, &json!({}), "privacy_email").unwrap(), "[개인정보 보호 이메일]");
+        let support = json!({"support_email": "help@shop.kr"});
+        assert_eq!(
+            brand_fragment(BASE, &support, "privacy_email").unwrap(),
+            "help@shop.kr",
+            "falls back to support"
+        );
+        let both = json!({"support_email": "help@shop.kr", "company": {"privacy_email": "p@shop.kr"}});
+        assert_eq!(brand_fragment(BASE, &both, "privacy_email").unwrap(), "p@shop.kr");
         assert!(brand_fragment(BASE, &b, "password").is_none());
     }
 

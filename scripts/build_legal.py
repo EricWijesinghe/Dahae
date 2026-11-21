@@ -99,6 +99,8 @@ OFFICER = seller("privacy_officer")
 SUPPORT_PHONE = seller("support_phone")
 SUPPORT_EMAIL = seller("support_email")
 CONTACT = SUPPORT_EMAIL + " · " + SUPPORT_PHONE
+# The console's 개인정보 문의 이메일 (the API falls back to the support email when it is empty).
+PRIVACY_CONTACT = seller("privacy_email") + " · " + SUPPORT_PHONE
 # 공정거래위원회 통신판매사업자 조회.
 BIZCHECK = seller("bizcheck")
 # Retention windows from the console's rules screen (settings registry), live.
@@ -173,7 +175,7 @@ PRIVACY = f"""
     <h2>9. 안전성 확보 조치</h2>
     <ul><li>전 구간 암호화 통신(HTTPS)</li><li>정산 계좌·연동 키 암호화 저장(AES-256-GCM), 자동결제 키와 본인확인 정보(CI) 해시 저장</li><li>관리자 비밀번호 해시 저장, 로그인 실패 잠금, 권한 최소화</li><li>직원의 고객 연락처·정산 계좌 조회 기록 보관, 정기 점검</li><li>개인정보 보관 기간이 지난 정보의 자동 파기</li></ul>
     <h2>10. 개인정보 보호책임자</h2>
-    <p>성명: {OFFICER}<br>연락처: {CONTACT}</p>
+    <p>성명: {OFFICER}<br>연락처: {PRIVACY_CONTACT}</p>
     <p>개인정보침해신고센터(privacy.kisa.or.kr, 118), 개인정보분쟁조정위원회(www.kopico.go.kr, 1833-6972)에 문의할 수도 있습니다.</p>
     <h2>11. 변경 고지</h2>
     <p>이 방침이 바뀌면 시행 7일 전부터 앱과 웹사이트에 공지합니다. 국외 이전 항목이나 필수 동의 내용이 바뀌면 다시 동의를 받습니다.</p>
@@ -238,7 +240,7 @@ LOCATION = f"""
     <h2>제5조 (이용자의 권리)</h2><p>이용자는 앱 [더보기 → 계정 → 동의 관리]에서 언제든지 동의를 철회할 수 있고, 기기 설정에서 위치 권한을 끌 수 있습니다. 동의하지 않거나 철회해도 주소를 직접 입력해 서비스를 그대로 이용할 수 있습니다. 이용자는 위치정보 이용·제공 사실 확인자료의 열람과 오류 정정을 요구할 수 있습니다.</p>
     <h2>제6조 (만 14세 미만)</h2><p>서비스는 만 14세 이상만 가입할 수 있어 만 14세 미만 아동의 위치정보는 처리하지 않습니다.</p>
     <h2>제7조 (손해배상과 분쟁 조정)</h2><p>회사가 관련 법령을 위반해 이용자에게 손해가 생기면 이용자는 배상을 청구할 수 있고, 회사는 고의나 과실이 없음을 입증하지 못하면 책임을 집니다. 위치정보와 관련한 분쟁은 방송통신위원회에 재정을, 개인정보 분쟁조정위원회에 조정을 신청할 수 있습니다.</p>
-    <h2>제8조 (위치정보관리책임자)</h2><p>{OFFICER} · {CONTACT}</p>
+    <h2>제8조 (위치정보관리책임자)</h2><p>{OFFICER} · {PRIVACY_CONTACT}</p>
     <h2>사업자 정보</h2><p>상호 {CO} · 대표 {CEO} · 주소 {ADDRESS}</p>
 {REVISION_TABLE}"""
 
@@ -267,7 +269,7 @@ def self_test():
     assert "다해" not in page, "no built-in brand name in the served text"
     privacy = page_html("privacy.html", "t", "d", PRIVACY)
     for field in ("uses_portone", "uses_toss", "uses_solapi", "uses_fcm", "uses_ai", "uses_backup", "uses_juso",
-                  "ai_chat_retention_days", "upload_orphan_days"):
+                  "ai_chat_retention_days", "upload_orphan_days", "privacy_email"):
         assert "seller-info?field=" + field + '"' in privacy, field
 
 
