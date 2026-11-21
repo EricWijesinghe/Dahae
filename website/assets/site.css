@@ -1,5 +1,5 @@
 /* 다해 (Dahae) website. Dark theme by default, light on toggle; brand colour comes from the console
-   setup wizard (/v1/brand) and is applied to --brand at load.
+   business profile: the server writes it into each page as --brand (Caddy include).
    Palette: teal #1E9EBA, dark teal #187A8F, check yellow #FFD95A, ink #17232C.
    --brand carries white text (buttons, band), so it is the dark teal: white on #187A8F = 4.98:1, on teal only 3.16:1.
    Yellow is a fill or a highlight on dark surfaces, never text on a light one (1.37:1). */
@@ -79,6 +79,8 @@ a { color: inherit; }
 /* House with a check inside: the Dahae mark. An owner logo from /v1/brand replaces it (site.js). */
 .logo-mark { width: 38px; height: 38px; border-radius: 11px; background: url(icons3d/logo_3d.webp) center / contain no-repeat; display: grid; place-items: center; overflow: hidden; }
 .logo-mark img { width: 100%; height: 100%; object-fit: cover; }
+/* The server puts the owner's logo inside the mark; the built-in art shows only without one. */
+.logo-mark:has(img) { background: none; }
 .nav-links { display: flex; gap: 4px; margin-left: auto; }
 .nav-links a { text-decoration: none; color: var(--ink-soft); padding: 10px 12px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; }
 .nav-links a:hover { color: var(--ink); background: var(--card); }

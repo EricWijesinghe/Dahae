@@ -219,7 +219,7 @@ async fn issue_and_deliver(
         .bind(Utc::now() + Duration::seconds(CODE_TTL_SECS))
         .execute(&mut **tx)
         .await?;
-    let text = sms_text(purpose == "invite", channel, &code);
+    let text = sms_text(&super::setup::brand::short_brand(&s.db).await, purpose == "invite", channel, &code);
     s.providers.send_sms(phone, &text).await.map_err(|_| ApiError::Unavailable("sms"))?;
     Ok(match channel {
         Channel::Copy => Some(code),
@@ -229,12 +229,12 @@ async fn issue_and_deliver(
 
 /// The text the staff member receives. A copy-channel code is never texted; they get a notice instead, so an
 /// unexpected reset or invite is visible to the person whose account it touches.
-fn sms_text(invite: bool, channel: Channel, code: &str) -> String {
+fn sms_text(brand: &str, invite: bool, channel: Channel, code: &str) -> String {
     match (invite, channel) {
-        (true, Channel::Sms) => format!("[다해] 직원 초대 인증번호는 {code}예요. 24시간 안에 입력해 주세요."),
-        (false, Channel::Sms) => format!("[다해] 비밀번호 재설정 인증번호는 {code}예요. 24시간 안에 입력해 주세요."),
-        (true, Channel::Copy) => "[다해] 직원 초대 절차가 시작됐어요. 본인이 아니면 관리자에게 알려 주세요.".into(),
-        (false, Channel::Copy) => "[다해] 관리자가 회원님의 비밀번호 재설정을 요청했어요. 본인이 아니면 관리자에게 알려 주세요.".into(),
+        (true, Channel::Sms) => format!("[{brand}] 직원 초대 인증번호는 {code}예요. 24시간 안에 입력해 주세요."),
+        (false, Channel::Sms) => format!("[{brand}] 비밀번호 재설정 인증번호는 {code}예요. 24시간 안에 입력해 주세요."),
+        (true, Channel::Copy) => format!("[{brand}] 직원 초대 절차가 시작됐어요. 본인이 아니면 관리자에게 알려 주세요."),
+        (false, Channel::Copy) => format!("[{brand}] 관리자가 회원님의 비밀번호 재설정을 요청했어요. 본인이 아니면 관리자에게 알려 주세요."),
     }
 }
 
@@ -354,9 +354,13 @@ mod tests {
 
     #[test]
     fn copy_channel_notice_never_carries_the_code() {
-        assert!(!sms_text(false, Channel::Copy, "123456").contains("123456"));
-        assert!(!sms_text(true, Channel::Copy, "123456").contains("123456"));
-        assert!(sms_text(true, Channel::Sms, "123456").contains("123456"));
+        assert!(!sms_text("다해", false, Channel::Copy, "123456").contains("123456"));
+        assert!(!sms_text("다해", true, Channel::Copy, "123456").contains("123456"));
+        assert!(sms_text("다해", true, Channel::Sms, "123456").contains("123456"));
+        assert!(
+            sms_text("반짝", true, Channel::Sms, "123456").starts_with("[반짝] "),
+            "the profile's short name"
+        );
     }
 
     #[test]

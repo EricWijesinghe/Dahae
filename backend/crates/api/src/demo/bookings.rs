@@ -616,7 +616,7 @@ async fn completion(
     is_quote: bool,
 ) -> Result<(), DemoError> {
     let p = &world.pros[pro];
-    let photo = photo_url(&c.public_base);
+    let photo = photo_url();
     sqlx::query("INSERT INTO completion_reports (booking_id, before_photos, after_photos, checklist, submitted_by, submitted_at) VALUES ($1,$2,$3,$4,$5,$6)")
         .bind(booking)
         .bind(vec![photo.clone()])

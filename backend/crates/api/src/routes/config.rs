@@ -15,12 +15,14 @@ use crate::{
 use axum::{
     Json, Router,
     extract::{Request, State},
-    http::{Method, header},
+    http::{HeaderName, HeaderValue, Method, header},
     middleware::Next,
     response::{IntoResponse, Response},
     routing::get,
 };
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{Map, Value, json};
+use sha2::Sha256;
 use sqlx::PgPool;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -34,6 +36,10 @@ pub const FLAGS: [&str; 4] = ["booking", "chat", "ai", "payments"];
 const MAX_MESSAGE_CHARS: usize = 200;
 const CACHE_TTL: Duration = Duration::from_secs(30);
 const CACHE_CONTROL: &str = "public, max-age=30";
+/// Every response carries the brand version; clients fetch `/v1/brand` again when it changes.
+pub const BRAND_VERSION_HEADER: HeaderName = HeaderName::from_static("x-brand-version");
+const INSTALL_ID_CONTEXT: &[u8] = b"malkkeum/install-id/v1";
+const INSTALL_ID_HEX: usize = 16;
 
 /// One entry, tagged with the database it was read from (one per process in production; tests share a process).
 static CACHE: Mutex<Option<(String, Instant, Value)>> = Mutex::new(None);
@@ -101,7 +107,32 @@ pub fn public_document(config: &Value, business: &Value, maintenance: &Value) ->
             "message": maintenance["message"].as_str().unwrap_or(""),
         },
         "app_versions": business.get("app_versions").cloned().unwrap_or_else(|| json!({})),
+        "brand_version": super::setup::brand::brand_version(business),
     })
+}
+
+/// Same value on every node of one install and never the same across installs: apps keep a discovered
+/// `api_base` only when it answers with this id. Derived from DATA_KEY; reveals nothing about it.
+pub fn install_id(cfg: &Config) -> String {
+    let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(&cfg.data_key).expect("HMAC takes any key length");
+    mac.update(INSTALL_ID_CONTEXT);
+    hex::encode(mac.finalize().into_bytes())[..INSTALL_ID_HEX].to_string()
+}
+
+/// Sign-in providers whose server keys are saved, so apps hide buttons the server would refuse.
+fn providers(s: &AppState) -> Vec<&'static str> {
+    use crate::integrations::Section;
+    let integ = s.providers.integ();
+    [
+        (Section::Kakao, "kakao"),
+        (Section::Naver, "naver"),
+        (Section::Google, "google"),
+        (Section::Apple, "apple"),
+    ]
+    .into_iter()
+    .filter(|(sec, _)| integ.has(*sec))
+    .map(|(_, code)| code)
+    .collect()
 }
 
 /// Called after any write that changes what [`public_document`] returns.
@@ -148,13 +179,17 @@ async fn current_document(db: &PgPool, cfg: &Config) -> ApiResult<Value> {
     if let Some(d) = cached(&key) {
         return Ok(d);
     }
-    let d = public_document(&load(db, CONFIG_KEY).await?, &load(db, BUSINESS_KEY).await?, &maintenance_state(db, cfg).await?);
+    let mut d = public_document(&load(db, CONFIG_KEY).await?, &load(db, BUSINESS_KEY).await?, &maintenance_state(db, cfg).await?);
+    d["api_base"] = json!(cfg.public_base_url.trim_end_matches('/'));
+    d["install_id"] = json!(install_id(cfg));
     remember(key, &d);
     Ok(d)
 }
 
 async fn public_config(State(s): State<AppState>) -> ApiResult<Response> {
-    let doc = current_document(&s.db, &s.config).await?;
+    let mut doc = current_document(&s.db, &s.config).await?;
+    // Per response, not cached: a cleared sign-in card must hide its button on the next poll.
+    doc["providers"] = json!(providers(&s));
     Ok(([(header::CACHE_CONTROL, CACHE_CONTROL)], Json(doc)).into_response())
 }
 
@@ -226,15 +261,21 @@ pub fn block_code(doc: &Value, method: &Method, path: &str) -> Option<&'static s
     }
 }
 
-/// Route layer: refuses requests to switched-off features with 503 and a stable code. Reads the
-/// same cache as `GET /v1/config`. A database error lets the request through (logged): flags are not a
+/// Route layer: refuses requests to switched-off features with 503 and a stable code, and stamps every response
+/// with `X-Brand-Version`. Reads the same cache as `GET /v1/config`. A database error lets the request through (logged): flags are not a
 /// security boundary, and a broken database fails the request anyway.
 pub async fn enforce(State(s): State<AppState>, req: Request, next: Next) -> Response {
     match current_document(&s.db, &s.config).await {
-        Ok(doc) => match block_code(&doc, req.method(), req.uri().path()) {
-            Some(code) => ApiError::Unavailable(code).into_response(),
-            None => next.run(req).await,
-        },
+        Ok(doc) => {
+            let mut res = match block_code(&doc, req.method(), req.uri().path()) {
+                Some(code) => ApiError::Unavailable(code).into_response(),
+                None => next.run(req).await,
+            };
+            if let Some(v) = doc["brand_version"].as_str().and_then(|v| HeaderValue::from_str(v).ok()) {
+                res.headers_mut().insert(BRAND_VERSION_HEADER, v);
+            }
+            res
+        }
         Err(e) => {
             tracing::warn!(error = ?e, "feature flags unreadable; serving request");
             next.run(req).await
@@ -316,6 +357,7 @@ mod tests {
         assert_eq!(doc["maintenance"], json!({ "on": true, "message": "곧 돌아와요" }));
         assert_eq!(doc["app_versions"]["customer"]["min_app_version"], json!("1.0.0"));
         assert!(doc.get("name").is_none(), "business profile fields stay private");
+        assert_eq!(doc["brand_version"], json!(crate::routes::setup::brand::brand_version(&business)));
     }
 
     fn doc(flags: Value, maintenance: bool) -> Value {
