@@ -376,10 +376,10 @@ struct MethodRow {
 
 /// What the app needs to open the card registration page of the gateway that saves cards
 /// (`Integrations::billing_gateway`). Hidden (`enabled: false`) while no gateway can save cards.
-async fn billing_setup(State(s): State<AppState>, Customer(a): Customer) -> ApiResult<Json<Value>> {
+async fn billing_setup(State(s): State<AppState>, Customer(a): Customer, Query(app): Query<super::payments::AppGateways>) -> ApiResult<Json<Value>> {
     let integ = s.providers.integ();
     let p = &integ.portone;
-    let Some(gw) = integ.billing_gateway() else {
+    let Some(gw) = integ.billing_gateway().filter(|g| app.opens(*g)) else {
         return Ok(Json(json!({ "enabled": false })));
     };
     // The ticket is stored so register_method can require it (single use, 30 minutes). Random (v4): Toss binds the

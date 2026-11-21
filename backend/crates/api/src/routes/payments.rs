@@ -10,7 +10,11 @@ use crate::{
     providers::Gateway,
     state::AppState,
 };
-use axum::{Json, Router, extract::State, routing::get};
+use axum::{
+    Json, Router,
+    extract::{Query, State},
+    routing::get,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
@@ -18,7 +22,8 @@ use std::collections::HashMap;
 
 const SETTING: &str = "payment_methods";
 
-/// (code, flow). `billing` methods can be saved for one-tap payment; `checkout` ones are one-off via the SDK.
+/// (code, kind). `billing` methods are the ones a saved method may name (`register_method`); what customers get is
+/// [`flow`]. `checkout` ones are one-off via the SDK.
 pub const METHODS: [(&str, &str); 10] = [
     ("card", "billing"),
     ("kakaopay", "billing"),
@@ -67,14 +72,11 @@ pub async fn offered(s: &AppState) -> ApiResult<Vec<(String, Gateway)>> {
         .collect())
 }
 
-/// A method's flow on its gateway. Toss saves cards only (자동결제, card only), so on Toss every other method is
-/// a one-off checkout, and card is a saved-card tile only while some gateway can save cards.
-pub fn flow(gw: Gateway, code: &str, catalogue_flow: &'static str, card_billing: bool) -> &'static str {
-    match gw {
-        Gateway::Portone => catalogue_flow,
-        Gateway::TossPayments if code == "card" && card_billing => "billing",
-        Gateway::TossPayments => "checkout",
-    }
+/// A method's flow for customers: card is a saved-card tile while some gateway can save cards; every other method
+/// is a one-off checkout on either gateway. Card setup registers cards only (Toss 자동결제 is card only, and PortOne's
+/// setup hands out the card billing channel only), so an easy-pay tile marked `billing` could never be saved.
+pub fn flow(code: &str, card_billing: bool) -> &'static str {
+    if code == "card" && card_billing { "billing" } else { "checkout" }
 }
 
 /// Rejects unknown, switched-off or unserved methods before any intent is created; returns the method's gateway.
@@ -97,17 +99,34 @@ struct Method {
     gateway: &'static str,
 }
 
-async fn enabled(State(s): State<AppState>) -> ApiResult<Json<Vec<Method>>> {
+/// `?gateways=portone,tosspayments`: the hosted pages the calling app can open.
+#[derive(Deserialize)]
+pub struct AppGateways {
+    gateways: Option<String>,
+}
+
+impl AppGateways {
+    /// Whether the app opens a page for `gw`. Apps from before Toss Payments (v1.5.1) send nothing and open PortOne
+    /// pages only, so Toss methods and Toss card saving are left out for them.
+    pub fn opens(&self, gw: Gateway) -> bool {
+        gw == Gateway::Portone || self.gateways.as_deref().is_some_and(|l| l.split(',').any(|g| g.trim() == gw.code()))
+    }
+}
+
+async fn enabled(State(s): State<AppState>, Query(app): Query<AppGateways>) -> ApiResult<Json<Vec<Method>>> {
     let on = offered(&s).await?;
-    let card_billing = s.providers.integ().billing_gateway().is_some();
+    let billing = s.providers.integ().billing_gateway().filter(|g| app.opens(*g));
     Ok(Json(
         METHODS
             .iter()
-            .filter_map(|&(code, f)| {
-                let gw = on.iter().find_map(|(c, g)| (c == code).then_some(*g))?;
-                Some(Method {
+            .filter_map(|&(code, _)| {
+                let one_off = on.iter().find_map(|(c, g)| (c == code).then_some(*g))?;
+                let flow = flow(code, billing.is_some());
+                // A saved-card tile registers with the gateway that saves cards, not the one-off card gateway.
+                let gw = if flow == "billing" { billing.unwrap_or(one_off) } else { one_off };
+                app.opens(gw).then_some(Method {
                     code,
-                    flow: flow(gw, code, f, card_billing),
+                    flow,
                     gateway: gw.code(),
                 })
             })
@@ -134,7 +153,11 @@ async fn admin_view(s: &AppState) -> ApiResult<Vec<AdminMethod>> {
     Ok(METHODS
         .iter()
         .map(|&(code, flow)| {
-            let gateway = integ.gateway_for(code).map(Gateway::code);
+            // Card shows where it is saved while a gateway saves cards, as customers see it.
+            let gateway = integ
+                .gateway_for(code)
+                .map(|g| if code == "card" { integ.billing_gateway().unwrap_or(g) } else { g })
+                .map(Gateway::code);
             AdminMethod {
                 code,
                 flow,
@@ -177,17 +200,16 @@ async fn admin_update(State(s): State<AppState>, Admin(a): Admin, Json(u): Json<
 
 #[cfg(test)]
 mod tests {
-    use super::{Gateway, channel_key, flow};
+    use super::{channel_key, flow};
     use std::collections::HashMap;
 
     #[test]
-    fn under_toss_only_card_with_billing_keys_is_saved() {
-        assert_eq!(flow(Gateway::Portone, "kakaopay", "billing", false), "billing");
-        assert_eq!(flow(Gateway::Portone, "transfer", "checkout", true), "checkout");
-        assert_eq!(flow(Gateway::TossPayments, "card", "billing", true), "billing");
-        assert_eq!(flow(Gateway::TossPayments, "card", "billing", false), "checkout");
-        assert_eq!(flow(Gateway::TossPayments, "kakaopay", "billing", true), "checkout");
-        assert_eq!(flow(Gateway::TossPayments, "transfer", "checkout", true), "checkout");
+    fn only_card_is_saved_and_only_while_a_gateway_saves_cards() {
+        assert_eq!(flow("card", true), "billing");
+        assert_eq!(flow("card", false), "checkout");
+        for code in ["kakaopay", "naverpay", "tosspay", "payco", "transfer"] {
+            assert_eq!(flow(code, true), "checkout", "{code} is paid once, on either gateway");
+        }
     }
 
     fn keys(pairs: &[(&str, &str)]) -> HashMap<String, String> {

@@ -47,9 +47,17 @@ async fn checkout(env: &TossEnv, c: &Customer, method: &str) -> (StatusCode, Val
     call(&env.app, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(body)).await
 }
 
-/// `(code, flow, gateway)` of the public methods list.
+/// What a current app sends: it opens both gateways' pages.
+const BOTH: &str = "?gateways=portone,tosspayments";
+
+/// `(code, flow, gateway)` of the public methods list, as a current app reads it.
 async fn methods(env: &TossEnv) -> Vec<(String, String, String)> {
-    let (st, list) = call(&env.app, "GET", "/v1/payments/methods", None, None).await;
+    methods_for(env, BOTH).await
+}
+
+/// The methods list for an app sending `query` ("" is a v1.5.1 app, which opens PortOne pages only).
+async fn methods_for(env: &TossEnv, query: &str) -> Vec<(String, String, String)> {
+    let (st, list) = call(&env.app, "GET", &format!("/v1/payments/methods{query}"), None, None).await;
     assert_eq!(st, StatusCode::OK, "{list}");
     let s = |v: &Value| v.as_str().expect("string").to_string();
     list.as_array()
@@ -60,7 +68,11 @@ async fn methods(env: &TossEnv) -> Vec<(String, String, String)> {
 }
 
 async fn setup(env: &TossEnv, c: &Customer) -> Value {
-    let (st, out) = call(&env.app, "GET", "/v1/me/payment-methods/setup", Some(c.token.as_str()), None).await;
+    setup_for(env, c, BOTH).await
+}
+
+async fn setup_for(env: &TossEnv, c: &Customer, query: &str) -> Value {
+    let (st, out) = call(&env.app, "GET", &format!("/v1/me/payment-methods/setup{query}"), Some(c.token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{out}");
     out
 }
@@ -192,4 +204,46 @@ async fn toss_switched_off_stops_only_new_toss_payments_and_cards(pool: PgPool) 
     common::book(&env.app, &paying, 6, None).await;
     let charges = fake.lock().expect("fake").calls_of("charge");
     assert_eq!(charges.iter().map(|c| c.secret.as_str()).collect::<Vec<_>>(), [BILLING_SK]);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn apps_from_before_toss_are_offered_portone_only(pool: PgPool) {
+    let (env, _, c) = env(&pool, "010-7700-0005", portone(&["transfer"]), Some(toss::card(true))).await;
+    assert_eq!(methods_for(&env, "").await, [("transfer".into(), "checkout".into(), "portone".into())]);
+    assert_eq!(setup_for(&env, &c, "").await, json!({ "enabled": false }), "Toss card saving is left out");
+    assert_eq!(methods(&env).await.len(), 10, "a current app sees both");
+    assert_eq!(setup(&env, &c).await["gateway"], "tosspayments");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn easy_pay_on_portone_is_paid_once_and_card_shows_where_it_is_saved(pool: PgPool) {
+    let po = PortOne {
+        channel_keys: [("kakaopay", "channel-key-kakaopay"), ("card_billing", "channel-key-billing")]
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .into(),
+        ..portone(&["transfer"])
+    };
+    let (env, _, c) = env(&pool, "010-7700-0006", po, Some(toss::card(true))).await;
+    let list = methods(&env).await;
+    let row = |code: &str| list.iter().find(|m| m.0 == code).map(|m| (m.1.clone(), m.2.clone()));
+    assert_eq!(row("kakaopay"), Some(("checkout".into(), "portone".into())), "a tile that could never be saved");
+    assert_eq!(
+        row("card"),
+        Some(("billing".into(), "portone".into())),
+        "card is saved on PortOne's billing channel"
+    );
+    assert_eq!(setup(&env, &c).await["gateway"], "portone");
+    let legacy = methods_for(&env, "").await;
+    assert!(
+        legacy.iter().any(|m| m.0 == "card" && m.2 == "portone"),
+        "v1.5.1 can save cards on PortOne: {legacy:?}"
+    );
+
+    let (admin, _) = staff_token(&pool, Role::StaffAdmin).await;
+    let (_, admin_list) = call(&env.app, "GET", "/v1/admin/payment-methods", Some(admin.as_str()), None).await;
+    let gateway = |code: &str| admin_list.as_array().expect("list").iter().find(|m| m["code"] == code).expect("row")["gateway"].clone();
+    assert_eq!(
+        (gateway("card"), gateway("kakaopay"), gateway("naverpay")),
+        (json!("portone"), json!("portone"), json!("tosspayments"))
+    );
 }

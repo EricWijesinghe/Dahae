@@ -431,7 +431,7 @@ async fn a_config_change_never_moves_a_row(pool: PgPool) {
 /// Registers a card under Toss. Returns the payment method id and the customerKey (the ticket).
 async fn register_toss_card(w: &World) -> (Uuid, String) {
     let tok = Some(w.c.token.as_str());
-    let (st, setup) = call(&w.env.app, "GET", "/v1/me/payment-methods/setup", tok, None).await;
+    let (st, setup) = call(&w.env.app, "GET", "/v1/me/payment-methods/setup?gateways=portone,tosspayments", tok, None).await;
     assert_eq!(st, StatusCode::OK, "{setup}");
     assert_eq!(setup["gateway"], "tosspayments");
     assert_eq!(setup["store_id"], Value::Null);
@@ -448,7 +448,7 @@ async fn register_toss_card(w: &World) -> (Uuid, String) {
 async fn saved_cards_under_toss_use_the_billing_mid(pool: PgPool) {
     let w = world(&pool, "010-7600-0008", true).await;
     let tok = Some(w.c.token.as_str());
-    let (st, methods) = call(&w.env.app, "GET", "/v1/payments/methods", None, None).await;
+    let (st, methods) = call(&w.env.app, "GET", "/v1/payments/methods?gateways=portone,tosspayments", None, None).await;
     assert_eq!(st, StatusCode::OK);
     let flow = |code: &str| methods.as_array().expect("list").iter().find(|m| m["code"] == code).map(|m| m["flow"].clone());
     assert_eq!(flow("card"), Some(json!("billing")));

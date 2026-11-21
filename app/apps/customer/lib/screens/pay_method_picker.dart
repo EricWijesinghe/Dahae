@@ -53,14 +53,18 @@ class _PayMethodPickerState extends State<PayMethodPicker> {
     _channels = _loadChannels();
   }
 
-  /// Saved-card channels show only when a gateway can save cards (see [BillingSetup]).
+  /// A saved-method channel this device cannot register (no gateway saves it, or web/Windows, which have no card
+  /// registration) is paid once in the window instead: `POST /checkouts` takes every offered method.
   Future<List<PayChannel>> _loadChannels() async {
     final api = context.api;
     final channels = await fetchPayChannels(api);
     _setup = await fetchBillingSetup(api);
-    return channels
-        .where((c) => !c.isBilling || _setup.supports(c.code))
-        .toList();
+    return [
+      for (final c in channels)
+        c.isBilling && !_setup.supports(c.code)
+            ? PayChannel(code: c.code, flow: 'checkout')
+            : c,
+    ];
   }
 
   void _reload() {

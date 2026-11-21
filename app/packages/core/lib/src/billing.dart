@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'checkout.dart' show appGateways;
 import 'desktop.dart';
 import 'portone_webview.dart';
 
@@ -61,7 +62,8 @@ class BillingSetup {
 Future<BillingSetup> fetchBillingSetup(ApiClient api) async {
   try {
     return BillingSetup.fromJson(
-      await api.get('/me/payment-methods/setup') as Map<String, dynamic>,
+      await api.get('/me/payment-methods/setup', query: appGateways)
+          as Map<String, dynamic>,
     );
   } on Object {
     return BillingSetup.off;
