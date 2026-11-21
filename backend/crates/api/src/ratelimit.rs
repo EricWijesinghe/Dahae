@@ -299,6 +299,9 @@ impl Gate {
 
 /// Axum middleware: 429 `rate_limited` once a client exceeds its bucket.
 pub async fn limit(State(gate): State<Arc<Gate>>, req: Request, next: Next) -> Response {
+    if req.uri().path() == crate::domains::TLS_ASK_PATH {
+        return next.run(req).await;
+    }
     let peer = req.extensions().get::<ConnectInfo<SocketAddr>>().map(|c| c.0.ip());
     let forwarded = req.headers().get(FORWARDED_FOR).and_then(|v| v.to_str().ok());
     let ip = client_ip(peer, forwarded, gate.trusted_proxy);

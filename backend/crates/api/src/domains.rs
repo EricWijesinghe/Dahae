@@ -74,8 +74,12 @@ struct Tick {
 }
 
 /// Top level, never proxied by Caddy (`@internal`): only the web container calls it.
+/// Caddy's certificate question. Not rate limited: Caddy's ask calls share one address, and a flood of random SNI
+/// names must not starve real aliases of certificates. The answer is cached and only Caddy can reach it.
+pub const TLS_ASK_PATH: &str = "/internal/tls-ask";
+
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/internal/tls-ask", get(tls_ask))
+    Router::new().route(TLS_ASK_PATH, get(tls_ask))
 }
 
 /// Owner console (mounted under `/admin`).

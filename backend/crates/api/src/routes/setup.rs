@@ -653,6 +653,8 @@ async fn overview(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<
     Ok(Json(json!({
         "business": business(&s.db).await?,
         "store_build": operator::store_build(&s).await?,
+        // The console shows the switch on when either is true; `env` means TOSS_PAYOUTS_ENABLED forces it on.
+        "payout_toss_switch": { "on": integrations::toss_switch_on(&s.db).await?, "env": integrations::toss_env_enabled() },
         "review_account": review_summary(&s.db).await?,
         "integrations": cards,
         "counts": { "staff": counts.0, "verified_pros": counts.1, "active_services": counts.2, "bookings": counts.3 },

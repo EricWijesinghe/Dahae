@@ -279,6 +279,9 @@ async fn toss_payout_switch_needs_the_owner_code_and_opens_the_gate(pool: PgPool
         api::integrations::toss_switch_on(&pool).await.expect("read"),
         "switch on, env off: the gate is open"
     );
+    let (st, b) = call(&app, "GET", "/v1/admin/setup", Some(&token), None).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert_eq!(b["payout_toss_switch"], json!({"on": true, "env": false}), "the console reads the saved switch");
     let audited: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE action = 'setup.payout_switch'")
         .fetch_one(&pool)
         .await
