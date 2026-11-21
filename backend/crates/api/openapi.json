@@ -348,8 +348,19 @@
         "tags": [
           "public"
         ],
-        "summary": "Payment methods offered at checkout, [{code, flow, gateway}], in catalogue order, each code once: switched on and served by a gateway. `gateway` (portone | tosspayments) is where POST /v1/checkouts sends the method now: PortOne when it has the method's channel key, else Toss Payments while its card is saved and active. Informational: the checkout intent decides the page. On Toss Payments `flow` is `billing` only for card and only when some gateway can save cards; every other method is `checkout`",
+        "summary": "Payment methods offered at checkout, [{code, flow, gateway}], in catalogue order, each code once: switched on and served by a gateway. `gateway` (portone | tosspayments) is where POST /v1/checkouts sends the method now: PortOne when it has the method's channel key, else Toss Payments while its card is saved and active. Informational: the checkout intent decides the page. `flow` is `billing` only for card and only while some gateway can save cards (then `gateway` is the one that saves cards); every other method, on either gateway, is `checkout`",
         "security": [],
+        "parameters": [
+          {
+            "name": "gateways",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated gateways whose hosted pages the app opens (current apps: portone,tosspayments). Without tosspayments, Toss Payments methods and Toss card saving are left out (v1.5.1 apps open PortOne pages only)"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -984,6 +995,17 @@
           "customer"
         ],
         "summary": "Gateway parameters to start card registration (see BillingSetup)",
+        "parameters": [
+          {
+            "name": "gateways",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated gateways whose hosted pages the app opens (current apps: portone,tosspayments). Without tosspayments, Toss Payments methods and Toss card saving are left out (v1.5.1 apps open PortOne pages only)"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",

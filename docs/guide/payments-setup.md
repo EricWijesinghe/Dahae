@@ -50,8 +50,8 @@ PortOne 과 토스페이먼츠는 둘 다 선택이에요. 하나만 또는 둘 
    - 기존 설치 호환: 카드 채널 키만 넣었던 설치는 정기결제가 그 `card` 키를 그대로 써요. 정기결제 칸을 채우면 그 칸이 우선해요. 현금영수증은 `cash_receipt` 칸이 없으면 결제수단(계좌이체·가상계좌)의 채널 키를 써요.
    - PortOne 콘솔(V2 웹훅)에 카드 옆 복사 버튼의 **웹훅 주소** `<PUBLIC_BASE_URL>/v1/webhooks/portone` 을 등록해요.
 2. **결제 (토스페이먼츠)** 카드 (선택. 혼자 써도 되고 PortOne 과 함께 써도 돼요): 자세한 순서는 [6절](#6-토스페이먼츠로-결제받기-단독-또는-portone과-함께)을 보세요.
-   - **사용** 스위치는 기본으로 켜져 있어요. 이미 결제를 받고 있는 서버라면 처음 저장하기 전에 **사용**을 꺼요. 키를 넣고 **저장** (처음 저장은 소유자 인증 코드) → [API 키 확인] → 토스 개발자센터에 웹훅 등록 → 결제 수단 확인 → 잠금 해제 → **사용** 켜고 저장.
-   - 화면의 "결제 연결" 제목 아래 **결제를 받는 곳**에 설정한 결제사가 모두 보여요 (PortOne 먼저, 테스트 키인 결제사 옆에 "테스트 키"). 아무것도 없으면 "아직 결제를 받을 곳이 없어요"가 떠요.
+   - **사용** 스위치를 건드리지 않고 처음 저장하면 라이브 키는 켜진 채, 테스트 키는 꺼진 채 저장돼요. 이미 결제를 받고 있는 서버라면 처음 저장하기 전에 **사용**을 꺼 두세요. 키를 넣고 **저장** (처음 저장은 소유자 인증 코드) → [API 키 확인] → 토스 개발자센터에 웹훅 등록 → 결제 수단 확인 → 잠금 해제 → **사용** 켜고 저장.
+   - 화면의 "결제 연결" 제목 아래 **결제를 받는 곳**에 설정한 결제사가 모두 보여요 (PortOne 먼저, 테스트 키인 결제사 옆에 "테스트 키"). 결제를 받는 곳이 없으면 (토스페이먼츠를 저장했지만 사용이 꺼져 있을 때도) "지금 결제를 받는 곳이 없어요"가 떠요.
 3. **지급대행 (토스)** 카드: 시크릿 키(`test_sk_` 또는 `live_sk_`)와 보안 키(64자리)를 붙여넣고 **저장** → [연결 확인] → 성공 후 지급 방식을 `toss` 로 바꿔요.
    - 카드의 **테스트** / **실거래** 표시는 시크릿 키 종류에서 와요. 테스트 통과가 실서비스 키를 열어주지 않아요.
    - 저장하면 카드가 잠겨요. [연결 확인]은 사장님(소유자) 계정이 잠긴 카드에서 바로 할 수 있어요 (잠금 해제 필요 없음).
@@ -110,18 +110,18 @@ PortOne 과 토스페이먼츠는 둘 다 선택이에요. 토스페이먼츠만
 
 ### 콘솔 순서
 
-스위치 이름은 **사용: 토스페이먼츠로 결제 받기** 예요. 기본으로 켜져 있어요. 켜져 있으면 PortOne 채널 키가 없는 켜진 결제수단을 토스페이먼츠로 받고, PortOne 이 카드를 저장할 수 없으면 새 카드도 토스페이먼츠에 저장해요. 끄면 새 토스 결제와 새 토스 카드 저장만 멈춰요. 진행 중인 결제, 환불, 대사, 웹훅, 저장된 카드와 정기결제는 계속 토스페이먼츠에서 처리해요.
+스위치 이름은 **사용: 토스페이먼츠로 결제 받기** 예요. 건드리지 않고 처음 저장하면 라이브 키는 켜진 채, 테스트 키는 꺼진 채 저장되고, 그 값은 키를 바꿔도 그대로예요. 켜져 있으면 PortOne 채널 키가 없는 켜진 결제수단을 토스페이먼츠로 받고, PortOne 이 카드를 저장할 수 없으면 새 카드도 토스페이먼츠에 저장해요 (자동결제 키가 있을 때). 끄면 새 토스 결제와 새 토스 카드 저장만 멈춰요. 진행 중인 결제, 환불, 대사, 웹훅, 저장된 카드와 정기결제는 계속 토스페이먼츠에서 처리해요.
 
-1. **사용 끄기 (이미 결제를 받는 서버만)**: 처음 저장하기 전에 **사용**을 꺼요. 켠 채로 저장하면 PortOne 채널 키가 없는 켜진 수단이 바로 고객에게 보여요.
+1. **사용 끄기 (이미 결제를 받는 서버만)**: 테스트 키는 사용이 꺼진 채 저장되지만, 처음 저장하기 전에 **사용**을 꺼 두면 확실해요. 켠 채로 저장하면 PortOne 채널 키가 없는 켜진 수단이 바로 고객에게 보여요.
 2. **테스트 키로 저장**: **결제 (토스페이먼츠)** 카드에 테스트 키(`test_`) 네 개를 넣고 저장해요. 처음 저장은 소유자 인증 코드가 필요하고, 저장하면 카드가 잠겨요.
 3. **[API 키 확인]**: 결제창 MID 키, 그다음 자동결제 MID 키를 확인해요. 자동결제 키만 틀리면 "자동결제(빌링) 키가 올바르지 않아요"가 떠요. 카드에 **테스트** / **실거래** 표시가 시크릿 키 종류대로 떠요. 이 확인은 시크릿 키만 봐요. 다른 MID 의 클라이언트 키를 넣었다면 첫 테스트 결제에서야 드러나요.
 4. **웹훅 등록**: 카드 옆 복사 버튼의 주소 `<PUBLIC_BASE_URL>/v1/webhooks/tosspayments` 를 개발자센터 **웹훅** 메뉴에서 **결제창 MID** 에 등록하고, `PAYMENT_STATUS_CHANGED` 와 `DEPOSIT_CALLBACK` 이벤트를 골라요. 자동결제 MID 에는 등록하지 않아도 돼요 (자동결제 승인은 웹훅이 오지 않아요). 지급대행 주소 `/v1/webhooks/toss` 와 헷갈리지 마세요.
 5. **결제 수단 고르기**: 설정 > **결제 수단**에서 토스페이먼츠와 계약·승인된 수단만 켜 두세요 (처음에는 10개 수단이 모두 켜져 있어요). 사용이 켜지면 PortOne 채널 키가 없는 켜진 수단이 모두 고객에게 토스페이먼츠로 보여요. 승인 안 된 수단을 고른 고객은 토스페이먼츠 오류를 봐요. 이 화면에 수단마다 결제사("결제사: PortOne" 또는 "결제사: 토스페이먼츠")가 보여요.
 6. **켜고 시험하기**: 잠금 해제(소유자 코드) → **사용** 켜기 → 저장. "결제 연결" 제목 아래 "결제를 받는 곳"에 토스페이먼츠와 "(테스트 키: 실제 돈이 오가지 않아요)"가 보여요. 예: "결제를 받는 곳: PortOne, 토스페이먼츠 (테스트 키: 실제 돈이 오가지 않아요)". 아래 "테스트 키로 먼저 확인할 것"을 결제수단마다 해 보고, 테스트 결제는 모두 환불해요. 이미 영업 중이면 손님이 테스트 키 결제를 하지 않도록 한가한 시간에 짧게 해요.
-7. **라이브 키로 바꾸기**: 잠금 해제 → 네 키를 모두 라이브 키(`live_`)로 바꿔 저장 → [API 키 확인] 을 다시 눌러요. 토스페이먼츠 옆 "테스트 키" 표시가 사라졌는지 봐요. 테스트 키로 받는 동안 받은 예약은 결제 완료로 보여도 실제 돈이 들어오지 않아요.
+7. **라이브 키로 바꾸기**: 잠금 해제 → 네 키를 모두 라이브 키(`live_`)로 바꿔 **사용**이 켜진 채 저장 → [API 키 확인] 을 다시 눌러요. 토스페이먼츠 옆 "테스트 키" 표시가 사라졌는지 봐요. 테스트 키로 받는 동안 받은 예약은 결제 완료로 보여도 실제 돈이 들어오지 않아요.
 8. **멈추기**: 잠금 해제 → **사용** 끄기 → 저장. 바꿀 때마다 감사 기록에 남아요.
 
-고객 앱이 오래된 버전이면: v1.5.1 스토어 앱은 PortOne 결제 페이지만 열 수 있어요. 토스페이먼츠로 가는 결제수단이나 카드 저장은 그 앱에서 오류가 나요 (돈은 움직이지 않아요). 고객이 스토어 앱을 쓰는 동안 토스페이먼츠로 결제를 받기 전에 새 앱을 출시하고, 콘솔 앱 버전 화면에서 고객 앱의 **최소 버전**을 올려요. 웹 앱은 항상 최신이에요.
+고객 앱이 오래된 버전이면: v1.5.1 스토어 앱은 PortOne 결제 페이지만 열 수 있어서, 서버가 그 앱에는 PortOne 결제수단과 PortOne 카드 저장만 보여줘요. 토스페이먼츠로 가는 수단은 그 앱에 보이지 않아요. 스토어 앱 고객도 토스페이먼츠 수단을 쓰게 하려면 새 앱을 출시하고, 콘솔 앱 버전 화면에서 고객 앱의 **최소 버전**을 올려요. 웹 앱은 항상 최신이에요.
 
 ### 무엇이 어디로 가나
 
@@ -138,7 +138,7 @@ PortOne 과 토스페이먼츠는 둘 다 선택이에요. 토스페이먼츠만
 | 둘 다, 토스 사용 끔 | PortOne | PortOne | – | PortOne | PortOne |
 | PortOne 채널 키는 있지만 API Secret 이나 상점 아이디가 없음 | – | – | – | 안 됨 | 아직 없음 |
 
-한 수단을 토스페이먼츠로 옮기려면 PortOne 카드에서 그 수단의 채널 키를 지워요. 카드 채널 키를 지우면 PortOne 카드 저장도 멈춰요. PortOne 에 계속 카드를 저장하려면 먼저 정기결제(`card_billing`) 칸을 채워요.
+한 수단을 토스페이먼츠로 옮기려면 잠금을 풀고 PortOne 카드에서 그 수단 칸의 **이 칸 지우기**를 누른 뒤 저장해요. PortOne 에 정기결제(`card_billing`)나 카드(`card`) 키가 있는 동안 카드는 PortOne 에 저장하는 카드로 남고, 결제 수단 화면에도 "결제사: PortOne"으로 보여요. 카드를 토스페이먼츠로 옮기려면 두 칸을 모두 지워요.
 
 이미 시작한 것은 옮겨지지 않아요:
 
@@ -151,9 +151,9 @@ PortOne 과 토스페이먼츠는 둘 다 선택이에요. 토스페이먼츠만
 | 현금영수증 | PortOne 결제는 지금처럼. 토스페이먼츠 결제는 결제창(계좌이체·가상계좌)에서 바로 발급되고, 결제를 취소하면 토스페이먼츠가 함께 취소해요 |
 | 지급대행 (파트너 지급) | 바뀌지 않아요 (지급대행 카드) |
 
-그래서 **각 결제 카드는 그 결제나 저장된 카드가 남아 있는 동안 지우지 마세요.** 지우면 그 환불이 실패하고 알림이 와요. PortOne 결제의 환불, PortOne 으로 저장한 카드, 본인인증은 PortOne 카드를 써요.
+그래서 **각 결제 카드는 그 결제나 저장된 카드가 남아 있는 동안 지우지 마세요.** 진행 중인 결제, 저장된 카드나 남은 환불이 있으면 [연결 끊기]가 거절돼요 (`gateway_in_use`). 예전 결제의 환불은 막지 않으니, 지우면 그 환불이 실패하고 알림이 와요. PortOne 결제의 환불, PortOne 으로 저장한 카드, 본인인증은 PortOne 카드를 써요.
 
-토스페이먼츠에서는 카카오페이·네이버페이·토스페이·페이코를 저장 수단으로 쓸 수 없어요 (토스 자동결제는 카드만). 토스페이먼츠로 가는 이 수단들은 고객 앱에서 1회 결제로 보여요. 이미 PortOne 으로 저장한 간편결제는 그대로 써요.
+카카오페이·네이버페이·토스페이·페이코는 어느 결제사로 가든 고객 앱에서 1회 결제로 보여요 (카드 저장 화면은 카드만 등록해요). 웹과 Windows 앱에서는 카드도 매번 결제창으로 결제해요. PortOne 테스트 채널로 받은 결제나 저장한 카드는 "결제는 됐지만 자동 처리가 안 됐어요" 알림을 띄워요 (`portone_test_channel`). 라이브 서버에 테스트 채널 키가 들어가 있다는 뜻이에요. 이미 PortOne 으로 저장한 간편결제는 그대로 써요.
 
 ### 테스트 키로 먼저 확인할 것
 
@@ -185,7 +185,7 @@ This is a **fill-in template**. Enter the real values only in the console (Setti
 
 PortOne and Toss Payments are both optional: set up either one, or both. Customers are offered the methods of every gateway set up; with neither, payment is unavailable.
 
-Console order (Settings › Payments): (1) PortOne card (optional; identity checks (PASS) need it): store id, V2 API secret, webhook secret and the channel key slots (card, card billing, KakaoPay, NaverPay, TossPay, virtual account, identity, cash receipt, bank transfer; also PAYCO, Samsung Pay, Apple Pay and phone), then Save (the first save needs the owner's code), then the owner presses Check API key. Installs that only had the card channel key keep billing and cash receipts on it. (2) Toss Payments card (optional; alone or next to PortOne): see "Taking payments with Toss Payments" below. Its Active switch is on by default, so on a server that already takes payments turn it off before the first save. The payments heading, "Payments go to: …", lists every gateway set up, PortOne first, with "test keys" next to any gateway on test keys, or says no gateway is set up yet. (3) Toss payout card: secret key and security key, Save, Check connection, then mode `toss`.
+Console order (Settings › Payments): (1) PortOne card (optional; identity checks (PASS) need it): store id, V2 API secret, webhook secret and the channel key slots (card, card billing, KakaoPay, NaverPay, TossPay, virtual account, identity, cash receipt, bank transfer; also PAYCO, Samsung Pay, Apple Pay and phone), then Save (the first save needs the owner's code), then the owner presses Check API key. Installs that only had the card channel key keep billing and cash receipts on it. (2) Toss Payments card (optional; alone or next to PortOne): see "Taking payments with Toss Payments" below. Saved without touching its Active switch, live keys are stored on and test keys off; on a server that already takes payments switch it off before the first save anyway. The payments heading, "Payments go to: …", lists every gateway set up, PortOne first, with "test keys" next to any gateway on test keys, or says no gateway takes payments right now (also while Toss is saved with Active off). (3) Toss payout card: secret key and security key, Save, Check connection, then mode `toss`.
 
 Each card locks after it is saved. Secrets and channel keys show only a mask and cannot be read back; identifiers such as the store id and the Toss mode show in full. To replace a value, press Unlock (owner only, 6-digit authenticator code), paste the new value and Save. An unlock ends after 5 minutes (the card shows the minutes left), or sooner with Lock now. The owner can run a connection check on a locked card; no unlock is needed. Lock, unlock, save and failed unlock attempts are written to the audit log without the values.
 
@@ -208,9 +208,9 @@ Contracts first: the Toss Payments online-payment contract (payment-window MID);
 
 Keys (developer center, API keys menu): the **API individual integration** client key (`test_ck_`) and secret key (`test_sk_`) of the payment-window MID, not the widget keys (`gck`/`gsk`); optionally the billing MID's pair (both or neither) and the 64-character security key. All keys must be test keys, or all live keys (`key_mode_mismatch` otherwise).
 
-Console order. The switch is **Active: take payments with Toss Payments** and it is on by default. On, switched-on methods without a PortOne channel key are paid through Toss Payments, and new cards are saved with Toss Payments when PortOne cannot save cards. Off stops only new Toss payments and new Toss card saves; payments in progress, refunds, reconciliation, webhooks, saved cards and subscriptions keep running on Toss Payments. (1) On a server that already takes payments, switch **Active** off before the first save: saved with it on, every switched-on method without a PortOne channel key is offered to customers at once; (2) save the four test keys (owner code on the first save); (3) Check API key: the window keys, then the billing keys (`billing_invalid_key` when only the billing pair fails). It checks the secret keys only: a client key from another MID shows up only at the first test payment; (4) register `<PUBLIC_BASE_URL>/v1/webhooks/tosspayments` on the payment-window MID with `PAYMENT_STATUS_CHANGED` and `DEPOSIT_CALLBACK` (not on the billing MID: billing approvals send no webhook); (5) under Setup > **Payment methods**, leave on only the methods Toss Payments contracted and approved (all 10 are on at first): with Active on, every switched-on method without a PortOne channel key is offered through Toss Payments. Each row there shows its gateway ("Gateway: PortOne" or "Gateway: Toss Payments"); (6) unlock (owner code), switch **Active** on, Save: the heading shows Toss Payments with "(test keys: no real money moves)", for example "Payments go to: PortOne, Toss Payments (test keys: no real money moves)". Run the test list below per method and refund every test payment; (7) unlock, replace all four keys with live keys (`live_`), Save, Check API key again, and see the "test keys" note next to Toss Payments gone: bookings taken on test keys look paid but bring in no money; (8) to pause Toss Payments, unlock, switch Active off, Save. Every change is in the audit log.
+Console order. The switch is **Active: take payments with Toss Payments**. Saved for the first time without touching it, live keys are stored on and test keys off, and the stored value stays when keys change. On, switched-on methods without a PortOne channel key are paid through Toss Payments, and new cards are saved with Toss Payments (with its billing pair) when PortOne cannot save cards. Off stops only new Toss payments and new Toss card saves; payments in progress, refunds, reconciliation, webhooks, saved cards and subscriptions keep running on Toss Payments. (1) On a server that already takes payments, switch **Active** off before the first save (test keys are stored off anyway): saved with it on, every switched-on method without a PortOne channel key is offered to customers at once; (2) save the four test keys (owner code on the first save); (3) Check API key: the window keys, then the billing keys (`billing_invalid_key` when only the billing pair fails). It checks the secret keys only: a client key from another MID shows up only at the first test payment; (4) register `<PUBLIC_BASE_URL>/v1/webhooks/tosspayments` on the payment-window MID with `PAYMENT_STATUS_CHANGED` and `DEPOSIT_CALLBACK` (not on the billing MID: billing approvals send no webhook); (5) under Setup > **Payment methods**, leave on only the methods Toss Payments contracted and approved (all 10 are on at first): with Active on, every switched-on method without a PortOne channel key is offered through Toss Payments. Each row there shows its gateway ("Gateway: PortOne" or "Gateway: Toss Payments"); (6) unlock (owner code), switch **Active** on, Save: the heading shows Toss Payments with "(test keys: no real money moves)", for example "Payments go to: PortOne, Toss Payments (test keys: no real money moves)". Run the test list below per method and refund every test payment; (7) unlock, replace all four keys with live keys (`live_`), Save with Active on, Check API key again, and see the "test keys" note next to Toss Payments gone: bookings taken on test keys look paid but bring in no money; (8) to pause Toss Payments, unlock, switch Active off, Save. Every change is in the audit log.
 
-Older customer apps: v1.5.1 store apps open PortOne pages only, so a method or card save routed to Toss Payments fails in them (no money moves). Before Toss Payments takes payments while customers still use store apps, publish the new apps and raise the customer app's **Minimum version** under App versions. The web app is always current.
+Older customer apps: v1.5.1 store apps open PortOne pages only. Current apps send `?gateways=portone,tosspayments`; without it the server offers PortOne methods and PortOne card saving only, so v1.5.1 never sees a Toss method. For store users to get the Toss methods, publish the new apps and raise the customer app's **Minimum version** under App versions. The web app is always current.
 
 Routing ("–" means not offered; every row assumes the method is switched on under Setup > Payment methods):
 
@@ -225,8 +225,8 @@ Routing ("–" means not offered; every row assumes the method is switched on un
 | Both, Toss Active off | PortOne | PortOne | – | PortOne | PortOne |
 | PortOne channel keys, but no API secret or no store id | – | – | – | off | none yet |
 
-To move a method to Toss Payments, clear its channel key on the PortOne card. Clearing the `card` key also stops PortOne card saves unless `card_billing` is set, so fill `card_billing` first if cards should stay on PortOne.
+To move a method to Toss Payments, unlock the PortOne card, press **Clear this slot** on that key and Save. While PortOne has the `card_billing` (or `card`) key, card stays a saved card on PortOne and its row shows "Gateway: PortOne"; to send card to Toss Payments clear both.
 
-Nothing already started moves: a payment already started, its refunds, lookups and reconciliation stay on the gateway it started on; saved cards and their subscription charges stay on the gateway they were saved with; identity checks (PASS) always use PortOne and need its identity channel; cash receipts for Toss payments come from the Toss window and are cancelled by Toss with the payment; payouts are unchanged. So **keep each gateway's card while its payments or saved cards remain**: clearing a card makes its refunds fail and alert. On Toss Payments, KakaoPay, NaverPay, Toss Pay and PAYCO cannot be saved (Toss billing is card only) and are one-off payments.
+Nothing already started moves: a payment already started, its refunds, lookups and reconciliation stay on the gateway it started on; saved cards and their subscription charges stay on the gateway they were saved with; identity checks (PASS) always use PortOne and need its identity channel; cash receipts for Toss payments come from the Toss window and are cancelled by Toss with the payment; payouts are unchanged. So **keep each gateway's card while its payments or saved cards remain**: Disconnect is refused (`gateway_in_use`) while the card has open checkouts, live saved cards or queued refunds; refunds of older payments are not guarded and fail and alert once the card is cleared. KakaoPay, NaverPay, Toss Pay and PAYCO are one-off payments on either gateway (card setup registers cards only), and on the web and Windows card is paid in the window too. A PortOne payment or saved card on a TEST channel raises the stuck-payment alert (`portone_test_channel`).
 
 Test with test keys first (no money moves; virtual accounts start with `X`; KakaoPay needs a contracted MID key, PAYCO live keys, Apple Pay Safari): one payment per method, a full and a partial refund, a closed or failed window, a saved card (test code 000000) charge, refund and delete when billing keys are set, the webhook log showing 200, and the hand-off to card apps, Toss and KakaoPay and back on Android and iOS. Then refund every test payment and switch to live keys (console order step 7). Developer checks (webhook signature header, the transaction list, billing latency) are in payments-reference.md section 4. To pause Toss Payments, switch Active off: only new Toss payments and card saves stop. Rolling the server back to a release from before Toss: switch Active off first and wait until no Toss payment is pending or awaiting deposit and no Toss refund is queued; older releases cannot look up or refund Toss payments.
