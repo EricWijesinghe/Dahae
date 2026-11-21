@@ -383,11 +383,11 @@ pub fn sample_values(vars: &[&'static str], brand: &str) -> Vec<(&'static str, S
 }
 
 /// Real values for an event's placeholders. `None` when the booking they need cannot be found.
-async fn live_values(db: &PgPool, vars: &[&'static str], booking: Option<Uuid>) -> sqlx::Result<Option<Vec<(&'static str, String)>>> {
+async fn live_values(db: &PgPool, locale: &str, vars: &[&'static str], booking: Option<Uuid>) -> sqlx::Result<Option<Vec<(&'static str, String)>>> {
     let mut out = Vec::with_capacity(vars.len());
     for &name in vars {
         if name == BRAND {
-            out.push((name, crate::routes::setup::brand_name(db).await));
+            out.push((name, crate::routes::setup::brand::brand_name_for(db, shipped(locale)).await));
             continue;
         }
         let Some(id) = booking else {
@@ -442,7 +442,7 @@ pub async fn notice(db: &PgPool, locale: &str, kind: &str, title: &str, body: &s
         return built_in;
     };
     let booking = data.get("booking_id").and_then(Value::as_str).and_then(|s| Uuid::parse_str(s).ok());
-    match live_values(db, ev.vars, booking).await {
+    match live_values(db, locale, ev.vars, booking).await {
         Ok(Some(values)) => pick(Some((&title, &body)), &values, built_in),
         Ok(None) => {
             tracing::warn!(kind, "notification placeholder has no value; using built-in text");

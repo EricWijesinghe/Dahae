@@ -110,7 +110,6 @@ pub(crate) struct Ctx<'t> {
     pub rng: StdRng,
     pub now: DateTime<Utc>,
     pub kst: FixedOffset,
-    pub public_base: String,
     pub data_key: [u8; 32],
     pub counts: BTreeMap<&'static str, u64>,
 }
@@ -193,7 +192,6 @@ pub async fn load(db: &PgPool, config: &Config, force: bool) -> Result<Report, D
         rng: StdRng::seed_from_u64(DEMO_SEED),
         now: Utc::now(),
         kst,
-        public_base: config.public_base_url.clone(),
         data_key: config.data_key,
         counts: BTreeMap::new(),
     };
@@ -286,8 +284,8 @@ fn placeholder_bytes() -> Vec<u8> {
 }
 
 /// Shared by people, bookings and social: the demo placeholder photo URL.
-pub(crate) fn photo_url(public_base: &str) -> String {
-    format!("{public_base}/files/{PLACEHOLDER_FILE}")
+pub(crate) fn photo_url() -> String {
+    format!("/files/{PLACEHOLDER_FILE}")
 }
 
 /// `api demo load [--force]` / `api demo clear`, run inside the api container or locally.
