@@ -5806,8 +5806,8 @@ abstract class T {
   /// No description provided for @dfSafeBooking.
   ///
   /// In ko, this message translates to:
-  /// **'다해 안심예약'**
-  String get dfSafeBooking;
+  /// **'{brand} 안심예약'**
+  String dfSafeBooking(String brand);
 
   /// No description provided for @dfRecommended.
   ///
@@ -6058,8 +6058,8 @@ abstract class T {
   /// No description provided for @dhHomeNews.
   ///
   /// In ko, this message translates to:
-  /// **'다해 소식'**
-  String get dhHomeNews;
+  /// **'{brand} 소식'**
+  String dhHomeNews(String brand);
 
   /// No description provided for @dhHomeAll.
   ///
@@ -7318,7 +7318,7 @@ abstract class T {
   /// No description provided for @err_invalid_photos.
   ///
   /// In ko, this message translates to:
-  /// **'사진은 다해에 올린 파일만 첨부할 수 있어요'**
+  /// **'사진은 이 앱에서 올린 파일만 첨부할 수 있어요'**
   String get err_invalid_photos;
 
   /// No description provided for @welcomeOfferTitle.
@@ -11453,6 +11453,18 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'평수 고치기'**
   String get quoteSizeChangeSize;
+
+  /// No description provided for @partnerAppTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'{brand} 파트너'**
+  String partnerAppTitle(String brand);
+
+  /// No description provided for @rbLegalOpenWeb.
+  ///
+  /// In ko, this message translates to:
+  /// **'웹 페이지로 보기'**
+  String get rbLegalOpenWeb;
 
   /// No description provided for @rnwTitle.
   ///

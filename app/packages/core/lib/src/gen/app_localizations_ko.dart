@@ -3004,7 +3004,9 @@ class TKo extends T {
   String get dfQuoteMethodTitle => '견적 방식을 확인하고\n예약을 진행해 주세요.';
 
   @override
-  String get dfSafeBooking => '다해 안심예약';
+  String dfSafeBooking(String brand) {
+    return '$brand 안심예약';
+  }
 
   @override
   String get dfRecommended => '추천!';
@@ -3140,7 +3142,9 @@ class TKo extends T {
   String get dhHomeRecommended => '추천 서비스';
 
   @override
-  String get dhHomeNews => '다해 소식';
+  String dhHomeNews(String brand) {
+    return '$brand 소식';
+  }
 
   @override
   String get dhHomeAll => '전체';
@@ -3822,7 +3826,7 @@ class TKo extends T {
   String get err_referral_disabled => '지금은 친구 추천을 받지 않아요';
 
   @override
-  String get err_invalid_photos => '사진은 다해에 올린 파일만 첨부할 수 있어요';
+  String get err_invalid_photos => '사진은 이 앱에서 올린 파일만 첨부할 수 있어요';
 
   @override
   String get welcomeOfferTitle => '첫 예약 할인';
@@ -6010,6 +6014,14 @@ class TKo extends T {
 
   @override
   String get quoteSizeChangeSize => '평수 고치기';
+
+  @override
+  String partnerAppTitle(String brand) {
+    return '$brand 파트너';
+  }
+
+  @override
+  String get rbLegalOpenWeb => '웹 페이지로 보기';
 
   @override
   String get rnwTitle => '갱신 일정';
