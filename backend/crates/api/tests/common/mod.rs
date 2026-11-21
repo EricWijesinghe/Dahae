@@ -141,34 +141,38 @@ pub struct TossEnv {
     pub state: api::state::AppState,
 }
 
-/// Production mode with PortOne (secret, store, card and billing channels) at `portone_api` and the Toss card
+/// Production mode with PortOne (secret, store, a `transfer` channel only) at `portone_api` and the Toss card
 /// (both MIDs and the 보안 키) at `toss_api`, switched on when `active`. The card is stored like a console save,
 /// so `setup::reload` keeps it.
 pub async fn prod_app_toss(db: PgPool, toss_api: &str, portone_api: &str, active: bool) -> TossEnv {
-    let mut cfg = test_config();
-    cfg.dev_mode = false;
-    cfg.portone = PortOne {
+    let portone = PortOne {
         api_secret: Some(PORTONE_SECRET.into()),
         store_id: Some("store-test".into()),
-        channel_keys: [("card", "channel-key-card"), ("card_billing", "channel-key-billing")]
-            .iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect(),
+        // PortOne serves transfer only, so card, kakaopay and saved cards go to Toss while it is on.
+        channel_keys: [("transfer".to_string(), "channel-key-transfer".to_string())].into(),
         cash_receipts: true,
         ..PortOne::default()
     };
+    let env = prod_app_gateways(db, toss_api, portone_api, portone).await;
+    set_toss(&env, toss::card(active)).await;
+    env
+}
+
+/// Production mode with the given env PortOne settings and no Toss card saved yet (see `set_toss`).
+pub async fn prod_app_gateways(db: PgPool, toss_api: &str, portone_api: &str, portone: PortOne) -> TossEnv {
+    let mut cfg = test_config();
+    cfg.dev_mode = false;
+    cfg.portone = portone;
     let mut state = build_state(db.clone(), cfg.clone()).expect("http client");
     let providers = Providers::new(cfg, db)
         .expect("http client")
         .with_portone_api(portone_api)
         .with_toss_api(toss_api);
     state.providers = Arc::new(providers);
-    let env = TossEnv {
+    TossEnv {
         app: routes::router(state.clone()),
         state,
-    };
-    set_toss(&env, toss::card(active)).await;
-    env
+    }
 }
 
 /// Saves the Toss card values (encrypted, as the console stores them) and reloads the live keys.

@@ -5,11 +5,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'checkout.dart' show appGateways;
 import 'desktop.dart';
 import 'portone_webview.dart';
 
-/// Server's answer for saving a card on the live gateway: PortOne store and per-method channel keys, or the
-/// Toss billing client key under `card`. Disabled until that gateway can save cards.
+/// Server's answer for saving a card on the gateway that saves cards (PortOne first, else Toss Payments): PortOne
+/// store and per-method channel keys, or the Toss billing client key under `card`. Disabled while none can.
 class BillingSetup {
   const BillingSetup({
     required this.enabled,
@@ -61,7 +62,8 @@ class BillingSetup {
 Future<BillingSetup> fetchBillingSetup(ApiClient api) async {
   try {
     return BillingSetup.fromJson(
-      await api.get('/me/payment-methods/setup') as Map<String, dynamic>,
+      await api.get('/me/payment-methods/setup', query: appGateways)
+          as Map<String, dynamic>,
     );
   } on Object {
     return BillingSetup.off;

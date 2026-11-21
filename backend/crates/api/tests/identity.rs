@@ -77,6 +77,34 @@ async fn setup_reports_enabled_in_dev_mode(db: PgPool) {
     assert_eq!(b["enabled"], json!(true));
 }
 
+/// A PortOne identity channel saved in the console (none in env) turns PASS on, with the console's store id.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_console_identity_channel_turns_pass_on(db: PgPool) {
+    let (token, _) = login(&common::app(db.clone()), "010-7100-0006", "customer").await;
+    let env = common::prod_app_gateways(db.clone(), "http://127.0.0.1:9", "http://127.0.0.1:9", Default::default()).await;
+    let setup = |env: &common::TossEnv| {
+        let (app, token) = (env.app.clone(), token.clone());
+        async move { call(&app, "GET", "/v1/me/identity/setup", Some(token.as_str()), None).await.1["enabled"].clone() }
+    };
+    assert_eq!(setup(&env).await, json!(false), "nothing set up");
+    let card = json!({ "store_id": "store-console", "api_secret": "fake-portone-api-secret-000000",
+                       "channel_keys": { "identity": "channel-key-identity" } });
+    let enc = api::crypto::encrypt(&env.state.config.data_key, api::crypto::aad::INTEGRATION, &card.to_string());
+    sqlx::query("INSERT INTO integration_settings (section, secret) VALUES ('portone', $1)")
+        .bind(enc)
+        .execute(&db)
+        .await
+        .expect("portone card");
+    api::routes::setup::reload(&env.state).await.expect("reload");
+    assert_eq!(setup(&env).await, json!(true));
+    let (st, s) = session(&env.app, &token).await;
+    assert_eq!(st, StatusCode::OK, "{s}");
+    assert_eq!(
+        (s["store_id"].as_str(), s["channel_key"].as_str()),
+        (Some("store-console"), Some("channel-key-identity"))
+    );
+}
+
 /// `/me.logins` lists only the caller's own customer identities: never another account's, never a pro's.
 #[sqlx::test(migrations = "../../migrations")]
 async fn me_logins_lists_only_the_callers_identities(db: PgPool) {

@@ -204,7 +204,7 @@ class AppState extends ChangeNotifier {
     await loadAddresses();
   }
 
-  /// [billingKey] comes from PortOne's card registration page; the server verifies it before saving.
+  /// [billingKey] comes from PortOne's or Toss Payments' card registration page; the server verifies it before saving.
   Future<PaymentMethod> addMethod(
     String provider,
     String displayName,

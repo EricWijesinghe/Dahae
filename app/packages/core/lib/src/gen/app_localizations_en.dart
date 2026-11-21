@@ -7286,6 +7286,15 @@ class TEn extends T {
   String get cSetupKeepValue => 'Saved (type only to replace)';
 
   @override
+  String get cSetupClearSlot => 'Clear this slot';
+
+  @override
+  String get cSetupUndoClearSlot => 'Keep this slot';
+
+  @override
+  String get cSetupSlotCleared => 'This key is removed when you save';
+
+  @override
   String get cSetupGuide => 'How to set up';
 
   @override
@@ -7411,7 +7420,8 @@ class TEn extends T {
   String get cSetupTestApiKey => 'Check API key';
 
   @override
-  String get cSetupNeedsKey => 'Add the channel key first';
+  String get cSetupNeedsKey =>
+      'Needs a PortOne channel key or Toss Payments with Active on';
 
   @override
   String get cSetupOtherMethods => 'Other payment methods';
@@ -7865,7 +7875,16 @@ class TEn extends T {
 
   @override
   String cSetupGatewayLive(String name) {
-    return 'New payments go to: $name';
+    return 'Payments go to: $name';
+  }
+
+  @override
+  String get cSetupGatewayNone =>
+      'No gateway takes payments right now. Set up PortOne or Toss Payments, or turn Toss Payments\' Active on.';
+
+  @override
+  String cPayMethodGateway(String name) {
+    return 'Gateway: $name';
   }
 
   @override
@@ -7878,6 +7897,10 @@ class TEn extends T {
   @override
   String get err_invalid_client_key =>
       'The client key starts with test_ck_ or live_ck_.';
+
+  @override
+  String get err_gateway_in_use =>
+      'This gateway still has payments in progress, saved cards or refunds, so it can\'t be disconnected. To stop new payments only, turn Toss Payments\' Active off, or clear PortOne\'s channel key slots.';
 
   @override
   String get err_key_mode_mismatch =>

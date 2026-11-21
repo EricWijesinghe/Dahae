@@ -93,9 +93,10 @@ struct IdentityInput {
     identity_verification_id: String,
 }
 
-/// Whether PASS can run here: dev mode always, otherwise a store id and an `identity` channel key.
+/// Whether PASS can run here: dev mode always, otherwise a store id and an `identity` channel key (env or console).
 fn identity_enabled(s: &AppState) -> bool {
-    s.config.dev_mode || (s.config.portone.store_id.is_some() && s.config.portone.channel_keys.contains_key("identity"))
+    let p = &s.providers.integ().portone;
+    s.config.dev_mode || (p.store_id.is_some() && p.channel_keys.contains_key("identity"))
 }
 
 #[derive(Serialize)]
@@ -130,9 +131,10 @@ async fn identity_session(State(s): State<AppState>, Customer(a): Customer) -> A
         .bind(a.id)
         .execute(&s.db)
         .await?;
+    let p = &s.providers.integ().portone;
     Ok(Json(IdentitySession {
-        store_id: s.config.portone.store_id.clone().unwrap_or_default(),
-        channel_key: s.config.portone.channel_keys.get("identity").cloned().unwrap_or_default(),
+        store_id: p.store_id.clone().unwrap_or_default(),
+        channel_key: p.channel_keys.get("identity").cloned().unwrap_or_default(),
         identity_verification_id: id,
     }))
 }
@@ -372,14 +374,14 @@ struct MethodRow {
     created_at: DateTime<Utc>,
 }
 
-/// What the app needs to open the live gateway's card registration page. Hidden (`enabled: false`) until that
-/// gateway can save cards (PortOne's billing channel, or Toss's 자동결제 keys).
-async fn billing_setup(State(s): State<AppState>, Customer(a): Customer) -> ApiResult<Json<Value>> {
+/// What the app needs to open the card registration page of the gateway that saves cards
+/// (`Integrations::billing_gateway`). Hidden (`enabled: false`) while no gateway can save cards.
+async fn billing_setup(State(s): State<AppState>, Customer(a): Customer, Query(app): Query<super::payments::AppGateways>) -> ApiResult<Json<Value>> {
     let integ = s.providers.integ();
     let p = &integ.portone;
-    if !s.providers.billing_ready() {
+    let Some(gw) = integ.billing_gateway().filter(|g| app.opens(*g)) else {
         return Ok(Json(json!({ "enabled": false })));
-    }
+    };
     // The ticket is stored so register_method can require it (single use, 30 minutes). Random (v4): Toss binds the
     // card to it as the customerKey, which must not be guessable.
     let mut random = [0u8; 16];
@@ -389,7 +391,6 @@ async fn billing_setup(State(s): State<AppState>, Customer(a): Customer) -> ApiR
         .bind(a.id)
         .fetch_one(&s.db)
         .await?;
-    let gw = integ.gateway();
     if let (Gateway::TossPayments, Some(t)) = (gw, &integ.toss_payments) {
         let card = t.billing.as_ref().map(|(ck, _)| ck.clone());
         return Ok(Json(json!({
@@ -441,8 +442,14 @@ async fn register_method(State(s): State<AppState>, Customer(a): Customer, Json(
     if !matches!(r.provider.as_str(), "card" | "kakaopay" | "naverpay" | "tosspay" | "payco") || r.display_name.chars().count() > MAX_NAME_LEN {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }
-    // A card registers with the live gateway; Toss 자동결제 saves cards only.
-    let gw = s.providers.integ().gateway();
+    // A card registers with the gateway that saves cards now; none (the owner switched card saving off after the
+    // ticket was issued) refuses, dev mode keeps its fake. Toss 자동결제 saves cards only.
+    let gw = s
+        .providers
+        .integ()
+        .billing_gateway()
+        .or(s.providers.dev().then_some(Gateway::Portone))
+        .ok_or(ApiError::Unavailable("provider_not_configured"))?;
     if gw == Gateway::TossPayments && r.provider != "card" {
         return Err(ApiError::BadRequest("invalid_payment_method"));
     }

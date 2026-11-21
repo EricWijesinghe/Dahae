@@ -7066,6 +7066,15 @@ class TKo extends T {
   String get cSetupKeepValue => '저장된 값 유지 (바꿀 때만 입력)';
 
   @override
+  String get cSetupClearSlot => '이 칸 지우기';
+
+  @override
+  String get cSetupUndoClearSlot => '지우지 않기';
+
+  @override
+  String get cSetupSlotCleared => '저장하면 이 칸의 키를 지워요';
+
+  @override
   String get cSetupGuide => '따라 하기';
 
   @override
@@ -7184,7 +7193,7 @@ class TKo extends T {
   String get cSetupTestApiKey => 'API 키 확인';
 
   @override
-  String get cSetupNeedsKey => '채널 키를 먼저 넣어요';
+  String get cSetupNeedsKey => 'PortOne 채널 키나 토스페이먼츠(사용 켜짐)가 필요해요';
 
   @override
   String get cSetupOtherMethods => '기타 결제수단';
@@ -7617,7 +7626,16 @@ class TKo extends T {
 
   @override
   String cSetupGatewayLive(String name) {
-    return '새 결제를 받는 곳: $name';
+    return '결제를 받는 곳: $name';
+  }
+
+  @override
+  String get cSetupGatewayNone =>
+      '지금 결제를 받는 곳이 없어요. PortOne이나 토스페이먼츠를 설정하거나, 토스페이먼츠의 사용을 켜세요.';
+
+  @override
+  String cPayMethodGateway(String name) {
+    return '결제사: $name';
   }
 
   @override
@@ -7630,6 +7648,10 @@ class TKo extends T {
   @override
   String get err_invalid_client_key =>
       '클라이언트 키는 test_ck_ 또는 live_ck_로 시작해야 해요.';
+
+  @override
+  String get err_gateway_in_use =>
+      '이 결제사에 진행 중인 결제, 저장된 카드나 남은 환불이 있어 연결을 끊을 수 없어요. 새 결제만 멈추려면 토스페이먼츠는 사용을 끄고, PortOne은 채널 키 칸을 지우세요.';
 
   @override
   String get err_key_mode_mismatch =>

@@ -84,7 +84,7 @@ No login. Catalog, prices, home groups, slots, content, reviews, brand and featu
 | GET | `/v1/content` | Published content blocks | none |  |
 | GET | `/v1/public/proof` | Public review and volume proof | none |  |
 | GET | `/v1/public/seller-info` | Seller details as an HTML fragment for the website (?field= for one value) | none |  |
-| GET | `/v1/payments/methods` | Payment methods enabled for checkout | none |  |
+| GET | `/v1/payments/methods` | Payment methods enabled for checkout, each with the gateway it goes to | none |  |
 | GET | `/v1/setup` | Whether first-run setup is complete | none |  |
 | POST | `/v1/setup/admin` | Create the first admin with the setup code | none |  |
 | GET | `/v1/brand` | Brand name, colours, app-update policy and seller details (company: legal_name, ceo, registration_no, mail_order_no, address, hosting_provider; support_phone, support_email) | none |  |

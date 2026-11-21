@@ -3471,6 +3471,9 @@
  "cSetupInvalidKey": "키가 올바르지 않아요. 복사한 값을 다시 확인해 주세요",
  "cSetupUnreachable": "서비스에 연결할 수 없어요. 잠시 후 다시 시도해 주세요",
  "cSetupKeepValue": "저장된 값 유지 (바꿀 때만 입력)",
+ "cSetupClearSlot": "이 칸 지우기",
+ "cSetupUndoClearSlot": "지우지 않기",
+ "cSetupSlotCleared": "저장하면 이 칸의 키를 지워요",
  "cSetupGuide": "따라 하기",
  "cSetupOpenSite": "사이트 열기",
  "cSetupWebhook": "웹훅 주소 (PortOne 콘솔에 붙여넣기)",
@@ -3516,7 +3519,7 @@
   }
  },
  "cSetupTestApiKey": "API 키 확인",
- "cSetupNeedsKey": "채널 키를 먼저 넣어요",
+ "cSetupNeedsKey": "PortOne 채널 키나 토스페이먼츠(사용 켜짐)가 필요해요",
  "cSetupOtherMethods": "기타 결제수단",
  "cSlotHintCard": "PortOne 콘솔의 채널 목록에서 일반결제(카드) 채널 키를 복사하세요",
  "cSlotHintBilling": "정기결제(빌링키) 채널 키예요. 비워 두면 카드 채널 키를 써요",
@@ -3677,8 +3680,17 @@
  "tTaxBusiness": "사업자 등록 (원천징수 없음)",
  "tReceiptSettings": "영수증 설정",
  "cIntTossPayments": "결제 (토스페이먼츠)",
- "cSetupGatewayLive": "새 결제를 받는 곳: {name}",
+ "cSetupGatewayLive": "결제를 받는 곳: {name}",
  "@cSetupGatewayLive": {
+  "placeholders": {
+   "name": {
+    "type": "String"
+   }
+  }
+ },
+ "cSetupGatewayNone": "지금 결제를 받는 곳이 없어요. PortOne이나 토스페이먼츠를 설정하거나, 토스페이먼츠의 사용을 켜세요.",
+ "cPayMethodGateway": "결제사: {name}",
+ "@cPayMethodGateway": {
   "placeholders": {
    "name": {
     "type": "String"
@@ -3688,6 +3700,7 @@
  "cSetupGatewayTestKeys": "(테스트 키: 실제 돈이 오가지 않아요)",
  "cSetupBillingInvalidKey": "자동결제(빌링) 키가 올바르지 않아요. 빌링 MID의 키를 확인해 주세요",
  "err_invalid_client_key": "클라이언트 키는 test_ck_ 또는 live_ck_로 시작해야 해요.",
+ "err_gateway_in_use": "이 결제사에 진행 중인 결제, 저장된 카드나 남은 환불이 있어 연결을 끊을 수 없어요. 새 결제만 멈추려면 토스페이먼츠는 사용을 끄고, PortOne은 채널 키 칸을 지우세요.",
  "err_key_mode_mismatch": "테스트 키와 라이브 키를 섞을 수 없어요. 같은 종류의 키를 넣어 주세요.",
  "reviewRuleLine": "욕설, 개인정보, 허위·광고 내용은 금지되며 신고된 후기는 숨겨집니다.",
  "reportAction": "신고",

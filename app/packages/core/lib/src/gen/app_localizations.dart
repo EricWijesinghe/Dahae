@@ -13410,6 +13410,24 @@ abstract class T {
   /// **'저장된 값 유지 (바꿀 때만 입력)'**
   String get cSetupKeepValue;
 
+  /// No description provided for @cSetupClearSlot.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 칸 지우기'**
+  String get cSetupClearSlot;
+
+  /// No description provided for @cSetupUndoClearSlot.
+  ///
+  /// In ko, this message translates to:
+  /// **'지우지 않기'**
+  String get cSetupUndoClearSlot;
+
+  /// No description provided for @cSetupSlotCleared.
+  ///
+  /// In ko, this message translates to:
+  /// **'저장하면 이 칸의 키를 지워요'**
+  String get cSetupSlotCleared;
+
   /// No description provided for @cSetupGuide.
   ///
   /// In ko, this message translates to:
@@ -13641,7 +13659,7 @@ abstract class T {
   /// No description provided for @cSetupNeedsKey.
   ///
   /// In ko, this message translates to:
-  /// **'채널 키를 먼저 넣어요'**
+  /// **'PortOne 채널 키나 토스페이먼츠(사용 켜짐)가 필요해요'**
   String get cSetupNeedsKey;
 
   /// No description provided for @cSetupOtherMethods.
@@ -14481,8 +14499,20 @@ abstract class T {
   /// No description provided for @cSetupGatewayLive.
   ///
   /// In ko, this message translates to:
-  /// **'새 결제를 받는 곳: {name}'**
+  /// **'결제를 받는 곳: {name}'**
   String cSetupGatewayLive(String name);
+
+  /// No description provided for @cSetupGatewayNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 결제를 받는 곳이 없어요. PortOne이나 토스페이먼츠를 설정하거나, 토스페이먼츠의 사용을 켜세요.'**
+  String get cSetupGatewayNone;
+
+  /// No description provided for @cPayMethodGateway.
+  ///
+  /// In ko, this message translates to:
+  /// **'결제사: {name}'**
+  String cPayMethodGateway(String name);
 
   /// No description provided for @cSetupGatewayTestKeys.
   ///
@@ -14501,6 +14531,12 @@ abstract class T {
   /// In ko, this message translates to:
   /// **'클라이언트 키는 test_ck_ 또는 live_ck_로 시작해야 해요.'**
   String get err_invalid_client_key;
+
+  /// No description provided for @err_gateway_in_use.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 결제사에 진행 중인 결제, 저장된 카드나 남은 환불이 있어 연결을 끊을 수 없어요. 새 결제만 멈추려면 토스페이먼츠는 사용을 끄고, PortOne은 채널 키 칸을 지우세요.'**
+  String get err_gateway_in_use;
 
   /// No description provided for @err_key_mode_mismatch.
   ///

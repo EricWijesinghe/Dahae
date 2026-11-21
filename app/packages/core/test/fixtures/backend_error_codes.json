@@ -111,7 +111,8 @@
     "quality_paused",
     "training_required",
     "no_partner_available",
-    "reassign_closed"
+    "reassign_closed",
+    "gateway_in_use"
   ],
   "fallback": [
     "already_confirmed",
