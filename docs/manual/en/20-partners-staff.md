@@ -132,14 +132,17 @@ To see the full number:
 3. Change how many days are counted and how many minutes late still count as on time in **[Operating rules]** ([chapter 23](23-rules-notify-privacy.md)).
 
 > **Warning**
-> This version has no console button found to lift a **Paused** status (**to be confirmed**).
+> This version of the console has no button to lift one partner's **Paused** status (**to be confirmed**; ask your developer). If it is urgent, you can lower the auto-pause score under **[Quality]**. It applies to every partner from the next score calculation, so use it with care.
 
 ## 20.4 Customers and points
 
 ### Find a customer
 
+> **Warning**
+> Only **admins** can use **[Customers]**. Consultants see the menu, but the list does not load for them.
+
 1. In the left menu, click **[Customers]**.
-2. Type a name or phone number in the search field at the top and press `Enter`.
+2. Type a name or phone number in the search field at the top (**Search (number, phone, name, address)**) and press `Enter`.
 3. Each row shows the name, phone, **Joined** date, and **(number) bookings** on the right.
 
 ![Customers list with search](../img/en/console-customers.png)
@@ -162,9 +165,6 @@ You should now see: **Points adjusted**, and a **Points adjustment** line at the
 > - There is a limit per adjustment: 100,000 points in a new installation. You can lower it in **[Operating rules]** under **Most points per manual adjustment**.
 > - Zero or an empty reason shows **Enter a non-zero amount and a reason**.
 > - Every adjustment is recorded in the activity log.
-
-> **Tip**
-> With a consultant account, tapping a customer row does nothing. Only admins can see the points ledger.
 
 ## 20.5 Staff (people who share the console)
 
@@ -233,7 +233,7 @@ You should now see: the text message note, or the **Reset code** window with the
 
 ## 20.6 Handing over the owner role
 
-Your account is the **owner**. There is only one owner. Handing it to another admin (**Hand over the owner role**), or an admin taking it when there is no owner (**Make me the owner**), is done in **[My account]**. See [chapter 8, Console tour](08-console-tour.md).
+Your account is the **owner**. There is only one owner. Handing it to another admin (**Hand over the owner role**), or an admin taking it when there is no owner (**Make me the owner**), is done in **[My account]**. See [8.5 My account](08-console-tour.md#85-my-account).
 
 ## If something goes wrong
 
@@ -246,4 +246,5 @@ Your account is the **owner**. There is only one owner. Handing it to another ad
 | **[Show full number (needs verification)]** says **That code does not match. Check that your phone's clock is right, then try again.** | Set your phone's clock to automatic and try with a new code |
 | **Too many attempts. Wait a few minutes and try again.** | Wait a few minutes and try again |
 | The staff text does not arrive | Use **Hand over (copy)**. Check text messaging in [chapter 14](14-setup-solapi.md) |
-| A points adjustment fails with **Something went wrong. Please try again.** | The limit (100,000 in a new installation) was exceeded, or the reason is too long (200 characters max). Use a smaller number or shorter reason |
+| A points adjustment fails with **Something went wrong. Please try again.** | The per-adjustment limit (100,000 in a new installation) was exceeded. Use a smaller number |
+| The **[Customers]** list does not show | This is a consultant account. Sign in as an admin |

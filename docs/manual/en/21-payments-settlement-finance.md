@@ -36,7 +36,7 @@ The deposit rate is shown under the **[Quote formula]** tab. A new installation 
 - If confirmation is slow right after paying, the app shows **Checking your payment**. Tell the customer not to pay again. The booking appears once it is confirmed.
 
 > **Warning**
-> The checkout note **Free cancellation up to 2 days before the visit...** is fixed text. If you changed the cancellation policy, whether this text follows is **to be confirmed** ([18.10](18-catalog-prices.md#1810-cancellation-fees-cancellation-policy)).
+> The checkout note **Free cancellation up to 2 days before the visit...** is fixed text. It does not follow a changed cancellation policy. If you change the policy, ask your developer to change the text ([18.10](18-catalog-prices.md#1810-cancellation-fees-cancellation-policy)).
 
 ## 21.2 Refunds
 
@@ -67,7 +67,7 @@ Good to know:
 | Status | Meaning |
 |---|---|
 | **Awaiting balance** | A quoted job waiting for the customer's balance |
-| **Scheduled** | Ready to pay. The pay date is the Wednesday after the job |
+| **Scheduled** | Ready to pay. The pay date is the Wednesday after the job (a job finished on a Wednesday is paid the next Wednesday) |
 | **Paid** | The partner has been paid |
 | **On hold** | You held it, or the booking was cancelled |
 
@@ -89,7 +89,7 @@ Hold a disputed job before it is paid.
 You should now see: **Done**, and the status is **On hold**. To release it, click **[Release]**.
 
 > **Warning**
-> A settlement already inside a payout cannot be held. Handle it in **[Payouts]** instead.
+> A settlement already inside a payout cannot be held. Clicking **[Hold]** shows **The settlement can't be changed right now.** Handle it in **[Payouts]** instead.
 
 ### Create payouts (Run payouts)
 
@@ -109,7 +109,7 @@ You should now see: **Created (number) payout requests**, and the screen switche
 1. Click **[Payouts]**.
 2. Each payout is a card.
    - First line: `partner name · team name · bank, last 4 digits of the account`
-   - Second line: **Gross**, **Withholding**, **Net**, the pay date and the method (**Manual transfer** or **Toss payouts**). A failed payout shows the failure reason below.
+   - Second line: **Gross**, **Withholding**, **Net**, the pay date and the method (**Manual transfer** or **Toss payouts**). If there is a failure reason, it shows on the line below.
    - Status: **Requested**, **Sent**, **Paid**, **Failed**
 3. If there are none, you see **No payouts yet**.
 
@@ -148,7 +148,7 @@ Use this only if partner payouts are set to Toss payouts in [chapter 13](13-setu
 
 1. On that partner's **Requested** (or **Failed**) card, click **[Register seller]**.
 2. In **Register as Toss seller**, pick **Individual** or **Business**. The note says **Uses the partner's verified payout account. Enter business details only.**
-3. Fill **Name**, **Settlement email** and **Phone**. If you picked **Business**, also fill **Representative name** and **Business registration no. (10 digits)**. Fields marked **Required** must be filled.
+3. Fill **Name**, **Settlement email** and **Phone** (10 or 11 digits). If you picked **Business**, also fill **Representative name** and **Business registration no. (10 digits)**. An empty or badly formatted field shows **Required** under it.
 4. Click **[Register]**.
 
 You should now see: **Seller status: (status)**. If the partner changed their account, registering again is safe.
@@ -169,15 +169,15 @@ If a send got no answer from Toss, nobody knows whether the money left. The card
 
 1. Click **[Check with Toss]**.
 2. If Toss answers, the status updates at once.
-3. If you see **Toss's records don't show this payout. Check again in a few minutes, or look in the Toss dashboard yourself.**, wait a few minutes and click again.
-4. If that still fails, **[Confirm it was not sent]** appears. Before clicking it, sign in to the Toss Payments merchant dashboard and look in the payouts list for that partner and amount.
+3. If you see **Toss's records don't show this payout. Check again in a few minutes, or look in the Toss dashboard yourself.**, or Toss cannot be reached, **[Confirm it was not sent]** appears on the card. First wait a few minutes and click **[Check with Toss]** again.
+4. If nothing changes, before clicking **[Confirm it was not sent]**, sign in to the Toss Payments merchant dashboard and look in the payouts list for that partner and amount.
    - Not there, or shown as failed or cancelled: go to step 5.
    - Shown as requested, in progress or completed: the money left or is leaving. Do not click anything; click **[Check with Toss]** again later.
 5. Click **[Confirm it was not sent]**. The **Was this payout really not sent?** window opens.
 6. Tick **I checked the Toss dashboard myself**.
 7. Click **[Mark as not sent]**.
 
-You should now see: **Marked as failed. You can retry it now.** Send it again with **[Retry]**.
+You should now see: **Marked as failed. You can retry it now.** Send it again with **[Retry]**. The bookings in this payout cannot be cancelled until Toss reports how the new send ended.
 
 > **Warning**
 > **If this is wrong, the partner may be paid twice.** Always check the Toss dashboard yourself before confirming.
@@ -202,7 +202,7 @@ You should now see: the new type applies from the next payout created. Existing 
    - **[Day]**: today
    - **[Week]**: this week (Monday to Sunday)
    - **[Month]**: this month
-   - **[Custom]**: pick a start and end date in the calendar (up to about 2 years)
+   - **[Custom]**: pick a start and end date in the calendar (under 800 days, about 2 years)
 3. Read the number cards.
 
 | Card | Meaning |
@@ -312,7 +312,7 @@ Details and alert settings are in [chapter 26](26-system-status-updates.md).
 
 | What happens | What to do |
 |---|---|
-| No buttons in **[Settlements]**, or no **[Finance]** menu | This is a consultant account. Sign in as an admin |
+| **[Settlements]** does not load or has no buttons, or there is no **[Finance]** menu | This is a consultant account. Sign in as an admin |
 | **[Run payouts]** says **Created 0 payout requests** | No **Scheduled** settlement is due yet, or the partner's account is not verified (see the warning above). Try again with today as **Pay up to date** |
 | **[Run payouts]** ends with **Something went wrong. Please try again.** | You may have picked a future date. Pick today or a past date |
 | **This action needs a fresh authenticator code. Confirm it, then try again.** | Type the authenticator code again. After 5 minutes it asks again |

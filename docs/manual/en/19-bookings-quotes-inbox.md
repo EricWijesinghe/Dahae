@@ -16,11 +16,11 @@
 
 | Card | Meaning |
 |---|---|
-| **Today's jobs** | Bookings with a visit today |
-| **Open quotes** | Quote requests still waiting for a quote |
+| **Today's jobs** | Bookings with a visit today (not counting cancelled ones) |
+| **Open quotes** | Quote requests **In consultation**. Requests that got a quote but whose deposit is not paid yet are counted too |
 | **Unassigned** | Confirmed bookings with no team yet |
-| **Unread chats** | Conversations waiting for a reply |
-| **30-day revenue** | Money received in the last 30 days |
+| **Unread chats** | Conversations with messages staff have not read yet |
+| **30-day revenue** | Money received in the last 30 days, minus refunds |
 | **30-day bookings** | Bookings made in the last 30 days |
 | **Average rating** | Average customer rating (`-` if none) |
 | **Referral conversion** | Invited people who reached the reward, out of all invited |
@@ -45,7 +45,7 @@
 4. If **Unread chats** is not 0, reply in **[Inbox]** ([19.4](#194-inbox)). The customer's app is notified at once.
 
 > **Tip**
-> Press `Ctrl + K` to jump to a menu or booking number ([chapter 8](08-console-tour.md)).
+> Press `Ctrl + K` to jump to a screen by its menu name. Find booking numbers with the search field in **[Bookings]** ([chapter 8](08-console-tour.md)).
 
 ## 19.2 Find and handle a booking
 
@@ -77,7 +77,7 @@ You should now see: the booking number, service name, visit date and a status ta
 - **Address**: address and size in pyeong
 - **Payments**: one line per payment, for example `Deposit · (amount) · Paid`. The kind is **Deposit**, **Balance** or **Total**. The status is **Paid**, **Refunded**, **Partly refunded** or **Failed**. A partial refund shows the refunded amount in brackets.
 - **Notes for the team**: notes the customer left
-- **[Inbox]** button: opens this booking's customer chat
+- **[Inbox]** button: opens this booking's customer chat. It shows only when the booking has a chat.
 
 ![Booking details with the change status card](../img/en/console-booking-detail.png)
 
@@ -90,7 +90,7 @@ The **Change status** card under the details only shows the buttons that fit the
 Usually a partner accepts the job in the partner app and is assigned automatically. Do this only for a team that does not use the app.
 
 1. Open a **Confirmed** booking.
-2. Type the team name in **Assigned team** (for example `Gangnam team 2`).
+2. Type the team name in **Assigned team** (for example `Gangnam team 2`). If you leave it empty, **Something went wrong. Please try again.** appears and nothing is assigned.
 3. Click **[Assign team]**.
 
 You should now see: **Done**, and the status changes to **Team assigned**.
@@ -138,7 +138,8 @@ You should now see: **Done**, and the status is **Cancelled**. In the **Payments
 > - Cancelling cannot be undone.
 > - The refund goes back through the gateway the customer paid with (PortOne or Toss Payments). That is why you must not delete a gateway's setup card ([chapter 12](12-setup-toss-payments.md)).
 > - Points the customer used come back in proportion to the refund (all of them on a full cancel).
-> - The partner's settlement for this booking goes **On hold** ([chapter 21](21-payments-settlement-finance.md)).
+> - On a full refund, the coupon the customer used comes back too.
+> - The partner's settlement for this booking goes **On hold** ([chapter 21](21-payments-settlement-finance.md)). If that settlement is already being sent, **This booking's payout is already with the bank, so it can't be cancelled.** appears and nothing is cancelled.
 > - Cancels and refunds are recorded in the [Activity log](23-rules-notify-privacy.md).
 
 ## 19.3 Quote desk (move-in cleaning)
@@ -149,7 +150,7 @@ Quoted services such as move-in cleaning go like this:
 2. Partners send their quotes from the partner app.
 3. You (or a consultant) set the final price in **[Quote desk]** and send it.
 4. The customer pays the deposit, a share of the final price (10% in a new installation, [18.6](18-catalog-prices.md#186-move-in-quote-formula-quote-formula)).
-5. The partner you picked is assigned automatically.
+5. If you picked a partner quote when sending, that partner is assigned automatically when the deposit arrives. If you did not, the booking stays **Confirmed**.
 6. After the job, the customer pays the balance.
 
 ### Send a quote
@@ -231,6 +232,9 @@ A line above the list shows the AI status:
 ## 19.5 Subscriptions
 
 Manage recurring cleaning that customers get every week, every 2 weeks or every 4 weeks.
+
+> **Warning**
+> Only **admins** can use this screen. Consultants see the menu, but opening it shows **Could not load subscriptions**.
 
 1. In the left menu, click **[Subscriptions]**.
 2. Use the status buttons at the top (**Active**, **Paused**, **Cancelled**) to filter.

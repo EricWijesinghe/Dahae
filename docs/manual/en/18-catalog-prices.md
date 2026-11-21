@@ -6,10 +6,10 @@
 > - You are signed in to the console with an admin account ([chapter 6](06-owner-account.md))
 > - Your price list (amount and time for each service)
 > - Your cancellation rules (how much you charge, how many days before the visit)
-> - Only to remove sample data: your phone's authenticator app (6-digit code)
+> - Only to remove sample data: the **owner** account and its authenticator app (6-digit code)
 
 > **Warning**
-> Only **admins** can change these screens. When a **consultant** taps a service, the toast **Admins only** appears and the save buttons are greyed out.
+> Only **admins** can change these screens. A **consultant** does not see **[New service]**, and tapping a service shows the toast **Admins only**. The save buttons on the other tabs are greyed out. On the **[Capacity per arrival slot]** tab, **[Save]** can be clicked but nothing is saved.
 
 ## 18.1 Open the catalog
 
@@ -33,7 +33,7 @@ Each card is one service. It shows the name and a price summary (the price and t
 3. Check the **Active** switch at the top. When it is on, customers can book the service.
 4. Edit the price fields. They depend on the kind of service.
    - **Fixed-price service:** type the amount in won in **Service**, digits only (no commas, for example `45000`). Type the time in minutes in **Minutes** (for example `120` for 2 hours).
-   - **Price-per-type service:** one row per type (for example wall-mounted, standing). Fill **Service** and **Minutes** on each row.
+   - **Price-per-type service:** one row per type (in a new installation: Bathroom cleaning with `1`, `2`, `3`, `4`). Fill **Service** and **Minutes** on each row.
    - **Counted service** (air conditioner, sofa, mattress and similar): a different window opens. See [18.9](#189-counted-services).
    - **Quoted service:** there are no price fields. The price is set during the consultation in the [Quote desk](19-bookings-quotes-inbox.md).
 5. Click **[Save]**. To stop, click **[Cancel]**.
@@ -55,7 +55,7 @@ You should now see: the card shows **Archived**. To sell it again, turn the swit
 
 1. At the top of the **[Pricing]** tab, click **[New service]**.
 2. The **New service** window opens.
-3. In **Service code (lowercase letters)**, type a code. Only lowercase letters, digits and `_` are allowed (for example `window_big`).
+3. In **Service code (lowercase letters)**, type a code. Only lowercase letters, digits and `_` are allowed. It must start with a lowercase letter and be 2 to 40 characters (for example `window_big`).
    > **Warning**
    > The service code cannot be changed later. Choose it carefully.
 4. In **Name shown to customers**, type the name customers will see (for example `Large window cleaning`).
@@ -73,7 +73,7 @@ You should now see: **Service created**, and a new card in the list.
 
 ## 18.4 Home screen tiles (Service groups)
 
-The customer app's home screen has four big tiles (groups). A new installation has move-in/move-out cleaning, home cleaning, appliance and furniture cleaning, and pest control. For each group you set the title, order, picture, what happens on tap, and the member services.
+The customer app's home screen has four big tiles (groups). A new installation has Move-in / move-out cleaning, Living-space cleaning, Appliance and furniture cleaning, and Pest control and disinfection. For each group you set the title, order, picture, what happens on tap, and the member services.
 
 1. Click the **[Service groups]** tab.
 2. At the top you see **The four big tiles on the app's home screen. Change titles, order and member services here**.
@@ -188,7 +188,7 @@ You should now see: **Saved**. As the screen says, it **Applies to new quotes an
 > With the switch on, the surcharge also counts in coupon and subscription discounts and in the partner's settlement. Subscriptions change from the next visit that is charged.
 
 > **Tip**
-> A wrong number shows **Check the numbers**. Percentages are 0 to 100, and the evening start hour must be before the end hour.
+> An empty field shows **Check the numbers**. Percentages are 0 to 100, the evening end hour is 24 or less, and the evening start hour must be before the end hour. Outside these ranges, **Something went wrong. Please try again.** appears and nothing is saved.
 
 ## 18.8 Partner quality thresholds
 
@@ -204,7 +204,7 @@ Each partner gets a **Quality score** from 0 to 100. It combines ratings, finish
 You should now see: **Saved**. As the screen says, it **Applies from the next score calculation**.
 
 > **Warning**
-> The auto-pause score cannot be higher than the warning score. Both must be 100 or less.
+> The auto-pause score cannot be higher than the warning score. Both must be 100 or less. Otherwise **Something went wrong. Please try again.** appears and nothing is saved. An empty field shows **Check the numbers**.
 
 See scores in the partner list in [20.3](20-partners-staff.md#203-quality-scores). The number of days counted is set in [Operating rules](23-rules-notify-privacy.md).
 
@@ -265,9 +265,9 @@ Set the fee charged when a customer cancels in the app.
 You should now see: **Saved**, and the default banner disappears. As the screen says, it **Applies to the customer app cancel screen right away. Terms update on the next legal build.**
 
 > **Warning**
-> - Days must go down from top to bottom (for example 2 → 1 → 0), and a lower row's fee may not be smaller than the row above. Otherwise it will not save.
+> - Days must go down from top to bottom (for example 2 → 1 → 0), and a lower row's fee may not be smaller than the row above. A blank fee (not cancellable in the app) is the strictest, so a row below a blank row cannot have a number. Fees are 100 or less. Otherwise **Something went wrong. Please try again.** appears and nothing is saved.
 > - You cannot add or delete rows here, only change the numbers. To change the number of rows, ask your developer (**to be confirmed**).
-> - The checkout note (**Free cancellation up to 2 days before the visit...**) is fixed text based on the default policy. Whether it follows your changed policy is **to be confirmed**.
+> - Some customer app texts are fixed and do not follow the policy. The checkout note **Free cancellation up to 2 days before the visit...**, the home screen's **Free cancellation up to 2 days before**, and the free-cancellation deadline shown while booking all use a fixed "2 days before". If you change the policy, ask your developer to change these texts.
 > - The cancellation terms in the terms of service change only with a new app build. Tell your developer.
 
 ## 18.11 Practice sample data
@@ -283,9 +283,11 @@ An empty console is hard to learn on. For practice or training you can add fake 
 You should now see: **Sample data added**. The dashboard and bookings show fake data.
 
 > **Warning**
-> It cannot be added if any real booking exists: you see **Real bookings exist, so sample data cannot be added**. If it is already there, you see **Sample data is already in place**.
+> It cannot be added if any real booking or payment exists: you see **Real bookings exist, so sample data cannot be added**. If it is already there, you see **Sample data is already in place**.
 
 ### Remove
+
+Only the **owner** account can remove sample data. With another admin account you see **Something went wrong. Please try again.**
 
 1. Click the **[Sample data]** tab.
 2. Click **[Remove sample data]**. A window with the same name opens.
@@ -296,7 +298,7 @@ You should now see: **Sample data added**. The dashboard and bookings show fake 
 You should now see: **Sample data removed**. Only the sample data is removed; real records stay.
 
 > **Tip**
-> A wrong or already used code shows **The code is wrong or already used. Enter the current code**. Wait for a new code in the app and type it again.
+> A wrong code shows **That code is wrong. Enter the 6-digit code shown in your app**, and a code already used shows **That code was already used. Wait about 30 seconds for the next code**. Wait for a new code in the app and type it again. If your sign-in has expired you may see **The code is wrong or already used. Enter the current code**; sign in again.
 
 > **Warning**
 > Remove the sample data before you start real business.
