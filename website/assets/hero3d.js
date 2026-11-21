@@ -128,12 +128,21 @@ function sparkles(count) {
   return new THREE.Points(geo, new THREE.PointsMaterial({ color: '#E3F4F8', size: 0.06, transparent: true, opacity: 0.9, depthWrite: false }));
 }
 
+// The brand hue at another sRGB lightness, as the --teal / --brand-deep / --grad-a tokens in site.css do
+// (the built-in brand gives the Dahae teals).
+function shade(hex, dl) {
+  const c = new THREE.Color(hex);
+  const hsl = c.getHSL({}, 'srgb');
+  c.setHSL(hsl.h, hsl.s, Math.min(1, Math.max(0, hsl.l + dl)), 'srgb');
+  return '#' + c.getHexString();
+}
+
 function themeColors() {
   const dark = document.documentElement.dataset.theme !== 'light';
   const brand = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#187A8F';
   return dark
-    ? { wall: '#EEF4F7', roof: brand, door: '#FFD95A', lawn: '#1E9EBA', soil: '#12606F', bush: '#5CC8DE', key: 1.6, amb: 0.7, wallGlow: 0.18 }
-    : { wall: '#FFFFFF', roof: brand, door: '#FFD95A', lawn: '#5CC8DE', soil: '#BFE6EF', bush: '#1E9EBA', key: 1.9, amb: 0.9, wallGlow: 0.04 };
+    ? { wall: '#EEF4F7', roof: brand, door: '#FFD95A', lawn: shade(brand, 0.09), soil: shade(brand, -0.08), bush: shade(brand, 0.29), key: 1.6, amb: 0.7, wallGlow: 0.18 }
+    : { wall: '#FFFFFF', roof: brand, door: '#FFD95A', lawn: shade(brand, 0.29), soil: shade(brand, 0.51), bush: shade(brand, 0.09), key: 1.9, amb: 0.9, wallGlow: 0.04 };
 }
 
 function start() {
