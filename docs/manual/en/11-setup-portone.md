@@ -225,6 +225,9 @@ You can take payments with PortOne only, Toss Payments only (chapter 12), or bot
 1. Check that Toss Payments approved this method, and that the **Payments (Toss Payments)** card is saved with **Active** on (chapter 12).
 2. On the PortOne card, click **[Unlock (owner code)]** and type the 6 digits.
 3. Click the bin icon **Clear this slot** at the right of that method's channel key. Under the box you see **This key is removed when you save**. To keep it after all, click **Keep this slot**.
+
+![The KakaoPay slot cleared: This key is removed when you save, with the undo button](../img/en/console-setup-portone-clear-slot.png)
+
 4. Click **[Save]** within 5 minutes.
 5. Open **Payment methods** (10.9). The row now shows **Gateway: Toss Payments**.
 

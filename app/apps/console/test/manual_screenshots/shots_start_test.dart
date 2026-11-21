@@ -7,6 +7,7 @@
 library;
 
 import 'package:console/screens/first_run.dart';
+import 'package:console/screens/host_controls.dart';
 import 'package:console/screens/setup.dart';
 import 'package:console/screens/setup_app_links.dart';
 import 'package:console/screens/setup_business.dart';

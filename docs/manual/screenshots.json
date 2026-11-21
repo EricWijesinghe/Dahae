@@ -389,6 +389,16 @@
   ]
  },
  {
+  "id": "console-setup-portone-clear-slot",
+  "app": "console",
+  "chapter": "11",
+  "what": "PortOne card unlocked with saved channel keys: bin buttons on each saved slot, the KakaoPay slot cleared (This key is removed when you save, undo button)",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
   "id": "external-portone-store-id",
   "app": "external",
   "chapter": "11",

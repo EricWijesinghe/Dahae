@@ -155,6 +155,7 @@ void _opsApi(
 ManualShot _ops(
   String id, {
   String Function(T t)? at,
+  double alignment = 0.05,
   bool red = false,
   bool running = false,
   bool maintenance = false,
@@ -165,7 +166,12 @@ ManualShot _ops(
   act: (tester, t) async {
     await openSection(tester, t.cOps);
     if (at != null) {
-      await scrollTo(tester, find.text(at(t)), within: OpsScreen);
+      await scrollTo(
+        tester,
+        find.text(at(t)),
+        within: OpsScreen,
+        alignment: alignment,
+      );
     }
   },
 );
@@ -178,6 +184,7 @@ final _shots = <ManualShot>[
   _ops('console-ops-flags', at: (t) => t.oFlags, maintenance: true),
   _ops('console-ops-update', at: (t) => t.hjTitle),
   _ops('console-ops-update-running', at: (t) => t.hjTitle, running: true),
+  _ops('console-ops-server-settings', at: (t) => t.cRbHostTitle, alignment: 0),
   // 27 Backups
   _ops('console-ops-backup-check', at: (t) => t.oChecks),
   // 29 When something is red
