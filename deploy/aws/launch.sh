@@ -60,6 +60,7 @@ update_policy() { # update_policy <arn> <file> : the file becomes the default ve
   local n old
   n=$(aws_ iam list-policy-versions --policy-arn "$1" --query 'length(Versions)')
   if [ "${n:-0}" -ge 5 ]; then
+    # shellcheck disable=SC2016 # backticks are a JMESPath literal, not shell
     old=$(aws_ iam list-policy-versions --policy-arn "$1" --query 'Versions[?IsDefaultVersion==`false`].VersionId' | tr -s '[:space:]' '\n' | sort -V | head -n1)
     aws_ iam delete-policy-version --policy-arn "$1" --version-id "$old" >/dev/null
   fi

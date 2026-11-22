@@ -48,6 +48,7 @@ nt "heartbeat subshell"    valid_hb_url 'https://x.io/$(id)'
 ping_url() {
   rm -f "$SB/ping.out"
   ( curl() { printf '%s' "${*: -1}" > "$SB/ping.out"; }
+    # shellcheck disable=SC2030 # the change is meant to stay in this subshell
     MALKKEUM_NOTIFY_URL="$1"; (exit "$2"); notify_result ) >/dev/null 2>&1
   cat "$SB/ping.out" 2>/dev/null || true
 }
@@ -511,6 +512,7 @@ fresh_env() { # fresh_env 코드 : write_fresh_env 가 만든 .env 의 설치 �
   local d; d=$(mktemp -d "$SB/fresh.XXXX")
   ( cd "$d" && MALKKEUM_SETUP_CODE="$1" write_fresh_env >/dev/null 2>&1 && grep '^SETUP_CODE=' .env ) || true
 }
+# shellcheck disable=SC2030 # the change is meant to stay in this subshell
 code_env() { ( MALKKEUM_SETUP_CODE="$1"; check_setup_code_env ) >/dev/null 2>&1; }
 t  "fresh .env keeps the page code"      eq "$(fresh_env ABCD2345678J)" SETUP_CODE=ABCD2345678J
 t  "fresh .env makes a code without one" eq "$(fresh_env '' | awk '{ print length($0) }')" 23
@@ -527,6 +529,7 @@ load_answers "$SB/answers"
 t  "answers: domain"                     eq "$MALKKEUM_DOMAIN" answers.example.kr
 t  "answers: email"                      eq "$MALKKEUM_EMAIL" owner@example.kr
 t  "answers: other keys ignored"         eq "${MALKKEUM_EVIL:-}" ""
+# shellcheck disable=SC2030 # the change is meant to stay in this subshell
 t  "answers: environment wins"           eq "$(export MALKKEUM_DOMAIN=keep.example.kr; load_answers "$SB/answers"; printf '%s' "$MALKKEUM_DOMAIN")" keep.example.kr
 printf 'DOMAIN=a b.kr\n' > "$SB/answers-bad"
 nt "answers: space in value refused"     sub load_answers "$SB/answers-bad"
@@ -622,11 +625,13 @@ t  "key-only drop-in text"                 grep -qx 'PasswordAuthentication no' 
 nt "empty authorized_keys is not a key"   has_key "$HB/empty-keys"
 t  "authorized_keys with a key"            has_key "$HB/no-such" "$HB/keys"
 t  "install installs ufw fail2ban unattended-upgrades" grep -qF 'ufw fail2ban unattended-upgrades' "$ROOT/deploy/install.sh"
+# shellcheck disable=SC2016 # literal text on purpose
 t  "install runs harden_host in main"      grep -qE '^  \[ "\$TOOLS_ONLY" = 1 \] \|\| harden_host$' "$ROOT/deploy/install.sh"
 # behavior: firewall_setup and ssh_keyonly_check with stubbed ufw, sshd, ask, systemctl (no real /etc or firewall changes)
 FWLOG="$HB/fw.log"
 fw_run() { # fw_run 방화벽상태 모드 : firewall_setup 을 가짜 ufw 로 돌리고 실행한 명령을 fw.log 에 남겨요
   : > "$FWLOG"
+  # shellcheck disable=SC2030 # the change is meant to stay in this subshell
   ( UFW_STATUS="$1"; MALKKEUM_FIREWALL="$2"
     ufw() { if [ "$1" = status ]; then printf '%s\n' "$UFW_STATUS"; else printf '%s\n' "$*" >> "$FWLOG"; fi; }
     firewall_setup ) >/dev/null 2>&1
@@ -786,6 +791,7 @@ printf '%s\n' "$*" > "$(dirname "$0")/blob-args"
 COS
 chmod 755 "$SB/bin/cosign"
 mkrel() { # mkrel 태그 [old] : 가짜 배포본 (install.sh·agent.sh, 지문 파일, 서명 묶음). old: 관리 도구 모드를 모르는 설치 프로그램
+  # shellcheck disable=SC2016 # literal text on purpose
   local d="$SB/rel/$1" mode='# [ "${MALKKEUM_HOST_UPDATE:-}" != tools ]'; mkdir -p "$d"
   [ "${2:-}" != old ] || mode='# full install only'
   printf '#!/usr/bin/env bash\necho "agent %s"\n' "$1" > "$d/agent.sh"
@@ -916,13 +922,16 @@ nt "...and an unreadable registry leaves no hold"   test -e "$SB/host/rollback-h
 rm -f "$SB/tools.log"; env_set PREV_API_IMAGE ''; rb 0; rc=$?
 t  "rollback with no previous version exits 6"      eq "$rc" 6
 nt "...before any backup"                           test -e "$SB/tools.log"
+# shellcheck disable=SC2016 # literal text on purpose
 t  "the CLI is written by rename (a running dahae update keeps its file)" grep -qF 'mv -f "$tmp" "$1"' "$ROOT/deploy/install.sh"
+# shellcheck disable=SC2016 # literal text on purpose
 t  "the agent service may rewrite the CLI and its units" grep -qF 'ReadWritePaths=$DIR /etc/cron.d /etc/logrotate.d /run /usr/local/bin /etc/systemd/system' "$ROOT/deploy/install.sh"
 ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; cmd_keys_confirm ) >/dev/null 2>&1
 t  "keys-confirm records the key copy"              test -n "$(env_get KEY_ESCROW_AT)"
 printf 'DB_PASSWORD=%s\nDATA_KEY=%s\nJWT_SECRET=%s\nAPI_DB_PASSWORD=%s\n' "$(printf 'a%.0s' $(seq 48))" "$(printf 'b%.0s' $(seq 64))" "$(printf 'c%.0s' $(seq 64))" "$(printf 'd%.0s' $(seq 48))" > "$SB/.env"
 mkdir -p "$SB/backups"; rm -f "$SB"/backups/keys-*.env.enc
 ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; has_tty() { return 1; }; DAHAE_KEYS_PASSPHRASE='correct horse battery' cmd_keys_backup ) >/dev/null 2>&1
+# shellcheck disable=SC2012 # test file names are known and plain
 copy=$(ls "$SB"/backups/keys-*.env.enc 2>/dev/null | head -n1)
 t  "keys-backup seals exactly the two keys keys-restore reads" eq "$(keys_open 'correct horse battery' < "$copy")" "$(printf 'DATA_KEY=%s\nJWT_SECRET=%s' "$(printf 'b%.0s' $(seq 64))" "$(printf 'c%.0s' $(seq 64))")"
 
@@ -973,6 +982,7 @@ t  "s3 env: written to .env"                        eq "$(env_get BACKUP_S3_BUCK
 t  "s3 env: a re-run without it keeps the bucket"   eq "$(env_get BACKUP_S3_BUCKET)" dahae-main-backupbucket-1a2b3c
 # shellcheck disable=SC2016 # literal ${...} on purpose
 t  "compose hands the bucket to the api"            grep -qF 'BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}' "$ROOT/deploy/docker-compose.yml"
+# shellcheck disable=SC2016 # literal ${...} searched in the template
 t  "the template passes the bucket and region to the installer" grep -qF 'MALKKEUM_BACKUP_S3_BUCKET=${BackupBucket} MALKKEUM_BACKUP_S3_REGION=${AWS::Region}' "$ROOT/deploy/aws/dahae.cfn.yaml"
 nt "tools mode needs an installed server"           installed_here
 printf 'API_IMAGE=repo/api@sha256:aa\n' >> "$SB/.env"

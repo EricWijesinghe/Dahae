@@ -334,6 +334,7 @@ printf 'DOMAIN=myshop.co.kr\nCHANNEL=stable\nVERSION=stable\nPREV_API_IMAGE=repo
 id2=$(uuid7); submit "$id2" "id=$id2\nkind=rollback\ntoken=$TOK2\n"
 t  "rollback waits for approval"          eq "$(state "$id2")" awaiting_approval
 t  "rollback summary names the version it goes back to" grep -q '"summary":"이전 버전으로 되돌려요: v1.6.1 ' "$DAHAE_JOBS/public/$TOK2.json"
+# shellcheck disable=SC2016 # literal text on purpose
 printf '$(id)\n' > "$SB/label.txt"
 t  "an odd version label is never shown"  eq "$(prev_version)" '버전 모름'
 rm -f "$SB/label.txt"; printf 'DOMAIN=myshop.co.kr\nCHANNEL=stable\nVERSION=stable\n' > "$DAHAE_DIR/.env"
@@ -602,9 +603,13 @@ ends_with() { # ends_with 종류 종료코드 : 가짜 관리 명령이 그 코�
   JOB_ID=$(uuid7) JOB_KIND=$1 JOB_ARG="" JOB_TOKEN=""; run_job
   printf '%s %s' "$(state "$JOB_ID")" "$(cat "$DAHAE_JOBS/status/$JOB_ID.json")"
 }
+# shellcheck disable=SC2016 # literal text on purpose
 t  "rollback with no previous version says so" sh -c 'case "$1" in failed*"되돌릴 이전 버전이 없어요"*) ;; *) exit 1 ;; esac' _ "$(ends_with rollback 6)"
+# shellcheck disable=SC2016 # literal text on purpose
 t  "rollback whose tools stayed says to re-run the install line" sh -c 'case "$1" in failed*"관리 도구만 되돌리지 못했어요"*"C-5"*) ;; *) exit 1 ;; esac' _ "$(ends_with rollback 5)"
+# shellcheck disable=SC2016 # literal text on purpose
 t  "any other rollback failure points at the logs" sh -c 'case "$1" in failed*"dahae logs"*) ;; *) exit 1 ;; esac' _ "$(ends_with rollback 1)"
+# shellcheck disable=SC2016 # literal text on purpose
 t  "update whose tools stayed says the new version is fine" sh -c 'case "$1" in failed*"새 버전으로 바꿨고 정상이에요"*) ;; *) exit 1 ;; esac' _ "$(ends_with update 5)"
 
 echo "agent self-test: $PASS passed, $FAIL failed"
