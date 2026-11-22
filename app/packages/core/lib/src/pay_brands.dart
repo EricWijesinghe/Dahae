@@ -71,7 +71,6 @@ class PayBrandBadge extends StatelessWidget {
         height: height,
         constraints: BoxConstraints(minWidth: height * 1.6),
         padding: const EdgeInsets.symmetric(horizontal: Space.xs),
-        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: brand.background ?? context.colors.canvas,
           borderRadius: BorderRadius.circular(Radii.chip),
@@ -79,17 +78,21 @@ class PayBrandBadge extends StatelessWidget {
               ? Border.all(color: context.colors.line)
               : null,
         ),
-        child: brand.wordmark != null
-            ? Text(
-                brand.wordmark!,
-                style: context.text.labelLarge?.copyWith(
-                  color: fg,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
-                maxLines: 1,
-              )
-            : Icon(brand.icon, color: context.primary, size: 22),
+        // widthFactor 1: as wide as the wordmark (never the whole slot, as a ListTile slot would give it).
+        child: Center(
+          widthFactor: 1,
+          child: brand.wordmark != null
+              ? Text(
+                  brand.wordmark!,
+                  style: context.text.labelLarge?.copyWith(
+                    color: fg,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                  ),
+                  maxLines: 1,
+                )
+              : Icon(brand.icon, color: context.primary, size: 22),
+        ),
       ),
     );
   }

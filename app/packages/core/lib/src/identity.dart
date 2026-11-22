@@ -37,6 +37,8 @@ class DevIdentityVerifier extends IdentityVerifier {
             child: Text(ctx.t.cancel),
           ),
           FilledButton(
+            // The theme's full-width minimum would push Cancel onto its own line.
+            style: FilledButton.styleFrom(minimumSize: const Size(64, 44)),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(ctx.t.apIdentityDevPass),
           ),

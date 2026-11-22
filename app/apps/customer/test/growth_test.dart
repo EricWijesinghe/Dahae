@@ -129,4 +129,45 @@ void main() {
       await unmount(tester);
     },
   );
+
+  // The claim button sat bare in a Row; the theme's full-width minimum cannot lay out there.
+  for (final lang in const ['ko', 'en']) {
+    for (final size in const [Size(360, 800), wideSize]) {
+      testWidgets(
+        'referral claim row lays out at ${size.width.toInt()} ($lang)',
+        (tester) async {
+          setViewport(tester, size);
+          final fake = FakeApi()
+            ..reply('GET', '/me/referral', {
+              'enabled': true,
+              'code': 'MK7Q2',
+              'amount': 5000,
+              'invited': 1,
+              'rewarded': 0,
+            });
+          stockCustomerApi(fake);
+          final env = await TestEnv.create(fake: fake, localeCode: lang);
+          await pumpCustomerScreen(
+            tester,
+            env,
+            const Scaffold(body: SingleChildScrollView(child: ReferralCard())),
+          );
+          await settle(tester);
+          expect(tester.takeException(), isNull);
+          final t = lookupT(Locale(lang));
+          final button = find.widgetWithText(
+            FilledButton,
+            t.referralClaimButton,
+          );
+          expect(button, findsOneWidget);
+          expect(
+            tester.getSize(button).width,
+            lessThan(size.width / 2),
+            reason: 'the button sits beside the field, not across the card',
+          );
+          await unmount(tester);
+        },
+      );
+    }
+  }
 }

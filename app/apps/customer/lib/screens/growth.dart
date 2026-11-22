@@ -207,6 +207,8 @@ class _ReferralCardState extends State<ReferralCard> {
               ),
               const SizedBox(width: Space.xs),
               FilledButton(
+                // As tall as the field beside it; the theme's full-width minimum cannot lay out in a Row.
+                style: FilledButton.styleFrom(minimumSize: const Size(64, 56)),
                 onPressed: _busy ? null : _claimCode,
                 child: Text(t.referralClaimButton),
               ),
