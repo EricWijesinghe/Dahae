@@ -80,7 +80,7 @@ pub async fn payment(p: &Providers, id: &str) -> Result<PaymentInfo, ProviderErr
     check_id(id)?;
     let v = get_json(p, &format!("/payments/{id}")).await?;
     if test_channel(&v["channel"]) {
-        p.observe("payment_stuck", Err("portone_test_channel")).await;
+        p.observe("payment_test_channel", Err("portone_test_channel")).await;
     }
     Ok(PaymentInfo {
         status: text(&v["status"]),
@@ -242,7 +242,7 @@ pub async fn verify_billing_key(p: &Providers, key: &str, customer: &str, issue:
     }
     let info = billing_key_at(p.http(), p.portone_api(), secret, key).await?;
     if info["channels"].as_array().is_some_and(|cs| cs.iter().any(test_channel)) {
-        p.observe("payment_stuck", Err("portone_test_channel")).await;
+        p.observe("payment_test_channel", Err("portone_test_channel")).await;
     }
     bound(&info, customer, issue)
 }

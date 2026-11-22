@@ -42,7 +42,7 @@ async fn status_is_staff_only(pool: PgPool) {
     let consultant = staff_token(&pool, "ops-consultant@test.local", Role::StaffConsultant).await;
     let (st, body) = call(&app, "GET", "/v1/admin/ops/status", Some(consultant.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{body}");
-    assert!(body["checks"].as_array().is_some_and(|c| c.len() == 6), "six checks: {body}");
+    assert!(body["checks"].as_array().is_some_and(|c| c.len() == 7), "seven checks: {body}");
     assert!(
         body["integrations"].as_array().is_some_and(|i| i.len() == ops::INTEGRATIONS.len() + 1),
         "every integration plus the photo backup: {body}"
@@ -134,4 +134,28 @@ async fn failing_photo_offsite_backup_has_its_own_status_row(pool: PgPool) {
         .clone();
     assert_eq!(row["last_error"], "unreachable");
     assert!(row["last_fail_at"].is_string(), "the failure time is shown");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_portone_test_channel_payment_is_its_own_check_not_a_stuck_payment(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let admin = staff_token(&pool, "ops-test-channel@test.local", Role::StaffAdmin).await;
+    ops::record(&pool, "payment_test_channel", Err("portone_test_channel")).await;
+
+    let (st, body) = call(&app, "GET", "/v1/admin/ops/status", Some(admin.as_str()), None).await;
+
+    assert_eq!(st, StatusCode::OK, "{body}");
+    let check = |key: &str| {
+        body["checks"]
+            .as_array()
+            .and_then(|c| c.iter().find(|c| c["key"] == key))
+            .cloned()
+            .unwrap_or_default()
+    };
+    assert_eq!(
+        (check("test_channel")["level"].as_str(), check("test_channel")["value"].as_i64()),
+        (Some("red"), Some(1)),
+        "{body}"
+    );
+    assert_eq!(check("payments")["level"], "green", "{body}");
 }

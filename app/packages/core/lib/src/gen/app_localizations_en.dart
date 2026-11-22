@@ -4333,6 +4333,20 @@ class TEn extends T {
   }
 
   @override
+  String get err_gateway_has_refundable_payments =>
+      'Payments taken through this gateway can still be refunded (up to a year after payment), so it can\'t be disconnected: those refunds would fail. To stop new payments only, turn Toss Payments\' Active off, or clear PortOne\'s channel key slots.';
+
+  @override
+  String get oRuleTestChannel => 'Payment on a PortOne test channel';
+
+  @override
+  String get oCheckTestChannel => 'PortOne test-channel payments';
+
+  @override
+  String get oActTestChannel =>
+      'A payment or saved card went through a PortOne test channel, so no real money moved: the live server has a PortOne test channel key. Replace it with the live channel key in Settings > Payments (PortOne), and check those bookings\' payments with the customers.';
+
+  @override
   String get ntNavLabel => 'Notification text';
 
   @override

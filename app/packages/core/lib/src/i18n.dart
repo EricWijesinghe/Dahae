@@ -115,6 +115,7 @@ extension Labels on T {
     'payout_provider' => err_payout_provider,
     'payout_in_transfer' => err_payout_in_transfer,
     'gateway_in_use' => err_gateway_in_use,
+    'gateway_has_refundable_payments' => err_gateway_has_refundable_payments,
     'payout_checked' => err_payout_checked,
     'settlement_in_transfer' => err_settlement_in_transfer,
     'checkout_not_open' => err_checkout_not_open,

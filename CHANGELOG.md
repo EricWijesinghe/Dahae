@@ -11,6 +11,8 @@ from the release branches; no tags existed for them.
 ### Fixed
 - Customer and partner apps: a saved server address (found after a domain move) that stops answering at a cold start while the build's own address answers is dropped, and the app starts on the build's address; offline, the saved address stays.
 - Windows apps: the window title and the exe's ProductName, FileDescription and CompanyName come from the brand at build time (`scripts/store_brand.py`, also run by `build-msix.ps1 -ApiBase`); 다해 is only the default. The title is written as `\u` escapes, so it no longer depends on the build machine's code page.
+- Money: disconnecting a payment card is also refused while that gateway has checkouts that expired within the last day (a late payment still settles on them, `gateway_in_use`) or payments from the last year that can still be refunded (`gateway_has_refundable_payments`, new console text); before, clearing the card made those refunds and late payments fail.
+- A PortOne payment or saved card on a TEST channel raises its own owner alert (rule `payment_test_channel`, "PortOne 테스트 채널로 결제가 들어왔어요", console label in Korean and English) and its own status check `test_channel`, instead of the stuck-payment alert and the `payments` check.
 
 ## [1.6.0] - 2026-11-22
 

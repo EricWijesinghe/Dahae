@@ -115,6 +115,13 @@ async fn claimed(pool: &PgPool, payment: &str) -> bool {
         .expect("checkout claim flag")
 }
 
+async fn test_channel_alert(pool: &PgPool) -> Option<String> {
+    sqlx::query_scalar("SELECT last_error FROM ops_health WHERE integration = 'payment_test_channel' AND last_fail_at IS NOT NULL")
+        .fetch_optional(pool)
+        .await
+        .expect("ops health")
+}
+
 async fn stuck_alert(pool: &PgPool) -> Option<String> {
     sqlx::query_scalar("SELECT last_error FROM ops_health WHERE integration = 'payment_stuck' AND last_fail_at IS NOT NULL")
         .fetch_optional(pool)
@@ -205,5 +212,6 @@ async fn a_payment_on_a_portone_test_channel_alerts_the_owner(pool: PgPool) {
     assert_eq!(stuck_alert(&pool).await, None, "a live channel is quiet");
     let paid = api::providers::portone::payment(&state.providers, "pay-test").await.expect("test payment");
     assert_eq!(paid.status, "PAID", "the payment itself still reads as paid");
-    assert_eq!(stuck_alert(&pool).await.as_deref(), Some("portone_test_channel"));
+    assert_eq!(test_channel_alert(&pool).await.as_deref(), Some("portone_test_channel"));
+    assert_eq!(stuck_alert(&pool).await, None, "its own alert, not a stuck payment");
 }

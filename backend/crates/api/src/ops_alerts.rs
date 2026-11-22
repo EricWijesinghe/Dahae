@@ -27,11 +27,12 @@ use std::{
 };
 use tokio::task::JoinHandle;
 
-pub const RULES: [&str; 17] = [
+pub const RULES: [&str; 18] = [
     "sms_failing",
     "push_failing",
     "payment_failing",
     "payment_stuck",
+    "payment_test_channel",
     "payment_mismatch",
     "social_failing",
     "auth_suspicious",
@@ -211,6 +212,13 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
             rule: "payment_stuck",
             title: "결제는 됐지만 자동 처리가 안 됐어요",
             body: "결제(PortOne/토스페이먼츠) 관리자 화면에서 해당 결제를 찾아 예약 생성 또는 환불 여부를 직접 확인하세요.",
+        });
+    }
+    if count(db, &["payment_test_channel"], STUCK_WINDOW_MIN).await? >= 1 {
+        out.push(Finding {
+            rule: "payment_test_channel",
+            title: "PortOne 테스트 채널로 결제가 들어왔어요",
+            body: "실제 돈이 오가지 않은 결제(또는 저장된 카드)예요. 라이브 서버에 PortOne 테스트 채널 키가 들어가 있어요. 설정 > 결제 (PortOne)에서 채널 키를 라이브 채널 키로 바꾸고, 해당 예약의 결제를 고객과 다시 확인하세요.",
         });
     }
     if count(db, &["sms_dead_letter"], DEAD_LETTER_WINDOW_MIN).await? >= 1 {

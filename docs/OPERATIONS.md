@@ -286,6 +286,7 @@ WAL 보관을 켠 경우(엔지니어 설정) 시점 복원은 `pgbackrest` 명�
 | 자동 백업 | 마지막 백업 26시간 넘으면 노랑, 36시간 넘으면 빨강 | `backup_level` |
 | 서버 오류 (24시간) | 20건 이상 노랑, 100건 이상 빨강 | `errors_level` |
 | 결제 확인 필요 (24시간) | 자동 처리가 멈춘 결제가 있으면 빨강 | `payments` check, `payment_stuck` |
+| PortOne 테스트 채널 결제 (24시간) | 테스트 채널로 들어온 결제나 저장된 카드가 있으면 빨강 | `test_channel` check, `payment_test_channel` |
 | 결제 알림 (웹훅) | 서명 실패 1건 이상 노랑, 3건 이상 빨강 | `signature_level` |
 | 외부 서비스 8종 | 설정 안 됨은 노랑, 최근 24시간 실패 후 성공이 없으면 빨강 | `INTEGRATIONS`, `integration_level` |
 | 백그라운드 작업 | 멈춘 작업이 있는지 | `jobs` |
@@ -297,7 +298,7 @@ WAL 보관을 켠 경우(엔지니어 설정) 시점 복원은 `pgbackrest` 명�
 ### 사장님 알림
 12개 규칙 (`RULES`, [backend/crates/api/src/ops_alerts.rs](../backend/crates/api/src/ops_alerts.rs)): 문자 발송 실패, 푸시 실패, 결제 연동 실패, 결제 자동 처리 실패,
 PortOne 결제 내역 불일치, 소셜 로그인 실패, 계정 보안 이상, 자동 백업 누락, 디스크 부족, 기사님 미배정 예약, 당일 취소 증가, 부가세 신고 기한.
-문자 재시도를 다 쓴 뒤의 `sms_dead_letter` 알림도 따로 있어요 (`ops_alerts.rs` 193행).
+PortOne 테스트 채널로 들어온 결제는 결제 자동 처리 실패와 따로 `payment_test_channel` 규칙으로 알려요. 문자 재시도를 다 쓴 뒤의 `sms_dead_letter` 알림도 따로 있어요 (`ops_alerts.rs` 193행).
 알림은 상담함, 사장님 휴대폰 문자, 직원 앱 푸시로 가요. 같은 문제는 6시간에 한 번만 보내요 (`COOLDOWN_HOURS`).
 조용한 시간(기본 밤 10시 ~ 아침 7시, 한국 시간)에는 보내지 않아요. 조용한 시간이 끝나면 그때 걸려 있는 항목을 규칙별로 한 번씩 보내요. 알림 받을 번호를 비우면 사업장 고객센터 번호로 가요.
 
