@@ -358,3 +358,18 @@ async fn an_unanswered_toss_payout_alerts_the_owner_after_half_an_hour(pool: PgP
     assert!(ops_alerts::RULES.contains(&"payout_unconfirmed"), "listed on the alert card");
     assert!(ops_alerts::Prefs::default().enabled("payout_unconfirmed"), "on by default");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_portone_test_channel_payment_has_its_own_alert_not_the_stuck_one(pool: PgPool) {
+    let state = api::build_state(pool.clone(), test_config()).expect("state");
+    api::ops::record(&pool, "payment_test_channel", Err("portone_test_channel")).await;
+
+    let findings = ops_alerts::evaluate(&state).await.expect("findings");
+
+    let f = findings.iter().find(|f| f.rule == "payment_test_channel").expect("test channel alert");
+    assert!(f.title.contains("테스트 채널"), "{}", f.title);
+    assert!(f.body.contains("채널 키"), "{}", f.body);
+    assert!(!fired(&findings, "payment_stuck"), "nothing is stuck");
+    assert!(ops_alerts::RULES.contains(&"payment_test_channel"), "listed on the alert card");
+    assert!(ops_alerts::Prefs::default().enabled("payment_test_channel"), "on by default");
+}

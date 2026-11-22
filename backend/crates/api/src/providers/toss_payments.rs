@@ -185,6 +185,13 @@ pub fn info(v: &Value) -> PaymentInfo {
     }
 }
 
+/// Whether `secret` reads `order_id` (200): a changed key still belongs to the MID that order was paid on.
+pub(crate) async fn reads_order(p: &Providers, secret: &str, order_id: &str) -> Result<bool, ProviderError> {
+    check_id(order_id)?;
+    let rb = p.http().get(url(&["v1", "payments", "orders", order_id])?).header(AUTHORIZATION, auth(secret));
+    call(p, rb).await.map(|(s, _)| s.is_success())
+}
+
 /// Setup-wizard check: looks up an order that cannot exist. 404 means the secret key was accepted, 401 that it was not.
 pub(crate) async fn check(p: &Providers, secret: &str) -> Result<StatusCode, ProviderError> {
     let rb = p

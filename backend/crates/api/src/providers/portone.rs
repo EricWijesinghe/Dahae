@@ -80,10 +80,15 @@ pub async fn payment(p: &Providers, id: &str) -> Result<PaymentInfo, ProviderErr
     check_id(id)?;
     let v = get_json(p, &format!("/payments/{id}")).await?;
     if test_channel(&v["channel"]) {
-        p.observe("payment_stuck", Err("portone_test_channel")).await;
+        p.observe("payment_test_channel", Err("portone_test_channel")).await;
     }
     Ok(PaymentInfo {
-        status: text(&v["status"]),
+        // Read as failed so nothing books: no money moved.
+        status: if foreign_test_channel(p, &v["channel"]) {
+            "FAILED".into()
+        } else {
+            text(&v["status"])
+        },
         // Missing amount reads as -1, which never matches a checkout: the payment gets refunded.
         total: v["amount"]["total"].as_i64().unwrap_or(-1),
         cancelled: v["amount"]["cancelled"].as_i64().unwrap_or(-1),
@@ -241,8 +246,12 @@ pub async fn verify_billing_key(p: &Providers, key: &str, customer: &str, issue:
         return Err(ProviderError::Declined("invalid_billing_key".into()));
     }
     let info = billing_key_at(p.http(), p.portone_api(), secret, key).await?;
-    if info["channels"].as_array().is_some_and(|cs| cs.iter().any(test_channel)) {
-        p.observe("payment_stuck", Err("portone_test_channel")).await;
+    let channels = info["channels"].as_array().map(Vec::as_slice).unwrap_or_default();
+    if channels.iter().any(test_channel) {
+        p.observe("payment_test_channel", Err("portone_test_channel")).await;
+    }
+    if channels.iter().any(|c| foreign_test_channel(p, c)) {
+        return Err(ProviderError::Declined("portone_test_channel".into()));
     }
     bound(&info, customer, issue)
 }
@@ -251,6 +260,12 @@ pub async fn verify_billing_key(p: &Providers, key: &str, customer: &str, issue:
 /// server alerts the owner.
 pub fn test_channel(channel: &Value) -> bool {
     channel["type"].as_str() == Some("TEST")
+}
+
+/// A test channel whose key this server does not hold. Channel keys are public, so any client can pay through
+/// a test channel of the same store: such a payment or card must never count.
+fn foreign_test_channel(p: &Providers, channel: &Value) -> bool {
+    test_channel(channel) && !channel["key"].as_str().is_some_and(|k| p.integ().portone.channel_keys.values().any(|c| c == k))
 }
 
 /// Binds a key to the customer and ticket it was issued for. Missing fields fail closed.

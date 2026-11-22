@@ -8,7 +8,9 @@
 Reads GET {API_BASE}/v1/brand (A: profile + `assets` with absolute public URLs) and writes into app/apps/<app>:
   - Android: legacy launcher icons from `store_1024`, the adaptive foreground and monochrome layers from `icon_512`,
     and the adaptive background colour from `primary_color`;
-  - iOS: every AppIcon size from `store_1024`, flattened to RGB (App Store Connect rejects an alpha channel).
+  - iOS: every AppIcon size from `store_1024`, flattened to RGB (App Store Connect rejects an alpha channel);
+  - Windows: the window title (runner/main.cpp) and ProductName / FileDescription (APP_LABEL) and
+    CompanyName (the brand name) in runner/Runner.rc.
 Prints APP_LABEL (customer: short_name; partner: "<short_name> 파트너") and APP_ID for the build steps
 (Gradle reads them, native-keys.sh writes them into Keys.xcconfig).
 
@@ -46,11 +48,15 @@ def app_id(app, env):
     return value
 
 
-def label(app, brand):
-    """Home-screen name. Characters that would break the manifest or xcconfig are dropped."""
-    name = str(brand.get("short_name") or "").strip() or str(brand.get("name") or "").strip()[:SHORT_MAX]
+def clean(text):
+    """Drops characters that would break the manifest, xcconfig, or a C++ or .rc string literal."""
     # A leading @ or ? would make android:label a resource reference.
-    name = re.sub(r"[\x00-\x1f<>&\"'\\$/]", "", name).strip().lstrip("@? ")
+    return re.sub(r"[\x00-\x1f<>&\"'\\$/]", "", text).strip().lstrip("@? ")
+
+
+def label(app, brand):
+    """Home-screen name."""
+    name = clean(str(brand.get("short_name") or "").strip() or str(brand.get("name") or "").strip()[:SHORT_MAX])
     if not name:
         sys.exit("/v1/brand has no name")
     return name if app == "customer" else f"{name} 파트너"
@@ -120,6 +126,26 @@ def ios_icons(iconset, store):
         save(flat.resize((px, px), LANCZOS), png)
 
 
+def wide(text):
+    """C++ wide literal body: non-ASCII as \\u escapes, so MSVC reads it the same under any code page."""
+    return "".join(c if ord(c) < 0x80 else f"\\u{ord(c):04X}" if ord(c) <= 0xFFFF else f"\\U{ord(c):08X}" for c in text)
+
+
+def sub_once(path, pattern, value):
+    text = path.read_text(encoding="utf-8")
+    new, n = re.subn(pattern, lambda m: m.group(1) + value + m.group(2), text)
+    if n != 1:
+        sys.exit(f"{path}: expected one {pattern!r}, found {n}")
+    path.write_text(new, encoding="utf-8", newline="\n")
+
+
+def windows_names(runner, title, company):
+    """Window title (main.cpp) and the exe's version info (Runner.rc, #pragma code_page(65001): plain UTF-8)."""
+    sub_once(runner / "main.cpp", r'(window\.Create\(L")[^"]*(")', wide(title))
+    for key, value in (("CompanyName", company), ("FileDescription", title), ("ProductName", title)):
+        sub_once(runner / "Runner.rc", rf'(VALUE "{key}", ")[^"]*(")', value)
+
+
 def apply(app, brand, get, apps=APPS):
     """Writes the icons into the app folder and returns the APP_LABEL value."""
     color = str(brand.get("primary_color") or "")
@@ -128,7 +154,9 @@ def apply(app, brand, get, apps=APPS):
     store, icon = image(brand, "store_1024", 1024, get), image(brand, "icon_512", 512, get)
     android_icons(apps / app / "android" / "app" / "src" / "main" / "res", store, icon, color.upper())
     ios_icons(apps / app / "ios" / "Runner" / "Assets.xcassets" / "AppIcon.appiconset", store)
-    return label(app, brand)
+    name = label(app, brand)
+    windows_names(apps / app / "windows" / "runner", name, clean(str(brand.get("name") or "")) or name)
+    return name
 
 
 def main(argv, env):

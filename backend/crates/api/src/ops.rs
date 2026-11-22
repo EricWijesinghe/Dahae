@@ -332,6 +332,7 @@ pub async fn status(s: &AppState) -> ApiResult<Value> {
         .await?;
     let signatures = count_failures(&s.db, "portone_webhook", 24).await? + count_failures(&s.db, "tosspayments_webhook", 24).await?;
     let stuck = count_failures(&s.db, "payment_stuck", 24).await?;
+    let test_channel = count_failures(&s.db, "payment_test_channel", 24).await?;
     let sms_dead = crate::sms_outbox::dead_count(&s.db).await?;
     let disk = disk_usage(s.config.upload_dir.clone()).await;
 
@@ -367,6 +368,7 @@ pub async fn status(s: &AppState) -> ApiResult<Value> {
         check("backup", backup_level(backup_age, &t), backup_age.map(|h| h.round())),
         check("errors", errors_level(errors), errors),
         check("payments", if stuck > 0 { Level::Red } else { Level::Green }, stuck),
+        check("test_channel", if test_channel > 0 { Level::Red } else { Level::Green }, test_channel),
         check("webhook", signature_level(signatures), signatures),
     ];
     // Background jobs of this process. Listed beside the checks (the console has no card for them

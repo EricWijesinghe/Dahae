@@ -8035,6 +8035,36 @@ abstract class T {
   /// **'{n}주 후 예약'**
   String anWeekAfter(String n);
 
+  /// No description provided for @err_gateway_has_refundable_payments.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 결제사로 받은 결제 중 아직 환불할 수 있는 결제(결제 후 1년 이내)가 있어 연결을 끊을 수 없어요. 연결을 끊으면 그 환불이 실패해요. 새 결제만 멈추려면 토스페이먼츠는 사용을 끄고, PortOne은 채널 키 칸을 지우세요.'**
+  String get err_gateway_has_refundable_payments;
+
+  /// No description provided for @err_gateway_account_changed.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 결제사로 받은 결제, 저장된 카드나 남은 환불이 아직 지금 계정(PortOne 상점, 토스페이먼츠 MID)에 있어서 다른 계정으로 바꿀 수 없어요. 바꾸면 그 조회와 환불이 새 계정으로 가서 실패해요. 같은 계정에서 새로 받은 키로 바꾸는 건 돼요.'**
+  String get err_gateway_account_changed;
+
+  /// No description provided for @oRuleTestChannel.
+  ///
+  /// In ko, this message translates to:
+  /// **'PortOne 테스트 채널로 들어온 결제'**
+  String get oRuleTestChannel;
+
+  /// No description provided for @oCheckTestChannel.
+  ///
+  /// In ko, this message translates to:
+  /// **'PortOne 테스트 채널 결제'**
+  String get oCheckTestChannel;
+
+  /// No description provided for @oActTestChannel.
+  ///
+  /// In ko, this message translates to:
+  /// **'PortOne 테스트 채널로 결제나 카드 저장이 들어왔어요. 실제 돈은 오가지 않았어요. 이 서버의 키가 아닌 테스트 채널로 들어온 건은 거절해서 예약되지 않았어요. 테스트 키로 시험 중이면 괜찮아요. 운영 중이라면 설정 > 결제 (PortOne)의 채널 키가 라이브 채널 키인지 확인하고, PortOne 관리자 화면에서 이 상점의 테스트 채널을 삭제한 뒤, 테스트 결제 내역에서 그 결제를 찾아 예약을 고객과 다시 확인하세요.'**
+  String get oActTestChannel;
+
   /// No description provided for @ntNavLabel.
   ///
   /// In ko, this message translates to:

@@ -43,6 +43,17 @@ class _MemStorage extends FlutterSecureStorage {
       data[key] = value;
     }
   }
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => data.remove(key);
 }
 
 const _old = 'https://old.test';
@@ -112,7 +123,7 @@ void main() {
         '$_old/.well-known/dahae-domain',
         '$_new/v1/config',
       ]);
-      expect(s.storage.data[apiBaseOverrideKey], '$_old|$_new');
+      expect(s.storage.data[apiBaseOverrideKey], '$_old|$_new|$_id');
       expect(s.api.baseUrl, _old, reason: 'never switched mid-session');
       expect(s.api.publicBase.value, _new);
       expect(
@@ -120,6 +131,7 @@ void main() {
           storage: s.storage,
           web: false,
           compiled: () => _old,
+          client: _probe(),
         ),
         _new,
       );
@@ -260,4 +272,170 @@ void main() {
       }
     },
   );
+
+  test(
+    'a move back to the build\'s own address clears the saved one',
+    () async {
+      final s = _setup(
+        probe: _probe(approved: 'old.test'),
+        base: _new,
+      );
+      s.storage.data[apiBaseOverrideKey] = '$_old|$_new|$_id';
+
+      await s.discovery.check(_config(_old));
+
+      expect(s.storage.data, isEmpty);
+      expect(s.api.publicBase.value, _old);
+    },
+  );
+
+  group('a saved address that stops answering', () {
+    const saved = '$_old|$_new|$_id';
+    const day = Duration(hours: 24);
+    final t0 = DateTime.utc(2026, 11, 23, 9);
+
+    /// `/v1/config` answers [body] (default: this install's id) on the hosts in [up]; [hang] hosts never
+    /// answer, others fail.
+    http.Client hosts({
+      Set<String> up = const {},
+      Set<String> hang = const {},
+      Map<String, String> body = const {},
+      List<Uri>? seen,
+    }) => MockClient((req) async {
+      seen?.add(req.url);
+      if (hang.contains(req.url.host)) await Completer<void>().future;
+      if (!up.contains(req.url.host)) throw http.ClientException('down');
+      return http.Response(
+        body[req.url.host] ?? jsonEncode({'install_id': _id}),
+        200,
+      );
+    });
+
+    Future<String> resolve(
+      http.Client client,
+      _MemStorage storage, {
+      DateTime? at,
+      Duration timeout = const Duration(milliseconds: 50),
+    }) => resolveApiBase(
+      storage: storage,
+      web: false,
+      compiled: () => _old,
+      client: client,
+      timeout: timeout,
+      now: () => at ?? t0,
+    );
+
+    String missAt(DateTime t) => '$saved|${t.millisecondsSinceEpoch}';
+
+    test('is kept while it answers with this install id', () async {
+      final seen = <Uri>[];
+      final storage = _MemStorage({apiBaseOverrideKey: saved});
+
+      expect(
+        await resolve(hosts(up: {'new.test', 'old.test'}, seen: seen), storage),
+        _new,
+      );
+      expect(storage.data[apiBaseOverrideKey], saved);
+      expect(seen.map((u) => '$u'), contains('$_new/v1/config'));
+    });
+
+    test(
+      'falls back only after misses on cold starts a day apart, then is cleared',
+      () async {
+        for (final client in [
+          hosts(up: {'old.test'}),
+          hosts(up: {'old.test'}, hang: {'new.test'}),
+          // A lapsed domain's parking page, or another install, answers 200 too.
+          hosts(
+            up: {'old.test', 'new.test'},
+            body: {'new.test': '<html>parked</html>'},
+          ),
+          hosts(
+            up: {'old.test', 'new.test'},
+            body: {
+              'new.test': jsonEncode({'install_id': 'ffffffffffffffff'}),
+            },
+          ),
+        ]) {
+          final storage = _MemStorage({apiBaseOverrideKey: saved});
+
+          expect(await resolve(client, storage), _new, reason: 'first miss');
+          expect(storage.data[apiBaseOverrideKey], missAt(t0));
+          expect(await resolve(client, storage, at: t0.add(day ~/ 2)), _new);
+          expect(storage.data[apiBaseOverrideKey], missAt(t0));
+          expect(await resolve(client, storage, at: t0.add(day)), _old);
+          expect(storage.data, isEmpty);
+        }
+      },
+    );
+
+    test('a miss is forgotten once the saved address answers again', () async {
+      final storage = _MemStorage({apiBaseOverrideKey: missAt(t0)});
+
+      expect(
+        await resolve(
+          hosts(up: {'new.test', 'old.test'}),
+          storage,
+          at: t0.add(day),
+        ),
+        _new,
+      );
+      expect(storage.data[apiBaseOverrideKey], saved);
+    });
+
+    test('is kept when the build\'s own address is not this install', () async {
+      for (final client in [
+        hosts(),
+        hosts(hang: {'new.test', 'old.test'}),
+        hosts(up: {'old.test'}, body: {'old.test': '<html>parked</html>'}),
+        hosts(
+          up: {'old.test'},
+          body: {
+            'old.test': jsonEncode({'install_id': 'ffffffffffffffff'}),
+          },
+        ),
+        hosts(
+          up: {'old.test'},
+          body: {
+            'old.test': jsonEncode({'install_id': ''}),
+          },
+        ),
+      ]) {
+        final storage = _MemStorage({apiBaseOverrideKey: missAt(t0)});
+
+        expect(await resolve(client, storage, at: t0.add(day * 2)), _new);
+        expect(storage.data[apiBaseOverrideKey], missAt(t0));
+      }
+    });
+
+    test('both probes share one deadline', () async {
+      final watch = Stopwatch()..start();
+      await resolve(
+        hosts(hang: {'new.test', 'old.test'}),
+        _MemStorage({apiBaseOverrideKey: saved}),
+        timeout: const Duration(milliseconds: 300),
+      );
+      expect(watch.elapsedMilliseconds, lessThan(550));
+    });
+
+    test(
+      'a value saved without an install id, or naming the build\'s own address, is not probed',
+      () async {
+        for (final (value, want) in [
+          ('$_old|$_new', _new),
+          ('$_old|$_old|$_id', _old),
+        ]) {
+          final seen = <Uri>[];
+          final storage = _MemStorage({apiBaseOverrideKey: value});
+
+          expect(
+            await resolve(hosts(up: {'old.test'}, seen: seen), storage),
+            want,
+          );
+          expect(seen, isEmpty);
+          expect(storage.data[apiBaseOverrideKey], value);
+        }
+      },
+    );
+  });
 }

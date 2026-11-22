@@ -763,6 +763,9 @@ async fn put_section(
     if sec == Section::Payout && !is_toss(&merged) && crate::payout_sync::toss_transfers_open(&s.db).await? {
         return Err(ApiError::Conflict("payout_in_transfer"));
     }
+    if account_changed(&s, sec, &current, &merged).await? {
+        return Err(ApiError::Conflict("gateway_account_changed"));
+    }
     if let Some(step) = owner_step {
         owner::burn_totp(&s, a.id, owner::client_ip(&s, Some(peer.ip()), &headers), step).await?;
     }
@@ -811,11 +814,18 @@ async fn clear_section(State(s): State<AppState>, Admin(a): Admin, Path(code): P
         Section::TossPayments => Some((Gateway::TossPayments, vec![Gateway::TossPayments.code(), crate::providers::TOSS_BILLING])),
         _ => None,
     };
-    if let Some((gw, refunds)) = gateway
-        && !integrations::Integrations::from_config(&s.config).has(sec)
-        && gateway_in_use(&s.db, gw, &refunds).await?
+    let env = integrations::Integrations::from_config(&s.config);
+    // The env copy serves those rows only when it is the same PortOne store.
+    let env_serves = env.has(sec)
+        && (sec != Section::Portone || {
+            let card = integrations::load_section(&s.db, &s.config.data_key, sec).await?;
+            card.get("store_id").and_then(Value::as_str) == env.portone.store_id.as_deref()
+        });
+    if let Some((gw, providers)) = gateway
+        && !env_serves
+        && let Some(why) = gateway_in_use(&s.db, gw, &providers).await?
     {
-        return Err(ApiError::Conflict("gateway_in_use"));
+        return Err(ApiError::Conflict(why));
     }
     // The row stays, locked and empty: a non-owner admin cannot re-save the card without an unlock.
     if !integrations::save_section(&s.db, &s.config.data_key, sec, &Map::new(), a.id).await? {
@@ -826,17 +836,81 @@ async fn clear_section(State(s): State<AppState>, Admin(a): Admin, Path(code): P
     Ok(Json(card(&s, sec, None).await?))
 }
 
-/// Open checkouts, live saved cards or queued refunds on `gw`: clearing its card would strand them.
-async fn gateway_in_use(db: &PgPool, gw: Gateway, refund_providers: &[&str]) -> Result<bool, sqlx::Error> {
-    sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM checkouts WHERE gateway = $1 AND status IN ('pending', 'awaiting_deposit'))
+/// How long a finished payment can still be refunded through its gateway: Toss card and virtual-account cancels
+/// work for a year (transfers 180 days); PortOne passes the PG's own limit through.
+const REFUND_WINDOW_DAYS: i32 = 365;
+
+/// Why clearing `gw`'s card would strand money, if it would: checkouts that can still be paid (open, awaiting a
+/// deposit, or expired within the reconciler's window: `can_settle` takes a late payment), live saved cards and
+/// queued refunds (`gateway_in_use`), or payments on its `providers` still refundable inside the refund window.
+async fn gateway_in_use(db: &PgPool, gw: Gateway, providers: &[&str]) -> Result<Option<&'static str>, sqlx::Error> {
+    let (in_use, refundable): (bool, bool) = sqlx::query_as(
+        "SELECT EXISTS (SELECT 1 FROM checkouts WHERE gateway = $1
+                        AND (status IN ('pending', 'awaiting_deposit')
+                             OR (status = 'expired' AND created_at > now() - make_interval(hours => $3::int))))
              OR EXISTS (SELECT 1 FROM payment_methods WHERE gateway = $1 AND deleted_at IS NULL AND billing_key <> '')
-             OR EXISTS (SELECT 1 FROM refund_queue WHERE done_at IS NULL AND provider = ANY($2))",
+             OR EXISTS (SELECT 1 FROM refund_queue WHERE done_at IS NULL AND provider = ANY($2))
+             -- A subscription charge still open after its card was deleted: reconcile settles it on this gateway.
+             OR EXISTS (SELECT 1 FROM subscription_visits WHERE payment_ref IS NOT NULL AND COALESCE(payment_provider, 'portone') = ANY($2)),
+                EXISTS (SELECT 1 FROM payments WHERE provider = ANY($2) AND status IN ('paid', 'partially_refunded')
+                        AND refunded_amount < amount AND created_at > now() - make_interval(days => $4)
+                        AND NOT EXISTS (SELECT 1 FROM demo_rows d WHERE d.tbl = 'payments' AND d.row_key = payments.id::text))",
     )
     .bind(gw.code())
-    .bind(refund_providers)
+    .bind(providers)
+    .bind(super::checkout_recon::RECON_MAX_AGE_HOURS)
+    .bind(REFUND_WINDOW_DAYS)
     .fetch_one(db)
-    .await
+    .await?;
+    Ok(if in_use {
+        Some("gateway_in_use")
+    } else if refundable {
+        Some("gateway_has_refundable_payments")
+    } else {
+        None
+    })
+}
+
+/// Whether re-saving a payment card with `merged` would send the rows on its gateway to another account: another
+/// PortOne store while the gateway is in use (lookups and refunds would go there), or a Toss secret that cannot read
+/// its MID's newest payment. A new key of the same account passes, so a leaked key can still be replaced.
+async fn account_changed(s: &AppState, sec: Section, current: &Map<String, Value>, merged: &Map<String, Value>) -> ApiResult<bool> {
+    let field = |m: &Map<String, Value>, k: &str| m.get(k).and_then(Value::as_str).map(str::to_owned);
+    let toss = [crate::providers::TOSS, crate::providers::TOSS_BILLING];
+    match sec {
+        Section::Portone => {
+            let before = field(current, "store_id").or_else(|| s.config.portone.store_id.clone());
+            if before.is_none() || before == field(merged, "store_id") {
+                return Ok(false);
+            }
+            Ok(gateway_in_use(&s.db, Gateway::Portone, &[Gateway::Portone.code()]).await?.is_some())
+        }
+        Section::TossPayments => {
+            for (key, provider) in [("secret_key", toss[0]), ("billing_secret_key", toss[1])] {
+                let Some(old) = field(current, key) else { continue };
+                let new = field(merged, key);
+                if new.as_deref() == Some(old.as_str()) {
+                    continue;
+                }
+                let newest: Option<String> = sqlx::query_scalar(
+                    "SELECT provider_tx_id FROM payments WHERE provider = $1 AND provider_tx_id IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+                )
+                .bind(provider)
+                .fetch_optional(&s.db)
+                .await?;
+                let same_mid = match (new, newest) {
+                    (Some(new), Some(order)) if !s.config.dev_mode => toss_payments::reads_order(&s.providers, &new, &order).await?,
+                    // Nothing to read with the new key: only a gateway with nothing on it may change.
+                    _ => gateway_in_use(&s.db, Gateway::TossPayments, &toss).await?.is_none(),
+                };
+                if !same_mid {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
+        _ => Ok(false),
+    }
 }
 
 /// Owner unlock of a saved card for `UNLOCK_TTL_SECS`. Every outcome is audited; no secret is in the record.

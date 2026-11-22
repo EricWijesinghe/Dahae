@@ -8,6 +8,17 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+### Fixed
+- Customer and partner apps: a saved server address (found after a domain move) that stops answering for this install at cold starts at least 24 hours apart, while the build's own address answers with the same `install_id`, is dropped, and the app starts on the build's address; offline, or when the build's address answers with a parking page or another install, the saved address stays. Both addresses are probed at once (one 4-second wait at most), only a JSON `/v1/config` with the install's id counts as an answer, and a move back to the build's own address clears the saved value.
+- Windows apps: the window title and the exe's ProductName, FileDescription and CompanyName come from the brand at build time (`scripts/store_brand.py`, also run by `build-msix.ps1 -ApiBase`); 다해 is only the default. The title is written as `\u` escapes, so it no longer depends on the build machine's code page.
+- Money: disconnecting a payment card is also refused while that gateway has checkouts that expired within the last day (a late payment still settles on them, `gateway_in_use`) or payments from the last year that can still be refunded (`gateway_has_refundable_payments`, new console text); before, clearing the card made those refunds and late payments fail.
+- A PortOne payment or saved card on a TEST channel raises its own owner alert (rule `payment_test_channel`, "PortOne 테스트 채널로 결제가 들어왔어요", console label in Korean and English) and its own status check `test_channel`, instead of the stuck-payment alert and the `payments` check.
+- Store builds: the partner iOS app takes its own Google iOS client id (new secret `PARTNER_GOOGLE_IOS_CLIENT_ID`) instead of the customer app's, which belongs to another bundle id and made its Google button fail; a partner build without Google sign-in warns in the build log, since App Review signs in to the partner app with Google.
+- Money: a PortOne payment or saved card on a TEST channel whose key this server does not hold (channel keys are public, so any client can pick one) reads as failed and books nothing, and the saved card is refused (`portone_test_channel`); before, it was booked as paid with no money moved. The test-channel alert now says both causes, that testing with test keys is fine, and to delete the store's test channels in the PortOne console.
+- Docs: OPERATIONS lists all 18 owner alert rules; the payments guide explains the test-channel alert.
+- Money: a payment card in use cannot be re-saved onto another account (`gateway_account_changed`): another PortOne store, or a Toss secret key that cannot read that MID's newest payment. A new key of the same account still saves. Disconnecting PortOne while the server's env also holds PortOne keys is guarded unless the env names the same store, an open subscription charge blocks a disconnect, and demo payments no longer do.
+- Docs and CI: the rebrand checklist no longer says the Windows window title and exe info need hand edits; `check-native.py` fails when the partner app could take the customer's iOS Google client id; the store review notes say both OSes need `GOOGLE_SERVER_CLIENT_ID`.
+
 ## [1.6.0] - 2026-11-22
 
 ### Security

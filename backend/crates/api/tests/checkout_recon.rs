@@ -49,15 +49,29 @@ async fn list(Query(q): Query<HashMap<String, String>>) -> Json<Value> {
 }
 
 /// `GET /payments/{id}`: ids ending in `failed` are failed at PortOne, the rest are paid; ids ending in `test` were
-/// paid on a PortOne test channel.
+/// paid on a PortOne test channel, with this server's test key ([`TEST_KEY`]) or, for `foreign-test`, another one.
 async fn one(Path(id): Path<String>) -> Json<Value> {
     let status = if id.ends_with("failed") { "FAILED" } else { "PAID" };
     let kind = if id.ends_with("test") { "TEST" } else { "LIVE" };
-    Json(json!({ "status": status, "amount": { "total": 9000, "cancelled": 0 }, "currency": "KRW", "channel": { "type": kind } }))
+    let key = if id.ends_with("foreign-test") { "channel-key-foreign" } else { TEST_KEY };
+    Json(json!({ "status": status, "amount": { "total": 9000, "cancelled": 0 }, "currency": "KRW", "channel": { "type": kind, "key": key } }))
+}
+
+/// The channel key this server holds (an owner trying payments with test keys, as the payments guide has them do).
+const TEST_KEY: &str = "channel-key-test";
+
+/// `GET /billing-keys/{key}`: issued to customer `c1` for ticket `i1`, on a test channel; `bk-foreign` on a test
+/// channel this server does not hold.
+async fn billing_key(Path(key): Path<String>) -> Json<Value> {
+    let channel = if key == "bk-foreign" { "channel-key-foreign" } else { TEST_KEY };
+    Json(json!({ "status": "ISSUED", "customer": { "id": "c1" }, "issueId": "i1", "channels": [{ "type": "TEST", "key": channel }] }))
 }
 
 async fn start_gateway() -> String {
-    let router = Router::new().route("/payments", get(list)).route("/payments/{id}", get(one));
+    let router = Router::new()
+        .route("/payments", get(list))
+        .route("/payments/{id}", get(one))
+        .route("/billing-keys/{key}", get(billing_key));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind mock");
     let addr = listener.local_addr().expect("mock addr");
     tokio::spawn(async move { axum::serve(listener, router).await.expect("mock serves") });
@@ -71,6 +85,7 @@ fn state_for(pool: PgPool, base: &str) -> AppState {
     cfg.portone = PortOne {
         api_secret: Some("test-secret".into()),
         store_id: Some("store-test".into()),
+        channel_keys: HashMap::from([("card".into(), TEST_KEY.into())]),
         ..Default::default()
     };
     let state = build_state(pool.clone(), cfg.clone()).expect("state");
@@ -113,6 +128,13 @@ async fn claimed(pool: &PgPool, payment: &str) -> bool {
         .fetch_one(pool)
         .await
         .expect("checkout claim flag")
+}
+
+async fn test_channel_alert(pool: &PgPool) -> Option<String> {
+    sqlx::query_scalar("SELECT last_error FROM ops_health WHERE integration = 'payment_test_channel' AND last_fail_at IS NOT NULL")
+        .fetch_optional(pool)
+        .await
+        .expect("ops health")
 }
 
 async fn stuck_alert(pool: &PgPool) -> Option<String> {
@@ -204,6 +226,31 @@ async fn a_payment_on_a_portone_test_channel_alerts_the_owner(pool: PgPool) {
     api::providers::portone::payment(&state.providers, "pay-live").await.expect("live payment");
     assert_eq!(stuck_alert(&pool).await, None, "a live channel is quiet");
     let paid = api::providers::portone::payment(&state.providers, "pay-test").await.expect("test payment");
-    assert_eq!(paid.status, "PAID", "the payment itself still reads as paid");
-    assert_eq!(stuck_alert(&pool).await.as_deref(), Some("portone_test_channel"));
+    assert_eq!(paid.status, "PAID", "a test key this server holds still reads as paid (owner testing)");
+    assert_eq!(test_channel_alert(&pool).await.as_deref(), Some("portone_test_channel"));
+    assert_eq!(stuck_alert(&pool).await, None, "its own alert, not a stuck payment");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_payment_on_a_test_channel_this_server_does_not_hold_books_nothing(pool: PgPool) {
+    let base = start_gateway().await;
+    let state = state_for(pool.clone(), &base);
+    // Channel keys are public: a client can pay through any test channel of the same store, moving no money.
+    let paid = api::providers::portone::payment(&state.providers, "pay-foreign-test").await.expect("lookup");
+    assert_eq!(paid.status, "FAILED", "never booked as paid");
+    assert_eq!(test_channel_alert(&pool).await.as_deref(), Some("portone_test_channel"));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_saved_card_on_a_test_channel_this_server_does_not_hold_is_refused(pool: PgPool) {
+    use api::providers::{ProviderError, portone::verify_billing_key};
+    let base = start_gateway().await;
+    let state = state_for(pool.clone(), &base);
+    verify_billing_key(&state.providers, "bk-own", "c1", "i1").await.expect("own test channel");
+    let refused = verify_billing_key(&state.providers, "bk-foreign", "c1", "i1").await;
+    assert!(
+        matches!(refused, Err(ProviderError::Declined(ref c)) if c == "portone_test_channel"),
+        "{refused:?}"
+    );
+    assert_eq!(test_channel_alert(&pool).await.as_deref(), Some("portone_test_channel"));
 }
