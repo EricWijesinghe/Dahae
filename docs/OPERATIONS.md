@@ -111,8 +111,8 @@ curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/beta/i
 | 명령 | 하는 일 | 확인 방법 · 주의 |
 |---|---|---|
 | `dahae status` | 컨테이너 상태, 앱·HTTPS, 가동 확인, 외부 백업, 비밀 키 사본 점검 | 줄마다 ✔ 또는 ! |
-| `dahae update [태그]` | 새 버전의 관리 도구 받기·서명 확인 → 백업 → 새 이미지 받기·서명 확인 → 시작 → 응답 확인 (기본 180초), 실패하면 자동 되돌리기 → 관리 도구 바꾸기 | 종료 코드 3 = 되돌렸어요. [§4 수동 업데이트](#수동-업데이트) |
-| `dahae rollback` | 마지막 업데이트 전 이미지로 되돌리기 (데이터는 그대로), 관리 도구도 그 버전의 것으로 | 정산 확인으로 멈추면 종료 코드 4. [§5](#5-되돌리기--rollback) |
+| `dahae update [태그]` | 새 버전의 관리 도구 받기·서명 확인 → 백업 → 새 이미지 받기·서명 확인 → 시작 → 응답 확인 (기본 180초), 실패하면 자동 되돌리기 → 관리 도구 바꾸기 | 종료 코드 3 = 되돌렸어요, 5 = 새 버전은 정상인데 관리 도구만 못 바꿨어요 (설치 줄을 한 번 다시 실행). [§4 수동 업데이트](#수동-업데이트) |
+| `dahae rollback` | 마지막 업데이트 전 이미지로 되돌리기 (데이터는 그대로), 관리 도구도 그 버전의 것으로 | 정산 확인으로 멈추면 종료 코드 4, 이전 버전이 없으면 6, 관리 도구만 못 되돌리면 5. [§5](#5-되돌리기--rollback) |
 | `dahae channel stable\|beta` | 채널 바꾸고 바로 업데이트 | |
 | `dahae version` | 채널, 이미지 태그, 실행 중인 버전 | |
 | `dahae backup` | 지금 바로 백업 (DB + 사진) | 실패하면 종료 코드 1 |
@@ -128,8 +128,8 @@ curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/beta/i
 | `dahae logs [api\|web\|db]` | 최근 200줄을 보고 계속 따라가요 (기본 api) | Ctrl+C 로 나가요 |
 | `dahae setup-code [--renew]` | 사장님 계정 설치 코드 보기 (설치할 때부터 7일) | `--renew` 는 새 코드 |
 | `dahae update-schedule mon@04:00\|off` | 자동 업데이트 요일·시각 (또는 끄기) | 예약표를 다시 써요 |
-| `dahae keys-backup` | `.env` 를 비밀번호로 잠근 사본 만들기 (12자 이상) | 보관 확인 문구 입력. 콘솔에서도 돼요 ([§6](#비밀-키-가장-중요)) |
-| `dahae keys-confirm` | 비밀 키 사본을 서버 밖에 보관했다고 기록 (`KEY_ESCROW_AT`) | 콘솔에서 사본을 내려받으면 작업 실행기가 불러요 |
+| `dahae keys-backup` | 비밀 키(`DATA_KEY`·`JWT_SECRET`)를 비밀번호로 잠근 사본 만들기 (12자 이상) | 보관 확인 문구 입력. 콘솔에서도 돼요 ([§6](#비밀-키-가장-중요)) |
+| `dahae keys-confirm` | 비밀 키 사본을 서버 밖에 보관했다고 기록 (`KEY_ESCROW_AT`) | 콘솔에서 사본을 내려받고 **서버 밖에 보관했어요** 를 누르면 작업 실행기가 불러요 |
 | `dahae keys-restore 파일 [--yes]` | 새 서버에 예전 `DATA_KEY`·`JWT_SECRET` 넣기 | `restore-offsite` 보다 먼저 |
 | `dahae alert update\|backup\|ssh [수]` | 예약 작업 실패나 SSH 차단 증가를 외부 가동 확인 주소로 알리기 | 가동 확인 주소가 있어야 해요 |
 | `dahae uninstall [--yes]` | 서비스 끄기 (데이터와 백업 유지) | [§13](#13-제거--uninstall) |
@@ -190,10 +190,13 @@ v1.6.0 이하로 설치한 서버는 이 기능이 없으니 설치 줄을 한 �
 `GET /v1/admin/host/jobs/{id}/output` 으로 10분 동안 읽을 수 있어요 (인증 앱 주소는 요청한 사장님만).
 
 `rollback` (서버 승인 코드도 필요) 과 `keys-backup <비밀번호 16진수>` 도 있어요. `keys-backup` 의 비밀번호는 작업 파일에만 들어가고
-DB·감사 기록·응답에는 남지 않아요 (`secret_arg`). 작업 실행기가 `DAHAE_KEYS_PASSPHRASE` 로 `dahae keys-backup` 을 돌려 만든 파일을 base64 로
-`out/<토큰>` 에 남기고, 그 결과는 **요청한 사장님만, 한 번만** 내려받아요 (두 번째는 409 `key_copy_already_taken`). 내려받으면 서버가
-`keys-confirm` 작업을 넣어 `KEY_ESCROW_AT` 을 기록해요 (클라이언트는 이 종류를 넣을 수 없어요). 콘솔 **시스템 상태 > 서버 업데이트 > 복구** 카드가
-두 작업을 버튼으로 보여 줘요.
+`host_jobs`·감사 기록·응답에는 남지 않아요 (`secret_arg`). 다시 보내기 기록(`idempotency_keys.request_hash`, 24시간)에는 요청 본문의
+`DATA_KEY` 로 잠근 HMAC 만 남아서, DB 나 그 덤프를 가져가도 비밀번호를 맞혀 볼 수 없어요 (`body_hash`). 작업 실행기가 `DAHAE_KEYS_PASSPHRASE` 로
+`dahae keys-backup` 을 돌려 만든 파일(`DATA_KEY`·`JWT_SECRET` 두 줄만: API 컨테이너가 이미 가진 값이라, API 가 뚫려도 이 사본으로 더 얻는 것이 없어요)을
+base64 로 `out/<토큰>` 에 남기고, 그 결과는 **요청한 사장님만, 한 번만** 내려받아요 (두 번째는 409 `key_copy_already_taken`).
+내려받기만으로는 보관을 기록하지 않아요 (브라우저가 저장하지 못했을 수 있어요). 콘솔이 파일을 저장하고 사장님이 **서버 밖에 보관했어요** 를 누르면
+`POST /v1/admin/host/jobs/{id}/kept` (요청한 사장님만, `downloaded` → `kept` 한 번)가 `keys-confirm` 작업을 넣어 `KEY_ESCROW_AT` 을 기록해요
+(클라이언트는 이 종류를 직접 넣을 수 없어요). 콘솔 **시스템 상태 > 서버 업데이트 > 복구** 카드가 두 작업을 버튼으로 보여 줘요.
 
 버전을 올리거나 되돌리는 작업(`update-tag`, `rollback`)과 도메인 바꾸기(`domain-set`)는 서버 승인 코드가 있어야 실행돼요.
 콘솔은 코드를 `POST /v1/admin/host/jobs/{id}/approve` 로 보내고, 작업 실행기가 확인해요. 승인은 10분 안에 해야 하고,
@@ -205,7 +208,7 @@ API 가 탈취되면 스스로 코드를 만들고 도메인 바꾸기를 승인
 
 **v1.6.0 이하로 설치한 서버는 한 번 설치 줄을 다시 실행해야 해요.** 그 버전의 `dahae update` 는 작업 실행기와 `dahae` 명령을 바꾸지
 않아요 (그 뒤 버전부터는 바꿔요, [수동 업데이트](#수동-업데이트)). 새 종류(`rollback`·`keys-backup` 의 콘솔 버튼 등)를 모르는 예전 실행기에서는
-작업이 이유 없이 `rejected` 로 끝나요. 설치 줄(웹 SSH 또는 AWS SSM Run Command)을 한 번 다시 실행하면 데이터는 그대로 두고 새 실행기와 명령이 들어가요.
+작업이 이유 없이 `rejected` 로 끝나요 (콘솔은 "서버의 관리 도구가 예전 버전이라 이 작업을 몰라요" 라고 보여 줘요). 설치 줄(웹 SSH 또는 AWS SSM Run Command)을 한 번 다시 실행하면 데이터는 그대로 두고 새 실행기와 명령이 들어가요.
 
 ### 도메인 바꾸기 · Domain move
 콘솔 설정 > 도메인에서 해요 (DNS 확인 → 사장님 코드 → 서버 승인 코드). 터미널에서는 `sudo dahae domain 새도메인`.
@@ -226,10 +229,18 @@ API 가 탈취되면 스스로 코드를 만들고 도메인 바꾸기를 승인
 ## 5. 되돌리기 · Rollback
 
 - `sudo dahae rollback`: 마지막 업데이트 직전 이미지로 돌아가요. 되돌리기 전에 백업을 먼저 해요 (`cmd_rollback`).
-- **콘솔에서:** **시스템 상태 > 서버 업데이트 > 복구 > 이전 버전으로 되돌리기** (사장님 코드 → 작업 실행기가 쓴 요약 "이전 버전으로 되돌려요" 확인 →
-  서버 승인 코드). 작업 실행기가 `dahae rollback` 을 실행하고, 정산 확인으로 멈추면 그 이유를 콘솔에 보여 줘요 (종료 코드 4, `fail_reason`).
-- **관리 도구도 되돌려요 (`tools_rollback`):** 이미지를 되돌리고 응답을 확인한 뒤 `host/install.prev.sh` (지난 `dahae update` 가 남긴, 서명 확인된
-  전 버전 설치 프로그램)가 있으면 `host/install.sh` 와 바꾸고 관리 도구 모드로 실행해요. 기록이 없으면 관리 도구는 그대로 두고 알려요.
+- **콘솔에서:** **시스템 상태 > 서버 업데이트 > 복구 > 이전 버전으로 되돌리기** (사장님 코드 → 작업 실행기가 쓴 요약 "이전 버전으로 되돌려요: v1.6.1" 확인 →
+  서버 승인 코드). 요약의 버전은 작업 실행기가 `PREV_API_IMAGE` 이미지의 버전 표시에서 읽어요 (`prev_version`). 작업 실행기가 `dahae rollback` 을 실행하고,
+  끝나지 못하면 이유를 콘솔에 보여 줘요 (`fail_reason`): 정산 확인 4, 이전 버전 없음 6, 관리 도구만 못 되돌림 5, 그 밖은 `dahae logs` 안내.
+  승인 창을 닫으면 아무것도 되돌리지 않고, 기다리던 작업은 10분 뒤 취소돼요. 기다림이 끝나도 진행 중이면 "아직 진행 중" 으로 보여요.
+- **관리 도구도 되돌려요 (`tools_rollback`):** 이미지를 되돌리고 응답을 확인한 뒤 `host/install.prev.sh` 와 `host/agent.prev.sh` (지난 업데이트가 남긴,
+  서명 확인된 전 버전 설치 프로그램과 작업 실행기)가 있으면 `host/install.sh`·`host/agent.keep.sh` 와 바꾸고 관리 도구 모드로 실행해요. 작업 실행기는 다시
+  내려받지 않아요 (`MALKKEUM_AGENT_FILE`, 그 설치 프로그램의 `AGENT_SHA256` 으로 다시 확인). 기록이 없으면 관리 도구는 그대로 두고 알려요.
+  되돌리기용 기록은 앱 이미지가 실제로 바뀔 때만 한 칸 밀려요 (`tools_rotate`): 새 버전이 없는 주의 자동 업데이트나 같은 이미지로 다시 맞추기는 기록을 바꾸지 않고,
+  설치 줄을 다시 실행해 이미지가 바뀌면 지금 기록이 전 버전 기록이 돼요.
+- **되돌린 뒤 자동 업데이트는 그 버전을 지켜요 (`rollback_hold`):** 되돌리면 채널(또는 고정 태그)의 지금 이미지 목록 지문을 `host/rollback-hold` 에 남겨요.
+  매주 `dahae auto-update` 는 채널이 아직 그 지문이면 "되돌린 버전을 지켜요" 를 남기고 건너뛰어요. 새 버전이 나오면 다시 업데이트하고,
+  직접 `dahae update` 를 하면 기록이 지워져요. v1.6.x 이하로 되돌리면 그 버전의 관리 도구는 이 기록을 몰라요: 자동 업데이트를 꺼 두세요 (`dahae update-schedule off`).
 - **데이터는 되돌리지 않아요.** 되돌린 뒤에도 업데이트 뒤에 들어온 예약은 그대로예요. 데이터까지 과거로 돌리려면 `dahae restore` 를 써요 ([§6](#6-백업--backups)).
 - 업데이트 기록이 없으면 "되돌릴 이전 버전 기록이 없어요" 라고 나와요.
 - **주의: 저장된 카드 암호화는 한 방향이에요.** 마이그레이션 0326 은 처음 시작할 때 저장된 카드의 빌링 키를 암호화해요.
@@ -260,13 +271,19 @@ API 가 탈취되면 스스로 코드를 만들고 도메인 바꾸기를 승인
 
 ### AWS 자동 외부 백업 (키 입력 없음)
 AWS 템플릿([deploy/aws/dahae.cfn.yaml](../deploy/aws/dahae.cfn.yaml))은 비공개 S3 저장소(`BackupBucket`: 공개 접근 차단, 버전 관리, SSE-S3,
-35일 만료 + 이전 판 35일, 스택을 지워도 남음)를 만들고, 서버 역할에는 그 저장소의 `s3:PutObject`·`s3:GetObject`·`s3:ListBucket` 만 줘요 (지우기 없음).
+35일 만료 + 이전 판 35일, 스택을 지워도 남음)를 만들고, 서버 역할에는 그 저장소의 `s3:GetObject`·`s3:ListBucket` 과 **새로 만들기만** 줘요:
+`s3:PutObject` 는 `s3:if-none-match` 가 `*` 일 때만 (멀티파트의 시작·조각은 `s3:ObjectCreationOperation` 이 false 일 때), 지우기는 없어요.
+그래서 API 는 역할로 올릴 때 한 번에 올리는 PUT 과 멀티파트 완료에 `If-None-Match: *` 를 붙여요 (`send`). 백업 이름에는 시각이 들어가서 겹치지 않아요.
+서버를 빼앗겨도 이미 있는 사본을 지우거나 덮어쓸 수 없어요. 서버를 잃고 새 스택을 만들 때는 예전 스택의 `BackupBucket` 출력을 `ExistingBackupBucket`
+(`launch.sh --backup-bucket`)으로 넘기면 새 저장소를 만들지 않고 그 저장소를 읽고 이어서 써요. 이 버전 전에 만든 스택에는 저장소가 없어요 (`launch.sh` 는 스택을 바꾸지 않아요):
+그런 서버는 콘솔 카드에 다른 S3 호환 저장소의 키를 넣어 연결해요.
 UserData 가 `MALKKEUM_BACKUP_S3_BUCKET`·`MALKKEUM_BACKUP_S3_REGION` 을 설치 프로그램에 넘기면 `.env` 의 `BACKUP_S3_BUCKET`·`BACKUP_S3_REGION` 이 되고
 (`check_backup_s3_env`, `apply_backup_s3_env`), compose 가 api 에 넘겨요. 콘솔 카드에 키가 저장돼 있지 않으면 API 가 이 저장소를 써요
 (`S3Config::instance_role`): 인스턴스 메타데이터 서비스(IMDSv2, 토큰 필수)에서 역할의 임시 키를 받아 요청마다 `x-amz-security-token` 을 서명에 넣고,
 만료 5분 전이면 다시 받아요 (`role_creds`). 컨테이너에서 닿도록 템플릿의 `HttpPutResponseHopLimit` 은 2 예요. 이 역할은 지울 수 없어서
 보관 기간 정리는 저장소 규칙이 하고, 연결 확인은 시험 파일 대신 목록 읽기로 해요. 콘솔 카드에는 **AWS S3 (자동)** 으로 보여요 (`source: aws_role`).
-역할 키를 받지 못하면 상태 코드는 `no_instance_role` 이에요. 카드에 다른 저장소의 키를 저장하면 그쪽이 이겨요.
+역할 키를 받지 못하거나 저장소가 역할을 거부하면 (401·403, 예: 관리자가 `launch.sh --admin` 을 다시 실행하지 않아 경계 정책이 예전 것) 상태 코드는 `no_instance_role` 이에요.
+카드에 다른 저장소의 키를 저장하면 그쪽이 이겨요.
 
 ### 외부 백업 연결 (콘솔)
 콘솔 **설정 > 외부 백업** 카드에 입력: 엔드포인트, 리전, 버킷, 접근 키, 비밀 키, 보관 일수(선택).
@@ -284,11 +301,13 @@ tail -n 50 /opt/malkkeum/backups/backup.log   # 백업 기록
 ### 비밀 키 (가장 중요)
 - `DATA_KEY` 는 연동 키(결제, 문자 등), 사진 링크 서명, **외부 백업 파일**을 열어요. `DATA_KEY` 를 잃으면 외부 백업을 열 수 없어요.
   `.env` 는 백업에 들어가지 않아요 ([docs/DEPLOY.md](DEPLOY.md) §2).
-- `sudo dahae keys-backup` 은 `.env` 를 비밀번호로 잠근 사본을 `backups/keys-*.env.enc` 로 만들어요.
+- `sudo dahae keys-backup` 은 `keys-restore` 가 쓰는 두 키(`DATA_KEY`·`JWT_SECRET`)만 비밀번호로 잠근 사본을 `backups/keys-*.env.enc` 로 만들어요
+  (DB 비밀번호 같은 다른 값은 넣지 않아요).
   끝나면 "서버 밖에 보관했어요" 를 직접 입력해야 기록돼요 (`--yes` 로는 확인되지 않아요, `key_escrow_confirm`).
   `dahae status` 는 이 확인이 없으면 경고해요.
 - **콘솔에서 (터미널 없이):** **시스템 상태 > 서버 업데이트 > 복구 > 비밀 키 사본 내려받기**. 잠금 비밀번호(12자 이상)를 두 번 넣고 사장님 코드를 넣으면
-  `dahae-keys-<날짜>.env.enc` 가 내려받아져요 (한 번만). 내려받으면 보관 확인도 기록돼요. 파일은 `dahae keys-restore` 로 그대로 열려요.
+  `dahae-keys-<날짜>.env.enc` 가 내려받아져요 (한 번만). 저장한 뒤 **서버 밖에 보관했어요** 를 눌러야 보관 확인이 기록돼요 (취소하면 기록하지 않아요).
+  파일은 `dahae keys-restore` 로 그대로 열려요.
 
 ---
 
@@ -301,6 +320,8 @@ tail -n 50 /opt/malkkeum/backups/backup.log   # 백업 기록
 권장 절차 (사장님이 해도 되는 범위):
 1. 같은 채널로 연습용 서버를 설치해요 (도메인은 다른 것).
 2. 연습용 서버에 `sudo dahae keys-restore` 로 예전 키를 넣고, 외부 백업을 연결한 뒤 `sudo dahae restore-offsite` 로 최근 백업을 복원해요.
+   AWS 템플릿 서버는 연결할 키가 없어요: 연습용 스택을 `ExistingBackupBucket` (실서버 스택의 `BackupBucket`) 으로 만들면 그 저장소를 읽어요.
+   연습용 서버도 그 저장소에 새 백업을 더하지만 (지우거나 덮어쓰지는 못해요), 연습이 끝나면 연습용 스택을 지우세요.
 3. 콘솔에서 예약 수와 고객 수를 실서버와 비교해요.
 4. 결과를 날짜와 함께 기록해요.
 
@@ -460,20 +481,20 @@ Cron-only commands: `auto-update`, `write-cron`; installer-only: `prepare`.
 - Automatic update: Monday 04:00 Korea time by default. It skips when a skip marker exists or a job is waiting, and on the stable channel it waits 24 hours after first seeing a new image (`stable_seasoned`, `cmd_auto_update`).
 - Images are accepted only with a valid cosign keyless signature from the release workflow of the signer repository (`verify_image`). Images loaded from a tar (`dahae load`) skip this check.
 - Host tools follow the version: `dahae update [tag]` first downloads that release's `install.sh`, `SHA256SUMS` and `SHA256SUMS.bundle` from the delivery repo (`DELIVERY_RAW`; the tag, or `main` for stable, `beta` for beta), verifies the SHA256SUMS cosign bundle with the same identity rule as the images and the install.sh hash against it, and stops before the backup on any mismatch (no fallback). Once the new images answer, it keeps that installer as `host/install.sh` (the previous one as `host/install.prev.sh`) and runs it with `MALKKEUM_HOST_UPDATE=tools`: CLI, agent, systemd units, cron and compose are rewritten; `.env`, data, packages, firewall and SSH settings are untouched. Dev installs without `DELIVERY_RAW`, tar images and unsigned test registries keep their tools. Servers installed with v1.6.0 or older re-run the install line once.
-- Owner-authenticated server jobs (`POST /v1/admin/host/jobs`; the console System status screen sends them): `backup-now`, `update`, `update-skip`, `channel`, `restart api|web|db|all`, `schedule`, `heartbeat`, `domain-check`, `domain-set`, `host-approval-enroll`, `rollback`, `keys-backup` (passphrase hex, kept out of the database; the sealed copy is read once by the requesting owner). Every kind except status refresh needs the owner's TOTP code ([backend/crates/api/src/host_jobs.rs](../backend/crates/api/src/host_jobs.rs)).
+- Owner-authenticated server jobs (`POST /v1/admin/host/jobs`; the console System status screen sends them): `backup-now`, `update`, `update-skip`, `channel`, `restart api|web|db|all`, `schedule`, `heartbeat`, `domain-check`, `domain-set`, `host-approval-enroll`, `rollback`, `keys-backup` (passphrase hex, kept out of `host_jobs` and the audit log; the replay record keeps only a DATA_KEY HMAC of the body; the sealed copy is read once by the requesting owner, and `POST …/{id}/kept` records it as kept off the server). Every kind except status refresh needs the owner's TOTP code ([backend/crates/api/src/host_jobs.rs](../backend/crates/api/src/host_jobs.rs)).
 - Version-raising and rollback jobs in the server job runner (root job script in the `deploy/` folder) need the server approval code, valid for 10 minutes; 10 wrong codes in an hour lock approvals.
 - Schema changes are additive (expand, then contract later), because a rollback runs the previous release on the migrated schema ([docs/DEPLOY.md](DEPLOY.md) §2).
 
 ## 5. Rollback
-`sudo dahae rollback` restores the images recorded before the last update (`PREV_API_IMAGE`, `PREV_WEB_IMAGE`) after taking a backup. It never removes data. When the last update left `host/install.prev.sh`, the host tools go back to that version too (`tools_rollback`). The console has the same rollback (System status > Server update > Recovery: owner code, then the server approval code for the agent's own summary); a stop by the payout check exits 4 and the console shows why. Migration 0326 makes saved-card key sealing one-way: after it runs, a rollback breaks saved-card charges. Roll forward, or restore the pre-update backup ([docs/DEPLOY.md](DEPLOY.md) §2).
+`sudo dahae rollback` restores the images recorded before the last update (`PREV_API_IMAGE`, `PREV_WEB_IMAGE`) after taking a backup. It never removes data. When the last update left `host/install.prev.sh` (and `host/agent.prev.sh`), the host tools go back to that version too (`tools_rollback`, no new download); that record moves only when the images really change. The console has the same rollback (System status > Server update > Recovery: owner code, then the server approval code for the agent's own summary, which names the target version); exit 4 = payout check, 5 = tools not rolled back, 6 = no previous version, and the console shows why. After a rollback, `host/rollback-hold` keeps the weekly auto-update from re-applying the version rolled back from until the channel moves on; a manual update clears it. Migration 0326 makes saved-card key sealing one-way: after it runs, a rollback breaks saved-card charges. Roll forward, or restore the pre-update backup ([docs/DEPLOY.md](DEPLOY.md) §2).
 
 Do not roll 1.5 back to 1.4 while a Toss payout waits on Toss. Migrations 0472 (`toss_ref`) and 0473 (`owner_not_sent_at`, `toss_memo`) add payout states 1.4 does not know: with a payout `failed` with `owner_not_sent_at` set, or `requested`/`sent` with a `failure_reason` (a send with no answer), 1.4 lets a cancel refund the job and may re-send under a new key, so the same payout can go out twice. `dahae rollback` refuses while any such payout exists, or when it cannot run the check, and prints the count (`payouts_settled_for_rollback` in [deploy/install.sh](../deploy/install.sh)). Settle them with the status check in the console's 정산 page first.
 
 ## 6. Backups
 - Local: daily at 03:30 Korea time and before every update, rollback and restore. Files are sealed with AES-256-GCM (`MKB1` format, key derived from `DATA_KEY`) and kept 14 days by modification time ([deploy/install.sh](../deploy/install.sh) `cmd_backup`, [backend/crates/api/src/backup.rs](../backend/crates/api/src/backup.rs)). If sealing fails, the plaintext stays and the command fails; update, rollback and restore refuse to run.
 - Offsite (optional): console **설정 > 외부 백업** (S3-compatible). Default retention 30 days, maximum 3650 ([backend/crates/api/src/integrations.rs](../backend/crates/api/src/integrations.rs)). An offsite failure is logged and does not hide the local backup.
-- AWS automatic offsite: the AWS template's private bucket (block public access, versioning, SSE-S3, 35-day expiry plus 35 days for old versions, retained on stack delete). The instance role may only put, get and list (no delete), so lifecycle does the retention and the connection check lists instead of writing a test object. `BACKUP_S3_BUCKET`/`BACKUP_S3_REGION` reach the api from the template's UserData through `.env` and compose; with no keys saved on the console card the API signs with IMDSv2 role credentials (session token signed, refreshed 5 minutes before expiry; hop limit 2 for the container). The card shows "AWS S3 (automatic)"; error code `no_instance_role` when the role is missing.
-- Keys: `dahae keys-backup` writes a passphrase-locked copy of `.env` (at least 12 characters, PBKDF2 with 600,000 iterations). The owner must type the escrow confirmation in a terminal; `--yes` does not record it. From the console (Recovery > download the secret key copy): passphrase twice and the owner code; the passphrase travels hex-encoded in the job file only (never in the database or audit log), the sealed file comes back once to the requesting owner, and the download queues `keys-confirm`, which records `KEY_ESCROW_AT`.
+- AWS automatic offsite: the AWS template's private bucket (block public access, versioning, SSE-S3, 35-day expiry plus 35 days for old versions, retained on stack delete). The instance role may only create (PutObject only with `If-None-Match: *`), get and list (no delete, no overwrite), so lifecycle does the retention and the connection check lists instead of writing a test object. `BACKUP_S3_BUCKET`/`BACKUP_S3_REGION` reach the api from the template's UserData through `.env` and compose; with no keys saved on the console card the API signs with IMDSv2 role credentials (session token signed, refreshed 5 minutes before expiry; hop limit 2 for the container). The card shows "AWS S3 (automatic)"; error code `no_instance_role` when the role is missing.
+- Keys: `dahae keys-backup` writes a passphrase-locked copy of DATA_KEY and JWT_SECRET only (at least 12 characters, PBKDF2 with 600,000 iterations). The owner must type the escrow confirmation in a terminal; `--yes` does not record it. From the console (Recovery > download the secret key copy): passphrase twice and the owner code; the passphrase travels hex-encoded in the job file only (never in the database or audit log), the sealed file comes back once to the requesting owner, and only the owner's "Kept off the server" after the file was saved (`POST …/kept`) queues `keys-confirm`, which records `KEY_ESCROW_AT`.
 - Restore: `dahae restore backups/db-….sql.gz.enc` takes a pre-restore backup, stops the API, applies the SQL in one transaction as the app role, swaps the photo archive, and restarts the API. `restore-offsite` downloads and decrypts a named offsite backup first. Lost `DATA_KEY` means offsite backups cannot be opened.
 - Objectives (without WAL archiving): recovery point up to 24 hours; recovery time about 1 hour on a fresh server ([docs/DEPLOY.md](DEPLOY.md) §2). WAL archiving (engineer setup, [deploy/wal/](../deploy/wal/)) targets about 5 minutes.
 

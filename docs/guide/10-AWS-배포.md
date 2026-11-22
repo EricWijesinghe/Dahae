@@ -114,6 +114,7 @@ bash scripts/release/build-aws-template.sh rel-v1.6.0/install.sh "$dist/v1.6.0/i
 | VpcId | 기본 VPC (default) 를 고르면 됩니다 |
 | SubnetId | 그 VPC 의 **인터넷으로 나갈 수 있는 서브넷** 하나. 모르면 기본 서브넷 중 하나 |
 | SshCidr | **비워 두기** (SSH 를 열지 않아요. 접속은 AWS 웹 화면으로 합니다) |
+| ExistingBackupBucket | **비워 두기.** 서버를 잃고 새로 만들 때만 예전 스택 출력의 `BackupBucket` 이름 (D-1) |
 | GitHubRepo | **기본값 `EricWijesinghe/Dahae` 를 그대로 두세요.** 이 저장소의 `deploy-aws` 워크플로만 이 서버에 배포할 권한을 얻어요. 다른 주소를 넣지 마세요 |
 | GitHubRepoIds | **기본값 `EricWijesinghe@48539716/Dahae@1452913067` 그대로.** GitHub 가 배포 로그인에 쓰는 고정 번호예요 (저장소 이름이 바뀌어도 그대로). 개발자는 `gh api repos/EricWijesinghe/Dahae --jq '.owner.id,.id'` 로 확인할 수 있어요 |
 | GitHubEnvironment | `doda-aws` (기본값 그대로, C 단계와 같은 이름이어야 해요) |
@@ -220,7 +221,9 @@ sudo dahae setup-code
 
 - **특정 버전 배포:** GitHub 저장소의 **Actions** 탭 > 왼쪽 **deploy-aws** > **Run workflow** > `version` 칸에 `v1.6.0` 입력 > **Run workflow**. 승인자를 넣었다면 승인 뒤 실행돼요.
 - **이전 버전으로 되돌리기:** 같은 화면에서 **rollback** 을 체크하고 **Run workflow**. 서버에서 `dahae rollback` 이 실행돼요. 마지막 업데이트 바로 전 버전으로 돌아가요.
-- **콘솔에서 되돌리기 (GitHub 없이):** 콘솔 **시스템 상태 > 서버 업데이트** 카드의 **복구 > 이전 버전으로 되돌리기**. 사장님 코드와 서버 승인 코드를 차례로 넣어요. 먼저 백업하고, 관리 도구도 그 버전으로 맞춰요.
+- **콘솔에서 되돌리기 (GitHub 없이):** 콘솔 **시스템 상태 > 서버 업데이트** 카드의 **복구 > 이전 버전으로 되돌리기**. 사장님 코드와 서버 승인 코드를 차례로 넣어요. 승인 창에 **되돌아갈 버전**(예: `v1.6.1`)이 나와요. 먼저 백업하고, 관리 도구도 그 버전으로 맞춰요.
+- **되돌린 뒤 자동 업데이트:** 되돌린 버전을 지켜요. 채널(또는 고정한 태그)이 아직 되돌리기 전 버전을 가리키면 매주 자동 업데이트가 그 버전을 다시 올리지 않고, **새 버전이 나오면** 다시 자동으로 업데이트해요. 직접 업데이트(GitHub 배포, 콘솔 업데이트, `dahae update`)를 하면 이 지킴은 끝나요. 단, v1.6.x 이하로 되돌리면 그 버전의 관리 도구는 이 지킴을 몰라요: 콘솔에서 자동 업데이트를 꺼 두세요.
+- 되돌릴 이전 버전이 없으면 (설치 뒤 아직 업데이트한 적이 없으면) 콘솔이 그렇게 알려 주고 아무것도 바꾸지 않아요.
 - 되돌리기는 정산이 진행 중이면 멈춰요. 그때는 콘솔 **정산** 화면에서 상태를 먼저 정리하세요 (콘솔은 그 이유를 그대로 보여 줘요).
 
 ### C-4. 실패했을 때
@@ -232,9 +235,14 @@ sudo dahae setup-code
 ### C-5. 관리 도구(작업 실행기·dahae 명령) 새로 받기
 
 v1.6.0 보다 새 버전부터는 `dahae update <태그>` (GitHub 배포, 콘솔 업데이트, 자동 업데이트 모두)가 앱 이미지와 함께 **그 버전의 관리 도구**
-(`dahae` 명령, 서버 작업 실행기, systemd 단위, 예약표, compose 설정)도 바꿔요. 배포 저장소(`EricWijesinghe/Dahae-install`)에서 그 버전의 `install.sh` 를 받아,
-릴리스가 서명한 `SHA256SUMS` (서명은 서버 이미지와 같은 방법으로 확인해요)와 지문이 같을 때만 쓰고, 하나라도 다르면 아무것도 바꾸지 않고 멈춰요.
-`.env` 와 데이터는 그대로예요. `dahae rollback` 도 관리 도구를 되돌린 버전의 것으로 맞춰요.
+(`dahae` 명령, 서버 작업 실행기, systemd 단위, 예약표, compose 설정)도 바꿔요. 배포 저장소(`EricWijesinghe/Dahae-install`)에서 그 버전의 `install.sh` 와 `agent.sh` 를 받아,
+**바로 그 태그에서** 릴리스가 서명한 `SHA256SUMS` (서명은 서버 이미지와 같은 방법으로 확인해요)와 지문이 같을 때만 쓰고, 하나라도 다르면 아무것도 바꾸지 않고 멈춰요.
+채널(stable·beta)은 그 채널이 지금 가리키는 태그로 바꿔 받고, 그 태그가 이 서버에 올렸던 버전보다 오래됐으면 멈춰요 (예전 서명 파일을 다시 내밀어도 쓰지 않아요).
+`.env` 와 데이터는 그대로예요. `dahae rollback` 도 관리 도구와 작업 실행기를 되돌린 버전의 것으로 맞춰요 (보관해 둔 파일을 써서 다시 내려받지 않아요).
+관리 도구 기록은 앱 이미지가 실제로 바뀔 때만 한 칸 밀려요: 새 버전이 없는 주의 자동 업데이트는 되돌리기용 기록을 바꾸지 않아요.
+
+**새 버전은 정상인데 관리 도구만 바꾸지 못했다면** 콘솔 작업에 "관리 도구만 바꾸지 못했어요: 설치 줄을 한 번 다시 실행해 주세요" 가 나와요.
+서비스는 새 버전으로 잘 돌아가요. 아래처럼 설치 줄을 한 번 다시 실행하면 맞춰져요. 되돌리기도 같아요.
 
 **v1.6.0 이하로 만든 서버는 한 번만** 설치 줄을 다시 실행해야 해요 (그 버전의 `dahae update` 는 아직 앱 이미지만 바꿔요):
 AWS 콘솔 → **Systems Manager > Run Command > AWS-RunShellScript** → 대상 인스턴스를 고르고, 명령에 설치 줄을 그대로 넣어 실행해요
@@ -250,12 +258,15 @@ AWS 콘솔 → **Systems Manager > Run Command > AWS-RunShellScript** → 대상
 | 무엇 | 어디에 | 언제 | 확인 방법 |
 |---|---|---|---|
 | 데이터베이스와 사진 (서버 안) | 서버 디스크 `backups/` (봉인된 파일) | 매일 03:30 (서버 시간) | `sudo dahae status` |
-| 외부 백업 | 이 템플릿이 만든 **S3 저장소** (자동, 키 입력 없음). 콘솔 **설정 > 외부 백업** 에서 다른 S3 호환 저장소의 키를 넣으면 그쪽을 써요 | 매일 (사진 파일도) | 콘솔 카드: **AWS S3 (자동)** |
+| 외부 백업 | 이 템플릿이 만든 **S3 저장소** (자동, 키 입력 없음). 콘솔 **설정 > 외부 백업** 에서 다른 S3 호환 저장소의 키를 넣으면 그쪽을 써요 | 매일, 업데이트·되돌리기 전에도 (사진 파일도) | 콘솔 카드: **AWS S3 (자동)** |
 | 디스크 스냅샷 | AWS **EBS 스냅샷** (이 템플릿이 매일 만들고 7개를 보관) | 매일 03:00 한국 시간 | EC2 > 스냅샷 |
-| 비밀 키 사본 | 콘솔 **시스템 상태 > 서버 업데이트 > 복구 > 비밀 키 사본 내려받기** (또는 서버에서 `sudo dahae keys-backup`) | 한 번, 바뀔 때마다 | 서버 밖(비밀번호 관리 앱 또는 USB)에 보관. 콘솔에서 내려받으면 보관 확인도 기록돼요 |
+| 비밀 키 사본 | 콘솔 **시스템 상태 > 서버 업데이트 > 복구 > 비밀 키 사본 내려받기** (또는 서버에서 `sudo dahae keys-backup`) | 한 번, 바뀔 때마다 | 서버 밖(비밀번호 관리 앱 또는 USB)에 보관. 내려받은 뒤 콘솔에서 **서버 밖에 보관했어요** 를 눌러야 보관 확인이 기록돼요 |
 
 - **비밀 키 사본은 꼭 하세요.** 외부 백업은 비밀 키로 잠겨 있어서, 키 사본이 없으면 서버를 잃었을 때 풀 수 없어요.
-- **자동 외부 백업 (S3):** 서버 역할은 이 저장소에 쓰고 읽고 목록을 볼 수만 있고 **지울 수는 없어요** (서버를 빼앗겨도 사본을 지우지 못해요). 버전 관리가 켜져 있고, 저장소가 암호화하고(SSE-S3), 공개 접근은 막혀 있어요. 오래된 백업은 저장소 규칙이 지워요: 35일 뒤 만료, 덮어쓰이거나 만료된 판은 35일 더 보관. 스택을 지워도 저장소는 남아요.
+- **비밀 키 사본에 든 것:** 외부 백업을 푸는 두 키(`DATA_KEY`, `JWT_SECRET`)만 들어 있어요. DB 비밀번호 같은 다른 값은 없어요.
+- **자동 외부 백업 (S3):** 서버 역할은 이 저장소에 **새 파일을 만들고**, 읽고, 목록을 볼 수만 있어요. **지우거나 덮어쓸 수 없어요**: 올릴 때마다 "같은 이름이 없을 때만" 조건을 붙여야 해서, 서버를 빼앗겨도 이미 있는 사본을 지우거나 바꾸지 못해요 (새 파일은 더할 수 있어요). 버전 관리가 켜져 있고, 저장소가 암호화하고(SSE-S3), 공개 접근은 막혀 있어요. 오래된 백업은 저장소 규칙이 지워요: 35일 뒤 만료, 만료된 판은 35일 더 보관. 백업이 멈추면 마지막 사본도 약 70일 뒤에 없어지니 `sudo dahae status` 의 "외부 백업 정상" 을 가끔 보세요. 스택을 지워도 저장소는 남아요.
+- **이 버전보다 먼저 만든 스택에는 S3 저장소가 없어요.** `launch.sh` 는 있는 스택을 바꾸지 않아요. 그런 서버는 예전처럼 콘솔 **설정 > 외부 백업** 에 다른 S3 호환 저장소의 키를 넣어 연결하세요 (꼭 하세요). 템플릿을 새로 올려 저장소를 더하는 일은 개발사와 상의하세요 (D-4 의 스택 업데이트 주의).
+- **서버를 잃고 새로 만들 때:** 예전 스택의 출력 **BackupBucket** 이름을 새 스택에 넘기면 새 서버가 그 저장소를 읽고 이어서 써요. CloudShell 한 줄이면 끝에 `--backup-bucket <BackupBucket 이름>` 을 붙이고, 손으로 만들면 B-2 의 **ExistingBackupBucket** 칸에 넣어요 (같은 리전). 설치가 끝나면 서버에서 `sudo dahae keys-restore <비밀 키 사본>` → `sudo dahae restore-offsite` 순서로 되돌려요.
 - 스냅샷만으로는 충분하지 않아요. 서버 밖에 복사본을 하나 더 두세요 (외부 백업).
 
 ### D-2. 모니터링
@@ -270,6 +281,7 @@ AWS 콘솔 → **Systems Manager > Run Command > AWS-RunShellScript** → 대상
 - 비용은 서버 종류, 디스크 크기, 데이터 전송량, 스냅샷 양에 따라 달라요.
 - 정확한 금액은 AWS 요금 계산기(https://calculator.aws/)에서 **서울(ap-northeast-2)** 과 위 설정으로 직접 계산하세요. 이 안내서에는 가격을 적지 않았어요.
 - 고정 IP(Elastic IP)는 서버에 연결되어 있을 때는 따로 비용이 없고, 연결이 끊기면 요금이 붙어요.
+- **S3 백업:** 저장 용량은 대략 (DB 백업 + 사진 전체) × 약 70일분이에요. 매일, 그리고 업데이트·되돌리기 전마다 사진 전체를 한 번씩 올리고, 각 사본이 35일 + 35일 남아요. 사진이 많으면 요금 계산기에 S3 Standard 용량도 넣어 보세요.
 
 ### D-4. 안전하게 삭제하기
 
@@ -302,9 +314,9 @@ This guide sets up one Dahae server on AWS (Seoul) and connects the developer's 
 5. **Setup code without SSH:** EC2 > Instances > Connect > Session Manager > Connect, then `sudo dahae setup-code` (valid 2 hours; `--renew` for a new code). DODA's owner, on a call with the developer, opens `https://<domain>/admin`, enters the code, creates the owner account and enables two-step sign-in on DODA's phone (the owner code guards the payment cards, so the developer never creates this account).
 6. **CD:** the developer's repository `EricWijesinghe/Dahae` holds the GitHub environment `doda-aws` (deployment branches limited to `master`; required reviewers from DODA are optional, and without them a run deploys as soon as the developer starts it) and four environment variables from the stack outputs: `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `DAHAE_DOMAIN`. The AWS role trusts that repository (by its immutable owner and repository ids) and environment, so no other repository can deploy here. The workflow `deploy-aws.yml` runs there. Each stable tag (vX.Y.Z) runs `dahae update <tag>` through SSM and checks health and version (after approval, when reviewers are set). Manual deploy and rollback are in the Actions tab (deploy-aws, Run workflow). Beta tags are never deployed.
 7. **Note:** the server's weekly auto-update is on by default. To make the GitHub deploy the only path, run `sudo dahae update-schedule off`.
-8. **Backups:** the template makes a private S3 bucket (block public access, versioning, SSE-S3, lifecycle: 35 days, then 35 more for old versions; kept when the stack is deleted) and the server's role may only put, get and list in it, never delete. Offsite backups and photo backups go there with no keys to type (console backup card: "AWS S3 (automatic)"); keys saved on that card for another S3-compatible store win. Keep the keys backup outside the server: console System status > Server update > Recovery > download the secret key copy (owner code, one download, recorded as kept), or `sudo dahae keys-backup`. EBS snapshots run daily at 03:00 Seoul time, keep 7.
+8. **Backups:** the template makes a private S3 bucket (block public access, versioning, SSE-S3, lifecycle: 35 days, then 35 more for old versions; kept when the stack is deleted) and the server's role may only create new objects (every PUT must carry `If-None-Match: *`), get and list: it can never delete or overwrite a copy. Backups stop for good about 70 days after uploads stop, so check `dahae status`. Stacks made before this release have no bucket (launch.sh never updates a stack): connect the console backup card with keys for another S3-compatible store. A replacement stack takes the old stack's `BackupBucket` output as `ExistingBackupBucket` (`launch.sh --backup-bucket NAME`), then `dahae keys-restore` and `dahae restore-offsite`. S3 storage is roughly (DB + all photos) x about 70 days of copies. Offsite backups and photo backups go there with no keys to type (console backup card: "AWS S3 (automatic)"); keys saved on that card for another S3-compatible store win. Keep the keys backup outside the server: console System status > Server update > Recovery > download the secret key copy (owner code, one download; recorded as kept only after the owner presses "Kept off the server"), or `sudo dahae keys-backup`. The copy holds only DATA_KEY and JWT_SECRET. EBS snapshots run daily at 03:00 Seoul time, keep 7.
 8a. **Alarm e-mails:** the system-check alarm (auto-recover) also mails the stack's Email through SNS, and again when it is OK. AWS first sends "Subscription Confirmation": click **Confirm subscription** once. No disk-space alarm: the server has no CloudWatch agent.
-8b. **Host tools and rollback:** after v1.6.0, `dahae update <tag>` also replaces the host tools (CLI, agent, units, cron, compose) with that release's install.sh from the delivery repo, only when it matches the release's cosign-signed SHA256SUMS; otherwise nothing changes. `dahae rollback` (also in the console: Recovery > Roll back, owner code plus server approval code) puts the previous version's tools back too, and still stops while a Toss payout is in doubt. Servers made with v1.6.0 or older re-run the install line once.
+8b. **Host tools and rollback:** after v1.6.0, `dahae update <tag>` also replaces the host tools (CLI, agent, units, cron, compose) with that release's install.sh from the delivery repo, and agent.sh, only when they match the SHA256SUMS that the release workflow signed at exactly that tag (a channel is read as the tag it points at and refused if older than the newest version this server ran); otherwise nothing changes. The rollback copy of the tools moves only when the images really change. If only the tools could not be replaced, the job says so (exit 5): re-run the install line once. After a rollback, the weekly auto-update holds the rolled-back version until a newer release appears (any manual update ends the hold); a rollback with no previous version says so (exit 6). `dahae rollback` (also in the console: Recovery > Roll back, owner code plus server approval code) puts the previous version's tools back too, and still stops while a Toss payout is in doubt. Servers made with v1.6.0 or older re-run the install line once.
 8c. **Policies and Windows:** accounts that ran `--admin` before run it again once (existing policies get the new default version: the template now adds the bucket and the alarm topic). `launch.sh` also runs from Git Bash on Windows with the AWS CLI for Windows.
 9. **Costs:** use the AWS pricing calculator (https://calculator.aws/) with Seoul pricing. This guide lists no prices.
 10. **Deleting:** back up first, turn off termination protection, then delete the stack. The disk and the Elastic IP stay until you delete them yourself. The GitHub OIDC provider is account-wide and stays. With no Dahae server left, DODA's admin deletes the deployer user and both policies.
