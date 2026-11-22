@@ -811,11 +811,11 @@ async fn clear_section(State(s): State<AppState>, Admin(a): Admin, Path(code): P
         Section::TossPayments => Some((Gateway::TossPayments, vec![Gateway::TossPayments.code(), crate::providers::TOSS_BILLING])),
         _ => None,
     };
-    if let Some((gw, refunds)) = gateway
+    if let Some((gw, providers)) = gateway
         && !integrations::Integrations::from_config(&s.config).has(sec)
-        && gateway_in_use(&s.db, gw, &refunds).await?
+        && let Some(why) = gateway_in_use(&s.db, gw, &providers).await?
     {
-        return Err(ApiError::Conflict("gateway_in_use"));
+        return Err(ApiError::Conflict(why));
     }
     // The row stays, locked and empty: a non-owner admin cannot re-save the card without an unlock.
     if !integrations::save_section(&s.db, &s.config.data_key, sec, &Map::new(), a.id).await? {
@@ -826,17 +826,36 @@ async fn clear_section(State(s): State<AppState>, Admin(a): Admin, Path(code): P
     Ok(Json(card(&s, sec, None).await?))
 }
 
-/// Open checkouts, live saved cards or queued refunds on `gw`: clearing its card would strand them.
-async fn gateway_in_use(db: &PgPool, gw: Gateway, refund_providers: &[&str]) -> Result<bool, sqlx::Error> {
-    sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM checkouts WHERE gateway = $1 AND status IN ('pending', 'awaiting_deposit'))
+/// How long a finished payment can still be refunded through its gateway: Toss card and virtual-account cancels
+/// work for a year (transfers 180 days); PortOne passes the PG's own limit through.
+const REFUND_WINDOW_DAYS: i32 = 365;
+
+/// Why clearing `gw`'s card would strand money, if it would: checkouts that can still be paid (open, awaiting a
+/// deposit, or expired within the reconciler's window: `can_settle` takes a late payment), live saved cards and
+/// queued refunds (`gateway_in_use`), or payments on its `providers` still refundable inside the refund window.
+async fn gateway_in_use(db: &PgPool, gw: Gateway, providers: &[&str]) -> Result<Option<&'static str>, sqlx::Error> {
+    let (in_use, refundable): (bool, bool) = sqlx::query_as(
+        "SELECT EXISTS (SELECT 1 FROM checkouts WHERE gateway = $1
+                        AND (status IN ('pending', 'awaiting_deposit')
+                             OR (status = 'expired' AND created_at > now() - make_interval(hours => $3::int))))
              OR EXISTS (SELECT 1 FROM payment_methods WHERE gateway = $1 AND deleted_at IS NULL AND billing_key <> '')
-             OR EXISTS (SELECT 1 FROM refund_queue WHERE done_at IS NULL AND provider = ANY($2))",
+             OR EXISTS (SELECT 1 FROM refund_queue WHERE done_at IS NULL AND provider = ANY($2)),
+                EXISTS (SELECT 1 FROM payments WHERE provider = ANY($2) AND status IN ('paid', 'partially_refunded')
+                        AND refunded_amount < amount AND created_at > now() - make_interval(days => $4))",
     )
     .bind(gw.code())
-    .bind(refund_providers)
+    .bind(providers)
+    .bind(super::checkout_recon::RECON_MAX_AGE_HOURS)
+    .bind(REFUND_WINDOW_DAYS)
     .fetch_one(db)
-    .await
+    .await?;
+    Ok(if in_use {
+        Some("gateway_in_use")
+    } else if refundable {
+        Some("gateway_has_refundable_payments")
+    } else {
+        None
+    })
 }
 
 /// Owner unlock of a saved card for `UNLOCK_TTL_SECS`. Every outcome is audited; no secret is in the record.

@@ -33,7 +33,7 @@ use uuid::Uuid;
 const RECON_BATCH: i64 = 20;
 const RECON_COOLDOWN_SECS: i64 = 300;
 const RECON_MIN_AGE_SECS: i64 = 120;
-const RECON_MAX_AGE_HOURS: i64 = 24;
+pub(crate) const RECON_MAX_AGE_HOURS: i64 = 24;
 /// The stale sweep stops at this age: older unfinished checkouts are left alone so the provider
 /// is not re-polled forever. Anything older than this needs the owner to look at it by hand.
 const RECON_STALE_MAX_DAYS: i64 = 30;

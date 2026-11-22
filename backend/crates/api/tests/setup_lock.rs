@@ -366,6 +366,75 @@ async fn a_payment_card_with_open_payments_cannot_be_cleared(db: PgPool) {
     assert_eq!(st, StatusCode::OK, "nothing left on PortOne: {body}");
 }
 
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_payment_card_with_late_payable_checkouts_or_refundable_payments_cannot_be_cleared(db: PgPool) {
+    common::seed_catalog(&db).await;
+    let app = common::app(db.clone());
+    let (owner, _) = enrolled_owner(&db).await;
+    save(&app, &owner, SECRET).await;
+    assert_eq!(unlock(&app, &owner, &code_now()).await.0, StatusCode::OK);
+    let c = common::customer(&app, &db, "010-7100-0901").await;
+    sqlx::query("UPDATE payment_methods SET deleted_at = now()")
+        .execute(&db)
+        .await
+        .expect("no saved card");
+    let clear = || common::call_owner(&app, "DELETE", PORTONE, &owner, None, Value::Null);
+    let code = |b: &Value| b["error"]["code"].as_str().map(str::to_owned);
+
+    // The reconciler still settles a late payment on a checkout that expired within the last day (can_settle).
+    let expired: Uuid = sqlx::query_scalar(
+        "INSERT INTO checkouts (user_id, kind, method, amount, status, expires_at, gateway, created_at)
+         VALUES ($1, 'booking', 'card', 9000, 'expired', now() - interval '30 minutes', 'portone', now() - interval '1 hour') RETURNING id",
+    )
+    .bind(c.user)
+    .fetch_one(&db)
+    .await
+    .expect("checkout");
+    let (st, body) = clear().await;
+    assert_eq!((st, code(&body).as_deref()), (StatusCode::CONFLICT, Some("gateway_in_use")), "{body}");
+    sqlx::query("UPDATE checkouts SET created_at = now() - interval '25 hours' WHERE id = $1")
+        .bind(expired)
+        .execute(&db)
+        .await
+        .expect("older");
+
+    // A finished payment can still be refunded through the gateway for a year (card and virtual account limits).
+    let booking: Uuid = sqlx::query_scalar(
+        "INSERT INTO bookings (number, user_id, service_code, address, district_code, visit_date, start_hour, status, final_price, list_price, discount)
+         VALUES ('BKG-1', $1, 'studio', '{}'::jsonb, '11680', '2026-03-15', 10, 3, 10000, 10000, 0) RETURNING id",
+    )
+    .bind(c.user)
+    .fetch_one(&db)
+    .await
+    .expect("booking");
+    let pay = |status: &'static str, refunded: i64, age: &'static str, key: &'static str| {
+        sqlx::query(
+            "INSERT INTO payments (booking_id, amount, kind, status, refunded_amount, provider, provider_tx_id, idempotency_key, created_at)
+             VALUES ($1, 10000, 'full', $2, $3, 'portone', $4, $4, now() - $5::interval)",
+        )
+        .bind(booking)
+        .bind(status)
+        .bind(refunded)
+        .bind(key)
+        .bind(age)
+        .execute(&db)
+    };
+    pay("paid", 0, "10 days", "pay-recent").await.expect("payment");
+    let (st, body) = clear().await;
+    assert_eq!(
+        (st, code(&body).as_deref()),
+        (StatusCode::CONFLICT, Some("gateway_has_refundable_payments")),
+        "{body}"
+    );
+    sqlx::query("UPDATE payments SET status = 'refunded', refunded_amount = amount")
+        .execute(&db)
+        .await
+        .expect("refunded");
+    pay("partially_refunded", 4000, "366 days", "pay-old").await.expect("old payment");
+    let (st, body) = clear().await;
+    assert_eq!(st, StatusCode::OK, "only refunded or past-the-window payments are left: {body}");
+}
+
 /// Saves the PortOne card with these channel keys as the owner (the card must be unlocked first if already saved).
 async fn save_channels(app: &Router, token: &str, channels: Value) {
     let body = json!({ "store_id": "store-00000000-0000-0000-0000-000000000000", "api_secret": SECRET, "channel_keys": channels });
