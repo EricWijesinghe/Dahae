@@ -8,6 +8,9 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+### Fixed
+- Customer and partner apps: a saved server address (found after a domain move) that stops answering at a cold start while the build's own address answers is dropped, and the app starts on the build's address; offline, the saved address stays.
+
 ## [1.6.0] - 2026-11-22
 
 ### Security

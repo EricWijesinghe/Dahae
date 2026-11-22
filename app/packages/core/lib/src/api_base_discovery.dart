@@ -32,25 +32,52 @@ String? httpsBase(Object? v) {
 }
 
 /// The address the customer and partner apps start with: the saved move first, then the compiled one.
+/// A saved address that stops answering while the compiled one answers is dropped (a move undone, a typo
+/// fixed by the owner, the new host gone); when neither answers (offline) the saved one stays.
 /// Web always uses its origin ([compiled]); the console keeps its own address store.
 Future<String> resolveApiBase({
   FlutterSecureStorage storage = const FlutterSecureStorage(),
   bool web = kIsWeb,
   String Function() compiled = defaultApiBase,
+  http.Client? client,
+  Duration timeout = const Duration(seconds: 4),
 }) async {
-  if (!web) {
-    try {
-      final value = await storage.read(key: apiBaseOverrideKey) ?? '';
-      final i = value.lastIndexOf('|');
-      final saved = httpsBase(value.substring(i + 1));
-      if (i > 0 && value.substring(0, i) == compiled() && saved != null) {
-        return saved;
-      }
-    } on Exception catch (e) {
-      debugPrint('saved server address unreadable: $e');
+  if (web) return compiled();
+  String? saved;
+  try {
+    final value = await storage.read(key: apiBaseOverrideKey) ?? '';
+    final i = value.lastIndexOf('|');
+    if (i > 0 && value.substring(0, i) == compiled()) {
+      saved = httpsBase(value.substring(i + 1));
     }
+  } on Exception catch (e) {
+    debugPrint('saved server address unreadable: $e');
+  }
+  if (saved == null) return compiled();
+  final c = client ?? http.Client();
+  try {
+    if (await _answers(c, saved, timeout)) return saved;
+    if (!await _answers(c, compiled(), timeout)) return saved;
+  } finally {
+    if (client == null) c.close();
+  }
+  try {
+    await storage.delete(key: apiBaseOverrideKey);
+  } on Exception catch (e) {
+    debugPrint('stale server address not cleared: $e');
   }
   return compiled();
+}
+
+/// `GET <base>/v1/config` answers 200 within [timeout].
+Future<bool> _answers(http.Client client, String base, Duration timeout) async {
+  try {
+    final res = await client.get(Uri.parse('$base/v1/config')).timeout(timeout);
+    return res.statusCode == 200;
+  } on Object catch (e) {
+    debugPrint('server $base not answering: $e');
+    return false;
+  }
 }
 
 /// Follows a domain move: after a `/v1/config` answer whose `api_base` differs from the current address,

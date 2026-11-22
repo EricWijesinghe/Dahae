@@ -43,6 +43,17 @@ class _MemStorage extends FlutterSecureStorage {
       data[key] = value;
     }
   }
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => data.remove(key);
 }
 
 const _old = 'https://old.test';
@@ -120,6 +131,7 @@ void main() {
           storage: s.storage,
           web: false,
           compiled: () => _old,
+          client: _probe(),
         ),
         _new,
       );
@@ -260,4 +272,67 @@ void main() {
       }
     },
   );
+
+  group('a saved address that stops answering', () {
+    final saved = {apiBaseOverrideKey: '$_old|$_new'};
+
+    /// `/v1/config` answers 200 on the hosts in [up]; [hang] hosts never answer, others fail.
+    http.Client hosts({
+      Set<String> up = const {},
+      Set<String> hang = const {},
+      List<Uri>? seen,
+    }) => MockClient((req) async {
+      seen?.add(req.url);
+      if (hang.contains(req.url.host)) await Completer<void>().future;
+      if (!up.contains(req.url.host)) throw http.ClientException('down');
+      return http.Response(jsonEncode({'install_id': _id}), 200);
+    });
+
+    Future<(String, _MemStorage)> resolve(http.Client client) async {
+      final storage = _MemStorage(saved);
+      final base = await resolveApiBase(
+        storage: storage,
+        web: false,
+        compiled: () => _old,
+        client: client,
+        timeout: const Duration(milliseconds: 50),
+      );
+      return (base, storage);
+    }
+
+    test('is kept while it answers', () async {
+      final seen = <Uri>[];
+      final (base, storage) = await resolve(
+        hosts(up: {'new.test', 'old.test'}, seen: seen),
+      );
+
+      expect(base, _new);
+      expect(storage.data, saved);
+      expect(seen.map((u) => '$u'), ['$_new/v1/config']);
+    });
+
+    test('falls back to the compiled address when that one answers, and is cleared', () async {
+      for (final client in [
+        hosts(up: {'old.test'}),
+        hosts(up: {'old.test'}, hang: {'new.test'}),
+      ]) {
+        final (base, storage) = await resolve(client);
+
+        expect(base, _old);
+        expect(storage.data, isEmpty);
+      }
+    });
+
+    test('is kept when neither answers (offline)', () async {
+      for (final client in [
+        hosts(),
+        hosts(hang: {'new.test', 'old.test'}),
+      ]) {
+        final (base, storage) = await resolve(client);
+
+        expect(base, _new);
+        expect(storage.data, saved);
+      }
+    });
+  });
 }
