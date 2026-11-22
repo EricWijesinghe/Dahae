@@ -16,7 +16,7 @@ The developer builds both apps with GitHub Actions (`store-apps`, macOS runner) 
 | 7 | Firebase iOS 앱 2개 (번들 ID 동일) → `GoogleService-Info.plist` | Firebase 콘솔 | `base64 -w0` 로 바꿔 `store` 환경의 secret `GOOGLE_SERVICE_INFO_PLIST_B64`(고객), `PARTNER_GOOGLE_SERVICE_INFO_PLIST_B64`(파트너). 없으면 푸시만 꺼진 채로 빌드돼요. Without it the build works, push is off |
 | 8 | 로그인 키 | `docs/DEPLOY.md` §3 표 | `GOOGLE_IOS_CLIENT_ID`(번들 ID마다 iOS OAuth 클라이언트), `KAKAO_NATIVE_KEY`(카카오 개발자 콘솔 → 플랫폼 → iOS 번들 ID 등록), 네이버 개발자센터에서 iOS 번들 ID 등록 |
 | 9 | `APP_LINK_DOMAIN` (서버 도메인) + 서버 콘솔 **설정 → 앱 링크** 카드의 Apple Team ID | Apple Developer 우측 상단 Membership → Team ID ([guide 11](../guide/11-앱-직접-빌드.md) 6번 6항) | 서버가 `/.well-known/apple-app-site-association` 을 내줘야 네이버 로그인이 iOS 17.4+ 에서 돼요. 아래 4항 확인 |
-| 10 | Apple 로그인 서버 키 (`.p8`) | 콘솔 Apple 카드, `review-notes.md` §3 | 탈퇴 때 Apple 토큰 해지에 쓰여요 |
+| 10 | Apple 로그인 서버 키 (`.p8`) | 콘솔 Apple 카드, `review-notes.md` §3 | 탈퇴 때 Apple 토큰 해지에 쓰여요. 키 하나 (`Eric Sign in with Apple`) 로 두 앱에 모두 써요. 서버가 이 키로 서명하고 앱마다 번들 ID (`kr.co.dahae.customer`, `kr.co.dahae.partner`) 를 클라이언트 ID 로 써요. One key, `Eric Sign in with Apple`, covers both apps: the server signs with it and uses each app's bundle id as its client id |
 | 11 | 스크린샷, 설명, 개인정보처리방침 URL | App Store Connect 앱 페이지 | 아이폰 6.9인치 스크린샷 필수 (`docs/store/screenshots`, 문구 `listing-*.md`). 아이패드용은 필요 없어요 (앱이 아이폰 전용) |
 
 **이름 규칙 / Naming**: DODA 가 개발자를 초대할 때 사용자 이름은 **Eric Wijesinghe** (이름 Eric), 개발자를 위해 만드는 키는 이름에 Eric 을 넣어요 (API 키 `Eric CI`, APNs 키 `Eric APNs`, Apple 로그인 키 `Eric Sign in with Apple`). 회사 안에서 누구의 계정·키인지 헷갈리지 않게 하려는 거예요. The developer's user is invited as **Eric Wijesinghe**, and every key made for him carries "Eric" in its name, so nobody at the company mistakes whose it is.

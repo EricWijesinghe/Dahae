@@ -50,7 +50,7 @@ The developer builds the apps. You create the store accounts in your company's n
 
 1. In Play Console, click **Users and permissions** in the left menu.
 2. Click the button to invite a new user.
-3. Enter the developer's Google account email.
+3. Enter the developer's (Eric's) Google account email. The upload service account `eric-play-upload` is created and invited by the developer later.
 4. Give the **Admin** permission.
 5. Send the invitation. It is done once the developer accepts it from the email.
 
@@ -72,7 +72,7 @@ The developer builds the apps. You create the store accounts in your company's n
 
 1. In App Store Connect, click **Users and Access**.
 2. Click the add (+) button.
-3. Enter the developer's name and Apple ID email.
+3. Enter the developer's name, **Eric Wijesinghe**, and Apple ID email.
 4. Choose the **Admin** role.
 5. Send the invitation. It is done once the developer accepts.
 
@@ -166,11 +166,10 @@ Reviewers cannot receive Korean text messages, so one review-only number gets a 
 
 - So today you cannot make a partner app review account from the console alone. How the partner app reviewer gets in is **to be confirmed**. Settle it with the developer before you submit.
 - Do not register a partner or staff member on the demo number. If you do, saving the demo account card again gives **A customer, partner or staff member already uses this number. Enter a number nobody uses.**
-- `docs/store/review-notes.md` says the partner app signs in with the same number and code, but that does not match the server today. Have the developer fix that line before you paste it.
 
 ### Review notes and addresses (with the developer)
 
-1. In `docs/store/review-notes.md`, replace `<REVIEW_PHONE>`, `<REVIEW_CODE>`, `<도메인>`, `<domain>` and `<API_DOMAIN>` (your domain) with the real values.
+1. In `docs/store/review-notes.md`, replace `<REVIEW_PHONE>`, `<REVIEW_CODE>`, `<REVIEW_GOOGLE_EMAIL>`, `<REVIEW_GOOGLE_PASSWORD>`, `<도메인>`, `<domain>` and `<API_DOMAIN>` (your domain) with the real values.
 2. Paste the text into Play Console **App access** and App Store Connect **App Review Information > Notes**.
 3. Privacy policy address: `https://your-domain/privacy.html`
 4. Account deletion address: `https://your-domain/delete-account.html` (both pages are created automatically when the server is installed)
@@ -184,7 +183,7 @@ Reviewers cannot receive Korean text messages, so one review-only number gets a 
 - [ ] Every `<…>` in the review notes is filled.
 - [ ] **[Coupons & content]** → **Growth** → **Review reports** has nothing waiting (chapter 22). Handle anything that arrives during review at once.
 - [ ] The customer app's **Terms of service** and **Privacy policy** screens show text (chapter 22, **Legal** content).
-- [ ] If you offer Sign in with Apple: the key (.p8) is in the console Apple card, and `https://your-domain/v1/auth/apple/notifications` is registered as the server notification address in the Apple developer account (chapter 15).
+- [ ] If you offer Sign in with Apple: the key (.p8) is in the console Apple card, and `https://your-domain/v1/auth/apple/notifications` is registered as the server notification address in the Apple developer account (chapter 15). One key, `Eric Sign in with Apple`, covers both apps: the server signs with it and uses each app's bundle id (`kr.co.dahae.customer`, `kr.co.dahae.partner`) as its client id.
 - [ ] Name and trademark checks: trademark search (KIPRIS), Kakao channel and AlimTalk names, payment merchant name, terms-change notice 7 days ahead (chapter 28).
 - [ ] The server is running. Do not stop it or turn on maintenance mode during review.
 
