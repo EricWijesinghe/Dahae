@@ -2,7 +2,7 @@
 
 `scripts/manual/shots.sh` renders the console, customer app and partner app screens from the real code
 with sample data. `scripts/manual/install_page_shot.sh` renders the install page. The images below are
-not made, so the manual describes these steps in text. They fall into three groups.
+not made, so the manual describes these steps in text, or are drawn with a stand-in. They fall into two groups.
 
 ## Third-party websites and terminals (never drawn by us)
 
@@ -34,21 +34,6 @@ picture is wanted later, take it from a real account and blur keys, codes, IPs a
 | external-r2-token | 17 | Cloudflare R2 API token with Object Read & Write |
 | external-play-console-users | 25 | Google Play Console > Users and permissions |
 | external-appstore-users | 25 | App Store Connect > Users and Access |
-
-## Console screens that hit a layout bug (to be confirmed and fixed in the app)
-
-These screens throw a Flutter layout error when they render with data, so they are not drawn. The theme
-gives `FilledButton` a minimum size of `Size.fromHeight(56)`, which is an infinite minimum width. Inside a
-`ListTile.trailing` or a `Row` that is "Trailing widget consumes the entire tile width" or
-"BoxConstraints forces an infinite width". Fix the screens first, then add the shots back to
-`app/apps/console/test/manual_screenshots/`.
-
-| id | chapter | where |
-|---|---|---|
-| console-my-account | 08 | `owner_account.dart` `_Card`: FilledButton as `ListTile.trailing` |
-| console-setup-pay-methods | 10 | `setup_pay_methods.dart`: `PayBrandBadge` (a Container with `alignment`, which fills the width) as `SwitchListTile.secondary` |
-| console-partners-list | 20 | `people.dart` PartnersScreen: buttons in `ListTile.trailing` |
-| console-privacy-requests | 23 | `privacy_requests.dart`: FilledButton beside the phone field in a `Row` |
 
 ## Drawn with a stand-in
 

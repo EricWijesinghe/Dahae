@@ -1292,6 +1292,16 @@
   ]
  },
  {
+  "id": "console-ops-recovery",
+  "app": "console",
+  "chapter": "26",
+  "what": "Server update card as owner, Recovery part: Roll back to the previous version button, Download the secret key copy with the two passphrase fields and Make and download, Recent server jobs with Roll back, Secret key copy and Key copy recorded done",
+  "lang": [
+   "ko",
+   "en"
+  ]
+ },
+ {
   "id": "console-ops-backup-check",
   "app": "console",
   "chapter": "27",

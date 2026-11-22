@@ -108,8 +108,6 @@ Json _lockedPayout() => setupCard(
 
 String _in(DateTime d) => d.toUtc().toIso8601String();
 
-// Left out until its layout bug is fixed (throws "Trailing widget consumes the entire tile width" in a
-// ListTile): console-my-account (FilledButton trailing, theme minimumSize fromHeight).
 final _shots = <ManualShot>[
   // 06 First sign-in
   ManualShot(
@@ -177,6 +175,19 @@ final _shots = <ManualShot>[
       );
       await shotSettle(tester);
     },
+  ),
+  ManualShot(
+    'console-my-account',
+    build: consoleApp,
+    api: (f) => f.reply('GET', '/admin/me/account', {
+      'is_owner': true,
+      'owner_exists': true,
+      'two_factor_enrolled': true,
+      'recovery_confirmed': true,
+      'alert_phone_masked': '010-****-5678',
+      'active_sessions': 2,
+    }),
+    act: (tester, t) => openSection(tester, t.oaTitle),
   ),
   // 09 The setup page
   ManualShot(

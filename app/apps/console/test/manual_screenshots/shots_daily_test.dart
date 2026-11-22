@@ -216,9 +216,6 @@ Future<void> _tapRow(WidgetTester tester, String text) async {
   await shotSettle(tester);
 }
 
-// Left out until their layout bug is fixed (the theme gives FilledButton minimumSize
-// Size.fromHeight, an infinite minimum width): console-partners-list (FilledButton in
-// ListTile.trailing) and console-privacy-requests (FilledButton beside the phone field in a Row).
 final _shots = <ManualShot>[
   // 18 Catalog and prices
   _tab('console-catalog-pricing', (t) => t.cCatalog, (t) => t.cPricing),
@@ -296,6 +293,11 @@ final _shots = <ManualShot>[
     },
   ),
   // 20 People
+  _page(
+    'console-partners-list',
+    (t) => t.cPartners,
+    api: (f) => f.reply('GET', '/admin/team-members/pending', const <Json>[]),
+  ),
   ManualShot(
     'console-partner-profile-checklist',
     build: (env) => consoleScreen(env, const SizedBox.expand()),
@@ -474,6 +476,30 @@ final _shots = <ManualShot>[
     then: (tester, t) => _tapRow(tester, '홍길동'),
   ),
   _page('console-renewals', (t) => t.rnwTitle),
+  _page(
+    'console-privacy-requests',
+    (t) => t.prqTitle,
+    api: (f) => f
+      ..reply('GET', '/admin/privacy/customers', [
+        {'id': 'u-0', 'name': '김지민', 'phone': '01012345678', 'bookings': 3},
+      ])
+      ..reply('GET', '/admin/privacy/requests', [
+        {
+          'kind': 'export',
+          'status': 'done',
+          'staff_name': '홍길동',
+          'created_at': '2026-11-18T02:10:00Z',
+        },
+      ]),
+    then: (tester, t) async {
+      await tester.enterText(
+        find.widgetWithText(TextField, t.prqPhone),
+        '010-1234-5678',
+      );
+      await tester.tap(find.text(t.prqFind));
+      await shotSettle(tester);
+    },
+  ),
 ];
 
 void main() => runManualShots('daily', _shots, _daily);

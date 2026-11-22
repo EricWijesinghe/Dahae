@@ -137,6 +137,24 @@ Json _jobs({bool running = false}) => {
   ],
 };
 
+/// Recent jobs after a rollback and a key copy the owner kept off the server.
+final _recoveryJobs = <String, Object?>{
+  'jobs': [
+    for (final (i, kind) in const [
+      'keys-confirm',
+      'keys-backup',
+      'rollback',
+      'update',
+    ].indexed)
+      {
+        'id': 'job-$i',
+        'kind': kind,
+        'state': 'ok',
+        'created_at': _ago(Duration(days: 1 + i)),
+      },
+  ],
+};
+
 void _opsApi(
   FakeApi f, {
   bool red = false,
@@ -185,6 +203,23 @@ final _shots = <ManualShot>[
   _ops('console-ops-update', at: (t) => t.hjTitle),
   _ops('console-ops-update-running', at: (t) => t.hjTitle, running: true),
   _ops('console-ops-server-settings', at: (t) => t.cRbHostTitle, alignment: 0),
+  ManualShot(
+    'console-ops-recovery',
+    build: consoleApp,
+    api: (f) {
+      f.reply('GET', '/admin/host/jobs', _recoveryJobs);
+      _opsApi(f);
+    },
+    act: (tester, t) async {
+      await openSection(tester, t.cOps);
+      await scrollTo(
+        tester,
+        find.text(t.srTitle),
+        within: OpsScreen,
+        alignment: 0,
+      );
+    },
+  ),
   // 27 Backups
   _ops('console-ops-backup-check', at: (t) => t.oChecks),
   // 29 When something is red
