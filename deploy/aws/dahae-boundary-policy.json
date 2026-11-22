@@ -80,6 +80,19 @@
       "Resource": "arn:aws:events:*:*:rule/AwsDataLifecycleRule.managed-cwe.*"
     },
     {
+      "Sid": "OffsiteBackupNoDelete",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:PutObject",
+        "s3:GetObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::dahae-*",
+        "arn:aws:s3:::dahae-*/*"
+      ]
+    },
+    {
       "Sid": "DeployOnlyToDahaeServers",
       "Effect": "Allow",
       "Action": "ssm:SendCommand",

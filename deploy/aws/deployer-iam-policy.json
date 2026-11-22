@@ -32,12 +32,8 @@
         "cloudformation:DescribeStackEvents",
         "cloudformation:DescribeStackResources",
         "cloudformation:GetTemplate",
-        "cloudformation:CreateChangeSet",
-        "cloudformation:DescribeChangeSet",
-        "cloudformation:ExecuteChangeSet",
-        "cloudformation:DeleteChangeSet",
-        "cloudformation:ListChangeSets",
-        "cloudformation:ListStackResources"
+        "cloudformation:ListStackResources",
+        "cloudformation:*ChangeSet*"
       ],
       "Resource": "arn:aws:cloudformation:ap-northeast-2:*:stack/dahae-*/*",
       "Condition": {
@@ -228,14 +224,7 @@
       "Sid": "SnapshotsAlarmsAndDns",
       "Effect": "Allow",
       "Action": [
-        "dlm:CreateLifecyclePolicy",
-        "dlm:GetLifecyclePolicy",
-        "dlm:GetLifecyclePolicies",
-        "dlm:UpdateLifecyclePolicy",
-        "dlm:DeleteLifecyclePolicy",
-        "dlm:TagResource",
-        "dlm:UntagResource",
-        "dlm:ListTagsForResource",
+        "dlm:*",
         "cloudwatch:PutMetricAlarm",
         "cloudwatch:DeleteAlarms",
         "cloudwatch:DescribeAlarms",
@@ -244,6 +233,27 @@
         "cloudwatch:TagResource"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "BackupBucket",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:ListBucket",
+        "s3:GetBucket*",
+        "s3:PutBucketTagging",
+        "s3:PutBucketVersioning",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:*EncryptionConfiguration",
+        "s3:*LifecycleConfiguration"
+      ],
+      "Resource": "arn:aws:s3:::dahae-*"
+    },
+    {
+      "Sid": "AlarmTopic",
+      "Effect": "Allow",
+      "Action": "sns:*",
+      "Resource": "arn:aws:sns:ap-northeast-2:*:dahae-*"
     },
     {
       "Sid": "DnsARecordOnly",

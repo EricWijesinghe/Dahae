@@ -1,12 +1,13 @@
 # Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-Proprietary
 #
-# 다해 서버 한 대: EC2 (Ubuntu 24.04) + 고정 IP + 매일 디스크 스냅샷 + 자동 복구 + GitHub 배포 권한.
+# 다해 서버 한 대: EC2 (Ubuntu 24.04) + 고정 IP + 매일 디스크 스냅샷 + 자동 복구 + GitHub 배포 권한
+# + 외부 백업 저장소(S3, 키 입력 없음) + 서버 이상 알림 메일(SNS, 처음 한 번 메일의 Confirm subscription 을 눌러요).
 # AWS 콘솔 > CloudFormation > 스택 생성 > 템플릿 파일 업로드 로 여세요. 순서는 docs/guide/10-AWS-배포.md.
 # 릴리스마다 scripts/release/build-aws-template.sh 가 아래 두 자리표시자를 그 버전의 install.sh 주소와 지문으로 바꿔요.
 # Filled per release (the template is not launchable with the placeholders still in it).
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Dahae server on EC2 (Ubuntu 24.04), elastic IP, daily EBS snapshots, GitHub Actions deploy role.
+Description: Dahae server on EC2 (Ubuntu 24.04), elastic IP, daily EBS snapshots, offsite S3 backups, alarm e-mails, GitHub Actions deploy role.
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -28,7 +29,7 @@ Parameters:
     ConstraintDescription: "소문자 도메인 이름이어야 해요 (예: app.example.co.kr). Lowercase domain name."
   Email:
     Type: String
-    Description: 인증서 안내를 받을 이메일. Email for certificate notices.
+    Description: 인증서 안내와 서버 이상 알림을 받을 이메일 (알림은 처음 온 메일에서 한 번 확인해요). Email for certificate notices and server alarms (confirm the first mail once).
     AllowedPattern: "^[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
     ConstraintDescription: 이메일 주소 형식이어야 해요. Must be an email address.
   HostedZoneId:
@@ -146,6 +147,46 @@ Resources:
       PermissionsBoundary: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/dahae-boundary"
       ManagedPolicyArns:
         - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      Policies:
+        # The app backs up with this role (no keys typed). No delete: a taken-over server cannot wipe the copies.
+        - PolicyName: offsite-backup-no-delete
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ListBackups
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt BackupBucket.Arn
+              - Sid: PutAndGetBackups
+                Effect: Allow
+                Action: [s3:PutObject, s3:GetObject]
+                Resource: !Sub "${BackupBucket.Arn}/*"
+
+  # Offsite backups: the app encrypts every file before upload. Old copies go by lifecycle (the server cannot delete):
+  # a backup expires after 35 days, and an overwritten or expired version is kept 35 more days.
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: { Status: Enabled }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-old-backups
+            Status: Enabled
+            ExpirationInDays: 35
+            NoncurrentVersionExpiration: { NoncurrentDays: 35 }
+            AbortIncompleteMultipartUpload: { DaysAfterInitiation: 7 }
+      Tags:
+        - { Key: Name, Value: !Sub "${AWS::StackName}-backups" }
 
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -169,7 +210,8 @@ Resources:
       MetadataOptions:
         HttpEndpoint: enabled
         HttpTokens: required
-        HttpPutResponseHopLimit: 1
+        # 2: the app runs in a container (one hop more) and reads the backup role from here. Tokens stay required (IMDSv2).
+        HttpPutResponseHopLimit: 2
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
@@ -185,17 +227,26 @@ Resources:
             set -euo pipefail
             curl -fsSL -o /root/dahae-install.sh __INSTALL_URL__
             echo '__INSTALL_SH_SHA256__  /root/dahae-install.sh' | sha256sum -c -
-            MALKKEUM_DOMAIN=${SiteDomain} MALKKEUM_EMAIL=${Email} MALKKEUM_FIREWALL=on bash /root/dahae-install.sh
+            MALKKEUM_DOMAIN=${SiteDomain} MALKKEUM_EMAIL=${Email} MALKKEUM_FIREWALL=on MALKKEUM_BACKUP_S3_BUCKET=${BackupBucket} MALKKEUM_BACKUP_S3_REGION=${AWS::Region} bash /root/dahae-install.sh
           # auto: the Elastic IP's own name on sslip.io until the owner moves to a real domain in the console.
           - SiteDomain: !If [AutoDomain, !Sub "${ElasticIp}.sslip.io", !Ref Domain]
       Tags:
         - { Key: Name, Value: !Sub "dahae-${AWS::StackName}" }
         - { Key: dahae-backup, Value: !Ref AWS::StackName }
 
+  # Alarm e-mails to the owner. AWS sends a "Subscription Confirmation" mail first: one click on Confirm subscription.
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Dahae server
+      Subscription:
+        - { Protocol: email, Endpoint: !Ref Email }
+
+  # No disk-space alarm: the server has no CloudWatch agent, so EC2 reports no disk metric (dahae status checks disk).
   SystemCheckAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: EC2 system check failed. Auto-recover moves the server to healthy hardware.
+      AlarmDescription: EC2 system check failed. Auto-recover moves the server to healthy hardware and the owner gets an e-mail.
       Namespace: AWS/EC2
       MetricName: StatusCheckFailed_System
       Dimensions:
@@ -208,6 +259,9 @@ Resources:
       TreatMissingData: notBreaching
       AlarmActions:
         - !Sub "arn:${AWS::Partition}:automate:${AWS::Region}:ec2:recover"
+        - !Ref AlarmTopic
+      OKActions:
+        - !Ref AlarmTopic
 
   BackupRole:
     Type: AWS::IAM::Role
@@ -293,6 +347,9 @@ Resources:
                 Resource: "*" # EC2 does not scope describe calls
 
 Outputs:
+  BackupBucket:
+    Description: 외부 백업이 쌓이는 S3 저장소 (서버가 자동으로 써요). Offsite backup bucket (used automatically).
+    Value: !Ref BackupBucket
   PublicIp:
     Description: 도메인 A 레코드에 넣을 고정 IP (Route 53 를 안 썼을 때). Elastic IP for the A record.
     Value: !Ref ElasticIp
