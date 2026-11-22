@@ -13,6 +13,7 @@ import '../state.dart';
 import 'acquisition.dart';
 import 'cases.dart';
 import 'review_reports.dart';
+import '../widgets/inline_button.dart';
 
 class GrowthSettings extends StatefulWidget {
   const GrowthSettings({super.key});
@@ -167,7 +168,11 @@ class _GrowthSettingsState extends State<GrowthSettings> {
     ),
     Align(
       alignment: Alignment.centerRight,
-      child: FilledButton(onPressed: _savePack, child: Text(t.save)),
+      child: FilledButton(
+        style: inlineFilled,
+        onPressed: _savePack,
+        child: Text(t.save),
+      ),
     ),
     const Divider(height: Space.xxl),
   ];
@@ -248,6 +253,7 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton(
+                    style: inlineFilled,
                     onPressed: _saveWelcome,
                     child: Text(t.save),
                   ),
@@ -275,6 +281,7 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: FilledButton(
+                    style: inlineFilled,
                     onPressed: _saveReferral,
                     child: Text(t.save),
                   ),

@@ -10,6 +10,7 @@ import '../download.dart';
 import '../state.dart';
 import 'finance_tax.dart';
 import 'stepup.dart';
+import '../widgets/inline_button.dart';
 
 /// Owner finance: period KPIs, trend charts, payment mix, partner and service tables, accountant CSVs.
 /// Every figure is integer won from the API. Charts only convert to double for drawing.
@@ -787,6 +788,7 @@ class _ExportCard extends StatelessWidget {
                 label: Text(t.fExportSettlements),
               ),
               FilledButton.icon(
+                style: inlineFilled,
                 onPressed: () => onExport('monthly'),
                 icon: const Icon(Icons.download_rounded),
                 label: Text(t.fExportMonthly),

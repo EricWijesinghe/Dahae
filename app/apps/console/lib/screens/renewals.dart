@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/inline_button.dart';
 
 const _keysTestId = 'keys_test';
 const _kinds = [
@@ -108,6 +109,7 @@ class _RenewalsState extends State<RenewalsScreen> {
             child: Text(t.rnwCancel),
           ),
           FilledButton(
+            style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(t.rnwDelete),
           ),
@@ -295,7 +297,11 @@ class _RenewalFormState extends State<_RenewalForm> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(t.rnwCancel),
         ),
-        FilledButton(onPressed: _submit, child: Text(t.rnwSave)),
+        FilledButton(
+          style: compactFilled,
+          onPressed: _submit,
+          child: Text(t.rnwSave),
+        ),
       ],
     );
   }

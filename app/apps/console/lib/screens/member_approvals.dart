@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/inline_button.dart';
 
 /// Team members a partner invited that the platform owner has not approved yet. Admins only.
 class MemberApprovals extends StatelessWidget {
@@ -35,6 +36,7 @@ class MemberApprovals extends StatelessWidget {
                 ),
                 subtitle: Text('${t.cPro_pending} · ${m['phone']}'),
                 trailing: FilledButton.tonal(
+                  style: compactFilled,
                   onPressed: () => _approve(context, '${m['id']}', reload),
                   child: Text(t.cVerify),
                 ),

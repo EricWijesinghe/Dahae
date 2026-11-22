@@ -5,6 +5,7 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
+import 'inline_button.dart';
 
 /// Header that carries the owner's per-request TOTP. The server burns the code, so each owner action
 /// asks again.
@@ -105,7 +106,11 @@ class _OwnerTotpDialogState extends State<_OwnerTotpDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(t.oaCancel),
         ),
-        FilledButton(onPressed: _submit, child: Text(t.oaContinue)),
+        FilledButton(
+          style: compactFilled,
+          onPressed: _submit,
+          child: Text(t.oaContinue),
+        ),
       ],
     );
   }

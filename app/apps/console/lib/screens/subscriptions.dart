@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/inline_button.dart';
 
 /// Owner view of regular cleaning subscriptions: filter by status, pause or resume one on the customer's behalf.
 /// The server audits every action. A schedule edit keeps tomorrow's visit and re-plans the later ones.
@@ -142,6 +143,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               child: Text(t.cancel),
             ),
             FilledButton(
+              style: compactFilled,
               onPressed: () => Navigator.of(ctx).pop({
                 'cadence_weeks': cadence,
                 'weekday': weekday,

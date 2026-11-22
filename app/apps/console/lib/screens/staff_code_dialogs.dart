@@ -5,6 +5,7 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
+import '../widgets/inline_button.dart';
 
 /// How a one-time staff code leaves the console: a text to the staff member, or shown once to copy by hand.
 class CodeDelivery {
@@ -55,6 +56,7 @@ Future<CodeDelivery?> pickCodeDelivery(
             child: Text(t.cancel),
           ),
           FilledButton(
+            style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(t.cStaffSendCode),
           ),
@@ -121,6 +123,7 @@ class _CodeDialog extends StatelessWidget {
           label: Text(t.cMfaCopy),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: () => Navigator.of(context).pop(),
           child: Text(t.cDone),
         ),

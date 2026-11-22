@@ -11,6 +11,7 @@ import 'package:ui/ui.dart';
 import '../brand_assets.dart';
 import '../state.dart';
 import 'brand_preview.dart';
+import '../widgets/inline_button.dart';
 
 /// Brand colours offered as one-tap swatches; any #RRGGBB can still be typed.
 const _swatches = [
@@ -455,6 +456,7 @@ class _BusinessCardState extends State<BusinessCard> {
             Align(
               alignment: Alignment.centerLeft,
               child: FilledButton.icon(
+                style: inlineFilled,
                 onPressed: _busy ? null : _save,
                 icon: const Icon(Icons.save_rounded),
                 label: Text(t.cSetupSave),

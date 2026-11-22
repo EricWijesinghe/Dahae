@@ -5,6 +5,7 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
+import '../widgets/inline_button.dart';
 
 /// Request header the server reads the owner's authenticator code from (routes/keys.rs owner_gate).
 const ownerTotpHeader = 'X-Owner-Totp';
@@ -66,6 +67,7 @@ class _OwnerCodeDialogState extends State<_OwnerCodeDialog> {
           child: Text(t.cancel),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: _complete ? _submit : null,
           child: Text(t.cOwnerCodeConfirm),
         ),

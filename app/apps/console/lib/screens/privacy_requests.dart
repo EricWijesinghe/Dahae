@@ -12,6 +12,7 @@ import '../booking_labels.dart';
 import '../download.dart';
 import '../state.dart';
 import 'stepup.dart';
+import '../widgets/inline_button.dart';
 
 class PrivacyRequestsScreen extends StatefulWidget {
   const PrivacyRequestsScreen({super.key});
@@ -136,6 +137,7 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
             child: Text(t.cancel),
           ),
           FilledButton(
+            style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(t.prqDelete),
           ),
@@ -177,6 +179,8 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
             ),
             const SizedBox(width: Space.sm),
             FilledButton(
+              // As tall as the phone field beside it.
+              style: FilledButton.styleFrom(minimumSize: const Size(64, 56)),
               onPressed: _busy ? null : _find,
               child: Text(t.prqFind),
             ),
@@ -215,12 +219,14 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
             const SizedBox(height: Space.xs),
             Wrap(
               spacing: Space.xs,
+              runSpacing: Space.xs,
               children: [
                 OutlinedButton(
                   onPressed: _busy ? null : () => _export(id),
                   child: Text(t.prqExport),
                 ),
                 FilledButton(
+                  style: inlineFilled,
                   onPressed: _busy || !context.console.isAdmin
                       ? null
                       : () => _delete(c),

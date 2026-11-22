@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 import '../state.dart';
 import '../widgets/copy_row.dart';
 import '../widgets/owner_totp_dialog.dart';
+import '../widgets/inline_button.dart';
 
 /// Label for a post-move checklist id (the ids the server sends, `domains.rs`). Unknown ids show as is.
 String checklistLabel(T t, String id) => switch (id) {
@@ -200,6 +201,7 @@ class _RetireDialogState extends State<_RetireDialog> {
           child: Text(t.cancel),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: _confirmed ? () => Navigator.of(context).pop(true) : null,
           child: Text(t.cRbDomainRetire),
         ),

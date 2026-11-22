@@ -5,6 +5,7 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
+import 'inline_button.dart';
 
 /// One input in [askFields]. [phone] and [digits] pick the keyboard and the input filter.
 class FieldSpec {
@@ -110,6 +111,7 @@ class _FieldsDialogState extends State<_FieldsDialog> {
           child: Text(t.oaCancel),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: _filled ? _submit : null,
           child: Text(widget.confirm),
         ),
@@ -176,6 +178,7 @@ Future<String?> askRecoveryCode(BuildContext context) async {
           child: Text(t.oaCancel),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: () => Navigator.of(ctx).pop(typed.text.trim()),
           child: Text(t.oaContinue),
         ),
@@ -213,6 +216,7 @@ Future<bool> showRecoveryCodes(BuildContext context, List<String> codes) async {
           label: Text(t.cMfaCopy),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: () => Navigator.of(ctx).pop(true),
           child: Text(t.oaConfirmCodes),
         ),

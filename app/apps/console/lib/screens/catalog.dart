@@ -12,6 +12,7 @@ import 'catalog_counts.dart';
 import 'catalog_demo.dart';
 import 'catalog_groups.dart';
 import 'catalog_rules.dart';
+import '../widgets/inline_button.dart';
 
 /// Prices, durations, availability, slot capacity and the quote formula — no code change needed.
 class CatalogScreen extends StatelessWidget {
@@ -149,6 +150,7 @@ class _ServicesState extends State<_Services> {
               child: Text(t.cancel),
             ),
             FilledButton(
+              style: compactFilled,
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text(t.save),
             ),
@@ -215,6 +217,7 @@ class _ServicesState extends State<_Services> {
             Align(
               alignment: Alignment.centerLeft,
               child: FilledButton.icon(
+                style: inlineFilled,
                 onPressed: () => _create(),
                 icon: const Icon(Icons.add),
                 label: Text(t.cgNewService),
@@ -376,6 +379,7 @@ Future<Json?> _askNewService(BuildContext context) async {
             child: Text(t.cancel),
           ),
           FilledButton(
+            style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(
               _newServiceBody(
                 code: code.text.trim(),

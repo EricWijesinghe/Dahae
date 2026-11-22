@@ -3,6 +3,7 @@
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import '../widgets/inline_button.dart';
 
 /// Asks before a destructive action. [action] names both the title and the confirm button, so the owner
 /// sees exactly what they are agreeing to. Resolves false when cancelled or dismissed.
@@ -23,6 +24,7 @@ Future<bool> confirmAction(
           child: Text(t.cancel),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: () => Navigator.of(ctx).pop(true),
           child: Text(action),
         ),

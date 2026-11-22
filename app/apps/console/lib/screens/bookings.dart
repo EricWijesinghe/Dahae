@@ -9,6 +9,7 @@ import 'package:ui/ui.dart';
 import '../booking_labels.dart';
 import '../state.dart';
 import 'inbox.dart';
+import '../widgets/inline_button.dart';
 
 /// Detail payload: the booking JSON, its quotes and the counts line (null when none).
 typedef _PanelData = (Json, List<Json>, String?);
@@ -440,7 +441,9 @@ class _BookingPanelState extends State<BookingPanel> with LiveReload {
             child: Text(t.cancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: ctx.colors.danger),
+            style: FilledButton.styleFrom(
+              backgroundColor: ctx.colors.danger,
+            ).merge(compactFilled),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(t.cCancelRefund),
           ),
@@ -553,6 +556,7 @@ class _StatusActionsState extends State<_StatusActions> {
             children: [
               if (b.status == 2 && b.proId == null)
                 FilledButton.tonal(
+                  style: inlineFilled,
                   onPressed: _busy ? null : () => _status(3),
                   child: Text(t.cMarkDone),
                 ),
@@ -686,6 +690,7 @@ class _QuoteDeskState extends State<_QuoteDesk> {
             child: Text(t.cancel),
           ),
           FilledButton(
+            style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(t.cQuoteOverride),
           ),

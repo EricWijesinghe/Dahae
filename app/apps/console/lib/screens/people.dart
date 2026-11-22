@@ -18,6 +18,7 @@ import 'people_profile.dart';
 import 'points_ledger.dart';
 import 'staff_invite.dart';
 import 'member_approvals.dart';
+import '../widgets/inline_button.dart';
 
 Future<void> _act(
   BuildContext context,
@@ -85,13 +86,18 @@ class PartnersScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      subtitle: Text(
-                        '${formatKoreanPhone('${p['phone']}')} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100} · ${t.cQualityScore} ${p['quality_score'] ?? '-'} (${qualityStatusLabel(t, p['quality_status'] as String?)})',
-                      ),
-                      trailing: !admin
-                          ? null
-                          : Wrap(
-                              spacing: 4,
+                      // The buttons go under the stats: beside them a phone-width tile left the name unreadable.
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${formatKoreanPhone('${p['phone']}')} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100} · ${t.cQualityScore} ${p['quality_score'] ?? '-'} (${qualityStatusLabel(t, p['quality_status'] as String?)})',
+                          ),
+                          if (admin) ...[
+                            const SizedBox(height: Space.sm),
+                            Wrap(
+                              spacing: Space.sm,
+                              runSpacing: Space.sm,
                               children: [
                                 OutlinedButton(
                                   onPressed: () => showProProfile(
@@ -103,6 +109,7 @@ class PartnersScreen extends StatelessWidget {
                                 ),
                                 if (p['status'] != 'verified')
                                   FilledButton.tonal(
+                                    style: inlineFilled,
                                     onPressed: () => showProProfile(
                                       context,
                                       '${p['id']}',
@@ -133,6 +140,9 @@ class PartnersScreen extends StatelessWidget {
                                   ),
                               ],
                             ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
               ],
@@ -469,6 +479,7 @@ class _SettlementsState extends State<SettlementsScreen> {
             child: Text(t.close),
           ),
           FilledButton(
+            style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(c.text.trim()),
             child: Text(t.poMarkFailed),
           ),
@@ -544,6 +555,7 @@ class _SettlementsState extends State<SettlementsScreen> {
                 ),
               if (admin)
                 FilledButton.icon(
+                  style: inlineFilled,
                   icon: const Icon(Icons.send_rounded),
                   label: Text(t.cRunPayouts),
                   onPressed: _run,

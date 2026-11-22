@@ -10,6 +10,7 @@ import '../state.dart';
 import 'campaign_tab.dart';
 import 'confirm_action.dart';
 import 'growth.dart';
+import '../widgets/inline_button.dart';
 
 // Content can be written in every app language; missing ones fall back to Korean.
 // i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)
@@ -352,6 +353,7 @@ class _ContentState extends State<_Content> {
               child: Text(t.cancel),
             ),
             FilledButton(
+              style: compactFilled,
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text(t.save),
             ),

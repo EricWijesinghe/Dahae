@@ -5,6 +5,7 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
+import '../widgets/inline_button.dart';
 
 /// Counted pricing ("수량 선택"): the owner sets options, a per-option cap and a multi-item discount.
 /// The math mirrors the server rule (CR-7.1): a basket of two or more items gets the discount,
@@ -294,7 +295,11 @@ class _CountsDialogState extends State<_CountsDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(t.cancel),
         ),
-        FilledButton(onPressed: () => _save(t), child: Text(t.save)),
+        FilledButton(
+          style: compactFilled,
+          onPressed: () => _save(t),
+          child: Text(t.save),
+        ),
       ],
     );
   }

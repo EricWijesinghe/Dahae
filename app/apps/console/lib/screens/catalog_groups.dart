@@ -9,6 +9,7 @@ import 'package:ui/ui.dart';
 import '../state.dart';
 import 'catalog_counts.dart';
 import 'catalog_groups_model.dart';
+import '../widgets/inline_button.dart';
 
 /// Home tiles: order, titles, picture, member services and the move-chooser questions.
 class GroupsTab extends StatefulWidget {
@@ -224,7 +225,11 @@ class _GroupDialogState extends State<_GroupDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(t.cancel),
         ),
-        FilledButton(onPressed: () => _save(t), child: Text(t.save)),
+        FilledButton(
+          style: compactFilled,
+          onPressed: () => _save(t),
+          child: Text(t.save),
+        ),
       ],
     );
   }

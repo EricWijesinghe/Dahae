@@ -21,6 +21,7 @@ import 'setup_owner_code.dart';
 import 'setup_pay_methods.dart';
 import 'setup_review.dart';
 import 'setup_store_build.dart';
+import '../widgets/inline_button.dart';
 
 /// Owner's launch checklist: business profile plus one card per external service.
 /// Keys are typed here (never in config files), saved encrypted, and tested on the spot.
@@ -589,6 +590,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
               runSpacing: Space.sm,
               children: [
                 FilledButton.icon(
+                  style: inlineFilled,
                   onPressed: _busy || _locked ? null : _save,
                   icon: const Icon(Icons.save_rounded),
                   label: Text(t.cSetupSave),

@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 
 import '../state.dart';
 import '../widgets/owner_totp_dialog.dart';
+import '../widgets/inline_button.dart';
 
 /// Store-review demo login: one phone number with a fixed 6-digit code for App Review and
 /// Google Play reviewers, who cannot receive Korean SMS. Turns itself off after 14 days.
@@ -127,6 +128,7 @@ class _ReviewAccountCardState extends State<ReviewAccountCard> {
               runSpacing: Space.sm,
               children: [
                 FilledButton.icon(
+                  style: inlineFilled,
                   onPressed: _busy
                       ? null
                       : () => _run(

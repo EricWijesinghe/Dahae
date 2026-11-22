@@ -4,6 +4,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
+import '../widgets/inline_button.dart';
 
 /// Audience size with marketing consent, for the given segment list.
 typedef PreviewFn = Future<Json> Function(List<Json> audience);
@@ -249,6 +250,7 @@ class _CampaignBuilderState extends State<CampaignBuilder> {
               child: Text(t.cmSchedule),
             ),
             FilledButton(
+              style: inlineFilled,
               onPressed: _busy || !_canSend ? null : () => _send(t, null),
               child: Text(t.cmSendNow),
             ),

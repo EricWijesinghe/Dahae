@@ -9,6 +9,7 @@ import 'package:ui/ui.dart';
 
 import '../state.dart';
 import 'stepup.dart';
+import '../widgets/inline_button.dart';
 
 /// Opens the verification checklist and employee profile of one pro. Approving a pro as active needs
 /// every checklist item ticked; the server enforces the same rule.
@@ -173,6 +174,7 @@ class _ChecklistTabState extends State<_ChecklistTab> {
               child: Text(t.cPfSaveChecklist),
             ),
             FilledButton(
+              style: inlineFilled,
               onPressed: _saving || _status == 'verified' ? null : _approve,
               child: Text(t.cPfApprove),
             ),

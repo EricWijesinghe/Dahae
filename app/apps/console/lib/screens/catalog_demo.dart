@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/inline_button.dart';
 
 /// Sample customers, partners and bookings for demos and training. Loading refuses over real bookings.
 /// Removing it needs a 6-digit code from the owner's authenticator app, typed here for each removal.
@@ -90,6 +91,7 @@ Future<String?> _askOwnerCode(BuildContext context) async {
           child: Text(t.cancel),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
           child: Text(t.save),
         ),

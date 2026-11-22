@@ -99,9 +99,16 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
                 // Without a gateway that serves it customers would not see the method, so it cannot be switched on yet.
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  // The badge centres its wordmark, so on its own it fills the whole leading width.
-                  secondary: IntrinsicWidth(
-                    child: PayBrandBadge(code: m['code'] as String, height: 32),
+                  // One slot width for every badge, so the method names line up (as in the customer picker).
+                  secondary: SizedBox(
+                    width: 72,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: PayBrandBadge(
+                        code: m['code'] as String,
+                        height: 32,
+                      ),
+                    ),
                   ),
                   title: Text(t.payMethod(m['code'] as String)),
                   subtitle: switch (gatewayNames[m['gateway']]) {

@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/inline_button.dart';
 
 /// Same limits as the server (points.rs): it refuses anything else, this only saves a round trip.
 const _maxAdjust = 100000;
@@ -76,6 +77,7 @@ class PointsLedgerPanel extends StatelessWidget {
             child: Text(t.close),
           ),
           FilledButton(
+            style: compactFilled,
             onPressed: () => Navigator.of(
               ctx,
             ).pop((int.tryParse(amount.text) ?? 0, reason.text.trim())),

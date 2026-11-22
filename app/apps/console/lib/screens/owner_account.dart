@@ -9,6 +9,7 @@ import '../state.dart';
 import '../widgets/owner_forms.dart';
 import '../widgets/owner_totp_dialog.dart';
 import 'confirm_action.dart';
+import '../widgets/inline_button.dart';
 
 /// 내 계정: the owner's own security settings, plus claiming or handing over the owner role.
 /// Every owner-only change asks for a fresh authenticator code first.
@@ -40,15 +41,16 @@ List<Widget> _adminCards(
       icon: Icons.shield_outlined,
       title: t.oaTitle,
       body: t.oaNotOwner,
-      trailing: null,
+      action: null,
     ),
     if (me['owner_exists'] != true)
       _Card(
         icon: Icons.verified_user_rounded,
         title: t.oaClaimTitle,
         body: ready ? t.oaClaimBody : t.oaTwoFactorHint,
-        trailing: ready
+        action: ready
             ? FilledButton.tonal(
+                style: compactFilled,
                 onPressed: () => _claim(context, reload),
                 child: Text(t.oaClaim),
               )
@@ -71,7 +73,7 @@ List<Widget> _ownerCards(
       icon: Icons.workspace_premium_rounded,
       title: '${t.oaTitle} · ${t.oaOwnerBadge}',
       body: ready ? null : t.oaTwoFactorHint,
-      trailing: null,
+      action: null,
     ),
     if (!ready &&
         me['recovery_confirmed'] != true &&
@@ -80,7 +82,8 @@ List<Widget> _ownerCards(
         icon: Icons.checklist_rounded,
         title: t.oaConfirmCodes,
         body: null,
-        trailing: FilledButton.tonal(
+        action: FilledButton.tonal(
+          style: compactFilled,
           onPressed: () => _confirmCodes(context, reload),
           child: Text(t.oaConfirmCodes),
         ),
@@ -89,7 +92,8 @@ List<Widget> _ownerCards(
       icon: Icons.sms_rounded,
       title: t.oaAlertPhone,
       body: phone == null ? t.oaAlertPhoneNone : '$phone · ${t.oaPhoneNote}',
-      trailing: FilledButton.tonal(
+      action: FilledButton.tonal(
+        style: compactFilled,
         onPressed: () => _changePhone(context, reload),
         child: Text(t.oaChangePhone),
       ),
@@ -98,7 +102,8 @@ List<Widget> _ownerCards(
       icon: Icons.lock_reset_rounded,
       title: t.oaPassword,
       body: t.oaPasswordNote,
-      trailing: FilledButton.tonal(
+      action: FilledButton.tonal(
+        style: compactFilled,
         onPressed: () => _changePassword(context),
         child: Text(t.oaPassword),
       ),
@@ -107,7 +112,8 @@ List<Widget> _ownerCards(
       icon: Icons.key_rounded,
       title: t.oaRecoveryCodes,
       body: t.oaRecoveryBody,
-      trailing: FilledButton.tonal(
+      action: FilledButton.tonal(
+        style: compactFilled,
         onPressed: () => _reissueCodes(context, reload),
         child: Text(t.oaRecoveryCodes),
       ),
@@ -116,7 +122,8 @@ List<Widget> _ownerCards(
       icon: Icons.devices_rounded,
       title: t.oaSignOutAll,
       body: '${t.oaSessions}: ${me['active_sessions']}\n${t.oaSignOutAllBody}',
-      trailing: FilledButton.tonal(
+      action: FilledButton.tonal(
+        style: compactFilled,
         onPressed: () => _signOutAll(context),
         child: Text(t.oaSignOutAll),
       ),
@@ -125,7 +132,8 @@ List<Widget> _ownerCards(
       icon: Icons.swap_horiz_rounded,
       title: t.oaTransfer,
       body: t.oaTransferBody,
-      trailing: FilledButton.tonal(
+      action: FilledButton.tonal(
+        style: compactFilled,
         onPressed: () => _transfer(context, me, reload),
         child: Text(t.oaTransfer),
       ),
@@ -133,17 +141,19 @@ List<Widget> _ownerCards(
   ];
 }
 
+/// One setting: icon, title and note, with its button under the note (beside it, a phone-width tile
+/// left the title too narrow to read).
 class _Card extends StatelessWidget {
   const _Card({
     required this.icon,
     required this.title,
     required this.body,
-    required this.trailing,
+    required this.action,
   });
   final IconData icon;
   final String title;
   final String? body;
-  final Widget? trailing;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -151,9 +161,18 @@ class _Card extends StatelessWidget {
     child: ListTile(
       leading: Icon(icon),
       title: Text(title, style: context.text.titleSmall),
-      subtitle: body == null ? null : Text(body!),
-      trailing: trailing,
-      isThreeLine: body != null && body!.contains('\n'),
+      subtitle: action == null
+          ? (body == null ? null : Text(body!))
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (body != null) Text(body!),
+                const SizedBox(height: Space.sm),
+                action!,
+              ],
+            ),
+      // Icon at the top of every card with a note, so the cards line up.
+      isThreeLine: action != null || body != null,
     ),
   );
 }

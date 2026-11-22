@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 import '../state.dart';
 import '../widgets/owner_totp_dialog.dart';
 import 'staff_code_dialogs.dart';
+import '../widgets/inline_button.dart';
 
 /// Invites a staff member: name, email, mobile and role, then a one-time code by SMS or copied by hand.
 /// Only admins are offered the admin role; the server enforces the same rule.
@@ -79,6 +80,7 @@ Future<void> inviteStaff(
             child: Text(t.cancel),
           ),
           FilledButton(
+            style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(t.cStaffSendCode),
           ),

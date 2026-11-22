@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 import '../state.dart';
 import '../widgets/owner_totp_dialog.dart';
 import 'stepup.dart';
+import '../widgets/inline_button.dart';
 
 /// The owner's way out of a Toss send that ended without an answer while Toss cannot be asked: they check
 /// the Toss dashboard and state the money did not leave. Explains what to look for, then asks for the
@@ -88,6 +89,7 @@ class _PayoutNotSentDialogState extends State<PayoutNotSentDialog> {
           child: Text(t.close),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: _checked ? () => Navigator.of(context).pop(true) : null,
           child: Text(t.poNotSentConfirm),
         ),

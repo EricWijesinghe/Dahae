@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/inline_button.dart';
 
 /// Downloads one CSV for the given path and query. Owned by the finance screen, which knows how to save.
 typedef ExportAt =
@@ -93,6 +94,7 @@ class TaxSection extends StatelessWidget {
             child: Text(t.cancel),
           ),
           FilledButton(
+            style: compactFilled,
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(t.tReExport),
           ),
@@ -140,6 +142,7 @@ class _VatExportCardState extends State<_VatExportCard> {
           ),
           for (final q in [1, 2, 3, 4])
             FilledButton.tonal(
+              style: inlineFilled,
               onPressed: () => _export(q),
               child: Text(t.tVatQuarter('$q')),
             ),
@@ -189,13 +192,21 @@ class _TaxInvoiceQueue extends StatelessWidget {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text('${r['company_name']} · ${r['business_number']}'),
-                subtitle: Text(_invoiceLine(t, r)),
-                trailing: r['state'] == 'requested'
-                    ? FilledButton(
+                // The button goes under the line: beside it a phone-width tile left the company name unreadable.
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_invoiceLine(t, r)),
+                    if (r['state'] == 'requested') ...[
+                      const SizedBox(height: Space.sm),
+                      FilledButton(
+                        style: compactFilled,
                         onPressed: () => _markIssued(context, r, reload),
                         child: Text(t.tMarkIssued),
-                      )
-                    : null,
+                      ),
+                    ],
+                  ],
+                ),
               ),
           ],
         ),
@@ -284,6 +295,7 @@ class _ApprovalDialogState extends State<_ApprovalDialog> {
           child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: () {
             final approval = _approval.text.trim();
             if (approval.isEmpty) return;

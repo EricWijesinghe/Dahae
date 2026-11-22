@@ -7,6 +7,7 @@ import 'package:ui/ui.dart';
 
 import '../state.dart';
 import 'confirm_action.dart';
+import '../widgets/inline_button.dart';
 
 /// Owner-editable push and inbox text, per event and language. An empty setup keeps the built-in text.
 /// Values in braces (such as the booking number) are filled in when the message is sent.
@@ -190,6 +191,7 @@ class _EventCardState extends State<_EventCard> {
               child: Text(t.ntPreview),
             ),
             FilledButton(
+              style: inlineFilled,
               onPressed: !canEdit ? null : () => _save(lang),
               child: Text(t.ntSave),
             ),

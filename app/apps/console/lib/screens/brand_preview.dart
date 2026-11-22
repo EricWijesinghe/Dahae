@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
+import '../widgets/inline_button.dart';
 
 /// Shows the made images (browser tab, app icon, home-screen icon, share card) before anything is uploaded.
 /// Resolves true when the owner goes ahead.
@@ -25,6 +26,7 @@ Future<bool> confirmBrandPreview(
           child: Text(t.cancel),
         ),
         FilledButton(
+          style: compactFilled,
           onPressed: () => Navigator.of(ctx).pop(true),
           child: Text(t.cSetupSave),
         ),
@@ -90,6 +92,7 @@ Future<void> showBrandApplied(BuildContext context) => showDialog<void>(
     content: Text(ctx.t.cRbAppliedList),
     actions: [
       FilledButton(
+        style: compactFilled,
         onPressed: () => Navigator.of(ctx).pop(),
         child: Text(ctx.t.ok),
       ),
