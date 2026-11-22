@@ -6718,6 +6718,23 @@
         }
       }
     },
+    "/v1/admin/host/jobs/{id}/kept": {
+      "post": {
+        "operationId": "adminKeepHostKeyCopy",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner confirms the downloaded key copy is kept off the server; recorded once and logged (owner only)",
+        "responses": {
+          "202": {
+            "description": "Recorded"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/host/jobs/{id}/output": {
       "get": {
         "operationId": "adminHostJobOutput",

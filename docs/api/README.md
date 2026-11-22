@@ -11,7 +11,7 @@
 목록은 커서 방식이며 `X-Next-Cursor` 헤더를 다음 요청의 `cursor`로 되돌려 보냅니다. 돈이 움직이는 POST는
 `Idempotency-Key`를 받습니다. 표의 작업 수와 경로 수는 이 문서를 쓸 때 스펙에서 센 값입니다.
 
-Spec: 325 operations on 279 paths, version `1.6.0` (`info.version`). The spec itself is served only to
+Spec: 326 operations on 280 paths, version `1.6.0` (`info.version`). The spec itself is served only to
 staff admins at `GET /v1/openapi.json` (`Admin` extractor) ([`backend/crates/api/src/openapi.rs`](../../backend/crates/api/src/openapi.rs)).
 Deprecated operations in this spec: 0.
 
@@ -253,7 +253,7 @@ A team member sees only jobs assigned to them.
 | GET | `/v1/member/jobs/{id}` | One assigned job | bearer: member |  |
 | POST | `/v1/member/jobs/{id}/complete` | Mark an assigned job complete | bearer: member |  |
 
-### Staff console (169)
+### Staff console (170)
 
 Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see note).
 
@@ -424,6 +424,7 @@ Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see 
 | PUT | `/v1/admin/setup/payout/switch` | Owner switch for Toss payouts (owner code required, audited) | bearer: staff |  |
 | POST | `/v1/admin/setup/store-build/ack` | Owner marks a store build with the current brand and domain as out | bearer: staff |  |
 | POST | `/v1/admin/host/jobs/{id}/approve` | Owner hands the server approval code to a held job (domain-set; owner only, logged) | bearer: staff |  |
+| POST | `/v1/admin/host/jobs/{id}/kept` | Owner confirms the downloaded key copy is kept off the server (owner only, logged once) | bearer: staff |  |
 | GET | `/v1/admin/host/jobs/{id}/output` | Result text a job published, capped at 64 KB; 404 once pruned | bearer: staff |  |
 | GET | `/v1/admin/domains` | Current service domain, former domains that still answer, and the after-move checklist | bearer: staff |  |
 | DELETE | `/v1/admin/domains/{host}` | Retire a former domain: it stops getting certificates (owner TOTP, logged) | bearer: staff |  |
