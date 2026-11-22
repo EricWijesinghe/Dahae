@@ -24,9 +24,10 @@ pub enum Kind {
     Heartbeat,
     HostApprovalEnroll,
     Rollback,
-    /// The `.env` sealed with the owner's passphrase (`arg`, hex), handed out once through `output`.
+    /// The secret keys (DATA_KEY, JWT_SECRET) sealed with the owner's passphrase (`arg`, hex), handed out once through `output`.
     KeysBackup,
-    /// Records that the owner took the sealed copy. Queued by the server after that download, never by a client.
+    /// Records that the owner keeps the sealed copy off the server. Queued by the server when the owner says so
+    /// after the download (`kept`), never by a client.
     KeysConfirm,
 }
 

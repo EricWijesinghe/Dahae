@@ -4,7 +4,8 @@
 //! Owner-queued server jobs (`/admin/host/jobs`). An accepted request writes one job file into the agent's
 //! inbox and records a row; the live state is read back from the agent's status files. A job the agent holds for
 //! the server approval code (`domain-set`) gets its code through `approve`; a job that publishes a result
-//! (`domain-check`, `host-approval-enroll`, `keys-backup`) is read back through `output`; the sealed key copy only once.
+//! (`domain-check`, `host-approval-enroll`, `keys-backup`) is read back through `output`; the sealed key copy only once,
+//! and it is recorded as kept off the server only when the owner says so after saving it (`kept`).
 
 use crate::{
     auth::Admin,
@@ -46,6 +47,7 @@ pub fn admin_routes() -> Router<AppState> {
         .route("/host/jobs/{id}", get(detail))
         .route("/host/jobs/{id}/approve", post(approve))
         .route("/host/jobs/{id}/output", get(output))
+        .route("/host/jobs/{id}/kept", post(kept))
 }
 
 #[derive(Deserialize)]
@@ -235,9 +237,8 @@ async fn output(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<Uuid>
     Ok(Json(json!({ "text": text })))
 }
 
-/// The sealed key copy (base64), for the owner who asked for it and only once. Taking it queues the agent's
-/// `keys-confirm`, the record `dahae status` reads as "kept off the server".
-async fn take_key_copy(s: &AppState, actor: Uuid, row: &JobRow) -> ApiResult<Json<Value>> {
+/// Only the owner who asked for this key copy may take it or say it is kept.
+async fn key_copy_owner(s: &AppState, actor: Uuid, row: &JobRow) -> ApiResult<()> {
     let requester: Uuid = sqlx::query_scalar("SELECT requested_by FROM host_jobs WHERE id = $1")
         .bind(row.id)
         .fetch_one(&s.db)
@@ -245,41 +246,69 @@ async fn take_key_copy(s: &AppState, actor: Uuid, row: &JobRow) -> ApiResult<Jso
     if requester != actor || !owner::is_owner(&s.db, actor).await? {
         return Err(ApiError::Forbidden);
     }
+    Ok(())
+}
+
+/// The sealed key copy (base64), for the owner who asked for it and only once. The mark and its audit entry
+/// commit together. Taking it records nothing about keeping it: the browser may not have saved the file.
+async fn take_key_copy(s: &AppState, actor: Uuid, row: &JobRow) -> ApiResult<Json<Value>> {
+    key_copy_owner(s, actor, row).await?;
     let text = read_output(&s.config.host_jobs_dir, &row.progress_token).ok_or(ApiError::NotFound)?;
+    let mut tx = s.db.begin().await?;
     // The passphrase never reaches the arg column, so for this kind it holds the one-time mark.
     let taken = sqlx::query("UPDATE host_jobs SET arg = 'downloaded' WHERE id = $1 AND arg = ''")
         .bind(row.id)
-        .execute(&s.db)
+        .execute(&mut *tx)
         .await?
         .rows_affected()
         == 1;
     if !taken {
         return Err(ApiError::Conflict("key_copy_already_taken"));
     }
-    crate::routes::audit(&s.db, "staff", Some(actor), "host_job.keys_download", &row.id.to_string(), json!({})).await?;
+    crate::routes::audit(&mut *tx, "staff", Some(actor), "host_job.keys_download", &row.id.to_string(), json!({})).await?;
+    tx.commit().await?;
+    Ok(Json(json!({ "text": text })))
+}
+
+/// Owner only, after the console saved the copy and the owner confirmed it is kept off the server. Records it
+/// once (`downloaded` to `kept`) and queues the agent's `keys-confirm`, which `dahae status` reads.
+async fn kept(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<Uuid>) -> ApiResult<StatusCode> {
+    let row = job_row(&s.db, id).await?;
+    if row.kind != Kind::KeysBackup.name() {
+        return Err(ApiError::BadRequest("not_a_key_copy"));
+    }
+    key_copy_owner(&s, a.id, &row).await?;
+    let dir = jobs_dir(&s)?;
+    let mut tx = s.db.begin().await?;
+    let marked = sqlx::query("UPDATE host_jobs SET arg = 'kept' WHERE id = $1 AND arg = 'downloaded'")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected()
+        == 1;
+    if !marked {
+        return Err(ApiError::Conflict("key_copy_not_downloaded"));
+    }
+    crate::routes::audit(&mut *tx, "staff", Some(a.id), "host_job.keys_kept", &id.to_string(), json!({})).await?;
     let confirm = JobSpec {
         kind: Kind::KeysConfirm,
         arg: String::new(),
     };
-    let queued = match jobs_dir(s) {
-        Ok(dir) => queue(
-            s,
-            dir,
-            Uuid::now_v7(),
-            &confirm,
-            &host_jobs::new_progress_token(),
-            &format!("keys-confirm:{}", row.id),
-            actor,
-        )
-        .await
-        .map(|_| ()),
-        Err(e) => Err(e),
-    };
-    // The copy is already taken: a missing confirmation only leaves `dahae status` asking for it.
-    if let Err(e) = queued {
-        tracing::warn!(error = ?e, "key copy confirmation not queued");
+    // Queued before the mark commits: if it cannot be queued, the mark rolls back and the owner can try again.
+    queue(
+        &s,
+        dir,
+        Uuid::now_v7(),
+        &confirm,
+        &host_jobs::new_progress_token(),
+        &format!("keys-confirm:{id}"),
+        a.id,
+    )
+    .await?;
+    if let Err(e) = tx.commit().await {
+        tracing::error!(error = %e, job = %id, "key copy confirmation queued but its mark was not saved");
     }
-    Ok(Json(json!({ "text": text })))
+    Ok(StatusCode::ACCEPTED)
 }
 
 fn read_output(dir: &FsPath, token: &str) -> Option<String> {
