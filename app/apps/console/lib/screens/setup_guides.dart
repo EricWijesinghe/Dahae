@@ -587,6 +587,7 @@ String setupMessage(T t, String code) => switch (code) {
   'connected' || 'sandbox_connected' || 'live_connected' => t.cSetupConnected,
   'saved_check_in_app' => t.cSetupCheckInApp,
   'invalid_key' => t.cSetupInvalidKey,
+  'no_instance_role' => t.cSetupNoInstanceRole,
   'unreachable' || 'provider_error' => t.cSetupUnreachable,
   'not_configured' => t.cSetupNotConnected,
   'weak_password' => t.cWeakPassword,

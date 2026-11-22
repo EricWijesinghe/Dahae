@@ -4333,6 +4333,85 @@ class TEn extends T {
   }
 
   @override
+  String get cSetupAwsAuto => 'AWS S3 (automatic)';
+
+  @override
+  String get cSetupNoInstanceRole =>
+      'The server role could not reach the AWS bucket. Check that this server was made with the AWS template.';
+
+  @override
+  String get srTitle => 'Recovery';
+
+  @override
+  String get srRollbackBody =>
+      'If something breaks after an update, go back to the version before. It backs up first and keeps your data. It does not run while a Toss payout is still waiting for its result. Needs your owner code and the server approval code.';
+
+  @override
+  String get srRollbackButton => 'Roll back to the previous version';
+
+  @override
+  String get srRollbackConfirm =>
+      'Roll back to the previous version? The service restarts for a few minutes.';
+
+  @override
+  String get srRunning =>
+      'Running. It keeps going on the server even if you close this screen.';
+
+  @override
+  String get srRollbackDone => 'Rolled back to the previous version.';
+
+  @override
+  String srFailed(String reason) {
+    return 'Could not roll back: $reason';
+  }
+
+  @override
+  String get srKeysTitle => 'Download the secret key copy';
+
+  @override
+  String get srKeysBody =>
+      'Download the server\'s secret keys locked with a passphrase, so offsite backups can be opened even if the server is lost. Keep the file and the passphrase apart, off the server. Each copy downloads once.';
+
+  @override
+  String get srKeysPass => 'Passphrase (12 characters or more)';
+
+  @override
+  String get srKeysPassAgain => 'Passphrase again';
+
+  @override
+  String get srKeysPassShort => 'Use 12 characters or more';
+
+  @override
+  String get srKeysPassMismatch => 'The two passphrases differ';
+
+  @override
+  String get srKeysButton => 'Make and download';
+
+  @override
+  String get srKeysRunning => 'Making the secret key copy';
+
+  @override
+  String get srKeysDone => 'Downloaded. Recorded as kept off the server.';
+
+  @override
+  String get srKeysSaveFailed =>
+      'The file could not be saved. Make a new copy.';
+
+  @override
+  String srKeysFailed(String reason) {
+    return 'Could not make the copy: $reason';
+  }
+
+  @override
+  String get srKindRollback => 'Roll back';
+
+  @override
+  String get srKindKeysBackup => 'Secret key copy';
+
+  @override
+  String get srKindKeysConfirm => 'Key copy recorded';
+
+  @override
   String get ntNavLabel => 'Notification text';
 
   @override
