@@ -16,6 +16,7 @@ from the release branches; no tags existed for them.
 - Store builds: the partner iOS app takes its own Google iOS client id (new secret `PARTNER_GOOGLE_IOS_CLIENT_ID`) instead of the customer app's, which belongs to another bundle id and made its Google button fail; a partner build without Google sign-in warns in the build log, since App Review signs in to the partner app with Google.
 - Money: a PortOne payment or saved card on a TEST channel whose key this server does not hold (channel keys are public, so any client can pick one) reads as failed and books nothing, and the saved card is refused (`portone_test_channel`); before, it was booked as paid with no money moved. The test-channel alert now says both causes, that testing with test keys is fine, and to delete the store's test channels in the PortOne console.
 - Docs: OPERATIONS lists all 18 owner alert rules; the payments guide explains the test-channel alert.
+- Money: a payment card in use cannot be re-saved onto another account (`gateway_account_changed`): another PortOne store, or a Toss secret key that cannot read that MID's newest payment. A new key of the same account still saves. Disconnecting PortOne while the server's env also holds PortOne keys is guarded unless the env names the same store, an open subscription charge blocks a disconnect, and demo payments no longer do.
 
 ## [1.6.0] - 2026-11-22
 

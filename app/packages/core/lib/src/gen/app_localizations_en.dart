@@ -4337,6 +4337,10 @@ class TEn extends T {
       'Payments taken through this gateway can still be refunded (up to a year after payment), so it can\'t be disconnected: those refunds would fail. To stop new payments only, turn Toss Payments\' Active off, or clear PortOne\'s channel key slots.';
 
   @override
+  String get err_gateway_account_changed =>
+      'Payments, saved cards or refunds on this gateway still belong to the current account (PortOne store, Toss Payments MID), so it can\'t switch to another account: their lookups and refunds would go to the new one and fail. A new key from the same account is fine.';
+
+  @override
   String get oRuleTestChannel => 'Payment on a PortOne test channel';
 
   @override

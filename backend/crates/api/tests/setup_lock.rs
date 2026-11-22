@@ -435,6 +435,126 @@ async fn a_payment_card_with_late_payable_checkouts_or_refundable_payments_canno
     assert_eq!(st, StatusCode::OK, "only refunded or past-the-window payments are left: {body}");
 }
 
+#[sqlx::test(migrations = "../../migrations")]
+async fn demo_payments_do_not_block_and_an_open_subscription_charge_does(db: PgPool) {
+    common::seed_catalog(&db).await;
+    let app = common::app(db.clone());
+    let (owner, _) = enrolled_owner(&db).await;
+    save(&app, &owner, SECRET).await;
+    assert_eq!(unlock(&app, &owner, &code_now()).await.0, StatusCode::OK);
+    let c = common::customer(&app, &db, "010-7100-0903").await;
+    sqlx::query("UPDATE payment_methods SET deleted_at = now()")
+        .execute(&db)
+        .await
+        .expect("no saved card");
+    let clear = || common::call_owner(&app, "DELETE", PORTONE, &owner, None, Value::Null);
+    let code = |b: &Value| b["error"]["code"].as_str().map(str::to_owned);
+
+    // Demo sample data (`api demo load`) books PortOne payments that are not real money.
+    let booking: Uuid = sqlx::query_scalar(
+        "INSERT INTO bookings (number, user_id, service_code, address, district_code, visit_date, start_hour, status, final_price, list_price, discount)
+         VALUES ('BKG-2', $1, 'studio', '{}'::jsonb, '11680', '2026-03-15', 10, 3, 10000, 10000, 0) RETURNING id",
+    )
+    .bind(c.user)
+    .fetch_one(&db)
+    .await
+    .expect("booking");
+    let demo: Uuid = sqlx::query_scalar(
+        "INSERT INTO payments (booking_id, amount, kind, status, refunded_amount, provider, provider_tx_id, idempotency_key)
+         VALUES ($1, 10000, 'full', 'paid', 0, 'portone', 'demo_pay_1', 'demo-1') RETURNING id",
+    )
+    .bind(booking)
+    .fetch_one(&db)
+    .await
+    .expect("demo payment");
+    sqlx::query("INSERT INTO demo_rows (tbl, row_key) VALUES ('payments', $1)")
+        .bind(demo.to_string())
+        .execute(&db)
+        .await
+        .expect("demo row");
+
+    // A subscription charge sent before the customer deleted the card (no provider: sent before the column, PortOne).
+    let sub: Uuid = sqlx::query_scalar(
+        "INSERT INTO subscriptions (user_id, service_code, address_id, payment_method_id, cadence_weeks, weekday, start_hour, anchor_date)
+         VALUES ($1, 'studio', $2, $3, 2, 1, 10, '2026-03-16') RETURNING id",
+    )
+    .bind(c.user)
+    .bind(c.address)
+    .bind(c.card)
+    .fetch_one(&db)
+    .await
+    .expect("subscription");
+    sqlx::query("INSERT INTO subscription_visits (subscription_id, visit_date, start_hour, payment_ref) VALUES ($1, '2026-03-16', 10, 'sub-charge-1')")
+        .bind(sub)
+        .execute(&db)
+        .await
+        .expect("visit");
+    let (st, body) = clear().await;
+    assert_eq!(
+        (st, code(&body).as_deref()),
+        (StatusCode::CONFLICT, Some("gateway_in_use")),
+        "an open charge: {body}"
+    );
+    sqlx::query("UPDATE subscription_visits SET payment_ref = NULL")
+        .execute(&db)
+        .await
+        .expect("settled");
+    let (st, body) = clear().await;
+    assert_eq!(st, StatusCode::OK, "only demo payments are left: {body}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_payment_card_in_use_cannot_switch_to_another_portone_store(db: PgPool) {
+    let app = common::app(db.clone());
+    let (owner, _) = enrolled_owner(&db).await;
+    save(&app, &owner, SECRET).await;
+    assert_eq!(unlock(&app, &owner, &code_now()).await.0, StatusCode::OK);
+    common::customer(&app, &db, "010-7100-0904").await; // with a saved PortOne card
+    let other = json!({ "store_id": "store-11111111-1111-1111-1111-111111111111", "api_secret": SECRET });
+    let code = |b: &Value| b["error"]["code"].as_str().map(str::to_owned);
+
+    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &owner, None, other.clone()).await;
+    assert_eq!(
+        (st, code(&body).as_deref()),
+        (StatusCode::CONFLICT, Some("gateway_account_changed")),
+        "lookups and refunds would go to the other store: {body}"
+    );
+    sqlx::query("UPDATE payment_methods SET deleted_at = now()")
+        .execute(&db)
+        .await
+        .expect("card deleted");
+    let (st, body) = common::call_owner(&app, "PUT", PORTONE, &owner, None, other).await;
+    assert_eq!(st, StatusCode::OK, "nothing left on the old store: {body}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_env_portone_store_lets_the_card_go_only_when_it_is_the_same_store(db: PgPool) {
+    let with_env = |store: &str| {
+        let mut cfg = test_config();
+        cfg.portone = api::config::PortOne {
+            api_secret: Some(SECRET.into()),
+            store_id: Some(store.into()),
+            ..Default::default()
+        };
+        api::routes::router(api::build_state(db.clone(), cfg).expect("state"))
+    };
+    let app = with_env("store-env");
+    let (owner, _) = enrolled_owner(&db).await;
+    save(&app, &owner, SECRET).await;
+    assert_eq!(unlock(&app, &owner, &code_now()).await.0, StatusCode::OK);
+    common::customer(&app, &db, "010-7100-0905").await; // with a saved PortOne card on the card's store
+
+    let (st, body) = common::call_owner(&app, "DELETE", PORTONE, &owner, None, Value::Null).await;
+    assert_eq!(
+        (st, body["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("gateway_in_use")),
+        "the env store is another store: {body}"
+    );
+    let same = with_env("store-00000000-0000-0000-0000-000000000000");
+    let (st, body) = common::call_owner(&same, "DELETE", PORTONE, &owner, None, Value::Null).await;
+    assert_eq!(st, StatusCode::OK, "the env copy is the same store: {body}");
+}
+
 /// Saves the PortOne card with these channel keys as the owner (the card must be unlocked first if already saved).
 async fn save_channels(app: &Router, token: &str, channels: Value) {
     let body = json!({ "store_id": "store-00000000-0000-0000-0000-000000000000", "api_secret": SECRET, "channel_keys": channels });

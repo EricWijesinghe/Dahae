@@ -113,7 +113,8 @@
     "no_partner_available",
     "reassign_closed",
     "gateway_in_use",
-    "gateway_has_refundable_payments"
+    "gateway_has_refundable_payments",
+    "gateway_account_changed"
   ],
   "fallback": [
     "already_confirmed",

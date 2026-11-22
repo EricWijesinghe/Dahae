@@ -4221,6 +4221,10 @@ class TKo extends T {
       '이 결제사로 받은 결제 중 아직 환불할 수 있는 결제(결제 후 1년 이내)가 있어 연결을 끊을 수 없어요. 연결을 끊으면 그 환불이 실패해요. 새 결제만 멈추려면 토스페이먼츠는 사용을 끄고, PortOne은 채널 키 칸을 지우세요.';
 
   @override
+  String get err_gateway_account_changed =>
+      '이 결제사로 받은 결제, 저장된 카드나 남은 환불이 아직 지금 계정(PortOne 상점, 토스페이먼츠 MID)에 있어서 다른 계정으로 바꿀 수 없어요. 바꾸면 그 조회와 환불이 새 계정으로 가서 실패해요. 같은 계정에서 새로 받은 키로 바꾸는 건 돼요.';
+
+  @override
   String get oRuleTestChannel => 'PortOne 테스트 채널로 들어온 결제';
 
   @override

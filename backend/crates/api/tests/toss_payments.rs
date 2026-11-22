@@ -695,6 +695,41 @@ async fn the_console_card_saves_with_the_owner_code_and_tests_both_mids(pool: Pg
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn a_toss_key_of_another_mid_is_refused_while_its_payments_remain(pool: PgPool) {
+    let w = world(&pool, "010-7600-0040", true).await;
+    let (id, amount, _) = checkout(&w, "card").await;
+    assert_eq!(toss_confirm(&w, id, "pk_1", amount).await.0, StatusCode::OK);
+    let (owner, owner_id) = staff_token(&pool, Role::StaffAdmin).await;
+    enrol_owner(&pool, owner_id, b"12345678901234567890").await;
+    sqlx::query("UPDATE integration_settings SET unlocked_until = now() + interval '5 minutes', unlocked_by = $1 WHERE section = 'tosspayments'")
+        .bind(owner_id)
+        .execute(&pool)
+        .await
+        .expect("unlocked");
+    let put = |secret: &str| {
+        let mut card = toss::card(true);
+        card.insert("secret_key".into(), json!(secret));
+        call_owner(&w.env.app, "PUT", "/v1/admin/setup/tosspayments", &owner, None, Value::Object(card))
+    };
+
+    let (st, out) = put("test_sk_othermid0001").await;
+    assert_eq!(
+        (st, out["error"]["code"].as_str()),
+        (StatusCode::CONFLICT, Some("gateway_account_changed")),
+        "refunds of that payment would go to another MID: {out}"
+    );
+    // A new key of the same MID reads its payments (the fake accepts this key on every order).
+    let (st, out) = put(BILLING_SK).await;
+    assert_eq!(st, StatusCode::OK, "{out}");
+    let probes = w.toss.lock().expect("fake").calls_of("order");
+    assert_eq!(
+        probes.last().map(|c| c.path.clone()),
+        Some(format!("/v1/payments/orders/{id}")),
+        "the payment itself is read"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn cash_receipts_and_tax_invoices_follow_the_gateway(pool: PgPool) {
     let w = world(&pool, "010-7600-0013", true).await;
     // PortOne serves transfer in this world, so the Toss leg uses the other cash-eligible method.
