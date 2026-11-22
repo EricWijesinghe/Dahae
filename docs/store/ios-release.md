@@ -19,6 +19,8 @@ The developer builds both apps with GitHub Actions (`store-apps`, macOS runner) 
 | 10 | Apple 로그인 서버 키 (`.p8`) | 콘솔 Apple 카드, `review-notes.md` §3 | 탈퇴 때 Apple 토큰 해지에 쓰여요 |
 | 11 | 스크린샷, 설명, 개인정보처리방침 URL | App Store Connect 앱 페이지 | 아이폰 6.9인치 스크린샷 필수 (`docs/store/screenshots`, 문구 `listing-*.md`). 아이패드용은 필요 없어요 (앱이 아이폰 전용) |
 
+**이름 규칙 / Naming**: DODA 가 개발자를 초대할 때 사용자 이름은 **Eric Wijesinghe** (이름 Eric), 개발자를 위해 만드는 키는 이름에 Eric 을 넣어요 (API 키 `Eric CI`, APNs 키 `Eric APNs`, Apple 로그인 키 `Eric Sign in with Apple`). 회사 안에서 누구의 계정·키인지 헷갈리지 않게 하려는 거예요. The developer's user is invited as **Eric Wijesinghe**, and every key made for him carries "Eric" in its name, so nobody at the company mistakes whose it is.
+
 `store` 환경의 값은 secret (키) 과 variable (`API_BASE`, `APPLE_TEAM_ID`, `APP_LINK_DOMAIN`) 로 나눠 넣어요. 키는 저장소 파일에 쓰지 않아요. Keys go into environment secrets only.
 
 ## 2. 첫 빌드 / First build
