@@ -171,8 +171,12 @@ class _Card extends StatelessWidget {
                 action!,
               ],
             ),
-      // Icon at the top of every card with a note, so the cards line up.
-      isThreeLine: action != null || body != null,
+      // Icon at the top of every card with a note, so the cards line up (a title alone stays centred beside it);
+      // three-line height only for a button or a two-line note.
+      titleAlignment: body == null && action == null
+          ? ListTileTitleAlignment.center
+          : ListTileTitleAlignment.top,
+      isThreeLine: action != null || (body?.contains('\n') ?? false),
     ),
   );
 }
