@@ -8,6 +8,8 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-11-23
+
 ### Fixed
 - Customer and partner apps: a saved server address (found after a domain move) that stops answering for this install at cold starts at least 24 hours apart, while the build's own address answers with the same `install_id`, is dropped, and the app starts on the build's address; offline, or when the build's address answers with a parking page or another install, the saved address stays. Both addresses are probed at once (one 4-second wait at most), only a JSON `/v1/config` with the install's id counts as an answer, and a move back to the build's own address clears the saved value.
 - Windows apps: the window title and the exe's ProductName, FileDescription and CompanyName come from the brand at build time (`scripts/store_brand.py`, also run by `build-msix.ps1 -ApiBase`); 다해 is only the default. The title is written as `\u` escapes, so it no longer depends on the build machine's code page.
