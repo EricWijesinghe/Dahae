@@ -10,6 +10,7 @@ from the release branches; no tags existed for them.
 
 ### Fixed
 - Customer and partner apps: a saved server address (found after a domain move) that stops answering at a cold start while the build's own address answers is dropped, and the app starts on the build's address; offline, the saved address stays.
+- Windows apps: the window title and the exe's ProductName, FileDescription and CompanyName come from the brand at build time (`scripts/store_brand.py`, also run by `build-msix.ps1 -ApiBase`); 다해 is only the default. The title is written as `\u` escapes, so it no longer depends on the build machine's code page.
 
 ## [1.6.0] - 2026-11-22
 

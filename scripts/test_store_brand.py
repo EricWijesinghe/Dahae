@@ -13,6 +13,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+REPO = pathlib.Path(__file__).resolve().parents[1]
 import store_brand  # noqa: E402
 
 from PIL import Image  # noqa: E402
@@ -32,6 +33,10 @@ class StoreBrand(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.apps = pathlib.Path(self.tmp.name)
         for app in ("customer", "partner"):
+            runner = self.apps / app / "windows" / "runner"
+            runner.mkdir(parents=True)
+            for f in ("main.cpp", "Runner.rc"):
+                (runner / f).write_bytes((REPO / "app" / "apps" / app / "windows" / "runner" / f).read_bytes())
             values = self.apps / app / "android" / "app" / "src" / "main" / "res" / "values"
             values.mkdir(parents=True)
             (values / "colors.xml").write_text(COLORS, encoding="utf-8")
@@ -59,6 +64,19 @@ class StoreBrand(unittest.TestCase):
         # A leading @ or ? would make android:label a resource reference, and the build fails.
         self.assertEqual(self.run_apply("customer", dict(self.brand, short_name="@string/x")), "stringx")
         self.assertEqual(self.run_apply("customer", dict(self.brand, short_name="?attr")), "attr")
+
+    def test_windows_title_and_version_info_follow_the_brand(self):
+        self.run_apply("partner", dict(self.brand, name='청소왕 "서비스"'))
+        runner = self.apps / "partner" / "windows" / "runner"
+        main = (runner / "main.cpp").read_text(encoding="utf-8")
+        self.assertIn(r'window.Create(L"\uCCAD\uC18C\uC655 \uD30C\uD2B8\uB108", origin, size)', main)
+        self.assertTrue(main.isascii(), "no source code page can garble the title")
+        rc = (runner / "Runner.rc").read_text(encoding="utf-8")
+        self.assertIn(r'VALUE "ProductName", "청소왕 파트너" "\0"', rc)
+        self.assertIn(r'VALUE "FileDescription", "청소왕 파트너" "\0"', rc)
+        self.assertIn(r'VALUE "CompanyName", "청소왕 서비스" "\0"', rc)
+        self.assertIn('VALUE "InternalName", "partner"', rc, "other values stay")
+        self.assertEqual(store_brand.wide("a\U0001F600"), r"a\U0001F600")
 
     def test_icons_have_every_size_and_ios_is_opaque(self):
         self.run_apply("customer")

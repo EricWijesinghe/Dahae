@@ -123,7 +123,7 @@ foreach ($name in $Apps) {
     if ($major -lt 1 -or $major -gt 65535) { throw "$name pubspec.yaml needs 'version: <major>.<minor>.<patch>' with major 1-65535 (an MSIX version cannot start with 0)." }
     $version = "$major.$($BuildNumber -shr 16).$($BuildNumber -band 0xFFFF).0"
     # Name and icons from the licensee's server, as the store workflow does: store_brand.py rewrites the iOS icon set
-    # that msix_config.logo_path points at and prints APP_LABEL. Without a server address the repo's name stays.
+    # that msix_config.logo_path points at, the window title and the exe's version info, and prints APP_LABEL. Without a server address the repo's name stays.
     $label = $null
     if ($ApiBase) {
       $env:API_BASE = $ApiBase
