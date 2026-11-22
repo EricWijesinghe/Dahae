@@ -8,18 +8,16 @@
 - Android: release signing from CI secrets (UPLOAD_KEYSTORE_* variables from CI secrets) or
   android/key.properties; debug keys only when neither exists, so local release builds still run.
 - Android: INTERNET + notification permissions in the main manifest (Flutter's template only
-  declares INTERNET for debug builds, so a release build would have no network), app label.
-- iOS: display name, photo/camera usage texts (Korean), export-compliance flag.
+  declares INTERNET for debug builds, so a release build would have no network).
+- iOS: photo/camera usage texts (Korean), export-compliance flag.
+- App names are not set here: they come from the brand at build time (scripts/store_brand.py ->
+  APP_LABEL / APP_DISPLAY_NAME), so this script must never write a fixed name over the placeholders.
 """
 import pathlib
 import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent / "app" / "apps"
-APPS = {
-    "customer": {"label": "말끔"},
-    "partner": {"label": "말끔 파트너"},
-    "console": {"label": "말끔 콘솔"},
-}
+APPS = ("customer", "partner", "console")
 PHOTO = "청소 전후 사진과 상담 사진을 올리기 위해 사진 보관함에 접근해요."
 CAMERA = "청소 전후 사진을 바로 찍어 올리기 위해 카메라를 사용해요."
 
@@ -79,10 +77,9 @@ def gradle(app: pathlib.Path) -> None:
     p.write_text(s, encoding="utf-8", newline="\n")
 
 
-def manifest(app: pathlib.Path, label: str) -> None:
+def manifest(app: pathlib.Path) -> None:
     p = app / "android" / "app" / "src" / "main" / "AndroidManifest.xml"
     s = p.read_text(encoding="utf-8")
-    s = re.sub(r'android:label="[^"]*"', f'android:label="{label}"', s, count=1)
     if "android.permission.INTERNET" not in s:
         s = s.replace('<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n',
                       '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n' + PERMISSIONS, 1)
@@ -98,12 +95,11 @@ def plist_set(s: str, key: str, value: str, kind: str = "string") -> str:
     return s.replace("</dict>\n</plist>", entry + "</dict>\n</plist>", 1)
 
 
-def plist(app: pathlib.Path, label: str) -> None:
+def plist(app: pathlib.Path) -> None:
     p = app / "ios" / "Runner" / "Info.plist"
     if not p.exists():
         return
     s = p.read_text(encoding="utf-8")
-    s = plist_set(s, "CFBundleDisplayName", label)
     s = plist_set(s, "NSPhotoLibraryUsageDescription", PHOTO)
     s = plist_set(s, "NSCameraUsageDescription", CAMERA)
     s = plist_set(s, "ITSAppUsesNonExemptEncryption", "false", kind="bool")
@@ -111,11 +107,11 @@ def plist(app: pathlib.Path, label: str) -> None:
 
 
 def main() -> None:
-    for name, cfg in APPS.items():
+    for name in APPS:
         app = ROOT / name
         gradle(app)
-        manifest(app, cfg["label"])
-        plist(app, cfg["label"])
+        manifest(app)
+        plist(app)
         print("store-ready:", name)
 
 
