@@ -51,7 +51,9 @@ jobs:
         with:
           context: backend
           push: true
-          build-args: APP_VERSION=e2e
+          build-args: |
+            APP_VERSION=e2e
+            SECURITY_REFRESH=${{ github.run_id }}-${{ github.run_attempt }}
           tags: localhost:5000/malkkeum-api:e2e
           cache-from: type=gha,scope=malkkeum-api
           cache-to: type=gha,mode=max,scope=malkkeum-api
@@ -61,7 +63,9 @@ jobs:
           context: .
           file: deploy/web.Dockerfile
           push: true
-          build-args: APP_VERSION=e2e
+          build-args: |
+            APP_VERSION=e2e
+            SECURITY_REFRESH=${{ github.run_id }}-${{ github.run_attempt }}
           tags: localhost:5000/malkkeum-web:e2e
           cache-from: type=gha,scope=malkkeum-web
           cache-to: type=gha,mode=max,scope=malkkeum-web

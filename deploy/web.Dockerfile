@@ -57,6 +57,8 @@ RUN GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 xcaddy build v2.11.9 --outpu
 # out of their root-owned certificate volume on the next `dahae update`.
 FROM caddy:2.11.9@sha256:4e2425f6009577e7c651010f16679c28f7d12df3e7b1914f941a7a3370746b3c
 COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
+# Changes every CI run, so the upgrade below never comes from the layer cache (cached layers kept fixed CVEs).
+ARG SECURITY_REFRESH
 # Security fixes released since the base digest (the release scan blocks on fixable HIGH/CRITICAL).
 RUN apk upgrade --no-cache
 # shortcut: OpenSSL 3.5.9-r1 (CVE-2026-88823, -95691, -95692, -107496) is only in edge so far; drop this line
