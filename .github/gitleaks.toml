@@ -27,7 +27,7 @@ description = "Published test vectors and fixture values in tests and job fixtur
 regexTarget = "line"
 regexes = [
   '''(token|progress)=0123456789abcdef0123456789abcdef''',
-  '''^const _token = '0123456789abcdef0123456789abcdef';$''',
+  '''const _token = '0123456789abcdef0123456789abcdef';''',
   '''otpauth://totp/Dahae:server\?secret=(ABCDEFGHIJKLMNOPQRSTUVWXYZ234567|X{32})&issuer=Dahae''',
   '''"api_secret": "fake-portone-api-secret-000000"''',
   '''"secret_key": "(sk_plain|test_sk_abcdef1234|live_sk_zz9876)"''',
