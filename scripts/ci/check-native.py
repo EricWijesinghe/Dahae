@@ -194,6 +194,8 @@ def check_xcconfig(app, ios):
     check("APP_DISPLAY_NAME = " in writer and "APP_BUNDLE_ID = " in writer, "native-keys.sh: Keys.xcconfig must set the store name and bundle id")
     check('KAKAO_URL_SCHEME = kakao${KAKAO_NATIVE_KEY' in writer,
           "native-keys.sh: KAKAO_URL_SCHEME must include the kakao prefix (Info.plist uses it as-is)")
+    check('export GOOGLE_IOS_CLIENT_ID="${PARTNER_GOOGLE_IOS_CLIENT_ID:-}"' in writer,
+          "native-keys.sh: the partner app takes only PARTNER_GOOGLE_IOS_CLIENT_ID (an iOS client is bound to one bundle id)")
 
 
 def check_entitlements_and_privacy(app, ios):
