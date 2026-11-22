@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
-use crate::{db::DbSettings, providers::fcm::ServiceAccount};
+use crate::{db::DbSettings, integrations::S3Config, providers::fcm::ServiceAccount};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use std::{collections::HashMap, env, net::SocketAddr, path::PathBuf};
 
@@ -75,6 +75,9 @@ pub struct Config {
     pub db: DbSettings,
     /// Bearer token for `GET /metrics`. None: only loopback clients may scrape.
     pub metrics_token: Option<String>,
+    /// AWS template only (`BACKUP_S3_BUCKET` + `BACKUP_S3_REGION`): offsite backups to the stack's bucket with the
+    /// server's instance role. The console's backup card, when saved, wins.
+    pub instance_backup: Option<S3Config>,
     /// Minutes after the arrival window starts before an unchecked-in partner counts as a no-show.
     pub noshow_grace_minutes: u32,
 }
@@ -193,6 +196,14 @@ fn metrics_token() -> Result<Option<String>, ConfigError> {
         Some(t) if t.len() < MIN_SECRET_BYTES => Err(ConfigError::Invalid("METRICS_TOKEN", format!("needs at least {MIN_SECRET_BYTES} bytes"))),
         t => Ok(t),
     }
+}
+
+fn instance_backup() -> Result<Option<S3Config>, ConfigError> {
+    let Some(bucket) = opt("BACKUP_S3_BUCKET") else { return Ok(None) };
+    let region = opt("BACKUP_S3_REGION").ok_or(ConfigError::Missing("BACKUP_S3_REGION"))?;
+    S3Config::instance_role(&bucket, &region)
+        .map(Some)
+        .ok_or_else(|| ConfigError::Invalid("BACKUP_S3_BUCKET", "not an S3 bucket name and AWS region".into()))
 }
 
 fn list(key: &str) -> Vec<String> {
@@ -389,6 +400,7 @@ impl Config {
                 slow_query_ms: number("DB_SLOW_QUERY_MS", 500, 1)?,
             },
             metrics_token: metrics_token()?,
+            instance_backup: instance_backup()?,
             noshow_grace_minutes: number("NOSHOW_GRACE_MINUTES", 30, 1)?,
         })
     }

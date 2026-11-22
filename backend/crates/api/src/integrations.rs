@@ -155,6 +155,26 @@ pub struct S3Config {
     pub access_key: String,
     pub secret_key: String,
     pub retention_days: u32,
+    /// Set for the AWS template's bucket: credentials come from the instance metadata service at this base URL
+    /// (IMDSv2) and the role cannot delete, so old copies go by the bucket's lifecycle. The key fields stay empty.
+    pub instance_role: Option<String>,
+}
+
+impl S3Config {
+    /// The AWS template's bucket, written to by the server's own role. None for a malformed bucket or region.
+    pub fn instance_role(bucket: &str, region: &str) -> Option<Self> {
+        let bucket_ok = (3..=63).contains(&bucket.len()) && bucket.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '.');
+        let region_ok = !region.is_empty() && region.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+        (bucket_ok && region_ok).then(|| Self {
+            endpoint: format!("https://s3.{region}.amazonaws.com"),
+            region: region.to_string(),
+            bucket: bucket.to_string(),
+            access_key: String::new(),
+            secret_key: String::new(),
+            retention_days: BACKUP_RETENTION_DEFAULT,
+            instance_role: Some(crate::backup::IMDS_BASE.to_string()),
+        })
+    }
 }
 
 impl Integrations {
@@ -172,7 +192,7 @@ impl Integrations {
             solapi: c.solapi.clone(),
             fcm: c.fcm.clone(),
             ai: None,
-            backup: None,
+            backup: c.instance_backup.clone(),
             payout: None,
             payout_toss_ready: false,
             juso_confm_key: None,
@@ -524,6 +544,7 @@ fn s3_config(v: &Map<String, Value>) -> Result<S3Config, Invalid> {
         access_key: required(v, "access_key")?,
         secret_key: required(v, "secret_key")?,
         retention_days,
+        instance_role: None,
     })
 }
 

@@ -44,6 +44,7 @@ pub fn test_config() -> Config {
         otp_pepper: None,
         data_key: [7u8; 32],
         host_jobs_dir: std::path::PathBuf::from("/nonexistent-host-jobs"),
+        instance_backup: None,
         upload_dir: std::env::temp_dir().join("api-flow-tests"),
         public_base_url: BASE_URL.into(),
         dev_mode: true,
