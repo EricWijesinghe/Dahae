@@ -374,6 +374,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       DATA_KEY: ${DATA_KEY:?set DATA_KEY}
       HEARTBEAT_URL: ${HEARTBEAT_URL:-}
+      # AWS template only: offsite backups to the stack's own bucket with the server's role (no keys typed).
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-}
       SETUP_CODE: ${SETUP_CODE:-}
       SETUP_CODE_AT: ${SETUP_CODE_AT:-}
       PUBLIC_BASE_URL: https://${DOMAIN:?set DOMAIN}
@@ -426,8 +429,9 @@ EOF
 }
 
 # 관리 명령. 본문은 따옴표 heredoc 이라 그대로 옮겨지고, __DIR__ 만 바꿔 넣어요.
-write_cli() { # write_cli 경로
-  cat > "$1" <<'CLI'
+write_cli() { # write_cli 경로 : 새 파일에 쓰고 이름을 바꿔요. 이 명령을 실행 중인 dahae update 가 읽던 파일은 그대로 남아요
+  local tmp="$1.new"
+  cat > "$tmp" <<'CLI'
 #!/usr/bin/env bash
 # 다해 관리 명령 (malkkeum 도 같은 명령이에요). 사용법: dahae help
 set -euo pipefail
@@ -441,6 +445,10 @@ BIN=/usr/local/bin
 API_DB_USER=dahae_api # 앱이 쓰는 DB 계정: 슈퍼유저가 아니에요. app 은 관리·백업용 슈퍼유저예요
 SIGN_ISSUER=https://token.actions.githubusercontent.com
 BACKUP_NAME_RE='^db-[0-9]{8}-[0-9]{6}\.sql\.gz(\.enc)?$'
+INSTALLER_KEEP=host/install.sh       # 지금 버전의 서명 확인된 설치 프로그램 (dahae update 가 둬요)
+INSTALLER_PREV=host/install.prev.sh  # 바로 전 버전의 것: dahae rollback 이 관리 도구를 그 버전으로 되돌릴 때 써요
+TOOLS_NEXT=host/next                 # 새 버전의 설치 프로그램을 받아 확인하는 곳
+RC_PAYOUTS_IN_DOUBT=4                # 되돌리기를 정산 확인 때문에 멈췄을 때의 종료 코드 (작업 실행기가 이유를 보여 줘요)
 USAGE='사용법: dahae <명령>
   status                      서비스 상태
   update [태그]               백업 → 새 버전 → 응답 없으면 자동으로 되돌리기
@@ -463,6 +471,7 @@ USAGE='사용법: dahae <명령>
   uninstall [--yes]           서비스 끄기 (데이터와 백업은 남겨요)
   uninstall --purge [--confirm 도메인]  데이터와 백업까지 삭제 (도메인을 입력해 확인. --yes 로는 넘어가지 않아요)
   keys-backup                 비밀 키 사본을 비밀번호로 잠가 만들기 (서버 밖에 보관: 외부 백업을 풀 때 필요)
+  keys-confirm                비밀 키 사본을 서버 밖에 보관했다고 기록하기 (콘솔에서 내려받으면 자동으로 해요)
   keys-restore 파일 [--yes]   새 서버에 예전 비밀 키 넣기 (restore-offsite 전에)
   alert update|backup|ssh     자동 작업 실패·SSH 차단 증가를 외부 가동 확인 주소로 알리기 (예약 작업·서버 점검용)'
 
@@ -749,7 +758,8 @@ cmd_load() { # 미리 받아 둔 이미지 묶음(.tar)을 불러와요. 인터�
   ok "이미지를 불러왔어요. 적용하려면: dahae update <태그>  (위 Loaded image 의 태그)"
 }
 
-die_rolled_back() { printf '\033[1;31m✘ %s\033[0m\n' "$*" >&2; exit 3; } # 종료 코드 3: 이전 버전으로 되돌렸어요 (작업 실행기가 rolled_back 으로 남겨요)
+die_code() { local rc="$1"; shift; printf '\033[1;31m✘ %s\033[0m\n' "$*" >&2; exit "$rc"; } # die_code 종료코드 안내 : 작업 실행기가 종료 코드로 이유를 골라요
+die_rolled_back() { die_code 3 "$@"; } # 종료 코드 3: 이전 버전으로 되돌렸어요 (작업 실행기가 rolled_back 으로 남겨요)
 
 running_tag() { # running_tag : 방금 띄운 이미지의 버전 태그(vX.Y.Z[-접미사]). 이미지 표시를 읽어요 (모르면 빈 값)
   local v
@@ -766,12 +776,72 @@ record_version() { # 실제로 띄운 버전을 설치 기록(host/version-histo
   grep -qxF "$v" host/version-history 2>/dev/null || printf '%s\n' "$v" >> host/version-history || warn "설치 기록을 남기지 못했어요"
 }
 
-cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔요 (로컬 이미지면 먼저 dahae load)
+tools_ref() { # tools_ref 버전 : 배포 저장소에서 그 버전의 관리 도구가 있는 곳 (태그는 v 를 붙여 그대로, stable → main, beta → beta). 모르면 빈 값
+  local v="$1"
+  case "$v" in stable) printf main; return 0 ;; beta) printf beta; return 0 ;; [0-9]*) v="v$v" ;; esac
+  if printf '%s' "$v" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]{1,40})?$'; then printf '%s' "$v"; fi
+  return 0
+}
+
+fetch_installer() { # fetch_installer 위치 폴더 : 그 버전의 install.sh 를 받아, 서명이 확인된 SHA256SUMS 와 지문이 같을 때만 남겨요. 하나라도 다르면 멈춰요
+  local ref="$1" out="$2" base signer want got f cosign="$DIR/bin/cosign"
+  base=$(env_get DELIVERY_RAW); signer=$(env_get SIGNER_REPO)
+  valid_signer "$signer" || die "서명자 설정(SIGNER_REPO)이 이상해서 업데이트를 멈췄어요: '$signer'. 지금 버전 그대로예요."
+  [ -x "$cosign" ] || die "서명 확인 도구($cosign)가 없어서 업데이트를 멈췄어요. 설치 명령을 다시 실행하세요. 지금 버전 그대로예요."
+  mkdir -p "$out"
+  for f in install.sh SHA256SUMS SHA256SUMS.bundle; do
+    SCRATCH+=("$out/$f")
+    curl -fsSL --retry 3 --max-time 120 -o "$out/$f" "$base/$ref/$f" \
+      || die "새 버전의 관리 도구($f)를 내려받지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+  done
+  # 이미지와 같은 규칙: 이 저장소의 release.yml 이 v 태그에서 서명한 SHA256SUMS 만 믿어요
+  TUF_ROOT="$DIR/.sigstore" "$cosign" verify-blob --bundle "$out/SHA256SUMS.bundle" --certificate-identity-regexp "$(signer_re "$signer")" \
+      --certificate-oidc-issuer "$SIGN_ISSUER" "$out/SHA256SUMS" >/dev/null 2>&1 \
+    || die "새 버전 지문 파일(SHA256SUMS)의 서명을 확인하지 못해서 업데이트를 멈췄어요 ($signer). 지금 버전 그대로예요."
+  want=$(awk '$2 == "install.sh" || $2 == "*install.sh" { print $1; exit }' "$out/SHA256SUMS")
+  got=$(sha256sum "$out/install.sh" | cut -d' ' -f1)
+  [ -n "$want" ] && [ "$want" = "$got" ] || die "받은 install.sh 의 지문이 서명된 SHA256SUMS 와 달라서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+  bash -n "$out/install.sh" || die "받은 install.sh 가 손상됐어요. 지금 버전 그대로예요."
+}
+
+tools_prepare() { # tools_prepare 버전 : 이미지를 바꾸기 전에 새 버전의 관리 도구를 받아 확인해요 (TOOLS_READY=1). 받을 곳이 없는 설치는 건너뛰어요
+  local ref; ref=$(tools_ref "$1"); TOOLS_READY=0
+  [ -z "${DAHAE_TOOLS_FRESH:-}" ] || return 0 # 설치 프로그램이 방금 관리 도구를 썼어요
+  if [ -z "$(env_get DELIVERY_RAW)" ] || [ -z "$ref" ] || [ "$(env_get IMAGE_SOURCE)" = local ] || [ "$(env_get IMAGE_VERIFY)" = off ]; then
+    warn "관리 도구(dahae 명령·작업 실행기·설정)는 그대로 둬요 (배포 주소가 없거나 직접 불러온 이미지예요). 바꾸려면 설치 명령을 다시 실행하세요."
+    return 0
+  fi
+  fetch_installer "$ref" "$TOOLS_NEXT"
+  TOOLS_READY=1
+}
+
+run_installer_tools() { MALKKEUM_HOST_UPDATE=tools DAHAE_TOOLS_FRESH=1 bash "$1" </dev/null; } # .env·데이터는 그대로, 관리 도구만 다시 써요
+
+tools_apply() { # 새 버전이 정상이면 확인해 둔 설치 프로그램으로 관리 도구를 바꿔요. 지금 것은 되돌리기용으로 남겨요
+  [ "${TOOLS_READY:-0}" = 1 ] || return 0
+  if [ -f "$INSTALLER_KEEP" ]; then mv -f "$INSTALLER_KEEP" "$INSTALLER_PREV"; else rm -f "$INSTALLER_PREV"; fi
+  install -m 600 "$TOOLS_NEXT/install.sh" "$INSTALLER_KEEP"
+  run_installer_tools "$INSTALLER_KEEP" \
+    || die "새 버전은 정상이에요. 관리 도구(dahae 명령·작업 실행기)를 바꾸지 못했어요. 설치 명령을 다시 실행해 주세요."
+  ok "관리 도구도 새 버전으로 바꿨어요"
+}
+
+tools_rollback() { # 되돌린 버전의 설치 프로그램이 남아 있으면 관리 도구도 그 버전으로 맞춰요 (없으면 그대로 두고 알려요)
+  if [ ! -f "$INSTALLER_PREV" ]; then warn "관리 도구는 그대로 둬요 (전 버전의 설치 프로그램 기록이 없어요)"; return 0; fi
+  mv -f "$INSTALLER_PREV" "$TOOLS_NEXT.swap"
+  if [ -f "$INSTALLER_KEEP" ]; then mv -f "$INSTALLER_KEEP" "$INSTALLER_PREV"; fi
+  mv -f "$TOOLS_NEXT.swap" "$INSTALLER_KEEP"
+  if run_installer_tools "$INSTALLER_KEEP"; then ok "관리 도구도 전 버전으로 되돌렸어요"
+  else warn "전 버전은 정상이에요. 관리 도구는 되돌리지 못했어요. 설치 명령을 다시 실행해 주세요."; fi
+}
+
+cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔요 (로컬 이미지면 먼저 dahae load). 관리 도구도 같은 버전으로 바꿔요
   local repo ver cur_api cur_web new_api
   printf '\n▶ 업데이트를 시작합니다 (먼저 백업해요)\n'
+  repo=$(env_get IMAGE_REPO); ver=${1:-$(env_get VERSION)}
+  tools_prepare "$ver" # 받거나 확인하지 못하면 아무것도 바꾸기 전에 멈춰요
   db_roles # 백업의 외부 업로드도 앱 계정으로 접속해요: 예전 설치를 처음 올릴 때 계정부터 만들어요
   cmd_backup || die "백업을 끝내지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
-  repo=$(env_get IMAGE_REPO); ver=${1:-$(env_get VERSION)}
   pull_images "$repo" "$ver"
   cur_api=$(digest_ref "$(running_image api "$(env_get API_IMAGE)")" "$repo/malkkeum-api")
   cur_web=$(digest_ref "$(running_image web "$(env_get WEB_IMAGE)")" "$repo/malkkeum-web")
@@ -795,6 +865,7 @@ cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔
     record_version
     prune_keep_tags
     ok "최신 버전($ver)으로 업데이트했어요"
+    tools_apply
     return 0
   fi
   warn "새 버전이 응답하지 않아요. 이전 버전으로 되돌릴게요."
@@ -822,7 +893,7 @@ payouts_settled_for_rollback() { # 토스에서 결과를 기다리는 정산이
   case "$n" in
     0) return 0 ;;
     ''|*[!0-9]*) die "정산 상태를 확인하지 못해서 되돌리지 않았어요. 'dahae logs db' 로 확인하세요." ;;
-    *) die "토스 결과를 기다리는 정산이 ${n}건 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요." ;;
+    *) die_code "$RC_PAYOUTS_IN_DOUBT" "토스 결과를 기다리는 정산이 ${n}건 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요." ;;
   esac
 }
 
@@ -840,6 +911,7 @@ cmd_rollback() {
   set_images "$prev_api" "${prev_web:-$(env_get WEB_IMAGE)}"
   # 데이터베이스 구조 변경(마이그레이션)은 되돌리지 않아요. 이전 버전은 새 구조를 그대로 읽어요.
   if wait_healthy; then ok "이전 버전으로 되돌렸어요"; else die "되돌린 뒤에도 응답이 없어요. 'dahae logs' 를 확인하세요."; fi
+  tools_rollback
 }
 
 cmd_channel() {
@@ -909,6 +981,8 @@ key_escrow_confirm() {
   if [ "$a" = "보관했어요" ]; then env_set KEY_ESCROW_AT "$(date +%s)"; ok "비밀 키 사본 보관을 확인했어요"
   else warn "비밀 키 사본 보관은 아직 확인되지 않았어요 (dahae status 에서 다시 확인해요)"; fi
 }
+
+cmd_keys_confirm() { env_set KEY_ESCROW_AT "$(date +%s)"; ok "비밀 키 사본 보관을 확인했어요"; } # 콘솔에서 사장님이 사본을 내려받은 뒤 작업 실행기가 불러요
 
 keys_field() { sed -n "s/^$1=\([0-9a-f]\{32,\}\)\$/\1/p" | tail -n1; } # keys_field 이름 < 내용 : 16진수 값만
 
@@ -1260,6 +1334,7 @@ main() {
     host-approval) shift; cmd_host_approval "$@" ;;
     owner-reset) shift; cmd_owner_reset "$@" ;;
     keys-backup) cmd_keys_backup ;;
+    keys-confirm) cmd_keys_confirm ;;
     keys-restore) shift; cmd_keys_restore "$@" ;;
     alert) shift; cmd_alert "$@" ;;
     applinks) shift; cmd_applinks "$@" ;;
@@ -1285,8 +1360,9 @@ main() {
 }
 [ "${DAHAE_SELFTEST:-}" = 1 ] || main "$@"
 CLI
-  sed -i "s|__DIR__|$DIR|" "$1"
-  chmod 755 "$1"
+  sed -i "s|__DIR__|$DIR|" "$tmp"
+  chmod 755 "$tmp"
+  mv -f "$tmp" "$1"
 }
 
 write_heartbeat() { # 5분마다 /health 가 정상일 때만 HEARTBEAT_URL 로 핑을 보내요. 핑이 끊기면 외부 서비스가 알려줘요.
@@ -1380,7 +1456,8 @@ User=root
 ExecStart=/bin/bash $DIR/agent.sh run
 TimeoutStartSec=13h
 ProtectSystem=full
-ReadWritePaths=$DIR /etc/cron.d /etc/logrotate.d /run
+# dahae update 가 관리 명령(/usr/local/bin)과 이 단위 파일(/etc/systemd/system)을 새 버전으로 바꿔요
+ReadWritePaths=$DIR /etc/cron.d /etc/logrotate.d /run /usr/local/bin /etc/systemd/system
 PrivateTmp=true
 ProtectHome=true
 EOF
@@ -1454,6 +1531,34 @@ notify_result() { # EXIT 트랩: 설치가 끝나면 알림 주소에 결과를 
   curl -fsS --max-time 10 -o /dev/null "$base$q" 2>/dev/null || true
 }
 
+installed_here() { [ -f "$DIR/.env" ] && grep -q '^API_IMAGE=.' "$DIR/.env"; } # 이미지까지 정해진 설치가 있어요
+
+check_backup_s3_env() { # AWS 템플릿이 넘기는 백업 저장소 이름과 리전: 둘 다 있거나 둘 다 없어야 하고, 모양이 맞아야 해요
+  local b="${MALKKEUM_BACKUP_S3_BUCKET:-}" r="${MALKKEUM_BACKUP_S3_REGION:-}"
+  [ -z "$b$r" ] && return 0
+  printf '%s' "$b" | grep -Eq '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$' || { warn "MALKKEUM_BACKUP_S3_BUCKET 이 S3 저장소 이름이 아니에요: $b"; return 1; }
+  printf '%s' "$r" | grep -Eq '^[a-z]{2}(-[a-z]+)+-[0-9]$' || { warn "MALKKEUM_BACKUP_S3_REGION 이 AWS 리전이 아니에요: $r"; return 1; }
+}
+
+apply_backup_s3_env() { # 받은 백업 저장소를 .env 에 남겨요 (없으면 예전 값 그대로). 앱이 서버 역할로 그 저장소에 백업해요
+  [ -n "${MALKKEUM_BACKUP_S3_BUCKET:-}" ] || return 0
+  env_set BACKUP_S3_BUCKET "$MALKKEUM_BACKUP_S3_BUCKET"; env_set BACKUP_S3_REGION "$MALKKEUM_BACKUP_S3_REGION"
+}
+
+install_packages() { # 필수 프로그램과 Docker. 새 설치와 손으로 다시 실행할 때만 해요 (dahae update 의 관리 도구 모드는 건너뛰어요)
+  say "필수 프로그램 설치 (새 서버면 자동 업데이트가 끝날 때까지 최대 10분 기다려요)"
+  apt_retry update -qq || die "패키지 목록을 받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요."
+  apt_retry install -y -qq ca-certificates curl openssl gzip cron dnsutils logrotate iproute2 ufw fail2ban unattended-upgrades >/dev/null \
+    || die "필수 프로그램을 설치하지 못했어요. 잠시 뒤 다시 실행하세요."
+  if ! command -v docker >/dev/null; then
+    curl -fsSL https://get.docker.com | sh >/dev/null || die "Docker 를 설치하지 못했어요. 잠시 뒤 다시 실행하세요."
+  fi
+  systemctl enable --now docker >/dev/null 2>&1 || true
+  local cv; cv=$(docker compose version --short 2>/dev/null) || die "Docker Compose 를 설치하지 못했어요."
+  ver_ge "$cv" "$COMPOSE_MIN" || die "Docker Compose($cv)가 너무 오래됐어요. 'curl -fsSL https://get.docker.com | sudo sh' 로 업데이트하세요."
+  ok "Docker 준비 완료"
+}
+
 install_mode() { # install_mode FRESH : 설치된 적이 있으면(0) DB 가 꺼져 있어도 업데이트로 가요 (백업 → 새 버전 → 되돌리기)
   # 첫 설치가 이미지 준비(prepare) 전에 멈췄으면 .env 에 API_IMAGE 가 없어요: compose 가 뜰 수 없으니 처음 설치를 다시 해요
   if [ "$1" = 0 ] && [ -n "$(env_get API_IMAGE)" ]; then printf update; else printf fresh; fi
@@ -1472,11 +1577,13 @@ EOF
 }
 main() {
   local k a m
-  for k in DOMAIN EMAIL IMAGES IMAGES_TAR CHANNEL VERSION TLS SKIP_DNS_CHECK HEALTH_WAIT HEARTBEAT_URL NOTIFY_URL SETUP_CODE SIGNER SKIP_SIGNATURE; do
+  for k in DOMAIN EMAIL IMAGES IMAGES_TAR CHANNEL VERSION TLS SKIP_DNS_CHECK HEALTH_WAIT HEARTBEAT_URL NOTIFY_URL SETUP_CODE SIGNER SKIP_SIGNATURE BACKUP_S3_BUCKET BACKUP_S3_REGION; do
     a=DAHAE_$k; m=MALKKEUM_$k
     if [ -n "${!a:-}" ] && [ -z "${!m:-}" ]; then export "$m=${!a}"; fi
   done
   HEALTH_WAIT_SECS=${MALKKEUM_HEALTH_WAIT:-300}
+  # dahae update / rollback 이 부르는 모드: 이미 설치된 서버의 관리 도구만 다시 써요 (패키지·DNS·보안 설정·이미지는 그대로)
+  TOOLS_ONLY=0; [ "${MALKKEUM_HOST_UPDATE:-}" != tools ] || TOOLS_ONLY=1
   if [ -n "${MALKKEUM_ANSWERS:-}" ]; then load_answers "$MALKKEUM_ANSWERS"; fi   # 질문 없이 설치: DOMAIN=·EMAIL= 줄 파일
   trap notify_result EXIT
 
@@ -1484,9 +1591,11 @@ main() {
   command -v apt-get >/dev/null || die "Ubuntu 또는 Debian 서버에서 실행해 주세요."
   check_setup_code_env || exit 1
   if [ -n "${MALKKEUM_NOTIFY_URL:-}" ]; then valid_hb_url "$MALKKEUM_NOTIFY_URL" || die "MALKKEUM_NOTIFY_URL 은 https:// 주소여야 해요 (& 나 공백은 안 돼요)."; fi
+  check_backup_s3_env || exit 1
+  if [ "$TOOLS_ONLY" = 1 ]; then installed_here || die "설치된 서버가 아니에요. 관리 도구만 바꾸는 모드는 dahae update 가 써요."; fi
 
   say "다해 서버 설치를 시작합니다"
-  preflight
+  [ "$TOOLS_ONLY" = 1 ] || preflight
   mkdir -p "$DIR/backups"
   cd "$DIR"
 
@@ -1534,20 +1643,11 @@ main() {
     valid_hb_url "$MALKKEUM_HEARTBEAT_URL" || die "MALKKEUM_HEARTBEAT_URL 은 https:// 주소여야 해요 (& 나 공백은 안 돼요)."
   fi
 
-  say "필수 프로그램 설치 (새 서버면 자동 업데이트가 끝날 때까지 최대 10분 기다려요)"
-  apt_retry update -qq || die "패키지 목록을 받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요."
-  apt_retry install -y -qq ca-certificates curl openssl gzip cron dnsutils logrotate iproute2 ufw fail2ban unattended-upgrades >/dev/null \
-    || die "필수 프로그램을 설치하지 못했어요. 잠시 뒤 다시 실행하세요."
-  if ! command -v docker >/dev/null; then
-    curl -fsSL https://get.docker.com | sh >/dev/null || die "Docker 를 설치하지 못했어요. 잠시 뒤 다시 실행하세요."
+  if [ "$TOOLS_ONLY" = 0 ]; then
+    install_packages
+    say "도메인 확인"
+    dns_check
   fi
-  systemctl enable --now docker >/dev/null 2>&1 || true
-  local cv; cv=$(docker compose version --short 2>/dev/null) || die "Docker Compose 를 설치하지 못했어요."
-  ver_ge "$cv" "$COMPOSE_MIN" || die "Docker Compose($cv)가 너무 오래됐어요. 'curl -fsSL https://get.docker.com | sudo sh' 로 업데이트하세요."
-  ok "Docker 준비 완료"
-
-  say "도메인 확인"
-  dns_check
 
   if [ "$FRESH" = 1 ]; then
     umask 077
@@ -1567,6 +1667,9 @@ main() {
   env_set SIGNER_REPO "$SIGNER_REPO"
   env_set IMAGE_VERIFY "$IMAGE_VERIFY"
   if [ -n "${MALKKEUM_HEARTBEAT_URL:-}" ]; then env_set HEARTBEAT_URL "$MALKKEUM_HEARTBEAT_URL"; fi
+  # 배포 저장소 주소(…/Dahae-install): dahae update 가 새 버전의 관리 도구를 여기서 받아요
+  if [ -n "$RELEASE_RAW" ]; then env_set DELIVERY_RAW "${RELEASE_RAW%/*}"; fi
+  apply_backup_s3_env
 
   write_compose
   write_cli "$BIN/dahae"
@@ -1576,7 +1679,7 @@ main() {
   write_schedules
   install_agent   # 새 설치와 업데이트 모두: 작업 실행기는 dahae update 가 쓰는 작업 폴더를 쓰므로 compose 를 띄우기 전에 둬요
 
-  harden_host
+  [ "$TOOLS_ONLY" = 1 ] || harden_host
 
   if [ "$IMAGE_SOURCE" = local ]; then
     :
@@ -1593,9 +1696,18 @@ main() {
     ok "이미지를 불러왔어요: $IMAGES_TAR"
   fi
 
-  if [ "$(install_mode "$FRESH")" = update ]; then
+  if [ "$TOOLS_ONLY" = 1 ]; then
+    # 이미지는 그대로예요. 바뀐 설정(compose)으로 다시 띄우고 응답만 확인해요
+    dc up -d --remove-orphans >/dev/null || die "새 설정으로 서비스를 다시 띄우지 못했어요. 'dahae logs' 를 확인하세요."
+    wait_for "$HEALTH_WAIT_SECS" app_ready || die "관리 도구를 바꾼 뒤 앱이 응답하지 않아요. 'dahae logs' 를 확인하세요."
+    ok "관리 도구를 이 버전으로 바꿨어요 (설정과 데이터는 그대로예요)"
+    return 0
+  elif [ "$(install_mode "$FRESH")" = update ]; then
     # 다시 실행 = 안전한 업데이트: 백업 → 새 버전 → 응답 확인, 실패하면 이전 버전으로 되돌려요.
-    DAHAE_HEALTH_WAIT=$HEALTH_WAIT_SECS "$BIN/dahae" update "$VERSION" || die "업데이트하지 못했어요. 위 안내를 확인해 주세요."
+    # 관리 도구는 방금 이 설치 프로그램이 썼어요 (DAHAE_TOOLS_FRESH). 종료 코드 3(되돌림)은 그대로 넘겨요
+    local rc=0
+    DAHAE_HEALTH_WAIT=$HEALTH_WAIT_SECS DAHAE_TOOLS_FRESH=1 "$BIN/dahae" update "$VERSION" || rc=$?
+    [ "$rc" = 0 ] || { warn "업데이트하지 못했어요. 위 안내를 확인해 주세요."; exit "$rc"; }
   else
     env_set VERSION "$VERSION"
     say "서비스 시작 (처음에는 몇 분 걸릴 수 있어요)"

@@ -58,6 +58,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       DATA_KEY: ${DATA_KEY:?set DATA_KEY}
       HEARTBEAT_URL: ${HEARTBEAT_URL:-}
+      # AWS template only: offsite backups to the stack's own bucket with the server's role (no keys typed).
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-}
       SETUP_CODE: ${SETUP_CODE:-}
       SETUP_CODE_AT: ${SETUP_CODE_AT:-}
       PUBLIC_BASE_URL: https://${DOMAIN:?set DOMAIN}

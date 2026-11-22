@@ -612,7 +612,7 @@ t  "key-only drop-in text"                 grep -qx 'PasswordAuthentication no' 
 nt "empty authorized_keys is not a key"   has_key "$HB/empty-keys"
 t  "authorized_keys with a key"            has_key "$HB/no-such" "$HB/keys"
 t  "install installs ufw fail2ban unattended-upgrades" grep -qF 'ufw fail2ban unattended-upgrades' "$ROOT/deploy/install.sh"
-t  "install runs harden_host in main"      grep -qE '^  harden_host( |$)' "$ROOT/deploy/install.sh"
+t  "install runs harden_host in main"      grep -qE '^  \[ "\$TOOLS_ONLY" = 1 \] \|\| harden_host$' "$ROOT/deploy/install.sh"
 # behavior: firewall_setup and ssh_keyonly_check with stubbed ufw, sshd, ask, systemctl (no real /etc or firewall changes)
 FWLOG="$HB/fw.log"
 fw_run() { # fw_run 방화벽상태 모드 : firewall_setup 을 가짜 ufw 로 돌리고 실행한 명령을 fw.log 에 남겨요
@@ -767,7 +767,130 @@ t  "domain: .env untouched on refusal"     grep -qx 'DOMAIN=old.co.kr' "$SB/.env
 nt "domain: no restart on refusal"         test -e "$SB/dc.log"
 rm -rf "$SB/.env" "$SB"/backups/env-before-domain-* "$SB/dc.log" "$SB/curl.log" "$SB/jobs"
 
-bash "$ROOT/scripts/ci/agent-selftest.sh" >/dev/null || { FAIL=$((FAIL + 1)); echo "FAIL: agent self-test (run scripts/ci/agent-selftest.sh)"; }
+# ---- dahae update refreshes the host tools from the delivery repo: signed SHA256SUMS, matching install.sh, else stop ----
+cd "$SB"; mkdir -p "$SB/host" "$SB/bin"
+cat > "$SB/bin/cosign" <<'COS'
+#!/usr/bin/env bash
+printf '%s\n' "$*" > "$(dirname "$0")/blob-args"
+[ "${FAKE_BLOB:-ok}" = ok ]
+COS
+chmod 755 "$SB/bin/cosign"
+mkrel() { # mkrel 위치 : 가짜 배포본 (install.sh 와 그 지문 파일, 서명 묶음)
+  local d="$SB/rel/$1"; mkdir -p "$d"
+  printf '#!/usr/bin/env bash\necho "tools %s"\n' "$1" > "$d/install.sh"
+  (cd "$d" && sha256sum install.sh > SHA256SUMS && printf 'bundle' > SHA256SUMS.bundle)
+}
+mkrel v1.7.0; mkrel main
+tools_env() { printf 'DELIVERY_RAW=file://%s/rel\nSIGNER_REPO=EricWijesinghe/Dahae\nIMAGE_SOURCE=remote\nIMAGE_VERIFY=on\nIMAGE_REPO=repo\nAPI_IMAGE=old\nWEB_IMAGE=old\nVERSION=stable\n' "$SB" > "$SB/.env"; rm -rf "$SB/host"/*; rm -f "$SB/tools.log"; }
+t  "tools ref: a tag stays"           eq "$(tools_ref v1.7.0)" v1.7.0
+t  "tools ref: a bare tag gets its v" eq "$(tools_ref 1.7.0)" v1.7.0
+t  "tools ref: stable is main"        eq "$(tools_ref stable)" main
+t  "tools ref: beta is beta"          eq "$(tools_ref beta)" beta
+t  "tools ref: odd names give none"   eq "$(tools_ref 'v1.7;id')$(tools_ref local)$(tools_ref v1.7)" ""
+fetch() { ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; fetch_installer "$1" host/next ) >/dev/null 2>&1; }
+tools_env
+t  "fetch: signed sums and matching install.sh pass" fetch v1.7.0
+t  "fetch: verify-blob with the bundle"             grep -qF -- "verify-blob --bundle host/next/SHA256SUMS.bundle" "$SB/bin/blob-args"
+t  "fetch: the release workflow identity"           grep -qF 'EricWijesinghe/Dahae/\.github/workflows/release\.yml@refs/tags/v' "$SB/bin/blob-args"
+t  "fetch: the GitHub OIDC issuer"                  grep -qF -- "--certificate-oidc-issuer https://token.actions.githubusercontent.com" "$SB/bin/blob-args"
+FAKE_BLOB=bad; export FAKE_BLOB
+nt "fetch: a bad signature stops"                   fetch v1.7.0
+FAKE_BLOB=ok
+printf 'echo evil\n' >> "$SB/rel/v1.7.0/install.sh"
+nt "fetch: an install.sh unlike SHA256SUMS stops"   fetch v1.7.0
+mkrel v1.7.0; printf '%s  agent.sh\n' "$(printf '0%.0s' $(seq 64))" > "$SB/rel/v1.7.0/SHA256SUMS"
+nt "fetch: no install.sh line stops"                fetch v1.7.0
+mkrel v1.7.0; rm -f "$SB/rel/v1.7.0/SHA256SUMS.bundle"
+nt "fetch: a missing bundle stops"                  fetch v1.7.0
+mkrel v1.7.0
+nt "fetch: an unknown release stops"                fetch v9.9.9
+# upd 버전 [HEALTH] : 가짜 백업·이미지로 cmd_update 를 돌려요. 단계는 tools.log 에, 종료 코드를 돌려줘요
+upd() {
+  ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; H=${2:-ok}
+    log() { printf '%s\n' "$*" >> "$SB/tools.log"; }
+    db_roles() { :; }; cmd_backup() { log backup; }; prune_keep_tags() { :; }; record_version() { :; }
+    # shellcheck disable=SC2034 # read by the sourced cmd_update
+    pull_images() { NEW_API=repo/api:new; NEW_WEB=repo/web:new; }
+    running_image() { echo "$2"; }; digest_ref() { echo "$1"; }; docker() { echo "id-$*"; }
+    set_images() { log "images $1"; }; wait_healthy() { [ "$H" = ok ] || [ "$(grep '^images' "$SB/tools.log" | tail -n1)" != "images repo/api:new" ]; }
+    run_installer_tools() { log "tools $(bash "$1")"; }
+    cmd_update "$1" ) >/dev/null 2>&1
+}
+tools_env; upd v1.7.0; rc=$?
+t  "update: ok"                                     eq "$rc" 0
+t  "update: tools come after the new images"        eq "$(tail -n1 "$SB/tools.log")" "tools tools v1.7.0"
+t  "update: the verified installer is kept"         grep -qF 'tools v1.7.0' "$SB/host/install.sh"
+t  "update: ...root-only"                           eq "$(stat -c %a "$SB/host/install.sh")" 600
+nt "update: no previous installer yet"              test -e "$SB/host/install.prev.sh"
+upd stable
+t  "update: the channel takes its branch"           eq "$(tail -n1 "$SB/tools.log")" "tools tools main"
+t  "update: the last installer is kept for rollback" grep -qF 'tools v1.7.0' "$SB/host/install.prev.sh"
+tools_env; FAKE_BLOB=bad upd v1.7.0; rc=$?
+t  "update: a bad signature stops the update"       eq "$rc" 1
+nt "...before the backup or any image"              test -e "$SB/tools.log"
+tools_env; upd v1.7.0 fail; rc=$?
+t  "update: a new version that does not answer exits 3" eq "$rc" 3
+nt "...and the tools stay"                          grep -q '^tools' "$SB/tools.log"
+nt "...and no installer is kept"                    test -e "$SB/host/install.sh"
+tools_env; DAHAE_TOOLS_FRESH=1 upd v1.7.0
+nt "update from the installer: no second refresh"   grep -q '^tools' "$SB/tools.log"
+tools_env; env_set DELIVERY_RAW ''; upd v1.7.0; rc=$?
+t  "update without a delivery address still updates" eq "$rc:$(grep -c '^images' "$SB/tools.log")" 0:1
+nt "...with the tools as they are"                  grep -q '^tools' "$SB/tools.log"
+tools_env; env_set IMAGE_SOURCE local; upd v1.7.0
+nt "local images: tools as they are"                grep -q '^tools' "$SB/tools.log"
+# rb [GATE] : 가짜 정산 확인(GATE=0 이면 통과)으로 cmd_rollback 을 돌려요
+rb() {
+  ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; GATE=${1:-0}
+    log() { printf '%s\n' "$*" >> "$SB/tools.log"; }
+    cmd_backup() { log backup; }; running_image() { echo "$2"; }; digest_ref() { echo "$1"; }
+    dc() { [ "$1" = exec ] && printf '%s\n' "$GATE"; return 0; }
+    set_images() { log "images $1"; }; wait_healthy() { return 0; }
+    run_installer_tools() { log "tools $(bash "$1")"; }
+    cmd_rollback ) >/dev/null 2>&1
+}
+tools_env; env_set PREV_API_IMAGE prev; env_set PREV_WEB_IMAGE prevweb
+install -m 600 "$SB/rel/main/install.sh" "$SB/host/install.sh"; install -m 600 "$SB/rel/v1.7.0/install.sh" "$SB/host/install.prev.sh"
+rb 2; rc=$?
+t  "rollback: payouts in doubt exit 4"              eq "$rc" 4
+nt "...with the images unchanged"                   grep -q '^images' "$SB/tools.log"
+t  "...and the installers unchanged"                grep -qF 'tools main' "$SB/host/install.sh"
+rm -f "$SB/tools.log"; rb 0; rc=$?
+t  "rollback: ok"                                   eq "$rc" 0
+t  "rollback: the previous images first"            eq "$(grep '^images' "$SB/tools.log")" "images prev"
+t  "rollback: the tools follow the rolled-back version" eq "$(tail -n1 "$SB/tools.log")" "tools tools v1.7.0"
+t  "rollback: the newer installer is kept for a second rollback" grep -qF 'tools main' "$SB/host/install.prev.sh"
+rm -f "$SB/host/install.prev.sh" "$SB/tools.log"; env_set PREV_API_IMAGE prev2; rb 0; rc=$?
+t  "rollback with no earlier installer still rolls back" eq "$rc:$(grep -c '^images' "$SB/tools.log")" 0:1
+nt "...and leaves the tools"                        grep -q '^tools' "$SB/tools.log"
+t  "the CLI is written by rename (a running dahae update keeps its file)" grep -qF 'mv -f "$tmp" "$1"' "$ROOT/deploy/install.sh"
+t  "the agent service may rewrite the CLI and its units" grep -qF 'ReadWritePaths=$DIR /etc/cron.d /etc/logrotate.d /run /usr/local/bin /etc/systemd/system' "$ROOT/deploy/install.sh"
+( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; cmd_keys_confirm ) >/dev/null 2>&1
+t  "keys-confirm records the key copy"              test -n "$(env_get KEY_ESCROW_AT)"
+
+# ---- AWS backup bucket from the template: checked, then written to .env for the app ----
+s3env() { ( MALKKEUM_BACKUP_S3_BUCKET=$1 MALKKEUM_BACKUP_S3_REGION=$2; check_backup_s3_env ) >/dev/null 2>&1; }
+t  "s3 env: none is fine"                           s3env "" ""
+t  "s3 env: a bucket and a region"                  s3env dahae-main-backupbucket-1a2b3c ap-northeast-2
+nt "s3 env: a bucket needs its region"              s3env dahae-main-backupbucket-1a2b3c ""
+nt "s3 env: upper case is not a bucket"             s3env Dahae-Bucket ap-northeast-2
+nt "s3 env: shell characters refused"               s3env 'a;rm -rf' ap-northeast-2
+nt "s3 env: odd region refused"                     s3env dahae-bucket 'seoul'
+printf 'DOMAIN=x.co.kr\n' > "$SB/.env"
+# shellcheck disable=SC2034 # read by apply_backup_s3_env
+( MALKKEUM_BACKUP_S3_BUCKET=dahae-main-backupbucket-1a2b3c MALKKEUM_BACKUP_S3_REGION=ap-northeast-2; apply_backup_s3_env )
+t  "s3 env: written to .env"                        eq "$(env_get BACKUP_S3_BUCKET) $(env_get BACKUP_S3_REGION)" "dahae-main-backupbucket-1a2b3c ap-northeast-2"
+( unset MALKKEUM_BACKUP_S3_BUCKET; apply_backup_s3_env )
+t  "s3 env: a re-run without it keeps the bucket"   eq "$(env_get BACKUP_S3_BUCKET)" dahae-main-backupbucket-1a2b3c
+# shellcheck disable=SC2016 # literal ${...} on purpose
+t  "compose hands the bucket to the api"            grep -qF 'BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}' "$ROOT/deploy/docker-compose.yml"
+t  "the template passes the bucket and region to the installer" grep -qF 'MALKKEUM_BACKUP_S3_BUCKET=${BackupBucket} MALKKEUM_BACKUP_S3_REGION=${AWS::Region}' "$ROOT/deploy/aws/dahae.cfn.yaml"
+nt "tools mode needs an installed server"           installed_here
+printf 'API_IMAGE=repo/api@sha256:aa\n' >> "$SB/.env"
+t  "...which has its images set"                    installed_here
+rm -rf "$SB/.env" "$SB/host" "$SB/rel" "$SB/tools.log"
+
+bash "$ROOT/scripts/ci/agent-selftest.sh" >/dev/null ||{ FAIL=$((FAIL + 1)); echo "FAIL: agent self-test (run scripts/ci/agent-selftest.sh)"; }
 
 echo "installer self-test: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ]
