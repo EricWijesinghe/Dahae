@@ -480,6 +480,16 @@ t  "running digest: no 24-hour wait"     has_updated "$(auto_run)"
 rm -f "$SB/host/applied-key" "$SB/host/first-seen"
 nt "unreadable web manifest: no update"  has_updated "$(WEB_FAIL=1 auto_run)"
 t  "unreadable web manifest: exit 1 so the alert runs" eq "$(WEB_FAIL=1 auto_run >/dev/null; echo $?)" 1
+# after a rollback: the channel still at the version rolled back from is held; a newer one updates again
+printf 'CHANNEL=stable\nVERSION=stable\nIMAGE_REPO=ghcr.io/owner\n' > "$SB/.env"; printf '%s\n' "$key" > "$SB/host/applied-key"
+printf '%s\n' "$key" > "$SB/host/rollback-hold"
+out=$(auto_run)
+nt "rollback hold: the version rolled back from is not applied again" has_updated "$out"
+t  "...and the run says why"             eq "$(printf '%s\n' "$out" | grep -c '되돌린 버전을 지켜요')" 1
+printf 'CHANNEL=beta\nVERSION=beta\nIMAGE_REPO=ghcr.io/owner\n' > "$SB/.env"; FAKE_MANIFEST='{"v":2}'
+t  "rollback hold: a newer version updates again" has_updated "$(auto_run)"
+nt "rollback hold: an unreadable registry does not update" has_updated "$(WEB_FAIL=1 auto_run)"
+FAKE_MANIFEST='{"v":1}'; rm -f "$SB/host/rollback-hold" "$SB/host/applied-key"
 
 # setup code: shown in groups of four for 7 days, then only --renew gives a new one
 printf 'SETUP_CODE=ABCDEFGHJKMN\nSETUP_CODE_AT=%s\n' "$(date +%s)" > "$SB/.env"
@@ -767,7 +777,7 @@ t  "domain: .env untouched on refusal"     grep -qx 'DOMAIN=old.co.kr' "$SB/.env
 nt "domain: no restart on refusal"         test -e "$SB/dc.log"
 rm -rf "$SB/.env" "$SB"/backups/env-before-domain-* "$SB/dc.log" "$SB/curl.log" "$SB/jobs"
 
-# ---- dahae update refreshes the host tools from the delivery repo: signed SHA256SUMS, matching install.sh, else stop ----
+# ---- dahae update refreshes the host tools from the delivery repo: signed SHA256SUMS, matching install.sh and agent.sh, else stop ----
 cd "$SB"; mkdir -p "$SB/host" "$SB/bin"
 cat > "$SB/bin/cosign" <<'COS'
 #!/usr/bin/env bash
@@ -775,56 +785,87 @@ printf '%s\n' "$*" > "$(dirname "$0")/blob-args"
 [ "${FAKE_BLOB:-ok}" = ok ]
 COS
 chmod 755 "$SB/bin/cosign"
-mkrel() { # mkrel 위치 : 가짜 배포본 (install.sh 와 그 지문 파일, 서명 묶음)
-  local d="$SB/rel/$1"; mkdir -p "$d"
-  printf '#!/usr/bin/env bash\necho "tools %s"\n' "$1" > "$d/install.sh"
-  (cd "$d" && sha256sum install.sh > SHA256SUMS && printf 'bundle' > SHA256SUMS.bundle)
+mkrel() { # mkrel 태그 [old] : 가짜 배포본 (install.sh·agent.sh, 지문 파일, 서명 묶음). old: 관리 도구 모드를 모르는 설치 프로그램
+  local d="$SB/rel/$1" mode='# [ "${MALKKEUM_HOST_UPDATE:-}" != tools ]'; mkdir -p "$d"
+  [ "${2:-}" != old ] || mode='# full install only'
+  printf '#!/usr/bin/env bash\necho "agent %s"\n' "$1" > "$d/agent.sh"
+  printf '#!/usr/bin/env bash\n%s\nAGENT_SHA256=%s\necho "tools %s"\n' "$mode" "$(sha256sum "$d/agent.sh" | cut -d' ' -f1)" "$1" > "$d/install.sh"
+  (cd "$d" && sha256sum install.sh agent.sh > SHA256SUMS && printf 'bundle' > SHA256SUMS.bundle)
 }
-mkrel v1.7.0; mkrel main
+mkchan() { mkdir -p "$SB/rel/$1"; printf '%s\n' "$2" > "$SB/rel/$1/VERSION"; } # mkchan 가지 버전 : 채널 가지가 가리키는 태그 (publish-delivery 의 VERSION)
+mkrel v1.7.0; mkrel v1.8.0; mkrel v1.5.0 old; mkchan main 1.8.0
 tools_env() { printf 'DELIVERY_RAW=file://%s/rel\nSIGNER_REPO=EricWijesinghe/Dahae\nIMAGE_SOURCE=remote\nIMAGE_VERIFY=on\nIMAGE_REPO=repo\nAPI_IMAGE=old\nWEB_IMAGE=old\nVERSION=stable\n' "$SB" > "$SB/.env"; rm -rf "$SB/host"/*; rm -f "$SB/tools.log"; }
 t  "tools ref: a tag stays"           eq "$(tools_ref v1.7.0)" v1.7.0
 t  "tools ref: a bare tag gets its v" eq "$(tools_ref 1.7.0)" v1.7.0
 t  "tools ref: stable is main"        eq "$(tools_ref stable)" main
 t  "tools ref: beta is beta"          eq "$(tools_ref beta)" beta
 t  "tools ref: odd names give none"   eq "$(tools_ref 'v1.7;id')$(tools_ref local)$(tools_ref v1.7)" ""
+t  "version order: 1.7.9 is older than 1.8.0" ver_older v1.7.9 v1.8.0
+nt "version order: 1.10.0 is not older than 1.9.0" ver_older v1.10.0 v1.9.0
+nt "version order: a stable release is not older than its beta" ver_older v1.8.0 v1.8.0-beta.2
 fetch() { ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; fetch_installer "$1" host/next ) >/dev/null 2>&1; }
 tools_env
 t  "fetch: signed sums and matching install.sh pass" fetch v1.7.0
 t  "fetch: verify-blob with the bundle"             grep -qF -- "verify-blob --bundle host/next/SHA256SUMS.bundle" "$SB/bin/blob-args"
-t  "fetch: the release workflow identity"           grep -qF 'EricWijesinghe/Dahae/\.github/workflows/release\.yml@refs/tags/v' "$SB/bin/blob-args"
+t  "fetch: signed at exactly this tag"              grep -qF 'EricWijesinghe/Dahae/\.github/workflows/release\.yml@refs/tags/v1\.7\.0$' "$SB/bin/blob-args"
 t  "fetch: the GitHub OIDC issuer"                  grep -qF -- "--certificate-oidc-issuer https://token.actions.githubusercontent.com" "$SB/bin/blob-args"
+t  "fetch: the agent of the same release is kept"   grep -qF 'agent v1.7.0' "$SB/host/next/agent.sh"
 FAKE_BLOB=bad; export FAKE_BLOB
 nt "fetch: a bad signature stops"                   fetch v1.7.0
 FAKE_BLOB=ok
 printf 'echo evil\n' >> "$SB/rel/v1.7.0/install.sh"
 nt "fetch: an install.sh unlike SHA256SUMS stops"   fetch v1.7.0
+mkrel v1.7.0; printf 'echo evil\n' >> "$SB/rel/v1.7.0/agent.sh"
+nt "fetch: an agent.sh unlike SHA256SUMS stops"     fetch v1.7.0
+mkrel v1.7.0; sed -i 's/^AGENT_SHA256=.*/AGENT_SHA256=0000000000000000000000000000000000000000000000000000000000000000/' "$SB/rel/v1.7.0/install.sh"
+(cd "$SB/rel/v1.7.0" && sha256sum install.sh agent.sh > SHA256SUMS)
+nt "fetch: an agent.sh unlike the installer's pinned hash stops" fetch v1.7.0
 mkrel v1.7.0; printf '%s  agent.sh\n' "$(printf '0%.0s' $(seq 64))" > "$SB/rel/v1.7.0/SHA256SUMS"
 nt "fetch: no install.sh line stops"                fetch v1.7.0
 mkrel v1.7.0; rm -f "$SB/rel/v1.7.0/SHA256SUMS.bundle"
 nt "fetch: a missing bundle stops"                  fetch v1.7.0
 mkrel v1.7.0
 nt "fetch: an unknown release stops"                fetch v9.9.9
-# upd 버전 [HEALTH] : 가짜 백업·이미지로 cmd_update 를 돌려요. 단계는 tools.log 에, 종료 코드를 돌려줘요
+t  "fetch: the channel is read as its tag"          fetch main
+t  "...and signed at that tag"                      grep -qF 'release\.yml@refs/tags/v1\.8\.0$' "$SB/bin/blob-args"
+printf 'v1.9.0\n' > "$SB/host/version-history"
+nt "fetch: a channel older than this server's newest version stops" fetch main
+rm -f "$SB/host/version-history"; mkchan main 'v1.8;id'
+nt "fetch: an odd channel version stops"            fetch main
+mkchan main 1.8.0
+t  "fetch: an installer without tools mode is told apart" eq "$( ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; fetch_installer v1.5.0 host/next ) >/dev/null 2>&1; echo $?)" 2
+# upd 버전 [HEALTH] : 가짜 백업·이미지로 cmd_update 를 돌려요. 단계는 tools.log 에, 종료 코드를 돌려줘요. SAME=1: 같은 이미지로 다시 맞추기
 upd() {
   ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; H=${2:-ok}
     log() { printf '%s\n' "$*" >> "$SB/tools.log"; }
     db_roles() { :; }; cmd_backup() { log backup; }; prune_keep_tags() { :; }; record_version() { :; }
     # shellcheck disable=SC2034 # read by the sourced cmd_update
     pull_images() { NEW_API=repo/api:new; NEW_WEB=repo/web:new; }
-    running_image() { echo "$2"; }; digest_ref() { echo "$1"; }; docker() { echo "id-$*"; }
+    running_image() { echo "$2"; }; digest_ref() { echo "$1"; }
+    docker() { if [ -n "${SAME:-}" ]; then echo same; else echo "id-$*"; fi; }
     set_images() { log "images $1"; }; wait_healthy() { [ "$H" = ok ] || [ "$(grep '^images' "$SB/tools.log" | tail -n1)" != "images repo/api:new" ]; }
-    run_installer_tools() { log "tools $(bash "$1")"; }
+    run_installer_tools() { [ -z "${TOOLS_FAIL:-}" ] || return 1; log "tools $(bash "$1") $(bash "$2")"; }
     cmd_update "$1" ) >/dev/null 2>&1
 }
-tools_env; upd v1.7.0; rc=$?
+tools_env; printf 'x\n' > "$SB/host/rollback-hold"; upd v1.7.0; rc=$?
 t  "update: ok"                                     eq "$rc" 0
-t  "update: tools come after the new images"        eq "$(tail -n1 "$SB/tools.log")" "tools tools v1.7.0"
+t  "update: tools come after the new images"        eq "$(tail -n1 "$SB/tools.log")" "tools tools v1.7.0 agent v1.7.0"
 t  "update: the verified installer is kept"         grep -qF 'tools v1.7.0' "$SB/host/install.sh"
 t  "update: ...root-only"                           eq "$(stat -c %a "$SB/host/install.sh")" 600
+t  "update: ...with its agent"                      grep -qF 'agent v1.7.0' "$SB/host/agent.keep.sh"
 nt "update: no previous installer yet"              test -e "$SB/host/install.prev.sh"
+nt "update: a chosen update ends a rollback hold"   test -e "$SB/host/rollback-hold"
 upd stable
-t  "update: the channel takes its branch"           eq "$(tail -n1 "$SB/tools.log")" "tools tools main"
+t  "update: the channel takes the tag it points at" eq "$(tail -n1 "$SB/tools.log")" "tools tools v1.8.0 agent v1.8.0"
 t  "update: the last installer is kept for rollback" grep -qF 'tools v1.7.0' "$SB/host/install.prev.sh"
+t  "update: ...and its agent"                       grep -qF 'agent v1.7.0' "$SB/host/agent.prev.sh"
+SAME=1 upd stable; SAME=1 upd stable
+t  "same image again (weekly auto-update): the rollback installer stays" grep -qF 'tools v1.7.0' "$SB/host/install.prev.sh"
+t  "...and its agent stays"                         grep -qF 'agent v1.7.0' "$SB/host/agent.prev.sh"
+rm -f "$SB/tools.log"; DAHAE_TOOLS_FRESH=1 upd v1.7.0
+t  "install-line re-run with new images: the old installer becomes the rollback one" grep -qF 'tools v1.8.0' "$SB/host/install.prev.sh"
+nt "...and none is kept for the tools the install line just wrote" test -e "$SB/host/install.sh"
+nt "...and no second refresh"                       grep -q '^tools' "$SB/tools.log"
 tools_env; FAKE_BLOB=bad upd v1.7.0; rc=$?
 t  "update: a bad signature stops the update"       eq "$rc" 1
 nt "...before the backup or any image"              test -e "$SB/tools.log"
@@ -832,8 +873,10 @@ tools_env; upd v1.7.0 fail; rc=$?
 t  "update: a new version that does not answer exits 3" eq "$rc" 3
 nt "...and the tools stay"                          grep -q '^tools' "$SB/tools.log"
 nt "...and no installer is kept"                    test -e "$SB/host/install.sh"
-tools_env; DAHAE_TOOLS_FRESH=1 upd v1.7.0
-nt "update from the installer: no second refresh"   grep -q '^tools' "$SB/tools.log"
+tools_env; TOOLS_FAIL=1 upd v1.7.0; rc=$?
+t  "update: new images fine but the tools refresh failed exits 5" eq "$rc:$(grep -c '^images' "$SB/tools.log")" 5:1
+tools_env; upd v1.5.0; rc=$?
+t  "update to a release whose installer has no tools mode keeps the tools" eq "$rc:$(grep -c '^tools' "$SB/tools.log")" 0:0
 tools_env; env_set DELIVERY_RAW ''; upd v1.7.0; rc=$?
 t  "update without a delivery address still updates" eq "$rc:$(grep -c '^images' "$SB/tools.log")" 0:1
 nt "...with the tools as they are"                  grep -q '^tools' "$SB/tools.log"
@@ -845,28 +888,74 @@ rb() {
     log() { printf '%s\n' "$*" >> "$SB/tools.log"; }
     cmd_backup() { log backup; }; running_image() { echo "$2"; }; digest_ref() { echo "$1"; }
     dc() { [ "$1" = exec ] && printf '%s\n' "$GATE"; return 0; }
+    docker() { [ -z "${NO_MANIFEST:-}" ] || return 1; echo "manifest-$*"; }
     set_images() { log "images $1"; }; wait_healthy() { return 0; }
-    run_installer_tools() { log "tools $(bash "$1")"; }
+    run_installer_tools() { [ -z "${TOOLS_FAIL:-}" ] || return 1; log "tools $(bash "$1") $(bash "$2" 2>/dev/null)"; }
     cmd_rollback ) >/dev/null 2>&1
 }
 tools_env; env_set PREV_API_IMAGE prev; env_set PREV_WEB_IMAGE prevweb
-install -m 600 "$SB/rel/main/install.sh" "$SB/host/install.sh"; install -m 600 "$SB/rel/v1.7.0/install.sh" "$SB/host/install.prev.sh"
+install -m 600 "$SB/rel/v1.8.0/install.sh" "$SB/host/install.sh"; install -m 600 "$SB/rel/v1.7.0/install.sh" "$SB/host/install.prev.sh"
+install -m 600 "$SB/rel/v1.8.0/agent.sh" "$SB/host/agent.keep.sh"; install -m 600 "$SB/rel/v1.7.0/agent.sh" "$SB/host/agent.prev.sh"
 rb 2; rc=$?
 t  "rollback: payouts in doubt exit 4"              eq "$rc" 4
 nt "...with the images unchanged"                   grep -q '^images' "$SB/tools.log"
-t  "...and the installers unchanged"                grep -qF 'tools main' "$SB/host/install.sh"
+t  "...and the installers unchanged"                grep -qF 'tools v1.8.0' "$SB/host/install.sh"
 rm -f "$SB/tools.log"; rb 0; rc=$?
 t  "rollback: ok"                                   eq "$rc" 0
 t  "rollback: the previous images first"            eq "$(grep '^images' "$SB/tools.log")" "images prev"
-t  "rollback: the tools follow the rolled-back version" eq "$(tail -n1 "$SB/tools.log")" "tools tools v1.7.0"
-t  "rollback: the newer installer is kept for a second rollback" grep -qF 'tools main' "$SB/host/install.prev.sh"
-rm -f "$SB/host/install.prev.sh" "$SB/tools.log"; env_set PREV_API_IMAGE prev2; rb 0; rc=$?
+t  "rollback: the tools and agent follow the rolled-back version" eq "$(tail -n1 "$SB/tools.log")" "tools tools v1.7.0 agent v1.7.0"
+t  "rollback: the newer installer is kept for a second rollback" grep -qF 'tools v1.8.0' "$SB/host/install.prev.sh"
+t  "...with its agent"                              grep -qF 'agent v1.8.0' "$SB/host/agent.prev.sh"
+t  "rollback: auto-update holds the version it fled" test -s "$SB/host/rollback-hold"
+rm -f "$SB/tools.log"; env_set PREV_API_IMAGE prev3; TOOLS_FAIL=1 rb 0; rc=$?
+t  "rollback: images back but the tools not exits 5" eq "$rc:$(grep -c '^images' "$SB/tools.log")" 5:1
+rm -f "$SB/host/install.prev.sh" "$SB/tools.log" "$SB/host/rollback-hold"; env_set PREV_API_IMAGE prev2; NO_MANIFEST=1 rb 0; rc=$?
 t  "rollback with no earlier installer still rolls back" eq "$rc:$(grep -c '^images' "$SB/tools.log")" 0:1
 nt "...and leaves the tools"                        grep -q '^tools' "$SB/tools.log"
+nt "...and an unreadable registry leaves no hold"   test -e "$SB/host/rollback-hold"
+rm -f "$SB/tools.log"; env_set PREV_API_IMAGE ''; rb 0; rc=$?
+t  "rollback with no previous version exits 6"      eq "$rc" 6
+nt "...before any backup"                           test -e "$SB/tools.log"
 t  "the CLI is written by rename (a running dahae update keeps its file)" grep -qF 'mv -f "$tmp" "$1"' "$ROOT/deploy/install.sh"
 t  "the agent service may rewrite the CLI and its units" grep -qF 'ReadWritePaths=$DIR /etc/cron.d /etc/logrotate.d /run /usr/local/bin /etc/systemd/system' "$ROOT/deploy/install.sh"
 ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; cmd_keys_confirm ) >/dev/null 2>&1
 t  "keys-confirm records the key copy"              test -n "$(env_get KEY_ESCROW_AT)"
+printf 'DB_PASSWORD=%s\nDATA_KEY=%s\nJWT_SECRET=%s\nAPI_DB_PASSWORD=%s\n' "$(printf 'a%.0s' $(seq 48))" "$(printf 'b%.0s' $(seq 64))" "$(printf 'c%.0s' $(seq 64))" "$(printf 'd%.0s' $(seq 48))" > "$SB/.env"
+mkdir -p "$SB/backups"; rm -f "$SB"/backups/keys-*.env.enc
+( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; has_tty() { return 1; }; DAHAE_KEYS_PASSPHRASE='correct horse battery' cmd_keys_backup ) >/dev/null 2>&1
+copy=$(ls "$SB"/backups/keys-*.env.enc 2>/dev/null | head -n1)
+t  "keys-backup seals exactly the two keys keys-restore reads" eq "$(keys_open 'correct horse battery' < "$copy")" "$(printf 'DATA_KEY=%s\nJWT_SECRET=%s' "$(printf 'b%.0s' $(seq 64))" "$(printf 'c%.0s' $(seq 64))")"
+
+# ---- install.sh tools mode (what dahae update and rollback run): only the tools are rewritten, the server stays ----
+tools_main() { # tools_main : 설치된 서버(가짜)에서 MALKKEUM_HOST_UPDATE=tools 로 main 을 돌려요. 단계는 main.log 에
+  ( DAHAE_SELFTEST=1 . "$ROOT/deploy/install.sh"; set +e
+    DIR=$SB/srv BIN=$SB/srv/bin; mkdir -p "$BIN"
+    log() { printf '%s\n' "$*" >> "$SB/main.log"; }
+    id() { echo 0; }
+    for f in preflight install_packages dns_check harden_host write_fresh_env final_banner; do eval "$f() { log 'BAD $f'; }"; done
+    install_cosign() { log cosign; }; write_schedules() { log schedules; }; install_agent() { log "install_agent ready=${AGENT_READY:-0}"; }
+    dc() { log "dc $*"; return 0; }
+    PATH="$SB/fakebin:$PATH" # a dahae update or prepare would reach docker: the fake one logs it
+    MALKKEUM_HOST_UPDATE=tools MALKKEUM_AGENT_FILE=$SB/agent-src.sh main ) >/dev/null 2>&1
+}
+mkdir -p "$SB/srv" "$SB/fakebin"; rm -f "$SB/main.log"
+printf '#!/usr/bin/env bash\necho "docker $*" >> "%s/main.log"\n' "$SB" > "$SB/fakebin/docker"; chmod +x "$SB/fakebin/docker"
+printf '#!/usr/bin/env bash\necho agent\n' > "$SB/agent-src.sh"
+printf 'DOMAIN=myshop.co.kr\nACME_EMAIL=owner@myshop.co.kr\nCHANNEL=stable\nVERSION=stable\nAPI_IMAGE=repo/api@sha256:aa\nWEB_IMAGE=repo/web@sha256:bb\nSIGNER_REPO=EricWijesinghe/Dahae\nAPI_DB_PASSWORD=%s\nDATA_KEY=%s\nJWT_SECRET=%s\n' \
+  "$(printf 'd%.0s' $(seq 48))" "$(printf 'b%.0s' $(seq 64))" "$(printf 'c%.0s' $(seq 64))" > "$SB/srv/.env"
+before=$(grep -E '^(DATA_KEY|JWT_SECRET|API_IMAGE)=' "$SB/srv/.env")
+tools_main; rc=$?
+t  "tools mode: ok"                                 eq "$rc" 0
+t  "tools mode: restarts with the new compose file"  grep -qxF 'dc up -d --remove-orphans' "$SB/main.log"
+nt "tools mode: no packages, DNS, hardening or fresh keys" grep -q '^BAD' "$SB/main.log"
+nt "tools mode: no image update or prepare"         grep -q '^docker ' "$SB/main.log"
+t  "tools mode: the agent is the handed file, fetched before the rest" eq "$(bash "$SB/srv/agent.sh"):$(grep -c 'install_agent ready=1' "$SB/main.log")" "agent:1"
+t  "tools mode: the CLI is rewritten"               test -x "$SB/srv/bin/dahae"
+t  "tools mode: keys and images unchanged"          eq "$(grep -E '^(DATA_KEY|JWT_SECRET|API_IMAGE)=' "$SB/srv/.env")" "$before"
+sed -i '/^API_IMAGE=/d' "$SB/srv/.env"; rm -f "$SB/main.log"; tools_main; rc=$?
+nt "tools mode on a server with no images refuses"  eq "$rc" 0
+nt "...before writing anything"                     grep -q '^dc ' "$SB/main.log"
+rm -rf "$SB/srv" "$SB/fakebin" "$SB/main.log" "$SB/agent-src.sh"
 
 # ---- AWS backup bucket from the template: checked, then written to .env for the app ----
 s3env() { ( MALKKEUM_BACKUP_S3_BUCKET=$1 MALKKEUM_BACKUP_S3_REGION=$2; check_backup_s3_env ) >/dev/null 2>&1; }

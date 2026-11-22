@@ -447,8 +447,13 @@ SIGN_ISSUER=https://token.actions.githubusercontent.com
 BACKUP_NAME_RE='^db-[0-9]{8}-[0-9]{6}\.sql\.gz(\.enc)?$'
 INSTALLER_KEEP=host/install.sh       # 지금 버전의 서명 확인된 설치 프로그램 (dahae update 가 둬요)
 INSTALLER_PREV=host/install.prev.sh  # 바로 전 버전의 것: dahae rollback 이 관리 도구를 그 버전으로 되돌릴 때 써요
+AGENT_KEEP=host/agent.keep.sh        # 그 설치 프로그램과 같은 릴리스의 작업 실행기 (서명된 SHA256SUMS 로 확인한 것)
+AGENT_PREV=host/agent.prev.sh        # 바로 전 버전의 작업 실행기: 되돌릴 때 다시 내려받지 않아요
 TOOLS_NEXT=host/next                 # 새 버전의 설치 프로그램을 받아 확인하는 곳
+ROLLBACK_HOLD=host/rollback-hold     # 되돌린 뒤 자동 업데이트가 같은 버전을 다시 올리지 않게, 되돌리기 전 버전의 이미지 목록 지문
 RC_PAYOUTS_IN_DOUBT=4                # 되돌리기를 정산 확인 때문에 멈췄을 때의 종료 코드 (작업 실행기가 이유를 보여 줘요)
+RC_TOOLS_STALE=5                     # 새(또는 되돌린) 버전은 정상인데 관리 도구만 바꾸지 못했을 때의 종료 코드
+RC_NO_PREVIOUS=6                     # 되돌릴 이전 버전 기록이 없을 때의 종료 코드
 USAGE='사용법: dahae <명령>
   status                      서비스 상태
   update [태그]               백업 → 새 버전 → 응답 없으면 자동으로 되돌리기
@@ -538,7 +543,11 @@ valid_team_id() { printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]{10}$'; }
 valid_backup_name() { printf '%s' "$1" | grep -Eq "$BACKUP_NAME_RE"; }
 valid_signer() { printf '%s' "$1" | grep -Eq '^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$'; }
 # 서명 인증서는 이 저장소의 release.yml 이 v 태그에서 실행됐을 때만 맞아요 (GitHub 이름은 대소문자 구분 없음).
-signer_re() { printf '(?i)^https://github\\.com/%s/\\.github/workflows/release\\.yml@refs/tags/v[0-9]' "$(printf '%s' "$1" | sed 's/\./\\./g')"; }
+signer_re() { # signer_re 서명자 [태그] : 태그를 주면 정확히 그 태그에서 서명한 것만 맞아요 (관리 도구는 받은 버전 그대로여야 해요)
+  local tag='v[0-9]'
+  [ -z "${2:-}" ] || tag="$(printf '%s' "$2" | sed 's/\./\\./g')\$"
+  printf '(?i)^https://github\\.com/%s/\\.github/workflows/release\\.yml@refs/tags/%s' "$(printf '%s' "$1" | sed 's/\./\\./g')" "$tag"
+}
 
 purge_ok() { # purge_ok [입력한 도메인] : 데이터 삭제는 --yes 나 DAHAE_YES 로 넘어가지 않아요. 도메인을 직접 맞혀야 해요
   local d YES=0; d=$(env_get DOMAIN)
@@ -783,62 +792,106 @@ tools_ref() { # tools_ref 버전 : 배포 저장소에서 그 버전의 관리 �
   return 0
 }
 
-fetch_installer() { # fetch_installer 위치 폴더 : 그 버전의 install.sh 를 받아, 서명이 확인된 SHA256SUMS 와 지문이 같을 때만 남겨요. 하나라도 다르면 멈춰요
-  local ref="$1" out="$2" base signer want got f cosign="$DIR/bin/cosign"
+ver_older() { # ver_older a b : a 의 버전 번호(X.Y.Z, 접미사는 빼요)가 b 보다 낮으면 성공
+  local a="${1#v}" b="${2#v}"; a=${a%%-*}; b=${b%%-*}
+  [ "$a" != "$b" ] && [ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)" = "$a" ]
+}
+newest_installed() { sed -n 's/^\(v[0-9][0-9.]*\).*/\1/p' host/version-history 2>/dev/null | sort -V | tail -n1; } # 이 서버에 올렸던 가장 높은 버전
+
+fetch_installer() { # fetch_installer 위치 폴더 : 그 버전의 install.sh·agent.sh 를 받아, 그 태그에서 서명된 SHA256SUMS 와 지문이 같을 때만 남겨요. 하나라도 다르면 멈춰요
+  # 종료 코드 2: 받은 설치 프로그램이 관리 도구만 바꾸는 모드를 몰라요 (오래된 버전). 관리 도구는 그대로 둬요
+  local ref="$1" ch="$1" out="$2" base signer want got f v newest cosign="$DIR/bin/cosign"
   base=$(env_get DELIVERY_RAW); signer=$(env_get SIGNER_REPO)
   valid_signer "$signer" || die "서명자 설정(SIGNER_REPO)이 이상해서 업데이트를 멈췄어요: '$signer'. 지금 버전 그대로예요."
   [ -x "$cosign" ] || die "서명 확인 도구($cosign)가 없어서 업데이트를 멈췄어요. 설치 명령을 다시 실행하세요. 지금 버전 그대로예요."
+  case "$ref" in main|beta) # 채널은 바뀌는 가지예요: 지금 가리키는 태그로 바꿔 받고, 그 태그의 서명만 믿어요
+    v=$(curl -fsSL --retry 3 --max-time 30 "$base/$ref/VERSION" | tr -d '[:space:]') \
+      || die "채널($ch)의 버전 기록을 받지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+    ref=$(tools_ref "${v#v}")
+    [ -n "$ref" ] || die "채널($ch)의 버전 기록이 이상해서 업데이트를 멈췄어요: '$v'. 지금 버전 그대로예요."
+    newest=$(newest_installed)
+    if [ -n "$newest" ] && ver_older "$ref" "$newest"; then
+      die "채널이 이 서버에 올렸던 버전($newest)보다 오래된 관리 도구($ref)를 가리켜서 업데이트를 멈췄어요. 개발자에게 알려 주세요. 지금 버전 그대로예요."
+    fi ;;
+  esac
   mkdir -p "$out"
   for f in install.sh SHA256SUMS SHA256SUMS.bundle; do
     SCRATCH+=("$out/$f")
     curl -fsSL --retry 3 --max-time 120 -o "$out/$f" "$base/$ref/$f" \
       || die "새 버전의 관리 도구($f)를 내려받지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
   done
-  # 이미지와 같은 규칙: 이 저장소의 release.yml 이 v 태그에서 서명한 SHA256SUMS 만 믿어요
-  TUF_ROOT="$DIR/.sigstore" "$cosign" verify-blob --bundle "$out/SHA256SUMS.bundle" --certificate-identity-regexp "$(signer_re "$signer")" \
+  # 이미지와 같은 서명자(release.yml), 그리고 정확히 이 태그: 예전 릴리스의 서명된 파일을 다시 내밀어도 맞지 않아요
+  TUF_ROOT="$DIR/.sigstore" "$cosign" verify-blob --bundle "$out/SHA256SUMS.bundle" --certificate-identity-regexp "$(signer_re "$signer" "$ref")" \
       --certificate-oidc-issuer "$SIGN_ISSUER" "$out/SHA256SUMS" >/dev/null 2>&1 \
-    || die "새 버전 지문 파일(SHA256SUMS)의 서명을 확인하지 못해서 업데이트를 멈췄어요 ($signer). 지금 버전 그대로예요."
-  want=$(awk '$2 == "install.sh" || $2 == "*install.sh" { print $1; exit }' "$out/SHA256SUMS")
-  got=$(sha256sum "$out/install.sh" | cut -d' ' -f1)
-  [ -n "$want" ] && [ "$want" = "$got" ] || die "받은 install.sh 의 지문이 서명된 SHA256SUMS 와 달라서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+    || die "새 버전 지문 파일(SHA256SUMS)의 서명을 확인하지 못해서 업데이트를 멈췄어요 ($signer, $ref). 지금 버전 그대로예요."
+  sums_ok "$out" install.sh || die "받은 install.sh 의 지문이 서명된 SHA256SUMS 와 달라서 업데이트를 멈췄어요. 지금 버전 그대로예요."
   bash -n "$out/install.sh" || die "받은 install.sh 가 손상됐어요. 지금 버전 그대로예요."
+  grep -qF 'MALKKEUM_HOST_UPDATE:-}" != tools' "$out/install.sh" || return 2
+  SCRATCH+=("$out/agent.sh")
+  curl -fsSL --retry 3 --max-time 120 -o "$out/agent.sh" "$base/$ref/agent.sh" \
+    || die "새 버전의 작업 실행기(agent.sh)를 내려받지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+  want=$(sed -n 's/^AGENT_SHA256=\([0-9a-f]\{64\}\)$/\1/p' "$out/install.sh")
+  got=$(sha256sum "$out/agent.sh" | cut -d' ' -f1)
+  sums_ok "$out" agent.sh && [ -n "$want" ] && [ "$want" = "$got" ] \
+    || die "받은 agent.sh 의 지문이 서명된 SHA256SUMS·install.sh 와 달라서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+}
+sums_ok() { # sums_ok 폴더 파일 : 파일의 SHA-256 이 같은 폴더의 SHA256SUMS 에 적힌 값과 같아야 해요
+  local want got
+  want=$(awk -v f="$2" '$2 == f || $2 == "*" f { print $1; exit }' "$1/SHA256SUMS")
+  got=$(sha256sum "$1/$2" | cut -d' ' -f1)
+  [ -n "$want" ] && [ "$want" = "$got" ]
 }
 
 tools_prepare() { # tools_prepare 버전 : 이미지를 바꾸기 전에 새 버전의 관리 도구를 받아 확인해요 (TOOLS_READY=1). 받을 곳이 없는 설치는 건너뛰어요
-  local ref; ref=$(tools_ref "$1"); TOOLS_READY=0
+  local ref rc=0; ref=$(tools_ref "$1"); TOOLS_READY=0
   [ -z "${DAHAE_TOOLS_FRESH:-}" ] || return 0 # 설치 프로그램이 방금 관리 도구를 썼어요
   if [ -z "$(env_get DELIVERY_RAW)" ] || [ -z "$ref" ] || [ "$(env_get IMAGE_SOURCE)" = local ] || [ "$(env_get IMAGE_VERIFY)" = off ]; then
     warn "관리 도구(dahae 명령·작업 실행기·설정)는 그대로 둬요 (배포 주소가 없거나 직접 불러온 이미지예요). 바꾸려면 설치 명령을 다시 실행하세요."
     return 0
   fi
-  fetch_installer "$ref" "$TOOLS_NEXT"
+  fetch_installer "$ref" "$TOOLS_NEXT" || rc=$?
+  if [ "$rc" = 2 ]; then warn "그 버전의 설치 프로그램은 관리 도구만 바꾸는 모드가 없어서 관리 도구는 그대로 둬요."; return 0; fi
   TOOLS_READY=1
 }
 
-run_installer_tools() { MALKKEUM_HOST_UPDATE=tools DAHAE_TOOLS_FRESH=1 bash "$1" </dev/null; } # .env·데이터는 그대로, 관리 도구만 다시 써요
+# .env·데이터는 그대로, 관리 도구만 다시 써요. 작업 실행기는 확인해 둔 파일을 넘겨서 다시 내려받지 않아요
+run_installer_tools() { # run_installer_tools 설치프로그램 작업실행기
+  local agent=""; [ ! -f "${2:-}" ] || agent="$DIR/$2"
+  MALKKEUM_HOST_UPDATE=tools DAHAE_TOOLS_FRESH=1 MALKKEUM_AGENT_FILE="$agent" bash "$1" </dev/null
+}
 
-tools_apply() { # 새 버전이 정상이면 확인해 둔 설치 프로그램으로 관리 도구를 바꿔요. 지금 것은 되돌리기용으로 남겨요
+keep_as_prev() { if [ -f "$1" ]; then mv -f "$1" "$2"; else rm -f "$2"; fi; } # keep_as_prev 지금 이전 : 지금 것을 되돌리기용으로 남겨요
+tools_rotate() { keep_as_prev "$INSTALLER_KEEP" "$INSTALLER_PREV"; keep_as_prev "$AGENT_KEEP" "$AGENT_PREV"; } # 이미지가 실제로 바뀔 때만 불러요
+
+tools_apply() { # 새 버전이 정상이면 확인해 둔 설치 프로그램으로 관리 도구를 바꿔요
   [ "${TOOLS_READY:-0}" = 1 ] || return 0
-  if [ -f "$INSTALLER_KEEP" ]; then mv -f "$INSTALLER_KEEP" "$INSTALLER_PREV"; else rm -f "$INSTALLER_PREV"; fi
   install -m 600 "$TOOLS_NEXT/install.sh" "$INSTALLER_KEEP"
-  run_installer_tools "$INSTALLER_KEEP" \
-    || die "새 버전은 정상이에요. 관리 도구(dahae 명령·작업 실행기)를 바꾸지 못했어요. 설치 명령을 다시 실행해 주세요."
+  install -m 600 "$TOOLS_NEXT/agent.sh" "$AGENT_KEEP"
+  run_installer_tools "$INSTALLER_KEEP" "$AGENT_KEEP" \
+    || die_code "$RC_TOOLS_STALE" "새 버전은 정상이에요. 관리 도구(dahae 명령·작업 실행기)를 바꾸지 못했어요. 설치 명령을 한 번 다시 실행해 주세요 (안내서 10 C-5)."
   ok "관리 도구도 새 버전으로 바꿨어요"
+}
+
+swap_files() { # swap_files a b : 두 파일을 맞바꿔요 (없는 쪽은 없는 그대로 바뀌어요)
+  local t="$TOOLS_NEXT.swap"; rm -f "$t"
+  if [ -f "$1" ]; then mv -f "$1" "$t"; fi
+  if [ -f "$2" ]; then mv -f "$2" "$1"; fi
+  if [ -f "$t" ]; then mv -f "$t" "$2"; fi
 }
 
 tools_rollback() { # 되돌린 버전의 설치 프로그램이 남아 있으면 관리 도구도 그 버전으로 맞춰요 (없으면 그대로 두고 알려요)
   if [ ! -f "$INSTALLER_PREV" ]; then warn "관리 도구는 그대로 둬요 (전 버전의 설치 프로그램 기록이 없어요)"; return 0; fi
-  mv -f "$INSTALLER_PREV" "$TOOLS_NEXT.swap"
-  if [ -f "$INSTALLER_KEEP" ]; then mv -f "$INSTALLER_KEEP" "$INSTALLER_PREV"; fi
-  mv -f "$TOOLS_NEXT.swap" "$INSTALLER_KEEP"
-  if run_installer_tools "$INSTALLER_KEEP"; then ok "관리 도구도 전 버전으로 되돌렸어요"
-  else warn "전 버전은 정상이에요. 관리 도구는 되돌리지 못했어요. 설치 명령을 다시 실행해 주세요."; fi
+  swap_files "$INSTALLER_PREV" "$INSTALLER_KEEP"; swap_files "$AGENT_PREV" "$AGENT_KEEP"
+  run_installer_tools "$INSTALLER_KEEP" "$AGENT_KEEP" \
+    || die_code "$RC_TOOLS_STALE" "전 버전은 정상이에요. 관리 도구는 되돌리지 못했어요. 설치 명령을 한 번 다시 실행해 주세요 (안내서 10 C-5)."
+  ok "관리 도구도 전 버전으로 되돌렸어요"
 }
 
 cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔요 (로컬 이미지면 먼저 dahae load). 관리 도구도 같은 버전으로 바꿔요
-  local repo ver cur_api cur_web new_api
+  local repo ver cur_api cur_web new_api rotate=0
   printf '\n▶ 업데이트를 시작합니다 (먼저 백업해요)\n'
   repo=$(env_get IMAGE_REPO); ver=${1:-$(env_get VERSION)}
+  rm -f "$ROLLBACK_HOLD" # 사람이(또는 새 버전을 찾은 자동 업데이트가) 고른 업데이트: 되돌린 버전 지키기는 끝나요
   tools_prepare "$ver" # 받거나 확인하지 못하면 아무것도 바꾸기 전에 멈춰요
   db_roles # 백업의 외부 업로드도 앱 계정으로 접속해요: 예전 설치를 처음 올릴 때 계정부터 만들어요
   cmd_backup || die "백업을 끝내지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
@@ -848,7 +901,7 @@ cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔
   new_api=$(docker image inspect -f '{{.Id}}' "$NEW_API")
   # 같은 이미지로 다시 맞추는 경우(설치 프로그램 재실행 등)에는 되돌리기 기록을 덮어쓰지 않아요.
   if [ "$new_api" != "$(docker image inspect -f '{{.Id}}' "$cur_api" 2>/dev/null || true)" ]; then
-    env_set PREV_API_IMAGE "$cur_api"; env_set PREV_WEB_IMAGE "$cur_web"
+    env_set PREV_API_IMAGE "$cur_api"; env_set PREV_WEB_IMAGE "$cur_web"; rotate=1
   fi
   # 새 버전을 띄운 뒤 응답 확인 전에 끊기면(시간 제한·서버 종료) 확인 안 된 새 버전이 남지 않게 이전 버전으로 되돌려요
   # 이전 이미지를 모르면(앱이 멈춰 있고 .env 에도 없음) .env 를 비우지 않게 되돌리지 않고 멈추기만 해요
@@ -865,6 +918,8 @@ cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔
     record_version
     prune_keep_tags
     ok "최신 버전($ver)으로 업데이트했어요"
+    # 관리 도구의 되돌리기 기록도 이미지 기록(PREV_*)과 같이 바뀌어요: 같은 이미지로 다시 맞추면 그대로 둬요
+    [ "$rotate" = 0 ] || tools_rotate
     tools_apply
     return 0
   fi
@@ -901,7 +956,7 @@ cmd_rollback() {
   local prev_api prev_web cur_api cur_web repo
   prev_api=$(env_get PREV_API_IMAGE); prev_web=$(env_get PREV_WEB_IMAGE); repo=$(env_get IMAGE_REPO)
   if [ -z "$prev_api" ] || [ "$prev_api" = "$(env_get API_IMAGE)" ]; then
-    die "되돌릴 이전 버전 기록이 없어요. 업데이트를 한 번 한 뒤에 쓸 수 있어요."
+    die_code "$RC_NO_PREVIOUS" "되돌릴 이전 버전 기록이 없어요. 업데이트를 한 번 한 뒤에 쓸 수 있어요."
   fi
   cmd_backup || die "백업을 끝내지 못해서 되돌리기를 멈췄어요. 지금 버전 그대로예요."
   payouts_settled_for_rollback
@@ -911,6 +966,7 @@ cmd_rollback() {
   set_images "$prev_api" "${prev_web:-$(env_get WEB_IMAGE)}"
   # 데이터베이스 구조 변경(마이그레이션)은 되돌리지 않아요. 이전 버전은 새 구조를 그대로 읽어요.
   if wait_healthy; then ok "이전 버전으로 되돌렸어요"; else die "되돌린 뒤에도 응답이 없어요. 'dahae logs' 를 확인하세요."; fi
+  rollback_hold
   tools_rollback
 }
 
@@ -953,7 +1009,7 @@ cmd_status() {
   else warn "비밀 키 사본을 서버 밖에 보관했다는 확인이 없어요 — 'dahae keys-backup' 을 다시 실행해 확인하세요"; fi
 }
 
-cmd_keys_backup() { # dahae keys-backup : 외부 백업은 DATA_KEY 로 잠겨요. 서버를 잃어도 풀 수 있게 .env 를 비밀번호로 잠근 사본을 만들어요
+cmd_keys_backup() { # dahae keys-backup : 외부 백업은 DATA_KEY 로 잠겨요. 서버를 잃어도 풀 수 있게 비밀 키(DATA_KEY·JWT_SECRET)를 비밀번호로 잠근 사본을 만들어요
   local out pass="${DAHAE_KEYS_PASSPHRASE:-}" again
   out="backups/keys-$(date +%Y%m%d-%H%M%S).env.enc"
   if [ -z "$pass" ]; then
@@ -963,7 +1019,8 @@ cmd_keys_backup() { # dahae keys-backup : 외부 백업은 DATA_KEY 로 잠겨�
     [ "$pass" = "$again" ] || die "두 비밀번호가 달라요. 다시 실행하세요."
   fi
   [ "${#pass}" -ge 12 ] || die "비밀번호는 12자 이상이어야 해요."
-  keys_seal "$pass" < .env > "$out" || { rm -f "$out"; die "비밀 키 사본을 만들지 못했어요 (openssl)."; }
+  # keys-restore 가 쓰는 두 키만 담아요: DB 비밀번호 같은 다른 값은 사본에 없어요 (사본이 새어도 DB 를 열 수 없어요)
+  grep -E '^(DATA_KEY|JWT_SECRET)=' .env | keys_seal "$pass" > "$out" || { rm -f "$out"; die "비밀 키 사본을 만들지 못했어요 (openssl)."; }
   ok "비밀 키 사본: $DIR/$out"
   echo "  이 파일과 비밀번호를 서버 밖(USB, 비밀번호 관리자 등)에 따로 보관하세요. 서버를 잃으면:"
   echo "  새 서버에 설치 → dahae keys-restore <이 파일> → 콘솔에서 외부 백업 연결 → dahae restore-offsite"
@@ -1254,12 +1311,19 @@ cmd_update_schedule() { # dahae update-schedule mon@04:00 | off : 자동 업데�
   ok "자동 업데이트 예약: $spec"
 }
 
-stable_manifest_key() { # API·웹 이미지 목록(stable 태그)의 지문. 둘 중 하나라도 못 읽으면 실패해요
-  local repo m_api m_web
+manifest_key() { # manifest_key 태그 : API·웹 이미지 목록(그 태그, 레지스트리에는 v 없이)의 지문. 둘 중 하나라도 못 읽으면 실패해요
+  local repo m_api m_web tag="${1#v}"
   repo=$(env_get IMAGE_REPO)
-  m_api=$(DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$repo/malkkeum-api:stable" 2>/dev/null) || return 1
-  m_web=$(DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$repo/malkkeum-web:stable" 2>/dev/null) || return 1
+  m_api=$(DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$repo/malkkeum-api:$tag" 2>/dev/null) || return 1
+  m_web=$(DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect "$repo/malkkeum-web:$tag" 2>/dev/null) || return 1
   printf '%s\n%s\n' "$m_api" "$m_web" | sha256sum | cut -c1-64
+}
+stable_manifest_key() { manifest_key stable; }
+
+rollback_hold() { # 되돌린 뒤: 채널(또는 고정 태그)이 아직 되돌리기 전 버전을 가리키면 자동 업데이트가 그 버전을 다시 올리지 않아요
+  local key
+  if key=$(manifest_key "$(env_get VERSION)"); then printf '%s\n' "$key" > "$ROLLBACK_HOLD" || warn "되돌린 버전 지키기 기록을 남기지 못했어요"
+  else warn "버전 정보를 읽지 못해서, 다음 자동 업데이트가 되돌리기 전 버전을 다시 올릴 수 있어요. 막으려면 콘솔에서 '다음 업데이트 건너뛰기' 를 누르세요"; fi
 }
 
 stable_seasoned() { # 0: 받아도 돼요. 1: 새 버전을 막 봤어요(24시간 기다려요). 2: 새 버전 정보를 못 읽었어요. 지문은 STABLE_KEY 에 둬요
@@ -1277,13 +1341,17 @@ stable_seasoned() { # 0: 받아도 돼요. 1: 새 버전을 막 봤어요(24시�
   return 1
 }
 
-cmd_auto_update() { # dahae auto-update : 예약 업데이트. 건너뛰기 표시, 기다리는 작업, 안정 채널 24시간 대기를 먼저 확인해요
-  local queued rc=0
+cmd_auto_update() { # dahae auto-update : 예약 업데이트. 건너뛰기 표시, 기다리는 작업, 되돌린 버전 지키기, 안정 채널 24시간 대기를 먼저 확인해요
+  local queued key rc=0
   if [ -e "$DIR/host/skip-next-update" ]; then
     rm -f "$DIR/host/skip-next-update"; echo "건너뛰기 표시가 있어 이번 자동 업데이트를 건너뛰었어요"; return 0
   fi
   queued=$(find "$DIR/jobs/inbox" -maxdepth 1 -name '*.job' 2>/dev/null | head -n1 || true)
   if [ -n "$queued" ]; then echo "기다리는 작업이 있어 자동 업데이트를 미뤘어요"; return 0; fi
+  if [ -s "$ROLLBACK_HOLD" ]; then
+    key=$(manifest_key "$(env_get VERSION)") || { echo "새 버전 정보를 읽지 못했어요. 인터넷 연결과 이미지 저장소를 확인하세요" >&2; return 1; }
+    if [ "$key" = "$(cat "$ROLLBACK_HOLD")" ]; then echo "되돌린 버전을 지켜요: 새 버전이 나오면 다시 자동으로 업데이트해요"; return 0; fi
+  fi
   STABLE_KEY=""
   if [ "$(env_get CHANNEL)" = stable ]; then
     stable_seasoned || rc=$?
@@ -1422,14 +1490,16 @@ fetch_agent() { # 같은 릴리스의 agent.sh 를 받아 install.sh 의 지문�
   tmp=$(mktemp "$DIR/.agent.XXXXXX") || die "작업 실행기 파일을 만들지 못했어요."
   if [ -n "${MALKKEUM_AGENT_FILE:-}" ]; then
     cp -- "$MALKKEUM_AGENT_FILE" "$tmp" || { rm -f "$tmp"; die "작업 실행기 파일을 읽지 못했어요: $MALKKEUM_AGENT_FILE"; }
+    # 배포본(지문이 적힌 install.sh)이면 로컬 파일도 그 지문과 같아야 해요 (dahae update 가 확인해 둔 파일을 넘겨요)
+    [ -z "$AGENT_SHA256" ] || agent_sha_ok "$tmp" "$AGENT_SHA256" || { rm -f "$tmp"; die "작업 실행기의 지문이 설치 프로그램에 적힌 값과 달라요. 설치를 멈췄어요."; }
   else
     { [ -n "$RELEASE_RAW" ] && [ -n "$AGENT_SHA256" ]; } || { rm -f "$tmp"; die "이 설치 프로그램에는 작업 실행기 주소나 지문이 없어요. 배포본의 install.sh 를 쓰세요."; }
-    curl -fsSL --max-time 60 "$RELEASE_RAW/agent.sh" -o "$tmp" \
+    curl -fsSL --retry 3 --max-time 60 "$RELEASE_RAW/agent.sh" -o "$tmp" \
       || { rm -f "$tmp"; die "작업 실행기를 내려받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요."; }
     agent_sha_ok "$tmp" "$AGENT_SHA256" || { rm -f "$tmp"; die "작업 실행기의 지문이 설치 프로그램에 적힌 값과 달라요. 설치를 멈췄어요."; }
   fi
   bash -n "$tmp" || { rm -f "$tmp"; die "작업 실행기 파일이 손상됐어요."; }
-  chmod 0755 "$tmp"; mv -f "$tmp" "$DIR/agent.sh"
+  chmod 0755 "$tmp"; mv -f "$tmp" "$DIR/agent.sh"; AGENT_READY=1
 }
 
 write_units() { # write_units [폴더]: systemd 단위 세 개. 작업 파일이 생기면(.path) 실행기를 돌리고, 1분마다도 한 번 봐요(.timer)
@@ -1481,7 +1551,7 @@ install_agent() { # 작업 실행기와 systemd 단위를 설치하고 켜요. �
   chmod 0755 "$DIR/jobs" "$DIR/jobs/status" "$DIR/jobs/out" "$DIR/jobs/public"
   chmod 0700 "$DIR/jobs/work" "$DIR/jobs/work/done" "$DIR/host"
   chown 10001:10001 "$DIR/jobs/inbox"; chmod 0700 "$DIR/jobs/inbox"   # API 컨테이너(사용자 10001)만 작업을 넣어요
-  fetch_agent
+  [ "${AGENT_READY:-0}" = 1 ] || fetch_agent
   write_units /etc/systemd/system
   systemctl daemon-reload || die "systemd 를 다시 읽지 못했어요."
   systemctl enable --now dahae-agent.path dahae-agent.timer >/dev/null 2>&1 \
@@ -1671,6 +1741,8 @@ main() {
   if [ -n "$RELEASE_RAW" ]; then env_set DELIVERY_RAW "${RELEASE_RAW%/*}"; fi
   apply_backup_s3_env
 
+  # 관리 도구만 바꿀 때는 작업 실행기부터 받아 확인해요: 받지 못하면 아무것도 바꾸지 않고 멈춰요
+  [ "$TOOLS_ONLY" = 0 ] || fetch_agent
   write_compose
   write_cli "$BIN/dahae"
   ln -sf dahae "$BIN/malkkeum"

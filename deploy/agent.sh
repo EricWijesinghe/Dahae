@@ -50,6 +50,8 @@ APPROVAL_FAIL_WINDOW_SEC=3600
 OWNER_FILE="$HOST_DIR/owner.json"   # 승인 코드를 만든 사장님 계정 번호
 KEYS_PASS_HEX_RE='^([0-9a-f]{2}){12,256}$' # 비밀 키 사본의 잠금 비밀번호 (UTF-8 바이트를 16진수로, 12~256 바이트)
 RC_PAYOUTS_IN_DOUBT=4               # dahae rollback 이 정산 확인 때문에 멈췄을 때의 종료 코드
+RC_TOOLS_STALE=5                    # 새(또는 되돌린) 버전은 정상인데 관리 도구만 바꾸지 못했을 때 (dahae update·rollback)
+RC_NO_PREVIOUS=6                    # dahae rollback: 되돌릴 이전 버전 기록이 없어요
 LOG_MIN_LINES=50
 LOG_MAX_LINES=2000
 
@@ -267,10 +269,18 @@ expire_slot() { # 승인 시간이 지난 작업은 취소해요 (실행기가 �
   return 0
 }
 
+prev_version() { # 되돌리면 올라올 버전: PREV_API_IMAGE 이미지의 버전 표시 (vX.Y.Z[-접미사] 만, 모르면 '버전 모름')
+  local img v=""
+  img=$(env_val PREV_API_IMAGE)
+  [ -z "$img" ] || v=$(timeout 20 docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.version"}}' "$img" 2>/dev/null) || v=""
+  case "$v" in [0-9]*) v="v$v" ;; esac
+  if printf '%s' "$v" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]{1,40})?$'; then printf '%s' "$v"; else printf '버전 모름'; fi
+}
+
 summary_for() { # 서버가 직접 쓰는 요약 (값은 이미 검사를 통과한 것만 들어가요)
   case "$1" in
     update-tag) printf '업데이트: %s 버전으로 바꿔요 (먼저 백업해요)' "$2" ;;
-    rollback) printf '이전 버전으로 되돌려요 (데이터는 그대로예요)' ;;
+    rollback) printf '이전 버전으로 되돌려요: %s (데이터는 그대로예요)' "$(prev_version)" ;;
     domain-set) printf '도메인을 %s 로 바꿔요 (예전 주소도 계속 응답해요)' "$2" ;;
   esac
 }
@@ -532,6 +542,10 @@ fail_reason() { # fail_reason 종료코드 : 도메인 바꾸기가 끝나지 �
   case "$JOB_KIND:$1" in
     domain-set:"$RC_ROLLED_BACK") echo "새 주소가 5분 안에 응답하지 않아 예전 도메인으로 되돌렸어요 (DNS·방화벽 80/443 확인)" ;;
     rollback:"$RC_PAYOUTS_IN_DOUBT") echo "토스 결과를 기다리는 정산이 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요" ;;
+    update:"$RC_TOOLS_STALE"|update-tag:"$RC_TOOLS_STALE"|channel:"$RC_TOOLS_STALE") echo "새 버전으로 바꿨고 정상이에요. 관리 도구만 바꾸지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" ;;
+    rollback:"$RC_TOOLS_STALE") echo "이전 버전으로 되돌렸고 정상이에요. 관리 도구만 되돌리지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" ;;
+    rollback:"$RC_NO_PREVIOUS") echo "되돌릴 이전 버전이 없어요 (업데이트를 한 번 한 뒤에 쓸 수 있어요). 지금 버전 그대로예요" ;;
+    rollback:*) echo "되돌리지 못했어요. 시스템 상태를 확인하고 'dahae logs' 를 개발자에게 보여 주세요" ;;
     domain-set:*) echo "도메인을 바꾸지 못했어요: 새 도메인 A 레코드가 이 서버를 가리키는지, 방화벽(80·443)이 열려 있는지 확인하세요. 지금 서비스는 그대로예요" ;;
   esac
 }
