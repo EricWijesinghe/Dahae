@@ -23,8 +23,8 @@ Metadata:
 Parameters:
   Domain:
     Type: String
-    Description: "고객이 쓸 주소 (예: app.example.co.kr). Customer-facing domain."
-    AllowedPattern: "^(?!-)[a-z0-9-]+(\\.[a-z0-9-]+)+$"
+    Description: "고객이 쓸 주소 (예: app.example.co.kr). 아직 없으면 auto: <서버 IP>.sslip.io 임시 주소 (나중에 콘솔에서 바꿔요). Customer-facing domain, or auto for a temporary <ip>.sslip.io address (change it later in the console)."
+    AllowedPattern: "^(auto|(?!-)[a-z0-9-]+(\\.[a-z0-9-]+)+)$"
     ConstraintDescription: "소문자 도메인 이름이어야 해요 (예: app.example.co.kr). Lowercase domain name."
   Email:
     Type: String
@@ -91,7 +91,8 @@ Parameters:
     Description: Canonical Ubuntu 24.04 arm64 (공식 SSM 경로). Do not change.
 
 Conditions:
-  HasDomainRecord: !Not [!Equals [!Ref HostedZoneId, ""]]
+  AutoDomain: !Equals [!Ref Domain, auto]
+  HasDomainRecord: !And [!Not [!Equals [!Ref HostedZoneId, ""]], !Not [!Condition AutoDomain]]
   HasSsh: !Not [!Equals [!Ref SshCidr, ""]]
   CreateOidc: !Equals [!Ref CreateGitHubOidcProvider, "true"]
   UseArm: !Equals [!Select [0, !Split [".", !Ref InstanceType]], t4g]
@@ -178,12 +179,15 @@ Resources:
             # The disk survives a terminate. Delete it yourself, after a checked backup.
             DeleteOnTermination: false
       UserData: !Base64
-        Fn::Sub: |
-          #!/bin/bash
-          set -euo pipefail
-          curl -fsSL -o /root/dahae-install.sh __INSTALL_URL__
-          echo '__INSTALL_SH_SHA256__  /root/dahae-install.sh' | sha256sum -c -
-          MALKKEUM_DOMAIN=${Domain} MALKKEUM_EMAIL=${Email} MALKKEUM_FIREWALL=on bash /root/dahae-install.sh
+        Fn::Sub:
+          - |
+            #!/bin/bash
+            set -euo pipefail
+            curl -fsSL -o /root/dahae-install.sh __INSTALL_URL__
+            echo '__INSTALL_SH_SHA256__  /root/dahae-install.sh' | sha256sum -c -
+            MALKKEUM_DOMAIN=${SiteDomain} MALKKEUM_EMAIL=${Email} MALKKEUM_FIREWALL=on bash /root/dahae-install.sh
+          # auto: the Elastic IP's own name on sslip.io until the owner moves to a real domain in the console.
+          - SiteDomain: !If [AutoDomain, !Sub "${ElasticIp}.sslip.io", !Ref Domain]
       Tags:
         - { Key: Name, Value: !Sub "dahae-${AWS::StackName}" }
         - { Key: dahae-backup, Value: !Ref AWS::StackName }
@@ -303,7 +307,7 @@ Outputs:
     Value: !Ref AWS::Region
   DahaeDomain:
     Description: GitHub 변수 DAHAE_DOMAIN. Use as DAHAE_DOMAIN.
-    Value: !Ref Domain
+    Value: !If [AutoDomain, !Sub "${ElasticIp}.sslip.io", !Ref Domain]
   NextStepUrl:
     Description: 설치가 끝나면 여는 주소 (약 15분 뒤). Open after about 15 minutes.
-    Value: !Sub "https://${Domain}/admin"
+    Value: !If [AutoDomain, !Sub "https://${ElasticIp}.sslip.io/admin", !Sub "https://${Domain}/admin"]

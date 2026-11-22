@@ -37,6 +37,8 @@ The developer usually does this, because the deployer account's MFA is on the de
    bash launch.sh --domain example.co.kr --email owner@example.co.kr
    ```
 
+   > **Tip:** no domain yet? Write `auto` instead of the domain (`--domain auto`). The server then gets a free temporary address like `3.38.12.200.sslip.io` with a real certificate, and there is no DNS to set up. Move to your real domain later in the console (chapter 28.8).
+
 4. Copy all three edited lines.
 5. Click once in the black CloudShell window and paste.
 6. Press **Enter**.

@@ -160,6 +160,7 @@ echo "$*" >> "$LAUNCH_LOG"
 case "$*" in
   *describe-vpcs*) echo vpc-1 ;; *describe-subnets*) echo subnet-1 ;; *get-caller-identity*) echo 123456789012 ;;
   *get-open-id-connect-provider*) [ -n "${LAUNCH_OIDC:-}" ] ;;
+  *DahaeDomain*) echo 203.0.113.7.sslip.io ;;
   *describe-stacks*Outputs*) echo "PublicIp 203.0.113.7" ;;
   *describe-stacks*) [ -n "${LAUNCH_STACK:-}" ] ;;
   *"cloudformation deploy"*) t=$(echo "$*" | sed -n 's/.*--template-file \([^ ]*\).*/\1/p'); cp "$t" "$LAUNCH_FILES/deployed.yaml" ;;
@@ -177,6 +178,10 @@ t  "launch: existing GitHub OIDC provider is reused" env LAUNCH_OIDC=1 PATH="$L/
 t  "launch: ...so it is not created again" grep -q "CreateGitHubOidcProvider=false" "$L/log"
 nt "launch: an existing stack is never updated" env LAUNCH_STACK=1 PATH="$L/bin:$PATH" LAUNCH_FILES="$L/files" LAUNCH_LOG="$L/log" bash "$ROOT/deploy/aws/launch.sh" --domain example.co.kr --email o@example.co.kr
 nt "launch: a domain is required" launch --email o@example.co.kr
+t  "launch: --domain auto passes auto to the template" launch --domain auto --email o@example.co.kr
+t  "launch: ...and names the sslip.io address in the next steps" bash -c 'PATH="$1/bin:$PATH" LAUNCH_FILES="$1/files" LAUNCH_LOG="$1/log" bash "$2/deploy/aws/launch.sh" --domain auto --email o@example.co.kr | grep -q "https://203.0.113.7.sslip.io/admin"' _ "$L" "$ROOT"
+t  "launch: ...in the deploy parameters" grep -q "Domain=auto " "$L/log"
+nt "launch: auto cannot take a Route 53 zone" launch --domain auto --email o@example.co.kr --hosted-zone-id Z123
 nt "launch: stack names stay dahae-*" launch --domain example.co.kr --email o@example.co.kr --stack prod
 cp "$L/files/install.sh" "$L/files/install.ok"; printf 'echo evil\n' > "$L/files/install.sh"
 nt "launch: an install.sh that differs from SHA256SUMS is refused" launch --domain example.co.kr --email o@example.co.kr

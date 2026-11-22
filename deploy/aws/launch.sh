@@ -10,6 +10,7 @@
 # Deployer, to create the server (once; later versions arrive through the deploy-aws workflow):
 #   curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- \
 #     --domain example.co.kr --email owner@example.co.kr
+#   No domain yet: --domain auto gives https://<server ip>.sslip.io; move to the real domain later in the console.
 # Options: --version vX.Y.Z (default: latest release)  --stack dahae-main  --instance-type t3.medium
 #          --hosted-zone-id Z123 (Route 53 A record)  --vpc vpc-… --subnet subnet-… (default: default VPC, public subnet)
 #          --region ap-northeast-2  --ref master (where the template and policies come from)  --dry-run
@@ -63,7 +64,9 @@ if [ "$ADMIN" = 1 ]; then
   exit 0
 fi
 
-[[ "$DOMAIN" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$ ]] || die "--domain like example.co.kr is required"
+[[ "$DOMAIN" == auto || "$DOMAIN" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$ ]] ||
+  die "--domain like example.co.kr is required (or auto for a temporary <ip>.sslip.io address)"
+[[ "$DOMAIN" != auto || -z "$ZONE" ]] || die "--hosted-zone-id needs a real --domain"
 [[ "$EMAIL" =~ ^[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] || die "--email is required"
 [[ "$STACK" =~ ^dahae-[A-Za-z0-9-]+$ ]] || die "--stack must start with dahae- (the deployer may only manage dahae-* stacks)"
 if [ -z "$VERSION" ]; then
@@ -109,9 +112,16 @@ if [ "$DRY" = 1 ]; then echo "dry run: $AWS --region $REGION ${deploy[*]}"; exit
 "$AWS" --region "$REGION" "${deploy[@]}"
 "$AWS" --region "$REGION" cloudformation describe-stacks --stack-name "$STACK" \
   --query 'Stacks[0].Outputs[].[OutputKey,OutputValue]' --output table
+if [ "$DOMAIN" = auto ]; then
+  DOMAIN=$("$AWS" --region "$REGION" cloudformation describe-stacks --stack-name "$STACK" \
+    --query "Stacks[0].Outputs[?OutputKey=='DahaeDomain'].OutputValue" --output text)
+  dns="nothing to do: $DOMAIN already points at the server (move to a real domain later in the console)"
+else
+  dns="A records @ and www -> the PublicIp above (Cloudflare: DNS only; skip if you passed --hosted-zone-id)"
+fi
 cat <<EOF
 Done. Next:
- 1. DNS (skip if you passed --hosted-zone-id): A records @ and www -> the PublicIp above (Cloudflare: DNS only).
+ 1. DNS: $dns
  2. Wait about 10 minutes, then open https://$DOMAIN/admin
  3. Owner setup code: EC2 > Instances > the dahae server > Connect > Session Manager, then: sudo dahae setup-code
  4. Automatic deploys: set the GitHub environment doda-aws variables from the outputs above (guide 10 C).

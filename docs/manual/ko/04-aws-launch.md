@@ -37,6 +37,8 @@
    bash launch.sh --domain example.co.kr --email owner@example.co.kr
    ```
 
+   > **팁:** 아직 도메인이 없나요? 도메인 자리에 `auto` 라고 써요 (`--domain auto`). 서버가 `3.38.12.200.sslip.io` 같은 무료 임시 주소와 정식 인증서를 받고, DNS 설정은 필요 없어요. 진짜 도메인은 나중에 콘솔에서 옮겨요 (28.8장).
+
 4. 바꾼 세 줄을 모두 복사해요.
 5. CloudShell 검은 화면을 한 번 누르고 붙여 넣어요.
 6. **Enter** 를 눌러요.
