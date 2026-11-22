@@ -22,6 +22,9 @@ mkdir -p "$DAHAE_JOBS/inbox" "$DAHAE_JOBS/work/done" "$DAHAE_JOBS/status" "$DAHA
 cat > "$DAHAE_CLI" <<EOF
 #!/usr/bin/env bash
 printf '%s YES=%s\n' "\$*" "\${DAHAE_YES:-}" >> "$SB/argv.log"
+# keys-backup: seals a fake copy with the passphrase it was handed; rollback exits 4 after touch \$SB/payouts-next
+if [ "\$1" = keys-backup ]; then mkdir -p "$SB/backups"; printf 'sealed:%s' "\${DAHAE_KEYS_PASSPHRASE:-}" > "$SB/backups/keys-\$(date +%Y%m%d-%H%M%S%N).env.enc"; exit 0; fi
+if [ "\$1" = rollback ] && [ -e "$SB/payouts-next" ]; then rm -f "$SB/payouts-next"; exit 4; fi
 case "\$1" in update|domain) ;; *) exit 0 ;; esac
 if [ -e "$SB/rollback-next" ]; then rm -f "$SB/rollback-next"; exit 3; fi
 if [ -e "$SB/fail-next" ]; then rm -f "$SB/fail-next"; exit 1; fi
@@ -553,6 +556,37 @@ for k in update backup-now rollback; do t "$k gets the long limit" eq "$(limit_o
 t  "channel gets the long limit"          eq "$(limit_of channel beta)" "$UPDATE_RUN_TIMEOUT"
 t  "update-tag gets the long limit"       eq "$(limit_of update-tag v9.9.9)" "$UPDATE_RUN_TIMEOUT"
 t  "schedule keeps the normal limit"      eq "$(limit_of schedule off)" "$RUN_TIMEOUT"
+
+# ---- keys backup from the console: the passphrase arrives as hex, the sealed copy goes out once as base64 ----
+hexof() { printf '%s' "$1" | od -An -tx1 | tr -d ' \n'; }
+KTOK=fedcba9876543210fedcba9876543210
+id=$(uuid7); submit "$id" "id=$id\nkind=keys-backup\narg=$(hexof 'correct horse battery')\ntoken=$KTOK\n"
+t  "keys-backup runs dahae keys-backup"      argv_has "keys-backup YES=1"
+t  "keys-backup ends ok"                     eq "$(state "$id")" ok
+t  "the CLI got the decoded passphrase"      eq "$(base64 -d "$DAHAE_JOBS/out/$KTOK" 2>/dev/null)" "sealed:correct horse battery"
+t  "the output is one base64 line"           eq "$(wc -l < "$DAHAE_JOBS/out/$KTOK" | tr -d ' ')" 0
+nt "the passphrase is not in the status"     grep -rqF "correct horse" "$DAHAE_JOBS/status"
+KTOK2=0123456789abcdef0123456789abcde0
+id=$(uuid7); submit "$id" "id=$id\nkind=keys-backup\narg=$(hexof '비밀번호한글열두자')\ntoken=$KTOK2\n"
+t  "a Korean passphrase arrives byte for byte" eq "$(base64 -d "$DAHAE_JOBS/out/$KTOK2" 2>/dev/null)" "sealed:비밀번호한글열두자"
+id=$(uuid7); t  "keys-backup without token refused"   refuse "$id" "id=$id\nkind=keys-backup\narg=$(hexof 'correct horse battery')\n"
+id=$(uuid7); t  "keys-backup short passphrase refused" refuse "$id" "id=$id\nkind=keys-backup\narg=$(hexof 'elevenchars')\ntoken=$KTOK\n"
+id=$(uuid7); t  "keys-backup upper-case hex refused"  refuse "$id" "id=$id\nkind=keys-backup\narg=$(hexof 'correct horse battery' | tr a-f A-F)\ntoken=$KTOK\n"
+id=$(uuid7); t  "keys-backup odd hex refused"         refuse "$id" "id=$id\nkind=keys-backup\narg=$(hexof 'correct horse battery')a\ntoken=$KTOK\n"
+before=$(argv_lines)
+id=$(uuid7); submit "$id" "id=$id\nkind=keys-backup\narg=00$(hexof 'correct horse battery')\ntoken=$KTOK\n"
+t  "a NUL byte in the passphrase fails the job" eq "$(state "$id")" failed
+t  "...before the CLI runs"                  eq "$(argv_lines)" "$before"
+id=$(uuid7); submit "$id" "id=$id\nkind=keys-confirm\n"
+t  "keys-confirm runs dahae keys-confirm"    argv_has "keys-confirm YES=1"
+id=$(uuid7); t  "keys-confirm takes no argument"      refuse "$id" "id=$id\nkind=keys-confirm\narg=x\n"
+
+# ---- rollback stopped by the payout guard says why ----
+touch "$SB/payouts-next"
+# shellcheck disable=SC2034 # read by run_job in the sourced agent
+JOB_ID=$(uuid7) JOB_KIND=rollback JOB_ARG="" JOB_TOKEN=""; run_job
+t  "payout guard: rollback ends failed"      eq "$(state "$JOB_ID")" failed
+t  "payout guard: the reason names the payouts" grep -qF '정산' "$DAHAE_JOBS/status/$JOB_ID.json"
 
 echo "agent self-test: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ]

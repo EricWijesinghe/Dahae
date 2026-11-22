@@ -4,7 +4,7 @@
 //! Owner-queued server jobs (`/admin/host/jobs`). An accepted request writes one job file into the agent's
 //! inbox and records a row; the live state is read back from the agent's status files. A job the agent holds for
 //! the server approval code (`domain-set`) gets its code through `approve`; a job that publishes a result
-//! (`domain-check`, `host-approval-enroll`) is read back through `output`.
+//! (`domain-check`, `host-approval-enroll`, `keys-backup`) is read back through `output`; the sealed key copy only once.
 
 use crate::{
     auth::Admin,
@@ -95,11 +95,16 @@ async fn enqueue(
     let row = JobRow {
         id,
         kind: spec.kind.name().into(),
-        arg: spec.arg,
+        arg: stored_arg(&spec).into(),
         progress_token: token,
         created_at,
     };
     Ok((StatusCode::ACCEPTED, Json(job_json(&dir_status(&s, id), &row))))
+}
+
+/// What the database keeps of the argument: nothing for a secret one (it lives in the job file until the agent reads it).
+fn stored_arg(spec: &JobSpec) -> &str {
+    if spec.kind.secret_arg() { "" } else { &spec.arg }
 }
 
 fn idempotency_key(headers: &HeaderMap) -> ApiResult<String> {
@@ -119,13 +124,13 @@ async fn queue(s: &AppState, dir: &FsPath, id: Uuid, spec: &JobSpec, token: &str
     )
     .bind(id)
     .bind(spec.kind.name())
-    .bind(&spec.arg)
+    .bind(stored_arg(spec))
     .bind(token)
     .bind(actor)
     .bind(key)
     .fetch_one(&mut *tx)
     .await?;
-    let data = json!({ "kind": spec.kind.name(), "arg": spec.arg });
+    let data = json!({ "kind": spec.kind.name(), "arg": stored_arg(spec) });
     sqlx::query("INSERT INTO audit_log (actor_role, actor_id, action, target, data) VALUES ('staff', $1, 'host_job.enqueue', $2, $3)")
         .bind(actor)
         .bind(id.to_string())
@@ -223,7 +228,57 @@ async fn output(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<Uuid>
     if row.kind == Kind::HostApprovalEnroll.name() && (row.arg != a.id.hyphenated().to_string() || !owner::is_owner(&s.db, a.id).await?) {
         return Err(ApiError::Forbidden);
     }
+    if row.kind == Kind::KeysBackup.name() {
+        return take_key_copy(&s, a.id, &row).await;
+    }
     let text = read_output(&s.config.host_jobs_dir, &row.progress_token).ok_or(ApiError::NotFound)?;
+    Ok(Json(json!({ "text": text })))
+}
+
+/// The sealed key copy (base64), for the owner who asked for it and only once. Taking it queues the agent's
+/// `keys-confirm`, the record `dahae status` reads as "kept off the server".
+async fn take_key_copy(s: &AppState, actor: Uuid, row: &JobRow) -> ApiResult<Json<Value>> {
+    let requester: Uuid = sqlx::query_scalar("SELECT requested_by FROM host_jobs WHERE id = $1")
+        .bind(row.id)
+        .fetch_one(&s.db)
+        .await?;
+    if requester != actor || !owner::is_owner(&s.db, actor).await? {
+        return Err(ApiError::Forbidden);
+    }
+    let text = read_output(&s.config.host_jobs_dir, &row.progress_token).ok_or(ApiError::NotFound)?;
+    // The passphrase never reaches the arg column, so for this kind it holds the one-time mark.
+    let taken = sqlx::query("UPDATE host_jobs SET arg = 'downloaded' WHERE id = $1 AND arg = ''")
+        .bind(row.id)
+        .execute(&s.db)
+        .await?
+        .rows_affected()
+        == 1;
+    if !taken {
+        return Err(ApiError::Conflict("key_copy_already_taken"));
+    }
+    crate::routes::audit(&s.db, "staff", Some(actor), "host_job.keys_download", &row.id.to_string(), json!({})).await?;
+    let confirm = JobSpec {
+        kind: Kind::KeysConfirm,
+        arg: String::new(),
+    };
+    let queued = match jobs_dir(s) {
+        Ok(dir) => queue(
+            s,
+            dir,
+            Uuid::now_v7(),
+            &confirm,
+            &host_jobs::new_progress_token(),
+            &format!("keys-confirm:{}", row.id),
+            actor,
+        )
+        .await
+        .map(|_| ()),
+        Err(e) => Err(e),
+    };
+    // The copy is already taken: a missing confirmation only leaves `dahae status` asking for it.
+    if let Err(e) = queued {
+        tracing::warn!(error = ?e, "key copy confirmation not queued");
+    }
     Ok(Json(json!({ "text": text })))
 }
 

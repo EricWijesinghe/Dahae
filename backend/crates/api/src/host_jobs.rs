@@ -23,6 +23,11 @@ pub enum Kind {
     DomainSet,
     Heartbeat,
     HostApprovalEnroll,
+    Rollback,
+    /// The `.env` sealed with the owner's passphrase (`arg`, hex), handed out once through `output`.
+    KeysBackup,
+    /// Records that the owner took the sealed copy. Queued by the server after that download, never by a client.
+    KeysConfirm,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,6 +50,8 @@ impl Kind {
             "domain-set" => Self::DomainSet,
             "heartbeat" => Self::Heartbeat,
             "host-approval-enroll" => Self::HostApprovalEnroll,
+            "rollback" => Self::Rollback,
+            "keys-backup" => Self::KeysBackup,
             _ => return None,
         })
     }
@@ -62,6 +69,9 @@ impl Kind {
             Self::DomainSet => "domain-set",
             Self::Heartbeat => "heartbeat",
             Self::HostApprovalEnroll => "host-approval-enroll",
+            Self::Rollback => "rollback",
+            Self::KeysBackup => "keys-backup",
+            Self::KeysConfirm => "keys-confirm",
         }
     }
 
@@ -79,6 +89,9 @@ impl Kind {
             Self::DomainSet => "도메인 바꾸기",
             Self::Heartbeat => "외부 가동 확인 주소 변경",
             Self::HostApprovalEnroll => "서버 승인 코드 만들기",
+            Self::Rollback => "이전 버전으로 되돌리기",
+            Self::KeysBackup => "비밀 키 사본 내려받기",
+            Self::KeysConfirm => "비밀 키 사본 보관 확인",
         }
     }
 
@@ -90,7 +103,12 @@ impl Kind {
 
     /// The agent holds these until the server approval code arrives (`agent.sh::is_high_kind`).
     pub fn needs_approval(self) -> bool {
-        self == Self::DomainSet
+        matches!(self, Self::DomainSet | Self::Rollback)
+    }
+
+    /// The argument is a secret (the key copy's passphrase): it goes into the job file only, never the database.
+    pub fn secret_arg(self) -> bool {
+        self == Self::KeysBackup
     }
 }
 
@@ -98,7 +116,8 @@ impl Kind {
 pub fn validate(kind: &str, arg: &str) -> Result<JobSpec, &'static str> {
     let kind = Kind::parse(kind).ok_or("unknown_job_kind")?;
     let ok = match kind {
-        Kind::StatusRefresh | Kind::BackupNow | Kind::Update | Kind::UpdateSkip => arg.is_empty(),
+        Kind::StatusRefresh | Kind::BackupNow | Kind::Update | Kind::UpdateSkip | Kind::Rollback | Kind::KeysConfirm => arg.is_empty(),
+        Kind::KeysBackup => valid_passphrase_hex(arg),
         Kind::Channel => matches!(arg, "stable" | "beta"),
         Kind::Restart => matches!(arg, "api" | "web" | "db" | "all"),
         Kind::Schedule => valid_schedule(arg),
@@ -112,6 +131,11 @@ pub fn validate(kind: &str, arg: &str) -> Result<JobSpec, &'static str> {
     } else {
         Err("invalid_job_arg")
     }
+}
+
+/// The agent's `KEYS_PASS_HEX_RE`: 12 to 256 bytes of passphrase as lowercase hex.
+fn valid_passphrase_hex(arg: &str) -> bool {
+    arg.len().is_multiple_of(2) && (24..=512).contains(&arg.len()) && arg.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
 /// `off`, or a weekday and a 24-hour time such as `mon@04:00`.
@@ -254,13 +278,35 @@ mod tests {
     }
 
     #[test]
-    fn enrol_never_takes_an_id_from_the_client_and_only_domain_set_waits_for_approval() {
+    fn enrol_never_takes_an_id_from_the_client_and_update_never_waits_for_approval() {
         assert!(validate("host-approval-enroll", "").is_ok());
         assert_eq!(validate("host-approval-enroll", "0190a6f2-1111-7000-8000-000000000001"), Err("invalid_job_arg"));
         assert!(!Kind::DomainCheck.needs_owner());
         assert!(Kind::DomainSet.needs_owner() && Kind::Heartbeat.needs_owner() && Kind::HostApprovalEnroll.needs_owner());
         assert!(Kind::DomainSet.needs_approval());
         assert!(!Kind::Update.needs_approval() && !Kind::DomainCheck.needs_approval());
+    }
+
+    #[test]
+    fn rollback_waits_for_approval_and_the_key_copy_takes_a_hex_passphrase_kept_out_of_the_database() {
+        assert!(validate("rollback", "").is_ok());
+        assert_eq!(validate("rollback", "v1.5.0"), Err("invalid_job_arg"));
+        assert!(Kind::Rollback.needs_owner() && Kind::Rollback.needs_approval());
+        let pass = hex::encode("correct horse battery");
+        assert!(validate("keys-backup", &pass).is_ok());
+        assert!(Kind::KeysBackup.needs_owner() && Kind::KeysBackup.secret_arg() && !Kind::KeysBackup.needs_approval());
+        for bad in [
+            String::new(),
+            hex::encode("elevenchars"),
+            pass.to_uppercase(),
+            format!("{pass}a"),
+            "zz".repeat(12),
+            "ab".repeat(257),
+        ] {
+            assert_eq!(validate("keys-backup", &bad), Err("invalid_job_arg"), "{bad}");
+        }
+        assert_eq!(validate("keys-confirm", ""), Err("unknown_job_kind"), "only the server queues the confirmation");
+        assert_eq!(Kind::KeysConfirm.name(), "keys-confirm");
     }
 
     #[test]
