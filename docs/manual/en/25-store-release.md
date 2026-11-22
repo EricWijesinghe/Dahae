@@ -160,11 +160,19 @@ Reviewers cannot receive Korean text messages, so one review-only number gets a 
 
 > **Warning** It switches off by itself after 14 days. If the review takes longer, switch it on again. A number already used by a customer, partner or staff member gives **A customer, partner or staff member already uses this number. Enter a number nobody uses.**
 
-### Partner app review account (to be confirmed)
+### Partner app review account (review Google account)
 
 > **Warning** The fixed sign-in code works **only in the customer app**. In the partner app the demo number gets no text, and the fixed code is refused as a wrong code. The server blocks it on purpose.
 
-- So today you cannot make a partner app review account from the console alone. How the partner app reviewer gets in is **to be confirmed**. Settle it with the developer before you submit.
+- So the partner app reviewer signs in with a review-only **Google account** through **[Continue with Google]** (`docs/store/review-notes.md` section 1).
+1. Create a new Google account just for review. Its address and password are `<REVIEW_GOOGLE_EMAIL>` and `<REVIEW_GOOGLE_PASSWORD>` in the review notes.
+2. Before you submit, sign in to the partner app once with that Google account and finish the number check with the **company mobile number**. Fill the sign-up details (area, services) too.
+3. In the console **[Partners]**, click **[Approve]** on that partner, tick every item in the **Verification checklist**, then click **[Approve as active]** (chapter 20).
+
+**You should now see:** signing in to the partner app with that Google account shows the **Jobs**, **My quotes**, **Schedule**, **Chat** and **More** tabs.
+
+> **Note** If the partner app has no **[Continue with Google]** button, the app build lacks the Google sign-in values. Ask your developer to rebuild (chapter 15).
+
 - Do not register a partner or staff member on the demo number. If you do, saving the demo account card again gives **A customer, partner or staff member already uses this number. Enter a number nobody uses.**
 
 ### Review notes and addresses (with the developer)
@@ -179,7 +187,7 @@ Reviewers cannot receive Korean text messages, so one review-only number gets a 
 ### Last check before submission (owner checklist)
 
 - [ ] The review demo account is on and stays on for the whole review.
-- [ ] You and the developer have settled how the partner app reviewer gets in (25.5, **to be confirmed**).
+- [ ] The review Google account has signed in to the partner app, finished the number check, and is **[Approve as active]** in the console (25.5).
 - [ ] Every `<…>` in the review notes is filled.
 - [ ] **[Coupons & content]** → **Growth** → **Review reports** has nothing waiting (chapter 22). Handle anything that arrives during review at once.
 - [ ] The customer app's **Terms of service** and **Privacy policy** screens show text (chapter 22, **Legal** content).
@@ -243,7 +251,7 @@ After the review, click **[Disconnect]** on the **Store review demo account** ca
 | The developer cannot create the Apple API key | Check that you (the account holder) clicked **Request Access** for the **App Store Connect API**. |
 | The developer did not get the invitation | Check the email spelling and invite again. Check the spam folder too. |
 | Rejected because the reviewer could not sign in | The demo account may have switched off (14 days). Switch it on again and check the number and code match the review notes. |
-| The reviewer could not get into the partner app | The fixed code works only in the customer app. Settle the partner app review with the developer (25.5, **to be confirmed**). |
+| The reviewer could not get into the partner app | The fixed code works only in the customer app. Check the review notes give the review Google account, and that the account is approved as **active** in the console (25.5). |
 | The reviewer asks how to delete an account | In the app: **More** → **Account** → **Delete account**. On the web: `https://your-domain/delete-account.html`. |
 | Rejected over in-app purchase | Add the English text in `docs/store/review-notes.md` section 4 (cleaning is a physical service) to the review notes and resubmit. |
 | Kakao or Google sign-in fails on Android | The Play app-signing SHA-1 must be registered in the Kakao and Google consoles. Tell the developer (chapter 15). |

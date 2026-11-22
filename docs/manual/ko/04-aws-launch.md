@@ -8,9 +8,10 @@
 
 ## 준비물
 
+- 3장의 정책 두 개 (`dahae-boundary`, `dahae-deployer-policy`). AWS 관리자가 `bash launch.sh --admin` 을 **한 번** 먼저 실행해 만들어요 (3.2). 없으면 이 장의 명령이 아무것도 만들지 않고 멈춰요.
 - 담당 계정 로그인 주소, 사용자 이름 `dahae-deployer`, 비밀번호 (3.7)
 - 담당 계정 MFA 가 들어 있는 휴대폰 (3.6)
-- 고객이 쓸 **도메인** (예: `example.co.kr` 또는 `app.example.co.kr`). `https://` 없이, **소문자로**
+- 고객이 쓸 **도메인** (예: `example.co.kr` 또는 `app.example.co.kr`). `https://` 없이, **소문자로**. 아직 도메인이 없으면 `auto` 로 시작할 수 있어요 (4.2 팁)
 - 인증서 안내를 받을 **이메일** (예: `owner@example.co.kr`)
 - (도메인을 AWS Route 53 에 둔 경우만) **호스팅 영역 ID** (`Z` 로 시작)
 - 시간: 명령 약 5–10분 + 서버 안 설치 약 15–20분
@@ -66,12 +67,13 @@
 2. 그 릴리스의 설치 프로그램을 내려받아, 릴리스의 지문 목록(`SHA256SUMS`)과 같은지 확인해요. 다르면 멈춰요.
 3. 서버 설계도(CloudFormation 템플릿)에 그 설치 프로그램의 지문을 고정해요. 서버는 다른 설치 프로그램은 실행하지 않아요.
 4. 기본 네트워크(기본 VPC)의 공개 서브넷을 찾아요.
-5. 스택 `dahae-main` 을 만들어요. 스택 안에는 이런 것이 들어 있어요.
+5. 정책 `dahae-boundary` 가 있는지 확인해요. 없으면 아무것도 만들지 않고 멈춰요 (3.2).
+6. 스택 `dahae-main` 을 만들어요. 스택 안에는 이런 것이 들어 있어요.
    - Ubuntu 24.04 서버 1대 (기본 `t3.medium`, 암호화된 50 GB 디스크)
    - 고정 IP (Elastic IP)
    - 80, 443 만 열린 방화벽 (SSH 22 는 닫혀 있어요. 서버 접속은 AWS 웹 화면으로 해요, 5.5)
    - 매일 디스크 스냅샷 (7개 보관), 하드웨어 고장 때 자동 복구, 실수로 지우지 않게 하는 종료 방지
-6. 끝나면 결과 표와 다음 할 일을 보여 줘요.
+7. 끝나면 결과 표와 다음 할 일을 보여 줘요.
 
 ## 4.3 명령에 붙일 수 있는 선택 항목
 
@@ -135,13 +137,15 @@ CloudShell 을 쓸 수 없을 때는 CloudFormation 화면에서 템플릿 파�
 
 | 화면에 나온 말 | 뜻과 해결 |
 |---|---|
-| `error: --domain like example.co.kr is required` | 도메인이 없거나 형식이 틀렸어요. `https://` 를 빼고, **소문자로**, `example.co.kr` 처럼 넣으세요 |
+| `error: --domain like example.co.kr is required (or auto …)` | 도메인이 없거나 형식이 틀렸어요. `https://` 를 빼고, **소문자로**, `example.co.kr` 처럼 넣으세요. 도메인이 아직 없으면 `--domain auto` 로 해요 |
+| `error: --hosted-zone-id needs a real --domain` | `--domain auto` 에는 `--hosted-zone-id` 를 붙이지 않아요. 둘 중 하나를 빼세요 |
 | `error: --email is required` | 이메일이 없거나 형식이 틀렸어요 |
 | `error: --stack must start with dahae-` | 스택 이름은 `dahae-` 로 시작해야 해요 |
 | `error: no release version found (use --version vX.Y.Z)` | 최신 버전을 찾지 못했어요. 잠시 뒤 다시 하거나, 개발자에게 버전 번호를 물어 `--version v1.6.0` 처럼 붙이세요 |
 | `error: install.sh of … does not match the release's SHA256SUMS` | 설치 프로그램 지문이 맞지 않아요. **더 진행하지 말고** 개발자에게 알려 주세요 |
 | `error: no default VPC in ap-northeast-2: pass --vpc and --subnet` | 서울 지역에 기본 네트워크가 없어요. 개발자에게 `--vpc`, `--subnet` 값을 물어보세요 |
 | `error: no public subnet in …: pass --subnet` | 인터넷으로 나갈 수 있는 서브넷이 없어요. 개발자에게 물어보세요 |
+| `error: policy dahae-boundary is missing: an admin runs this script with --admin once first` | 3장의 정책이 아직 없어요. 아무것도 만들어지지 않았어요. AWS 관리자 계정으로 `bash launch.sh --admin` 을 한 번 실행하고 (3.2), 담당 계정에 정책을 붙인 뒤 (3.5) 이 명령을 다시 실행하세요 |
 | `error: stack dahae-main already exists; …` | 이미 서버가 있어요. 새로 만들 필요가 없어요. 업데이트는 26장을 보세요 |
 | `AccessDenied` 나 권한 오류 | MFA 코드를 넣고 로그인했는지, 담당 계정에 정책 두 개가 붙어 있는지 확인하세요 (3.5, 3.6) |
 | 상태가 `ROLLBACK_COMPLETE` 나 `CREATE_FAILED` 예요 | 서버 만들기가 실패했어요. CloudFormation 의 **이벤트** 탭 화면을 캡처해 개발자에게 보내세요 |

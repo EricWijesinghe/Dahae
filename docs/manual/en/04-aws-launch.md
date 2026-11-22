@@ -8,9 +8,10 @@ The developer usually does this, because the deployer account's MFA is on the de
 
 ## Before you start
 
+- The two policies from chapter 3 (`dahae-boundary`, `dahae-deployer-policy`). An AWS admin creates them by running `bash launch.sh --admin` **once** first (3.2). Without them the command in this chapter stops before creating anything.
 - The deployer sign-in URL, user name `dahae-deployer` and password (3.7)
 - The phone with the deployer account's MFA (3.6)
-- The **domain** customers will use (for example `example.co.kr` or `app.example.co.kr`), without `https://`, **in lower case**
+- The **domain** customers will use (for example `example.co.kr` or `app.example.co.kr`), without `https://`, **in lower case**. No domain yet? You can start with `auto` (tip in 4.2)
 - An **email** for certificate notices (for example `owner@example.co.kr`)
 - (Only if the domain is in AWS Route 53) the **hosted zone ID** (starts with `Z`)
 - Time: about 5–10 minutes for the command + about 15–20 minutes for the install inside the server
@@ -66,12 +67,13 @@ The command does these things in order. Nobody needs to do anything.
 2. Downloads that release's installer and checks it against the release's list of fingerprints (`SHA256SUMS`). If they differ, it stops.
 3. Pins the installer's fingerprint into the server blueprint (the CloudFormation template). The server refuses to run any other installer.
 4. Finds a public subnet in the default network (default VPC).
-5. Creates the stack `dahae-main`. The stack contains:
+5. Checks the policy `dahae-boundary` exists. If not, it stops before creating anything (3.2).
+6. Creates the stack `dahae-main`. The stack contains:
    - One Ubuntu 24.04 server (default `t3.medium`, encrypted 50 GB disk)
    - A fixed IP (Elastic IP)
    - A firewall open only on 80 and 443 (SSH port 22 is closed; you reach the server through the AWS web console, 5.5)
    - Daily disk snapshots (7 kept), automatic recovery on hardware failure, termination protection against accidental deletion
-6. Prints the result table and the next steps.
+7. Prints the result table and the next steps.
 
 ## 4.3 Options you can add to the command
 
@@ -135,13 +137,15 @@ When the command stops, it prints a line starting with `error:`. Find that line 
 
 | What the screen says | Meaning and fix |
 |---|---|
-| `error: --domain like example.co.kr is required` | The domain is missing or wrongly formed. Leave out `https://`, use **lower case**, like `example.co.kr` |
+| `error: --domain like example.co.kr is required (or auto …)` | The domain is missing or wrongly formed. Leave out `https://`, use **lower case**, like `example.co.kr`. No domain yet: use `--domain auto` |
+| `error: --hosted-zone-id needs a real --domain` | `--domain auto` does not take `--hosted-zone-id`. Leave one of them out |
 | `error: --email is required` | The email is missing or wrongly formed |
 | `error: --stack must start with dahae-` | The stack name must start with `dahae-` |
 | `error: no release version found (use --version vX.Y.Z)` | The latest version could not be found. Try again later, or ask the developer for the version and add `--version v1.6.0` |
 | `error: install.sh of … does not match the release's SHA256SUMS` | The installer's fingerprint does not match. **Stop here** and tell the developer |
 | `error: no default VPC in ap-northeast-2: pass --vpc and --subnet` | There is no default network in Seoul. Ask the developer for `--vpc` and `--subnet` values |
 | `error: no public subnet in …: pass --subnet` | No subnet can reach the internet. Ask the developer |
+| `error: policy dahae-boundary is missing: an admin runs this script with --admin once first` | The chapter 3 policies do not exist yet. Nothing was created. Run `bash launch.sh --admin` once with the AWS admin account (3.2), attach the policy to the deployer account (3.5), then run this command again |
 | `error: stack dahae-main already exists; …` | The server already exists. You do not need a new one. For updates, see chapter 26 |
 | `AccessDenied` or another permission error | Check you signed in with the MFA code, and that both policies are attached to the deployer account (3.5, 3.6) |
 | Status `ROLLBACK_COMPLETE` or `CREATE_FAILED` | Creating the server failed. Take a screenshot of the **Events** tab in CloudFormation and send it to the developer |

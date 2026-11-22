@@ -11,7 +11,7 @@
 목록은 커서 방식이며 `X-Next-Cursor` 헤더를 다음 요청의 `cursor`로 되돌려 보냅니다. 돈이 움직이는 POST는
 `Idempotency-Key`를 받습니다. 표의 작업 수와 경로 수는 이 문서를 쓸 때 스펙에서 센 값입니다.
 
-Spec: 312 operations on 267 paths, version `1.6.0` (`info.version`). The spec itself is served only to
+Spec: 325 operations on 279 paths, version `1.6.0` (`info.version`). The spec itself is served only to
 staff admins at `GET /v1/openapi.json` (`Admin` extractor) ([`backend/crates/api/src/openapi.rs`](../../backend/crates/api/src/openapi.rs)).
 Deprecated operations in this spec: 0.
 
@@ -69,7 +69,7 @@ Columns: method, path, summary (from the spec; the two support helper rows diffe
 The role shown is the tag's role. For `admin` operations the route file decides between the `Admin` extractor
 (`StaffAdmin` only) and the `Staff` extractor (admin or consultant); check the route before relying on it.
 
-### Public and discovery (26)
+### Public and discovery (28)
 
 No login. Catalog, prices, home groups, slots, content, reviews, brand and feature flags, setup, app links, uploaded photos.
 
@@ -101,6 +101,8 @@ No login. Catalog, prices, home groups, slots, content, reviews, brand and featu
 | GET | `/v1/public/offers` | Welcome offer, sign-up coupons and referral amount for guests | none |  |
 | GET | `/v1/service-groups` | Home groups in order, with member services, chooser and derived badge (HOT over N); inactive groups and hidden members (studio) left out | none |  |
 | GET | `/v1/public/reviews` | Public review list (rating, body, name, booking_id), cursor-paged | none | paged |
+| GET | `/v1/brand/manifest/{app}` | PWA manifest built from the business profile; `app` is site, customer or console | none |  |
+| POST | `/v1/checkouts/{id}/toss-confirm` | Capture a Toss Payments checkout from /pay/toss-success.html (`amount` must equal the stored charge; repeats answer the settled state) | none |  |
 
 ### Sign-in and tokens (15)
 
@@ -124,7 +126,7 @@ Sign-in by one-time code, social login and staff password. Rotating tokens.
 | POST | `/v1/auth/staff/code/redeem` | Redeem a staff one-time SMS code | bearer |  |
 | POST | `/v1/auth/staff/owner-reset` | Lost second factor: owner signs in with password plus a server-issued reset code; TOTP and recovery codes are cleared | bearer |  |
 
-### Customer app (67)
+### Customer app (68)
 
 Bookings, quotes, checkout, chat, notifications, consents and account deletion.
 
@@ -197,6 +199,7 @@ Bookings, quotes, checkout, chat, notifications, consents and account deletion.
 | POST | `/v1/waitlist` | Join the waitlist for a full slot | bearer: customer |  |
 | DELETE | `/v1/waitlist/{id}` | Leave the waitlist | bearer: customer |  |
 | POST | `/v1/waitlist/{id}/accept` | Accept an offered waitlist slot | bearer: customer |  |
+| POST | `/v1/bookings/price` | What a fixed or unit booking would charge right now, by the same rules as booking and checkout. Read-only | bearer: customer |  |
 
 ### Partner (pro) app (34)
 
@@ -250,7 +253,7 @@ A team member sees only jobs assigned to them.
 | GET | `/v1/member/jobs/{id}` | One assigned job | bearer: member |  |
 | POST | `/v1/member/jobs/{id}/complete` | Mark an assigned job complete | bearer: member |  |
 
-### Staff console (159)
+### Staff console (169)
 
 Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see note).
 
@@ -415,8 +418,18 @@ Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see 
 | PUT | `/v1/admin/me/alert-phone` | Set the SMS number for owner alerts; the replaced number is told when possible | bearer: staff |  |
 | POST | `/v1/admin/me/password` | Change the owner's password; every session ends | bearer: staff |  |
 | POST | `/v1/admin/me/sign-out-all` | End every session of the owner, this one included | bearer: staff |  |
+| POST | `/v1/admin/settlements/payouts/{id}/not-sent` | Owner states an ambiguous Toss send never left (marks it failed, audited) | bearer: staff |  |
+| GET | `/v1/admin/setup/business-hours` | Business hours used by AI offline mode | bearer: staff |  |
+| PUT | `/v1/admin/setup/business-hours` | Save business hours (open before close) | bearer: staff |  |
+| PUT | `/v1/admin/setup/payout/switch` | Owner switch for Toss payouts (owner code required, audited) | bearer: staff |  |
+| POST | `/v1/admin/setup/store-build/ack` | Owner marks a store build with the current brand and domain as out | bearer: staff |  |
+| POST | `/v1/admin/host/jobs/{id}/approve` | Owner hands the server approval code to a held job (domain-set; owner only, logged) | bearer: staff |  |
+| GET | `/v1/admin/host/jobs/{id}/output` | Result text a job published, capped at 64 KB; 404 once pruned | bearer: staff |  |
+| GET | `/v1/admin/domains` | Current service domain, former domains that still answer, and the after-move checklist | bearer: staff |  |
+| DELETE | `/v1/admin/domains/{host}` | Retire a former domain: it stops getting certificates (owner TOTP, logged) | bearer: staff |  |
+| PUT | `/v1/admin/domains/checklist/{id}` | Tick or untick one after-move checklist item (logged) | bearer: staff |  |
 
-### Provider callbacks (3)
+### Provider callbacks (4)
 
 Payment and Apple notifications. Authenticated by the provider's signature, not a bearer token.
 
@@ -425,6 +438,7 @@ Payment and Apple notifications. Authenticated by the provider's signature, not 
 | POST | `/v1/webhooks/portone` | PortOne payment notifications (signature verified) | signature |  |
 | POST | `/v1/webhooks/toss` | Toss Payments notifications (signature verified) | signature |  |
 | POST | `/v1/auth/apple/notifications` | Sign in with Apple server-to-server notifications (JWS verified against Apple's keys; replays acknowledged once) | signature |  |
+| POST | `/v1/webhooks/tosspayments` | Toss Payments payment-window notifications (HMAC checked when set; the server re-reads the payment by orderId) | signature |  |
 
 ### Realtime (2)
 
@@ -434,6 +448,14 @@ WebSocket events authenticated by a single-use ticket.
 |---|---|---|---|---|
 | GET | `/v1/ws` | WebSocket: booking, chat and notification events. Authenticate with a ticket from POST /v1/realtime/ticket | ticket |  |
 | POST | `/v1/realtime/ticket` | Single-use WebSocket ticket, valid 30 seconds, bound to the caller | bearer: customer, partner, member or staff |  |
+
+### Internal (1)
+
+Called by the server's own Caddy, never proxied publicly.
+
+| Method | Path | Summary | Auth | Flags |
+|---|---|---|---|---|
+| GET | `/internal/tls-ask` | Caddy on-demand TLS check: 200 when the host is a former service domain, 404 otherwise | none (local only) |  |
 
 ## Support helper endpoints
 
