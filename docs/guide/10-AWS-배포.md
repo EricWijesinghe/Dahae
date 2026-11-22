@@ -43,6 +43,7 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 > ```
 > curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --admin
 > ```
+> 예전에 정책을 만들어 둔 계정도 이 줄을 **한 번 다시** 실행하세요: 있는 정책은 새 판으로 바뀌어요 (v1.6.0 보다 새 템플릿은 외부 백업 저장소와 알림 메일을 만들어서 권한이 조금 늘었어요).
 
 1. 오른쪽 위 지역을 **아시아 태평양(서울) ap-northeast-2** 로 바꿉니다.
 2. 검색창에 **IAM** 을 입력해 엽니다.
@@ -73,6 +74,7 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 > - 아직 도메인이 없으면 `--domain auto`: `<서버 IP>.sslip.io` 임시 주소로 열고 DNS 설정은 건너뛰어요. 진짜 도메인은 나중에 콘솔에서 옮겨요.
 > - Route 53 에 도메인이 있으면 `--hosted-zone-id <ID>` 를 붙이면 A 레코드도 만들어요. 사양은 `--instance-type t3.large` 처럼 바꿔요. 실행 전 확인만 하려면 `--dry-run`.
 > - 이미 있는 스택은 건드리지 않아요. 새 버전 설치는 C 단계의 GitHub 배포로 해요.
+> - CloudShell 대신 **Windows 의 Git Bash** 에서도 돼요 (AWS CLI 를 설치하고 `aws configure` 로 담당 계정에 로그인한 뒤). 파일 경로와 한글 템플릿은 스크립트가 알아서 Windows 용으로 넘겨요.
 
 ### B-1. 템플릿 파일 준비 (개발자)
 
@@ -105,7 +107,7 @@ bash scripts/release/build-aws-template.sh rel-v1.6.0/install.sh "$dist/v1.6.0/i
 | 항목 | 넣을 값 |
 |---|---|
 | Domain | 고객이 쓸 주소 (예: `app.example.co.kr`). `https://` 없이 |
-| Email | 인증서 안내를 받을 이메일 |
+| Email | 인증서 안내와 **서버 이상 알림 메일**을 받을 이메일 (아래 8번에서 한 번 확인해요) |
 | HostedZoneId | Route 53 에 도메인을 두었다면 호스팅 영역 ID (Z 로 시작). 아니면 **비워 두기** |
 | InstanceType | `t3.medium` (x86, 기본값). 처음에는 기본값을 쓰세요. `t4g` 는 ARM 이라 바꾸면 서버가 새로 만들어져요 |
 | DiskSizeGiB | `50` (기본값). 사진이 많으면 늘리세요 |
@@ -120,6 +122,7 @@ bash scripts/release/build-aws-template.sh rel-v1.6.0/install.sh "$dist/v1.6.0/i
 
 6. **다음 > 다음**. 맨 아래 **AWS CloudFormation 이 IAM 리소스를 생성할 수 있음을 승인합니다** 를 체크하고 **제출**.
 7. 상태가 `CREATE_IN_PROGRESS` → `CREATE_COMPLETE` 로 바뀔 때까지 기다립니다 (약 3–5분).
+8. **알림 메일 확인 (클릭 한 번):** Email 로 **AWS Notification - Subscription Confirmation** 메일이 와요. 메일의 **Confirm subscription** 을 한 번 누르세요. 누르지 않으면 서버 이상 알림(하드웨어 점검 실패와 자동 복구)이 오지 않아요. 메일이 안 보이면 스팸함을 보세요. (CloudShell 의 한 줄로 만들었을 때도 같아요.)
 
 > 서버가 `CREATE_COMPLETE` 가 되어도 **설치는 아직 진행 중**이에요. 서버 안에서 설치가 약 15–20분 걸립니다.
 
@@ -217,7 +220,8 @@ sudo dahae setup-code
 
 - **특정 버전 배포:** GitHub 저장소의 **Actions** 탭 > 왼쪽 **deploy-aws** > **Run workflow** > `version` 칸에 `v1.6.0` 입력 > **Run workflow**. 승인자를 넣었다면 승인 뒤 실행돼요.
 - **이전 버전으로 되돌리기:** 같은 화면에서 **rollback** 을 체크하고 **Run workflow**. 서버에서 `dahae rollback` 이 실행돼요. 마지막 업데이트 바로 전 버전으로 돌아가요.
-- 되돌리기는 정산이 진행 중이면 멈춰요. 그때는 콘솔 **정산** 화면에서 상태를 먼저 정리하세요.
+- **콘솔에서 되돌리기 (GitHub 없이):** 콘솔 **시스템 상태 > 서버 업데이트** 카드의 **복구 > 이전 버전으로 되돌리기**. 사장님 코드와 서버 승인 코드를 차례로 넣어요. 먼저 백업하고, 관리 도구도 그 버전으로 맞춰요.
+- 되돌리기는 정산이 진행 중이면 멈춰요. 그때는 콘솔 **정산** 화면에서 상태를 먼저 정리하세요 (콘솔은 그 이유를 그대로 보여 줘요).
 
 ### C-4. 실패했을 때
 
@@ -225,9 +229,14 @@ sudo dahae setup-code
 - 서버가 이전 버전으로 되돌렸다면 출력에 "이전 버전으로 되돌렸어요" 라고 나와요. 서비스는 이전 버전에서 계속 돌아가요.
 - 서버 자체가 응답하지 않으면 B-5 로 들어가 `sudo dahae logs` 를 확인하세요.
 
-### C-5. 서버 작업 실행기 새로 받기 (기능 추가 뒤 한 번)
+### C-5. 관리 도구(작업 실행기·dahae 명령) 새로 받기
 
-콘솔의 도메인 바꾸기처럼 서버 쪽 명령이 새로 생기면, 이미 만든 서버는 설치 줄을 한 번 다시 실행해야 해요 (`dahae update` 는 앱 이미지만 바꿔요).
+v1.6.0 보다 새 버전부터는 `dahae update <태그>` (GitHub 배포, 콘솔 업데이트, 자동 업데이트 모두)가 앱 이미지와 함께 **그 버전의 관리 도구**
+(`dahae` 명령, 서버 작업 실행기, systemd 단위, 예약표, compose 설정)도 바꿔요. 배포 저장소(`EricWijesinghe/Dahae-install`)에서 그 버전의 `install.sh` 를 받아,
+릴리스가 서명한 `SHA256SUMS` (서명은 서버 이미지와 같은 방법으로 확인해요)와 지문이 같을 때만 쓰고, 하나라도 다르면 아무것도 바꾸지 않고 멈춰요.
+`.env` 와 데이터는 그대로예요. `dahae rollback` 도 관리 도구를 되돌린 버전의 것으로 맞춰요.
+
+**v1.6.0 이하로 만든 서버는 한 번만** 설치 줄을 다시 실행해야 해요 (그 버전의 `dahae update` 는 아직 앱 이미지만 바꿔요):
 AWS 콘솔 → **Systems Manager > Run Command > AWS-RunShellScript** → 대상 인스턴스를 고르고, 명령에 설치 줄을 그대로 넣어 실행해요
 (같은 도메인, 데이터는 그대로예요). B-5 의 웹 SSH 로 실행해도 돼요.
 도메인을 옮긴 뒤에는 `MALKKEUM_DOMAIN` 을 빼고 실행하세요 (.env 의 도메인을 써요). 넣으면 그 도메인으로 다시 옮겨 가요.
@@ -241,17 +250,19 @@ AWS 콘솔 → **Systems Manager > Run Command > AWS-RunShellScript** → 대상
 | 무엇 | 어디에 | 언제 | 확인 방법 |
 |---|---|---|---|
 | 데이터베이스와 사진 (서버 안) | 서버 디스크 `backups/` (봉인된 파일) | 매일 03:30 (서버 시간) | `sudo dahae status` |
-| 외부 백업 (권장) | 콘솔 **설정 > 외부 백업** 에서 연결한 S3 호환 저장소 | 매일 | 콘솔 카드 상태 |
+| 외부 백업 | 이 템플릿이 만든 **S3 저장소** (자동, 키 입력 없음). 콘솔 **설정 > 외부 백업** 에서 다른 S3 호환 저장소의 키를 넣으면 그쪽을 써요 | 매일 (사진 파일도) | 콘솔 카드: **AWS S3 (자동)** |
 | 디스크 스냅샷 | AWS **EBS 스냅샷** (이 템플릿이 매일 만들고 7개를 보관) | 매일 03:00 한국 시간 | EC2 > 스냅샷 |
-| 비밀 키 사본 | 서버에서 `sudo dahae keys-backup` 으로 만든 파일 | 한 번, 바뀔 때마다 | 서버 밖(비밀번호 관리 앱 또는 USB)에 보관 |
+| 비밀 키 사본 | 콘솔 **시스템 상태 > 서버 업데이트 > 복구 > 비밀 키 사본 내려받기** (또는 서버에서 `sudo dahae keys-backup`) | 한 번, 바뀔 때마다 | 서버 밖(비밀번호 관리 앱 또는 USB)에 보관. 콘솔에서 내려받으면 보관 확인도 기록돼요 |
 
-- **외부 백업 연결과 비밀 키 사본은 꼭 하세요.** 외부 백업은 비밀 키로 잠겨 있어서, 키 사본이 없으면 서버를 잃었을 때 풀 수 없어요.
+- **비밀 키 사본은 꼭 하세요.** 외부 백업은 비밀 키로 잠겨 있어서, 키 사본이 없으면 서버를 잃었을 때 풀 수 없어요.
+- **자동 외부 백업 (S3):** 서버 역할은 이 저장소에 쓰고 읽고 목록을 볼 수만 있고 **지울 수는 없어요** (서버를 빼앗겨도 사본을 지우지 못해요). 버전 관리가 켜져 있고, 저장소가 암호화하고(SSE-S3), 공개 접근은 막혀 있어요. 오래된 백업은 저장소 규칙이 지워요: 35일 뒤 만료, 덮어쓰이거나 만료된 판은 35일 더 보관. 스택을 지워도 저장소는 남아요.
 - 스냅샷만으로는 충분하지 않아요. 서버 밖에 복사본을 하나 더 두세요 (외부 백업).
 
 ### D-2. 모니터링
 
 - **가동 확인 (heartbeat):** 서버에서 `sudo dahae heartbeat <주소>` 로 외부 가동 확인 서비스(예: healthchecks.io)에 연결하세요. 서버가 멈추면 외부 서비스가 알려줘요.
-- **하드웨어 장애 자동 복구:** 템플릿이 AWS 경보를 만들어 두었어요. 서버 하드웨어가 고장 나면 AWS 가 같은 서버를 다른 장비에서 자동으로 되살려요. 디스크 데이터는 그대로 남아요.
+- **하드웨어 장애 자동 복구와 알림 메일:** 템플릿이 AWS 경보를 만들어 두었어요. 서버 하드웨어 점검이 실패하면 AWS 가 같은 서버를 다른 장비에서 자동으로 되살리고, Email 로 알림 메일을 보내요 (정상으로 돌아오면 한 번 더). B-2 8번의 **Confirm subscription** 을 눌러야 메일이 와요.
+- **디스크 공간 경보는 없어요:** 서버에 CloudWatch 에이전트가 없어 AWS 가 디스크 사용량을 모르기 때문이에요. 디스크는 `sudo dahae status` 와 콘솔 시스템 상태에서 보세요.
 - **운영 명령:** 로그와 상태 확인 명령은 [07번 안내서](07-운영-명령어.md) 에 있어요.
 
 ### D-3. 비용
@@ -271,6 +282,7 @@ AWS 콘솔 → **Systems Manager > Run Command > AWS-RunShellScript** → 대상
    - **디스크(볼륨):** 서버를 종료해도 디스크는 남아요 (데이터 보호). 더 필요 없다고 확인한 뒤 EC2 > 볼륨에서 직접 지우세요.
    - **고정 IP:** EC2 > 탄력적 IP 에서 확인하고, 필요 없으면 해제하세요 (담당 계정으로 안 되면 DODA 의 관리자 계정으로).
    - **OIDC 공급자:** 계정 전체에서 쓰이므로 스택이 지우지 않아요.
+   - **백업 S3 저장소 (`dahae-…-backupbucket-…`):** 데이터 보호를 위해 남아요. 필요 없다고 확인한 뒤 S3 콘솔에서 비우고 지우세요 (DODA 관리자 계정).
 5. GitHub 환경 `doda-aws` 의 변수를 지우거나 환경을 삭제하세요.
 6. 담당 IAM 사용자는 더 쓸 일이 없으면 **IAM > 사용자 > 삭제** 로 지우세요. 다해 서버가 하나도 남지 않으면 정책 `dahae-deployer-policy` 와 `dahae-boundary` 도 **IAM > 정책** 에서 지워요 (DODA 관리자 계정).
 
@@ -290,7 +302,10 @@ This guide sets up one Dahae server on AWS (Seoul) and connects the developer's 
 5. **Setup code without SSH:** EC2 > Instances > Connect > Session Manager > Connect, then `sudo dahae setup-code` (valid 2 hours; `--renew` for a new code). DODA's owner, on a call with the developer, opens `https://<domain>/admin`, enters the code, creates the owner account and enables two-step sign-in on DODA's phone (the owner code guards the payment cards, so the developer never creates this account).
 6. **CD:** the developer's repository `EricWijesinghe/Dahae` holds the GitHub environment `doda-aws` (deployment branches limited to `master`; required reviewers from DODA are optional, and without them a run deploys as soon as the developer starts it) and four environment variables from the stack outputs: `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `DAHAE_DOMAIN`. The AWS role trusts that repository (by its immutable owner and repository ids) and environment, so no other repository can deploy here. The workflow `deploy-aws.yml` runs there. Each stable tag (vX.Y.Z) runs `dahae update <tag>` through SSM and checks health and version (after approval, when reviewers are set). Manual deploy and rollback are in the Actions tab (deploy-aws, Run workflow). Beta tags are never deployed.
 7. **Note:** the server's weekly auto-update is on by default. To make the GitHub deploy the only path, run `sudo dahae update-schedule off`.
-8. **Backups:** keep the offsite backup and the keys backup (`sudo dahae keys-backup`) outside the server. EBS snapshots run daily at 03:00 Seoul time, keep 7.
+8. **Backups:** the template makes a private S3 bucket (block public access, versioning, SSE-S3, lifecycle: 35 days, then 35 more for old versions; kept when the stack is deleted) and the server's role may only put, get and list in it, never delete. Offsite backups and photo backups go there with no keys to type (console backup card: "AWS S3 (automatic)"); keys saved on that card for another S3-compatible store win. Keep the keys backup outside the server: console System status > Server update > Recovery > download the secret key copy (owner code, one download, recorded as kept), or `sudo dahae keys-backup`. EBS snapshots run daily at 03:00 Seoul time, keep 7.
+8a. **Alarm e-mails:** the system-check alarm (auto-recover) also mails the stack's Email through SNS, and again when it is OK. AWS first sends "Subscription Confirmation": click **Confirm subscription** once. No disk-space alarm: the server has no CloudWatch agent.
+8b. **Host tools and rollback:** after v1.6.0, `dahae update <tag>` also replaces the host tools (CLI, agent, units, cron, compose) with that release's install.sh from the delivery repo, only when it matches the release's cosign-signed SHA256SUMS; otherwise nothing changes. `dahae rollback` (also in the console: Recovery > Roll back, owner code plus server approval code) puts the previous version's tools back too, and still stops while a Toss payout is in doubt. Servers made with v1.6.0 or older re-run the install line once.
+8c. **Policies and Windows:** accounts that ran `--admin` before run it again once (existing policies get the new default version: the template now adds the bucket and the alarm topic). `launch.sh` also runs from Git Bash on Windows with the AWS CLI for Windows.
 9. **Costs:** use the AWS pricing calculator (https://calculator.aws/) with Seoul pricing. This guide lists no prices.
 10. **Deleting:** back up first, turn off termination protection, then delete the stack. The disk and the Elastic IP stay until you delete them yourself. The GitHub OIDC provider is account-wide and stays. With no Dahae server left, DODA's admin deletes the deployer user and both policies.
 

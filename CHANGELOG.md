@@ -8,6 +8,16 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+### Added
+- `dahae update <tag>` (and channel updates) also replaces the host tools (CLI, job agent, systemd units, cron, compose) with that release's install.sh from the delivery repo, used only when it matches the release's cosign-signed SHA256SUMS; any mismatch stops the update before the backup. `dahae rollback` puts the previous version's tools back too and keeps the payout double-pay guard (now exit code 4 with its reason in the console).
+- AWS template: a private S3 bucket for offsite backups (block public access, versioning, SSE-S3, 35-day lifecycle, kept on stack delete); the server role may only put, get and list in it, and backups and photo backups go there with no keys to type. The console backup card shows "AWS S3 (automatic)".
+- The API signs offsite backups with the EC2 instance role (IMDSv2 token, session token signed, credentials refreshed before expiry) when no backup keys are saved and `BACKUP_S3_BUCKET` is set; the template's metadata hop limit is 2 so the container reaches it.
+- AWS template: the system-check alarm e-mails the stack's Email through SNS (one "Confirm subscription" click), next to the auto-recover action. No disk alarm: the server has no CloudWatch agent.
+- Console recovery card (System status > Server update): one-click rollback to the previous version (owner code, then the server approval code) and a secret key copy download (owner code; one download, recorded as kept off the server).
+
+### Fixed
+- `deploy/aws/launch.sh` runs from Git Bash on Windows: the AWS CLI gets Windows file paths and reads the Korean template as UTF-8. `--admin` now updates policies that already exist.
+
 ## [1.6.0] - 2026-11-22
 
 ### Security
