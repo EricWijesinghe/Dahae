@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
 import '../state.dart';
+import '../widgets/inline_button.dart';
 
 /// Runs a sensitive owner action. When the server answers 403 stepup_required (no fresh TOTP step-up),
 /// asks for an authenticator code, posts it, and runs the action once more. Cancelling rethrows that error.
@@ -78,6 +79,12 @@ class _StepUpDialogState extends State<_StepUpDialog> {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
+      // The page gutter instead of the default 40px inset: at phone width "Confirm and continue" then still fits
+      // beside Cancel instead of dropping below it.
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: Space.gutter,
+        vertical: Space.xl,
+      ),
       title: Text(t.cStepUpTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -103,7 +110,21 @@ class _StepUpDialogState extends State<_StepUpDialog> {
           onPressed: _busy ? null : () => Navigator.of(context).pop(false),
           child: Text(t.cStepUpCancel),
         ),
-        PrimaryButton(label: t.cStepUpConfirm, busy: _busy, onPressed: _submit),
+        // PrimaryButton takes no style: the compact size comes from the theme, under its own gradient style.
+        Theme(
+          data: Theme.of(context).copyWith(
+            filledButtonTheme: FilledButtonThemeData(
+              style: compactFilled.merge(
+                Theme.of(context).filledButtonTheme.style,
+              ),
+            ),
+          ),
+          child: PrimaryButton(
+            label: t.cStepUpConfirm,
+            busy: _busy,
+            onPressed: _submit,
+          ),
+        ),
       ],
     );
   }

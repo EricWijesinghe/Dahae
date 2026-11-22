@@ -14,6 +14,7 @@ import 'package:console/screens/owner_account.dart';
 import 'package:console/screens/people.dart';
 import 'package:console/screens/privacy_requests.dart';
 import 'package:console/screens/setup_pay_methods.dart';
+import 'package:console/screens/stepup.dart';
 import 'package:core/auth_pay.dart';
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
@@ -181,6 +182,64 @@ Future<void> setViewSize(WidgetTester tester, Size size) async {
   addTearDown(tester.view.resetDevicePixelRatio);
 }
 
+/// Pumps [c] in [lang] at [size] and runs its act step; returns the strings for that language.
+Future<T> pumpCase(
+  WidgetTester tester,
+  LayoutCase c,
+  String lang,
+  Size size,
+) async {
+  final fake = FakeApi();
+  c.api?.call(fake);
+  final env = await TestEnv.create(
+    fake: fake,
+    localeCode: lang,
+    themeMode: ThemeMode.light,
+    role: 'staff_admin',
+  );
+  await setViewSize(tester, size);
+  await pumpConsoleScreen(tester, env, c.home);
+  await tester.pumpAndSettle();
+  final t = lookupT(Locale(lang));
+  await c.act?.call(tester, t);
+  expect(tester.takeException(), isNull);
+  return t;
+}
+
+/// Every button label on screen sits on one line, clear of the button's top and bottom edges.
+void expectButtonLabelsFit(WidgetTester tester) {
+  final buttons = find.byWidgetPredicate((w) => w is ButtonStyleButton);
+  expect(buttons, findsWidgets);
+  for (final b in buttons.evaluate()) {
+    final box = b.renderObject! as RenderBox;
+    final labels = find.descendant(
+      of: find.byElementPredicate((e) => e == b),
+      matching: find.byType(RichText),
+    );
+    for (final l in labels.evaluate()) {
+      final p = l.renderObject! as RenderParagraph;
+      final text = p.text.toPlainText();
+      expect(
+        p.size.width,
+        greaterThanOrEqualTo(p.getMaxIntrinsicWidth(double.infinity) - 0.5),
+        reason: '"$text" wraps inside its button',
+      );
+      final top = p.localToGlobal(Offset.zero).dy;
+      final buttonTop = box.localToGlobal(Offset.zero).dy;
+      expect(
+        top - buttonTop,
+        greaterThanOrEqualTo(4),
+        reason: '"$text" touches the top',
+      );
+      expect(
+        buttonTop + box.size.height - (top + p.size.height),
+        greaterThanOrEqualTo(4),
+        reason: '"$text" touches the bottom',
+      );
+    }
+  }
+}
+
 void main() {
   for (final c in layoutCases) {
     for (final lang in const ['ko', 'en']) {
@@ -188,20 +247,7 @@ void main() {
         testWidgets('${c.name}: lays out at ${size.width.toInt()} wide ($lang)', (
           tester,
         ) async {
-          final fake = FakeApi();
-          c.api?.call(fake);
-          final env = await TestEnv.create(
-            fake: fake,
-            localeCode: lang,
-            themeMode: ThemeMode.light,
-            role: 'staff_admin',
-          );
-          await setViewSize(tester, size);
-          await pumpConsoleScreen(tester, env, c.home);
-          await tester.pumpAndSettle();
-          final t = lookupT(Locale(lang));
-          await c.act?.call(tester, t);
-          expect(tester.takeException(), isNull);
+          final t = await pumpCase(tester, c, lang, size);
           for (final title in c.titles(t)) {
             // A phone-height list builds its lower cards only once they scroll near.
             for (
@@ -260,5 +306,102 @@ void main() {
         );
       },
     );
+  }
+
+  final ownerCases = layoutCases.where(
+    (c) => c.name.startsWith('owner account'),
+  );
+  for (final c in ownerCases) {
+    for (final lang in const ['ko', 'en']) {
+      testWidgets('${c.name}: button labels fit on one line at 360 ($lang)', (
+        tester,
+      ) async {
+        // Real faces: the test font's glyph widths say nothing about where a label wraps.
+        await tester.runAsync(loadShotFonts);
+        // Tall enough that every card is built without scrolling.
+        await pumpCase(tester, c, lang, const Size(360, 2400));
+        expectButtonLabelsFit(tester);
+      });
+
+      for (final size in _sizes) {
+        testWidgets(
+          '${c.name}: cards without a button hug their note at ${size.width.toInt()} ($lang)',
+          (tester) async {
+            await pumpCase(tester, c, lang, Size(size.width, 2400));
+            final plain = find.byWidgetPredicate(
+              (w) => w is ListTile && w.subtitle is! Column,
+            );
+            expect(plain, findsWidgets);
+            for (final e in plain.evaluate()) {
+              final tile = e.renderObject! as RenderBox;
+              final texts = find.descendant(
+                of: find.byElementPredicate((x) => x == e),
+                matching: find.byType(RichText),
+              );
+              final textBottom = texts
+                  .evaluate()
+                  .map((x) {
+                    final r = x.renderObject! as RenderBox;
+                    return r.localToGlobal(Offset(0, r.size.height)).dy;
+                  })
+                  .reduce(math.max);
+              final tileBottom = tile
+                  .localToGlobal(Offset(0, tile.size.height))
+                  .dy;
+              // ListTile's own padding (a title-only tile centres in 56px); the old forced three-line height left ~36px more.
+              expect(tileBottom - textBottom, lessThanOrEqualTo(20));
+              if (size.width >= 1280) {
+                expect(tile.size.height, lessThanOrEqualTo(72));
+              }
+            }
+          },
+        );
+      }
+    }
+  }
+
+  for (final lang in const ['ko', 'en']) {
+    for (final size in _sizes) {
+      testWidgets(
+        'step-up dialog keeps Cancel and Confirm on one row at ${size.width.toInt()} ($lang)',
+        (tester) async {
+          await tester.runAsync(loadShotFonts);
+          final env = await TestEnv.create(
+            localeCode: lang,
+            themeMode: ThemeMode.light,
+            role: 'staff_admin',
+          );
+          await setViewSize(tester, size);
+          await pumpConsoleScreen(
+            tester,
+            env,
+            Builder(
+              builder: (context) => TextButton(
+                onPressed: () => withStepUp<void>(
+                  context,
+                  () async => throw const ApiException(403, 'stepup_required'),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          );
+          await tester.tap(find.text('open'));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          final t = lookupT(Locale(lang));
+          final cancel = find.widgetWithText(TextButton, t.cStepUpCancel);
+          final ok = find.widgetWithText(FilledButton, t.cStepUpConfirm);
+          expect(
+            tester.getCenter(cancel).dy,
+            moreOrLessEquals(tester.getCenter(ok).dy, epsilon: 1),
+          );
+          expect(
+            tester.getTopLeft(cancel).dx,
+            lessThan(tester.getTopLeft(ok).dx),
+          );
+          expectButtonLabelsFit(tester);
+        },
+      );
+    }
   }
 }
