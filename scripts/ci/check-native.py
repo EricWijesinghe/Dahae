@@ -146,8 +146,8 @@ def check_info_plist(app, ios):
         check(want in queries, f"{app} Info.plist: LSApplicationQueriesSchemes lacks card/wallet app scheme {want} (PortOne WebView)")
     if app in PAY_APPS:
         check(PAY_APP_SCHEME in schemes, f"{app} Info.plist: CFBundleURLSchemes lacks the PortOne appScheme {PAY_APP_SCHEME}")
-        check(info.get("FlutterDeepLinkingEnabled") is False,
-              f"{app} Info.plist: FlutterDeepLinkingEnabled must be false, or the {PAY_APP_SCHEME}:// return pushes a route over the payment")
+    check(info.get("FlutterDeepLinkingEnabled") is False,
+          f"{app} Info.plist: FlutterDeepLinkingEnabled must be false (payment {PAY_APP_SCHEME}:// return, Naver Universal Link are not routes)")
     check(len(info.get("LSApplicationQueriesSchemes", [])) <= 50, f"{app} Info.plist: iOS honours at most 50 LSApplicationQueriesSchemes")
     for key in ["CFBundleDisplayName", "CFBundleName"]:
         value = str(info.get(key, "")).strip()
