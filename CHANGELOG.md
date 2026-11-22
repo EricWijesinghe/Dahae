@@ -8,6 +8,8 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-22
+
 ### Added
 - Domain move from the console. New server jobs `domain-check` (admin) and `domain-set` (owner code, then the server approval code), `heartbeat` and `host-approval-enroll` (owner; the server fills in the caller's id); `POST /v1/admin/host/jobs/{id}/approve` hands the approval code to the server, and `GET /v1/admin/host/jobs/{id}/output` returns a job's result (DNS check, enrolment address; capped at 64 KB). The new `dahae domain <new> [--yes]` backs up `.env`, sets `DOMAIN`, restarts api and web and checks `https://<new>/health` for up to 5 minutes; when the new address does not answer it restores `.env` and ends as rolled back (exit 3). Jobs the server cannot hold for approval now say why in their step text.
 - Former domains keep serving: the API records the old domain as an alias when it starts on a new one, adds it to CORS, and answers Caddy's on-demand TLS question (`/internal/tls-ask`, never proxied). On a former domain every API, payment, app-link, sign-in, app and SEO path is served as before; only website pages get a 301 to the new domain. `GET /v1/admin/domains` lists the domains with the after-move checklist (values to copy), `PUT /v1/admin/domains/checklist/{id}` ticks an item and `DELETE /v1/admin/domains/{host}` (owner code) retires a former domain.
