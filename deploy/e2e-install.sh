@@ -85,7 +85,7 @@ api_version_is_test() { get /health | grep -q "\"version\":\"$TAG\""; }
 website_served() { [ "$(code /)" = 200 ] && get / | grep -qi '<html'; }
 # Every page's fragments reach the API from Caddy's own address (about 22 per home page view, 300 a minute for one
 # address): a busy minute must not turn the site into the maintenance page.
-pages_survive_a_burst() { local i; for i in $(seq 40); do [ "$(code /)" = 200 ] || return 1; done; }
+pages_survive_a_burst() { for _ in $(seq 40); do [ "$(code /)" = 200 ] || return 1; done; }
 # The domain root approved, which the apps check before following a new api_base.
 approved_domain_served() { [ "$(get /.well-known/dahae-domain)" = "$DOMAIN" ]; }
 # API down: a proxied non-API path gets the static maintenance page (Caddy's 502 handler), then the API comes back.

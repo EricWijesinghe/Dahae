@@ -59,6 +59,9 @@ FROM caddy:2.11.9@sha256:4e2425f6009577e7c651010f16679c28f7d12df3e7b1914f941a7a3
 COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
 # Security fixes released since the base digest (the release scan blocks on fixable HIGH/CRITICAL).
 RUN apk upgrade --no-cache
+# shortcut: OpenSSL 3.5.9-r1 (CVE-2026-88823, -95691, -95692, -107496) is only in edge so far; drop this line
+# once the base Alpine branch ships it.
+RUN apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main "libssl3>=3.5.9-r1" "libcrypto3>=3.5.9-r1"
 ARG APP_VERSION=dev
 LABEL org.opencontainers.image.source=https://github.com/EricWijesinghe/Dahae-install org.opencontainers.image.version=$APP_VERSION
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
