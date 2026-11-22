@@ -7,7 +7,7 @@ This book shows how to install, set up and run Dahae, the booking, payment and p
 | Item | Details |
 |---|---|
 | Edition | 2nd edition |
-| Version covered | Dahae v1.6.0 (released 2026-11-22), including the one-command AWS install (chapter 4), rebranding in the console (name, logo, colours, the Store app build card) and the domain move (chapter 28), and the server settings, uptime heartbeat, business hours, Toss payouts switch and app IDs now in the console (chapters 13, 15, 17 and 26) |
+| Version covered | Dahae v1.6.1 (released 2026-11-23), including the one-command AWS install (chapter 4), rebranding in the console (name, logo, colours, the Store app build card) and the domain move (chapter 28), and the server settings, uptime heartbeat, business hours, Toss payouts switch and app IDs now in the console (chapters 13, 15, 17 and 26) |
 | Who it is for | The owner and admins of the company that uses Dahae. No technical knowledge needed |
 | Developer material | Collected in chapter 33 (developer appendix) |
 | Copyright | © 2026 Eric Wijesinghe. All rights reserved |

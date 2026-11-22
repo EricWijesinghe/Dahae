@@ -84,15 +84,15 @@ AWS 콘솔(https://aws.amazon.com/console/)에 회사 계정으로 로그인한 
 
 ```bash
 git clone https://github.com/EricWijesinghe/Dahae.git && cd Dahae   # master
-gh release download v1.6.0 -R EricWijesinghe/Dahae -p install.sh -p SHA256SUMS -p SHA256SUMS.bundle -D rel-v1.6.0
-bash scripts/release/verify-blob.sh rel-v1.6.0/SHA256SUMS EricWijesinghe/Dahae   # cosign 이 있으면: 릴리스 서명 확인
-(cd rel-v1.6.0 && sha256sum -c --ignore-missing SHA256SUMS)                       # install.sh: OK
+gh release download v1.6.1 -R EricWijesinghe/Dahae -p install.sh -p SHA256SUMS -p SHA256SUMS.bundle -D rel-v1.6.1
+bash scripts/release/verify-blob.sh rel-v1.6.1/SHA256SUMS EricWijesinghe/Dahae   # cosign 이 있으면: 릴리스 서명 확인
+(cd rel-v1.6.1 && sha256sum -c --ignore-missing SHA256SUMS)                       # install.sh: OK
 dist=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install           # 공개 배포 저장소 (DIST_REPO)
-bash scripts/release/build-aws-template.sh rel-v1.6.0/install.sh "$dist/v1.6.0/install.sh" out
+bash scripts/release/build-aws-template.sh rel-v1.6.1/install.sh "$dist/v1.6.1/install.sh" out
 ```
 
 - 마지막 줄이 `aws template written: out/dahae-aws.yaml (install.sh sha256 <지문>)` 로 나와요. 이 지문이 `SHA256SUMS` 의 `install.sh` 줄과 같아야 해요.
-- 주소는 반드시 태그(`/v1.6.0/`)가 들어간 주소여야 해요. 스크립트가 `main` 같은 브랜치 주소는 거부해요.
+- 주소는 반드시 태그(`/v1.6.1/`)가 들어간 주소여야 해요. 스크립트가 `main` 같은 브랜치 주소는 거부해요.
 - 만든 `out/dahae-aws.yaml` 을 B-2 에서 올립니다.
 - (저장소 안의 `deploy/aws/dahae.cfn.yaml` 은 빈칸이 있는 원본이라 그대로는 못 써요.)
 
@@ -205,7 +205,7 @@ sudo dahae setup-code
 
 1. 개발자가 안정 버전 태그(`vX.Y.Z`)를 만들고, 릴리스 작업(`release`)이 끝나요.
 2. **deploy-aws** 작업이 자동으로 시작해요. `doda-aws` 환경에 승인자가 있으면 승인을 기다리고 (없으면 바로 배포돼요)
-3. 서버에서 `dahae update v1.6.0` 이 실행됩니다 (승인자를 넣었다면 승인자가 **Review deployments > doda-aws > Approve and deploy** 를 누른 뒤). 업데이트는 최대 6시간까지 기다려요.
+3. 서버에서 `dahae update v1.6.1` 이 실행됩니다 (승인자를 넣었다면 승인자가 **Review deployments > doda-aws > Approve and deploy** 를 누른 뒤). 업데이트는 최대 6시간까지 기다려요.
 4. 서버는 백업을 먼저 하고, 새 버전을 받고, 응답을 확인합니다. 새 버전이 응답하지 않으면 **이전 버전으로 자동으로 되돌립니다.**
 5. 마지막으로 `https://<도메인>/health` 와 서버가 보고하는 버전을 확인합니다. 모두 통과하면 작업이 초록색이 됩니다.
 
@@ -219,7 +219,7 @@ sudo dahae setup-code
 
 ### C-3. 수동으로 배포하거나 되돌리기
 
-- **특정 버전 배포:** GitHub 저장소의 **Actions** 탭 > 왼쪽 **deploy-aws** > **Run workflow** > `version` 칸에 `v1.6.0` 입력 > **Run workflow**. 승인자를 넣었다면 승인 뒤 실행돼요.
+- **특정 버전 배포:** GitHub 저장소의 **Actions** 탭 > 왼쪽 **deploy-aws** > **Run workflow** > `version` 칸에 `v1.6.1` 입력 > **Run workflow**. 승인자를 넣었다면 승인 뒤 실행돼요.
 - **이전 버전으로 되돌리기:** 같은 화면에서 **rollback** 을 체크하고 **Run workflow**. 서버에서 `dahae rollback` 이 실행돼요. 마지막 업데이트 바로 전 버전으로 돌아가요.
 - **콘솔에서 되돌리기 (GitHub 없이):** 콘솔 **시스템 상태 > 서버 업데이트** 카드의 **복구 > 이전 버전으로 되돌리기**. 사장님 코드와 서버 승인 코드를 차례로 넣어요. 승인 창에 **되돌아갈 버전**(예: `v1.6.1`)이 나와요. 먼저 백업하고, 관리 도구도 그 버전으로 맞춰요.
 - **되돌린 뒤 자동 업데이트:** 되돌린 버전을 지켜요. 채널(또는 고정한 태그)이 아직 되돌리기 전 버전을 가리키면 매주 자동 업데이트가 그 버전을 다시 올리지 않고, **새 버전이 나오면** 다시 자동으로 업데이트해요. 직접 업데이트(GitHub 배포, 콘솔 업데이트, `dahae update`)를 하면 이 지킴은 끝나요. 단, v1.6.x 이하로 되돌리면 그 버전의 관리 도구는 이 지킴을 몰라요: 콘솔에서 자동 업데이트를 꺼 두세요.
@@ -308,7 +308,7 @@ This guide sets up one Dahae server on AWS (Seoul) and connects the developer's 
 
 0. **Fastest path (AWS CloudShell, the `>_` icon in the console, region Seoul):** DODA's admin runs `curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --admin` once (creates both policies), then creates the user below with `dahae-deployer-policy` and `AWSCloudShellFullAccess` attached. The developer, signed in as that user, runs `curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --domain example.co.kr --email owner@example.co.kr`: it checks the latest release's install.sh against the release SHA256SUMS, pins it into the template, finds the default VPC's public subnet, creates stack `dahae-main` and prints the outputs (options: `--domain auto` for a temporary `<ip>.sslip.io` address until the real domain is moved in from the console, `--hosted-zone-id`, `--instance-type`, `--dry-run`). It never touches an existing stack; new versions go through C. Steps 1–2 below are the manual equivalent.
 1. **Deployer account (DODA, for the developer):** first create the customer-managed policy `dahae-boundary` (exact name) from `deploy/aws/dahae-boundary-policy.json` and attach it to nobody; it is the permissions boundary of the template's roles. Then create an IAM user with console access for the developer and attach `deploy/aws/deployer-iam-policy.json` (as a second customer-managed policy) and the AWS managed policy `AWSCloudShellFullAccess`. Assign its MFA on a call: the developer scans the QR code with the developer's own phone and reads back the two codes. Create no access keys. Send the sign-in URL and user name through a separate channel from the password.
-2. **Template (developer):** the simplest path is `launch.sh` (step 0). To upload a template by hand, download `dahae-aws.yaml` from the latest release (Releases → Latest → Assets); the release builds it from `master`'s template with that release's install.sh URL and SHA-256 filled in. Optional fallback, building it locally: on a `master` checkout, download `install.sh`, `SHA256SUMS` and `SHA256SUMS.bundle` of v1.6.0 (`gh release download v1.6.0 -R EricWijesinghe/Dahae -p install.sh -p SHA256SUMS -p SHA256SUMS.bundle -D rel-v1.6.0`), check them (`scripts/release/verify-blob.sh rel-v1.6.0/SHA256SUMS EricWijesinghe/Dahae` when cosign is installed, then `sha256sum -c --ignore-missing SHA256SUMS`), and, with `dist=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install` (the public delivery repo), run `bash scripts/release/build-aws-template.sh rel-v1.6.0/install.sh "$dist/v1.6.0/install.sh" out`. It writes `out/dahae-aws.yaml` and prints the install.sh SHA-256, which must match the `install.sh` line in `SHA256SUMS`.
+2. **Template (developer):** the simplest path is `launch.sh` (step 0). To upload a template by hand, download `dahae-aws.yaml` from the latest release (Releases → Latest → Assets); the release builds it from `master`'s template with that release's install.sh URL and SHA-256 filled in. Optional fallback, building it locally: on a `master` checkout, download `install.sh`, `SHA256SUMS` and `SHA256SUMS.bundle` of v1.6.1 (`gh release download v1.6.1 -R EricWijesinghe/Dahae -p install.sh -p SHA256SUMS -p SHA256SUMS.bundle -D rel-v1.6.1`), check them (`scripts/release/verify-blob.sh rel-v1.6.1/SHA256SUMS EricWijesinghe/Dahae` when cosign is installed, then `sha256sum -c --ignore-missing SHA256SUMS`), and, with `dist=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install` (the public delivery repo), run `bash scripts/release/build-aws-template.sh rel-v1.6.1/install.sh "$dist/v1.6.1/install.sh" out`. It writes `out/dahae-aws.yaml` and prints the install.sh SHA-256, which must match the `install.sh` line in `SHA256SUMS`.
 3. **Launch (developer, signed in as the deployer user):** in CloudFormation (region ap-northeast-2), create a stack from that `dahae-aws.yaml`. Keep `GitHubRepo` (`EricWijesinghe/Dahae`) and `GitHubRepoIds` (`EricWijesinghe@48539716/Dahae@1452913067`) at their defaults. The stack name must start with `dahae-`. Fill Domain, Email, and optionally HostedZoneId (Route 53). Leave SshCidr empty. Acknowledge IAM and create. Wait for CREATE_COMPLETE, then about 20 minutes for the installer.
 4. **DNS (developer, Cloudflare):** add an A record for the domain pointing to the `PublicIp` output, DNS only (grey cloud). For a bare domain such as `example.co.kr`, add two: `@` and `www`. With Route 53 (HostedZoneId) the stack writes the `Domain` record only.
 5. **Setup code without SSH:** EC2 > Instances > Connect > Session Manager > Connect, then `sudo dahae setup-code` (valid 2 hours; `--renew` for a new code). DODA's owner, on a call with the developer, opens `https://<domain>/admin`, enters the code, creates the owner account and enables two-step sign-in on DODA's phone (the owner code guards the payment cards, so the developer never creates this account).
