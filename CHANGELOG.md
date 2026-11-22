@@ -13,6 +13,7 @@ from the release branches; no tags existed for them.
 - Windows apps: the window title and the exe's ProductName, FileDescription and CompanyName come from the brand at build time (`scripts/store_brand.py`, also run by `build-msix.ps1 -ApiBase`); 다해 is only the default. The title is written as `\u` escapes, so it no longer depends on the build machine's code page.
 - Money: disconnecting a payment card is also refused while that gateway has checkouts that expired within the last day (a late payment still settles on them, `gateway_in_use`) or payments from the last year that can still be refunded (`gateway_has_refundable_payments`, new console text); before, clearing the card made those refunds and late payments fail.
 - A PortOne payment or saved card on a TEST channel raises its own owner alert (rule `payment_test_channel`, "PortOne 테스트 채널로 결제가 들어왔어요", console label in Korean and English) and its own status check `test_channel`, instead of the stuck-payment alert and the `payments` check.
+- Store builds: the partner iOS app takes its own Google iOS client id (new secret `PARTNER_GOOGLE_IOS_CLIENT_ID`) instead of the customer app's, which belongs to another bundle id and made its Google button fail; a partner build without Google sign-in warns in the build log, since App Review signs in to the partner app with Google.
 
 ## [1.6.0] - 2026-11-22
 

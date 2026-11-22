@@ -683,6 +683,10 @@ def check_store_ios(wf):
     check(bypass is not None and wf.count("BYPASS_PERMISSION_LOCATION_ALWAYS") == 1,
           "store-apps.yml: BYPASS_PERMISSION_LOCATION_ALWAYS belongs to the customer (geolocator) app only")
     check("submit_to_app_store" not in wf and "--upload-app" in wf, "store-apps.yml: TestFlight only, nothing goes to App Review")
+    # An iOS OAuth client is bound to one bundle id: App Review signs in to the partner app with Google.
+    ios_job = wf.split("runs-on: macos")[-1]
+    check("PARTNER_GOOGLE_IOS_CLIENT_ID: ${{ secrets.PARTNER_GOOGLE_IOS_CLIENT_ID }}" in ios_job,
+          "store-apps.yml: the iOS job must pass PARTNER_GOOGLE_IOS_CLIENT_ID (Google sign-in in the partner app)")
 
 
 def check_ci():

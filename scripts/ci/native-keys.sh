@@ -22,6 +22,18 @@ up=$(printf '%s' "$app" | tr '[:lower:]' '[:upper:]')
 # Partner Firebase files have their own vars (separate Firebase apps); everything else is shared.
 pick() { local own="${up}_$1"; printf '%s' "${!own:-${!1:-}}"; }
 
+# A Google iOS OAuth client belongs to one bundle id, so the partner app takes only its own: with the customer's id
+# its Google button would fail on iOS. App Review signs in to the partner app with Google (docs/store/review-notes.md).
+if [ "$app" = partner ]; then
+  export GOOGLE_IOS_CLIENT_ID="${PARTNER_GOOGLE_IOS_CLIENT_ID:-}"
+  wanted=",$(printf '%s' "${SOCIAL_PROVIDERS:-}" | tr -d ' '),"
+  if [ -z "${GOOGLE_SERVER_CLIENT_ID:-}" ] || { [ "$wanted" != ",," ] && [[ "$wanted" != *,google,* ]]; }; then
+    echo "::warning::partner build without Google sign-in (GOOGLE_SERVER_CLIENT_ID unset or SOCIAL_PROVIDERS without google): App Review cannot sign in"
+  elif [ -z "$GOOGLE_IOS_CLIENT_ID" ] && [ "${RUNNER_OS:-}" = macOS ]; then
+    echo "::warning::partner iOS build without Google sign-in: set PARTNER_GOOGLE_IOS_CLIENT_ID (the iOS OAuth client of the partner bundle id)"
+  fi
+fi
+
 # The dart-define gets the current domain only; the native App Link entries get every host.
 hosts=$(printf '%s' "${APP_LINK_DOMAIN:-}" | tr -d ' ')
 IFS=, read -r host1 host2 host3 extra <<< "$hosts" || true

@@ -242,7 +242,8 @@ and the Firebase files. All optional except `API_BASE`; a missing key hides that
 | `NAVER_CLIENT_ID` | developers.naver.com → 애플리케이션 → 네아로. Callback URL: `https://<APP_LINK_DOMAIN>/auth/naver/callback` (see Naver App Link below). The secret stays on the server |
 | `APP_LINK_DOMAIN` (variable) | bare server host, same as the server `DOMAIN` (e.g. `myshop.co.kr`). Android App Link host and iOS `applinks:` domain. Naver is hidden without it |
 | `GOOGLE_SERVER_CLIENT_ID` | Google Cloud console → Credentials → *Web* OAuth client id (also put it in the console wizard Google card) |
-| `GOOGLE_IOS_CLIENT_ID` | Google Cloud console → *iOS* OAuth client for each bundle id (the reversed id is derived) |
+| `GOOGLE_IOS_CLIENT_ID` | Google Cloud console → *iOS* OAuth client of the customer bundle id (the reversed id is derived) |
+| `PARTNER_GOOGLE_IOS_CLIENT_ID` | the same for the partner bundle id. An iOS client belongs to one bundle id, so the partner app never takes the customer's; without it the partner iOS app has no Google button (App Review signs in with Google, `docs/store/review-notes.md`) |
 | `GOOGLE_SERVICES_JSON_B64`, `GOOGLE_SERVICE_INFO_PLIST_B64` | Firebase project → customer Android/iOS app config files, `base64 -w0` |
 | `PARTNER_GOOGLE_SERVICES_JSON_B64`, `PARTNER_GOOGLE_SERVICE_INFO_PLIST_B64` | same for the partner apps |
 | `SOCIAL_PROVIDERS` | optional override, e.g. `kakao,naver` |
