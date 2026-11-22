@@ -198,7 +198,9 @@ def check_xcconfig(app, ios):
 
 def check_entitlements_and_privacy(app, ios):
     ent = plist(ios / "Runner" / "Runner.entitlements")
-    check(ent.get("aps-environment") == "production", f"{app} Runner.entitlements: aps-environment must be production")
+    # The archive is signed with a development profile (automatic signing, "iPhone Developer"), so the file must say
+    # development; -exportArchive re-signs with the distribution profile, which sets production (checked in check_ipa).
+    check(ent.get("aps-environment") == "development", f"{app} Runner.entitlements: aps-environment must be development")
     check("Default" in ent.get("com.apple.developer.applesignin", []),
           f"{app} Runner.entitlements: Sign in with Apple entitlement missing")
     check("applinks:$(APP_LINK_HOST)" in ent.get("com.apple.developer.associated-domains", []),
