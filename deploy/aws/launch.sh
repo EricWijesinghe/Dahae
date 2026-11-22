@@ -6,7 +6,8 @@
 #
 # DODA's AWS admin, once:  curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --admin
 #   creates the policies dahae-boundary and dahae-deployer-policy (attach the second one plus AWSCloudShellFullAccess
-#   to the deployer's IAM user).
+#   to the deployer's IAM user). Run again, policies that already exist get this version as their default.
+# Also runs from Git Bash on Windows (the AWS CLI for Windows): file paths are handed over in Windows form.
 # Deployer, to create the server (once; later versions arrive through the deploy-aws workflow):
 #   curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- \
 #     --domain example.co.kr --email owner@example.co.kr
@@ -14,6 +15,7 @@
 # Options: --version vX.Y.Z (default: latest release)  --stack dahae-main  --instance-type t3.medium
 #          --hosted-zone-id Z123 (Route 53 A record)  --vpc vpc-… --subnet subnet-… (default: default VPC, public subnet)
 #          --region ap-northeast-2  --ref master (where the template and policies come from)  --dry-run
+#          --backup-bucket dahae-… (a new server after a lost one: keep using the old stack's retained S3 backup bucket)
 # The release's install.sh is downloaded and checked against the release's SHA256SUMS before its hash is pinned
 # into the template; the server refuses to run any other install.sh.
 set -euo pipefail
@@ -22,7 +24,7 @@ REPO=EricWijesinghe/Dahae
 DIST=EricWijesinghe/Dahae-install
 AWS=${DAHAE_AWS:-aws}
 REGION=ap-northeast-2 REF=master STACK=dahae-main TYPE=t3.medium
-DOMAIN="" EMAIL="" VERSION="" ZONE="" VPC="" SUBNET="" ADMIN=0 DRY=0
+DOMAIN="" EMAIL="" VERSION="" ZONE="" VPC="" SUBNET="" BUCKET="" ADMIN=0 DRY=0
 
 die() { echo "error: $*" >&2; exit 1; }
 need() { [ -n "${2:-}" ] || die "$1 needs a value"; }
@@ -38,6 +40,7 @@ while [ $# -gt 0 ]; do
     --hosted-zone-id) need "$1" "${2:-}"; ZONE=$2; shift ;;
     --vpc) need "$1" "${2:-}"; VPC=$2; shift ;;
     --subnet) need "$1" "${2:-}"; SUBNET=$2; shift ;;
+    --backup-bucket) need "$1" "${2:-}"; BUCKET=$2; shift ;;
     --region) need "$1" "${2:-}"; REGION=$2; shift ;;
     --ref) need "$1" "${2:-}"; REF=$2; shift ;;
     *) die "unknown option $1" ;;
@@ -46,17 +49,33 @@ while [ $# -gt 0 ]; do
 done
 RAW="https://raw.githubusercontent.com/$REPO/$REF"
 aws_() { "$AWS" --region "$REGION" --output text "$@"; }
+# The template and the policies have Korean text; the AWS CLI on Windows would read them in the system code page.
+export AWS_CLI_FILE_ENCODING=UTF-8
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
+# Git Bash (MSYS): aws.exe is a Windows program and cannot open /tmp/...; give it the same folder as C:/...
+wwork=$work
+if command -v cygpath >/dev/null 2>&1; then wwork=$(cygpath -m "$work"); fi
+
+update_policy() { # update_policy <arn> <file> : the file becomes the default version (at most 5 kept: the oldest other one goes)
+  local n old
+  n=$(aws_ iam list-policy-versions --policy-arn "$1" --query 'length(Versions)')
+  if [ "${n:-0}" -ge 5 ]; then
+    old=$(aws_ iam list-policy-versions --policy-arn "$1" --query 'Versions[?IsDefaultVersion==`false`].VersionId' | tr -s '[:space:]' '\n' | sort -V | head -n1)
+    aws_ iam delete-policy-version --policy-arn "$1" --version-id "$old" >/dev/null
+  fi
+  aws_ iam create-policy-version --policy-arn "$1" --policy-document "file://$wwork/$2" --set-as-default >/dev/null
+}
 
 if [ "$ADMIN" = 1 ]; then
   acct=$(aws_ sts get-caller-identity --query Account)
   for p in dahae-boundary:dahae-boundary-policy.json dahae-deployer-policy:deployer-iam-policy.json; do
-    name=${p%%:*} file=${p#*:}
-    if aws_ iam get-policy --policy-arn "arn:aws:iam::$acct:policy/$name" >/dev/null 2>&1; then
-      echo "policy $name already exists"
+    name=${p%%:*} file=${p#*:} arn="arn:aws:iam::$acct:policy/${p%%:*}"
+    curl -fsSL -o "$work/$file" "$RAW/deploy/aws/$file"
+    if aws_ iam get-policy --policy-arn "$arn" >/dev/null 2>&1; then
+      update_policy "$arn" "$file"
+      echo "updated policy $name (new default version)"
     else
-      curl -fsSL -o "$work/$file" "$RAW/deploy/aws/$file"
-      aws_ iam create-policy --policy-name "$name" --policy-document "file://$work/$file" >/dev/null
+      aws_ iam create-policy --policy-name "$name" --policy-document "file://$wwork/$file" >/dev/null
       echo "created policy $name"
     fi
   done
@@ -69,6 +88,7 @@ fi
 [[ "$DOMAIN" != auto || -z "$ZONE" ]] || die "--hosted-zone-id needs a real --domain"
 [[ "$EMAIL" =~ ^[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] || die "--email is required"
 [[ "$STACK" =~ ^dahae-[A-Za-z0-9-]+$ ]] || die "--stack must start with dahae- (the deployer may only manage dahae-* stacks)"
+[[ -z "$BUCKET" || "$BUCKET" =~ ^dahae-[a-z0-9.-]+$ ]] || die "--backup-bucket is the old stack's BackupBucket output (dahae-…)"
 if [ -z "$VERSION" ]; then
   VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
 fi
@@ -102,8 +122,9 @@ aws_ iam get-open-id-connect-provider \
 
 params=(Domain="$DOMAIN" Email="$EMAIL" InstanceType="$TYPE" VpcId="$VPC" SubnetId="$SUBNET" CreateGitHubOidcProvider="$oidc")
 [ -z "$ZONE" ] || params+=(HostedZoneId="$ZONE")
+[ -z "$BUCKET" ] || params+=(ExistingBackupBucket="$BUCKET")
 echo "Dahae $VERSION -> stack $STACK in $REGION (vpc $VPC, subnet $SUBNET, instance $TYPE)"
-deploy=(cloudformation deploy --stack-name "$STACK" --template-file "$work/dahae-aws.yaml"
+deploy=(cloudformation deploy --stack-name "$STACK" --template-file "$wwork/dahae-aws.yaml"
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset --parameter-overrides "${params[@]}")
 # Create only: a template change on a running stack would stop and start the server without updating it.
 # Updates go through `dahae update` / the deploy-aws workflow.
@@ -127,4 +148,5 @@ Done. Next:
  2. Wait about 10 minutes, then open https://$DOMAIN/admin
  3. Owner setup code: EC2 > Instances > the dahae server > Connect > Session Manager, then: sudo dahae setup-code
  4. Automatic deploys: set the GitHub environment doda-aws variables from the outputs above (guide 10 C).
+ 5. Alarm e-mails: AWS sent "AWS Notification - Subscription Confirmation" to $EMAIL; click Confirm subscription once (guide 10 B-2 step 8).
 EOF

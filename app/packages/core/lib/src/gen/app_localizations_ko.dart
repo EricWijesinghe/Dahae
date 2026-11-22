@@ -4235,6 +4235,109 @@ class TKo extends T {
       'PortOne 테스트 채널로 결제나 카드 저장이 들어왔어요. 실제 돈은 오가지 않았어요. 이 서버의 키가 아닌 테스트 채널로 들어온 건은 거절해서 예약되지 않았어요. 테스트 키로 시험 중이면 괜찮아요. 운영 중이라면 설정 > 결제 (PortOne)의 채널 키가 라이브 채널 키인지 확인하고, PortOne 관리자 화면에서 이 상점의 테스트 채널을 삭제한 뒤, 테스트 결제 내역에서 그 결제를 찾아 예약을 고객과 다시 확인하세요.';
 
   @override
+  String get cSetupAwsAuto => 'AWS S3 (자동)';
+
+  @override
+  String get cSetupNoInstanceRole =>
+      '서버 역할로 AWS 저장소에 접속하지 못했어요. AWS 템플릿으로 만든 서버인지, AWS 관리자가 launch.sh --admin 을 한 번 다시 실행했는지 확인하세요.';
+
+  @override
+  String get srTitle => '복구';
+
+  @override
+  String get srRollbackBody =>
+      '업데이트 뒤에 문제가 생기면 바로 전 버전으로 돌아가요. 먼저 백업하고, 데이터는 그대로예요. 토스 결과를 기다리는 정산이 있으면 되돌리지 않아요. 되돌린 뒤에는 새 버전이 나올 때까지 자동 업데이트가 그 버전을 다시 올리지 않아요. 사장님 코드와 서버 승인 코드가 필요해요.';
+
+  @override
+  String get srRollbackButton => '이전 버전으로 되돌리기';
+
+  @override
+  String get srRollbackConfirm => '이전 버전으로 되돌릴까요? 몇 분 동안 서비스가 다시 시작돼요.';
+
+  @override
+  String get srRunning => '진행 중이에요. 이 화면을 닫아도 서버에서 계속돼요.';
+
+  @override
+  String get srRollbackDone =>
+      '이전 버전으로 되돌렸어요. 새 버전이 나올 때까지 자동 업데이트는 이 버전을 지켜요.';
+
+  @override
+  String get srApprovalCancelled =>
+      '서버 승인 코드를 넣지 않아서 되돌리지 않았어요. 기다리던 작업은 10분 뒤에 저절로 취소돼요.';
+
+  @override
+  String get srApprovalNoSummary =>
+      '서버가 보낸 요약이 되돌리기가 아니어서 승인 코드를 보내지 않았어요. 아래 최근 작업을 확인해 주세요.';
+
+  @override
+  String get srStillRunning => '아직 진행 중이에요. 결과는 아래 최근 작업에서 보세요.';
+
+  @override
+  String get srOldTools =>
+      '서버의 관리 도구가 예전 버전이라 이 작업을 몰라요. 설치 줄을 한 번 다시 실행하세요 (안내서 10 C-5).';
+
+  @override
+  String srFailed(String reason) {
+    return '되돌리지 못했어요: $reason';
+  }
+
+  @override
+  String get srKeysTitle => '비밀 키 사본 내려받기';
+
+  @override
+  String get srKeysBody =>
+      '서버를 잃어도 외부 백업을 풀 수 있게, 서버의 비밀 키를 비밀번호로 잠근 파일을 내려받아요. 파일과 비밀번호는 서버 밖에 따로 보관하세요. 만든 파일은 한 번만 내려받을 수 있어요.';
+
+  @override
+  String get srKeysPass => '잠금 비밀번호 (12자 이상)';
+
+  @override
+  String get srKeysPassAgain => '잠금 비밀번호 한 번 더';
+
+  @override
+  String get srKeysPassShort => '12자 이상 입력하세요';
+
+  @override
+  String get srKeysPassMismatch => '두 비밀번호가 달라요';
+
+  @override
+  String get srKeysButton => '만들고 내려받기';
+
+  @override
+  String get srKeysRunning => '비밀 키 사본을 만들고 있어요';
+
+  @override
+  String get srKeysDone => '서버 밖에 보관했다고 기록했어요.';
+
+  @override
+  String get srKeysKept => '서버 밖에 보관했어요';
+
+  @override
+  String get srKeysKeptConfirm =>
+      '내려받은 파일을 USB 나 비밀번호 관리자처럼 서버 밖에 옮겨 두었고, 비밀번호도 따로 적어 두었나요? 그래야 서버를 잃어도 백업을 풀 수 있어요.';
+
+  @override
+  String get srKeysNotKept =>
+      '내려받았어요. 서버 밖 보관은 아직 기록하지 않았어요: 옮겨 둔 뒤 사본을 다시 만들어 확인해 주세요.';
+
+  @override
+  String get srKeysSaveFailed => '파일을 저장하지 못했어요. 사본을 다시 만들어 주세요.';
+
+  @override
+  String srKeysFailed(String reason) {
+    return '사본을 만들지 못했어요: $reason';
+  }
+
+  @override
+  String get srKindRollback => '이전 버전으로 되돌리기';
+
+  @override
+  String get srKindKeysBackup => '비밀 키 사본';
+
+  @override
+  String get srKindKeysConfirm => '비밀 키 사본 보관 기록';
+
+  @override
   String get ntNavLabel => '알림 문구';
 
   @override

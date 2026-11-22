@@ -20,6 +20,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::MethodRouter,
 };
+use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -37,6 +38,14 @@ pub fn replayable(m: MethodRouter<AppState>) -> MethodRouter<AppState> {
 
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The stored request fingerprint, keyed with DATA_KEY: a body can hold a secret (the key copy's passphrase), and
+/// a plain hash of it in the table or a DB dump could be guessed offline.
+fn body_hash(data_key: &[u8; 32], body: &[u8]) -> String {
+    let mut mac = <Hmac<Sha256> as hmac::KeyInit>::new_from_slice(data_key).expect("HMAC takes any key length");
+    mac.update(body);
+    hex(&mac.finalize().into_bytes())
 }
 
 fn valid_key(raw: &axum::http::HeaderValue) -> ApiResult<String> {
@@ -84,7 +93,7 @@ pub async fn replay(Extension(db): Extension<PgPool>, Extension(config): Extensi
         Err(_) => return Ok(StatusCode::PAYLOAD_TOO_LARGE.into_response()),
     };
     let scope = format!("{}:{}", caller(&db, &config, parts.headers.get(header::AUTHORIZATION)).await, parts.uri.path());
-    let body_hash = hex(&Sha256::digest(&bytes));
+    let body_hash = body_hash(&config.data_key, &bytes);
     match claim(&db, &scope, &key, &body_hash).await? {
         Slot::Done(status, text) => Ok(replayed(status, text)),
         Slot::Fresh => {

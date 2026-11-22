@@ -22,6 +22,11 @@ mkdir -p "$DAHAE_JOBS/inbox" "$DAHAE_JOBS/work/done" "$DAHAE_JOBS/status" "$DAHA
 cat > "$DAHAE_CLI" <<EOF
 #!/usr/bin/env bash
 printf '%s YES=%s\n' "\$*" "\${DAHAE_YES:-}" >> "$SB/argv.log"
+# the next command exits with the code in \$SB/rc-next (once)
+if [ -f "$SB/rc-next" ]; then rc=\$(cat "$SB/rc-next"); rm -f "$SB/rc-next"; exit "\$rc"; fi
+# keys-backup: seals a fake copy with the passphrase it was handed; rollback exits 4 after touch \$SB/payouts-next
+if [ "\$1" = keys-backup ]; then mkdir -p "$SB/backups"; printf 'sealed:%s' "\${DAHAE_KEYS_PASSPHRASE:-}" > "$SB/backups/keys-\$(date +%Y%m%d-%H%M%S%N).env.enc"; exit 0; fi
+if [ "\$1" = rollback ] && [ -e "$SB/payouts-next" ]; then rm -f "$SB/payouts-next"; exit 4; fi
 case "\$1" in update|domain) ;; *) exit 0 ;; esac
 if [ -e "$SB/rollback-next" ]; then rm -f "$SB/rollback-next"; exit 3; fi
 if [ -e "$SB/fail-next" ]; then rm -f "$SB/fail-next"; exit 1; fi
@@ -35,7 +40,7 @@ mkdir -p "$SB/bin"
 cat > "$SB/bin/docker" <<EOF
 #!/usr/bin/env bash
 printf '%s %s\n' "\$PWD" "\$*" >> "$SB/docker.log"
-case "\$*" in *" logs "*) cat "$SB/logs.txt" 2>/dev/null || true ;; esac
+case "\$*" in *" logs "*) cat "$SB/logs.txt" 2>/dev/null || true ;; "image inspect"*) cat "$SB/label.txt" 2>/dev/null || exit 1 ;; esac
 EOF
 chmod +x "$SB/bin/docker"
 # fake public-IP lookup and DNS lookups: the server is 203.0.113.7, the domain has one A and one AAAA record
@@ -325,8 +330,13 @@ t  "version history records v2.1.0"       grep -qx v2.1.0 "$HOST_DIR/version-his
 nt "downgrade after approval refused"     tag_newer v2.0.0
 
 # B: the same code is never accepted twice; five wrong codes cancel the job
+printf 'DOMAIN=myshop.co.kr\nCHANNEL=stable\nVERSION=stable\nPREV_API_IMAGE=repo/api@sha256:aa\n' > "$DAHAE_DIR/.env"; printf '1.6.1\n' > "$SB/label.txt"
 id2=$(uuid7); submit "$id2" "id=$id2\nkind=rollback\ntoken=$TOK2\n"
 t  "rollback waits for approval"          eq "$(state "$id2")" awaiting_approval
+t  "rollback summary names the version it goes back to" grep -q '"summary":"이전 버전으로 되돌려요: v1.6.1 ' "$DAHAE_JOBS/public/$TOK2.json"
+printf '$(id)\n' > "$SB/label.txt"
+t  "an odd version label is never shown"  eq "$(prev_version)" '버전 모름'
+rm -f "$SB/label.txt"; printf 'DOMAIN=myshop.co.kr\nCHANNEL=stable\nVERSION=stable\n' > "$DAHAE_DIR/.env"
 before=$(argv_lines)
 ap "$id2" "$good"
 t  "reused code refused"                  eq "$(argv_lines)" "$before"
@@ -553,6 +563,49 @@ for k in update backup-now rollback; do t "$k gets the long limit" eq "$(limit_o
 t  "channel gets the long limit"          eq "$(limit_of channel beta)" "$UPDATE_RUN_TIMEOUT"
 t  "update-tag gets the long limit"       eq "$(limit_of update-tag v9.9.9)" "$UPDATE_RUN_TIMEOUT"
 t  "schedule keeps the normal limit"      eq "$(limit_of schedule off)" "$RUN_TIMEOUT"
+
+# ---- keys backup from the console: the passphrase arrives as hex, the sealed copy goes out once as base64 ----
+hexof() { printf '%s' "$1" | od -An -tx1 | tr -d ' \n'; }
+KTOK=fedcba9876543210fedcba9876543210
+id=$(uuid7); submit "$id" "id=$id\nkind=keys-backup\narg=$(hexof 'correct horse battery')\ntoken=$KTOK\n"
+t  "keys-backup runs dahae keys-backup"      argv_has "keys-backup YES=1"
+t  "keys-backup ends ok"                     eq "$(state "$id")" ok
+t  "the CLI got the decoded passphrase"      eq "$(base64 -d "$DAHAE_JOBS/out/$KTOK" 2>/dev/null)" "sealed:correct horse battery"
+t  "the output is one base64 line"           eq "$(wc -l < "$DAHAE_JOBS/out/$KTOK" | tr -d ' ')" 0
+nt "the passphrase is not in the status"     grep -rqF "correct horse" "$DAHAE_JOBS/status"
+KTOK2=0123456789abcdef0123456789abcde0
+id=$(uuid7); submit "$id" "id=$id\nkind=keys-backup\narg=$(hexof '비밀번호한글열두자')\ntoken=$KTOK2\n"
+t  "a Korean passphrase arrives byte for byte" eq "$(base64 -d "$DAHAE_JOBS/out/$KTOK2" 2>/dev/null)" "sealed:비밀번호한글열두자"
+id=$(uuid7); t  "keys-backup without token refused"   refuse "$id" "id=$id\nkind=keys-backup\narg=$(hexof 'correct horse battery')\n"
+id=$(uuid7); t  "keys-backup short passphrase refused" refuse "$id" "id=$id\nkind=keys-backup\narg=$(hexof 'elevenchars')\ntoken=$KTOK\n"
+id=$(uuid7); t  "keys-backup upper-case hex refused"  refuse "$id" "id=$id\nkind=keys-backup\narg=$(hexof 'correct horse battery' | tr a-f A-F)\ntoken=$KTOK\n"
+id=$(uuid7); t  "keys-backup odd hex refused"         refuse "$id" "id=$id\nkind=keys-backup\narg=$(hexof 'correct horse battery')a\ntoken=$KTOK\n"
+before=$(argv_lines)
+id=$(uuid7); submit "$id" "id=$id\nkind=keys-backup\narg=00$(hexof 'correct horse battery')\ntoken=$KTOK\n"
+t  "a NUL byte in the passphrase fails the job" eq "$(state "$id")" failed
+t  "...before the CLI runs"                  eq "$(argv_lines)" "$before"
+id=$(uuid7); submit "$id" "id=$id\nkind=keys-confirm\n"
+t  "keys-confirm runs dahae keys-confirm"    argv_has "keys-confirm YES=1"
+id=$(uuid7); t  "keys-confirm takes no argument"      refuse "$id" "id=$id\nkind=keys-confirm\narg=x\n"
+
+# ---- rollback stopped by the payout guard says why ----
+touch "$SB/payouts-next"
+# shellcheck disable=SC2034 # read by run_job in the sourced agent
+JOB_ID=$(uuid7) JOB_KIND=rollback JOB_ARG="" JOB_TOKEN=""; run_job
+t  "payout guard: rollback ends failed"      eq "$(state "$JOB_ID")" failed
+t  "payout guard: the reason names the payouts" grep -qF '정산' "$DAHAE_JOBS/status/$JOB_ID.json"
+
+# ---- every way a rollback or an update can end has a reason the console shows ----
+ends_with() { # ends_with 종류 종료코드 : 가짜 관리 명령이 그 코드로 끝날 때 상태 파일의 이유
+  printf '%s\n' "$2" > "$SB/rc-next"
+  # shellcheck disable=SC2034 # read by run_job in the sourced agent
+  JOB_ID=$(uuid7) JOB_KIND=$1 JOB_ARG="" JOB_TOKEN=""; run_job
+  printf '%s %s' "$(state "$JOB_ID")" "$(cat "$DAHAE_JOBS/status/$JOB_ID.json")"
+}
+t  "rollback with no previous version says so" sh -c 'case "$1" in failed*"되돌릴 이전 버전이 없어요"*) ;; *) exit 1 ;; esac' _ "$(ends_with rollback 6)"
+t  "rollback whose tools stayed says to re-run the install line" sh -c 'case "$1" in failed*"관리 도구만 되돌리지 못했어요"*"C-5"*) ;; *) exit 1 ;; esac' _ "$(ends_with rollback 5)"
+t  "any other rollback failure points at the logs" sh -c 'case "$1" in failed*"dahae logs"*) ;; *) exit 1 ;; esac' _ "$(ends_with rollback 1)"
+t  "update whose tools stayed says the new version is fine" sh -c 'case "$1" in failed*"새 버전으로 바꿨고 정상이에요"*) ;; *) exit 1 ;; esac' _ "$(ends_with update 5)"
 
 echo "agent self-test: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ]

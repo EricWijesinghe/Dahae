@@ -608,6 +608,9 @@ async fn card(s: &AppState, sec: Section, last_test: Option<Value>) -> ApiResult
     let lock = integrations::lock_state(&s.db, sec).await?;
     let source = if !saved.is_empty() {
         "console"
+    } else if base.backup.as_ref().is_some_and(|b| sec == Section::Backup && b.instance_role.is_some()) {
+        // The AWS template's own bucket, written with the server's role: nothing to type.
+        "aws_role"
     } else if env {
         "env"
     } else {

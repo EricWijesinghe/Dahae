@@ -18,6 +18,26 @@ from the release branches; no tags existed for them.
 - Docs: OPERATIONS lists all 18 owner alert rules; the payments guide explains the test-channel alert.
 - Money: a payment card in use cannot be re-saved onto another account (`gateway_account_changed`): another PortOne store, or a Toss secret key that cannot read that MID's newest payment. A new key of the same account still saves. Disconnecting PortOne while the server's env also holds PortOne keys is guarded unless the env names the same store, an open subscription charge blocks a disconnect, and demo payments no longer do.
 - Docs and CI: the rebrand checklist no longer says the Windows window title and exe info need hand edits; `check-native.py` fails when the partner app could take the customer's iOS Google client id; the store review notes say both OSes need `GOOGLE_SERVER_CLIENT_ID`.
+### Added
+- `dahae update <tag>` (and channel updates) also replaces the host tools (CLI, job agent, systemd units, cron, compose) with that release's install.sh from the delivery repo, used only when it matches the release's cosign-signed SHA256SUMS; any mismatch stops the update before the backup. `dahae rollback` puts the previous version's tools back too and keeps the payout double-pay guard (now exit code 4 with its reason in the console).
+- AWS template: a private S3 bucket for offsite backups (block public access, versioning, SSE-S3, 35-day lifecycle, kept on stack delete); the server role may only put, get and list in it, and backups and photo backups go there with no keys to type. The console backup card shows "AWS S3 (automatic)".
+- The API signs offsite backups with the EC2 instance role (IMDSv2 token, session token signed, credentials refreshed before expiry) when no backup keys are saved and `BACKUP_S3_BUCKET` is set; the template's metadata hop limit is 2 so the container reaches it.
+- AWS template: the system-check alarm e-mails the stack's Email through SNS (one "Confirm subscription" click), next to the auto-recover action. No disk alarm: the server has no CloudWatch agent.
+- Console recovery card (System status > Server update): one-click rollback to the previous version (owner code, then the server approval code) and a secret key copy download (owner code; one download, recorded as kept off the server once the owner confirms it).
+- `deploy/aws/launch.sh` runs from Git Bash on Windows: the AWS CLI gets Windows file paths and reads the Korean template as UTF-8. `--admin` now updates policies that already exist.
+- Host tools: the rollback copy of the installer moves only when the images really change, so a weekly auto-update with no new release no longer makes the next rollback re-run the current tools, and an install-line re-run keeps the record one version back.
+- Host tools: the installer and agent.sh are verified against the SHA256SUMS signed at exactly that tag; a channel is read as the tag it points at (its VERSION) and refused when older than the newest version the server ran. An installer without tools mode is never run as a refresh.
+- Host tools: agent.sh is fetched and verified with the installer and kept beside it, so a rollback does not download it again (a moved `beta` branch no longer breaks it); in tools mode the agent is checked before anything is written.
+- A tools refresh or tools rollback that fails after the app answers now ends with exit code 5 and a reason in the console instead of a bare failure or a false "ok"; a rollback with no previous version ends with exit code 6 and says so; other rollback failures point at `dahae logs`.
+- After a rollback the weekly auto-update holds the rolled-back version until the channel moves to a newer one (`host/rollback-hold`); a manual update ends the hold.
+- The console's key copy download no longer records the copy as kept: the owner confirms "Kept off the server" after the file was saved (`POST /v1/admin/host/jobs/{id}/kept`), and the one-time download mark and its audit entry commit together.
+- `dahae keys-backup` seals only DATA_KEY and JWT_SECRET (what keys-restore reads) instead of the whole `.env` with the database superuser password.
+- The idempotency record stores a DATA_KEY HMAC of the request body instead of a plain SHA-256, so the key copy passphrase cannot be guessed from the database or a dump.
+- AWS backup bucket: the server role may only create objects (PutObject requires `If-None-Match: *`, which the API sends on role uploads), so a taken-over server cannot overwrite or delete existing copies.
+- AWS template: `ExistingBackupBucket` (`launch.sh --backup-bucket`) lets a replacement stack read and keep using the retained bucket of a lost server.
+- A role refusal (401/403) on the automatic AWS bucket reports `no_instance_role` instead of "wrong key".
+- Console recovery card: the rollback approval shows the target version; closing the approval dialog, a job still running after the wait, and a job old server tools do not know each get their own message.
+- `launch.sh` ends with the alarm e-mail confirmation step.
 
 ## [1.6.0] - 2026-11-22
 

@@ -509,6 +509,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
     final passKept = _result?['ok'] == false && _lastPass?['ok'] == true;
     final status = !configured
         ? Tag(label: t.cSetupNotConnected, hue: StatusHues.consultation)
+        : widget.card['source'] == 'aws_role'
+        ? Tag(label: t.cSetupAwsAuto, hue: StatusHues.assigned)
         : widget.card['source'] == 'env'
         ? Tag(label: t.cSetupFromEnv, hue: StatusHues.assigned)
         : _result == null

@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 import '../state.dart';
 import '../widgets/owner_totp_dialog.dart';
 import 'host_controls.dart';
+import 'server_recovery.dart';
 
 /// "Update now" for the owner, plus the recent server jobs with their state. The button needs the owner's
 /// code for each press and is hidden from other admins; a run already queued or running turns it off.
@@ -60,6 +61,8 @@ class _HostUpdateCardState extends State<HostUpdateCard> {
               HostControls(onQueued: reload),
               const SizedBox(height: Space.lg),
               const ApprovalEnrollCard(),
+              const SizedBox(height: Space.lg),
+              ServerRecoveryCard(onQueued: reload),
             ],
             const SizedBox(height: Space.md),
             Text(t.hjRecent, style: context.text.labelLarge),
@@ -117,6 +120,9 @@ String _kind(T t, String kind) => switch (kind) {
   'domain-check' => t.cRbKindDomainCheck,
   'domain-set' => t.cRbKindDomainSet,
   'host-approval-enroll' => t.cRbKindEnroll,
+  'rollback' => t.srKindRollback,
+  'keys-backup' => t.srKindKeysBackup,
+  'keys-confirm' => t.srKindKeysConfirm,
   _ => kind,
 };
 

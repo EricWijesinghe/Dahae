@@ -421,3 +421,105 @@ async fn output_is_capped_and_the_enrolment_result_is_the_owners_only(db: PgPool
     assert_eq!(st, StatusCode::OK);
     assert_eq!(out["text"], "otpauth://totp/x");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn rollback_is_an_owner_job_that_takes_the_server_approval_code(db: PgPool) {
+    let h = host(db.clone());
+    let admin = enrolled_admin(&db).await;
+    let job = queue_job(&h, &admin, json!({ "kind": "rollback" })).await;
+    let id = job["id"].as_str().expect("id").to_string();
+    let text = std::fs::read_to_string(&job_files(&h.dir)[0]).expect("job file");
+    assert!(text.contains("\nkind=rollback\ntoken="), "{text}");
+    write_status(&h, &id, "awaiting_approval");
+    let (st, _) = send(
+        &h.app,
+        "POST",
+        &format!("/v1/admin/host/jobs/{id}/approve"),
+        &admin,
+        None,
+        None,
+        Some(json!({ "code": "123456" })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::ACCEPTED);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn key_copy_passphrase_stays_out_of_the_database_and_the_copy_is_taken_once_then_kept_on_the_owners_word(db: PgPool) {
+    let h = host(db.clone());
+    std::fs::create_dir_all(h.dir.join("out")).expect("out");
+    let admin = enrolled_admin(&db).await;
+    let (other, _) = staff_token(&db, api::auth::Role::StaffAdmin).await;
+    let pass = hex::encode("correct horse battery");
+    let job = queue_job(&h, &admin, json!({ "kind": "keys-backup", "arg": pass })).await;
+    assert_eq!(job["arg"], "", "the response does not echo the passphrase");
+    let id = job["id"].as_str().expect("id").to_string();
+    let file = std::fs::read_to_string(&job_files(&h.dir)[0]).expect("job file");
+    assert!(file.contains(&format!("\nkind=keys-backup\narg={pass}\ntoken=")), "{file}");
+    let stored: String = sqlx::query_scalar("SELECT arg FROM host_jobs WHERE id = $1::uuid")
+        .bind(&id)
+        .fetch_one(&db)
+        .await
+        .expect("row");
+    assert_eq!(stored, "");
+    let leaked: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE data::text LIKE '%' || $1 || '%'")
+        .bind(&pass)
+        .fetch_one(&db)
+        .await
+        .expect("audit");
+    assert_eq!(leaked, 0, "the audit entry has no passphrase");
+    // The replay record keeps only a keyed hash of the request: a plain SHA-256 of it could be guessed offline.
+    let body = json!({ "kind": "keys-backup", "arg": pass }).to_string();
+    let plain = hex::encode(<sha2::Sha256 as sha2::Digest>::digest(body.as_bytes()));
+    let (rows, plain_rows): (i64, i64) =
+        sqlx::query_as("SELECT count(*), count(*) FILTER (WHERE request_hash = $1) FROM idempotency_keys WHERE scope LIKE '%/host/jobs'")
+            .bind(&plain)
+            .fetch_one(&db)
+            .await
+            .expect("idempotency rows");
+    assert_eq!((rows, plain_rows), (1, 0), "one replay record, without a plain hash of the passphrase");
+
+    let uri = format!("/v1/admin/host/jobs/{id}/output");
+    let kept = format!("/v1/admin/host/jobs/{id}/kept");
+    let (st, _) = send(&h.app, "GET", &uri, &admin, None, None, None).await;
+    assert_eq!(st, StatusCode::NOT_FOUND, "not sealed yet");
+    let (st, _) = send(&h.app, "POST", &kept, &admin, None, None, None).await;
+    assert_eq!(st, StatusCode::CONFLICT, "nothing downloaded yet, nothing to keep");
+    std::fs::write(h.dir.join("out").join(job["progress_token"].as_str().expect("token")), "U2FsdGVkX18=").expect("out file");
+    let (st, _) = send(&h.app, "GET", &uri, &other, None, None, None).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "another admin");
+    let (st, out) = send(&h.app, "GET", &uri, &admin, None, None, None).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(out["text"], "U2FsdGVkX18=");
+    let (st, _) = send(&h.app, "GET", &uri, &admin, None, None, None).await;
+    assert_eq!(st, StatusCode::CONFLICT, "one download only");
+
+    let confirms = || -> Vec<String> {
+        job_files(&h.dir)
+            .iter()
+            .filter_map(|p| std::fs::read_to_string(p).ok())
+            .filter(|t| t.contains("\nkind=keys-confirm\n"))
+            .collect()
+    };
+    assert!(confirms().is_empty(), "a download alone records nothing: the browser may not have saved it");
+    let (st, _) = send(&h.app, "POST", &kept, &other, None, None, None).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "another admin cannot say it is kept");
+    let (st, _) = send(&h.app, "POST", &kept, &admin, None, None, None).await;
+    assert_eq!(st, StatusCode::ACCEPTED);
+    let (st, _) = send(&h.app, "POST", &kept, &admin, None, None, None).await;
+    assert_eq!(st, StatusCode::CONFLICT, "recorded once");
+    let confirms = confirms();
+    assert_eq!(confirms.len(), 1, "the owner's word queues the confirmation once");
+    assert!(!confirms[0].contains("arg="), "{}", confirms[0]);
+    let (st, _) = send(
+        &h.app,
+        "POST",
+        "/v1/admin/host/jobs",
+        &admin,
+        Some(&code_now()),
+        Some(&Uuid::now_v7().to_string()),
+        Some(json!({ "kind": "keys-confirm" })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "a client cannot queue the confirmation");
+}

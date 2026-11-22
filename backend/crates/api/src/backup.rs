@@ -44,6 +44,84 @@ const KEY_CONTEXT: &[u8] = b"malkkeum offsite backup v1";
 const SINGLE_PUT_MAX: u64 = 5 * 1024 * 1024 * 1024;
 const MIN_PART: u64 = 64 * 1024 * 1024;
 const MAX_PARTS: u64 = 10_000;
+/// EC2 instance metadata service (IMDSv2). The AWS template sets the hop limit to 2 so the API container reaches it.
+pub const IMDS_BASE: &str = "http://169.254.169.254";
+const IMDS_TOKEN_TTL_SECS: &str = "21600";
+const IMDS_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+/// Role credentials are fetched again this long before they expire: a photo upload in parts can outlast them.
+const ROLE_REFRESH_MARGIN_SECS: i64 = 300;
+
+/// Temporary credentials of the server's instance role.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct RoleCreds {
+    access: String,
+    secret: String,
+    token: String,
+    expires: DateTime<Utc>,
+}
+
+/// Role credentials by the metadata service they came from (one entry on a server; tests run fakes side by side).
+static ROLE_CACHE: std::sync::Mutex<Vec<(String, RoleCreds)>> = std::sync::Mutex::new(Vec::new());
+
+/// Cached role credentials, fetched again from `base` when none are cached or they expire within the margin.
+async fn role_creds(http: &reqwest::Client, base: &str) -> Result<RoleCreds, Fail> {
+    let fresh_until = Utc::now() + Duration::seconds(ROLE_REFRESH_MARGIN_SECS);
+    let cached = ROLE_CACHE
+        .lock()
+        .ok()
+        .and_then(|c| c.iter().find(|(b, c)| b == base && c.expires > fresh_until).map(|(_, c)| c.clone()));
+    if let Some(c) = cached {
+        return Ok(c);
+    }
+    let creds = fetch_role_creds(http, base).await?;
+    if let Ok(mut c) = ROLE_CACHE.lock() {
+        c.retain(|(b, _)| b != base);
+        c.push((base.to_string(), creds.clone()));
+    }
+    Ok(creds)
+}
+
+/// IMDSv2: a session token first (PUT), then the role name and its credentials with that token.
+async fn fetch_role_creds(http: &reqwest::Client, base: &str) -> Result<RoleCreds, Fail> {
+    let token = imds_text(
+        http.put(format!("{base}/latest/api/token"))
+            .header("x-aws-ec2-metadata-token-ttl-seconds", IMDS_TOKEN_TTL_SECS),
+    )
+    .await?;
+    let path = format!("{base}/latest/meta-data/iam/security-credentials/");
+    let roles = imds_text(http.get(&path).header("x-aws-ec2-metadata-token", &token)).await?;
+    let role = roles
+        .lines()
+        .next()
+        .map(str::trim)
+        .filter(|r| !r.is_empty() && r.chars().all(|c| c.is_ascii_alphanumeric() || "+=,.@_-".contains(c)))
+        .ok_or(Fail::NoRole)?;
+    let body = imds_text(http.get(format!("{path}{role}")).header("x-aws-ec2-metadata-token", &token)).await?;
+    parse_role_creds(&body).ok_or(Fail::NoRole)
+}
+
+async fn imds_text(req: reqwest::RequestBuilder) -> Result<String, Fail> {
+    let resp = req.timeout(IMDS_TIMEOUT).send().await.map_err(|_| Fail::NoRole)?;
+    if !resp.status().is_success() {
+        return Err(Fail::NoRole);
+    }
+    resp.text().await.map_err(|_| Fail::NoRole)
+}
+
+/// The metadata service's credentials document; anything but `"Code": "Success"` with all four fields is refused.
+fn parse_role_creds(body: &str) -> Option<RoleCreds> {
+    let v: Value = serde_json::from_str(body).ok()?;
+    let field = |k: &str| v.get(k).and_then(Value::as_str).filter(|s| !s.is_empty()).map(str::to_owned);
+    if v.get("Code").and_then(Value::as_str) != Some("Success") {
+        return None;
+    }
+    Some(RoleCreds {
+        access: field("AccessKeyId")?,
+        secret: field("SecretAccessKey")?,
+        token: field("Token")?,
+        expires: DateTime::parse_from_rfc3339(&field("Expiration")?).ok()?.with_timezone(&Utc),
+    })
+}
 
 /// Why a remote call failed. `code()` is what the status page and the wizard show.
 #[derive(Debug, thiserror::Error)]
@@ -60,11 +138,14 @@ pub enum Fail {
     BadListing,
     #[error("backup target did not finish the multipart upload")]
     Incomplete,
+    #[error("no instance role credentials from the metadata service")]
+    NoRole,
 }
 
 impl Fail {
     pub fn code(&self) -> &'static str {
         match self {
+            Self::NoRole => "no_instance_role",
             Self::Unreachable => "unreachable",
             Self::Rejected(401 | 403) => "invalid_key",
             Self::Rejected(_) | Self::Incomplete => "provider_error",
@@ -242,6 +323,13 @@ async fn send(http: &reqwest::Client, r: Req<'_>) -> Result<reqwest::Response, F
     let amz_date = Utc::now().format("%Y%m%dT%H%M%SZ").to_string();
     let host = host_of(&cfg.endpoint).to_string();
     let length = r.body.as_ref().map(|(_, n)| n.to_string());
+    let role = match &cfg.instance_role {
+        Some(base) => Some(role_creds(http, base).await?),
+        None => None,
+    };
+    let (access, secret) = role
+        .as_ref()
+        .map_or((cfg.access_key.as_str(), cfg.secret_key.as_str()), |c| (c.access.as_str(), c.secret.as_str()));
     let mut headers: Vec<(&str, &str)> = vec![
         ("host", host.as_str()),
         ("x-amz-content-sha256", r.payload_hash),
@@ -250,11 +338,21 @@ async fn send(http: &reqwest::Client, r: Req<'_>) -> Result<reqwest::Response, F
     if let Some(len) = &length {
         headers.push(("content-length", len.as_str()));
     }
+    // Temporary role credentials only work with their session token, signed like the other headers.
+    if let Some(c) = &role {
+        headers.push(("x-amz-security-token", c.token.as_str()));
+    }
+    // The role may only create (deploy/aws/dahae.cfn.yaml): the PUT of a whole file and the multipart completion
+    // say the object must not exist yet, so nothing can be overwritten. Backup names carry their time.
+    let create_only = role.is_some() && ((r.method == "PUT" && r.query.is_empty()) || (r.method == "POST" && r.query.starts_with("uploadId=")));
+    if create_only {
+        headers.push(("if-none-match", "*"));
+    }
     headers.sort_by(|a, b| a.0.cmp(b.0));
     let auth = authorization(
         &Sigv4 {
-            access: &cfg.access_key,
-            secret: &cfg.secret_key,
+            access,
+            secret,
             region: &cfg.region,
             service: "s3",
         },
@@ -276,14 +374,21 @@ async fn send(http: &reqwest::Client, r: Req<'_>) -> Result<reqwest::Response, F
         .header("x-amz-date", &amz_date)
         .header("x-amz-content-sha256", r.payload_hash)
         .header("authorization", auth);
+    if let Some(c) = &role {
+        req = req.header("x-amz-security-token", &c.token);
+    }
+    if create_only {
+        req = req.header("if-none-match", "*");
+    }
     if let Some((body, n)) = r.body {
         req = req.header("content-length", n.to_string()).body(body);
     }
     let resp = req.send().await.map_err(|_| Fail::Unreachable)?;
-    if resp.status().is_success() {
-        Ok(resp)
-    } else {
-        Err(Fail::Rejected(resp.status().as_u16()))
+    match (resp.status().is_success(), role.is_some(), resp.status().as_u16()) {
+        (true, ..) => Ok(resp),
+        // No keys to get wrong in role mode: a refusal means the role lacks the bucket (old template or boundary).
+        (false, true, 401 | 403) => Err(Fail::NoRole),
+        (false, _, status) => Err(Fail::Rejected(status)),
     }
 }
 
@@ -535,7 +640,11 @@ pub fn expired(objects: &[(String, DateTime<Utc>)], now: DateTime<Utc>, retentio
 }
 
 /// Connection test for the wizard: writes and removes a tiny object. Proves the keys and bucket work.
+/// The instance role cannot delete, so its bucket is proven with a listing instead.
 pub async fn check(http: &reqwest::Client, cfg: &S3Config) -> Result<(), Fail> {
+    if cfg.instance_role.is_some() {
+        return list_objects(http, cfg).await.map(|_| ());
+    }
     let body = b"malkkeum connection test".to_vec();
     let hash = hex(Sha256::digest(&body));
     let len = body.len() as u64;
@@ -579,6 +688,10 @@ async fn offsite(http: &reqwest::Client, cfg: &S3Config, data_key: &[u8; 32], fi
         encrypt_stream(&key, io::BufReader::new(src), &mut sealed)?;
         sealed.flush()?;
         put_file(http, cfg, &name, &tmp).await?;
+        // The instance role has no delete: its bucket's lifecycle expires old copies.
+        if cfg.instance_role.is_some() {
+            return Ok(());
+        }
         let objects = list_objects(http, cfg).await?;
         for old in expired(&objects, Utc::now(), cfg.retention_days) {
             delete_object(http, cfg, &old).await?;
@@ -981,5 +1094,195 @@ mod tests {
     fn photo_and_database_offsite_outcomes_are_kept_apart() {
         assert_eq!(offsite_integration("uploads-20261116-031500.tar.gz"), "backup-uploads");
         assert_eq!(offsite_integration("db-20261116-031500.sql.gz"), "backup");
+    }
+
+    // ---- instance role (AWS template): IMDSv2 credentials with their session token, no deletes ----
+
+    type Heads = std::sync::Arc<std::sync::Mutex<Vec<String>>>;
+
+    fn role_doc(expires: DateTime<Utc>) -> String {
+        json!({ "Code": "Success", "AccessKeyId": "ASIAFAKE", "SecretAccessKey": "fake-secret", "Token": "fake-session", "Expiration": expires.to_rfc3339() })
+            .to_string()
+    }
+
+    /// A fake metadata service and S3 bucket on one local port. Keeps every request head; the role's
+    /// credentials expire at `expires`. Without the IMDSv2 token header the credential paths answer 401.
+    async fn fake_aws(expires: DateTime<Utc>) -> (String, Heads) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let base = format!("http://{}", listener.local_addr().expect("addr"));
+        let heads: Heads = Default::default();
+        let log = heads.clone();
+        tokio::spawn(async move {
+            while let Ok((sock, _)) = listener.accept().await {
+                tokio::spawn(answer(sock, log.clone(), expires));
+            }
+        });
+        (base, heads)
+    }
+
+    async fn answer(mut sock: tokio::net::TcpStream, log: Heads, expires: DateTime<Utc>) {
+        let mut buf = Vec::new();
+        let mut chunk = [0u8; 4096];
+        let end = loop {
+            let Ok(n) = sock.read(&mut chunk).await else { return };
+            if n == 0 {
+                return;
+            }
+            buf.extend_from_slice(&chunk[..n]);
+            if let Some(i) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                break i + 4;
+            }
+        };
+        let head = String::from_utf8_lossy(&buf[..end]).to_lowercase();
+        let length: usize = head
+            .lines()
+            .find_map(|l| l.strip_prefix("content-length:"))
+            .and_then(|v| v.trim().parse().ok())
+            .unwrap_or(0);
+        while buf.len() < end + length {
+            let Ok(n) = sock.read(&mut chunk).await else { return };
+            if n == 0 {
+                break;
+            }
+            buf.extend_from_slice(&chunk[..n]);
+        }
+        log.lock().expect("log").push(head.clone());
+        let line = head.lines().next().unwrap_or_default().to_string();
+        let token_ok = head.contains("x-aws-ec2-metadata-token: tok-1");
+        let (status, body) = match line.split(' ').take(2).collect::<Vec<_>>()[..] {
+            ["put", "/latest/api/token"] if head.contains("x-aws-ec2-metadata-token-ttl-seconds:") => (200, "tok-1".to_string()),
+            ["get", "/latest/meta-data/iam/security-credentials/"] if token_ok => (200, "dahae-main-instancerole\n".into()),
+            ["get", "/latest/meta-data/iam/security-credentials/dahae-main-instancerole"] if token_ok => (200, role_doc(expires)),
+            ["get", p] if p.starts_with("/dahae-bkt?") => (200, "<ListBucketResult></ListBucketResult>".into()),
+            ["put", p] if p.starts_with("/dahae-bkt/") => (200, String::new()),
+            ["get", p] if p.starts_with("/dahae-denied?") => (403, String::new()),
+            ["get" | "put", p] if p.starts_with("/latest/") => (401, String::new()),
+            _ => (404, String::new()),
+        };
+        let reply = format!("HTTP/1.1 {status} X\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}", body.len());
+        let _ = sock.write_all(reply.as_bytes()).await;
+    }
+
+    fn role_bucket(base: &str) -> S3Config {
+        let mut cfg = S3Config::instance_role("dahae-bkt", "ap-northeast-2").expect("valid");
+        cfg.endpoint = base.to_string();
+        cfg.instance_role = Some(base.to_string());
+        cfg
+    }
+
+    fn count(heads: &Heads, start: &str) -> usize {
+        heads.lock().expect("log").iter().filter(|h| h.starts_with(start)).count()
+    }
+
+    #[test]
+    fn instance_role_bucket_is_aws_s3_in_its_region_with_no_keys() {
+        let cfg = S3Config::instance_role("dahae-main-backupbucket-1a2b", "ap-northeast-2").expect("valid");
+        assert_eq!(cfg.endpoint, "https://s3.ap-northeast-2.amazonaws.com");
+        assert_eq!(cfg.instance_role.as_deref(), Some(IMDS_BASE));
+        assert!(cfg.access_key.is_empty() && cfg.secret_key.is_empty());
+        for (bucket, region) in [
+            ("Dahae", "ap-northeast-2"),
+            ("ab", "ap-northeast-2"),
+            ("a/b", "ap-northeast-2"),
+            ("dahae-b", ""),
+            ("dahae-b", "ap northeast"),
+        ] {
+            assert!(S3Config::instance_role(bucket, region).is_none(), "{bucket} {region}");
+        }
+    }
+
+    #[test]
+    fn role_credentials_need_success_and_all_four_fields() {
+        let at = Utc::now();
+        assert_eq!(parse_role_creds(&role_doc(at)).map(|c| c.token), Some("fake-session".into()));
+        let mut doc: Value = serde_json::from_str(&role_doc(at)).expect("json");
+        doc["Code"] = json!("Failure");
+        assert!(parse_role_creds(&doc.to_string()).is_none());
+        let mut doc: Value = serde_json::from_str(&role_doc(at)).expect("json");
+        doc["Token"] = json!("");
+        assert!(parse_role_creds(&doc.to_string()).is_none());
+        assert!(parse_role_creds("not json").is_none());
+    }
+
+    #[tokio::test]
+    async fn role_requests_carry_the_signed_session_token_and_reuse_fresh_credentials() {
+        let (base, heads) = fake_aws(Utc::now() + Duration::hours(6)).await;
+        let cfg = role_bucket(&base);
+        let http = reqwest::Client::new();
+        list_objects(&http, &cfg).await.expect("first listing");
+        list_objects(&http, &cfg).await.expect("second listing");
+        assert_eq!(count(&heads, "put /latest/api/token"), 1, "fresh credentials are reused");
+        let listing = heads
+            .lock()
+            .expect("log")
+            .iter()
+            .find(|h| h.starts_with("get /dahae-bkt?"))
+            .cloned()
+            .expect("listing request");
+        assert!(listing.contains("x-amz-security-token: fake-session"), "{listing}");
+        assert!(listing.contains("credential=asiafake/"), "{listing}");
+        assert!(
+            listing.contains("signedheaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token"),
+            "{listing}"
+        );
+    }
+
+    #[tokio::test]
+    async fn role_credentials_close_to_expiry_are_fetched_again() {
+        let (base, heads) = fake_aws(Utc::now() + Duration::seconds(60)).await;
+        let cfg = role_bucket(&base);
+        let http = reqwest::Client::new();
+        list_objects(&http, &cfg).await.expect("first");
+        list_objects(&http, &cfg).await.expect("second");
+        assert_eq!(count(&heads, "put /latest/api/token"), 2, "inside the refresh margin");
+    }
+
+    #[tokio::test]
+    async fn role_backups_upload_and_check_without_ever_deleting() {
+        let (base, heads) = fake_aws(Utc::now() + Duration::hours(6)).await;
+        let cfg = role_bucket(&base);
+        let http = reqwest::Client::new();
+        let dir = std::env::temp_dir().join(format!("role-backup-{}", uuid::Uuid::now_v7().simple()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let file = dir.join("db-20261123-033000.sql.gz");
+        std::fs::write(&file, b"dump").expect("dump");
+        offsite(&http, &cfg, &[3u8; 32], &file).await.expect("upload");
+        check(&http, &cfg).await.expect("check");
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(count(&heads, "put /dahae-bkt/malkkeum/db-20261123-033000.sql.gz.enc"), 1);
+        let put = heads
+            .lock()
+            .expect("log")
+            .iter()
+            .find(|h| h.starts_with("put /dahae-bkt/"))
+            .cloned()
+            .expect("upload request");
+        assert!(put.contains("if-none-match: *"), "a role upload never overwrites: {put}");
+        assert!(put.contains(";if-none-match;"), "and the header is signed: {put}");
+        assert_eq!(count(&heads, "delete "), 0, "the role has no delete; lifecycle expires old copies");
+        assert_eq!(count(&heads, "get /dahae-bkt?"), 1, "the check lists instead of writing a test object");
+    }
+
+    #[tokio::test]
+    async fn a_role_the_bucket_refuses_is_no_instance_role_not_a_wrong_key() {
+        let (base, _) = fake_aws(Utc::now() + Duration::hours(6)).await;
+        let mut cfg = role_bucket(&base);
+        cfg.bucket = "dahae-denied".into();
+        let err = list_objects(&reqwest::Client::new(), &cfg).await.expect_err("refused");
+        assert_eq!(err.code(), "no_instance_role");
+    }
+
+    #[test]
+    fn keyed_targets_keep_their_own_refusal_code() {
+        assert_eq!(Fail::Rejected(403).code(), "invalid_key");
+    }
+
+    #[tokio::test]
+    async fn no_metadata_service_is_reported_as_no_instance_role() {
+        let (base, _) = fake_aws(Utc::now() + Duration::hours(6)).await;
+        let mut cfg = role_bucket(&base);
+        cfg.instance_role = Some(format!("{base}/missing"));
+        let err = list_objects(&reqwest::Client::new(), &cfg).await.expect_err("no role");
+        assert_eq!(err.code(), "no_instance_role");
     }
 }

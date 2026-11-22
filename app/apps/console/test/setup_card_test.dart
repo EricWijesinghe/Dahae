@@ -122,6 +122,22 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('the AWS template bucket reads as AWS S3 (automatic)', (
+    tester,
+  ) async {
+    await _pump(tester, {
+      'code': 'backup',
+      'source': 'aws_role',
+      'configured': true,
+      'fields': [_field('bucket', 'text'), _field('access_key', 'secret')],
+      'last_test': null,
+    });
+
+    expect(find.text(koT.cSetupAwsAuto), findsOneWidget);
+    expect(find.text(koT.cSetupFromEnv), findsNothing);
+    await unmount(tester);
+  });
+
   testWidgets('no mode from the server means no badge', (tester) async {
     await _pump(tester, _payoutCard(mode: null));
 

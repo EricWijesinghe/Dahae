@@ -601,3 +601,17 @@ async fn review_code_signs_in_only_the_review_customer_never_a_later_account(poo
     let (st, b) = verify_fixed(&app, phone, "partner").await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "{b}");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn aws_template_bucket_shows_as_automatic_until_the_card_is_saved(pool: PgPool) {
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
+    let mut cfg = common::test_config();
+    cfg.instance_backup = api::integrations::S3Config::instance_role("dahae-main-backupbucket-1a2b", "ap-northeast-2");
+    let app = api::routes::router(api::build_state(pool.clone(), cfg).expect("state"));
+    create_owner(&app, "ABCD2345EFGH").await;
+    let token = owner_token(&app, &pool).await;
+    let (_, all) = call(&app, "GET", "/v1/admin/setup", Some(token.as_str()), None).await;
+    let backup = all["integrations"].as_array().unwrap().iter().find(|c| c["code"] == "backup").unwrap().clone();
+    assert_eq!(backup["source"], "aws_role");
+    assert_eq!(backup["configured"], true);
+}

@@ -8065,6 +8065,186 @@ abstract class T {
   /// **'PortOne 테스트 채널로 결제나 카드 저장이 들어왔어요. 실제 돈은 오가지 않았어요. 이 서버의 키가 아닌 테스트 채널로 들어온 건은 거절해서 예약되지 않았어요. 테스트 키로 시험 중이면 괜찮아요. 운영 중이라면 설정 > 결제 (PortOne)의 채널 키가 라이브 채널 키인지 확인하고, PortOne 관리자 화면에서 이 상점의 테스트 채널을 삭제한 뒤, 테스트 결제 내역에서 그 결제를 찾아 예약을 고객과 다시 확인하세요.'**
   String get oActTestChannel;
 
+  /// No description provided for @cSetupAwsAuto.
+  ///
+  /// In ko, this message translates to:
+  /// **'AWS S3 (자동)'**
+  String get cSetupAwsAuto;
+
+  /// No description provided for @cSetupNoInstanceRole.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버 역할로 AWS 저장소에 접속하지 못했어요. AWS 템플릿으로 만든 서버인지, AWS 관리자가 launch.sh --admin 을 한 번 다시 실행했는지 확인하세요.'**
+  String get cSetupNoInstanceRole;
+
+  /// No description provided for @srTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'복구'**
+  String get srTitle;
+
+  /// No description provided for @srRollbackBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'업데이트 뒤에 문제가 생기면 바로 전 버전으로 돌아가요. 먼저 백업하고, 데이터는 그대로예요. 토스 결과를 기다리는 정산이 있으면 되돌리지 않아요. 되돌린 뒤에는 새 버전이 나올 때까지 자동 업데이트가 그 버전을 다시 올리지 않아요. 사장님 코드와 서버 승인 코드가 필요해요.'**
+  String get srRollbackBody;
+
+  /// No description provided for @srRollbackButton.
+  ///
+  /// In ko, this message translates to:
+  /// **'이전 버전으로 되돌리기'**
+  String get srRollbackButton;
+
+  /// No description provided for @srRollbackConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'이전 버전으로 되돌릴까요? 몇 분 동안 서비스가 다시 시작돼요.'**
+  String get srRollbackConfirm;
+
+  /// No description provided for @srRunning.
+  ///
+  /// In ko, this message translates to:
+  /// **'진행 중이에요. 이 화면을 닫아도 서버에서 계속돼요.'**
+  String get srRunning;
+
+  /// No description provided for @srRollbackDone.
+  ///
+  /// In ko, this message translates to:
+  /// **'이전 버전으로 되돌렸어요. 새 버전이 나올 때까지 자동 업데이트는 이 버전을 지켜요.'**
+  String get srRollbackDone;
+
+  /// No description provided for @srApprovalCancelled.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버 승인 코드를 넣지 않아서 되돌리지 않았어요. 기다리던 작업은 10분 뒤에 저절로 취소돼요.'**
+  String get srApprovalCancelled;
+
+  /// No description provided for @srApprovalNoSummary.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버가 보낸 요약이 되돌리기가 아니어서 승인 코드를 보내지 않았어요. 아래 최근 작업을 확인해 주세요.'**
+  String get srApprovalNoSummary;
+
+  /// No description provided for @srStillRunning.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 진행 중이에요. 결과는 아래 최근 작업에서 보세요.'**
+  String get srStillRunning;
+
+  /// No description provided for @srOldTools.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버의 관리 도구가 예전 버전이라 이 작업을 몰라요. 설치 줄을 한 번 다시 실행하세요 (안내서 10 C-5).'**
+  String get srOldTools;
+
+  /// No description provided for @srFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'되돌리지 못했어요: {reason}'**
+  String srFailed(String reason);
+
+  /// No description provided for @srKeysTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'비밀 키 사본 내려받기'**
+  String get srKeysTitle;
+
+  /// No description provided for @srKeysBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버를 잃어도 외부 백업을 풀 수 있게, 서버의 비밀 키를 비밀번호로 잠근 파일을 내려받아요. 파일과 비밀번호는 서버 밖에 따로 보관하세요. 만든 파일은 한 번만 내려받을 수 있어요.'**
+  String get srKeysBody;
+
+  /// No description provided for @srKeysPass.
+  ///
+  /// In ko, this message translates to:
+  /// **'잠금 비밀번호 (12자 이상)'**
+  String get srKeysPass;
+
+  /// No description provided for @srKeysPassAgain.
+  ///
+  /// In ko, this message translates to:
+  /// **'잠금 비밀번호 한 번 더'**
+  String get srKeysPassAgain;
+
+  /// No description provided for @srKeysPassShort.
+  ///
+  /// In ko, this message translates to:
+  /// **'12자 이상 입력하세요'**
+  String get srKeysPassShort;
+
+  /// No description provided for @srKeysPassMismatch.
+  ///
+  /// In ko, this message translates to:
+  /// **'두 비밀번호가 달라요'**
+  String get srKeysPassMismatch;
+
+  /// No description provided for @srKeysButton.
+  ///
+  /// In ko, this message translates to:
+  /// **'만들고 내려받기'**
+  String get srKeysButton;
+
+  /// No description provided for @srKeysRunning.
+  ///
+  /// In ko, this message translates to:
+  /// **'비밀 키 사본을 만들고 있어요'**
+  String get srKeysRunning;
+
+  /// No description provided for @srKeysDone.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버 밖에 보관했다고 기록했어요.'**
+  String get srKeysDone;
+
+  /// No description provided for @srKeysKept.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버 밖에 보관했어요'**
+  String get srKeysKept;
+
+  /// No description provided for @srKeysKeptConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'내려받은 파일을 USB 나 비밀번호 관리자처럼 서버 밖에 옮겨 두었고, 비밀번호도 따로 적어 두었나요? 그래야 서버를 잃어도 백업을 풀 수 있어요.'**
+  String get srKeysKeptConfirm;
+
+  /// No description provided for @srKeysNotKept.
+  ///
+  /// In ko, this message translates to:
+  /// **'내려받았어요. 서버 밖 보관은 아직 기록하지 않았어요: 옮겨 둔 뒤 사본을 다시 만들어 확인해 주세요.'**
+  String get srKeysNotKept;
+
+  /// No description provided for @srKeysSaveFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일을 저장하지 못했어요. 사본을 다시 만들어 주세요.'**
+  String get srKeysSaveFailed;
+
+  /// No description provided for @srKeysFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'사본을 만들지 못했어요: {reason}'**
+  String srKeysFailed(String reason);
+
+  /// No description provided for @srKindRollback.
+  ///
+  /// In ko, this message translates to:
+  /// **'이전 버전으로 되돌리기'**
+  String get srKindRollback;
+
+  /// No description provided for @srKindKeysBackup.
+  ///
+  /// In ko, this message translates to:
+  /// **'비밀 키 사본'**
+  String get srKindKeysBackup;
+
+  /// No description provided for @srKindKeysConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'비밀 키 사본 보관 기록'**
+  String get srKindKeysConfirm;
+
   /// No description provided for @ntNavLabel.
   ///
   /// In ko, this message translates to:
