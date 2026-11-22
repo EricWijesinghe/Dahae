@@ -4337,14 +4337,14 @@ class TEn extends T {
 
   @override
   String get cSetupNoInstanceRole =>
-      'The server role could not reach the AWS bucket. Check that this server was made with the AWS template.';
+      'The server role could not reach the AWS bucket. Check that this server was made with the AWS template and that the AWS admin ran launch.sh --admin once more.';
 
   @override
   String get srTitle => 'Recovery';
 
   @override
   String get srRollbackBody =>
-      'If something breaks after an update, go back to the version before. It backs up first and keeps your data. It does not run while a Toss payout is still waiting for its result. Needs your owner code and the server approval code.';
+      'If something breaks after an update, go back to the version before. It backs up first and keeps your data. It does not run while a Toss payout is still waiting for its result. After a rollback, automatic updates leave that version alone until a newer one comes out. Needs your owner code and the server approval code.';
 
   @override
   String get srRollbackButton => 'Roll back to the previous version';
@@ -4358,7 +4358,24 @@ class TEn extends T {
       'Running. It keeps going on the server even if you close this screen.';
 
   @override
-  String get srRollbackDone => 'Rolled back to the previous version.';
+  String get srRollbackDone =>
+      'Rolled back to the previous version. Automatic updates keep it until a newer version comes out.';
+
+  @override
+  String get srApprovalCancelled =>
+      'No server approval code was entered, so nothing was rolled back. The held job cancels itself after 10 minutes.';
+
+  @override
+  String get srApprovalNoSummary =>
+      'The server\'s summary was not a rollback, so no approval code was sent. Check the recent jobs below.';
+
+  @override
+  String get srStillRunning =>
+      'Still running. See the result under recent jobs below.';
+
+  @override
+  String get srOldTools =>
+      'The server\'s tools are older and do not know this job. Run the install line once more (guide 10 C-5).';
 
   @override
   String srFailed(String reason) {
@@ -4391,7 +4408,18 @@ class TEn extends T {
   String get srKeysRunning => 'Making the secret key copy';
 
   @override
-  String get srKeysDone => 'Downloaded. Recorded as kept off the server.';
+  String get srKeysDone => 'Recorded as kept off the server.';
+
+  @override
+  String get srKeysKept => 'Kept off the server';
+
+  @override
+  String get srKeysKeptConfirm =>
+      'Did you move the downloaded file off the server (a USB stick or a password manager) and write the passphrase down separately? Only then can backups be opened if the server is lost.';
+
+  @override
+  String get srKeysNotKept =>
+      'Downloaded. Not yet recorded as kept off the server: move it, then make a new copy to confirm.';
 
   @override
   String get srKeysSaveFailed =>

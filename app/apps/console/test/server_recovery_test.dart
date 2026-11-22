@@ -13,7 +13,7 @@ import 'package:test_support/test_support.dart';
 import 'support/console_host.dart';
 
 const _token = '0123456789abcdef0123456789abcdef';
-const _rollbackSummary = '이전 버전으로 되돌려요 (데이터는 그대로예요)';
+const _rollbackSummary = '이전 버전으로 되돌려요: v1.6.1 (데이터는 그대로예요)';
 
 /// A server that holds `rollback` for the approval code and then ends in [end]; `keys-backup` ends in [keysEnd]
 /// with [keysOut] as its one-time output. Like the agent, it stays on hold for one poll after the code.
@@ -56,7 +56,8 @@ FakeApi _server({
       return null;
     })
     ..reply('GET', '/admin/host/jobs/keys', keysEnd)
-    ..reply('GET', '/admin/host/jobs/keys/output', {'text': keysOut});
+    ..reply('GET', '/admin/host/jobs/keys/output', {'text': keysOut})
+    ..on('POST', '/admin/host/jobs/keys/kept', (_) => null);
 }
 
 Future<FakeApi> _pump(WidgetTester tester, FakeApi fake) async {
@@ -136,7 +137,7 @@ void main() {
     await _startRollback(tester);
     await tester.pump(const Duration(seconds: 6));
     await settle(tester);
-    expect(find.text(koT.cRbApprovalNoSummary), findsOneWidget);
+    expect(find.text(koT.srApprovalNoSummary), findsOneWidget);
     expect(find.textContaining(koT.cRbApprovalBody), findsNothing);
     expect(fake.callsTo('POST', '/admin/host/jobs/rb/approve'), isEmpty);
   });
@@ -185,12 +186,87 @@ void main() {
         saved.single.$2,
         matches(RegExp(r'^dahae-keys-\d{8}-\d{6}\.env\.enc$')),
       );
+      expect(
+        fake.callsTo('POST', '/admin/host/jobs/keys/kept'),
+        isEmpty,
+        reason: 'saved is not kept until the owner says so',
+      );
+      expect(find.text(koT.srKeysKeptConfirm), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, koT.srKeysKept));
+      await settle(tester);
+      expect(fake.callsTo('POST', '/admin/host/jobs/keys/kept'), hasLength(1));
       expect(find.text(koT.srKeysDone), findsOneWidget);
       expect(
         tester.widget<TextField>(find.byType(TextField).first).controller!.text,
         isEmpty,
         reason: 'the passphrase does not stay on screen',
       );
+    },
+  );
+
+  testWidgets(
+    'a saved copy the owner has not moved off the server is not recorded',
+    (tester) async {
+      final fake = await _pump(tester, _server(keysOut: base64.encode([1, 2])));
+      await _keys(tester, 'correct horse battery');
+      await _code(tester, '111111');
+      expect(saved, hasLength(1));
+      await tester.tap(find.widgetWithText(TextButton, koT.cancel));
+      await settle(tester);
+      expect(fake.callsTo('POST', '/admin/host/jobs/keys/kept'), isEmpty);
+      expect(find.text(koT.srKeysNotKept), findsOneWidget);
+    },
+  );
+
+  testWidgets('a copy the browser could not save is never recorded', (
+    tester,
+  ) async {
+    saveKeyCopy = (_, _) async => false;
+    final fake = await _pump(tester, _server(keysOut: base64.encode([1, 2])));
+    await _keys(tester, 'correct horse battery');
+    await _code(tester, '111111');
+    expect(find.text(koT.srKeysKeptConfirm), findsNothing);
+    expect(fake.callsTo('POST', '/admin/host/jobs/keys/kept'), isEmpty);
+    expect(find.text(koT.srKeysSaveFailed), findsOneWidget);
+  });
+
+  testWidgets('closing the approval dialog says nothing was rolled back', (
+    tester,
+  ) async {
+    final fake = await _pump(tester, _server());
+    await _startRollback(tester);
+    await tester.tap(find.widgetWithText(TextButton, koT.oaCancel));
+    await settle(tester);
+    expect(fake.callsTo('POST', '/admin/host/jobs/rb/approve'), isEmpty);
+    expect(find.text(koT.srApprovalCancelled), findsOneWidget);
+  });
+
+  testWidgets(
+    'a rollback still running after the wait is not called a failure',
+    (tester) async {
+      hostJobPoll = const Duration(minutes: 1);
+      await _pump(tester, _server(end: const {'id': 'rb', 'state': 'running'}));
+      await _startRollback(tester);
+      await _code(tester, '222222');
+      await tester.pump(const Duration(minutes: 40));
+      await settle(tester);
+      expect(find.text(koT.srStillRunning), findsOneWidget);
+      expect(find.textContaining(koT.srFailed('')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a job old server tools refused without a reason says to re-run the install line',
+    (tester) async {
+      await _pump(
+        tester,
+        _server(end: const {'id': 'rb', 'state': 'rejected'}),
+      );
+      await _startRollback(tester);
+      await _code(tester, '222222');
+      await tester.pump(const Duration(seconds: 1));
+      await settle(tester);
+      expect(find.text(koT.srOldTools), findsOneWidget);
     },
   );
 

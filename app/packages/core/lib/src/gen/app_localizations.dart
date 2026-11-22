@@ -8044,7 +8044,7 @@ abstract class T {
   /// No description provided for @cSetupNoInstanceRole.
   ///
   /// In ko, this message translates to:
-  /// **'서버 역할로 AWS 저장소에 접속하지 못했어요. AWS 템플릿으로 만든 서버인지 확인하세요.'**
+  /// **'서버 역할로 AWS 저장소에 접속하지 못했어요. AWS 템플릿으로 만든 서버인지, AWS 관리자가 launch.sh --admin 을 한 번 다시 실행했는지 확인하세요.'**
   String get cSetupNoInstanceRole;
 
   /// No description provided for @srTitle.
@@ -8056,7 +8056,7 @@ abstract class T {
   /// No description provided for @srRollbackBody.
   ///
   /// In ko, this message translates to:
-  /// **'업데이트 뒤에 문제가 생기면 바로 전 버전으로 돌아가요. 먼저 백업하고, 데이터는 그대로예요. 토스 결과를 기다리는 정산이 있으면 되돌리지 않아요. 사장님 코드와 서버 승인 코드가 필요해요.'**
+  /// **'업데이트 뒤에 문제가 생기면 바로 전 버전으로 돌아가요. 먼저 백업하고, 데이터는 그대로예요. 토스 결과를 기다리는 정산이 있으면 되돌리지 않아요. 되돌린 뒤에는 새 버전이 나올 때까지 자동 업데이트가 그 버전을 다시 올리지 않아요. 사장님 코드와 서버 승인 코드가 필요해요.'**
   String get srRollbackBody;
 
   /// No description provided for @srRollbackButton.
@@ -8080,8 +8080,32 @@ abstract class T {
   /// No description provided for @srRollbackDone.
   ///
   /// In ko, this message translates to:
-  /// **'이전 버전으로 되돌렸어요.'**
+  /// **'이전 버전으로 되돌렸어요. 새 버전이 나올 때까지 자동 업데이트는 이 버전을 지켜요.'**
   String get srRollbackDone;
+
+  /// No description provided for @srApprovalCancelled.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버 승인 코드를 넣지 않아서 되돌리지 않았어요. 기다리던 작업은 10분 뒤에 저절로 취소돼요.'**
+  String get srApprovalCancelled;
+
+  /// No description provided for @srApprovalNoSummary.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버가 보낸 요약이 되돌리기가 아니어서 승인 코드를 보내지 않았어요. 아래 최근 작업을 확인해 주세요.'**
+  String get srApprovalNoSummary;
+
+  /// No description provided for @srStillRunning.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 진행 중이에요. 결과는 아래 최근 작업에서 보세요.'**
+  String get srStillRunning;
+
+  /// No description provided for @srOldTools.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버의 관리 도구가 예전 버전이라 이 작업을 몰라요. 설치 줄을 한 번 다시 실행하세요 (안내서 10 C-5).'**
+  String get srOldTools;
 
   /// No description provided for @srFailed.
   ///
@@ -8140,8 +8164,26 @@ abstract class T {
   /// No description provided for @srKeysDone.
   ///
   /// In ko, this message translates to:
-  /// **'내려받았어요. 서버 밖에 보관했다고 기록했어요.'**
+  /// **'서버 밖에 보관했다고 기록했어요.'**
   String get srKeysDone;
+
+  /// No description provided for @srKeysKept.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버 밖에 보관했어요'**
+  String get srKeysKept;
+
+  /// No description provided for @srKeysKeptConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'내려받은 파일을 USB 나 비밀번호 관리자처럼 서버 밖에 옮겨 두었고, 비밀번호도 따로 적어 두었나요? 그래야 서버를 잃어도 백업을 풀 수 있어요.'**
+  String get srKeysKeptConfirm;
+
+  /// No description provided for @srKeysNotKept.
+  ///
+  /// In ko, this message translates to:
+  /// **'내려받았어요. 서버 밖 보관은 아직 기록하지 않았어요: 옮겨 둔 뒤 사본을 다시 만들어 확인해 주세요.'**
+  String get srKeysNotKept;
 
   /// No description provided for @srKeysSaveFailed.
   ///
