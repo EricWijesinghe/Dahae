@@ -342,6 +342,12 @@ async fn send(http: &reqwest::Client, r: Req<'_>) -> Result<reqwest::Response, F
     if let Some(c) = &role {
         headers.push(("x-amz-security-token", c.token.as_str()));
     }
+    // The role may only create (deploy/aws/dahae.cfn.yaml): the PUT of a whole file and the multipart completion
+    // say the object must not exist yet, so nothing can be overwritten. Backup names carry their time.
+    let create_only = role.is_some() && ((r.method == "PUT" && r.query.is_empty()) || (r.method == "POST" && r.query.starts_with("uploadId=")));
+    if create_only {
+        headers.push(("if-none-match", "*"));
+    }
     headers.sort_by(|a, b| a.0.cmp(b.0));
     let auth = authorization(
         &Sigv4 {
@@ -371,14 +377,18 @@ async fn send(http: &reqwest::Client, r: Req<'_>) -> Result<reqwest::Response, F
     if let Some(c) = &role {
         req = req.header("x-amz-security-token", &c.token);
     }
+    if create_only {
+        req = req.header("if-none-match", "*");
+    }
     if let Some((body, n)) = r.body {
         req = req.header("content-length", n.to_string()).body(body);
     }
     let resp = req.send().await.map_err(|_| Fail::Unreachable)?;
-    if resp.status().is_success() {
-        Ok(resp)
-    } else {
-        Err(Fail::Rejected(resp.status().as_u16()))
+    match (resp.status().is_success(), role.is_some(), resp.status().as_u16()) {
+        (true, ..) => Ok(resp),
+        // No keys to get wrong in role mode: a refusal means the role lacks the bucket (old template or boundary).
+        (false, true, 401 | 403) => Err(Fail::NoRole),
+        (false, _, status) => Err(Fail::Rejected(status)),
     }
 }
 
@@ -1145,6 +1155,7 @@ mod tests {
             ["get", "/latest/meta-data/iam/security-credentials/dahae-main-instancerole"] if token_ok => (200, role_doc(expires)),
             ["get", p] if p.starts_with("/dahae-bkt?") => (200, "<ListBucketResult></ListBucketResult>".into()),
             ["put", p] if p.starts_with("/dahae-bkt/") => (200, String::new()),
+            ["get", p] if p.starts_with("/dahae-denied?") => (403, String::new()),
             ["get" | "put", p] if p.starts_with("/latest/") => (401, String::new()),
             _ => (404, String::new()),
         };
@@ -1239,8 +1250,31 @@ mod tests {
         check(&http, &cfg).await.expect("check");
         let _ = std::fs::remove_dir_all(&dir);
         assert_eq!(count(&heads, "put /dahae-bkt/malkkeum/db-20261123-033000.sql.gz.enc"), 1);
+        let put = heads
+            .lock()
+            .expect("log")
+            .iter()
+            .find(|h| h.starts_with("put /dahae-bkt/"))
+            .cloned()
+            .expect("upload request");
+        assert!(put.contains("if-none-match: *"), "a role upload never overwrites: {put}");
+        assert!(put.contains(";if-none-match;"), "and the header is signed: {put}");
         assert_eq!(count(&heads, "delete "), 0, "the role has no delete; lifecycle expires old copies");
         assert_eq!(count(&heads, "get /dahae-bkt?"), 1, "the check lists instead of writing a test object");
+    }
+
+    #[tokio::test]
+    async fn a_role_the_bucket_refuses_is_no_instance_role_not_a_wrong_key() {
+        let (base, _) = fake_aws(Utc::now() + Duration::hours(6)).await;
+        let mut cfg = role_bucket(&base);
+        cfg.bucket = "dahae-denied".into();
+        let err = list_objects(&reqwest::Client::new(), &cfg).await.expect_err("refused");
+        assert_eq!(err.code(), "no_instance_role");
+    }
+
+    #[test]
+    fn keyed_targets_keep_their_own_refusal_code() {
+        assert_eq!(Fail::Rejected(403).code(), "invalid_key");
     }
 
     #[tokio::test]

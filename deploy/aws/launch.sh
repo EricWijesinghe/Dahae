@@ -15,6 +15,7 @@
 # Options: --version vX.Y.Z (default: latest release)  --stack dahae-main  --instance-type t3.medium
 #          --hosted-zone-id Z123 (Route 53 A record)  --vpc vpc-… --subnet subnet-… (default: default VPC, public subnet)
 #          --region ap-northeast-2  --ref master (where the template and policies come from)  --dry-run
+#          --backup-bucket dahae-… (a new server after a lost one: keep using the old stack's retained S3 backup bucket)
 # The release's install.sh is downloaded and checked against the release's SHA256SUMS before its hash is pinned
 # into the template; the server refuses to run any other install.sh.
 set -euo pipefail
@@ -23,7 +24,7 @@ REPO=EricWijesinghe/Dahae
 DIST=EricWijesinghe/Dahae-install
 AWS=${DAHAE_AWS:-aws}
 REGION=ap-northeast-2 REF=master STACK=dahae-main TYPE=t3.medium
-DOMAIN="" EMAIL="" VERSION="" ZONE="" VPC="" SUBNET="" ADMIN=0 DRY=0
+DOMAIN="" EMAIL="" VERSION="" ZONE="" VPC="" SUBNET="" BUCKET="" ADMIN=0 DRY=0
 
 die() { echo "error: $*" >&2; exit 1; }
 need() { [ -n "${2:-}" ] || die "$1 needs a value"; }
@@ -39,6 +40,7 @@ while [ $# -gt 0 ]; do
     --hosted-zone-id) need "$1" "${2:-}"; ZONE=$2; shift ;;
     --vpc) need "$1" "${2:-}"; VPC=$2; shift ;;
     --subnet) need "$1" "${2:-}"; SUBNET=$2; shift ;;
+    --backup-bucket) need "$1" "${2:-}"; BUCKET=$2; shift ;;
     --region) need "$1" "${2:-}"; REGION=$2; shift ;;
     --ref) need "$1" "${2:-}"; REF=$2; shift ;;
     *) die "unknown option $1" ;;
@@ -86,6 +88,7 @@ fi
 [[ "$DOMAIN" != auto || -z "$ZONE" ]] || die "--hosted-zone-id needs a real --domain"
 [[ "$EMAIL" =~ ^[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] || die "--email is required"
 [[ "$STACK" =~ ^dahae-[A-Za-z0-9-]+$ ]] || die "--stack must start with dahae- (the deployer may only manage dahae-* stacks)"
+[[ -z "$BUCKET" || "$BUCKET" =~ ^dahae-[a-z0-9.-]+$ ]] || die "--backup-bucket is the old stack's BackupBucket output (dahae-…)"
 if [ -z "$VERSION" ]; then
   VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
 fi
@@ -119,6 +122,7 @@ aws_ iam get-open-id-connect-provider \
 
 params=(Domain="$DOMAIN" Email="$EMAIL" InstanceType="$TYPE" VpcId="$VPC" SubnetId="$SUBNET" CreateGitHubOidcProvider="$oidc")
 [ -z "$ZONE" ] || params+=(HostedZoneId="$ZONE")
+[ -z "$BUCKET" ] || params+=(ExistingBackupBucket="$BUCKET")
 echo "Dahae $VERSION -> stack $STACK in $REGION (vpc $VPC, subnet $SUBNET, instance $TYPE)"
 deploy=(cloudformation deploy --stack-name "$STACK" --template-file "$wwork/dahae-aws.yaml"
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset --parameter-overrides "${params[@]}")
@@ -144,4 +148,5 @@ Done. Next:
  2. Wait about 10 minutes, then open https://$DOMAIN/admin
  3. Owner setup code: EC2 > Instances > the dahae server > Connect > Session Manager, then: sudo dahae setup-code
  4. Automatic deploys: set the GitHub environment doda-aws variables from the outputs above (guide 10 C).
+ 5. Alarm e-mails: AWS sent "AWS Notification - Subscription Confirmation" to $EMAIL; click Confirm subscription once (guide 10 B-2 step 8).
 EOF

@@ -191,6 +191,11 @@ t  "launch: ...and names the sslip.io address in the next steps" bash -c 'PATH="
 t  "launch: ...in the deploy parameters" grep -q "Domain=auto " "$L/log"
 nt "launch: auto cannot take a Route 53 zone" launch --domain auto --email o@example.co.kr --hosted-zone-id Z123
 nt "launch: stack names stay dahae-*" launch --domain example.co.kr --email o@example.co.kr --stack prod
+t  "launch: the next steps name the alarm e-mail confirmation" bash -c 'PATH="$1/bin:$PATH" LAUNCH_FILES="$1/files" LAUNCH_LOG="$1/log" bash "$2/deploy/aws/launch.sh" --domain example.co.kr --email o@example.co.kr | grep -q "Confirm subscription once"' _ "$L" "$ROOT"
+: > "$L/log"
+t  "launch: --backup-bucket reuses a lost server's bucket" launch --domain example.co.kr --email o@example.co.kr --backup-bucket dahae-main-backupbucket-1a2b
+t  "launch: ...as ExistingBackupBucket" grep -q "ExistingBackupBucket=dahae-main-backupbucket-1a2b" "$L/log"
+nt "launch: --backup-bucket takes only a dahae- bucket name" launch --domain example.co.kr --email o@example.co.kr --backup-bucket 'other;rm'
 cp "$L/files/install.sh" "$L/files/install.ok"; printf 'echo evil\n' > "$L/files/install.sh"
 nt "launch: an install.sh that differs from SHA256SUMS is refused" launch --domain example.co.kr --email o@example.co.kr
 mv "$L/files/install.ok" "$L/files/install.sh"
