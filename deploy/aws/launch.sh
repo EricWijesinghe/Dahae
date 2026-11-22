@@ -6,7 +6,8 @@
 #
 # DODA's AWS admin, once:  curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --admin
 #   creates the policies dahae-boundary and dahae-deployer-policy (attach the second one plus AWSCloudShellFullAccess
-#   to the deployer's IAM user).
+#   to the deployer's IAM user). Run again, policies that already exist get this version as their default.
+# Also runs from Git Bash on Windows (the AWS CLI for Windows): file paths are handed over in Windows form.
 # Deployer, to create the server (once; later versions arrive through the deploy-aws workflow):
 #   curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- \
 #     --domain example.co.kr --email owner@example.co.kr
@@ -46,17 +47,33 @@ while [ $# -gt 0 ]; do
 done
 RAW="https://raw.githubusercontent.com/$REPO/$REF"
 aws_() { "$AWS" --region "$REGION" --output text "$@"; }
+# The template and the policies have Korean text; the AWS CLI on Windows would read them in the system code page.
+export AWS_CLI_FILE_ENCODING=UTF-8
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
+# Git Bash (MSYS): aws.exe is a Windows program and cannot open /tmp/...; give it the same folder as C:/...
+wwork=$work
+if command -v cygpath >/dev/null 2>&1; then wwork=$(cygpath -m "$work"); fi
+
+update_policy() { # update_policy <arn> <file> : the file becomes the default version (at most 5 kept: the oldest other one goes)
+  local n old
+  n=$(aws_ iam list-policy-versions --policy-arn "$1" --query 'length(Versions)')
+  if [ "${n:-0}" -ge 5 ]; then
+    old=$(aws_ iam list-policy-versions --policy-arn "$1" --query 'Versions[?IsDefaultVersion==`false`].VersionId' | tr -s '[:space:]' '\n' | sort -V | head -n1)
+    aws_ iam delete-policy-version --policy-arn "$1" --version-id "$old" >/dev/null
+  fi
+  aws_ iam create-policy-version --policy-arn "$1" --policy-document "file://$wwork/$2" --set-as-default >/dev/null
+}
 
 if [ "$ADMIN" = 1 ]; then
   acct=$(aws_ sts get-caller-identity --query Account)
   for p in dahae-boundary:dahae-boundary-policy.json dahae-deployer-policy:deployer-iam-policy.json; do
-    name=${p%%:*} file=${p#*:}
-    if aws_ iam get-policy --policy-arn "arn:aws:iam::$acct:policy/$name" >/dev/null 2>&1; then
-      echo "policy $name already exists"
+    name=${p%%:*} file=${p#*:} arn="arn:aws:iam::$acct:policy/${p%%:*}"
+    curl -fsSL -o "$work/$file" "$RAW/deploy/aws/$file"
+    if aws_ iam get-policy --policy-arn "$arn" >/dev/null 2>&1; then
+      update_policy "$arn" "$file"
+      echo "updated policy $name (new default version)"
     else
-      curl -fsSL -o "$work/$file" "$RAW/deploy/aws/$file"
-      aws_ iam create-policy --policy-name "$name" --policy-document "file://$work/$file" >/dev/null
+      aws_ iam create-policy --policy-name "$name" --policy-document "file://$wwork/$file" >/dev/null
       echo "created policy $name"
     fi
   done
@@ -103,7 +120,7 @@ aws_ iam get-open-id-connect-provider \
 params=(Domain="$DOMAIN" Email="$EMAIL" InstanceType="$TYPE" VpcId="$VPC" SubnetId="$SUBNET" CreateGitHubOidcProvider="$oidc")
 [ -z "$ZONE" ] || params+=(HostedZoneId="$ZONE")
 echo "Dahae $VERSION -> stack $STACK in $REGION (vpc $VPC, subnet $SUBNET, instance $TYPE)"
-deploy=(cloudformation deploy --stack-name "$STACK" --template-file "$work/dahae-aws.yaml"
+deploy=(cloudformation deploy --stack-name "$STACK" --template-file "$wwork/dahae-aws.yaml"
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset --parameter-overrides "${params[@]}")
 # Create only: a template change on a running stack would stop and start the server without updating it.
 # Updates go through `dahae update` / the deploy-aws workflow.

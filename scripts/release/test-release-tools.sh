@@ -143,13 +143,14 @@ t  "delivery: re-run ships the same signature" [ "$(cat "$pd/assets/SHA256SUMS.b
 L="$SB/launch"; mkdir -p "$L/bin" "$L/files"
 printf 'echo hi\n' > "$L/files/install.sh"
 printf '%s  install.sh\n' "$(sha256sum "$L/files/install.sh" | cut -d' ' -f1)" > "$L/files/SHA256SUMS"
-cp "$ROOT/deploy/aws/dahae.cfn.yaml" "$L/files/dahae.cfn.yaml"
+cp "$ROOT/deploy/aws/dahae.cfn.yaml" "$ROOT/deploy/aws/dahae-boundary-policy.json" "$ROOT/deploy/aws/deployer-iam-policy.json" "$L/files/"
 cat > "$L/bin/curl" <<'EOF'
 #!/usr/bin/env bash
 out=""; url=""
 while [ $# -gt 0 ]; do case "$1" in -o) out=$2; shift ;; -*) ;; *) url=$1 ;; esac; shift; done
 case "$url" in
   */install.sh) f=install.sh ;; */SHA256SUMS) f=SHA256SUMS ;; */dahae.cfn.yaml) f=dahae.cfn.yaml ;;
+  */dahae-boundary-policy.json) f=dahae-boundary-policy.json ;; */deployer-iam-policy.json) f=deployer-iam-policy.json ;;
   */releases/latest) echo '{"tag_name": "v9.9.9"}'; exit 0 ;; *) exit 22 ;;
 esac
 if [ -n "$out" ]; then cp "$LAUNCH_FILES/$f" "$out"; else cat "$LAUNCH_FILES/$f"; fi
@@ -157,14 +158,19 @@ EOF
 cat > "$L/bin/aws" <<'EOF'
 #!/usr/bin/env bash
 echo "$*" >> "$LAUNCH_LOG"
+echo "ENC=${AWS_CLI_FILE_ENCODING:-}" >> "$LAUNCH_LOG.env"
+# Windows paths from the fake cygpath (W:/...) are read like the Windows AWS CLI would: file://W:/... must exist
+for a in "$@"; do case "$a" in file://W:*) [ -f "${a#file://W:}" ] || exit 252 ;; file://*) [ -z "${LAUNCH_WIN:-}" ] && [ -f "${a#file://}" ] || exit 252 ;; esac; done
 case "$*" in
+  *"length(Versions)"*) echo "${LAUNCH_VERSIONS:-2}" ;;
+  *"list-policy-versions"*) printf 'v3\tv1\tv10\tv2\n' ;;
   *describe-vpcs*) echo vpc-1 ;; *describe-subnets*) echo subnet-1 ;; *get-caller-identity*) echo 123456789012 ;;
   *get-open-id-connect-provider*) [ -n "${LAUNCH_OIDC:-}" ] ;;
   *"iam get-policy"*) [ -z "${LAUNCH_NO_BOUNDARY:-}" ] ;;
   *DahaeDomain*) echo 203.0.113.7.sslip.io ;;
   *describe-stacks*Outputs*) echo "PublicIp 203.0.113.7" ;;
   *describe-stacks*) [ -n "${LAUNCH_STACK:-}" ] ;;
-  *"cloudformation deploy"*) t=$(echo "$*" | sed -n 's/.*--template-file \([^ ]*\).*/\1/p'); cp "$t" "$LAUNCH_FILES/deployed.yaml" ;;
+  *"cloudformation deploy"*) t=$(echo "$*" | sed -n 's/.*--template-file \([^ ]*\).*/\1/p'); cp "${t#W:}" "$LAUNCH_FILES/deployed.yaml" ;;
 esac
 EOF
 chmod +x "$L/bin/curl" "$L/bin/aws"
@@ -188,6 +194,26 @@ nt "launch: stack names stay dahae-*" launch --domain example.co.kr --email o@ex
 cp "$L/files/install.sh" "$L/files/install.ok"; printf 'echo evil\n' > "$L/files/install.sh"
 nt "launch: an install.sh that differs from SHA256SUMS is refused" launch --domain example.co.kr --email o@example.co.kr
 mv "$L/files/install.ok" "$L/files/install.sh"
+: > "$L/log"; : > "$L/log.env"
+launch --domain example.co.kr --email o@example.co.kr >/dev/null 2>&1
+t  "launch: AWS_CLI_FILE_ENCODING=UTF-8 for every aws call" sh -c "[ -s '$L/log.env' ] && ! grep -vqx 'ENC=UTF-8' '$L/log.env'"
+# Git Bash on Windows: a fake cygpath turns the work folder into W:<path>; the fake aws only opens W: paths then
+mkdir -p "$L/winbin"; printf '#!/usr/bin/env bash\n[ "$1" = -m ] && printf "W:%%s\\n" "$2"\n' > "$L/winbin/cygpath"; chmod +x "$L/winbin/cygpath"
+winlaunch() { PATH="$L/winbin:$L/bin:$PATH" LAUNCH_WIN=1 LAUNCH_FILES="$L/files" LAUNCH_LOG="$L/log" bash "$ROOT/deploy/aws/launch.sh" "$@"; }
+: > "$L/log"
+t  "launch (Git Bash): the template goes over as a Windows path" winlaunch --domain example.co.kr --email o@example.co.kr
+t  "launch (Git Bash): ...named W:/..." grep -q -- "--template-file W:/" "$L/log"
+: > "$L/log"
+t  "admin: existing policies get a new default version" launch --admin
+t  "admin: ...from the downloaded file" grep -q "create-policy-version --policy-arn arn:aws:iam::123456789012:policy/dahae-boundary --policy-document file:///" "$L/log"
+t  "admin: ...for the deployer policy too" grep -q "create-policy-version --policy-arn arn:aws:iam::123456789012:policy/dahae-deployer-policy .*--set-as-default" "$L/log"
+nt "admin: under five versions nothing is deleted" grep -q "delete-policy-version" "$L/log"
+: > "$L/log"
+t  "admin (Git Bash): policy files as Windows paths" env LAUNCH_VERSIONS=5 PATH="$L/winbin:$L/bin:$PATH" LAUNCH_WIN=1 LAUNCH_FILES="$L/files" LAUNCH_LOG="$L/log" bash "$ROOT/deploy/aws/launch.sh" --admin
+t  "admin: at five versions the oldest other one goes first" grep -q "delete-policy-version --policy-arn arn:aws:iam::123456789012:policy/dahae-boundary --version-id v1$" "$L/log"
+: > "$L/log"
+t  "admin: a new account gets the policies created" env LAUNCH_NO_BOUNDARY=1 PATH="$L/bin:$PATH" LAUNCH_FILES="$L/files" LAUNCH_LOG="$L/log" bash "$ROOT/deploy/aws/launch.sh" --admin
+t  "admin: ...with create-policy" grep -q "iam create-policy --policy-name dahae-boundary --policy-document file:///" "$L/log"
 
 # ---- syntax ----
 t "syntax: launch.sh" bash -n "$ROOT/deploy/aws/launch.sh"
