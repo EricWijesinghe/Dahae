@@ -225,7 +225,7 @@ After the review, click **[Disconnect]** on the **Store review demo account** ca
 
 > **Note** If you changed the name, logo, colour, app IDs or domain in the console, the **Store app build** card on **[Setup]** lists what changed. Those values reach the apps only through a new build. Ask your developer for one, and click **[I built it]** once the new apps are in the stores (chapter 28, 28.7).
 
-1. The developer tags a new version (for example `v1.5.2`) and runs `store-apps` again.
+1. The developer tags a new version (for example `v1.6.1`) and runs `store-apps` again.
 2. Android: check the draft in Play Console and release it. iPhone: check it in TestFlight and send it to review.
 3. Once approved, customers' phones update automatically.
 

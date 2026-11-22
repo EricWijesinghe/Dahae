@@ -178,7 +178,7 @@ Options: `--version vX.Y.Z` (default: latest release), `--stack dahae-main`, `--
 
 **By hand (B-1, B-2 in short)**
 
-1. Do not use `dahae-aws.yaml` from the v1.5.1 release assets (it predates the permissions boundary and OIDC subject fixes). Build a new one on `master` with `scripts/release/build-aws-template.sh`. The URL must contain the tag (`/v1.5.1/`). The printed hash must match the `install.sh` line in `SHA256SUMS`.
+1. Download `dahae-aws.yaml` from the latest release assets (install.sh URL and hash already pinned). Optional fallback: build it on `master` with `scripts/release/build-aws-template.sh`. The URL must contain the tag (`/v1.6.0/`). The printed hash must match the `install.sh` line in `SHA256SUMS`.
 2. CloudFormation > Create stack > Upload a template file. The stack name **must start with `dahae-`**.
 3. Parameters: `Domain`, `Email`, `HostedZoneId` (empty if none), `InstanceType` (`t3.medium` default; `t4g` is ARM and replaces the server), `DiskSizeGiB` (`50`), `VpcId`, `SubnetId`, `SshCidr` (empty), `GitHubRepo` (keep `EricWijesinghe/Dahae`), `GitHubRepoIds` (keep the default), `GitHubEnvironment` (`doda-aws`), `CreateGitHubOidcProvider` (`true` if first in the account), `AmdAmiId`/`ArmAmiId` (do not change).
 4. Tick the IAM resources acknowledgement → Submit → `CREATE_COMPLETE` (about 3–5 minutes). The install inside the server then takes about 15–20 more minutes.

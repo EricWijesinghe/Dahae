@@ -12,7 +12,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf -- "$TMP" 2>/dev/null || true' EXIT
 # Same placeholder URL the installer self-test uses; the page only needs a pinned-tag shape.
 bash "$ROOT/scripts/release/build-install-page.sh" "$ROOT/deploy/install.sh" \
-  "https://raw.githubusercontent.com/owner/repo/v1.5.1/install.sh" "$TMP" >/dev/null
+  "https://raw.githubusercontent.com/owner/repo/v1.6.0/install.sh" "$TMP" >/dev/null
 python -I - "$TMP/index.html" "$TMP/shot.html" <<'PY'
 import sys
 page = open(sys.argv[1], encoding="utf-8").read()

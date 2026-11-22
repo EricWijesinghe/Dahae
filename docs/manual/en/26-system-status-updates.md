@@ -39,7 +39,7 @@ Every item on the page has a small dot in front of it. Read the colour and the w
 The top card shows three things on one line.
 
 - **Server status**: the overall colour and word (**OK** / **Check** / **Action needed**).
-- **Version**: the Dahae version installed on the server now (for example `Version 1.5.1`).
+- **Version**: the Dahae version installed on the server now (for example `Version 1.6.0`).
 - **Uptime**: the time since the server program last restarted (for example `Uptime 52 h 10 min`).
 
 > **Tip** An update restarts the program, so **Uptime** drops back to almost zero. If the **Version** number changed and **Uptime** is short after an update, the update went in.

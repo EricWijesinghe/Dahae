@@ -178,7 +178,7 @@ bash launch.sh --domain example.co.kr --email owner@example.co.kr
 
 **손으로 만들기 (B-1, B-2 요약)**
 
-1. v1.5.1 릴리스 Assets 의 `dahae-aws.yaml` 은 쓰지 마세요 (권한 한도·OIDC 주체 수정 전 파일). `master` 에서 `scripts/release/build-aws-template.sh` 로 새로 만들어요. 주소는 태그(`/v1.5.1/`)가 들어간 주소여야 해요. 출력 지문이 `SHA256SUMS` 의 `install.sh` 줄과 같아야 해요.
+1. 최신 릴리스 Assets 의 `dahae-aws.yaml` 을 내려받아요 (설치 스크립트 주소와 지문이 이미 고정돼 있어요). (선택) `master` 에서 `scripts/release/build-aws-template.sh` 로 직접 만들 수도 있어요. 주소는 태그(`/v1.6.0/`)가 들어간 주소여야 해요. 출력 지문이 `SHA256SUMS` 의 `install.sh` 줄과 같아야 해요.
 2. CloudFormation > 스택 생성 > 템플릿 파일 업로드. 스택 이름은 **반드시 `dahae-` 로 시작**.
 3. 매개변수: `Domain`, `Email`, `HostedZoneId` (없으면 비움), `InstanceType` (`t3.medium` 기본; `t4g` 는 ARM 이라 서버가 새로 만들어져요), `DiskSizeGiB` (`50`), `VpcId`, `SubnetId`, `SshCidr` (비움), `GitHubRepo` (`EricWijesinghe/Dahae` 그대로), `GitHubRepoIds` (기본값 그대로), `GitHubEnvironment` (`doda-aws`), `CreateGitHubOidcProvider` (계정에 처음이면 `true`), `AmdAmiId`/`ArmAmiId` (바꾸지 않기).
 4. IAM 리소스 생성 승인 체크 → 제출 → `CREATE_COMPLETE` (약 3~5분). 그 뒤 서버 안 설치가 약 15~20분 더 걸려요.

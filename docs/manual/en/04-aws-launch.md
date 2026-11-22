@@ -45,7 +45,7 @@ The developer usually does this, because the deployer account's MFA is on the de
 7. One line appears first, for example:
 
    ```
-   Dahae v1.5.1 -> stack dahae-main in ap-northeast-2 (vpc vpc-…, subnet subnet-…, instance t3.medium)
+   Dahae v1.6.0 -> stack dahae-main in ap-northeast-2 (vpc vpc-…, subnet subnet-…, instance t3.medium)
    ```
 
 8. Then wait while AWS creates the server (about 5–10 minutes). **Do not close the window.**
@@ -81,7 +81,7 @@ Add these to the end of the command only when needed. At first, adding none is r
 |---|---|---|
 | `--hosted-zone-id Z123…` | Creates the A record in Route 53 for you | None (you set DNS yourself) |
 | `--instance-type t3.large` | Changes the server size. Allowed values: `t3.medium`, `t3.large`, `t4g.medium`, `t4g.large` | `t3.medium` |
-| `--version v1.5.1` | Installs a specific version | Latest release |
+| `--version v1.6.0` | Installs a specific version | Latest release |
 | `--stack dahae-name` | Changes the stack name. It must start with `dahae-` | `dahae-main` |
 | `--vpc vpc-… --subnet subnet-…` | Picks the network yourself | Public subnet of the default VPC |
 | `--region ap-northeast-2` | Region | Seoul |
@@ -138,7 +138,7 @@ When the command stops, it prints a line starting with `error:`. Find that line 
 | `error: --domain like example.co.kr is required` | The domain is missing or wrongly formed. Leave out `https://`, use **lower case**, like `example.co.kr` |
 | `error: --email is required` | The email is missing or wrongly formed |
 | `error: --stack must start with dahae-` | The stack name must start with `dahae-` |
-| `error: no release version found (use --version vX.Y.Z)` | The latest version could not be found. Try again later, or ask the developer for the version and add `--version v1.5.1` |
+| `error: no release version found (use --version vX.Y.Z)` | The latest version could not be found. Try again later, or ask the developer for the version and add `--version v1.6.0` |
 | `error: install.sh of … does not match the release's SHA256SUMS` | The installer's fingerprint does not match. **Stop here** and tell the developer |
 | `error: no default VPC in ap-northeast-2: pass --vpc and --subnet` | There is no default network in Seoul. Ask the developer for `--vpc` and `--subnet` values |
 | `error: no public subnet in …: pass --subnet` | No subnet can reach the internet. Ask the developer |

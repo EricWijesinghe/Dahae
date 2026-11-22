@@ -36,7 +36,7 @@ Principle. The developer (Eric) builds, deploys and maintains everything from hi
 - 카카오·구글 로그인에는 **Play 앱 서명 키**의 SHA-1 이 필요해요. 첫 업로드 뒤 Play Console → 앱 무결성에서 복사해 카카오·구글 콘솔에 등록해요. 같은 화면의 SHA-256 은 콘솔 설정 → 앱 링크 카드에 넣어요.
 
 **업데이트**
-- 개발자가 새 태그 (`v1.5.2`) 를 만들고 `store-apps` 를 다시 실행해요 ([guide 11](guide/11-앱-직접-빌드.md) 10번). 빌드 번호는 자동으로 올라가요.
+- 개발자가 새 태그 (`v1.6.1`) 를 만들고 `store-apps` 를 다시 실행해요 ([guide 11](guide/11-앱-직접-빌드.md) 10번). 빌드 번호는 자동으로 올라가요.
 
 ## 3. iOS (App Store · TestFlight)
 
@@ -78,7 +78,7 @@ DODA 의 서비스가 모두 AWS 에 있으니 **DODA 의 AWS 서울 리전(ap-n
 
 **확인되지 않은 것.** 템플릿과 CD 는 AWS 검사 도구(cfn-lint, actionlint)를 통과했지만 실제 AWS 계정에서는 아직 띄워 보지 않았어요. 첫 배포 때 DODA 관리자와 개발자가 같이 확인해요.
 
-**템플릿과 새 버전:** v1.5.1 릴리스에 첨부된 `dahae-aws.yaml` 은 권한 한도와 GitHub 로그인 주체 수정 전 파일이라 쓰지 않아요. 개발자가 `master` 에서 v1.5.1 설치 스크립트로 새로 만들어요 ([guide 10](guide/10-AWS-배포.md) B-1). 다음 릴리스부터는 릴리스 페이지(Releases → 최신 버전(Latest) → Assets)의 파일을 그대로 써요. 설치 스크립트 주소와 지문이 이미 채워져 있어요. 새 버전도 같은 저장소에서 릴리스돼요. 릴리스 작업이 `deploy-aws` 를 자동으로 시작해요 (승인자가 있으면 승인 후 배포).
+**템플릿과 새 버전:** 가장 쉬운 길은 `deploy/aws/launch.sh` 예요 ([guide 10](guide/10-AWS-배포.md) B). 템플릿 파일을 직접 올릴 때는 릴리스 페이지(Releases → 최신 버전(Latest) → Assets)의 `dahae-aws.yaml` 을 그대로 써요. 설치 스크립트 주소와 지문이 이미 채워져 있어요. 새 버전도 같은 저장소에서 릴리스돼요. 릴리스 작업이 `deploy-aws` 를 자동으로 시작해요 (승인자가 있으면 승인 후 배포).
 
 **AWS 가 아닌 곳에 올릴 때**는 [guide 09](guide/09-클라우드별-설치.md) (클라우드별 설치) 와 [guide 08](guide/08-클라우드-배포.md) 을 봐요.
 
@@ -175,7 +175,7 @@ All of DODA's services run on AWS, so the server goes to **DODA's AWS Seoul regi
 
 **Not yet verified.** The template and CD pass the AWS linters (cfn-lint, actionlint) but have not been launched on a real AWS account. The first deploy is checked together by DODA's admin and the developer.
 
-**Template and new versions:** the `dahae-aws.yaml` attached to the v1.5.1 release predates the permissions boundary and the GitHub subject fix, so it is not used; the developer builds it on `master` from the v1.5.1 install script ([guide 10](guide/10-AWS-배포.md) B-1). From the next release on, download it from the release page (Releases → Latest → Assets); the install script URL and SHA-256 are already filled in. New versions are released from the same repository, which starts `deploy-aws` automatically (waiting for approval if reviewers are set).
+**Template and new versions:** the simplest path is `deploy/aws/launch.sh` ([guide 10](guide/10-AWS-배포.md) B). To upload the template by hand, download `dahae-aws.yaml` from the release page (Releases → Latest → Assets); the install script URL and SHA-256 are already filled in. New versions are released from the same repository, which starts `deploy-aws` automatically (waiting for approval if reviewers are set).
 
 **Other clouds:** [guide 09](guide/09-클라우드별-설치.md) and [guide 08](guide/08-클라우드-배포.md).
 

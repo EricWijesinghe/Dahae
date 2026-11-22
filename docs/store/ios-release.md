@@ -25,7 +25,7 @@ The developer builds both apps with GitHub Actions (`store-apps`, macOS runner) 
 
 ## 2. 첫 빌드 / First build
 
-1. 저장소에서 버전 태그를 만들고 (예: `v1.5.1`, [guide 11](../guide/11-앱-직접-빌드.md) 8번) Actions → `store-apps` → Run workflow 에서 `app` = customer 또는 both, `platform` = ios 또는 both, `upload` = true 로 실행해요 (태그가 없으면 pubspec 의 버전을 써요). store 환경에 승인자를 넣었다면 승인 뒤 실행돼요. If the store environment has reviewers, one approves the run.
+1. 저장소에서 버전 태그를 만들고 (예: `v1.6.0`, [guide 11](../guide/11-앱-직접-빌드.md) 8번) Actions → `store-apps` → Run workflow 에서 `app` = customer 또는 both, `platform` = ios 또는 both, `upload` = true 로 실행해요 (태그가 없으면 pubspec 의 버전을 써요). store 환경에 승인자를 넣었다면 승인 뒤 실행돼요. If the store environment has reviewers, one approves the run.
 2. 워크플로가 하는 일 / The workflow does: `check-native.py`(Info.plist·권한·개인정보 매니페스트 검사) → `flutter build ios --config-only`(난독화, 빌드 번호는 `scripts/ci/build-number.py`) → `xcodebuild archive` 와 `-exportArchive`(자동 서명, App Store Connect 키로 프로필 생성, `-allowProvisioningUpdates`) → `check-native.py --ipa`(서명된 ipa 검사) → `upload` 가 켜져 있으면 `xcrun altool --upload-app` 로 TestFlight 업로드.
 3. 빌드 번호는 시간(분) 기준 증가 값이라 같은 번호가 두 번 나오지 않아요. 직접 올리지 마세요. Build numbers rise by the minute; never set one by hand.
 4. 업로드 후 Apple 처리에 10~30분. TestFlight 내부 테스터로 먼저 실기기 확인: 로그인(전화, 카카오, 네이버, 구글, Apple), 사진 고르기, 결제창(PortOne, 카드 앱 호출), 푸시, 위치.

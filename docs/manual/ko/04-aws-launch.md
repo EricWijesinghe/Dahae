@@ -45,7 +45,7 @@
 7. 한 줄이 먼저 나와요. 예:
 
    ```
-   Dahae v1.5.1 -> stack dahae-main in ap-northeast-2 (vpc vpc-…, subnet subnet-…, instance t3.medium)
+   Dahae v1.6.0 -> stack dahae-main in ap-northeast-2 (vpc vpc-…, subnet subnet-…, instance t3.medium)
    ```
 
 8. 그다음 AWS 가 서버를 만드는 동안 기다려요 (약 5–10분). **창을 닫지 마세요.**
@@ -81,7 +81,7 @@
 |---|---|---|
 | `--hosted-zone-id Z123…` | Route 53 에 A 레코드를 자동으로 만들어요 | 없음 (직접 DNS 설정) |
 | `--instance-type t3.large` | 서버 사양을 바꿔요. 고를 수 있는 값: `t3.medium`, `t3.large`, `t4g.medium`, `t4g.large` | `t3.medium` |
-| `--version v1.5.1` | 특정 버전을 설치해요 | 가장 최근 릴리스 |
+| `--version v1.6.0` | 특정 버전을 설치해요 | 가장 최근 릴리스 |
 | `--stack dahae-이름` | 스택 이름을 바꿔요. 반드시 `dahae-` 로 시작해야 해요 | `dahae-main` |
 | `--vpc vpc-… --subnet subnet-…` | 네트워크를 직접 골라요 | 기본 VPC 의 공개 서브넷 |
 | `--region ap-northeast-2` | 지역 | 서울 |
@@ -138,7 +138,7 @@ CloudShell 을 쓸 수 없을 때는 CloudFormation 화면에서 템플릿 파�
 | `error: --domain like example.co.kr is required` | 도메인이 없거나 형식이 틀렸어요. `https://` 를 빼고, **소문자로**, `example.co.kr` 처럼 넣으세요 |
 | `error: --email is required` | 이메일이 없거나 형식이 틀렸어요 |
 | `error: --stack must start with dahae-` | 스택 이름은 `dahae-` 로 시작해야 해요 |
-| `error: no release version found (use --version vX.Y.Z)` | 최신 버전을 찾지 못했어요. 잠시 뒤 다시 하거나, 개발자에게 버전 번호를 물어 `--version v1.5.1` 처럼 붙이세요 |
+| `error: no release version found (use --version vX.Y.Z)` | 최신 버전을 찾지 못했어요. 잠시 뒤 다시 하거나, 개발자에게 버전 번호를 물어 `--version v1.6.0` 처럼 붙이세요 |
 | `error: install.sh of … does not match the release's SHA256SUMS` | 설치 프로그램 지문이 맞지 않아요. **더 진행하지 말고** 개발자에게 알려 주세요 |
 | `error: no default VPC in ap-northeast-2: pass --vpc and --subnet` | 서울 지역에 기본 네트워크가 없어요. 개발자에게 `--vpc`, `--subnet` 값을 물어보세요 |
 | `error: no public subnet in …: pass --subnet` | 인터넷으로 나갈 수 있는 서브넷이 없어요. 개발자에게 물어보세요 |

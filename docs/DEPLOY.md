@@ -187,7 +187,7 @@ process holds port 80 or 443.
 
 ### AWS server and GitHub deploys (per client)
 
-The release also uploads `dahae-aws.yaml` (CloudFormation, pinned to the same `install.sh`) as a release asset, signed like the install page. The developer launches it in the client's AWS console, signed in as the deployer IAM user (v1.5.1's asset predates the permissions boundary and the immutable OIDC subject: rebuild it on master as in guide 10 B-1); [`.github/workflows/deploy-aws.yml`](../.github/workflows/deploy-aws.yml) then runs `dahae update <tag>` (or `dahae rollback`) on that server through SSM, after approval when the `doda-aws` GitHub environment has reviewers. The client-facing steps are in [guide 10](guide/10-AWS-배포.md); the IAM policy is [deploy/aws/deployer-iam-policy.json](../deploy/aws/deployer-iam-policy.json).
+The release also uploads `dahae-aws.yaml` (CloudFormation, pinned to the same `install.sh`) as a release asset, signed like the install page. The developer launches it in the client's AWS console, signed in as the deployer IAM user, or runs [`deploy/aws/launch.sh`](../deploy/aws/launch.sh) in CloudShell, which pins the latest release's `install.sh` into the same template; [`.github/workflows/deploy-aws.yml`](../.github/workflows/deploy-aws.yml) then runs `dahae update <tag>` (or `dahae rollback`) on that server through SSM, after approval when the `doda-aws` GitHub environment has reviewers. The client-facing steps are in [guide 10](guide/10-AWS-배포.md); the IAM policy is [deploy/aws/deployer-iam-policy.json](../deploy/aws/deployer-iam-policy.json).
 
 ## 3. Store apps (per client)
 
