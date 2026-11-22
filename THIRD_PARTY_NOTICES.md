@@ -88,7 +88,7 @@ Rust crates: 259 (api binary, normal dependencies; union of x86_64 and aarch64 L
 | either | 1.19.0 | MIT OR Apache-2.0 | https://crates.io/crates/either/1.19.0 |
 | errno | 0.3.14 | MIT OR Apache-2.0 | https://crates.io/crates/errno/0.3.14 |
 | etcetera | 0.8.0 | MIT OR Apache-2.0 | https://crates.io/crates/etcetera/0.8.0 |
-| form_urlencoded | 1.2.2 | MIT OR Apache-2.0 | https://crates.io/crates/form_urlencoded/1.2.2 |
+| form_urlencoded | 1.2.3 | MIT OR Apache-2.0 | https://crates.io/crates/form_urlencoded/1.2.3 |
 | futures-channel | 0.3.34 | MIT OR Apache-2.0 | https://crates.io/crates/futures-channel/0.3.34 |
 | futures-core | 0.3.34 | MIT OR Apache-2.0 | https://crates.io/crates/futures-core/0.3.34 |
 | futures-intrusive | 0.5.0 | MIT OR Apache-2.0 | https://crates.io/crates/futures-intrusive/0.5.0 |
@@ -185,7 +185,7 @@ Rust crates: 259 (api binary, normal dependencies; union of x86_64 and aarch64 L
 | typenum | 1.20.1 | MIT OR Apache-2.0 | https://crates.io/crates/typenum/1.20.1 |
 | unicode-bidi | 0.3.18 | MIT OR Apache-2.0 | https://crates.io/crates/unicode-bidi/0.3.18 |
 | universal-hash | 0.5.1 | MIT OR Apache-2.0 | https://crates.io/crates/universal-hash/0.5.1 |
-| url | 2.5.8 | MIT OR Apache-2.0 | https://crates.io/crates/url/2.5.8 |
+| url | 2.5.9 | MIT OR Apache-2.0 | https://crates.io/crates/url/2.5.9 |
 | windows-link | 0.2.1 | MIT OR Apache-2.0 | https://crates.io/crates/windows-link/0.2.1 |
 | windows-sys | 0.48.0 | MIT OR Apache-2.0 | https://crates.io/crates/windows-sys/0.48.0 |
 | windows-sys | 0.61.2 | MIT OR Apache-2.0 | https://crates.io/crates/windows-sys/0.61.2 |
