@@ -12,7 +12,7 @@
 - 담당 계정 로그인 주소, 사용자 이름 `dahae-deployer`, 비밀번호 (3.7)
 - 담당 계정 MFA 가 들어 있는 휴대폰 (3.6)
 - 고객이 쓸 **도메인** (예: `example.co.kr` 또는 `app.example.co.kr`). `https://` 없이, **소문자로**. 아직 도메인이 없으면 `auto` 로 시작할 수 있어요 (4.2 팁)
-- 인증서 안내를 받을 **이메일** (예: `owner@example.co.kr`)
+- 인증서 안내와 AWS 알림 메일을 받을 **이메일** (예: `owner@example.co.kr`). 사장님이 읽는 메일함이어야 해요: AWS 가 그곳으로 확인 메일을 보내요 (4.2 의 10번)
 - (도메인을 AWS Route 53 에 둔 경우만) **호스팅 영역 ID** (`Z` 로 시작)
 - 시간: 명령 약 5–10분 + 서버 안 설치 약 15–20분
 
@@ -53,9 +53,14 @@
 
 ![CloudShell 에서 서버 만들기 명령을 실행한 화면 (IP 는 가렸어요)](../img/ko/aws-cloudshell-launch.png)
 
-**이렇게 보이면 성공:** 표가 하나 나오고, 그 아래에 `Done. Next:` 로 시작하는 안내 네 줄이 보여요. 표에는 `PublicIp`, `InstanceId`, `DeployRoleArn`, `AwsRegion`, `DahaeDomain`, `NextStepUrl` 같은 값이 있어요.
+**이렇게 보이면 성공:** 표가 하나 나오고, 그 아래에 `Done. Next:` 로 시작하는 안내 다섯 줄이 보여요. 표에는 `PublicIp`, `InstanceId`, `DeployRoleArn`, `AwsRegion`, `DahaeDomain`, `BackupBucket`, `NextStepUrl` 같은 값이 있어요.
 
-9. 표의 **`PublicIp`** 값(예: `3.38.12.34`)을 복사해서 메모해요. 5장에서 써요.
+9. 표의 **`PublicIp`** 값(예: `3.38.12.34`)을 복사해서 메모해요. 5장에서 써요. **`BackupBucket`** 값(`dahae-` 로 시작)도 메모해 둬요. 이 서버를 잃고 새로 만들 때만 필요해요 (4.3).
+10. 마지막 줄에 `5. Alarm e-mails: AWS sent "AWS Notification - Subscription Confirmation" to …` 가 보여요. 그 메일함을 열고 (스팸함도 봐요), **AWS Notification - Subscription Confirmation** 메일을 열어 **Confirm subscription** 을 한 번 눌러요.
+
+**이렇게 보이면 성공:** 브라우저에 **Subscription confirmed!** 화면이 떠요. 이제 서버 하드웨어가 고장 나고 복구되면 AWS 가 이 주소로 메일을 보내요 (27장 27.3).
+
+> **주의** 이 한 번의 클릭이 없으면 알림 메일이 아예 오지 않아요. 개발자가 명령을 실행했다면, 사장님께 메일을 찾아 눌러 달라고 전하세요.
 
 > **팁** 도메인이 Route 53 에 있다면 명령 끝에 `--hosted-zone-id Z로시작하는ID` 를 붙이세요. 그러면 도메인의 A 레코드도 자동으로 만들어져요 (5.1).
 
@@ -72,7 +77,8 @@
    - Ubuntu 24.04 서버 1대 (기본 `t3.medium`, 암호화된 50 GB 디스크)
    - 고정 IP (Elastic IP)
    - 80, 443 만 열린 방화벽 (SSH 22 는 닫혀 있어요. 서버 접속은 AWS 웹 화면으로 해요, 5.5)
-   - 매일 디스크 스냅샷 (7개 보관), 하드웨어 고장 때 자동 복구, 실수로 지우지 않게 하는 종료 방지
+   - 매일 디스크 스냅샷 (7개 보관), 하드웨어 고장 때 자동 복구와 위 이메일로 알림 메일, 실수로 지우지 않게 하는 종료 방지
+   - 외부 백업용 비공개 S3 저장소. 서버가 자기 AWS 역할로 백업을 올려서 백업 키를 넣을 일이 없어요 (27장 27.3). 스택을 지워도 저장소는 남아요
 7. 끝나면 결과 표와 다음 할 일을 보여 줘요.
 
 ## 4.3 명령에 붙일 수 있는 선택 항목
@@ -87,6 +93,7 @@
 | `--stack dahae-이름` | 스택 이름을 바꿔요. 반드시 `dahae-` 로 시작해야 해요 | `dahae-main` |
 | `--vpc vpc-… --subnet subnet-…` | 네트워크를 직접 골라요 | 기본 VPC 의 공개 서브넷 |
 | `--region ap-northeast-2` | 지역 | 서울 |
+| `--backup-bucket dahae-…` | **서버를 잃고 새로 만들 때만:** 예전 스택의 `BackupBucket` 값. 새 저장소를 만들지 않고, 새 서버가 그 저장소의 예전 백업을 읽고 이어서 써요 (같은 지역, 27장 27.7) | 없음 (새 저장소) |
 | `--dry-run` | 실제로 만들지 않고 무엇을 할지만 보여 줘요 | - |
 
 > **주의** 이 명령은 **이미 있는 스택은 건드리지 않아요.** 같은 이름의 스택이 있으면 멈춰요. 새 버전으로 올리는 일은 이 명령이 아니라 콘솔의 업데이트(26장)나 개발자의 자동 배포로 해요.
@@ -141,6 +148,8 @@ CloudShell 을 쓸 수 없을 때는 CloudFormation 화면에서 템플릿 파�
 | `error: --hosted-zone-id needs a real --domain` | `--domain auto` 에는 `--hosted-zone-id` 를 붙이지 않아요. 둘 중 하나를 빼세요 |
 | `error: --email is required` | 이메일이 없거나 형식이 틀렸어요 |
 | `error: --stack must start with dahae-` | 스택 이름은 `dahae-` 로 시작해야 해요 |
+| `error: --backup-bucket is the old stack's BackupBucket output (dahae-…)` | `--backup-bucket` 뒤의 값이 저장소 이름이 아니에요. CloudFormation → 예전 스택 → **출력(Outputs)** 의 `BackupBucket` 값을 다시 복사해요 |
+| **AWS Notification - Subscription Confirmation** 메일이 없어요 | 스팸함을 봐요. `--email` 값을 바르게 넣었는지 확인해요. 개발자가 AWS 에서 다시 보낼 수 있어요 (SNS → 구독 → **확인 요청**) |
 | `error: no release version found (use --version vX.Y.Z)` | 최신 버전을 찾지 못했어요. 잠시 뒤 다시 하거나, 개발자에게 버전 번호를 물어 `--version v1.6.0` 처럼 붙이세요 |
 | `error: install.sh of … does not match the release's SHA256SUMS` | 설치 프로그램 지문이 맞지 않아요. **더 진행하지 말고** 개발자에게 알려 주세요 |
 | `error: no default VPC in ap-northeast-2: pass --vpc and --subnet` | 서울 지역에 기본 네트워크가 없어요. 개발자에게 `--vpc`, `--subnet` 값을 물어보세요 |

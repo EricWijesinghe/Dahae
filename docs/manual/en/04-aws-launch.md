@@ -12,7 +12,7 @@ The developer usually does this, because the deployer account's MFA is on the de
 - The deployer sign-in URL, user name `dahae-deployer` and password (3.7)
 - The phone with the deployer account's MFA (3.6)
 - The **domain** customers will use (for example `example.co.kr` or `app.example.co.kr`), without `https://`, **in lower case**. No domain yet? You can start with `auto` (tip in 4.2)
-- An **email** for certificate notices (for example `owner@example.co.kr`)
+- An **email** for certificate notices and AWS alarm e-mails (for example `owner@example.co.kr`). Use a mailbox the owner reads: AWS sends a confirmation mail there (step 10 in 4.2)
 - (Only if the domain is in AWS Route 53) the **hosted zone ID** (starts with `Z`)
 - Time: about 5–10 minutes for the command + about 15–20 minutes for the install inside the server
 
@@ -53,9 +53,14 @@ The developer usually does this, because the deployer account's MFA is on the de
 
 ![CloudShell after the launch command (IP covered)](../img/en/aws-cloudshell-launch.png)
 
-**You should now see:** a table, and under it four lines of next steps starting with `Done. Next:`. The table holds values such as `PublicIp`, `InstanceId`, `DeployRoleArn`, `AwsRegion`, `DahaeDomain` and `NextStepUrl`.
+**You should now see:** a table, and under it five lines of next steps starting with `Done. Next:`. The table holds values such as `PublicIp`, `InstanceId`, `DeployRoleArn`, `AwsRegion`, `DahaeDomain`, `BackupBucket` and `NextStepUrl`.
 
-9. Copy the **`PublicIp`** value from the table (for example `3.38.12.34`) and note it down. You need it in chapter 5.
+9. Copy the **`PublicIp`** value from the table (for example `3.38.12.34`) and note it down. You need it in chapter 5. Note the **`BackupBucket`** value too (it starts with `dahae-`): it is needed only if this server is ever lost and replaced (4.3).
+10. The last line says `5. Alarm e-mails: AWS sent "AWS Notification - Subscription Confirmation" to …`. Open that mailbox (look in the spam folder too), open the mail **AWS Notification - Subscription Confirmation** and click **Confirm subscription** once.
+
+**You should now see:** a browser page **Subscription confirmed!**. From now on AWS e-mails this address when the server's hardware fails and is recovered (chapter 27, 27.3).
+
+> **Warning** Without that one click, no alarm e-mail ever arrives. If the developer ran the command, tell the owner to look for the mail and click it.
 
 > **Tip** If the domain is in Route 53, add `--hosted-zone-id <ID starting with Z>` to the end of the command. The domain's A record is then created for you too (5.1).
 
@@ -72,7 +77,8 @@ The command does these things in order. Nobody needs to do anything.
    - One Ubuntu 24.04 server (default `t3.medium`, encrypted 50 GB disk)
    - A fixed IP (Elastic IP)
    - A firewall open only on 80 and 443 (SSH port 22 is closed; you reach the server through the AWS web console, 5.5)
-   - Daily disk snapshots (7 kept), automatic recovery on hardware failure, termination protection against accidental deletion
+   - Daily disk snapshots (7 kept), automatic recovery on hardware failure with an alarm e-mail to the email above, termination protection against accidental deletion
+   - A private S3 bucket for offsite backups. The server writes its backups there with its own AWS role, so nobody types backup keys (chapter 27, 27.3). The bucket stays even if the stack is deleted
 7. Prints the result table and the next steps.
 
 ## 4.3 Options you can add to the command
@@ -87,6 +93,7 @@ Add these to the end of the command only when needed. At first, adding none is r
 | `--stack dahae-name` | Changes the stack name. It must start with `dahae-` | `dahae-main` |
 | `--vpc vpc-… --subnet subnet-…` | Picks the network yourself | Public subnet of the default VPC |
 | `--region ap-northeast-2` | Region | Seoul |
+| `--backup-bucket dahae-…` | **Only when a lost server is replaced:** the old stack's `BackupBucket` value. The new server reads the old backups and keeps using that bucket (same region) instead of making a new one (chapter 27, 27.7) | None (a new bucket) |
 | `--dry-run` | Shows what it would do, without creating anything | - |
 
 > **Warning** This command **never touches an existing stack.** If a stack with the same name exists, it stops. New versions come through the console's update (chapter 26) or the developer's automatic deploy, not through this command.
@@ -141,6 +148,8 @@ When the command stops, it prints a line starting with `error:`. Find that line 
 | `error: --hosted-zone-id needs a real --domain` | `--domain auto` does not take `--hosted-zone-id`. Leave one of them out |
 | `error: --email is required` | The email is missing or wrongly formed |
 | `error: --stack must start with dahae-` | The stack name must start with `dahae-` |
+| `error: --backup-bucket is the old stack's BackupBucket output (dahae-…)` | The value after `--backup-bucket` is not a bucket name. Copy the old stack's `BackupBucket` value from CloudFormation → the old stack → **Outputs** |
+| No **AWS Notification - Subscription Confirmation** mail | Look in the spam folder. Check the `--email` value was typed right. The developer can send it again from AWS (SNS → Subscriptions → **Request confirmation**) |
 | `error: no release version found (use --version vX.Y.Z)` | The latest version could not be found. Try again later, or ask the developer for the version and add `--version v1.6.0` |
 | `error: install.sh of … does not match the release's SHA256SUMS` | The installer's fingerprint does not match. **Stop here** and tell the developer |
 | `error: no default VPC in ap-northeast-2: pass --vpc and --subnet` | There is no default network in Seoul. Ask the developer for `--vpc` and `--subnet` values |

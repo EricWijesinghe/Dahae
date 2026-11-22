@@ -6,7 +6,7 @@ You connect the **uptime heartbeat**, so an outside service tells you when the s
 And you learn to turn on the **store review demo account**, so app store reviewers can sign in, and to set the **business hours** the AI assistant uses.
 
 > **Before you start**
-> - Offsite backup: a Cloudflare account (R2) or a Naver Cloud account (Object Storage). Cost depends on storage used; see each provider's price list.
+> - Offsite backup: a Cloudflare account (R2) or a Naver Cloud account (Object Storage). Cost depends on storage used; see each provider's price list. Not needed on a server made with the AWS command (chapter 4): see the tip in 17.1.
 > - Heartbeat: an account with an uptime service such as healthchecks.io, the owner account and its authenticator app
 > - Demo account: one mobile number nobody uses, and the authenticator app on the owner's phone (chapter 6)
 
@@ -18,7 +18,9 @@ Every night the server makes a backup and keeps it on the server for 14 days. Bu
 - **[System status]** lists them apart: **Offsite backup (S3-compatible)** and **Offsite photo backup (S3-compatible)** (chapter 26).
 - Backup files are encrypted before upload.
 
-> **Warning** The key that opens the backups comes from the server's secret key (`DATA_KEY`). If you lose that key along with the server, the offsite backups can't be opened. Keep a **copy of the secret keys** outside the server. Chapter 27 shows how to make it (`sudo dahae keys-backup`) and how to restore.
+> **Tip** On a server made with the AWS command (chapter 4) this card already shows **AWS S3 (automatic)**: backups go to the stack's own private S3 bucket with no keys to type, so you can skip the rest of 17.1 (chapter 27, 27.3). If you do save keys for another store on this card, that store is used instead.
+
+> **Warning** The key that opens the backups comes from the server's secret key (`DATA_KEY`). If you lose that key along with the server, the offsite backups can't be opened. Keep a **copy of the secret keys** outside the server. Chapter 27, 27.4 shows how to make it in the console (**[System status]** → **Server update** → **Recovery**) and how to restore.
 
 ### Which provider?
 
@@ -168,6 +170,7 @@ You should now see: **Saved** at the bottom of the screen.
 | Backup card shows **The key was rejected. …** | Check the token has **Object Read & Write** and the keys were copied exactly. |
 | Backup card shows **Could not reach the service. …** | The storage could not be reached, or it refused the test file. Check the account ID in the endpoint and the bucket name (and that the bucket really exists), then try again in a few minutes. |
 | Backup card shows **Please check the highlighted value** (after the check) | Uploading or deleting the test file failed. Check the bucket name and permissions. |
+| Backup card shows **The server role could not reach the AWS bucket. …** (AWS) | Send a screenshot to your developer. They check that the server was made with the AWS template and that the AWS admin ran `launch.sh --admin` once more. |
 | Heartbeat card stays **Not set** | On **[System status]**, check that the `Heartbeat` job under **Recent server jobs** is **Done**, then reload **[Setup]**. If it **Failed**, copy the address in again. |
 | Business hours shows **Pick at least one day, and a closing time after the opening time.** | Pick at least one day, use two-digit times such as `09:00`, and make the closing time later. |
 | **A customer, partner or staff member already uses this number. …** | Use a demo number that nobody uses. |

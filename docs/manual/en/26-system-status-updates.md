@@ -46,9 +46,9 @@ The top card shows three things on one line.
 
 ---
 
-## 26.3 Checks (six cards)
+## 26.3 Checks (seven cards)
 
-Under **Checks** there are six cards. When a card turns red, red text under it says what to do. The limits in the table are the values from a fresh install. You can make the disk and backup limits stricter under **[Operating rules]** (chapter 23).
+Under **Checks** there are seven cards. When a card turns red, red text under it says what to do. The limits in the table are the values from a fresh install. You can make the disk and backup limits stricter under **[Operating rules]** (chapter 23).
 
 | Card | Value shown | Turns yellow | Turns red | Red text on screen (summary) |
 |---|---|---|---|---|
@@ -57,6 +57,7 @@ Under **Checks** there are six cards. When a card turns red, red text under it s
 | **Automatic backup** | Last backup ○ h ago | Over 26 hours | Over 36 hours, or **No backup yet** | Ask your developer to check the backup; check the offsite backup connection |
 | **Server errors (24 h)** | ○ | 20 or more | 100 or more | If they keep happening, send the details to your developer |
 | **Payments to check** | ○ (24 h) | - | Any at all | Check the payment in the gateway's console and refund it yourself if needed |
+| **PortOne test-channel payments** | ○ (24 h) | - | Any at all | A payment or card save came in through a PortOne test channel, so no real money moved. Fine while you test. When live, make sure the channel keys are live keys and delete the store's test channels in the PortOne console (chapter 11, 11.10) |
 | **Payment webhooks** | Signature failures ○ (24 h) | 1 or 2 | 3 or more | Re-enter the webhook secret (PortOne) or the security key (Toss Payments) |
 
 Chapter 29 explains in detail what to do when a card is red.
@@ -141,6 +142,7 @@ When something goes wrong, the server leaves an alert in the **Inbox** and texts
 | **Push notifications fail** | Push fails several times |
 | **Payment connection fails** | The gateway connection fails several times |
 | **Payment not processed automatically** | Money came in but the booking was not processed |
+| **Payment on a PortOne test channel** | A payment or saved card came in through a PortOne test channel, so no real money moved (chapter 11, 11.10) |
 | **Payments differ from the gateway (PortOne/Toss Payments)** | The gateway's records and ours differ |
 | **Social sign-in fails** | Kakao, Naver, Google or Apple sign-in fails several times |
 | **Automatic backup missed** | No daily backup for a long time |
@@ -272,9 +274,11 @@ Status words in **Recent server jobs**:
 
 > **Tip** An update changes only the program. Data such as customers, bookings and settings stays as it is.
 
+> **Note** An update also replaces the server's own tools (the `dahae` command and the job runner that carries out these buttons) with the new version's, after checking them against the signed release. Nobody needs to run the install line again after an update. Only a server installed with version 1.6.0 or older needs the developer to run the install line **once** more; after that, updates bring the tools by themselves.
+
 ### If something is wrong after an update
 
-If the update succeeded but a screen or feature looks wrong, tell your developer. The developer goes back to the previous version on the server (rollback). The console has no rollback button. A rollback does not delete data (chapter 33).
+If the update succeeded but a screen or feature looks wrong, you can go back to the previous version yourself with **[Roll back to the previous version]** in the **Recovery** part of this card (below). Data is not deleted. Tell your developer what looked wrong too.
 
 ### Server settings (owner only)
 
@@ -320,16 +324,85 @@ You should now see: `Update schedule · Done` under **Recent server jobs**.
 | **[Skip the next automatic update]** | Skips the next scheduled automatic update **once**. The one after that runs as usual |
 | **[Restart the service]** | Turns the service off and on. In the **Restart the service? It drops for about a minute.** window you click **[Restart the service]** once more. Use it only when your developer tells you to |
 
-Job names under **Recent server jobs**: **Update**, **Back up now**, **Skip update**, **Update channel**, **Restart**, **Update schedule**, **Heartbeat** (chapter 17), **DNS check**, **Domain change**, **Approval code setup** (chapter 28). Besides the states in the table above, there are two more.
+Job names under **Recent server jobs**: **Update**, **Back up now**, **Skip update**, **Update channel**, **Restart**, **Update schedule**, **Heartbeat** (chapter 17), **DNS check**, **Domain change**, **Approval code setup** (chapter 28), **Roll back**, **Secret key copy** and **Key copy recorded** (Recovery, below). Besides the states in the table above, there are two more.
 
 | Screen text | Meaning | What to do |
 |---|---|---|
-| **Waiting for the approval code** | It runs only after the server approval code is entered (domain change) | Chapter 28, 28.8.4 |
+| **Waiting for the approval code** | It runs only after the server approval code is entered (domain change, roll back) | Chapter 28, 28.8.4, or Recovery below |
 | **Refused** | The server did not accept this job | See the reasons in chapter 28, 28.8.5 |
 
 ### Server approval code
 
 Below **Server settings** is **Server approval code**: a second 6-digit code the server checks itself for big jobs such as a domain change. Chapter 28, 28.8.1 shows how to set it up. You do it once.
+
+### Recovery: roll back to the previous version (owner only)
+
+Below **Server approval code** is **Recovery**. It holds two jobs that used to need the server terminal: going back to the previous version, and downloading the secret key copy (next part). Only the **Owner** account sees it.
+
+![Recovery: the rollback button, the secret key copy and recent server jobs](../img/en/console-ops-recovery.png)
+
+> **Before you start**
+>
+> - The **Owner** account and the authenticator app with **both** entries: your owner code and the **server approval** code (chapter 28, 28.8.1). Without the server approval code the server refuses the rollback.
+> - A quiet time. The service restarts for a few minutes.
+> - No Toss payout waiting for its result (chapter 21). The server does not roll back while one waits.
+
+A rollback takes a backup first, then puts back the version that ran **before the last update**. Customers, bookings and settings stay as they are. It goes back one version only.
+
+1. On **[System status]**, scroll down to the **Server update** card and find **Recovery**.
+2. Click **[Roll back to the previous version]**.
+3. The window **Roll back to the previous version? The service restarts for a few minutes.** opens. Click **[Roll back to the previous version]** in it.
+4. The **Enter your code** window opens. Type the **owner** 6 digits from your authenticator app and click **[Continue]**.
+5. **Running. It keeps going on the server even if you close this screen.** appears under the card.
+6. Soon the **Server approval code** window opens. Under **Enter the 6 digits of the server approval entry in your authenticator. It is not your owner code.** it shows the server's own summary with the version you go back to, in Korean, for example `이전 버전으로 되돌려요: 1.6.0 (데이터는 그대로예요)` ("Going back to the previous version: 1.6.0 (data stays)").
+7. Check that the version number is the one you want to go back to. Then type the **server approval** 6 digits into **6-digit code** and click **[Continue]**.
+8. Leave the page open. The backup and the restart take a few minutes (longer with many photos).
+
+**You should now see:** **Rolled back to the previous version. Automatic updates keep it until a newer version comes out.** under the card, `Roll back · Done` under **Recent server jobs**, and the older number at **Version** at the top of the page (26.2). As with every server job, the owner's phone also gets the text **서버 작업이 요청됐어요: …**.
+
+> **Note** After a rollback the weekly automatic update **holds** the version you went back to: it does not put back the version you left. It updates by itself again only when a version newer than that comes out.
+
+> **Warning** **[Update now]**, or changing the **Update channel**, ends the hold and installs the newest version straight away, which may be the one you just left. Press them only when your developer says the fixed version is out.
+
+> **Tip** If you close the **Server approval code** window, nothing is rolled back: **No server approval code was entered, so nothing was rolled back. The held job cancels itself after 10 minutes.** Wait 10 minutes, then start again from step 2. A wrong code opens the window again; after 5 wrong codes the job is cancelled.
+
+If the rollback did not happen, the note under the card says why. The part after the colon comes from the server, in Korean.
+
+| Screen text | Meaning | What to do |
+|---|---|---|
+| **Could not roll back: 토스 결과를 기다리는 정산이 있어서 되돌리지 않았어요. …** | A Toss payout is still waiting for its result | In **[Settlements]** → **[Payouts]**, click **[Check status]** on it (chapter 21), then try again |
+| **Could not roll back: 되돌릴 이전 버전이 없어요 …** | No update has run on this server yet, so there is no previous version. Nothing changed | Tell your developer what looks wrong |
+| **Could not roll back: 서버 승인 코드가 없어요. 설정에서 먼저 만들어 주세요** | The server approval code is not set up | Do chapter 28, 28.8.1 first |
+| **Could not roll back: 틀린 승인 코드가 많아서 승인이 잠겨 있어요 (1시간 뒤에 풀려요)** | Too many wrong approval codes | Try again after an hour |
+| **Could not roll back: 다른 작업이 서버 승인을 기다리고 있어요** | Another job (for example a domain change) is waiting for its approval | Wait 10 minutes and try again |
+| **Could not roll back: 이전 버전으로 되돌렸고 정상이에요. 관리 도구만 …** | The service runs on the previous version. Only the server tools were not put back | Tell your developer. They run the install line once (data stays) |
+| **Could not roll back: 되돌리지 못했어요. …** | Another failure | Take a screenshot and send it to your developer |
+| **The server's summary was not a rollback, so no approval code was sent. Check the recent jobs below.** | The server's own summary did not say rollback | Do not approve anything. Send a screenshot to your developer |
+| **Still running. See the result under recent jobs below.** | It is still going after 30 minutes | Check **Recent server jobs** later |
+| **The server's tools are older and do not know this job. Run the install line once more (guide 10 C-5).** | The server was installed with version 1.6.0 or older | Ask your developer to run the install line once (data stays) |
+
+### Recovery: download the secret key copy (owner only)
+
+Under the rollback button is **Download the secret key copy**. It downloads the server's secret keys locked with a passphrase you choose, so offsite backups can still be opened if the server is lost. Why it matters and where to keep it is in chapter 27, 27.4. It needs only your owner code.
+
+1. In **Passphrase (12 characters or more)**, type a long passphrase you choose. Write it down now, for example in a password manager.
+2. Type the same passphrase in **Passphrase again**.
+3. Click **[Make and download]**.
+4. In the **Enter your code** window, type the **owner** 6 digits and click **[Continue]**.
+5. Wait a moment. The browser downloads a file named like `dahae-keys-20261123-101500.env.enc`.
+6. Move the file off this computer's Downloads folder: onto a USB stick, or into a password manager as an attachment. Keep the passphrase in a different place from the file.
+7. The window **Kept off the server** asks: **Did you move the downloaded file off the server (a USB stick or a password manager) and write the passphrase down separately? Only then can backups be opened if the server is lost.** When both are done, click **[Kept off the server]**.
+
+**You should now see:** **Recorded as kept off the server.** under the card, and `Key copy recorded · Done` under **Recent server jobs**.
+
+> **Warning** Each copy downloads **once**. If you clicked **[Cancel]** in step 7, you see **Downloaded. Not yet recorded as kept off the server: move it, then make a new copy to confirm.** Move the file, then make a new copy from step 1 and click **[Kept off the server]** at the end.
+
+| Screen text | What to do |
+|---|---|
+| **Use 12 characters or more** | Make the passphrase longer |
+| **The two passphrases differ** | Type the same passphrase in both boxes |
+| **The file could not be saved. Make a new copy.** | Check that the browser allows downloads, then start again from step 1 |
+| **Could not make the copy: (reason)** | Take a screenshot and send it to your developer |
 
 ---
 
@@ -349,7 +422,9 @@ A server installed on AWS (chapters 3–4) can use the same **[Update now]** but
 > - **I cannot see [Update now]** → Check that you signed in with the owner account. Other admins do not see the button.
 > - **[Update now] is grey and cannot be pressed** → An update is already **Waiting** or **In progress**. Wait for it to end.
 > - **A Server settings button shows Something went wrong. Please try again.** → Check that you are signed in with the owner account. If **That code is wrong. Enter the 6-digit code shown in your app** shows, enter the number your authenticator shows **now**.
-> - **A recent server job ends as Refused** → The server may have been installed before this feature. Ask your developer to run the install line once more (your data stays).
+> - **A recent server job ends as Refused** → The server may have been installed with version 1.6.0 or older. Ask your developer to run the install line once more (your data stays). Later updates bring the server tools by themselves.
+> - **An update ends as Failed with 새 버전으로 바꿨고 정상이에요. 관리 도구만 바꾸지 못했어요 …** → The new version runs fine; only the server tools were not replaced. Tell your developer. They run the install line once (your data stays).
+> - **I cannot see Recovery** → Sign in with the owner account. Other admins do not see it.
 > - **The alert switches are grey** → This is a **Consultant** account. Sign in with an **Admin** account.
 > - **Alert texts do not arrive** → Check **Phone for alerts** and **Quiet hours**, then click **[Check connection]** on the **SMS & KakaoTalk (Solapi)** card in **[Setup]**.
 > - **Server status stays yellow** → Look for the yellow rows in **External services**. If they are unused services marked **Not set up**, that is fine.

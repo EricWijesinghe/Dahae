@@ -149,14 +149,16 @@ The console is web-only, so the browser and the console installed as in 6.8 neve
 
 > **Warning** Without the server's secret key file (`/opt/malkkeum/.env`), **offsite backups cannot be restored.** If the server is lost, the keys are lost with it, so a copy of the keys must be kept off the server.
 
-The key copy **cannot yet be made or downloaded in the console.** Ask the developer.
+You make the key copy yourself in the console, with the owner account you just set up.
 
-1. Tell the developer: **"Please make a copy of the security keys."**
-2. The developer makes it on the server with `sudo dahae keys-backup` and sets a **lock password** (at least 12 characters).
-3. Get the copy file from the developer (named like `keys-date-time.env.enc`).
-4. Keep the file on a USB stick or in the password manager.
+1. Click **[System status]** in the left menu and scroll down to the **Server update** card.
+2. Under **Recovery** → **Download the secret key copy**, type a **lock password** of at least 12 characters in **Passphrase (12 characters or more)**, and the same in **Passphrase again**.
+3. Click **[Make and download]**, enter your owner code and click **[Continue]**.
+4. The browser downloads a file named like `dahae-keys-date-time.env.enc`. Keep it on a USB stick or in the password manager.
 5. Write the lock password **in a different place from the file** (for example the password manager).
-6. Ask the developer to check that `sudo dahae status` on the server shows `✔` on both lines "비밀 키 사본 있음" (key copy exists) and "비밀 키 사본을 서버 밖에 보관했다고 확인했어요" (confirmed kept off the server). (These two lines do not show in the console.)
+6. In the **Kept off the server** window, click **[Kept off the server]**.
+
+**You should now see:** **Recorded as kept off the server.** under the card. Every step and message is in chapter 26 (Recovery: download the secret key copy) and chapter 27, 27.4.
 
 > **Warning** Do not paste the key copy file or the lock password into KakaoTalk or an email body.
 

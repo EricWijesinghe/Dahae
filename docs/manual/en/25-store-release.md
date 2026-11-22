@@ -171,7 +171,7 @@ Reviewers cannot receive Korean text messages, so one review-only number gets a 
 
 **You should now see:** signing in to the partner app with that Google account shows the **Jobs**, **My quotes**, **Schedule**, **Chat** and **More** tabs.
 
-> **Note** If the partner app has no **[Continue with Google]** button, the app build lacks the Google sign-in values. Ask your developer to rebuild (chapter 15).
+> **Note** If the partner app has no **[Continue with Google]** button, the app build lacks the Google sign-in values. Ask your developer to rebuild (chapter 15). On iPhone the partner app needs its **own** Google iOS client ID (store secret `PARTNER_GOOGLE_IOS_CLIENT_ID`); the customer app's does not work there. A partner build without Google sign-in shows a warning in the build log.
 
 - Do not register a partner or staff member on the demo number. If you do, saving the demo account card again gives **A customer, partner or staff member already uses this number. Enter a number nobody uses.**
 
@@ -189,6 +189,7 @@ Reviewers cannot receive Korean text messages, so one review-only number gets a 
 - [ ] The review demo account is on and stays on for the whole review.
 - [ ] The review Google account has signed in to the partner app, finished the number check, and is **[Approve as active]** in the console (25.5).
 - [ ] Every `<…>` in the review notes is filled.
+- [ ] Google sign-in works in the partner app on both Android and iPhone: the developer saved `GOOGLE_SERVER_CLIENT_ID` and the partner app's own iOS client ID `PARTNER_GOOGLE_IOS_CLIENT_ID` (chapter 15, 15.3), and the build log has no Google warning for the partner app.
 - [ ] **[Coupons & content]** → **Growth** → **Review reports** has nothing waiting (chapter 22). Handle anything that arrives during review at once.
 - [ ] The customer app's **Terms of service** and **Privacy policy** screens show text (chapter 22, **Legal** content).
 - [ ] If you offer Sign in with Apple: the key (.p8) is in the console Apple card, and `https://your-domain/v1/auth/apple/notifications` is registered as the server notification address in the Apple developer account (chapter 15). One key, `Eric Sign in with Apple`, covers both apps: the server signs with it and uses each app's bundle id (`kr.co.dahae.customer`, `kr.co.dahae.partner`) as its client id.

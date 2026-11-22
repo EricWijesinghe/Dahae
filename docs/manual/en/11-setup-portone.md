@@ -176,6 +176,8 @@ Test with PortOne test channel keys first, then switch to the real channel keys.
 
 **You should now see:** the payments and refunds look the same in the console and on the PortOne site.
 
+> **Note** While you test, the **PortOne test-channel payments** check on **[System status]** turns red and the alert phone gets the text **PortOne 테스트 채널로 결제가 들어왔어요** (chapter 26). That is expected with test channel keys. Test only with the test channel keys **saved on this card**: a payment or card save on a test channel whose key this server does not hold is refused, reads as failed and books nothing.
+
 > **To be confirmed** These have not yet been checked in a real test store. Check them with your developer during testing.
 > - How real card decline codes arrive
 > - The shape of the cash receipt response
@@ -191,8 +193,11 @@ Test with PortOne test channel keys first, then switch to the real channel keys.
 5. Click **[Save]** within 5 minutes.
 6. Click **[Check API key]**.
 7. Make one small real payment and one refund.
+8. On the PortOne site, delete this store's **test** channels, so no test payment can come in any more.
 
-> **Warning** The PortOne card has no **Test** / **Live** label. Keep your own note of whether the saved channel keys are test or real. PortOne itself reports test channels: a payment or saved card on a test channel raises a payment warning on the **System status** page (chapter 26), which means a test channel key is still saved.
+**You should now see:** after the real payment, the **PortOne test-channel payments** check on **[System status]** stays at 0. (Test payments from before the switch keep it red for up to 24 hours.)
+
+> **Warning** The PortOne card has no **Test** / **Live** label. Keep your own note of whether the saved channel keys are test or real. PortOne itself reports test channels: a payment or saved card on a test channel turns the **PortOne test-channel payments** check on **[System status]** red and sends the alert text **PortOne 테스트 채널로 결제가 들어왔어요** (chapter 26). When you are live, that means a test channel key is still saved or a test channel still exists.
 
 ---
 
@@ -204,7 +209,14 @@ Even if you add Toss Payments later (chapter 12), keep the PortOne card as it is
 - Cards saved through PortOne, and their recurring charges, use PortOne.
 - Identity verification (PASS) always uses PortOne.
 
-> **Warning** While PortOne still has payments in progress, saved cards or refunds waiting, **[Disconnect]** is refused with **This gateway still has payments in progress, saved cards or refunds, so it can't be disconnected. To stop new payments only, turn Toss Payments' Active off, or clear PortOne's channel key slots.** Refunds of older PortOne payments and identity checks are not guarded: disconnecting makes them fail.
+The server guards this. **[Disconnect]** is refused while PortOne still has any of these:
+
+- payments in progress, payment windows that expired within the last day (a late payment can still arrive on them), saved cards, open subscription charges or refunds waiting: **This gateway still has payments in progress, saved cards or refunds, so it can't be disconnected. To stop new payments only, turn Toss Payments' Active off, or clear PortOne's channel key slots.**
+- payments from the last year that can still be refunded: **Payments taken through this gateway can still be refunded (up to a year after payment), so it can't be disconnected: those refunds would fail. To stop new payments only, turn Toss Payments' Active off, or clear PortOne's channel key slots.**
+
+Saving the card with **another** PortOne store's values while it is in use is refused too: **Payments, saved cards or refunds on this gateway still belong to the current account (PortOne store, Toss Payments MID), so it can't switch to another account: their lookups and refunds would go to the new one and fail. A new key from the same account is fine.** A new V2 API secret of the **same** store saves as usual.
+
+> **Warning** Refunds of PortOne payments older than a year and identity checks (PASS) are not guarded: disconnecting makes them fail. Keep the card.
 
 ---
 
@@ -260,5 +272,7 @@ To move the method back to PortOne, put its channel key in again (11.4).
 | A payment method is missing in the customer app | No gateway takes it (no PortOne channel key, and no Toss Payments), or it is off under **Payment methods** | Add the channel key (11.4) or set up Toss Payments (chapter 12), and switch it on (10.9) |
 | A method you expected on PortOne shows **Gateway: Toss Payments** | PortOne has no channel key for it | Add its channel key (11.4) |
 | Card shows **Gateway: PortOne** although you cleared **Card payment** | PortOne still has the **Recurring billing key**, so cards are still saved on PortOne | Clear **Recurring billing key** too (11.12) |
-| **System status** shows a payment warning after a PortOne payment | That payment or saved card went through a PortOne **test** channel | Replace the test channel keys with real ones (11.10) |
+| **PortOne test-channel payments** on **System status** is red after a PortOne payment | That payment or saved card went through a PortOne **test** channel | While testing, nothing to do. When live, replace the test channel keys with real ones and delete the store's test channels (11.10) |
+| A payment or card save fails while you test, and nothing is booked | It went through a PortOne test channel whose key is not saved on this card | Save that test channel's key on the card (11.4), or test with the channel whose key is saved |
+| **[Disconnect]** or **[Save]** is refused with **… can't be disconnected …** or **… can't switch to another account …** | PortOne still has payments, saved cards or refunds, or you pasted another store's values | Keep the card, or put back the store you used before (11.11) |
 | A payment went through but the console does not show it as paid | The webhook address or secret may be wrong | Check 11.5 again and tell your developer |

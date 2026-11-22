@@ -24,7 +24,7 @@
 - [ ] You created the **owner account** yourself with the setup code. The developer did not create it for you (chapter 6).
 - [ ] Two-step sign-in is registered in the authenticator app on your phone (chapter 6).
 - [ ] The 10 recovery codes are written **on paper** and kept somewhere safe (chapters 6, 32).
-- [ ] The **secret key copy** the developer made and its lock password are kept off the server, apart from each other (chapter 27).
+- [ ] The **secret key copy** (made in the console, chapter 27, 27.4) and its lock password are kept off the server, apart from each other.
 - [ ] The console is installed like an app on your PC and phone (chapter 6).
 
 ### Setup cards (console **[Setup]**)

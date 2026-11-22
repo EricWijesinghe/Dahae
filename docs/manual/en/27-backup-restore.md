@@ -5,9 +5,10 @@
 > **Before you start**
 >
 > - A console admin account (chapter 6).
-> - An offsite backup store connected (the **Offsite backup (S3-compatible)** card in chapter 17). If you have not done it, read this chapter and do chapter 17 first.
+> - An offsite backup store connected (the **Offsite backup (S3-compatible)** card in chapter 17). On a server made with the AWS command (chapter 4) it is already connected by itself (27.3). Otherwise, read this chapter and do chapter 17 first.
 > - Somewhere to keep the secret key copy: a password manager or a USB stick.
-> - Restores and the key copy need commands on the server, so you need help from your **developer (installer)**.
+> - The **Owner** account and its authenticator app, to make the secret key copy in the console (27.4).
+> - Restores need commands on the server, so you need help from your **developer (installer)**.
 
 ---
 
@@ -18,8 +19,8 @@ The on-server backup and the offsite backup happen by themselves. There is nothi
 | What | When | Where | Kept for |
 |---|---|---|---|
 | **On-server backup** (customer and booking data + photo files) | Every day at 3:30 in the morning (Korea time). Also once right before every update, rollback and restore | The backup folder on the server disk | 14 days |
-| **Offsite backup** (a copy of the on-server backup) | Right after the on-server backup | The S3-compatible store you connected in chapter 17 (for example Cloudflare R2, Naver Cloud Object Storage, AWS S3) | The card's retention (starts at 30 days, 1 to 3650 days) |
-| **Secret key copy** | Not automatic. The developer makes one right after install, and again whenever the keys change | Off the server (password manager, USB stick) | Kept by you |
+| **Offsite backup** (a copy of the on-server backup) | Right after the on-server backup | The S3-compatible store you connected in chapter 17 (for example Cloudflare R2, Naver Cloud Object Storage, AWS S3). On AWS: the stack's own S3 bucket, with no keys to type (27.3) | The card's retention (starts at 30 days, 1 to 3650 days). AWS bucket: 35 days, plus 35 more for replaced copies |
+| **Secret key copy** | Not automatic. You make one in the console right after install (27.4), and again whenever the keys change | Off the server (password manager, USB stick) | Kept by you |
 
 - Every backup file is **encrypted**. No unencrypted backup stays on the server disk either.
 - Backups run once a day, so in the worst case you can lose **one day of data** (bookings that came in after the last backup).
@@ -56,32 +57,72 @@ Checking once a week is enough.
 
 ---
 
-## 27.3 If your server is on AWS (one more layer)
+## 27.3 If your server is on AWS (automatic offsite backup and one more layer)
 
-A server installed on AWS (chapters 3–4) has one more layer: **disk snapshots** taken by AWS.
+A server made with the AWS command (chapter 4) gets two things by itself.
+
+### Automatic offsite backup to the stack's S3 bucket
+
+The AWS command also creates a **private S3 bucket** for this server's offsite backups. The server writes to it with its own AWS role, so there are **no keys to type**: the database and photo backups go there every night, and before every update and rollback.
+
+1. Click **[Setup]** in the left menu and find the **Offsite backup (S3-compatible)** card.
+2. Look at the label at the top of the card.
+
+**You should now see:** **AWS S3 (automatic)**. Nothing else to do on this card. Check the backups as in 27.2.
+
+- The bucket is private (no public access), keeps versions and is encrypted by AWS.
+- The server can only **add** new backup files, read them and list them. It cannot delete or overwrite a copy, so even someone who took over the server cannot wipe the existing backups.
+- Old copies go by themselves: each copy is kept 35 days, plus 35 more days for a copy that was replaced. If backups stop, the last copy is gone after about 70 days, so look at the **Automatic backup** card now and then (27.2).
+- The bucket stays even if the stack (the server) is deleted. A new server can keep using it (27.7).
+- Storage cost: roughly (database backup + all photos) × about 70 days of copies, because every night the whole photo set is copied once. With many photos, put that size into the AWS pricing calculator under S3 Standard.
+- If you save keys for another S3-compatible store on this card (chapter 17), that store is used instead.
+
+> **Note** A stack made before this feature has no bucket, and the label does not say **AWS S3 (automatic)**. Connect another S3-compatible store on the card as in chapter 17. Adding a bucket to an existing stack is developer work: talk to your developer.
+
+> **Warning** The automatic backup is locked with the server's secret key too. You still need the **secret key copy** (27.4).
+
+### Alarm e-mail when the server hardware fails
+
+AWS watches the server's hardware. When a hardware check fails, AWS moves the server to healthy hardware by itself and e-mails the address given to the AWS command (chapter 4), and once more when it is fine again. AWS sends these e-mails only after **one click** on the first e-mail.
+
+1. Open the mailbox of the e-mail used in chapter 4.
+2. Find the mail **AWS Notification - Subscription Confirmation**. If it is not there, look in the spam folder.
+3. In the mail, click **Confirm subscription**.
+
+**You should now see:** a page **Subscription confirmed!** in the browser.
+
+> **Note** There is no disk-space alarm e-mail from AWS. Watch the **Server disk** card on **[System status]** instead (chapter 26).
+
+### Disk snapshots
+
+AWS also takes **disk snapshots** of the server.
 
 | What | When | Where | Kept |
 |---|---|---|---|
 | Disk snapshot | Every day at 3:00 in the morning (Korea time) | AWS console **EC2 > Snapshots** | 7 |
 
 - A snapshot is like a photo of the whole server disk. It lives in the same AWS account as the server.
-- So a snapshot alone is not enough. Do the offsite backup (chapter 17) and the secret key copy (27.4) as well.
+- So a snapshot alone is not enough. Keep the offsite backup (above, or chapter 17) and the secret key copy (27.4) as well.
 - How to restore from a snapshot is not in this manual. Talk to your developer if you need it.
 
 ---
 
 ## 27.4 Make and keep the secret key copy (do this)
 
-Today the console cannot make or download the secret key copy. Ask your developer (installer).
+You make the copy yourself in the console, with the owner account. The copy holds only the two keys that open the backups (`DATA_KEY` and `JWT_SECRET`), locked with a passphrase you choose.
 
-1. Tell your developer: **"Please make a secret key copy."**
-2. The developer makes the copy file on the server and sets a **lock password** (12 characters or more). The file name looks like `keys-date-time.env.enc`.
-3. Receive the file. Do not receive it pasted into KakaoTalk or an email body. Receive the file itself, on a USB stick or through a password manager.
-4. Store the file in a **password manager** or on a **USB stick**. It must be somewhere other than the server.
-5. Write the lock password down in a **different place** from the file (for example the file on USB, the password in the password manager).
-6. When the developer asks on the server whether you stored it off the server, tell them you have. The developer records the confirmation on the server.
+1. Click **[System status]** in the left menu.
+2. Scroll down to the **Server update** card and find **Recovery** → **Download the secret key copy**.
+3. Type a passphrase of 12 characters or more in **Passphrase (12 characters or more)** and the same in **Passphrase again**. This is the copy's **lock password**.
+4. Click **[Make and download]**, type your owner code in the **Enter your code** window and click **[Continue]**.
+5. The browser downloads a file named like `dahae-keys-date-time.env.enc`.
+6. Store the file in a **password manager** or on a **USB stick**, somewhere other than the server, and delete it from the Downloads folder. Never paste it into KakaoTalk or an email body.
+7. Write the lock password down in a **different place** from the file (for example the file on USB, the password in the password manager).
+8. In the **Kept off the server** window, click **[Kept off the server]**.
 
-You are done when: running `sudo dahae status` on the server shows `✔ 비밀 키 사본 있음` (key copy exists) and `✔ 비밀 키 사본을 서버 밖에 보관했다고 확인했어요` (stored off the server, confirmed). The server prints these lines in Korean.
+**You should now see:** **Recorded as kept off the server.** under the card and `Key copy recorded · Done` under **Recent server jobs**. Every step and message is in chapter 26 (Recovery: download the secret key copy).
+
+> **Note** Each copy downloads once. If you did not click **[Kept off the server]**, nothing is recorded: make a new copy and confirm it at the end. The developer can also make a copy on the server with `sudo dahae keys-backup`; then `sudo dahae status` shows `✔ 비밀 키 사본 있음` (key copy exists) and `✔ 비밀 키 사본을 서버 밖에 보관했다고 확인했어요` (stored off the server, confirmed).
 
 > **Warning** If you lose **both** the copy file and the lock password, offsite backups cannot be opened. If someone else gets both, they can learn the server's secret key. Keep the two apart and safe.
 
@@ -134,10 +175,10 @@ A **real restore practice** is done on a **separate test server**, not the live 
 
 These steps are for when the server broke or you move to another company's server. The developer does it; it usually takes about an hour. You only need to know the order.
 
-1. Create a new server and install Dahae (Part 2, chapter 4 or 7).
+1. Create a new server and install Dahae (Part 2, chapter 4 or 7). On AWS, the developer adds `--backup-bucket <BackupBucket name>` to the command (chapter 4, 4.3), so the new server reads and keeps using the old server's backup bucket.
 2. (If the old server still works) make a last backup and a secret key copy on the old server.
 3. Put the **secret key copy** on the new server. This needs the lock password. Give the developer the file and password you kept (by phone or another way that is not chat).
-4. In the new server's console, fill the **Offsite backup (S3-compatible)** card again with the same values as before and save (chapter 17).
+4. In the new server's console, fill the **Offsite backup (S3-compatible)** card again with the same values as before and save (chapter 17). On AWS with `--backup-bucket`, skip this step: the card shows **AWS S3 (automatic)**.
 5. The developer puts the data back from the offsite backup.
 6. Sign in with the **old owner account** (email, password, authenticator app). An account you created fresh on the new server disappears during the restore.
 7. Change the domain's A record to the **new server's IP** (chapter 5).
@@ -165,6 +206,8 @@ The domain (site address) is now changed on the console's **[Setup]** → **Doma
 > - **The Automatic backup card is red** → Tell your developer: "The automatic backup has stopped, please check." The server disk may be full, so look at the **Server disk** card too.
 > - **Offsite backup says Not set up** → Fill the **Offsite backup (S3-compatible)** card as in chapter 17.
 > - **The offsite backup row is red** → In **[Setup]**, click **[Check connection]** on the offsite backup card (the owner does not need to unlock it). If it says the key is wrong, unlock the card, enter a new key made in the store and click **[Save]**.
-> - **I forgot the key copy's lock password** → That copy cannot be used. While the server still works, ask your developer to make a new copy straight away.
+> - **I forgot the key copy's lock password** → That copy cannot be used. While the server still works, make a new copy straight away (27.4).
+> - **[Check connection] on the offsite backup card shows The server role could not reach the AWS bucket. …** → The server cannot reach its AWS bucket. Send a screenshot to your developer: they check that the server was made with the AWS template and that the AWS admin ran `launch.sh --admin` once more.
+> - **The AWS alarm e-mails never arrive** → Look for **AWS Notification - Subscription Confirmation** in the spam folder and click **Confirm subscription** (27.3). If the mail is gone, ask your developer to send it again from AWS.
 > - **After the restore, recent bookings are missing** → That is expected. Bookings after the backup moment are lost. Contact those customers and take the bookings again.
 > - **After the restore the customer app still shows the maintenance banner** → Check that you turned **Maintenance mode** off and clicked **[Save]**. Wait 30 seconds, then close the app completely and open it again.

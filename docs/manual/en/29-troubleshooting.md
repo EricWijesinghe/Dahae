@@ -267,6 +267,26 @@ Some cards, such as the social sign-in cards, cannot be tested from the server. 
 4. If it is paid but there is no booking, **refund it yourself** in the gateway's admin screen and tell the customer.
 5. If the booking never appears, or you refunded it yourself, send the payment number and time to your developer.
 
+### "PortOne test-channel payments" in System status is red
+
+- **Who:** you
+- **Where:** console **[Setup]** → **Payments (PortOne)**, the PortOne admin site
+
+A payment or card save came in through a PortOne **test** channel. No real money moved. The owner's alert phone also gets the text **PortOne 테스트 채널로 결제가 들어왔어요** ("A payment came in on a PortOne test channel").
+
+1. If you are still testing with test channel keys (chapter 11, 11.9), this is expected. Nothing to do.
+2. If you are live: unlock the **Payments (PortOne)** card and check that every saved channel key is a **live** channel key (chapter 11, 11.10).
+3. On the PortOne admin site, delete this store's test channels.
+4. Find the payment in PortOne's test payment history and check the booking with the customer. A payment on a test channel whose key this server does not hold was refused and booked nothing.
+
+### Disconnecting or re-saving a payment card is refused
+
+| Screen text | Meaning | What to do |
+|---|---|---|
+| **This gateway still has payments in progress, saved cards or refunds, so it can't be disconnected. …** | Open payments, checkouts that expired within the last day, saved cards, open subscription charges or queued refunds still use this card | Keep the card. To stop new payments only, turn Toss Payments' **Active** off (chapter 12, 12.10) or clear PortOne's channel key slots (chapter 11, 11.12) |
+| **Payments taken through this gateway can still be refunded (up to a year after payment), so it can't be disconnected: …** | A payment from the last year could still be refunded through this card | Keep the card at least a year after its last payment |
+| **Payments, saved cards or refunds on this gateway still belong to the current account (PortOne store, Toss Payments MID), so it can't switch to another account: …** | You pasted keys of **another** PortOne store or Toss MID into a card that is in use | Put back the keys of the account you used before. A new key of the **same** account saves fine. To move to a new account, ask your developer first |
+
 ### Many customers say payment does not work
 
 1. **[Setup]** → the **Payments (PortOne)** card → **[Check API key]** (if you use Toss Payments, **[Check API key]** on the **Payments (Toss Payments)** card).
@@ -338,13 +358,13 @@ Follow 27.2 and "If something goes wrong" in chapter 27.
 
 ### Screens or features look wrong after an update
 
-- **Who:** the developer
-- **Where:** server (on AWS, also from GitHub)
+- **Who:** you (owner account), then your developer
+- **Where:** console **[System status]** → **Server update** → **Recovery**
 
-1. Take a screenshot of **Recent server jobs** in **[System status]**.
-2. Write down what looks wrong and send it to your developer.
-3. The developer goes back to the previous version (rollback). Data is not deleted.
-4. Even after a rollback, the next Monday automatic update may install the new version again. Agree with your developer when to update again.
+1. Take a screenshot of what looks wrong and of **Recent server jobs** in **[System status]**.
+2. Click **[Roll back to the previous version]** under **Recovery** and follow chapter 26 (Recovery: roll back to the previous version). You need your owner code and the server approval code. Data is not deleted.
+3. Send the screenshots and what looked wrong to your developer.
+4. After the rollback, the Monday automatic update keeps the version you went back to until a newer version comes out. Do not press **[Update now]** until your developer says the fixed version is out: it would put back the version you left.
 
 ### Recent server jobs shows "Failed" or "Failed, so it went back to the previous version"
 

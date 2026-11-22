@@ -85,16 +85,22 @@ You should now see: **Saved · confirm by signing in from the app**.
 
 1. Sign in at console.cloud.google.com and pick **the same project as Firebase** (chapter 16).
 2. Go to APIs & Services → Credentials.
-3. Create **OAuth client IDs** for **Android**, **iOS** and **Web**: three in total.
-4. Copy the three client IDs (they end in `.apps.googleusercontent.com`) into a notepad.
-5. Send the **Web** and **iOS** client IDs to the developer who builds the apps.
+3. Create these **OAuth client IDs**:
+   - **Web**: one, shared by both apps.
+   - **iOS**: one for the customer app (bundle ID `kr.co.dahae.customer`) and **one more for the partner app** (bundle ID `kr.co.dahae.partner`). An iOS client belongs to one bundle ID only, so the partner app cannot use the customer app's.
+   - **Android**: one per app (package names `kr.co.dahae.customer` and `kr.co.dahae.partner`, with the signing certificate SHA-1 your developer gives you).
+4. Copy every client ID (they end in `.apps.googleusercontent.com`) into a notepad, with a note of which is which.
+5. Send these three to the developer who builds the apps:
+   - the **Web** client ID (store secret `GOOGLE_SERVER_CLIENT_ID`)
+   - the customer app's **iOS** client ID (`GOOGLE_IOS_CLIENT_ID`)
+   - the partner app's **iOS** client ID (`PARTNER_GOOGLE_IOS_CLIENT_ID`)
 
-> **Note** An older guide (guide 02) says to send the iOS and Android client IDs. The app code actually reads the server (Web) client ID and the iOS client ID. Confirm with your developer.
+> **Note** The Android client IDs are not typed into any build, but Google needs them so sign-in works for each Android package. App Review signs in to the partner app with Google (chapter 25), so the partner iOS client ID must not be missing. A partner build without Google sign-in shows a warning in the build log. Confirm the list with your developer.
 
 ### In the console
 
 1. Open **[Setup]** → **Google login**.
-2. Paste all three IDs into **Client IDs** on one line, **separated by commas**.
+2. Paste **all** the client IDs from step 4 into **Client IDs** on one line, **separated by commas**.
    Example: `111-aaa.apps.googleusercontent.com, 222-bbb.apps.googleusercontent.com, 333-ccc.apps.googleusercontent.com`
 3. Click **[Save]**, then **[Check connection]**.
 
@@ -168,7 +174,8 @@ You should now see: each button signs you in and returns you to the app.
 
 | You see | Do this |
 |---|---|
-| No social buttons in the app | The app build lacks the values. Ask your developer to rebuild with the Kakao native app key, Naver Client ID and Google Web and iOS client IDs. Web pages never show these buttons. |
+| No social buttons in the app | The app build lacks the values. Ask your developer to rebuild with the Kakao native app key, Naver Client ID, the Google Web client ID and both Google iOS client IDs (customer and partner). Web pages never show these buttons. |
+| The partner app on iPhone has no Google button, or Google sign-in fails only there | The partner build has no iOS client ID of its own, or was given the customer app's. Ask your developer to save the partner app's iOS client ID as `PARTNER_GOOGLE_IOS_CLIENT_ID` and rebuild (15.3). |
 | Naver sign-in doesn't return to the app | On **App links**, click **[Check]** and confirm both lines say **on**. If off, get the fingerprint and Team ID from your developer again. |
 | **Fill in every required field.** | Google and Apple need at least one ID. Apple needs Team ID, Key ID and .p8 all together or none. Naver needs both Client ID and Client Secret. |
 | **Please check the highlighted value** | Apple Team ID and Key ID are 10 letters or digits. Paste the .p8 including the BEGIN and END lines. |

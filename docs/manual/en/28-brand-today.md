@@ -308,7 +308,7 @@ Big jobs such as a domain change need a **server approval code** on top of your 
 | **The server refused: 서버 승인 코드가 없어요. 설정에서 먼저 만들어 주세요** (no server approval code yet) | You have not set up the server approval code | Do 28.8.1 first |
 | **The server refused: 틀린 승인 코드가 많아서 승인이 잠겨 있어요 (1시간 뒤에 풀려요)** (too many wrong codes, locked for an hour) | Too many wrong approval codes | Try again in an hour |
 | **The server refused: 다른 작업이 서버 승인을 기다리고 있어요** (another job is waiting for approval) | A job you started earlier is still waiting for approval | Wait 10 minutes, then try again |
-| **The server agent is out of date. Re-run the install line once, then try again.** | The server was installed before this feature | Ask the developer to run the install line once more (your data stays) |
+| **The server agent is out of date. Re-run the install line once, then try again.** | The server was installed with version 1.6.0 or older (after one re-run, later updates bring the tools themselves) | Ask the developer to run the install line once more (your data stays) |
 | **Could not change it: (reason)** | Any other failure, including a job cancelled after 5 wrong approval codes | Capture the screen and send it to the developer |
 
 > **Note** The **(reason)** text is a Korean sentence sent by the server. It stays in Korean on the English screen too.

@@ -22,8 +22,8 @@ The install folder on the server is `/opt/malkkeum`. `sudo dahae help` prints th
 | `dahae backup` | Back up now (DB + photos). Ends with `✔ 백업 완료: /opt/malkkeum/backups/db-….sql.gz.enc` |
 | `dahae restore file [--yes]` | Restore from an on-server backup (DB + photos from the same time). Only files inside `backups/` |
 | `dahae restore-offsite [name] [--yes]` | Without a name: list offsite backups. With a name: download and restore |
-| `dahae update [tag]` | Backup → new version → health check. Rolls back by itself if it does not answer |
-| `dahae rollback` | Go back to the previous program version (data stays) |
+| `dahae update [tag]` | Fetch and verify that release's host tools → backup → new version → health check (rolls back by itself if it does not answer) → replace the host tools (CLI, job agent, systemd units, cron, compose) with that release's `install.sh` in tools mode. Any signature or hash mismatch stops before the backup. Exit 3 = rolled back, 5 = new version fine but the tools were not replaced (run the install line once) |
+| `dahae rollback` | Go back to the previous program version (data stays). Backs up first, puts the previous host tools back too, refuses while a Toss payout waits (exit 4), exit 5 = tools not put back, 6 = no previous version. Holds the weekly auto-update on the rolled-back version (`host/rollback-hold`) until the channel moves on; a manual update ends the hold. The console's **Recovery** card does the same (chapter 26) |
 | `dahae channel stable\|beta` | Switch the update channel. Updates to that channel's version straight away |
 | `dahae update-schedule mon@04:00\|off` | Automatic update day and time. `off` turns automatic updates off (days: mon, tue, wed, thu, fri, sat, sun) |
 | `dahae load file.tar` | Load pre-downloaded images (offline update, demos) |
@@ -34,7 +34,7 @@ The install folder on the server is `/opt/malkkeum`. `sudo dahae help` prints th
 | `dahae applinks --android-sha256 fp[,fp] --apple-team-id TEAMID` | Set up app links |
 | `dahae demo load [--force]` / `demo clear` | Load / clear demo data |
 | `dahae setup-code [--renew]` | The owner account setup code. Valid for 7 days after it is first shown. `--renew` makes a new one |
-| `dahae keys-backup` | Makes a passphrase-locked copy (12+ characters) of `.env` as `backups/keys-….env.enc`. The escrow is recorded only when a person types the confirmation word (`보관했어요`) at the end |
+| `dahae keys-backup` | Makes a passphrase-locked copy (12+ characters) of `DATA_KEY` and `JWT_SECRET` (what `keys-restore` reads) as `backups/keys-….env.enc`. The escrow is recorded only when a person types the confirmation word (`보관했어요`) at the end. The console's **Recovery** card makes the same copy (owner code, one download) and records it only after the owner clicks **[Kept off the server]** |
 | `dahae keys-restore file [--yes]` | Puts the old `DATA_KEY` and `JWT_SECRET` on a new server (before `restore-offsite`) |
 | `dahae alert update\|backup\|ssh` | Reports scheduled-job failures or rising SSH blocks to the outside uptime URL (for cron) |
 | `dahae uninstall [--yes]` | Stops the service. Data, `.env` and backups stay |
@@ -155,11 +155,13 @@ The **Server update** card on the console's **[System status]** page queues a `k
 | `domain-check` | Yes (**[Check DNS]** on the **Domain** card, chapter 28) | Admin session only. The result JSON is readable for 10 minutes at `GET /admin/host/jobs/{id}/output` |
 | `domain-set` | Yes (**[Change]** on the **Domain** card, chapter 28) | Owner code plus the server approval code (`POST /admin/host/jobs/{id}/approve`). Runs `dahae domain`; on failure it restores `.env` and ends `rolled_back` |
 | `host-approval-enroll` | Yes (**Server approval code** → **[Set up]**, chapter 28, 28.8.1) | Owner code. The server fills in the account id; only the requesting owner can read the authenticator link. Fails if one exists |
-| `update-tag`, `rollback` | No | Need the server approval code (TOTP). Approve within 10 minutes; 5 wrong codes cancel the job; 10 wrong codes in an hour lock approvals |
+| `rollback` | Yes (**Recovery** → **[Roll back to the previous version]**, chapter 26) | Owner code plus the server approval code; the approval shows the agent's own summary with the target version. Runs `dahae rollback`; the console shows the exit 4/5/6 reason |
+| `keys-backup`, `keys-confirm` | Yes (**Recovery** → **[Make and download]**, chapter 26) | Owner code. The sealed copy downloads once; `POST /admin/host/jobs/{id}/kept` queues `keys-confirm` (records `KEY_ESCROW_AT`) only after the owner confirms |
+| `update-tag` | No | Needs the server approval code (TOTP), like `rollback` and `domain-set`. Approve within 10 minutes; 5 wrong codes cancel the job; 10 wrong codes in an hour lock approvals |
 | `status-refresh`, `logs`, `offsite-list` | No | The agent accepts them, but the console does not send them today |
 
 - Job states in the console: `queued` **Waiting**, `running` **In progress**, `ok` **Done**, `failed` **Failed**, `rolled_back` **Failed, so it went back to the previous version**, `awaiting_approval` **Waiting for the approval code**, `rejected` **Refused**, anything else **Needs a check**.
-- A server installed before this feature needs the install line run once more to get the new job runner and `dahae domain` (`dahae update` swaps images only). Until then `domain-set` ends `rejected` with no reason.
+- A server installed with v1.6.0 or older needs the install line run **once** more to get the new job runner, `dahae domain`, rollback and keys jobs (its own `dahae update` swaps images only). Until then those jobs end `rejected` with no reason. From then on `dahae update` refreshes the host tools itself; no re-run after each update.
 - Create the server approval code in the console (chapter 28, 28.8.1) or with `dahae host-approval enroll <owner account number>`; if it leaked, run `dahae owner-reset` and create it again.
 
 ---
@@ -174,13 +176,13 @@ curl -fsSLO $R/Dahae/master/deploy/aws/launch.sh
 bash launch.sh --domain example.co.kr --email owner@example.co.kr
 ```
 
-Options: `--version vX.Y.Z` (default: latest release), `--stack dahae-main`, `--instance-type t3.medium`, `--hosted-zone-id Z…` (Route 53 A record), `--vpc vpc-… --subnet subnet-…` (default: the default VPC's public subnet), `--region ap-northeast-2`, `--ref master`, `--dry-run`. `--admin` creates the policies. It never touches an existing stack. It checks the release's `install.sh` against `SHA256SUMS`, then pins its hash in the template.
+Options: `--version vX.Y.Z` (default: latest release), `--stack dahae-main`, `--instance-type t3.medium`, `--hosted-zone-id Z…` (Route 53 A record), `--vpc vpc-… --subnet subnet-…` (default: the default VPC's public subnet), `--region ap-northeast-2`, `--ref master`, `--backup-bucket dahae-…` (replacement stack only: the old stack's `BackupBucket` output, passed as `ExistingBackupBucket`), `--dry-run`. `--admin` creates or updates the policies. It runs from CloudShell or Git Bash on Windows, and ends with the alarm e-mail **Confirm subscription** step. It never touches an existing stack. It checks the release's `install.sh` against `SHA256SUMS`, then pins its hash in the template.
 
 **By hand (B-1, B-2 in short)**
 
 1. Download `dahae-aws.yaml` from the latest release assets (install.sh URL and hash already pinned). Optional fallback: build it on `master` with `scripts/release/build-aws-template.sh`. The URL must contain the tag (`/v1.6.0/`). The printed hash must match the `install.sh` line in `SHA256SUMS`.
 2. CloudFormation > Create stack > Upload a template file. The stack name **must start with `dahae-`**.
-3. Parameters: `Domain`, `Email`, `HostedZoneId` (empty if none), `InstanceType` (`t3.medium` default; `t4g` is ARM and replaces the server), `DiskSizeGiB` (`50`), `VpcId`, `SubnetId`, `SshCidr` (empty), `GitHubRepo` (keep `EricWijesinghe/Dahae`), `GitHubRepoIds` (keep the default), `GitHubEnvironment` (`doda-aws`), `CreateGitHubOidcProvider` (`true` if first in the account), `AmdAmiId`/`ArmAmiId` (do not change).
+3. Parameters: `Domain`, `Email`, `HostedZoneId` (empty if none), `InstanceType` (`t3.medium` default; `t4g` is ARM and replaces the server), `DiskSizeGiB` (`50`), `VpcId`, `SubnetId`, `SshCidr` (empty), `GitHubRepo` (keep `EricWijesinghe/Dahae`), `GitHubRepoIds` (keep the default), `GitHubEnvironment` (`doda-aws`), `CreateGitHubOidcProvider` (`true` if first in the account), `AmdAmiId`/`ArmAmiId` (do not change), `ExistingBackupBucket` (empty; only for a replacement stack, the old `BackupBucket`).
 4. Tick the IAM resources acknowledgement → Submit → `CREATE_COMPLETE` (about 3–5 minutes). The install inside the server then takes about 15–20 more minutes.
 
 **GitHub deploys (stage C)**
@@ -192,7 +194,9 @@ Options: `--version vX.Y.Z` (default: latest release), `--stack dahae-main`, `--
 - Failures: **Actions > that run > server output**. If the server does not answer, use Session Manager and `sudo dahae logs`.
 - The server's own Monday 04:00 automatic update is on too. For GitHub-only updates: `sudo dahae update-schedule off`.
 
-**Costs:** depend on instance type, disk, data transfer and snapshots. Work them out in the AWS pricing calculator for Seoul (ap-northeast-2). This manual gives no prices.
+**Backups and alarms:** the template adds a private S3 bucket (versioning, SSE-S3, 35-day lifecycle plus 35 for noncurrent versions, kept on stack delete). The server role may only create (`If-None-Match: *`), get and list, so it can never delete or overwrite a copy; the API signs with the instance role (IMDSv2) when no backup keys are saved, and keys saved on the console card win. A role refusal shows `no_instance_role`. The system-check alarm e-mails the stack's `Email` through SNS (one **Confirm subscription** click); there is no disk alarm. Stacks made before this have no bucket: connect another S3-compatible store on the card.
+
+**Costs:** depend on instance type, disk, data transfer, snapshots and the S3 backups (roughly DB + all photos × about 70 days of copies). Work them out in the AWS pricing calculator for Seoul (ap-northeast-2). This manual gives no prices.
 
 **Deleting safely (D-4)**
 

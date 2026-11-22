@@ -22,8 +22,8 @@
 | `dahae backup` | 지금 바로 백업 (DB + 사진). 끝나면 `✔ 백업 완료: /opt/malkkeum/backups/db-….sql.gz.enc` |
 | `dahae restore 파일 [--yes]` | 서버 안 백업으로 되돌리기 (DB + 같은 시각 사진). `backups/` 안의 파일만 받아요 |
 | `dahae restore-offsite [이름] [--yes]` | 이름 없이: 외부 백업 목록. 이름과 함께: 내려받아 되돌리기 |
-| `dahae update [태그]` | 백업 → 새 버전 → 응답 확인. 응답이 없으면 자동으로 되돌려요 |
-| `dahae rollback` | 바로 전 버전의 프로그램으로 되돌리기 (데이터는 그대로) |
+| `dahae update [태그]` | 그 릴리스의 관리 도구 받기·서명 확인 → 백업 → 새 버전 → 응답 확인 (응답이 없으면 자동으로 되돌려요) → 관리 도구(CLI, 작업 실행기, systemd 단위, 예약표, compose)를 그 릴리스의 `install.sh` 도구 모드로 바꾸기. 서명이나 지문이 다르면 백업 전에 멈춰요. 종료 코드 3 = 되돌렸어요, 5 = 새 버전은 정상인데 관리 도구만 못 바꿨어요 (설치 줄을 한 번 실행) |
+| `dahae rollback` | 바로 전 버전의 프로그램으로 되돌리기 (데이터는 그대로). 먼저 백업하고, 관리 도구도 전 버전으로 돌려요. 토스 결과를 기다리는 정산이 있으면 거절 (종료 코드 4), 5 = 관리 도구만 못 돌렸어요, 6 = 이전 버전이 없어요. 되돌린 뒤 매주 자동 업데이트가 그 버전을 지켜요 (`host/rollback-hold`, 채널이 더 새 버전으로 가면 끝나요). 직접 업데이트하면 지키기가 끝나요. 콘솔의 **복구** 카드도 같은 일을 해요 (26장) |
 | `dahae channel stable\|beta` | 업데이트 채널 바꾸기. 바꾸면 바로 그 채널 버전으로 업데이트해요 |
 | `dahae update-schedule mon@04:00\|off` | 자동 업데이트 요일·시각. `off` 는 자동 업데이트 끄기 (요일: mon, tue, wed, thu, fri, sat, sun) |
 | `dahae load 파일.tar` | 미리 받아 둔 이미지 불러오기 (인터넷 없이 업데이트, 체험용) |
@@ -34,7 +34,7 @@
 | `dahae applinks --android-sha256 지문[,지문] --apple-team-id 팀ID` | 앱 링크 설정 |
 | `dahae demo load [--force]` / `demo clear` | 체험용 데이터 넣기 / 지우기 |
 | `dahae setup-code [--renew]` | 사장님 계정 설치 코드. 처음 보인 뒤 7일 동안 써요. `--renew` 는 새 코드 |
-| `dahae keys-backup` | `.env` 를 비밀번호(12자 이상)로 잠근 사본 `backups/keys-….env.enc` 를 만들어요. 끝에 "보관했어요" 를 직접 입력해야 보관 확인이 기록돼요 |
+| `dahae keys-backup` | `DATA_KEY` 와 `JWT_SECRET` (`keys-restore` 가 읽는 값) 을 비밀번호(12자 이상)로 잠근 사본 `backups/keys-….env.enc` 를 만들어요. 끝에 "보관했어요" 를 직접 입력해야 보관 확인이 기록돼요. 콘솔 **복구** 카드도 같은 사본을 만들고 (사장님 코드, 한 번만 내려받기), 사장님이 **[서버 밖에 보관했어요]** 를 눌러야 기록해요 |
 | `dahae keys-restore 파일 [--yes]` | 새 서버에 예전 `DATA_KEY`·`JWT_SECRET` 을 넣어요 (`restore-offsite` 전에) |
 | `dahae alert update\|backup\|ssh` | 자동 작업 실패·SSH 차단 증가를 외부 가동 확인 주소로 알려요 (예약 작업용) |
 | `dahae uninstall [--yes]` | 서비스 끄기. 데이터, `.env`, 백업은 남겨요 |
@@ -155,11 +155,13 @@ sudo dahae restore-offsite db-20261110-033000.sql.gz.enc
 | `domain-check` | 있음 (**도메인** 카드의 **[DNS 확인]**, 28장) | 관리자 세션만. 결과 JSON 은 `GET /admin/host/jobs/{id}/output` 으로 10분 동안 읽어요 |
 | `domain-set` | 있음 (**도메인** 카드의 **[바꾸기]**, 28장) | 소유자 코드 + 서버 승인 코드 (`POST /admin/host/jobs/{id}/approve`). `dahae domain` 실행, 실패하면 `.env` 를 되돌리고 `rolled_back` |
 | `host-approval-enroll` | 있음 (**서버 승인 코드** → **[등록하기]**, 28장 28.8.1) | 소유자 코드. 계정 번호는 서버가 채워요. 인증 앱 주소는 요청한 소유자만 읽어요. 이미 있으면 실패 |
-| `update-tag`, `rollback` | 없음 | 서버 승인 코드(TOTP)가 필요한 작업. 승인 칸에서 10분 안에 승인, 5번 틀리면 취소, 1시간에 10번 틀리면 잠김 |
+| `rollback` | 있음 (**복구** → **[이전 버전으로 되돌리기]**, 26장) | 소유자 코드 + 서버 승인 코드. 승인 창에 실행기가 직접 쓴 요약과 돌아갈 버전이 보여요. `dahae rollback` 실행, 종료 코드 4/5/6 의 이유를 콘솔이 보여 줘요 |
+| `keys-backup`, `keys-confirm` | 있음 (**복구** → **[만들고 내려받기]**, 26장) | 소유자 코드. 봉인된 사본은 한 번만 내려받아요. 사장님이 확인한 뒤에만 `POST /admin/host/jobs/{id}/kept` 가 `keys-confirm` 을 넣어요 (`KEY_ESCROW_AT` 기록) |
+| `update-tag` | 없음 | `rollback`, `domain-set` 처럼 서버 승인 코드(TOTP)가 필요한 작업. 승인 칸에서 10분 안에 승인, 5번 틀리면 취소, 1시간에 10번 틀리면 잠김 |
 | `status-refresh`, `logs`, `offsite-list` | 없음 | 에이전트는 받지만 지금 콘솔에서는 보내지 않아요 |
 
 - 콘솔의 작업 상태 표시: `queued` **대기 중**, `running` **진행 중**, `ok` **완료**, `failed` **실패**, `rolled_back` **실패해서 이전 버전으로 되돌렸어요**, `awaiting_approval` **승인 코드를 기다려요**, `rejected` **거절됨**, 그 밖 **확인이 필요해요**.
-- 이 기능 전에 설치한 서버는 설치 줄을 한 번 다시 실행해야 새 작업 실행기와 `dahae domain` 이 들어가요 (`dahae update` 는 이미지만 바꿔요). 그 전에는 `domain-set` 이 이유 없이 `rejected` 로 끝나요.
+- v1.6.0 이하로 설치한 서버는 설치 줄을 **한 번** 다시 실행해야 새 작업 실행기, `dahae domain`, 되돌리기와 키 사본 작업이 들어가요 (그 버전의 `dahae update` 는 이미지만 바꿔요). 그 전에는 이 작업들이 이유 없이 `rejected` 로 끝나요. 그다음부터는 `dahae update` 가 관리 도구도 바꾸니, 업데이트마다 다시 실행할 필요는 없어요.
 - 서버 승인 코드는 콘솔(28장 28.8.1) 또는 `dahae host-approval enroll <사장님 계정 번호>` 로 만들고, 새어 나갔으면 `dahae owner-reset` 후 다시 만들어요.
 
 ---
@@ -174,13 +176,13 @@ curl -fsSLO $R/Dahae/master/deploy/aws/launch.sh
 bash launch.sh --domain example.co.kr --email owner@example.co.kr
 ```
 
-옵션: `--version vX.Y.Z` (기본: 최신 릴리스), `--stack dahae-main`, `--instance-type t3.medium`, `--hosted-zone-id Z…` (Route 53 A 레코드), `--vpc vpc-… --subnet subnet-…` (기본: 기본 VPC 의 공개 서브넷), `--region ap-northeast-2`, `--ref master`, `--dry-run`. 정책 만들기는 `--admin`. 이미 있는 스택은 건드리지 않아요. 릴리스의 `install.sh` 를 `SHA256SUMS` 와 대조한 뒤 지문을 템플릿에 고정해요.
+옵션: `--version vX.Y.Z` (기본: 최신 릴리스), `--stack dahae-main`, `--instance-type t3.medium`, `--hosted-zone-id Z…` (Route 53 A 레코드), `--vpc vpc-… --subnet subnet-…` (기본: 기본 VPC 의 공개 서브넷), `--region ap-northeast-2`, `--ref master`, `--backup-bucket dahae-…` (새로 만드는 대체 스택만: 예전 스택 출력의 `BackupBucket`, `ExistingBackupBucket` 으로 넘겨요), `--dry-run`. 정책 만들기와 고치기는 `--admin`. CloudShell 이나 Windows 의 Git Bash 에서 돌아가고, 마지막에 알림 메일 **Confirm subscription** 안내가 나와요. 이미 있는 스택은 건드리지 않아요. 릴리스의 `install.sh` 를 `SHA256SUMS` 와 대조한 뒤 지문을 템플릿에 고정해요.
 
 **손으로 만들기 (B-1, B-2 요약)**
 
 1. 최신 릴리스 Assets 의 `dahae-aws.yaml` 을 내려받아요 (설치 스크립트 주소와 지문이 이미 고정돼 있어요). (선택) `master` 에서 `scripts/release/build-aws-template.sh` 로 직접 만들 수도 있어요. 주소는 태그(`/v1.6.0/`)가 들어간 주소여야 해요. 출력 지문이 `SHA256SUMS` 의 `install.sh` 줄과 같아야 해요.
 2. CloudFormation > 스택 생성 > 템플릿 파일 업로드. 스택 이름은 **반드시 `dahae-` 로 시작**.
-3. 매개변수: `Domain`, `Email`, `HostedZoneId` (없으면 비움), `InstanceType` (`t3.medium` 기본; `t4g` 는 ARM 이라 서버가 새로 만들어져요), `DiskSizeGiB` (`50`), `VpcId`, `SubnetId`, `SshCidr` (비움), `GitHubRepo` (`EricWijesinghe/Dahae` 그대로), `GitHubRepoIds` (기본값 그대로), `GitHubEnvironment` (`doda-aws`), `CreateGitHubOidcProvider` (계정에 처음이면 `true`), `AmdAmiId`/`ArmAmiId` (바꾸지 않기).
+3. 매개변수: `Domain`, `Email`, `HostedZoneId` (없으면 비움), `InstanceType` (`t3.medium` 기본; `t4g` 는 ARM 이라 서버가 새로 만들어져요), `DiskSizeGiB` (`50`), `VpcId`, `SubnetId`, `SshCidr` (비움), `GitHubRepo` (`EricWijesinghe/Dahae` 그대로), `GitHubRepoIds` (기본값 그대로), `GitHubEnvironment` (`doda-aws`), `CreateGitHubOidcProvider` (계정에 처음이면 `true`), `AmdAmiId`/`ArmAmiId` (바꾸지 않기), `ExistingBackupBucket` (비움. 대체 스택일 때만 예전 `BackupBucket`).
 4. IAM 리소스 생성 승인 체크 → 제출 → `CREATE_COMPLETE` (약 3~5분). 그 뒤 서버 안 설치가 약 15~20분 더 걸려요.
 
 **GitHub 배포 (C 단계)**
@@ -192,7 +194,9 @@ bash launch.sh --domain example.co.kr --email owner@example.co.kr
 - 실패: **Actions > 그 실행 > server output**. 서버가 응답하지 않으면 Session Manager 로 `sudo dahae logs`.
 - 서버 자체의 월요일 04:00 자동 업데이트도 켜져 있어요. GitHub 로만 올리려면 `sudo dahae update-schedule off`.
 
-**비용:** 서버 종류, 디스크, 전송량, 스냅샷에 따라 달라요. AWS 요금 계산기에서 서울(ap-northeast-2)로 직접 계산하세요. 이 매뉴얼에는 가격을 적지 않아요.
+**백업과 알림:** 템플릿이 비공개 S3 저장소를 더해요 (버전 관리, SSE-S3, 35일 만료 + 지난 판 35일, 스택을 지워도 남음). 서버 역할은 새로 만들기(`If-None-Match: *`), 읽기, 목록만 할 수 있어서 사본을 지우거나 덮어쓰지 못해요. 백업 키를 저장하지 않으면 API 가 인스턴스 역할(IMDSv2)로 서명하고, 콘솔 카드에 저장한 키가 있으면 그쪽이 이겨요. 역할이 거절되면 `no_instance_role` 이 보여요. 시스템 점검 경보가 SNS 로 스택의 `Email` 에 메일을 보내요 (**Confirm subscription** 한 번). 디스크 경보는 없어요. 이 기능 전에 만든 스택에는 저장소가 없으니 카드에 다른 S3 호환 저장소를 연결해요.
+
+**비용:** 서버 종류, 디스크, 전송량, 스냅샷, S3 백업(대략 DB + 사진 전체 × 약 70일분)에 따라 달라요. AWS 요금 계산기에서 서울(ap-northeast-2)로 직접 계산하세요. 이 매뉴얼에는 가격을 적지 않아요.
 
 **안전하게 삭제 (D-4)**
 
