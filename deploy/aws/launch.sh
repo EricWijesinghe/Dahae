@@ -94,6 +94,8 @@ if [ -z "$SUBNET" ]; then
 fi
 [ -n "$VPC" ] || VPC=$(aws_ ec2 describe-subnets --subnet-ids "$SUBNET" --query 'Subnets[0].VpcId')
 acct=$(aws_ sts get-caller-identity --query Account)
+aws_ iam get-policy --policy-arn "arn:aws:iam::$acct:policy/dahae-boundary" >/dev/null 2>&1 ||
+  die "policy dahae-boundary is missing: an admin runs this script with --admin once first"
 oidc=true
 aws_ iam get-open-id-connect-provider \
   --open-id-connect-provider-arn "arn:aws:iam::$acct:oidc-provider/token.actions.githubusercontent.com" >/dev/null 2>&1 && oidc=false
