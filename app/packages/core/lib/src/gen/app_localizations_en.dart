@@ -4344,7 +4344,7 @@ class TEn extends T {
 
   @override
   String get oActTestChannel =>
-      'A payment or saved card went through a PortOne test channel, so no real money moved: the live server has a PortOne test channel key. Replace it with the live channel key in Settings > Payments (PortOne), and check those bookings\' payments with the customers.';
+      'A payment or card save came in through a PortOne test channel, so no real money moved. Ones on a test channel whose key this server does not hold were refused and booked nothing. If you are testing with test keys, this is fine. If you are live, make sure the channel keys under Setup > Payments (PortOne) are live channel keys, delete this store\'s test channels in the PortOne console, then find the payment in PortOne\'s test payment history and check the booking with the customer.';
 
   @override
   String get ntNavLabel => 'Notification text';

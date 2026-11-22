@@ -14,6 +14,8 @@ from the release branches; no tags existed for them.
 - Money: disconnecting a payment card is also refused while that gateway has checkouts that expired within the last day (a late payment still settles on them, `gateway_in_use`) or payments from the last year that can still be refunded (`gateway_has_refundable_payments`, new console text); before, clearing the card made those refunds and late payments fail.
 - A PortOne payment or saved card on a TEST channel raises its own owner alert (rule `payment_test_channel`, "PortOne 테스트 채널로 결제가 들어왔어요", console label in Korean and English) and its own status check `test_channel`, instead of the stuck-payment alert and the `payments` check.
 - Store builds: the partner iOS app takes its own Google iOS client id (new secret `PARTNER_GOOGLE_IOS_CLIENT_ID`) instead of the customer app's, which belongs to another bundle id and made its Google button fail; a partner build without Google sign-in warns in the build log, since App Review signs in to the partner app with Google.
+- Money: a PortOne payment or saved card on a TEST channel whose key this server does not hold (channel keys are public, so any client can pick one) reads as failed and books nothing, and the saved card is refused (`portone_test_channel`); before, it was booked as paid with no money moved. The test-channel alert now says both causes, that testing with test keys is fine, and to delete the store's test channels in the PortOne console.
+- Docs: OPERATIONS lists all 18 owner alert rules; the payments guide explains the test-channel alert.
 
 ## [1.6.0] - 2026-11-22
 

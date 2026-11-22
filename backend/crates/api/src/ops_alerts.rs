@@ -218,7 +218,7 @@ pub async fn evaluate(s: &AppState) -> ApiResult<Vec<Finding>> {
         out.push(Finding {
             rule: "payment_test_channel",
             title: "PortOne 테스트 채널로 결제가 들어왔어요",
-            body: "실제 돈이 오가지 않은 결제(또는 저장된 카드)예요. 라이브 서버에 PortOne 테스트 채널 키가 들어가 있어요. 설정 > 결제 (PortOne)에서 채널 키를 라이브 채널 키로 바꾸고, 해당 예약의 결제를 고객과 다시 확인하세요.",
+            body: "PortOne 테스트 채널로 결제나 카드 저장이 들어왔어요. 실제 돈은 오가지 않았어요. 이 서버의 키가 아닌 테스트 채널로 들어온 건은 거절해서 예약되지 않았어요. 테스트 키로 시험 중이면 괜찮아요. 운영 중이라면 설정 > 결제 (PortOne)의 채널 키가 라이브 채널 키인지 확인하고, PortOne 관리자 화면에서 이 상점의 테스트 채널을 삭제한 뒤, 테스트 결제 내역에서 그 결제를 찾아 예약을 고객과 다시 확인하세요.",
         });
     }
     if count(db, &["sms_dead_letter"], DEAD_LETTER_WINDOW_MIN).await? >= 1 {
