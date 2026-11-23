@@ -19,6 +19,10 @@ class TEn extends T {
       'Address search is not ready yet. Please type your address.';
 
   @override
+  String get addressSearchFailedHint =>
+      'Address search is not working right now. Please type your address.';
+
+  @override
   String get addressSearchMinChars => 'Enter at least 2 characters';
 
   @override

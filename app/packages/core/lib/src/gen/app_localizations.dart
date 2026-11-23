@@ -115,6 +115,12 @@ abstract class T {
   /// **'주소 검색은 아직 준비 중이에요. 주소를 직접 입력해 주세요.'**
   String get addressSearchOffHint;
 
+  /// No description provided for @addressSearchFailedHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'주소 검색을 지금 쓸 수 없어요. 주소를 직접 입력해 주세요.'**
+  String get addressSearchFailedHint;
+
   /// No description provided for @addressSearchMinChars.
   ///
   /// In ko, this message translates to:

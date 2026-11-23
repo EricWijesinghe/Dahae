@@ -367,6 +367,26 @@ async fn address_road_must_match_its_district(pool: PgPool) {
     assert_eq!(b["error"]["code"], "invalid_address");
 }
 
+/// Typed entry (address search off or down): a road without any district gets the chosen one, so it saves.
+#[sqlx::test(migrations = "../../migrations")]
+async fn typed_road_without_a_district_takes_the_chosen_one(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let c = customer(&app, &pool, "010-5000-0404").await;
+    let (st, b) = call(
+        &app,
+        "POST",
+        "/v1/me/addresses",
+        Some(c.token.as_str()),
+        Some(json!({
+            "kind": "home", "label": "집", "road_address": " 테헤란로 152 ", "detail": "101동",
+            "district_code": common::DISTRICT, "size_pyeong": 9
+        })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert_eq!(b["road_address"], "서울특별시 강남구 테헤란로 152", "{b}");
+}
+
 /// Owner approval for a new team member: the platform admin approves, the team lead cannot.
 async fn approve_member(app: &axum::Router, db: &PgPool, member_id: &str) {
     let (admin, _) = common::staff_token(db, Role::StaffAdmin).await;

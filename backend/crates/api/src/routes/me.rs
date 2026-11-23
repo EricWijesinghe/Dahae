@@ -267,6 +267,13 @@ struct AddressInput {
 }
 
 impl AddressInput {
+    /// Checked input, with a typed road completed by its district (`address::with_district`).
+    fn checked(mut self) -> ApiResult<Self> {
+        self.road_address = crate::address::with_district(&self.road_address, &self.district_code);
+        self.validate()?;
+        Ok(self)
+    }
+
     fn validate(&self) -> ApiResult<()> {
         let ok = matches!(self.kind.as_str(), "home" | "office")
             && !self.label.trim().is_empty()
@@ -295,7 +302,7 @@ async fn list_addresses(State(s): State<AppState>, Customer(a): Customer) -> Api
 }
 
 async fn create_address(State(s): State<AppState>, Customer(a): Customer, Json(i): Json<AddressInput>) -> ApiResult<Json<Address>> {
-    i.validate()?;
+    let i = i.checked()?;
     let household = checked_household(&i.household.clone().unwrap_or_else(|| json!({})))?;
     let row = sqlx::query_as(&format!(
         "INSERT INTO addresses (user_id, kind, label, road_address, detail, district_code, size_pyeong, household) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING {ADDRESS_COLS}"
@@ -314,7 +321,7 @@ async fn create_address(State(s): State<AppState>, Customer(a): Customer, Json(i
 }
 
 async fn update_address(State(s): State<AppState>, Customer(a): Customer, Path(id): Path<Uuid>, Json(i): Json<AddressInput>) -> ApiResult<Json<Address>> {
-    i.validate()?;
+    let i = i.checked()?;
     let household = i.household.as_ref().map(checked_household).transpose()?;
     // Bookings keep an address snapshot, so editing never rewrites history.
     let row = sqlx::query_as(&format!(

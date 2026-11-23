@@ -44,6 +44,18 @@ pub fn road_in_district(road: &str, code: &str) -> bool {
         .is_some_and(|d| road.split_whitespace().any(|word| word == d.1))
 }
 
+/// A typed road with no Seoul district in it gets the chosen one in front ("테헤란로 152" with 강남구 ->
+/// "서울특별시 강남구 테헤란로 152"), so typed entry saves when search is off or down. A road naming any district is
+/// only trimmed: [`road_in_district`] still refuses one that names another district.
+pub fn with_district(road: &str, code: &str) -> String {
+    let road = road.trim();
+    let named = road.split_whitespace().any(|w| crate::seo::SEOUL_DISTRICTS.iter().any(|d| d.1 == w));
+    match crate::seo::SEOUL_DISTRICTS.iter().find(|d| d.0 == code) {
+        Some(d) if !named && !road.is_empty() => format!("서울특별시 {} {road}", d.1),
+        _ => road.to_string(),
+    }
+}
+
 /// Collapses whitespace, then rejects keywords the provider refuses (length, symbols, SQL words).
 pub fn clean_keyword(raw: &str) -> Result<String, Invalid> {
     let q = raw.split_whitespace().collect::<Vec<_>>().join(" ");
@@ -182,6 +194,14 @@ mod tests {
         let addr = listener.local_addr().expect("fake addr");
         tokio::spawn(async move { axum::serve(listener, app).await.expect("fake serves") });
         format!("http://{addr}/addr")
+    }
+
+    #[test]
+    fn typed_road_takes_the_chosen_district_only_when_it_names_none() {
+        assert_eq!(with_district(" 테헤란로 152 ", "11680"), "서울특별시 강남구 테헤란로 152");
+        assert_eq!(with_district("서울 송파구 올림픽로 1", "11680"), "서울 송파구 올림픽로 1");
+        assert_eq!(with_district("테헤란로 1", "99999"), "테헤란로 1");
+        assert_eq!(with_district("  ", "11680"), "");
     }
 
     #[test]

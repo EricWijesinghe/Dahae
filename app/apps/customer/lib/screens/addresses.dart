@@ -242,9 +242,12 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
       }
     } catch (e) {
       if (mounted) {
+        // The provider is down or rejects the saved key: switch to typed entry so booking is not blocked.
         setState(() {
           _hits = const [];
           _searchError = context.t.error(e);
+          _searchOn = false;
+          _road.text = q;
         });
       }
     } finally {
@@ -531,14 +534,27 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
               ],
             ],
           ),
-          if (_searchOn == false)
+          if (_searchOn == false) ...[
+            if (_searchError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: Space.xs),
+                child: Text(
+                  _searchError!,
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.colors.danger,
+                  ),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.only(top: Space.xs),
               child: Text(
-                t.addressSearchOffHint,
+                _searchError == null
+                    ? t.addressSearchOffHint
+                    : t.addressSearchFailedHint,
                 style: context.text.bodySmall,
               ),
             ),
+          ],
           if (searchOn && _road.text.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: Space.xs),

@@ -3,6 +3,7 @@
  "addressSearchHint": "Road name, building or lot number",
  "addressSearchButton": "Search",
  "addressSearchOffHint": "Address search is not ready yet. Please type your address.",
+ "addressSearchFailedHint": "Address search is not working right now. Please type your address.",
  "addressSearchMinChars": "Enter at least 2 characters",
  "addressNoResults": "No results. Try different words.",
  "cardRegisterTitle": "Register card",

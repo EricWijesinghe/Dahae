@@ -18,6 +18,9 @@ class TKo extends T {
   String get addressSearchOffHint => '주소 검색은 아직 준비 중이에요. 주소를 직접 입력해 주세요.';
 
   @override
+  String get addressSearchFailedHint => '주소 검색을 지금 쓸 수 없어요. 주소를 직접 입력해 주세요.';
+
+  @override
   String get addressSearchMinChars => '두 글자 이상 입력해 주세요';
 
   @override

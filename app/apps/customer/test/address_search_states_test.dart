@@ -101,11 +101,13 @@ void main() {
         findsNothing,
         reason: 'an error is not an empty result',
       );
-      expect(
-        find.text(koT.addressRoad),
-        findsOneWidget,
-        reason: 'typed road address still works',
+      expect(find.text(koT.addressSearchFailedHint), findsOneWidget);
+      // A saved Juso key the provider rejects must not block booking: the typed words stay as the address.
+      expect(find.text('상암동'), findsOneWidget);
+      final button = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, koT.addressSearchButton),
       );
+      expect(button.onPressed, isNull, reason: 'typed entry from now on');
       await unmount(tester);
     },
   );
