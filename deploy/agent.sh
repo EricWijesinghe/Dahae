@@ -508,12 +508,13 @@ ssh_alert() { # ssh_alert 차단 수 : 차단 중인 주소가 전보다 늘었�
   else warn "SSH 차단 알림을 보내지 못했어요"; fi
 }
 
-host_refresh() { # 호스트 정보 파일(host.json): 확인 시각, 채널, 버전, 필요한 관리 명령 판, 다음 자동 업데이트, SSH 실패 로그인 수
-  local failed banned
+host_refresh() { # 호스트 정보 파일(host.json): 확인 시각, 채널, 버전, 태그 고정 여부, 필요한 관리 명령 판, 다음 자동 업데이트, SSH 실패 로그인 수
+  local failed banned pinned=true
   read -r failed banned <<< "$(ssh_counts)"
   ssh_alert "$banned"
-  write_file "$HOST_DIR/host.json" "$(printf '{"checked":"%s","channel":"%s","version":"%s","min_cli":%s,"next_update":%s,"ssh_failed":%s,"ssh_banned":%s}' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(word_or_unknown "$(env_val CHANNEL)")" "$(word_or_unknown "$(env_val VERSION)")" \
+  case "$(env_val VERSION)" in stable|beta|'') pinned=false ;; esac # 고정: 'dahae update 태그' 뒤로 채널 대신 그 태그예요 (자동 업데이트가 채널로 되돌려요)
+  write_file "$HOST_DIR/host.json" "$(printf '{"checked":"%s","channel":"%s","version":"%s","pinned":%s,"min_cli":%s,"next_update":%s,"ssh_failed":%s,"ssh_banned":%s}' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(word_or_unknown "$(env_val CHANNEL)")" "$(word_or_unknown "$(env_val VERSION)")" "$pinned" \
     "$MIN_CLI_REV" "$(next_update)" "$failed" "$banned")"
 }
 

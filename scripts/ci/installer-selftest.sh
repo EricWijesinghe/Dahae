@@ -439,7 +439,9 @@ cd "$SB"
 sed -e "s|/etc/cron.d/malkkeum|$SB/cron-out|" -e "s|__DIR__|$SB|" "$SB/dahae" > "$SB/dahae-cron"
 cron_cli() { ( DAHAE_SELFTEST=1 . "$SB/dahae-cron"; cd "$SB"; "$@" ) >/dev/null 2>&1; }
 has_updated() { case "$1" in *UPDATED*) return 0 ;; *) return 1 ;; esac; }
-auto_run() { ( DAHAE_SELFTEST=1 . "$SB/dahae-cron"; cd "$SB"; cmd_update() { echo UPDATED; }; docker() { case "$*" in *malkkeum-web*) [ -z "${WEB_FAIL:-}" ] || return 1 ;; esac; printf '%s' "$FAKE_MANIFEST"; }; cmd_auto_update ) 2>&1; }
+auto_run() { ( DAHAE_SELFTEST=1 . "$SB/dahae-cron"; cd "$SB"; cmd_update() { echo UPDATED; }; curl() { printf '%s
+' "$*" >> "$SB/curl-auto.log"; [ -n "${CHAN_VER:-}" ] && printf '%s
+' "$CHAN_VER"; }; docker() { case "$*" in *malkkeum-web*) [ -z "${WEB_FAIL:-}" ] || return 1 ;; esac; printf '%s' "$FAKE_MANIFEST"; }; cmd_auto_update ) 2>&1; }
 setup_out() { ( DAHAE_SELFTEST=1 . "$SB/dahae-cron"; cd "$SB"; dc() { return 0; }; cmd_setup_code "$@" ) 2>/dev/null; }
 rm -f "$SB/update-schedule"
 cron_cli cmd_write_cron
@@ -504,6 +506,32 @@ printf 'CHANNEL=beta\nVERSION=beta\nIMAGE_REPO=ghcr.io/owner\n' > "$SB/.env"; FA
 t  "rollback hold: a newer version updates again" has_updated "$(auto_run)"
 nt "rollback hold: an unreadable registry does not update" has_updated "$(WEB_FAIL=1 auto_run)"
 FAKE_MANIFEST='{"v":1}'; rm -f "$SB/host/rollback-hold" "$SB/host/applied-key"
+# after 'dahae update <tag>' (console, DODA's deploy job): back on the channel once it reaches that tag; a pin ahead of it waits
+pin_env() { printf 'CHANNEL=stable
+VERSION=%s
+IMAGE_REPO=ghcr.io/owner
+DELIVERY_RAW=https://raw.example/d
+IMAGE_SOURCE=%s
+' "$1" "${2:-remote}" > "$SB/.env"; printf '%s
+' "$key" > "$SB/host/applied-key"; rm -f "$SB/curl-auto.log"; }
+pin_env v1.0.0; out=$(CHAN_VER=v1.2.0 auto_run)
+t  "pinned below the channel: back on the channel" grep -qx 'VERSION=stable' "$SB/.env"
+t  "...and it updates"                   has_updated "$out"
+t  "...after reading the channel's VERSION" grep -qF 'https://raw.example/d/main/VERSION' "$SB/curl-auto.log"
+pin_env v1.2.0; CHAN_VER=v1.2.0 auto_run >/dev/null
+t  "pinned at the channel's version: back on the channel" grep -qx 'VERSION=stable' "$SB/.env"
+pin_env v2.0.0; out=$(CHAN_VER=v1.2.0 auto_run)
+nt "pinned ahead of the channel: no update" has_updated "$out"
+t  "...and the pin stays"                grep -qx 'VERSION=v2.0.0' "$SB/.env"
+pin_env v1.0.0; out=$(auto_run); rc=$?
+nt "channel VERSION unreadable: no update" has_updated "$out"
+t  "...exit 1 so the alert runs"         eq "$rc" 1
+t  "...and the pin stays"                grep -qx 'VERSION=v1.0.0' "$SB/.env"
+pin_env v1.0.0 local; out=$(auto_run)
+t  "local images: the pin stays"         grep -qx 'VERSION=v1.0.0' "$SB/.env"
+t  "...and the update runs as before"    has_updated "$out"
+nt "...without asking the delivery repo" test -e "$SB/curl-auto.log"
+rm -f "$SB/host/applied-key"
 
 # setup code: shown in groups of four for 7 days, then only --renew gives a new one
 printf 'SETUP_CODE=ABCDEFGHJKMN\nSETUP_CODE_AT=%s\n' "$(date +%s)" > "$SB/.env"
@@ -878,6 +906,10 @@ upd() {
     pull_images() { NEW_API=repo/api:new; NEW_WEB=repo/web:new; }
     running_image() { echo "$2"; }; digest_ref() { echo "$1"; }
     docker() { if [ -n "${SAME:-}" ]; then echo same; else echo "id-$*"; fi; }
+    df() { printf 'Filesystem 1024-blocks Used Available Capacity Mounted
+fs 1 1 %s 1%% /
+' "${DISK_FREE:-999999999}"; }
+    dc() { [ "$1" != run ] || echo "${UPLOADS_KB:-0} /data/uploads"; }
     set_images() { log "images $1"; }; wait_healthy() { [ "$H" = ok ] || [ "$(grep '^images' "$SB/tools.log" | tail -n1)" != "images repo/api:new" ]; }
     run_installer_tools() { [ -z "${TOOLS_FAIL:-}" ] || return 1; log "tools $(bash "$1") $(bash "$2")"; }
     cmd_update "$1" ) >/dev/null 2>&1
@@ -917,6 +949,18 @@ t  "update without a delivery address still updates" eq "$rc:$(grep -c '^images'
 nt "...with the tools as they are"                  grep -q '^tools' "$SB/tools.log"
 tools_env; env_set IMAGE_SOURCE local; upd v1.7.0
 nt "local images: tools as they are"                grep -q '^tools' "$SB/tools.log"
+# disk: twice the photos (backup and its sealed copy) + 3 GB, on the install folder and Docker's, before anything changes
+tools_env; env_set DELIVERY_RAW ''; DISK_FREE=1048576 upd v1.7.0; rc=$?
+t  "update: a full disk stops it"                   eq "$rc" 1
+nt "...before the backup or any image"              test -e "$SB/tools.log"
+tools_env; env_set DELIVERY_RAW ''; UPLOADS_KB=2097152 DISK_FREE=7340031 upd v1.7.0; rc=$?
+t  "update: the photos count twice in the space needed" eq "$rc" 1
+tools_env; env_set DELIVERY_RAW ''; UPLOADS_KB=2097152 DISK_FREE=7340032 upd v1.7.0; rc=$?
+t  "update: twice the photos + 3 GB free runs"      eq "$rc:$(grep -c '^images' "$SB/tools.log")" 0:1
+# an automatic rollback holds the release it fled: no backup, outage and rollback again every week
+tools_env; env_set DELIVERY_RAW ''; upd '' fail; rc=$?
+t  "auto-rollback exits 3"                          eq "$rc" 3
+t  "...and holds the channel's bad build"           eq "$(cat "$SB/host/rollback-hold" 2>/dev/null)" "$( ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; docker() { echo "id-$*"; }; manifest_key stable ) )"
 # rb [GATE] : 가짜 정산 확인(GATE=0 이면 통과)으로 cmd_rollback 을 돌려요
 rb() {
   ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; GATE=${1:-0}

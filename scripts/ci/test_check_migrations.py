@@ -77,5 +77,62 @@ class NewSql(unittest.TestCase):
         self.assertEqual(cm.check_new_sql("0040_x.sql", sql), [])
 
 
+class Contract(unittest.TestCase):
+    RELEASED = (1, 6, 4)
+
+    def check(self, sql):
+        return cm.check_new_sql("0400_x.sql", sql, self.RELEASED)
+
+    def test_bare_drop_table_fails(self):
+        self.assertTrue(any("contract" in e for e in self.check("DROP TABLE staff_password_resets;")))
+
+    def test_each_destructive_form_fails(self):
+        for sql in (
+            "ALTER TABLE bookings DROP COLUMN note;",
+            "DROP TYPE booking_state;",
+            "DROP FUNCTION IF EXISTS f(int);",
+            "DROP TRIGGER t ON bookings;",
+            "ALTER TABLE bookings DROP CONSTRAINT c;",
+            "ALTER TABLE bookings RENAME COLUMN a TO b;",
+            "ALTER TABLE bookings ALTER COLUMN a TYPE bigint;",
+            "ALTER TABLE bookings ALTER COLUMN a SET DATA TYPE bigint;",
+            "ALTER TABLE bookings ALTER COLUMN a SET NOT NULL;",
+        ):
+            self.assertEqual(len(self.check(sql)), 1, sql)
+
+    def test_marker_at_or_below_the_last_release_passes(self):
+        for version in ("v1.6.4", "v1.5.0"):
+            sql = f"-- contract: unused since {version}\nDROP TABLE staff_password_resets;"
+            self.assertEqual(self.check(sql), [], version)
+
+    def test_marker_above_the_last_release_fails(self):
+        sql = "-- contract: unused since v1.6.5\nDROP TABLE staff_password_resets;"
+        self.assertEqual(len(self.check(sql)), 1)
+
+    def test_marker_without_a_known_release_fails(self):
+        sql = "-- contract: unused since v1.0.0\nDROP TABLE staff_password_resets;"
+        self.assertEqual(len(cm.check_new_sql("0400_x.sql", sql)), 1)
+
+    def test_objects_created_in_the_same_file_are_exempt(self):
+        sql = (
+            "CREATE TABLE tmp_x (a int);\nALTER TABLE tmp_x ALTER COLUMN a SET NOT NULL;\nDROP TABLE tmp_x;\n"
+            "DROP TRIGGER IF EXISTS t ON bookings;\nCREATE TRIGGER t AFTER INSERT ON bookings FOR EACH ROW EXECUTE FUNCTION f();\n"
+            "DROP FUNCTION IF EXISTS g();\nCREATE OR REPLACE FUNCTION g() RETURNS int AS 'select 1' LANGUAGE sql;"
+        )
+        self.assertEqual(self.check(sql), [])
+
+    def test_constraint_added_again_is_exempt(self):
+        sql = "ALTER TABLE bookings DROP CONSTRAINT IF EXISTS c;\nALTER TABLE bookings ADD CONSTRAINT c CHECK (x > 0) NOT VALID;"
+        self.assertEqual(self.check(sql), [])
+
+    def test_column_added_then_set_not_null_fails(self):
+        sql = "ALTER TABLE refund_queue ADD COLUMN c bigint;\nALTER TABLE refund_queue ALTER COLUMN c SET NOT NULL;"
+        self.assertEqual(len(self.check(sql)), 1)
+
+    def test_names_that_only_contain_the_words_pass(self):
+        sql = "ALTER TABLE bookings ADD COLUMN renamed_at timestamptz;\n-- DROP TABLE bookings;\nSELECT 1;"
+        self.assertEqual(self.check(sql), [])
+
+
 if __name__ == "__main__":
     unittest.main()

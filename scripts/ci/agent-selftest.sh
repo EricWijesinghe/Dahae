@@ -251,6 +251,10 @@ host_refresh
 t  "host.json has channel"        grep -q '"channel":"stable"' "$DAHAE_HOST_DIR/host.json"
 t  "host.json has min_cli"        grep -q '"min_cli":2' "$DAHAE_HOST_DIR/host.json"
 t  "host.json next update set"    grep -q '"next_update":"20' "$DAHAE_HOST_DIR/host.json"
+t  "host.json: a channel host is not pinned" grep -q '"pinned":false' "$DAHAE_HOST_DIR/host.json"
+cp "$DAHAE_DIR/.env" "$SB/env.keep"; sed -i 's/^VERSION=.*/VERSION=v1.6.4/' "$DAHAE_DIR/.env"; host_refresh
+t  "host.json: a host on a fixed tag is pinned" grep -q '"version":"v1.6.4","pinned":true' "$DAHAE_HOST_DIR/host.json"
+mv -f "$SB/env.keep" "$DAHAE_DIR/.env"
 echo off > "$DAHAE_DIR/update-schedule"; host_refresh
 t  "host.json next update null when off" grep -q '"next_update":null' "$DAHAE_HOST_DIR/host.json"
 # ---- fail2ban counts for host.json (failed ssh logins, current bans) ----

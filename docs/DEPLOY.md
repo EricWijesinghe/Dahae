@@ -42,8 +42,10 @@ requests that touch the installer or the server build; `ci.yml` runs on every pu
    `docker pull ghcr.io/<owner>/malkkeum-api:stable` and `…/malkkeum-web:stable`.
 7. **Release environments (before the first tag; GitHub makes a missing environment with no
    rules, so a release would run unprotected).** Settings → Environments, create each one with
-   *Required reviewers* (the owner) and *Deployment branches and tags* → *Selected* → tag `v*`:
-   - `release-cosign`: the image push and signing job. No secrets.
+   *Required reviewers* (the owner; *Prevent self-review* off), *Allow administrators to bypass* off and
+   *Deployment branches and tags* → *Selected* → tag `v*`:
+   - `release-cosign`: the image push and signing job. No secrets. Also a 60-minute *Wait timer*: this job
+     moves `:stable` before delivery, so its gate is what holds back what servers pull.
    - `release-delivery`: the publish job. Move `DIST_DEPLOY_KEY` and `DAHAE_MANIFEST_KEY` here (remove the
      repo-level copies). Keep `DIST_REPO` as a repository variable.
    Check: a `v*` tag run waits at both jobs for approval. The store builds run in environment `store` (§3) and `deploy-aws` in `doda-aws` (guide 10 C-1).
@@ -122,14 +124,24 @@ process holds port 80 or 443.
 - `stable` (client default) and `beta` are image tags; `sudo dahae channel beta|stable` switches a server.
 - Every installed server keeps its channel tag in `/opt/malkkeum/.env` (`VERSION=stable`). Each
   Monday 04:00 KST it backs up, pulls the tag, checks health, and rolls back to the recorded previous
-  image digests if the new one does not answer within 3 minutes.
+  image digests if the new one does not answer within 3 minutes. After such an automatic rollback it
+  holds that build (`host/rollback-hold`) and tries again only when a newer release ships.
+- `dahae update <tag>` (console update-tag, `deploy-aws.yml`) pins `VERSION` to that tag (`host.json`
+  `"pinned":true`). The next auto-update reads the channel's `VERSION` in the delivery repo: at or above
+  the pin, the server goes back to its channel; below it, the server keeps the pin and skips that week.
+- Every update first checks free disk on the install folder and on `/var/lib/docker`: twice the photo
+  volume plus 3 GB, or it stops before the backup with nothing changed.
 - `sudo dahae rollback` returns to the images recorded by the last update (a registry digest, or a
   local `keep-…` tag for tar installs). It swaps the program only: migrations are not undone and
   no data is removed. To go back in time as well, `sudo dahae restore <backup>` (guide 07).
 - **Migrations stay additive (expand/contract).** A rollback, automatic or manual, runs the previous
   binary against the already-migrated schema. So a release may add tables, columns and indexes, but
   must not drop, rename or tighten anything the previous release still reads or writes. Remove the
-  old shape one release later, once no rollback target uses it.
+  old shape one release later, once no rollback target uses it. `scripts/ci/check-migrations.py` enforces
+  this: a new migration with `DROP TABLE/COLUMN/TYPE/FUNCTION/TRIGGER/CONSTRAINT`, `RENAME`,
+  `ALTER COLUMN … TYPE` or `ALTER COLUMN … SET NOT NULL` fails CI unless it has a line
+  `-- contract: unused since vX.Y.Z` naming a release at or below the last one (the release that stopped
+  using it). Objects the same file creates, and a constraint it adds again under the same name, are exempt.
 - **Saved cards are a one-way step (migration 0326).** On first start the server seals every saved-card
   billing key (`billing_keys::seal_stored`). The previous binary reads plaintext keys, so after that start
   a rollback breaks saved-card charges and account-deletion key cleanup. Roll forward, or restore the

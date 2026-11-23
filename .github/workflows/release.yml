@@ -10,10 +10,15 @@ name: release
 # GitHub-hosted runners only (signing identity, deploy key and package write access never touch a
 # machine anyone else uses).
 #
-# Environments (set in GitHub: required reviewer, deployment branches and tags = v*):
-#   release-cosign   images job: GHCR push and keyless cosign signing (OIDC).
+# Environments: their protection lives in GitHub settings, not in this file, and only those settings stop a
+# tag push from publishing on its own (docs/DEPLOY.md §1 step 7; check with
+# gh api repos/<owner>/<repo>/environments/<name>). Each needs deployment tags v* only, the owner as required
+# reviewer (prevent_self_review off: one developer) and can_admins_bypass off:
+#   release-cosign   images job: GHCR push and keyless cosign signing (OIDC). It moves :stable before delivery,
+#                    so its gate (plus a 60-minute wait timer) is what holds back what the fleet pulls.
 #   release-delivery delivery job: DIST_DEPLOY_KEY (push to DIST_REPO), DAHAE_MANIFEST_KEY (ed25519 PEM,
 #                    signs installer_manifest.json), and the cosign OIDC identity for SHA256SUMS and the page.
+#                    Both keys belong here as environment secrets, not repository secrets.
 #   Store apps: .github/workflows/store-apps.yml (manual run, environment store).
 #   GitHub creates a missing environment without protection rules, so set up the two above before the first tag.
 #
@@ -136,8 +141,9 @@ jobs:
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
             SECURITY_REFRESH=${{ github.run_id }}-${{ github.run_attempt }}
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          # No build cache: master CI jobs write the same Actions cache, so a cached layer could carry their
+          # code into a signed image (cache poisoning). The API build layer changes every release anyway.
+          no-cache: true
           tags: ${{ steps.meta.outputs.tags }}
           # SPDX SBOM (BuildKit's syft scanner) and SLSA provenance, attached to the index.
           sbom: true

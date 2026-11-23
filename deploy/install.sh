@@ -464,6 +464,7 @@ ROLLBACK_HOLD=host/rollback-hold     # 되돌린 뒤 자동 업데이트가 같�
 RC_PAYOUTS_IN_DOUBT=4                # 되돌리기를 정산 확인 때문에 멈췄을 때의 종료 코드 (작업 실행기가 이유를 보여 줘요)
 RC_TOOLS_STALE=5                     # 새(또는 되돌린) 버전은 정상인데 관리 도구만 바꾸지 못했을 때의 종료 코드
 RC_NO_PREVIOUS=6                     # 되돌릴 이전 버전 기록이 없을 때의 종료 코드
+UPDATE_SPARE_KB=3145728              # 업데이트에 필요한 디스크: 사진 크기의 두 배(백업 묶음과 봉인 사본) + 3 GB (새 이미지·DB 덤프)
 USAGE='사용법: dahae <명령>
   status                      서비스 상태
   update [태그]               백업 → 새 버전 → 응답 없으면 자동으로 되돌리기
@@ -903,9 +904,23 @@ tools_rollback() { # 되돌린 버전의 설치 프로그램이 남아 있으면
   ok "관리 도구도 전 버전으로 되돌렸어요"
 }
 
+update_disk_check() { # 백업·새 이미지가 들어갈 자리가 없으면 아무것도 바꾸기 전에 멈춰요 (가득 찬 디스크는 DB 까지 멈춰요)
+  local up need p free
+  up=$(dc run --rm --no-deps -T --entrypoint du api -sk /data/uploads 2>/dev/null | awk 'NR == 1 { print $1 }') || up=
+  case "$up" in ''|*[!0-9]*) up=0 ;; esac # shortcut: 사진 크기를 못 재면 3 GB 만 봐요 (백업이 사진 실패를 따로 알려요)
+  need=$((2 * up + UPDATE_SPARE_KB))
+  for p in "$DIR" /var/lib/docker; do
+    [ -d "$p" ] || continue
+    free=$(df -Pk "$p" | awk 'NR == 2 { print $4 }')
+    case "$free" in ''|*[!0-9]*) die "디스크 남은 공간을 확인하지 못해서 업데이트를 멈췄어요 ($p). 지금 버전 그대로예요." ;; esac
+    [ "$free" -ge "$need" ] || die "디스크가 부족해서 업데이트를 멈췄어요 ($p: 남은 $((free / 1024)) MB, 필요 $((need / 1024)) MB). 지금 버전 그대로예요."
+  done
+}
+
 cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔요 (로컬 이미지면 먼저 dahae load). 관리 도구도 같은 버전으로 바꿔요
   local repo ver cur_api cur_web new_api rotate=0
   printf '\n▶ 업데이트를 시작합니다 (먼저 백업해요)\n'
+  update_disk_check
   repo=$(env_get IMAGE_REPO); ver=${1:-$(env_get VERSION)}
   rm -f "$ROLLBACK_HOLD" # 사람이(또는 새 버전을 찾은 자동 업데이트가) 고른 업데이트: 되돌린 버전 지키기는 끝나요
   tools_prepare "$ver" # 받거나 확인하지 못하면 아무것도 바꾸기 전에 멈춰요
@@ -942,6 +957,7 @@ cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔
   warn "새 버전이 응답하지 않아요. 이전 버전으로 되돌릴게요."
   set_images "$cur_api" "$cur_web"
   if wait_healthy; then
+    rollback_hold "$ver" # 같은 버전을 다음 주에 또 올렸다 되돌리지 않아요: 새 버전이 나오면 다시 올려요
     die_rolled_back "업데이트에 실패해서 이전 버전으로 되돌렸어요. 'dahae logs' 로 원인을 확인해 주세요."
   fi
   die "이전 버전으로도 응답하지 않아요. 'dahae logs' 화면을 개발자에게 전달해 주세요."
@@ -1336,9 +1352,9 @@ manifest_key() { # manifest_key 태그 : API·웹 이미지 목록(그 태그, �
 }
 stable_manifest_key() { manifest_key stable; }
 
-rollback_hold() { # 되돌린 뒤: 채널(또는 고정 태그)이 아직 되돌리기 전 버전을 가리키면 자동 업데이트가 그 버전을 다시 올리지 않아요
+rollback_hold() { # rollback_hold [태그] : 되돌린 뒤: 채널(또는 고정 태그)이 아직 되돌리기 전 버전을 가리키면 자동 업데이트가 그 버전을 다시 올리지 않아요
   local key
-  if key=$(manifest_key "$(env_get VERSION)"); then printf '%s\n' "$key" > "$ROLLBACK_HOLD" || warn "되돌린 버전 지키기 기록을 남기지 못했어요"
+  if key=$(manifest_key "${1:-$(env_get VERSION)}"); then printf '%s\n' "$key" > "$ROLLBACK_HOLD" || warn "되돌린 버전 지키기 기록을 남기지 못했어요"
   else warn "버전 정보를 읽지 못해서, 다음 자동 업데이트가 되돌리기 전 버전을 다시 올릴 수 있어요. 막으려면 콘솔에서 '다음 업데이트 건너뛰기' 를 누르세요"; fi
 }
 
@@ -1357,6 +1373,21 @@ stable_seasoned() { # 0: 받아도 돼요. 1: 새 버전을 막 봤어요(24시�
   return 1
 }
 
+rejoin_channel() { # 'dahae update 태그' 로 고정된 서버를 채널로 되돌려요. 2: 채널이 그 태그보다 뒤에 있어요 (고정 그대로, 이번 업데이트는 건너뛰어요)
+  local ver cv ch
+  ver=$(env_get VERSION); ch=$(env_get CHANNEL)
+  case "$ver" in stable|beta) return 0 ;; esac
+  # 직접 불러온 이미지·배포 주소 없는 설치는 채널 버전을 읽을 곳이 없어요: 고정 그대로예요
+  if [ -z "$(tools_ref "$ver")" ] || [ -z "$(env_get DELIVERY_RAW)" ] || [ "$(env_get IMAGE_SOURCE)" = local ]; then return 0; fi
+  case "$ch" in stable|beta) ;; *) return 0 ;; esac
+  cv=$(curl -fsSL --retry 3 --max-time 30 "$(env_get DELIVERY_RAW)/$(tools_ref "$ch")/VERSION" | tr -d '[:space:]') \
+    || { echo "채널($ch)의 버전 기록을 받지 못했어요. 인터넷 연결을 확인하세요" >&2; return 1; }
+  [ -n "$(tools_ref "${cv#v}")" ] || { echo "채널($ch)의 버전 기록이 이상해요: '$cv'" >&2; return 1; }
+  if ver_older "$cv" "$ver"; then echo "채널($cv)보다 앞선 버전($ver)에 고정돼 있어요. 채널이 따라오면 다시 채널을 따라가요"; return 2; fi
+  env_set VERSION "$ch"
+  echo "고정 버전($ver)에서 $ch 채널로 돌아가요"
+}
+
 cmd_auto_update() { # dahae auto-update : 예약 업데이트. 건너뛰기 표시, 기다리는 작업, 되돌린 버전 지키기, 안정 채널 24시간 대기를 먼저 확인해요
   local queued key rc=0
   if [ -e "$DIR/host/skip-next-update" ]; then
@@ -1364,6 +1395,8 @@ cmd_auto_update() { # dahae auto-update : 예약 업데이트. 건너뛰기 표�
   fi
   queued=$(find "$DIR/jobs/inbox" -maxdepth 1 -name '*.job' 2>/dev/null | head -n1 || true)
   if [ -n "$queued" ]; then echo "기다리는 작업이 있어 자동 업데이트를 미뤘어요"; return 0; fi
+  rejoin_channel || rc=$?
+  if [ "$rc" = 2 ]; then return 0; elif [ "$rc" != 0 ]; then return 1; fi
   if [ -s "$ROLLBACK_HOLD" ]; then
     key=$(manifest_key "$(env_get VERSION)") || { echo "새 버전 정보를 읽지 못했어요. 인터넷 연결과 이미지 저장소를 확인하세요" >&2; return 1; }
     if [ "$key" = "$(cat "$ROLLBACK_HOLD")" ]; then echo "되돌린 버전을 지켜요: 새 버전이 나오면 다시 자동으로 업데이트해요"; return 0; fi

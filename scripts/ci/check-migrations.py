@@ -11,10 +11,16 @@
   table (exempt when the same file creates the table);
 - a CREATE INDEX CONCURRENTLY file lacks the `-- no-transaction` first line or holds more than one
   statement (sqlx sends a file as one simple query, which Postgres runs in an implicit transaction,
-  and CONCURRENTLY refuses to run inside one).
+  and CONCURRENTLY refuses to run inside one);
+- a new migration drops, renames or retypes something (DROP TABLE/COLUMN/TYPE/FUNCTION/TRIGGER/CONSTRAINT,
+  RENAME, ALTER COLUMN ... TYPE, ALTER COLUMN ... SET NOT NULL) without a `-- contract: unused since vX.Y.Z`
+  line naming a release at or below the last one (expand/contract: the release before must already run
+  without it, so an automatic rollback to it still works). Objects the same file creates, and a
+  constraint the same file adds again under its name, are exempt.
 
 Usage: python3 -I scripts/ci/check-migrations.py [--base REF] [--dir backend/migrations]
-Base: --base, else the newest v* tag, else origin/master, else master.
+Base: --base, else the newest v* tag, else origin/master, else master. The last release for the contract
+rule is the newest v* tag reachable from the base.
 Limits: statements are split on ';' after stripping -- comments, so a literal ';' or '--' inside a
 string literal would confuse it; keep migrations free of both.
 """
@@ -40,6 +46,19 @@ ALTER_TABLE_RE = re.compile(r"^ALTER\s+TABLE\s+(?:ONLY\s+)?(\w+)", re.IGNORECASE
 CREATE_TABLE_RE = re.compile(r"^CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)", re.IGNORECASE)
 ADD_CONSTRAINT_RE = re.compile(r"\bADD\s+CONSTRAINT\b", re.IGNORECASE)
 NOT_VALID_RE = re.compile(r"\bNOT\s+VALID\b", re.IGNORECASE)
+DESTRUCTIVE_RE = re.compile(
+    r"\b(DROP\s+(TABLE|COLUMN|TYPE|FUNCTION|TRIGGER|CONSTRAINT)|RENAME\b"
+    r"|ALTER\s+COLUMN\s+\S+\s+(SET\s+DATA\s+)?TYPE|ALTER\s+COLUMN\s+\S+\s+SET\s+NOT\s+NULL)",
+    re.IGNORECASE,
+)
+CREATED_RE = re.compile(
+    r"^CREATE\s+(?:OR\s+REPLACE\s+)?(?:TABLE|TYPE|FUNCTION|TRIGGER)\s+(?:IF\s+NOT\s+EXISTS\s+)?([\w.]+)", re.IGNORECASE
+)
+DROPPED_RE = re.compile(r"^DROP\s+(?:TABLE|TYPE|FUNCTION|TRIGGER)\s+(?:IF\s+EXISTS\s+)?([\w.]+)", re.IGNORECASE)
+DROP_CONSTRAINT_RE = re.compile(r"\bDROP\s+CONSTRAINT\s+(?:IF\s+EXISTS\s+)?(\w+)", re.IGNORECASE)
+ADDED_CONSTRAINT_RE = re.compile(r"\bADD\s+CONSTRAINT\s+(\w+)", re.IGNORECASE)
+CONTRACT_RE = re.compile(r"^--\s*contract:\s*unused since v(\d+)\.(\d+)\.(\d+)\b", re.IGNORECASE | re.MULTILINE)
+VERSION_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)")
 
 
 def check_duplicates(names):
@@ -77,10 +96,42 @@ def statements(sql):
     return [s.strip() for s in no_comments.split(";") if s.strip()]
 
 
-def check_new_sql(name, sql):
+def destructive_target(stmt):
+    """The object a destructive statement changes: the table of an ALTER TABLE, else the dropped object."""
+    match = ALTER_TABLE_RE.match(stmt) or DROPPED_RE.match(stmt)
+    return match.group(1).lower() if match else None
+
+
+def is_destructive(stmt, created, added):
+    if destructive_target(stmt) in created:
+        return False
+    # A constraint dropped and added again by the same file (a widened CHECK) is replaced, not removed.
+    rest = DROP_CONSTRAINT_RE.sub(lambda m: "" if m.group(1).lower() in added else m.group(0), stmt)
+    return bool(DESTRUCTIVE_RE.search(rest))
+
+
+def check_contract(name, sql, stmts, released):
+    created = {m.group(1).lower() for s in stmts if (m := CREATED_RE.match(s))}
+    added = {m.group(1).lower() for s in stmts for m in ADDED_CONSTRAINT_RE.finditer(s)}
+    risky = [s for s in stmts if is_destructive(s, created, added)]
+    if not risky:
+        return []
+    marks = [tuple(map(int, m.groups())) for m in CONTRACT_RE.finditer(sql)]
+    if released is not None and any(mark <= released for mark in marks):
+        return []
+    first = " ".join(risky[0].split())[:80]
+    last = "unknown (no v* tag)" if released is None else "v{}.{}.{}".format(*released)
+    return [
+        f"{name}: destructive statement ({first}) needs `-- contract: unused since vX.Y.Z` with X.Y.Z at or "
+        f"below the last release ({last}); ship the code that stops using it first (expand/contract)"
+    ]
+
+
+def check_new_sql(name, sql, released=None):
     errors = []
     stmts = statements(sql)
     created = {m.group(1).lower() for s in stmts if (m := CREATE_TABLE_RE.match(s))}
+    errors += check_contract(name, sql, stmts, released)
     for stmt in stmts:
         index = CREATE_INDEX_RE.match(stmt)
         if index:
@@ -117,6 +168,15 @@ def resolve_base(repo, requested):
     return None
 
 
+def released_version(repo, base):
+    """(X, Y, Z) of the newest v* tag reachable from base, or None."""
+    probe = subprocess.run(
+        ["git", "-C", repo, "describe", "--tags", "--abbrev=0", "--match", "v*", base], capture_output=True
+    )
+    match = VERSION_RE.match(probe.stdout.decode().strip()) if probe.returncode == 0 else None
+    return tuple(map(int, match.groups())) if match else None
+
+
 def released_files(repo, base, folder):
     paths = git(repo, "ls-tree", "-r", "--name-only", base, "--", folder).decode().split("\n")
     files = {}
@@ -149,8 +209,9 @@ def main(argv):
     errors = check_duplicates(current)
     errors += check_released(released, current)
     new = [name for name in current if name not in released]
+    last = released_version(repo, base)
     for name in new:
-        errors += check_new_sql(name, current[name].decode("utf-8"))
+        errors += check_new_sql(name, current[name].decode("utf-8"), last)
 
     for error in errors:
         print(f"check-migrations: {error}")

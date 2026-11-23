@@ -120,6 +120,7 @@ jobs:
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with: { distribution: temurin, java-version: '21' }
       - uses: ./.github/actions/flutter-setup
+        with: { cache: 'false' } # no shared Actions cache in a signed store build
       - name: Analyze
         working-directory: app
         run: dart analyze --fatal-infos
@@ -245,6 +246,7 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
         with: { xcode-version: "26.6" }
       - uses: ./.github/actions/flutter-setup
+        with: { cache: 'false' } # no shared Actions cache in a signed store build
       - name: Analyze
         working-directory: app
         run: dart analyze --fatal-infos
