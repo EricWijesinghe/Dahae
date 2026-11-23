@@ -128,6 +128,14 @@ pub async fn search(http: &reqwest::Client, key: &str, keyword: &str, page: u32)
     search_at(http, JUSO_API, key, keyword, page).await
 }
 
+/// Juso answers that refuse the key itself: E0001 not approved, E0014 approval expired.
+const KEY_REFUSED: [&str; 2] = ["E0001", "E0014"];
+
+/// True when a [`search`] failure means the confirm key is wrong, not that the provider is down.
+pub fn key_refused(e: &ProviderError) -> bool {
+    matches!(e, ProviderError::Upstream(m) if KEY_REFUSED.iter().any(|c| *m == format!("juso error {c}")))
+}
+
 /// Setup-wizard check: a fixed keyword must return a clean response.
 pub async fn check(http: &reqwest::Client, key: &str) -> Result<(), ProviderError> {
     search(http, key, "세종대로", 1).await.map(|_| ())
@@ -174,6 +182,11 @@ mod tests {
         assert_eq!(parse(&flat).expect("flat shape")[0].road_address, "flat");
         let bad_key = json!({"results": {"common": {"errorCode": "E0001"}}});
         assert!(matches!(parse(&bad_key), Err(ProviderError::Upstream(_))));
+        assert!(key_refused(&parse(&bad_key).unwrap_err()), "E0001 is a wrong key");
+        let expired = json!({"results": {"common": {"errorCode": "E0014"}}});
+        assert!(key_refused(&parse(&expired).unwrap_err()), "E0014 is an expired key");
+        let busy = json!({"results": {"common": {"errorCode": "-999"}}});
+        assert!(!key_refused(&parse(&busy).unwrap_err()), "a system error is not the key");
         assert!(matches!(parse(&json!({})), Err(ProviderError::Upstream(_))));
     }
 

@@ -1008,6 +1008,16 @@ pub fn check_result(status: StatusCode, ok_statuses: &[StatusCode]) -> (bool, &'
     }
 }
 
+/// Solapi refuses a wrong API key or signature with 400 (InvalidApiKey, ValidationError): the balance GET
+/// sends nothing else that could be invalid.
+fn solapi_result(status: StatusCode) -> (bool, &'static str) {
+    if status == StatusCode::BAD_REQUEST {
+        (false, "invalid_key")
+    } else {
+        check_result(status, &[StatusCode::OK])
+    }
+}
+
 async fn probe(s: &AppState, sec: Section) -> (bool, &'static str) {
     let integ = s.providers.integ();
     let http = s.providers.http();
@@ -1026,7 +1036,7 @@ async fn probe(s: &AppState, sec: Section) -> (bool, &'static str) {
         Section::Solapi => match integ.solapi.as_ref() {
             None => (false, "not_configured"),
             Some(cfg) => match sms::check(http, cfg).await {
-                Ok(st) => check_result(st, &[StatusCode::OK]),
+                Ok(st) => solapi_result(st),
                 Err(_) => (false, "unreachable"),
             },
         },
@@ -1055,6 +1065,7 @@ async fn probe(s: &AppState, sec: Section) -> (bool, &'static str) {
             None => (false, "not_configured"),
             Some(key) => match address::check(http, key).await {
                 Ok(()) => (true, "connected"),
+                Err(e) if address::key_refused(&e) => (false, "invalid_key"),
                 Err(_) => (false, "provider_error"),
             },
         },
@@ -1306,5 +1317,8 @@ mod tests {
         assert_eq!(check_result(StatusCode::NOT_FOUND, &[StatusCode::NOT_FOUND]), (true, "connected"));
         assert_eq!(check_result(StatusCode::UNAUTHORIZED, &[StatusCode::OK]), (false, "invalid_key"));
         assert_eq!(check_result(StatusCode::BAD_GATEWAY, &[StatusCode::OK]), (false, "provider_error"));
+        assert_eq!(solapi_result(StatusCode::BAD_REQUEST), (false, "invalid_key"));
+        assert_eq!(solapi_result(StatusCode::OK), (true, "connected"));
+        assert_eq!(solapi_result(StatusCode::INTERNAL_SERVER_ERROR), (false, "provider_error"));
     }
 }
