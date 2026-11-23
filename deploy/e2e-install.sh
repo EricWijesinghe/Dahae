@@ -100,9 +100,9 @@ maintenance_page_when_api_down() {
 }
 console_served() { [ "$(code /admin/)" = 200 ] && get /admin/ | grep -q 'base href="/admin/"'; }
 csp_of() { curl_d -D - -o /dev/null "https://$DOMAIN$1" | grep -i '^content-security-policy:'; }
-csp_tight() { # apps: connect-src only to the payment gateways (PortOne, Toss), no unsafe-eval, nothing may frame us
+csp_tight() { # apps: connect-src only to picked files (blob:) and the payment gateways (PortOne, Toss), no unsafe-eval, nothing may frame us
   local csp; csp="$(csp_of /admin/)"
-  echo "$csp" | grep -q "connect-src 'self' https://\*\.portone\.io https://\*\.tosspayments\.com;" \
+  echo "$csp" | grep -q "connect-src 'self' blob: https://\*\.portone\.io https://\*\.tosspayments\.com;" \
     && echo "$csp" | grep -q "frame-ancestors 'none'" \
     && ! echo "$csp" | grep -qi "'unsafe-eval'" # 'wasm-unsafe-eval' (Flutter --wasm) is fine
 }

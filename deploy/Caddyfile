@@ -96,12 +96,13 @@
 	# style-src / font-src: same origin only (the website self-hosts its Dahae Sans subset). No Google Fonts:
 	#   the Flutter apps load their fallback fonts from /webfonts/ (same origin).
 	# connect-src: *.portone.io = PortOne API (api.portone.io) and SDK calls; *.tosspayments.com = Toss Payments
-	#   SDK calls (the window and billing pages). Social sign-in (Kakao, Naver,
+	#   SDK calls (the window and billing pages). blob: = a picked image (logo, photo): the web image picker hands
+	#   the file over as a blob: URL and Flutter reads it with a fetch, which 'self' does not cover. Social sign-in (Kakao, Naver,
 	#   Google, Apple) runs in the native apps only; the web build offers no social SDK, so no hosts here.
 	# frame-src / form-action: PG payment windows (card, KakaoPay, NaverPay...) are hosted by many PGs whose
 	#   hosts PortOne and Toss do not publish as a fixed list; keep https: or checkout breaks.
 	# frame-ancestors none: nothing may embed us.
-	header @app_csp Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.portone.io https://js.tosspayments.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.portone.io https://*.tosspayments.com; frame-src 'self' https:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-ancestors 'none'"
+	header @app_csp Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.portone.io https://js.tosspayments.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' blob: https://*.portone.io https://*.tosspayments.com; frame-src 'self' https:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-ancestors 'none'"
 	# Static website: no inline script except the theme snippet in its pages' <head>, allowed by hash
 	# (scripts/ci/check-native.py fails when a page's inline script has no hash here). No PG, no frames.
 	header @site_csp Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-BAOxqSXTXY0xct7XpdRWh4Q+kVwbxikbI09LZ/Tqsqg=' 'sha256-UtC0U60paHl4CC9DOzN7OY+bZaNnUQ9p4kyLhFax6ts='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
