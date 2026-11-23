@@ -235,11 +235,14 @@ class _ServerRecoveryCardState extends State<ServerRecoveryCard> {
         const SizedBox(height: Space.md),
         Text(t.srKeysTitle, style: context.text.bodyMedium),
         Text(t.srKeysBody, style: context.text.bodySmall),
+        // Room for the filled fields' floating labels, which otherwise sit on the text above.
+        const SizedBox(height: Space.sm),
         TextField(
           controller: _pass,
           obscureText: true,
           decoration: InputDecoration(labelText: t.srKeysPass),
         ),
+        const SizedBox(height: Space.sm),
         TextField(
           controller: _again,
           obscureText: true,
