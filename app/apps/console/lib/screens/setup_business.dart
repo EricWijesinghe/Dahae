@@ -163,12 +163,21 @@ class _BusinessCardState extends State<BusinessCard> {
   };
 
   Future<void> _pickLogo() async {
-    final file = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-    );
-    if (file == null) return;
-    final bytes = await file.readAsBytes();
+    final Uint8List bytes;
+    final XFile file;
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+      );
+      if (picked == null) return;
+      file = picked;
+      bytes = await file.readAsBytes();
+    } catch (_) {
+      // Web: a blocked or revoked blob: read lands here; say so instead of keeping the old logo silently.
+      if (mounted) showToast(context, context.t.cRbDeriveFailed);
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _logoBytes = bytes;
