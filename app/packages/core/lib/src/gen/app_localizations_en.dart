@@ -4955,6 +4955,10 @@ class TEn extends T {
       'Finish two-step sign-in and saving recovery codes first';
 
   @override
+  String get err_recovery_unconfirmed =>
+      'Your recovery codes are not confirmed yet. In My account, tap \'I wrote down my recovery codes\' and type one code';
+
+  @override
   String get err_owner_transfer_self =>
       'You cannot hand the owner role to yourself';
 

@@ -615,6 +615,7 @@ String setupMessage(T t, String code) => switch (code) {
   'totp_reused' => t.err_totp_reused,
   'totp_required' => t.err_totp_required,
   'second_factor_required' => t.err_second_factor_required,
+  'recovery_unconfirmed' => t.err_recovery_unconfirmed,
   'nothing_saved' => t.cSetupNothingSaved,
   _ => t.cInvalidValue,
 };

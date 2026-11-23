@@ -157,9 +157,26 @@ void main() {
       // Not signed in until the owner has the codes in hand.
       expect(env.session.signedIn, isFalse);
 
+      // Continue waits for one of the codes typed back: skipping it left owner actions locked.
+      await tester.tap(find.widgetWithText(PrimaryButton, koT.cMfaContinue));
+      await settle(tester);
+      expect(env.session.signedIn, isFalse);
+      final saved = find.widgetWithText(TextField, koT.oaRecoveryTypeLabel);
+      await tester.enterText(saved, 'AAAA-BBBB-CCCC-DDDX');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, koT.cMfaContinue));
+      await settle(tester);
+      expect(env.session.signedIn, isFalse, reason: 'not one of the codes');
+
+      await tester.enterText(saved, 'eeee ffff gggg hhhh');
+      await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, koT.cMfaContinue));
       await settle(tester);
       expect(env.session.signedIn, isTrue);
+      expect(
+        fake.lastCall('POST', '/admin/me/recovery-codes/confirm')!.json['code'],
+        'eeee ffff gggg hhhh',
+      );
       await unmount(tester);
     },
   );

@@ -131,6 +131,7 @@ extension Labels on T {
     'read_only_setting' => err_read_only_setting,
     'owner_exists' => err_owner_exists,
     'second_factor_required' => err_second_factor_required,
+    'recovery_unconfirmed' => err_recovery_unconfirmed,
     'owner_transfer_self' => err_owner_transfer_self,
     'owner_target_invalid' => err_owner_target_invalid,
     'wrong_password' => err_wrong_password,

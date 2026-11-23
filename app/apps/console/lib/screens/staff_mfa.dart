@@ -114,6 +114,15 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
     }
   });
 
+  /// Continue opens once one of the shown codes is typed back (the server ignores case, spaces and dashes too),
+  /// so the confirmation that unlocks owner actions cannot be skipped or fail on a typo after the screen is gone.
+  bool get _savedCodeOk {
+    String norm(String c) =>
+        c.replaceAll(RegExp('[^A-Za-z0-9]'), '').toUpperCase();
+    final typed = norm(_savedCode.text);
+    return typed.isNotEmpty && _codes!.any((c) => norm(c) == typed);
+  }
+
   void _submit() {
     if (_busy) return;
     if (widget.challenge.enrol && _codes == null) {
@@ -162,7 +171,11 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
       ],
       const SizedBox(height: Space.lg),
       if (_codes != null)
-        PrimaryButton(label: t.cMfaContinue, busy: _busy, onPressed: _continue)
+        PrimaryButton(
+          label: t.cMfaContinue,
+          busy: _busy,
+          onPressed: _savedCodeOk ? _continue : null,
+        )
       else
         PrimaryButton(
           label: widget.challenge.enrol ? t.cMfaConfirm : t.cMfaVerify,
@@ -256,7 +269,12 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
     const SizedBox(height: Space.md),
     TextField(
       controller: _savedCode,
-      decoration: InputDecoration(labelText: t.oaRecoveryTypeLabel),
+      decoration: InputDecoration(
+        labelText: t.oaRecoveryTypeLabel,
+        helperText: t.oaRecoveryTypeBody,
+        helperMaxLines: 2,
+      ),
+      onChanged: (_) => setState(() {}),
     ),
     const SizedBox(height: Space.sm),
     Wrap(

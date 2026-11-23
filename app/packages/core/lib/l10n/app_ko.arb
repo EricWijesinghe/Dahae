@@ -2483,6 +2483,7 @@
  "hjEmpty": "아직 서버 작업이 없어요",
  "err_owner_exists": "이미 소유자가 있어요",
  "err_second_factor_required": "2단계 인증과 복구 코드 저장을 먼저 마쳐 주세요",
+ "err_recovery_unconfirmed": "복구 코드 저장 확인이 아직이에요. 내 계정에서 '복구 코드를 종이에 적어 보관했어요'를 눌러 코드 한 개를 입력해 주세요",
  "err_owner_transfer_self": "자기 자신에게는 소유자를 넘길 수 없어요",
  "err_owner_target_invalid": "넘겨받을 사람은 사용 중인 관리자여야 해요",
  "err_wrong_password": "현재 비밀번호가 맞지 않아요",

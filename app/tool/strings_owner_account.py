@@ -5,6 +5,7 @@
 S = {
   "err_owner_exists": ["이미 소유자가 있어요", "An owner is already set"],
   "err_second_factor_required": ["2단계 인증과 복구 코드 저장을 먼저 마쳐 주세요", "Finish two-step sign-in and saving recovery codes first"],
+  "err_recovery_unconfirmed": ["복구 코드 저장 확인이 아직이에요. 내 계정에서 '복구 코드를 종이에 적어 보관했어요'를 눌러 코드 한 개를 입력해 주세요", "Your recovery codes are not confirmed yet. In My account, tap 'I wrote down my recovery codes' and type one code"],
   "err_owner_transfer_self": ["자기 자신에게는 소유자를 넘길 수 없어요", "You cannot hand the owner role to yourself"],
   "err_owner_target_invalid": ["넘겨받을 사람은 사용 중인 관리자여야 해요", "The new owner must be an active admin"],
   "err_wrong_password": ["현재 비밀번호가 맞지 않아요", "The current password is wrong"],

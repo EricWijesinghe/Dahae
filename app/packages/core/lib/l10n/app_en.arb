@@ -1504,6 +1504,7 @@
  "hjEmpty": "No server jobs yet",
  "err_owner_exists": "An owner is already set",
  "err_second_factor_required": "Finish two-step sign-in and saving recovery codes first",
+ "err_recovery_unconfirmed": "Your recovery codes are not confirmed yet. In My account, tap 'I wrote down my recovery codes' and type one code",
  "err_owner_transfer_self": "You cannot hand the owner role to yourself",
  "err_owner_target_invalid": "The new owner must be an active admin",
  "err_wrong_password": "The current password is wrong",

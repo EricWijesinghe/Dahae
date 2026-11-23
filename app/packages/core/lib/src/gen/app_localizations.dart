@@ -9121,6 +9121,12 @@ abstract class T {
   /// **'2단계 인증과 복구 코드 저장을 먼저 마쳐 주세요'**
   String get err_second_factor_required;
 
+  /// No description provided for @err_recovery_unconfirmed.
+  ///
+  /// In ko, this message translates to:
+  /// **'복구 코드 저장 확인이 아직이에요. 내 계정에서 \'복구 코드를 종이에 적어 보관했어요\'를 눌러 코드 한 개를 입력해 주세요'**
+  String get err_recovery_unconfirmed;
+
   /// No description provided for @err_owner_transfer_self.
   ///
   /// In ko, this message translates to:

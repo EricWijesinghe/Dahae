@@ -234,6 +234,8 @@ async fn owner_gates_stay_shut_until_recovery_codes_are_confirmed(db: PgPool) {
     let body = Some(json!({ "phone": "010-1234-5678" }));
     let (st, b) = owner_call(&app, PHONE_CALL.0, PHONE_CALL.1, &token, Some(code.as_str()), body.clone()).await;
     assert_eq!(st, StatusCode::CONFLICT, "codes not confirmed yet: {b}");
+    // Told apart from "no authenticator": the owner already has one and must be sent to the confirmation.
+    assert_eq!(b["error"]["code"], "recovery_unconfirmed", "{b}");
     let (st, _) = confirm_codes(&app, &token, &recovery[0]).await;
     assert_eq!(st, StatusCode::OK);
     let code = fresh(&db, &staff).await;

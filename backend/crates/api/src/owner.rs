@@ -114,8 +114,11 @@ pub async fn check_totp(s: &AppState, staff: Uuid, code: &str, ip: IpAddr, requi
     .fetch_optional(&s.db)
     .await?;
     let (secret, last_step, enrolled, confirmed) = row.ok_or(ApiError::Unauthorized)?;
-    if !enrolled || (require_confirmed && !confirmed) {
+    if !enrolled {
         return Err(ApiError::Conflict("second_factor_required"));
+    }
+    if require_confirmed && !confirmed {
+        return Err(ApiError::Conflict("recovery_unconfirmed"));
     }
     let secret = secret
         .and_then(|enc| crypto::decrypt(&s.config.data_key, crypto::aad::STAFF_TOTP, &enc))

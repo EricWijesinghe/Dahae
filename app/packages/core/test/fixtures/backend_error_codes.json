@@ -79,6 +79,7 @@
     "quote_not_payable",
     "rate_limited",
     "recovery_code_invalid",
+    "recovery_unconfirmed",
     "referee_already_booked",
     "referral_disabled",
     "required_consent",

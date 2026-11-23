@@ -4820,6 +4820,10 @@ class TKo extends T {
   String get err_second_factor_required => '2단계 인증과 복구 코드 저장을 먼저 마쳐 주세요';
 
   @override
+  String get err_recovery_unconfirmed =>
+      '복구 코드 저장 확인이 아직이에요. 내 계정에서 \'복구 코드를 종이에 적어 보관했어요\'를 눌러 코드 한 개를 입력해 주세요';
+
+  @override
   String get err_owner_transfer_self => '자기 자신에게는 소유자를 넘길 수 없어요';
 
   @override
