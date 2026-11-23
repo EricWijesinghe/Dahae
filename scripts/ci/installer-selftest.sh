@@ -746,8 +746,7 @@ backup_keeps_after() { ( OFF=$1; rm -f backups/db-old* backups/uploads-old* back
     "backup-upload /backups/uploads-"*) case "$OFF" in uploaded) echo "offsite backup uploaded: ${2##*/}" ;; unset) echo "offsite backup not set up (console: 설정 > 백업)" ;; fail) return 1 ;; esac ;;
     *) return 0 ;; esac; }
   dc() { case "$1" in exec) printf 'dump' ;; run) printf 'tar' ;; esac; return 0; }
-  cmd_backup >/dev/null 2>&1; cd backups && ls -1 db-old* uploads-old* 2>/dev/null | tr '
-' ' ' ); }
+  cmd_backup >/dev/null 2>&1; cd backups && for f in db-old* uploads-old*; do [ -e "$f" ] && printf '%s ' "$f"; done ); }
 t  "offsite photos: 3 local photo days, 14 DB days" eq "$(backup_keeps_after uploaded)" "db-old5.sql.gz.enc "
 t  "no offsite: photos and DB both kept 14 days"    eq "$(backup_keeps_after unset)" "db-old5.sql.gz.enc uploads-old5.tar.gz.enc "
 t  "offsite failed: photos kept 14 days"            eq "$(backup_keeps_after fail)" "db-old5.sql.gz.enc uploads-old5.tar.gz.enc "
