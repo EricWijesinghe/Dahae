@@ -477,6 +477,33 @@ void _lockedTests() {
     },
   );
 
+  testWidgets(
+    'Solapi template boxes carry their own hint, not the PortOne channel key one',
+    (tester) async {
+      await _pump(tester, {
+        'code': 'solapi',
+        'source': 'none',
+        'configured': false,
+        'fields': [
+          _field('api_key', 'text'),
+          _field(
+            'templates',
+            'map',
+            set: true,
+            preview: {'booking_confirmed': '••••'},
+          ),
+        ],
+        'last_test': null,
+      }, size: _fullCardSize);
+      await tester.tap(find.byType(ExpansionTile));
+      await settle(tester);
+
+      expect(find.textContaining(koT.cSlotHintMethod), findsNothing);
+      expect(find.textContaining('승인된 템플릿 ID'), findsWidgets);
+      await unmount(tester);
+    },
+  );
+
   testWidgets('a secret paste box can show and hide what is typed', (
     tester,
   ) async {

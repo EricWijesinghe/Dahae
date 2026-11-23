@@ -657,11 +657,15 @@ class _IntegrationCardState extends State<IntegrationCard> {
 
   Widget _slotField(
     BuildContext context,
+    String field,
     MapEntry<String, TextEditingController> e,
     bool saved,
   ) {
     final t = context.t;
-    final hint = _slotHint(t, e.key);
+    // PortOne channel keys say where each key comes from; other maps (Solapi templates) use their field guide.
+    final hint = field == 'channel_keys'
+        ? _slotHint(t, e.key)
+        : _guide.fields[field]?.hint?.of(context.lang);
     final cleared = _clearedSlots.contains(e.key);
     return Padding(
       padding: const EdgeInsets.only(bottom: Space.xs),
@@ -675,9 +679,9 @@ class _IntegrationCardState extends State<IntegrationCard> {
               ? hint
               : cleared
               ? t.cSetupSlotCleared
-              : '${t.cSetupKeepValue} · $hint',
+              : [t.cSetupKeepValue, ?hint].join(' · '),
           isDense: true,
-          errorText: _errorFor('channel_keys', e.value.text),
+          errorText: _errorFor(field, e.value.text),
           // A saved slot can be removed alone (e.g. to move that method to Toss Payments).
           suffixIcon: saved && !_locked
               ? IconButton(
@@ -719,13 +723,13 @@ class _IntegrationCardState extends State<IntegrationCard> {
             const SizedBox(height: Space.xs),
             for (final e in entries)
               if (!otherSlotKeys.contains(e.key))
-                _slotField(context, e, savedSlots.contains(e.key)),
+                _slotField(context, name, e, savedSlots.contains(e.key)),
             if (entries.any((e) => otherSlotKeys.contains(e.key))) ...[
               const SizedBox(height: Space.xs),
               Text(t.cSetupOtherMethods, style: context.text.labelMedium),
               for (final e in entries)
                 if (otherSlotKeys.contains(e.key))
-                  _slotField(context, e, savedSlots.contains(e.key)),
+                  _slotField(context, name, e, savedSlots.contains(e.key)),
             ],
           ],
         ),

@@ -331,6 +331,10 @@ final guides = <String, Guide>{
       'pf_id': FieldGuide(Tr('카카오 채널 ID (pfId)', 'Kakao channel ID (pfId)')),
       'templates': FieldGuide(
         Tr('알림톡 템플릿 ID', 'AlimTalk template IDs'),
+        hint: Tr(
+          '솔라피 콘솔 [카카오 알림톡] → [템플릿 관리] 에서 승인된 템플릿 ID 를 복사하세요',
+          'Copy the approved template ID from Kakao AlimTalk → Templates in the Solapi console',
+        ),
         suggestions: messageEventKeys,
       ),
     },
