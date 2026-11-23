@@ -13,15 +13,16 @@ import '../state.dart';
 import 'brand_preview.dart';
 import '../widgets/inline_button.dart';
 
-/// Brand colours offered as one-tap swatches; any #RRGGBB can still be typed.
-const _swatches = [
+/// Brand colours offered as one-tap swatches; any #RRGGBB can still be typed. Each one carries white text
+/// at AA (whiteTextReadsOn), so a tapped swatch is always applied in the apps.
+const brandSwatches = [
   '#187A8F',
-  '#00B386',
-  '#FF6B3D',
-  '#8B5CF6',
+  '#047857',
+  '#C2410C',
+  '#7C3AED',
   '#E11D74',
-  '#1E9EBA',
-  '#F59E0B',
+  '#0E7490',
+  '#B45309',
   '#111827',
 ];
 
@@ -108,7 +109,7 @@ class _BusinessCardState extends State<BusinessCard> {
         k: TextEditingController(text: _savedVersion(k)),
     };
     _color = TextEditingController(
-      text: widget.initial['primary_color'] as String? ?? _swatches.first,
+      text: widget.initial['primary_color'] as String? ?? brandSwatches.first,
     )..addListener(() => setState(() {}));
     _logo = widget.initial['logo_url'] as String?;
     _c['name']!.addListener(() => setState(() {}));
@@ -397,7 +398,7 @@ class _BusinessCardState extends State<BusinessCard> {
               spacing: Space.xs,
               runSpacing: Space.xs,
               children: [
-                for (final s in _swatches)
+                for (final s in brandSwatches)
                   Semantics(
                     button: true,
                     label: s,
