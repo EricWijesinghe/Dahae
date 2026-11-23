@@ -40,6 +40,23 @@
 	}
 }
 
+# Response headers for every answer. Error pages (handle_errors) do not pass through the site's own header
+# directive, so they import these again.
+(edge-headers) {
+	# Deferred (it deletes a field), so these are set when the response is written, over anything upstream sent.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		# No camera, microphone or USB for any page; location only for our own pages (address search).
+		Permissions-Policy "camera=(), microphone=(), usb=(), geolocation=(self), browsing-topics=()"
+		# Our pages keep their opener links to the PG payment popups they open, nothing else does.
+		Cross-Origin-Opener-Policy same-origin-allow-popups
+		-Server
+	}
+}
+
 # Everything the main domain serves. Imported by the main site and by the former-domain site below.
 (site) {
 	encode zstd gzip
@@ -69,18 +86,7 @@
 		}
 	}
 
-	# Deferred (it deletes a field), so these are set when the response is written, over anything upstream sent.
-	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		X-Content-Type-Options nosniff
-		X-Frame-Options DENY
-		Referrer-Policy strict-origin-when-cross-origin
-		# No camera, microphone or USB for any page; location only for our own pages (address search).
-		Permissions-Policy "camera=(), microphone=(), usb=(), geolocation=(self), browsing-topics=()"
-		# Our pages keep their opener links to the PG payment popups they open, nothing else does.
-		Cross-Origin-Opener-Policy same-origin-allow-popups
-		-Server
-	}
+	import edge-headers
 
 	# Two CSPs, chosen by path (the matchers are exact opposites, so exactly one applies).
 	# Apps, payment pages and API-rendered pages get the policy below; the static website gets the strict
@@ -107,9 +113,10 @@
 	# (scripts/ci/check-native.py fails when a page's inline script has no hash here). No PG, no frames.
 	header @site_csp Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-BAOxqSXTXY0xct7XpdRWh4Q+kVwbxikbI09LZ/Tqsqg=' 'sha256-UtC0U60paHl4CC9DOzN7OY+bZaNnUQ9p4kyLhFax6ts='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
-	# Probes, metrics and the certificate question are for the server itself, never the internet.
+	# Probes, metrics and the certificate question are for the server itself, never the internet; nor are the
+	# website's own tests (website/tests/), which ship inside /srv/website.
 	# A handle block, not a bare respond: handle runs before respond, so the catch-all handle below would answer first.
-	@internal path /ready /metrics /internal/*
+	@internal path /ready /metrics /internal/* /tests/*
 	handle @internal {
 		respond 404
 	}
@@ -138,6 +145,20 @@
 	handle /admin/manifest.json {
 		rewrite * /v1/brand/manifest/console
 		reverse_proxy api:8080
+	}
+
+	# Browsers, feed readers and crawlers ask for these fixed addresses without reading the page: send them to the
+	# brand icon the pages name (the owner's upload, or the built-in one). The template only sets Location.
+	handle /favicon.ico {
+		templates
+		header Cache-Control "public, max-age=3600"
+		respond `{{.RespHeader.Set "Location" (httpInclude "/v1/public/seller-info?field=favicon")}}` 302
+	}
+	@apple_icon path /apple-touch-icon.png /apple-touch-icon-precomposed.png
+	handle @apple_icon {
+		templates
+		header Cache-Control "public, max-age=3600"
+		respond `{{.RespHeader.Set "Location" (httpInclude "/v1/public/seller-info?field=apple_icon")}}` 302
 	}
 
 	# Public SEO pages and feeds are rendered by the API from live data (crates/api/src/seo.rs).
@@ -196,7 +217,14 @@
 		file_server
 	}
 
+	# The 404 page only ever answers an unknown address; asked for by name it is a 404 too.
+	@error_page path /404 /404.html
+	handle @error_page {
+		error 404
+	}
+
 	# Website file names carry no content hash, so assets are cached for an hour and pages revalidate.
+	# A page is a file, name.html or a folder's index.html; any other address is a 404 (handle_errors below).
 	handle {
 		root * /srv/website
 		@site_assets path /assets/* /vendor/*
@@ -208,7 +236,7 @@
 		# and pay/ and auth/ stay as they are. A failing fragment fails the page, so keep the API up.
 		@site_templated not path /assets/* /vendor/* /pay/* /auth/*
 		templates @site_templated
-		try_files {path} {path}.html {path}/index.html /index.html
+		try_files {path} {path}.html {path}/index.html
 		file_server
 	}
 
@@ -216,6 +244,7 @@
 	# pages get a static maintenance page, sent as 503, instead of a bare error. API paths keep their own status,
 	# so the apps still get a JSON error they can read. /health stays a plain error so probes see the API as down.
 	handle_errors {
+		import edge-headers
 		@page_down expression {http.error.status_code} in [500, 502, 503] && !{http.request.uri.path}.startsWith("/v1/") && !{http.request.uri.path}.startsWith("/health")
 		handle @page_down {
 			root * /srv/website
@@ -223,6 +252,19 @@
 			header Cache-Control "no-store"
 			file_server {
 				status 503
+			}
+		}
+		# Unknown address: the website's own 404 page, templated like the other pages and sent as 404. Files that
+		# only programs fetch (fonts, job progress, assets) keep a bare 404; checked on the address as requested,
+		# since handle_path and rewrite have changed the path by now.
+		@page_missing expression `{http.error.status_code} == 404 && !{http.request.orig_uri.path}.matches("^/(webfonts|ops-progress|assets|vendor)/")`
+		handle @page_missing {
+			root * /srv/website
+			rewrite * /404.html
+			templates
+			header Cache-Control "no-cache"
+			file_server {
+				status 404
 			}
 		}
 	}

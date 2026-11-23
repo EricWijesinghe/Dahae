@@ -27,7 +27,8 @@ const COPY = {
     band_title: '지금 앱을 내려받고 첫 예약 쿠폰을 받으세요', band_sub: '가입하면 바로 쓸 수 있는 쿠폰을 드려요.',
     partner_title: '청소 전문가로 함께해요', partner_sub: '원하는 지역과 시간에 일하고, 매주 수요일 정산받으세요.', partner_cta: '파트너 앱 받기',
     f_privacy: '개인정보처리방침', f_terms: '이용약관', f_delete: '계정 삭제 안내', f_support: '고객센터', c_bizcheck: '사업자정보확인',
-    store_soon: '곧 출시',
+    store_soon: '곧 출시', svc_generic: '청소 서비스',
+    nf_title: '페이지를 찾을 수 없어요', nf_body: '주소가 바뀌었거나 없어진 페이지예요. 홈에서 원하는 서비스를 찾아보세요.', nf_home: '홈으로 가기',
   },
   en: {
     proof_title: '{brand} in numbers', proof_homes: '{n} homes cleaned this month', proof_rating: 'Average {r} stars · {n} reviews',
@@ -50,15 +51,18 @@ const COPY = {
     band_title: 'Get the app and your first-booking coupons', band_sub: 'Coupons are ready the moment you sign up.',
     partner_title: 'Work with us as a cleaning pro', partner_sub: 'Choose your areas and hours; get paid every Wednesday.', partner_cta: 'Get the partner app',
     f_privacy: 'Privacy policy', f_terms: 'Terms of service', f_delete: 'Delete your account', f_support: 'Support', c_bizcheck: 'Verify business registration',
-    store_soon: 'Coming soon',
+    store_soon: 'Coming soon', svc_generic: 'Cleaning service',
+    nf_title: 'Page not found', nf_body: 'This page has moved or no longer exists. Find the service you need from the home page.', nf_home: 'Go to home',
   },
 };
 
 // Tile tints per service (recognition); the 3D art itself is palette-coloured.
-const HUES = { studio: '#1E9EBA', kitchen: '#FF7A59', bathroom: '#19C39A', mattress: '#8B5CF6', aircon: '#0EA5E9', sofa: '#E11D74', move_out: '#F59E0B', move_in: '#10B981' };
-// Service code -> rendered art in /assets/icons3d/ (ids follow the app's Icon3D ids).
+// Keys in catalogue order: the grid shows them this way while /v1/services has not answered.
+const HUES = { studio: '#1E9EBA', kitchen: '#FF7A59', bathroom: '#19C39A', mattress: '#8B5CF6', aircon: '#0EA5E9', sofa: '#E11D74', move_out: '#F59E0B', move_in: '#10B981', whole_home: '#3B82F6', window: '#06B6D4', disinfection: '#65A30D' };
+// Service code -> rendered art in /assets/icons3d/ (ids follow the app's Icon3D ids). A service added later in the
+// console gets the generic house until its art ships.
 const ART = { move_in: 'svc_move', move_out: 'svc_move' };
-const art = (code) => `/assets/icons3d/${ART[code] || (HUES[code] ? `svc_${code}` : 'svc_studio')}.webp`;
+const art = (code) => `/assets/icons3d/${ART[code] || (HUES[code] ? `svc_${code}` : 'svc_whole_home')}.webp`;
 
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } } };
 
@@ -77,7 +81,7 @@ function applyWebCopy() {
   const per = webCopy[lang] || webCopy.en || {};
   document.querySelectorAll("[data-web-t]").forEach((el) => { if (per[el.dataset.webT]) el.textContent = per[el.dataset.webT]; });
 }
-fetch("assets/web_copy.json").then((r) => r.json()).then((j) => { webCopy = j; applyWebCopy(); }).catch(() => {});
+fetch("/assets/web_copy.json").then((r) => r.json()).then((j) => { webCopy = j; applyWebCopy(); }).catch(() => {});
 const text = (k) => (COPY[lang] && COPY[lang][k]) || COPY.en[k] || COPY.ko[k] || '';
 // The server writes the business name into the page (Caddy include); English uses name_en once /v1/brand answers.
 const serverName = (document.querySelector('[data-brand-name]')?.textContent || '').trim();
@@ -109,10 +113,11 @@ function renderProof() {
   section.hidden = false;
 }
 
+// The app's "from" price (Service.fromPrice in app/packages/core/lib/src/models.dart): a fixed price, or the cheapest option of a unit or counts service.
 function fromPrice(s) {
   const p = s.pricing || {};
-  if (p.type === 'fixed') return p.price;
-  if (p.type === 'unit' && p.units && p.units.length) return Math.min(...p.units.map((u) => u.price));
+  if (p.type === 'fixed') return p.price ?? null;
+  if ((p.type === 'unit' || p.type === 'counts') && p.units && p.units.length) return Math.min(...p.units.map((u) => u.price));
   return null;
 }
 
@@ -131,7 +136,7 @@ function renderServices() {
     card.innerHTML = `<div class="shine"></div>
       <div class="glyph" aria-hidden="true"><img class="icon3d" src="${art(s.code)}" alt="" width="72" height="72" loading="lazy" decoding="async"></div>
       <h3></h3><p></p><div class="price"></div>`;
-    card.querySelector('h3').textContent = n.name || s.code;
+    card.querySelector('h3').textContent = n.name || text('svc_generic');
     card.querySelector('p').textContent = n.desc || '';
     const priceEl = card.querySelector('.price');
     if (price != null) {
