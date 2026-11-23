@@ -88,7 +88,7 @@ pub fn brand_fragment(base: &str, b: &Value, field: &str) -> Option<String> {
         "privacy_email" => escape_html(
             text(&b["company"], "privacy_email")
                 .or_else(|| text(b, "support_email"))
-                .unwrap_or("[개인정보 보호 이메일]"),
+                .unwrap_or(super::PENDING),
         ),
         _ => return None,
     })
@@ -259,7 +259,7 @@ mod tests {
             "https://shop.example/assets/og-image.png"
         );
         assert_eq!(brand_fragment(BASE, &json!({}), "favicon").unwrap(), DEFAULT_FAVICON);
-        assert_eq!(brand_fragment(BASE, &json!({}), "privacy_email").unwrap(), "[개인정보 보호 이메일]");
+        assert_eq!(brand_fragment(BASE, &json!({}), "privacy_email").unwrap(), crate::routes::seller::PENDING);
         let support = json!({"support_email": "help@shop.kr"});
         assert_eq!(
             brand_fragment(BASE, &support, "privacy_email").unwrap(),

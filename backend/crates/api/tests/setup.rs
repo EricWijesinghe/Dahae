@@ -153,6 +153,48 @@ async fn code_stops_working_once_the_owner_exists(pool: PgPool) {
     assert_eq!(st, StatusCode::CONFLICT, "a new installer code cannot create a second owner");
 }
 
+/// `demo load` adds two inactive sample staff. They are not a real account, so a demo-only install still asks for
+/// its owner, gets a setup code and can create it; once the owner exists, setup is closed as usual.
+#[sqlx::test(migrations = "../../migrations")]
+async fn demo_staff_alone_do_not_close_setup(pool: PgPool) {
+    let mut config = common::test_config();
+    config.upload_dir = std::env::temp_dir().join(format!("setup-demo-{}", rand::random::<u64>()));
+    common::seed_catalog(&pool).await;
+    api::demo::load(&pool, &config, false).await.expect("demo load");
+    let demo_staff: i64 = sqlx::query_scalar("SELECT count(*) FROM staff").fetch_one(&pool).await.unwrap();
+    assert!(demo_staff > 0, "demo load adds staff rows");
+
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
+    let app = common::app(pool.clone());
+    let (_, s) = call(&app, "GET", "/v1/setup", None, None).await;
+    assert_eq!(s["needs_admin"], true, "demo staff alone: the owner is still to be created");
+    let (st, b) = create_owner(&app, "ABCD2345EFGH").await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+
+    let (_, s) = call(&app, "GET", "/v1/setup", None, None).await;
+    assert_eq!(s["needs_admin"], false);
+    ensure_setup_code(&pool, Some("ZZZZ2345EFGH"), None).await.expect("no-op once the owner exists");
+    let (st, _) = create_owner(&app, "ZZZZ2345EFGH").await;
+    assert_eq!(st, StatusCode::CONFLICT, "the real owner can never be replaced through setup");
+    owner_token(&app, &pool).await;
+    let _ = std::fs::remove_dir_all(&config.upload_dir);
+}
+
+/// A real owner blocks setup even while deactivated, and even with demo rows around.
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_inactive_real_owner_still_closes_setup(pool: PgPool) {
+    ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");
+    let app = common::app(pool.clone());
+    let (st, b) = create_owner(&app, "ABCD2345EFGH").await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    sqlx::query("UPDATE staff SET active = FALSE").execute(&pool).await.unwrap();
+    ensure_setup_code(&pool, Some("ZZZZ2345EFGH"), None).await.expect("code");
+    let (_, s) = call(&app, "GET", "/v1/setup", None, None).await;
+    assert_eq!(s["needs_admin"], false);
+    let (st, _) = create_owner(&app, "ZZZZ2345EFGH").await;
+    assert_eq!(st, StatusCode::CONFLICT);
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn owner_saves_business_and_keys_secrets_come_back_masked(pool: PgPool) {
     ensure_setup_code(&pool, Some("ABCD2345EFGH"), None).await.expect("code");

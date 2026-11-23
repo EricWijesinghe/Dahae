@@ -190,6 +190,8 @@ async fn public_config(State(s): State<AppState>) -> ApiResult<Response> {
     let mut doc = current_document(&s.db, &s.config).await?;
     // Per response, not cached: a cleared sign-in card must hide its button on the next poll.
     doc["providers"] = json!(providers(&s));
+    // The owner's AI switch alone is not enough: without a saved AI key the chat would never get an answer.
+    doc["flags"]["ai"] = json!(flag_value(&doc, "ai") && s.providers.integ().has(crate::integrations::Section::Ai));
     Ok(([(header::CACHE_CONTROL, CACHE_CONTROL)], Json(doc)).into_response())
 }
 

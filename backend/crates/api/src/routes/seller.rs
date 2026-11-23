@@ -37,18 +37,22 @@ const FTC_LOOKUP: &str = "https://www.ftc.go.kr/bizCommPop.do";
 /// One entry, tagged with the database it was read from (one per process in production; tests share a process).
 static BUSINESS: Mutex<Option<(String, Instant, Value)>> = Mutex::new(None);
 
-/// Single fields the legal pages put inline, with the text shown until the owner fills them in.
-const FIELDS: [(&str, &str); 9] = [
-    ("legal_name", "[상호]"),
-    ("ceo", "[대표자]"),
-    ("registration_no", "[사업자등록번호]"),
-    ("mail_order_no", "[통신판매업 신고번호]"),
-    ("address", "[주소]"),
-    ("privacy_officer", "[개인정보 보호책임자]"),
-    ("hosting_provider", "[호스팅 제공자]"),
-    ("support_phone", "[고객센터 전화]"),
-    ("support_email", "[고객센터 이메일]"),
+/// Single fields the legal pages put inline.
+const FIELDS: [&str; 9] = [
+    "legal_name",
+    "ceo",
+    "registration_no",
+    "mail_order_no",
+    "address",
+    "privacy_officer",
+    "hosting_provider",
+    "support_phone",
+    "support_email",
 ];
+
+/// Shown for a field the owner has not filled in yet (the 통신판매업 number legitimately comes later). Every page
+/// puts its own label before the value, so "통신판매업 신고 준비 중" reads as one phrase; never a `[bracket]`.
+pub(crate) const PENDING: &str = "준비 중";
 
 /// Footer rows, in order: field, Korean label (empty label = the bare value).
 const FOOTER_ROWS: [(&str, &str); 7] = [
@@ -101,7 +105,7 @@ async fn any_fragment(s: &AppState, business: &Value, field: Option<&str>) -> Ap
 /// Every `?field=` the endpoint answers (website contract test).
 #[cfg(test)]
 fn all_fields() -> Vec<&'static str> {
-    let mut out: Vec<&str> = FIELDS.iter().map(|(k, _)| *k).collect();
+    let mut out: Vec<&str> = FIELDS.to_vec();
     out.push("bizcheck");
     out.extend(live::FIELDS);
     out
@@ -147,15 +151,15 @@ pub fn fragment(business: &Value, field: Option<&str>) -> Option<String> {
         None => Some(footer_block(business)),
         Some("bizcheck") => Some(ftc_link(business)),
         Some(f) => {
-            let (_, placeholder) = FIELDS.iter().find(|(k, _)| *k == f)?;
-            Some(field_html(f, value_of(business, f).as_deref(), placeholder))
+            let f = FIELDS.iter().find(|k| **k == f)?;
+            Some(field_html(f, value_of(business, f).as_deref()))
         }
     }
 }
 
 /// One field's HTML: escaped text, or a `tel:` / `mailto:` link for the support contacts.
-fn field_html(field: &str, value: Option<&str>, placeholder: &str) -> String {
-    let Some(v) = value else { return escape_html(placeholder) };
+fn field_html(field: &str, value: Option<&str>) -> String {
+    let Some(v) = value else { return PENDING.to_owned() };
     match field {
         "support_phone" => {
             let tel: String = v.chars().filter(|c| c.is_ascii_digit() || *c == '+').collect();
@@ -175,11 +179,11 @@ fn footer_block(business: &Value) -> String {
     let mut out = String::new();
     for (field, label) in FOOTER_ROWS {
         let value = value_of(business, field);
-        let text = match (value.as_deref(), label) {
-            (Some(v), "") => escape_html(v),
-            (Some(v), _) => escape_html(&format!("{label} {v}")),
-            (None, "") => escape_html(FIELDS.iter().find(|(k, _)| *k == field).map_or("", |(_, p)| *p)),
-            (None, _) => escape_html(&format!("{label} {}", FIELDS.iter().find(|(k, _)| *k == field).map_or("", |(_, p)| *p))),
+        let v = value.as_deref().unwrap_or(PENDING);
+        let text = if label.is_empty() {
+            escape_html(v)
+        } else {
+            escape_html(&format!("{label} {v}"))
         };
         out.push_str(&format!("<span>{text}</span>"));
     }
@@ -237,11 +241,19 @@ mod tests {
     }
 
     #[test]
-    fn missing_fields_show_placeholders() {
-        let html = fragment(&json!({"name": "다해"}), Some("ceo")).unwrap();
-        assert_eq!(html, "[대표자]");
-        let phone = fragment(&json!({}), Some("support_phone")).unwrap();
-        assert_eq!(phone, "[고객센터 전화]");
+    fn missing_fields_read_as_pending_never_brackets() {
+        let empty = json!({"name": "다해", "company": {"mail_order_no": "  "}});
+        for f in FIELDS {
+            let html = fragment(&empty, Some(f)).unwrap();
+            assert_eq!(html, PENDING, "{f}");
+        }
+    }
+
+    #[test]
+    fn footer_with_a_missing_mail_order_number_says_it_is_pending() {
+        let html = fragment(&configured(), None).unwrap();
+        assert!(html.contains("<span>통신판매업 신고 준비 중</span>"), "{html}");
+        assert!(!html.contains('['), "no bracket placeholder on a public page: {html}");
     }
 
     #[test]

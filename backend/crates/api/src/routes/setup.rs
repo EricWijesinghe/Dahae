@@ -76,8 +76,14 @@ pub fn admin_routes() -> Router<AppState> {
         .route("/setup/{section}/lock", post(lock_section))
 }
 
+/// Whether a real staff account exists: one that can sign in, or the owner. Rows `demo load` added (listed in
+/// `demo_rows`, inactive, nobody can sign in) do not count, so a demo-only install can still create its owner.
+/// The owner row always counts, so setup can never replace an install's owner.
+const REAL_STAFF_EXISTS: &str = "SELECT EXISTS (SELECT 1 FROM staff s WHERE (s.active OR s.is_owner) \
+     AND NOT EXISTS (SELECT 1 FROM demo_rows d WHERE d.tbl = 'staff' AND d.row_key = s.id::text))";
+
 async fn has_staff(db: &PgPool) -> Result<bool, sqlx::Error> {
-    sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM staff)").fetch_one(db).await
+    sqlx::query_scalar(REAL_STAFF_EXISTS).fetch_one(db).await
 }
 
 fn random_code() -> String {
@@ -175,7 +181,7 @@ async fn create_admin(State(s): State<AppState>, Json(req): Json<NewAdmin>) -> A
     let mut tx = s.db.begin().await?;
     // Serialises concurrent attempts: only the first one can create the owner.
     sqlx::query("LOCK TABLE staff IN EXCLUSIVE MODE").execute(&mut *tx).await?;
-    let exists: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM staff)").fetch_one(&mut *tx).await?;
+    let exists: bool = sqlx::query_scalar(REAL_STAFF_EXISTS).fetch_one(&mut *tx).await?;
     if exists {
         return Err(ApiError::Conflict("already_set_up"));
     }

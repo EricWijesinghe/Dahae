@@ -131,6 +131,39 @@ async fn config_endpoint_is_public_and_hides_business_fields(pool: PgPool) {
     assert!(b.get("name").is_none());
 }
 
+async fn public_ai(app: &axum::Router) -> Value {
+    call(app, "GET", "/v1/config", None, None).await.1["flags"]["ai"].clone()
+}
+
+/// Apps show AI 상담 from `flags.ai`: on only while the owner's switch is on and an AI key is saved, so a
+/// customer never opens a chat that cannot answer. The console still sees the owner's own switch.
+#[sqlx::test(migrations = "../../migrations")]
+async fn ai_flag_needs_the_switch_and_a_configured_provider(pool: PgPool) {
+    use api::ai::{AiConfig, Caps, DEFAULT_MODEL, Mode};
+    let cfg = common::test_config();
+    let state = api::build_state(pool.clone(), cfg.clone()).expect("state");
+    let app = api::routes::router(state.clone());
+
+    assert_eq!(public_ai(&app).await, json!(false), "switched on but no AI key: hidden");
+    let token = owner_token(&app, &pool).await;
+    let (_, admin) = call(&app, "GET", "/v1/admin/config", Some(&token), None).await;
+    assert_eq!(admin["flags"]["ai"], json!(true), "the owner's switch itself is unchanged");
+
+    let mut integ = api::integrations::Integrations::from_config(&cfg);
+    integ.ai = Some(AiConfig {
+        api_key: "sk-ant-test-key".into(),
+        model: DEFAULT_MODEL.into(),
+        mode: Mode::Offline,
+        caps: Caps::default(),
+    });
+    state.providers.set_integrations(integ);
+    assert_eq!(public_ai(&app).await, json!(true), "switched on and configured");
+
+    let (st, b) = call(&app, "PUT", "/v1/admin/config", Some(&token), Some(json!({"flags": {"ai": false}}))).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert_eq!(public_ai(&app).await, json!(false), "switched off by the owner");
+}
+
 /// Owner set up and signed in with a recovery-code login, for switching maintenance in a test.
 async fn owner_token(app: &axum::Router, pool: &PgPool) -> String {
     ensure_setup_code(pool, Some(CODE), None).await.expect("code");
