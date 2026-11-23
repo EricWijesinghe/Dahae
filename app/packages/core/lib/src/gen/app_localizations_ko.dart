@@ -1009,6 +1009,9 @@ class TKo extends T {
   String get cMarkDone => '완료 처리';
 
   @override
+  String get cMarkDoneAsk => '청소를 마친 예약만 완료 처리하세요. 완료한 예약은 되돌릴 수 없어요.';
+
+  @override
   String get cConfirm => '확정 처리';
 
   @override

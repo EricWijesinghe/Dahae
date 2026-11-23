@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 
 import '../booking_labels.dart';
 import '../state.dart';
+import 'confirm_action.dart';
 import 'inbox.dart';
 import '../widgets/inline_button.dart';
 
@@ -557,7 +558,18 @@ class _StatusActionsState extends State<_StatusActions> {
               if (b.status == 2 && b.proId == null)
                 FilledButton.tonal(
                   style: inlineFilled,
-                  onPressed: _busy ? null : () => _status(3),
+                  // Completion has no undo: ask first.
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          if (await confirmAction(
+                            context,
+                            t.cMarkDone,
+                            message: t.cMarkDoneAsk,
+                          )) {
+                            await _status(3);
+                          }
+                        },
                   child: Text(t.cMarkDone),
                 ),
               if (b.status == 2)

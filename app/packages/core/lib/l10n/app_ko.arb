@@ -420,6 +420,7 @@
  "cTeamName": "배정 팀 이름",
  "cAssign": "팀 배정",
  "cMarkDone": "완료 처리",
+ "cMarkDoneAsk": "청소를 마친 예약만 완료 처리하세요. 완료한 예약은 되돌릴 수 없어요.",
  "cConfirm": "확정 처리",
  "cCancelRefund": "취소 · 환불",
  "cRefundAmount": "환불 금액 (비우면 전액)",

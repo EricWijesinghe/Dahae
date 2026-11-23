@@ -324,6 +324,7 @@
  "cTeamName": "Assigned team",
  "cAssign": "Assign team",
  "cMarkDone": "Mark completed",
+ "cMarkDoneAsk": "Only mark a booking completed once the cleaning is done. This cannot be undone.",
  "cConfirm": "Mark confirmed",
  "cCancelRefund": "Cancel & refund",
  "cRefundAmount": "Refund amount (empty = full)",

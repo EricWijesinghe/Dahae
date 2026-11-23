@@ -44,6 +44,7 @@ S = {
   "cTeamName": ["배정 팀 이름", "Assigned team"],
   "cAssign": ["팀 배정", "Assign team"],
   "cMarkDone": ["완료 처리", "Mark completed"],
+  "cMarkDoneAsk": ["청소를 마친 예약만 완료 처리하세요. 완료한 예약은 되돌릴 수 없어요.", "Only mark a booking completed once the cleaning is done. This cannot be undone."],
   "cConfirm": ["확정 처리", "Mark confirmed"],
   "cCancelRefund": ["취소 · 환불", "Cancel & refund"],
   "cRefundAmount": ["환불 금액 (비우면 전액)", "Refund amount (empty = full)"],

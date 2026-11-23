@@ -71,7 +71,18 @@ void main() {
 
       final markDone = find.widgetWithText(FilledButton, koT.cMarkDone);
       await tester.tap(markDone);
+      await settle(tester);
+      // No undo after completion: one click must not finish a booking.
+      expect(find.text(koT.cMarkDoneAsk), findsOneWidget);
+      expect(fake.callsTo('POST', '/admin/bookings/bk-1/status'), isEmpty);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, koT.cMarkDone),
+        ),
+      );
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       expect(
         tester.widget<FilledButton>(markDone).onPressed,
         isNull,

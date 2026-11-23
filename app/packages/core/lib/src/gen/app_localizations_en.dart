@@ -1039,6 +1039,10 @@ class TEn extends T {
   String get cMarkDone => 'Mark completed';
 
   @override
+  String get cMarkDoneAsk =>
+      'Only mark a booking completed once the cleaning is done. This cannot be undone.';
+
+  @override
   String get cConfirm => 'Mark confirmed';
 
   @override

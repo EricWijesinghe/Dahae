@@ -2041,6 +2041,12 @@ abstract class T {
   /// **'완료 처리'**
   String get cMarkDone;
 
+  /// No description provided for @cMarkDoneAsk.
+  ///
+  /// In ko, this message translates to:
+  /// **'청소를 마친 예약만 완료 처리하세요. 완료한 예약은 되돌릴 수 없어요.'**
+  String get cMarkDoneAsk;
+
   /// No description provided for @cConfirm.
   ///
   /// In ko, this message translates to:
