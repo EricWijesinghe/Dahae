@@ -1236,7 +1236,15 @@ class TKo extends T {
   String get cRating => '평점';
 
   @override
-  String get cFeeRate => '수수료율 %';
+  String cFeeRate(String rate) {
+    return '수수료율 $rate%';
+  }
+
+  @override
+  String get cProsEmpty => '아직 파트너가 없어요';
+
+  @override
+  String get cProsEmptyBody => '파트너는 파트너 앱에서 가입해요. 가입하면 여기에서 확인하고 승인할 수 있어요.';
 
   @override
   String get cRunPayouts => '정산 지급 실행';

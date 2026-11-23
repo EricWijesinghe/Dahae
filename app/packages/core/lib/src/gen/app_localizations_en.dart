@@ -1269,7 +1269,16 @@ class TEn extends T {
   String get cRating => 'Rating';
 
   @override
-  String get cFeeRate => 'Fee %';
+  String cFeeRate(String rate) {
+    return 'Fee $rate%';
+  }
+
+  @override
+  String get cProsEmpty => 'No partners yet';
+
+  @override
+  String get cProsEmptyBody =>
+      'Partners sign up in the partner app. Once they do, you review and approve them here.';
 
   @override
   String get cRunPayouts => 'Run payouts';

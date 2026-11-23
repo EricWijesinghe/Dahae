@@ -2494,8 +2494,20 @@ abstract class T {
   /// No description provided for @cFeeRate.
   ///
   /// In ko, this message translates to:
-  /// **'수수료율 %'**
-  String get cFeeRate;
+  /// **'수수료율 {rate}%'**
+  String cFeeRate(String rate);
+
+  /// No description provided for @cProsEmpty.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 파트너가 없어요'**
+  String get cProsEmpty;
+
+  /// No description provided for @cProsEmptyBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'파트너는 파트너 앱에서 가입해요. 가입하면 여기에서 확인하고 승인할 수 있어요.'**
+  String get cProsEmptyBody;
 
   /// No description provided for @cRunPayouts.
   ///

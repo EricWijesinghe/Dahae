@@ -502,7 +502,16 @@
  "cCompleted": "완료",
  "cCancelledN": "취소",
  "cRating": "평점",
- "cFeeRate": "수수료율 %",
+ "cFeeRate": "수수료율 {rate}%",
+ "@cFeeRate": {
+  "placeholders": {
+   "rate": {
+    "type": "String"
+   }
+  }
+ },
+ "cProsEmpty": "아직 파트너가 없어요",
+ "cProsEmptyBody": "파트너는 파트너 앱에서 가입해요. 가입하면 여기에서 확인하고 승인할 수 있어요.",
  "cRunPayouts": "정산 지급 실행",
  "cPayoutDate": "지급 기준일",
  "cPayoutDone": "{n}명에게 지급 처리했어요",

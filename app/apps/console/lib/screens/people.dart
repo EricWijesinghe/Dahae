@@ -43,6 +43,12 @@ String qualityStatusLabel(T t, String? status) => switch (status) {
   _ => t.cQualityNone,
 };
 
+/// Basis points as a short percentage: 2000 -> "20", 1250 -> "12.5".
+String _percent(num bps) {
+  final v = bps / 100;
+  return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+}
+
 class PartnersScreen extends StatelessWidget {
   const PartnersScreen({super.key});
 
@@ -64,7 +70,11 @@ class PartnersScreen extends StatelessWidget {
       load: () async =>
           (await context.api.get('/admin/pros') as List).cast<Json>(),
       builder: (context, rows, reload) => rows.isEmpty
-          ? EmptyState(icon: Icons.engineering_rounded, title: t.cNoResults)
+          ? EmptyState(
+              icon: Icons.engineering_rounded,
+              title: t.cProsEmpty,
+              body: t.cProsEmptyBody,
+            )
           : ListView(
               padding: const EdgeInsets.all(Space.lg),
               children: [
@@ -91,7 +101,7 @@ class PartnersScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${formatKoreanPhone('${p['phone']}')} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate} ${(p['fee_bps'] as num) / 100} · ${t.cQualityScore} ${p['quality_score'] ?? '-'} (${qualityStatusLabel(t, p['quality_status'] as String?)})',
+                            '${formatKoreanPhone('${p['phone']}')} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate(_percent(p['fee_bps'] as num))} · ${t.cQualityScore} ${p['quality_score'] ?? '-'} (${qualityStatusLabel(t, p['quality_status'] as String?)})',
                           ),
                           if (admin) ...[
                             const SizedBox(height: Space.sm),
