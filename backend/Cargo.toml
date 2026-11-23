@@ -7,7 +7,7 @@ members = ["crates/domain", "crates/api"]
 
 [workspace.package]
 edition = "2024"
-version = "1.6.2"
+version = "1.6.3"
 license = "LicenseRef-Proprietary"
 authors = ["Eric Wijesinghe <EricWijesinghe@hotmail.com>"]
 

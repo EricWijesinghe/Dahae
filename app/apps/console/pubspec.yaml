@@ -4,7 +4,7 @@
 name: console
 description: console app
 publish_to: none
-version: 1.6.2+162
+version: 1.6.3+163
 resolution: workspace
 environment:
   sdk: ^3.9.0
