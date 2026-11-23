@@ -284,6 +284,29 @@ void main() {
     expect(find.text(koT.srKeysFailed(why)), findsOneWidget);
   });
 
+  testWidgets(
+    'a key copy the server agent never picks up says so within minutes, not after ten',
+    (tester) async {
+      hostJobPoll = const Duration(seconds: 10);
+      await _pump(
+        tester,
+        _server(keysEnd: const {'id': 'keys', 'state': 'queued'}),
+      );
+      await _keys(tester, 'correct horse battery');
+      await _code(tester, '111111');
+      await tester.pump(const Duration(minutes: 4));
+      await settle(tester);
+      expect(saved, isEmpty);
+      expect(find.text(koT.hjAgentSilent), findsOneWidget);
+      expect(find.text(koT.srStillRunning), findsNothing);
+      // The buttons are back for another try.
+      final button = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, koT.srKeysButton),
+      );
+      expect(button.onPressed, isNotNull);
+    },
+  );
+
   test('hex is lowercase and two digits per byte', () {
     expect(hex([0, 10, 255]), '000aff');
   });

@@ -116,6 +116,8 @@ S = {
   "hjRecent": ["최근 서버 작업", "Recent server jobs"],
   "hjKindUpdate": ["업데이트", "Update"],
   "hjStateQueued": ["대기 중", "Waiting"],
+  "hjStateUnclaimed": ["서버 작업 실행기가 가져가지 않았어요", "The server agent never picked it up"],
+  "hjAgentSilent": ["서버 작업 실행기가 몇 분째 이 작업을 가져가지 않아요. 다른 작업(백업 등)이 끝나기를 기다리는 중이거나 실행기가 멈췄을 수 있어요. 결과는 아래 최근 서버 작업에서 보세요.", "The server agent has not picked this job up for several minutes. It may be waiting for another job (such as a backup) to finish, or it may have stopped. See the result under recent server jobs below."],
   "hjStateRunning": ["진행 중", "In progress"],
   "hjStateOk": ["완료", "Done"],
   "hjStateFailed": ["실패", "Failed"],

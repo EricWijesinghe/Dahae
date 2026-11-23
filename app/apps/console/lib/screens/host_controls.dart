@@ -284,7 +284,7 @@ class _ApprovalEnrollCardState extends State<ApprovalEnrollCard> {
       setState(() {
         _uri = uri?.trim();
         if (uri == null) {
-          _error = t.cRbEnrollFailed(jobReason(end) ?? t.cRbDomainNoReason);
+          _error = t.cRbEnrollFailed(jobReason(end, t) ?? t.cRbDomainNoReason);
         }
       });
     } catch (e) {

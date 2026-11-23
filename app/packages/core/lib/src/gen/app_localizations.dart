@@ -9073,6 +9073,18 @@ abstract class T {
   /// **'대기 중'**
   String get hjStateQueued;
 
+  /// No description provided for @hjStateUnclaimed.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버 작업 실행기가 가져가지 않았어요'**
+  String get hjStateUnclaimed;
+
+  /// No description provided for @hjAgentSilent.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버 작업 실행기가 몇 분째 이 작업을 가져가지 않아요. 다른 작업(백업 등)이 끝나기를 기다리는 중이거나 실행기가 멈췄을 수 있어요. 결과는 아래 최근 서버 작업에서 보세요.'**
+  String get hjAgentSilent;
+
   /// No description provided for @hjStateRunning.
   ///
   /// In ko, this message translates to:

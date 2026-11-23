@@ -1496,6 +1496,8 @@
  "hjRecent": "Recent server jobs",
  "hjKindUpdate": "Update",
  "hjStateQueued": "Waiting",
+ "hjStateUnclaimed": "The server agent never picked it up",
+ "hjAgentSilent": "The server agent has not picked this job up for several minutes. It may be waiting for another job (such as a backup) to finish, or it may have stopped. See the result under recent server jobs below.",
  "hjStateRunning": "In progress",
  "hjStateOk": "Done",
  "hjStateFailed": "Failed",

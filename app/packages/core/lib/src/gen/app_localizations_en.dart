@@ -4929,6 +4929,13 @@ class TEn extends T {
   String get hjStateQueued => 'Waiting';
 
   @override
+  String get hjStateUnclaimed => 'The server agent never picked it up';
+
+  @override
+  String get hjAgentSilent =>
+      'The server agent has not picked this job up for several minutes. It may be waiting for another job (such as a backup) to finish, or it may have stopped. See the result under recent server jobs below.';
+
+  @override
   String get hjStateRunning => 'In progress';
 
   @override

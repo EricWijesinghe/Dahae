@@ -95,7 +95,7 @@ class _DomainBodyState extends State<_DomainBody> {
       if (parsed is! Json && mounted) {
         showToast(
           context,
-          t.cRbDomainFailed(jobReason(end) ?? t.cRbDomainNoReason),
+          t.cRbDomainFailed(jobReason(end, t) ?? t.cRbDomainNoReason),
         );
       }
     } catch (e) {
@@ -189,7 +189,7 @@ class _DomainBodyState extends State<_DomainBody> {
 
   void _finish(Json job) {
     setState(() {
-      _reason = jobReason(job);
+      _reason = jobReason(job, context.t);
       _phase = switch (job['state']) {
         'ok' => MovePhase.done,
         'rolled_back' => MovePhase.rolledBack,

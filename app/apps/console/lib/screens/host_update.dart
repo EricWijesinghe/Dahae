@@ -134,5 +134,6 @@ String _state(T t, String state) => switch (state) {
   'rolled_back' => t.hjStateRolledBack,
   'awaiting_approval' => t.cRbStateAwaiting,
   'rejected' => t.cRbStateRejected,
+  'unknown' => t.hjStateUnclaimed,
   _ => t.hjStateCheck,
 };

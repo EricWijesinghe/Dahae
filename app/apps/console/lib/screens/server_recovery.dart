@@ -60,9 +60,11 @@ class _ServerRecoveryCardState extends State<ServerRecoveryCard> {
 
   /// The note for a job's last answer: done, still going, unknown to old server tools, or the agent's reason.
   void _sayEnd(Json end, String done, String Function(String) failed) {
-    final t = context.t, state = end['state'], why = jobReason(end);
+    final t = context.t, state = end['state'], why = jobReason(end, t);
     if (state == 'ok') {
       _say(done);
+    } else if (state == 'queued' || state == 'unknown') {
+      _say(why!, bad: true);
     } else if (_going.contains(state)) {
       _say(t.srStillRunning);
     } else if (state == 'rejected' && why == null) {

@@ -8,6 +8,11 @@ import 'package:flutter/foundation.dart';
 @visibleForTesting
 Duration hostJobPoll = const Duration(seconds: 2);
 
+/// How long a job may stay `queued` before the wait gives up. The agent wakes on the job file and every minute,
+/// so minutes without a pickup mean it is stopped or busy with a long job. Tests shorten it.
+@visibleForTesting
+Duration hostJobClaimLimit = const Duration(minutes: 3);
+
 /// States after which a job never changes again. `unknown` means the agent never picked it up.
 const finalJobStates = {
   'ok',
@@ -33,7 +38,8 @@ Future<Json> queueHostJob(
         )
         as Json;
 
-/// Polls job [id] until its state is final or in [until]. After [limit] it returns the last answer as is.
+/// Polls job [id] until its state is final or in [until]. After [limit], or [hostJobClaimLimit] still
+/// `queued`, it returns the last answer as is.
 Future<Json> waitHostJob(
   ApiClient api,
   String id, {
@@ -41,10 +47,13 @@ Future<Json> waitHostJob(
   Duration limit = const Duration(minutes: 10),
 }) async {
   final rounds = limit.inMicroseconds ~/ hostJobPoll.inMicroseconds;
+  final claimRounds =
+      hostJobClaimLimit.inMicroseconds ~/ hostJobPoll.inMicroseconds;
   var job = await api.get('/admin/host/jobs/$id') as Json;
   for (var i = 0; i < rounds; i++) {
     final state = job['state'];
     if (finalJobStates.contains(state) || until.contains(state)) break;
+    if (state == 'queued' && i >= claimRounds) break;
     await Future<void>.delayed(hostJobPoll);
     job = await _poll(api, id) ?? job;
   }
@@ -72,8 +81,12 @@ Future<String?> hostJobOutput(ApiClient api, String id) async {
   }
 }
 
-/// The agent's last step line, the reason shown when a job is refused or rolled back.
-String? jobReason(Json job) {
+/// The agent's last step line, the reason shown when a job is refused or rolled back. A job the agent never
+/// picked up has no step: it says so.
+String? jobReason(Json job, T t) {
+  if (job['state'] == 'queued' || job['state'] == 'unknown') {
+    return t.hjAgentSilent;
+  }
   final step = job['step'];
   return step is String && step.trim().isNotEmpty ? step.trim() : null;
 }
