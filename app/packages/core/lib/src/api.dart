@@ -262,6 +262,7 @@ class ApiClient {
   /// token signs the user out; a network blip keeps the session for the next attempt.
   Future<bool> _refresh() => _refreshing ??= () async {
     try {
+      await session.reloadRefresh();
       final r =
           await _exec('/auth/refresh', () {
                 return http.Request('POST', _uri('/auth/refresh'))

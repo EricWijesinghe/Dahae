@@ -56,6 +56,16 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Web: every tab of the app shares this storage, and the server treats a rotated refresh token
+  /// sent again as theft (it ends the whole sign-in). Take the copy another tab may have rotated.
+  Future<void> reloadRefresh() async {
+    try {
+      refreshToken = await _storage.read(key: _k('refresh')) ?? refreshToken;
+    } catch (_) {
+      // Unreadable keystore: keep this tab's copy, the refresh call decides.
+    }
+  }
+
   Future<void> save(Map<String, dynamic> tokens) async {
     accessToken = tokens['access_token'] as String?;
     refreshToken = tokens['refresh_token'] as String?;

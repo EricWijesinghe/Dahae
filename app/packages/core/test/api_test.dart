@@ -103,6 +103,28 @@ void main() {
   });
 
   test(
+    'a second tab refreshes with the token the first tab rotated, not its stale copy',
+    () async {
+      final sent = <String>[];
+      final (api, session, storage) = await signedIn((req) async {
+        if (req.url.path == '/v1/auth/refresh') {
+          sent.add(jsonDecode(req.body)['refresh_token'] as String);
+          return json(200, tokens);
+        }
+        return req.headers['Authorization'] == 'Bearer new-access'
+            ? json(200, {'ok': true})
+            : json(401, {
+                'error': {'code': 'unauthorized'},
+              });
+      });
+      // The other tab shares the web storage and has already rotated old-refresh.
+      storage.data['t.refresh'] = 'other-tab-refresh';
+      expect(await api.get('/me'), {'ok': true});
+      expect(sent, ['other-tab-refresh']);
+    },
+  );
+
+  test(
     'cold start: warmUp gets the access token once and member calls are not doubled by 401s',
     () async {
       final hits = <String>[];
