@@ -192,6 +192,17 @@ class ApiClient {
     return req;
   });
 
+  /// Auth calls sent with the access token: their 401 means it expired, so they refresh and retry like any call.
+  /// The other /auth/ calls (sign-in, codes, refresh itself) answer 401 for a wrong credential instead.
+  static const _bearerAuthPaths = [
+    '/auth/staff/mfa/step-up',
+    '/auth/sessions',
+    '/auth/logout-all',
+  ];
+
+  static bool _refreshable(String path) =>
+      !path.startsWith('/auth/') || _bearerAuthPaths.any(path.startsWith);
+
   /// Sends a request (rebuilt on retry), refreshing the access token once on 401.
   Future<dynamic> _exec(
     String path,
@@ -202,7 +213,7 @@ class ApiClient {
     void Function(Map<String, String> headers)? onHeaders,
   }) async {
     final pending = _refreshing;
-    if (pending != null && !retried && !path.startsWith('/auth/')) {
+    if (pending != null && !retried && _refreshable(path)) {
       await pending;
     }
     final req = build();
@@ -223,7 +234,7 @@ class ApiClient {
     if (res.statusCode == 401 &&
         !retried &&
         session.refreshToken != null &&
-        !path.startsWith('/auth/')) {
+        _refreshable(path)) {
       if (await _refresh()) {
         return _exec(
           path,

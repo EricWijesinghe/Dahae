@@ -102,6 +102,49 @@ void main() {
     expect(session.refreshToken, 'new-refresh');
   });
 
+  // The access token can expire while the owner types the step-up code: that call must refresh like any other,
+  // not tell a signed-in owner to start again from the password.
+  test(
+    'a step-up sent with an expired access token refreshes and retries',
+    () async {
+      var refreshes = 0;
+      final (api, _, _) = await signedIn((req) async {
+        if (req.url.path == '/v1/auth/refresh') {
+          refreshes++;
+          return json(200, tokens);
+        }
+        return req.headers['Authorization'] == 'Bearer new-access'
+            ? json(200, {'ok': true})
+            : json(401, {
+                'error': {'code': 'unauthorized'},
+              });
+      });
+      expect(await api.post('/auth/staff/mfa/step-up', {'code': '123456'}), {
+        'ok': true,
+      });
+      expect(await api.get('/auth/sessions'), {'ok': true});
+      expect(refreshes, 1);
+    },
+  );
+
+  test('a refused sign-in does not try a refresh', () async {
+    var refreshes = 0;
+    final (api, _, _) = await signedIn((req) async {
+      if (req.url.path == '/v1/auth/refresh') {
+        refreshes++;
+        return json(200, tokens);
+      }
+      return json(401, {
+        'error': {'code': 'invalid_credentials'},
+      });
+    });
+    await expectLater(
+      api.post('/auth/staff/login', {'email': 'a', 'password': 'b'}),
+      throwsA(isA<ApiException>().having((e) => e.status, 'status', 401)),
+    );
+    expect(refreshes, 0);
+  });
+
   test(
     'a second tab refreshes with the token the first tab rotated, not its stale copy',
     () async {
