@@ -93,6 +93,11 @@ id=$(uuid7)
 t  "fresh id passes"           id_fresh "$id"
 nt "old id (16 min) refused"   id_fresh "$(uuid7 $(( $(now_ms) - 960000 )))"
 nt "future id refused"         id_fresh "$(uuid7 $(( $(now_ms) + 60000 )))"
+# The API names a job with the real millisecond and the folder watch runs the agent within that same second:
+# an id late in the current second must pass (it was refused as "future" when the check rounded down to seconds).
+t  "id later in this second passes"  id_fresh "$(uuid7 $(( $(now_ms) + 999 )))"
+t  "id 1.5 s ahead passes (skew)"    id_fresh "$(uuid7 $(( $(now_ms) + 1500 )))"
+nt "id 5 s ahead refused"            id_fresh "$(uuid7 $(( $(now_ms) + 5000 )))"
 nt "v4 id refused"             id_fresh "$(printf '%s' "$id" | sed 's/^\(.\{14\}\)7/\14/')"  # 14번째 글자가 버전
 
 # ---- happy path: the fixed argv, step lines only, state ok ----
@@ -585,8 +590,9 @@ before=$(argv_lines)
 id=$(uuid7); submit "$id" "id=$id\nkind=keys-backup\narg=00$(hexof 'correct horse battery')\ntoken=$KTOK\n"
 t  "a NUL byte in the passphrase fails the job" eq "$(state "$id")" failed
 t  "...before the CLI runs"                  eq "$(argv_lines)" "$before"
-id=$(uuid7); submit "$id" "id=$id\nkind=keys-confirm\n"
+id=$(uuid7 $(( $(now_ms) + 999 ))); submit "$id" "id=$id\nkind=keys-confirm\ntoken=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')\n"
 t  "keys-confirm runs dahae keys-confirm"    argv_has "keys-confirm YES=1"
+t  "keys-confirm queued in the same second, with a token, ends ok" eq "$(state "$id")" ok
 id=$(uuid7); t  "keys-confirm takes no argument"      refuse "$id" "id=$id\nkind=keys-confirm\narg=x\n"
 
 # ---- rollback stopped by the payout guard says why ----
