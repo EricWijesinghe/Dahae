@@ -73,7 +73,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     final c = context.colors;
     return Scaffold(
       backgroundColor: c.surface,
-      appBar: AppBar(title: Text(t.morePayments)),
+      appBar: AppBar(title: KeepAllText(t.morePayments)),
       body: RefreshIndicator(
         onRefresh: () async {
           _reload();
@@ -111,7 +111,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                       horizontal: Space.gutter,
                       vertical: Space.xs,
                     ),
-                    child: Text(
+                    child: KeepAllText(
                       t.methodsEmpty,
                       style: context.text.bodySmall?.copyWith(color: c.inkSoft),
                     ),
@@ -140,7 +140,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
+                        KeepAllText(
                           t.apPayManageTitle,
                           style: context.text.titleSmall,
                         ),
@@ -163,7 +163,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                   ),
                 Padding(
                   padding: const EdgeInsets.all(Space.gutter),
-                  child: Text(
+                  child: KeepAllText(
                     t.payCardNote(context.brandName),
                     style: context.text.bodySmall?.copyWith(color: c.inkSoft),
                   ),
@@ -263,14 +263,14 @@ class _MethodRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    KeepAllText(
                       title,
                       style: context.text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     if (subtitle != null)
-                      Text(
+                      KeepAllText(
                         subtitle!,
                         style: context.text.bodySmall?.copyWith(
                           color: c.inkSoft,

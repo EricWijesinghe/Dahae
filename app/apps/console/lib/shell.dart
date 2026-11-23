@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui/ui.dart';
 
+import 'console_title.dart';
 import 'nav_sections.dart';
 import 'screens/bookings.dart';
 import 'server_moved_banner.dart';
@@ -95,7 +96,7 @@ class _ConsoleShellState extends State<ConsoleShell> {
               child: Icon3D(s.id, active: selected, size: 24),
             ),
           ),
-          title: Text(
+          title: KeepAllText(
             s.label(t),
             style: context.text.labelLarge?.copyWith(
               fontSize: 14,
@@ -126,8 +127,8 @@ class _ConsoleShellState extends State<ConsoleShell> {
               const DahaeLogo(size: 26),
               const SizedBox(width: Space.xs),
               Expanded(
-                child: Text(
-                  '${BrandScope.of(context).name} ${t.cTitle}',
+                child: KeepAllText(
+                  consoleTitle(context),
                   style: context.text.titleSmall,
                 ),
               ),
@@ -149,9 +150,9 @@ class _ConsoleShellState extends State<ConsoleShell> {
             label: Row(
               children: [
                 Expanded(
-                  child: Text(t.cSearchCommand, style: context.text.bodySmall),
+                  child: KeepAllText(t.cSearchCommand, style: context.text.bodySmall),
                 ),
-                Text('Ctrl K', style: context.text.labelSmall),
+                KeepAllText('Ctrl K', style: context.text.labelSmall),
               ],
             ),
             onPressed: _palette,
@@ -166,21 +167,19 @@ class _ConsoleShellState extends State<ConsoleShell> {
         ListTile(
           dense: true,
           leading: const Icon(Icons.article_rounded, size: 20),
-          title: Text(t.moreLicenses),
-          onTap: () => showDahaeLicensePage(
-            context,
-            applicationName: BrandScope.of(context).name,
-          ),
+          title: KeepAllText(t.moreLicenses),
+          onTap: () =>
+              showDahaeLicensePage(context, applicationName: context.brandName),
         ),
         ListTile(
           dense: true,
           leading: const Icon(Icons.logout_rounded, size: 20),
-          title: Text(t.logout),
+          title: KeepAllText(t.logout),
           onTap: Deps.read(context).session.logout,
         ),
         Padding(
           padding: const EdgeInsets.all(Space.sm),
-          child: Text(
+          child: KeepAllText(
             t.legalCopyright,
             style: context.text.labelSmall,
             textAlign: TextAlign.center,
@@ -216,7 +215,7 @@ class _ConsoleShellState extends State<ConsoleShell> {
               )
             : Scaffold(
                 appBar: AppBar(
-                  title: Text(sections[_index].label(t)),
+                  title: KeepAllText(sections[_index].label(t)),
                   actions: [
                     IconButton(
                       tooltip: t.cSearchCommand,
@@ -306,14 +305,14 @@ class _PaletteState extends State<_Palette> {
                   for (final i in matches)
                     ListTile(
                       leading: Icon(widget.sections[i].icon),
-                      title: Text(widget.sections[i].label(widget.t)),
-                      trailing: i < 9 ? Text('Ctrl ${i + 1}') : null,
+                      title: KeepAllText(widget.sections[i].label(widget.t)),
+                      trailing: i < 9 ? KeepAllText('Ctrl ${i + 1}') : null,
                       onTap: () => Navigator.of(context).pop(i),
                     ),
                   if (looksLikeBooking)
                     ListTile(
                       leading: const Icon(Icons.tag_rounded),
-                      title: Text('${widget.t.cOpenBooking}: ${_q.trim()}'),
+                      title: KeepAllText('${widget.t.cOpenBooking}: ${_q.trim()}'),
                       onTap: () => Navigator.of(context).pop(_q.trim()),
                     ),
                 ],

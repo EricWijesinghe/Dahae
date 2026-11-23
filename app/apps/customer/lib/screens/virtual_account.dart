@@ -20,7 +20,7 @@ class VirtualAccountScreen extends StatelessWidget {
     final due = account.due;
     final amount = account.amount;
     return Scaffold(
-      appBar: AppBar(title: Text(t.apVaTitle)),
+      appBar: AppBar(title: KeepAllText(t.apVaTitle)),
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [
@@ -30,9 +30,9 @@ class VirtualAccountScreen extends StatelessWidget {
             icon: Icons.hourglass_top_rounded,
           ),
           const SizedBox(height: Space.sm),
-          Text(t.apVaTitle, style: context.text.headlineSmall),
+          KeepAllText(t.apVaTitle, style: context.text.headlineSmall),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             t.apVaBody,
             style: context.text.bodyMedium?.copyWith(
               color: context.colors.inkSoft,
@@ -70,7 +70,7 @@ class VirtualAccountScreen extends StatelessWidget {
           ),
           if (due != null) ...[
             const SizedBox(height: Space.sm),
-            Text(
+            KeepAllText(
               t.apVaDue(dateTimeLabel(due, context.lang)),
               style: context.text.titleSmall,
               textAlign: TextAlign.center,
@@ -99,7 +99,7 @@ class _Row extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: Space.xxs),
     child: Row(
       children: [
-        Text(
+        KeepAllText(
           label,
           style: context.text.bodyMedium?.copyWith(
             color: context.colors.inkSoft,
@@ -107,7 +107,7 @@ class _Row extends StatelessWidget {
         ),
         const SizedBox(width: Space.md),
         Expanded(
-          child: Text(
+          child: KeepAllText(
             value,
             textAlign: TextAlign.end,
             style:

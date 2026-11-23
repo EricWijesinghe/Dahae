@@ -89,7 +89,7 @@ class WelcomeOfferLine extends StatelessWidget {
           : context.won(offers.welcomeValue);
       return Padding(
         padding: const EdgeInsets.only(top: Space.xs),
-        child: Text(
+        child: KeepAllText(
           context.t.welcomeOfferLine(value, '${offers.couponDays}'),
           style: context.text.bodySmall?.copyWith(color: context.primary),
         ),

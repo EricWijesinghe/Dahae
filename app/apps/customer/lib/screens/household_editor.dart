@@ -100,8 +100,8 @@ class _HouseholdEditorState extends State<HouseholdEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(t.hhTitle, style: context.text.titleSmall),
-        Text(t.hhHint, style: context.text.bodySmall),
+        KeepAllText(t.hhTitle, style: context.text.titleSmall),
+        KeepAllText(t.hhHint, style: context.text.bodySmall),
         const SizedBox(height: Space.sm),
         for (var i = 0; i < _pets.length; i++)
           Padding(
@@ -116,7 +116,7 @@ class _HouseholdEditorState extends State<HouseholdEditor> {
                       for (final k in _petKinds)
                         DropdownMenuItem(
                           value: k,
-                          child: Text(_petLabel(context, k)),
+                          child: KeepAllText(_petLabel(context, k)),
                         ),
                     ],
                     onChanged: (v) => setState(() {
@@ -155,7 +155,7 @@ class _HouseholdEditorState extends State<HouseholdEditor> {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               icon: const Icon(Icons.add_rounded),
-              label: Text(t.hhAddPet),
+              label: KeepAllText(t.hhAddPet),
               onPressed: () => setState(() {
                 _pets.add(_PetRow(_petKinds.first, 1));
                 _emit();
@@ -195,7 +195,7 @@ class _HouseholdEditorState extends State<HouseholdEditor> {
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(t.hhElevator),
+          title: KeepAllText(t.hhElevator),
           value: _elevator,
           onChanged: (v) => setState(() {
             _elevator = v;

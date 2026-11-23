@@ -59,7 +59,7 @@ class _Timeline extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            KeepAllText(
                               bookingStepLabel(t, steps[i].$1),
                               style: context.text.titleSmall?.copyWith(
                                 color: b.status >= steps[i].$1
@@ -68,7 +68,7 @@ class _Timeline extends StatelessWidget {
                               ),
                             ),
                             if (steps[i].$2 != null)
-                              Text(steps[i].$2!, style: context.text.bodySmall),
+                              KeepAllText(steps[i].$2!, style: context.text.bodySmall),
                           ],
                         ),
                       ),
@@ -129,7 +129,7 @@ class _Photos extends StatelessWidget {
     Widget strip(String label, List<String> urls) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: context.text.labelMedium),
+        KeepAllText(label, style: context.text.labelMedium),
         const SizedBox(height: 6),
         SizedBox(
           height: 96,
@@ -208,7 +208,7 @@ class _ReviewPrompt extends StatelessWidget {
         Icon(Icons.star_rounded, color: context.colors.sun),
         const SizedBox(width: Space.xs),
         Expanded(
-          child: Text(context.t.reviewTitle, style: context.text.titleSmall),
+          child: KeepAllText(context.t.reviewTitle, style: context.text.titleSmall),
         ),
         const Icon(Icons.chevron_right_rounded),
       ],

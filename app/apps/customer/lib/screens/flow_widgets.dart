@@ -59,7 +59,7 @@ class FlowTitle extends StatelessWidget {
               borderRadius: BorderRadius.circular(Radii.chip),
             ),
             child: RollIn(
-              child: Text(
+              child: KeepAllText(
                 chip!,
                 style: context.text.labelMedium?.copyWith(
                   color: context.primary,
@@ -76,7 +76,7 @@ class FlowTitle extends StatelessWidget {
             children: [
               Semantics(
                 header: true,
-                child: Text(
+                child: KeepAllText(
                   title,
                   style: context.text.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w800,
@@ -85,7 +85,7 @@ class FlowTitle extends StatelessWidget {
               ),
               if (body != null) ...[
                 const SizedBox(height: Space.xs),
-                Text(
+                KeepAllText(
                   body!,
                   style: context.text.bodyMedium?.copyWith(
                     color: context.colors.inkMuted,
@@ -131,7 +131,7 @@ class FlowSection extends StatelessWidget {
                 Expanded(
                   child: Semantics(
                     header: true,
-                    child: Text(
+                    child: KeepAllText(
                       title!,
                       style: context.text.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
@@ -181,6 +181,8 @@ class CircleChoice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    // On the filled primary circle: white in light mode, the dark canvas on dark mode's light teal.
+    final onFill = Theme.of(context).colorScheme.onPrimary;
     return Semantics(
       inMutuallyExclusiveGroup: true,
       checked: selected,
@@ -213,10 +215,10 @@ class CircleChoice extends StatelessWidget {
                   color: selected ? context.primary : c.surfaceHigh,
                 ),
                 child: text != null
-                    ? Text(
+                    ? KeepAllText(
                         text!,
                         style: context.text.titleLarge?.copyWith(
-                          color: selected ? Colors.white : c.ink,
+                          color: selected ? onFill : c.ink,
                         ),
                       )
                     : ExcludeSemantics(
@@ -224,12 +226,14 @@ class CircleChoice extends StatelessWidget {
                           icon!,
                           active: selected,
                           size: size * 0.6,
+                          // Mono line art: same colours as the number label.
+                          color: selected ? onFill : null,
                         ),
                       ),
               ),
             ),
             const SizedBox(height: Space.xs),
-            Text(
+            KeepAllText(
               label,
               textAlign: TextAlign.center,
               style: context.text.bodySmall?.copyWith(
@@ -289,7 +293,7 @@ class RadioRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      KeepAllText(
                         title,
                         style: context.text.bodyLarge?.copyWith(
                           fontWeight: selected
@@ -300,7 +304,8 @@ class RadioRow extends StatelessWidget {
                       if (subtitle != null)
                         Text.rich(
                           TextSpan(
-                            text: subtitle,
+                            text: keepAll(subtitle!),
+                            semanticsLabel: subtitle,
                             children: [
                               if (subtitleTrailing != null) ...[
                                 const TextSpan(text: ' '),
@@ -316,7 +321,7 @@ class RadioRow extends StatelessWidget {
                           ),
                         ),
                       if (footnote != null)
-                        Text(
+                        KeepAllText(
                           footnote!,
                           style: context.text.bodySmall?.copyWith(
                             color: context.primary,
@@ -387,7 +392,7 @@ class InfoRow extends StatelessWidget {
         capped(
           context,
           _labelShare,
-          Text(
+          KeepAllText(
             label,
             style: context.text.bodyMedium?.copyWith(
               color: context.colors.inkMuted,
@@ -405,7 +410,7 @@ class InfoRow extends StatelessWidget {
             ),
             child:
                 valueChild ??
-                Text(
+                KeepAllText(
                   value,
                   key: ValueKey(value),
                   textAlign: TextAlign.end,
@@ -447,7 +452,9 @@ class CheckList extends StatelessWidget {
                   size: 24,
                 ),
                 const SizedBox(width: Space.sm),
-                Expanded(child: Text(item, style: context.text.bodyLarge)),
+                Expanded(
+                  child: KeepAllText(item, style: context.text.bodyLarge),
+                ),
               ],
             ),
           ),
@@ -481,13 +488,13 @@ class NoteBox extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (title != null) ...[
-          Text(title!, style: context.text.titleSmall),
+          KeepAllText(title!, style: context.text.titleSmall),
           const SizedBox(height: Space.xs),
         ],
         for (final (i, item) in items.indexed)
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
+            child: KeepAllText(
               '·  $item',
               style: context.text.bodySmall?.copyWith(
                 color: danger.contains(i)
@@ -571,20 +578,20 @@ class ChoiceTile3D extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: Space.sm),
-              Text(
+              KeepAllText(
                 label,
                 style: context.text.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               if (subtitle != null)
-                Text(
+                KeepAllText(
                   subtitle!,
                   style: context.text.bodySmall?.copyWith(color: c.inkMuted),
                 ),
               if (trailing != null) ...[
                 const SizedBox(height: Space.xs),
-                Text(
+                KeepAllText(
                   trailing!,
                   style: context.text.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -655,14 +662,14 @@ class PriceBar extends StatelessWidget {
           style: context.text.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
         if (caption != null)
-          Text(
+          KeepAllText(
             caption!,
             style: context.text.labelSmall?.copyWith(
               color: context.colors.inkMuted,
             ),
           ),
         if (onDetails != null)
-          Text(
+          KeepAllText(
             context.t.dfDetails,
             style: context.text.labelMedium?.copyWith(
               color: context.colors.inkSoft,
@@ -741,7 +748,7 @@ Future<void> showPriceBreakdown(BuildContext context, BookingDraft d) {
           ),
           StaggerIn(
             index: 1,
-            child: Text(
+            child: KeepAllText(
               t.vatIncluded,
               style: ctx.text.bodySmall?.copyWith(color: ctx.colors.inkMuted),
             ),

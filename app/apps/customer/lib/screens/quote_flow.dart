@@ -443,7 +443,7 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
       trailing: AnimatedSwitcher(
         duration: motionFor(context, Motion.standard),
         child: !answered && (marked || _asked)
-            ? Text(
+            ? KeepAllText(
                 t.dfPleaseSelect,
                 textAlign: TextAlign.end,
                 style: context.text.bodySmall?.copyWith(
@@ -666,7 +666,7 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
             },
           ),
           const SizedBox(height: Space.lg),
-          Text(
+          KeepAllText(
             t.dfVisitTime,
             style: context.text.bodySmall?.copyWith(
               color: context.colors.inkMuted,

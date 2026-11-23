@@ -109,18 +109,18 @@ class _CountTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Space.sm),
-          Text(
+          KeepAllText(
             label,
             style: context.text.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
-          Text(
+          KeepAllText(
             subtitle,
             style: context.text.bodySmall?.copyWith(color: c.inkMuted),
           ),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             trailing,
             style: context.text.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
@@ -168,7 +168,7 @@ class _Stepper extends StatelessWidget {
           icon: const Icon(Icons.remove_rounded),
           onPressed: count > 0 ? () => onChanged(count - 1) : null,
         ),
-        Text(
+        KeepAllText(
           '$count',
           style: context.text.titleMedium?.copyWith(
             fontWeight: FontWeight.w800,

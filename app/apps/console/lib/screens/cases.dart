@@ -102,19 +102,19 @@ class _CaseQueueState extends State<CaseQueue> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.consoleCasesTitle, style: context.text.titleMedium),
+        KeepAllText(t.consoleCasesTitle, style: context.text.titleMedium),
         const SizedBox(height: Space.xs),
         if (rows.isEmpty)
-          Text(t.consoleCasesEmpty, style: context.text.bodySmall),
+          KeepAllText(t.consoleCasesEmpty, style: context.text.bodySmall),
         for (final r in rows)
           Card(
             child: ListTile(
-              title: Text(caseKindLabel(t, r['kind'] as String)),
-              subtitle: Text(
+              title: KeepAllText(caseKindLabel(t, r['kind'] as String)),
+              subtitle: KeepAllText(
                 '${r['booking_number'] ?? '-'} · ${caseStatusLabel(t, r['status'] as String)}',
               ),
               trailing: r['overdue'] == true
-                  ? Chip(label: Text(t.caseOverdue))
+                  ? Chip(label: KeepAllText(t.caseOverdue))
                   : null,
               onTap: () => _select(r['id'] as String),
             ),
@@ -185,18 +185,18 @@ class _Detail extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            KeepAllText(
               '${caseKindLabel(t, c['kind'] as String)} · ${caseStatusLabel(t, status)}',
               style: context.text.labelLarge,
             ),
-            Text(c['summary'] as String, style: context.text.bodyMedium),
+            KeepAllText(c['summary'] as String, style: context.text.bodyMedium),
             if (checkedIn != null)
-              Text(
+              KeepAllText(
                 t.checkedInAt(_hm(checkedIn)),
                 style: context.text.bodySmall,
               ),
             if (checkedOut != null)
-              Text(
+              KeepAllText(
                 t.checkedOutAt(_hm(checkedOut)),
                 style: context.text.bodySmall,
               ),
@@ -208,12 +208,12 @@ class _Detail extends StatelessWidget {
                 for (final next in caseNextStatuses(status))
                   OutlinedButton(
                     onPressed: busy ? null : () => onStatus(next),
-                    child: Text(caseStatusLabel(t, next)),
+                    child: KeepAllText(caseStatusLabel(t, next)),
                   ),
                 if (c['kind'] == 'no_show' && booking != null)
                   OutlinedButton(
                     onPressed: busy ? null : onReassign,
-                    child: Text(t.caseReassign),
+                    child: KeepAllText(t.caseReassign),
                   ),
               ],
             ),
@@ -231,19 +231,19 @@ class _Detail extends StatelessWidget {
                   const SizedBox(width: Space.xs),
                   OutlinedButton(
                     onPressed: busy ? null : onRefund,
-                    child: Text(t.caseRefund),
+                    child: KeepAllText(t.caseRefund),
                   ),
                   const SizedBox(width: Space.xs),
                   OutlinedButton(
                     onPressed: busy ? null : () => onHold(true),
-                    child: Text(t.caseHold),
+                    child: KeepAllText(t.caseHold),
                   ),
                 ],
               ),
             ],
             const SizedBox(height: Space.xs),
             for (final n in notes)
-              Text(
+              KeepAllText(
                 '· ${n['author'] ?? '-'}: ${n['body']}',
                 style: context.text.bodySmall,
               ),
@@ -257,7 +257,7 @@ class _Detail extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: busy ? null : onNote,
-                  child: Text(t.caseSave),
+                  child: KeepAllText(t.caseSave),
                 ),
               ],
             ),

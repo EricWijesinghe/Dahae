@@ -79,29 +79,29 @@ class _HostControlsState extends State<HostControls> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.cRbHostTitle, style: context.text.labelLarge),
+        KeepAllText(t.cRbHostTitle, style: context.text.labelLarge),
         const SizedBox(height: Space.sm),
-        Text(t.cRbChannel, style: context.text.bodyMedium),
+        KeepAllText(t.cRbChannel, style: context.text.bodyMedium),
         Wrap(
           spacing: Space.sm,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             SegmentedButton<String>(
               segments: [
-                ButtonSegment(value: 'stable', label: Text(t.cRbChannelStable)),
-                ButtonSegment(value: 'beta', label: Text(t.cRbChannelBeta)),
+                ButtonSegment(value: 'stable', label: KeepAllText(t.cRbChannelStable)),
+                ButtonSegment(value: 'beta', label: KeepAllText(t.cRbChannelBeta)),
               ],
               selected: {_channel},
               onSelectionChanged: (s) => setState(() => _channel = s.first),
             ),
             OutlinedButton(
               onPressed: () => _send('channel', _channel),
-              child: Text(t.cRbApply),
+              child: KeepAllText(t.cRbApply),
             ),
           ],
         ),
         const SizedBox(height: Space.md),
-        Text(t.cRbSchedule, style: context.text.bodyMedium),
+        KeepAllText(t.cRbSchedule, style: context.text.bodyMedium),
         Wrap(
           spacing: Space.sm,
           crossAxisAlignment: WrapCrossAlignment.center,
@@ -110,8 +110,8 @@ class _HostControlsState extends State<HostControls> {
               value: _day,
               items: [
                 for (var i = 0; i < _days.length; i++)
-                  DropdownMenuItem(value: _days[i], child: Text(dayNames[i])),
-                DropdownMenuItem(value: 'off', child: Text(t.cRbOff)),
+                  DropdownMenuItem(value: _days[i], child: KeepAllText(dayNames[i])),
+                DropdownMenuItem(value: 'off', child: KeepAllText(t.cRbOff)),
               ],
               onChanged: (v) => setState(() => _day = v ?? _day),
             ),
@@ -127,7 +127,7 @@ class _HostControlsState extends State<HostControls> {
                   ),
                 ),
               ),
-            OutlinedButton(onPressed: _schedule, child: Text(t.cRbApply)),
+            OutlinedButton(onPressed: _schedule, child: KeepAllText(t.cRbApply)),
           ],
         ),
         const SizedBox(height: Space.md),
@@ -137,13 +137,13 @@ class _HostControlsState extends State<HostControls> {
           children: [
             OutlinedButton(
               onPressed: () => _send('backup-now', ''),
-              child: Text(t.cRbBackupNow),
+              child: KeepAllText(t.cRbBackupNow),
             ),
             OutlinedButton(
               onPressed: () => _send('update-skip', ''),
-              child: Text(t.cRbSkipUpdate),
+              child: KeepAllText(t.cRbSkipUpdate),
             ),
-            OutlinedButton(onPressed: _restart, child: Text(t.cRbRestart)),
+            OutlinedButton(onPressed: _restart, child: KeepAllText(t.cRbRestart)),
           ],
         ),
       ],
@@ -205,8 +205,8 @@ class _HeartbeatCardState extends State<HeartbeatCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(t.oHeartbeat, style: context.text.titleSmall),
-                    Text(
+                    KeepAllText(t.oHeartbeat, style: context.text.titleSmall),
+                    KeepAllText(
                       on ? t.oHeartbeatOn : t.cRbHeartbeatOff,
                       style: context.text.bodySmall,
                     ),
@@ -230,12 +230,12 @@ class _HeartbeatCardState extends State<HeartbeatCard> {
             children: [
               OutlinedButton(
                 onPressed: () => _save(_url.text.trim()),
-                child: Text(t.save),
+                child: KeepAllText(t.save),
               ),
               if (on)
                 TextButton(
                   onPressed: () => _save('off'),
-                  child: Text(t.cRbOff),
+                  child: KeepAllText(t.cRbOff),
                 ),
             ],
           ),
@@ -301,18 +301,18 @@ class _ApprovalEnrollCardState extends State<ApprovalEnrollCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.cRbEnrollTitle, style: context.text.labelLarge),
+        KeepAllText(t.cRbEnrollTitle, style: context.text.labelLarge),
         const SizedBox(height: Space.xs),
-        Text(t.cRbEnrollBody, style: context.text.bodySmall),
+        KeepAllText(t.cRbEnrollBody, style: context.text.bodySmall),
         if (uri != null) ...[
           CopyRow(label: t.cRbEnrollSecret, value: otpSecret(uri) ?? ''),
           CopyRow(label: t.cRbEnrollUri, value: uri),
-          Text(t.cRbEnrollDone, style: context.text.bodySmall),
+          KeepAllText(t.cRbEnrollDone, style: context.text.bodySmall),
         ] else ...[
           if (_error case final e?)
             Padding(
               padding: const EdgeInsets.only(top: Space.xs),
-              child: Text(
+              child: KeepAllText(
                 e,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.danger,
@@ -322,7 +322,7 @@ class _ApprovalEnrollCardState extends State<ApprovalEnrollCard> {
           const SizedBox(height: Space.sm),
           OutlinedButton(
             onPressed: _busy ? null : _start,
-            child: Text(_busy ? t.cRbEnrollWaiting : t.cRbEnrollStart),
+            child: KeepAllText(_busy ? t.cRbEnrollWaiting : t.cRbEnrollStart),
           ),
         ],
       ],

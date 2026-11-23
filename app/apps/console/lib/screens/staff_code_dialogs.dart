@@ -26,12 +26,12 @@ Future<CodeDelivery?> pickCodeDelivery(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, set) => AlertDialog(
-        title: Text(t.cStaffChannel),
+        title: KeepAllText(t.cStaffChannel),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (needsPhone) ...[
-              Text(t.cStaffPhoneNeeded),
+              KeepAllText(t.cStaffPhoneNeeded),
               const SizedBox(height: Space.sm),
               TextField(
                 controller: phone,
@@ -42,8 +42,8 @@ Future<CodeDelivery?> pickCodeDelivery(
             ],
             SegmentedButton<String>(
               segments: [
-                ButtonSegment(value: 'sms', label: Text(t.cStaffChannelSms)),
-                ButtonSegment(value: 'copy', label: Text(t.cStaffChannelCopy)),
+                ButtonSegment(value: 'sms', label: KeepAllText(t.cStaffChannelSms)),
+                ButtonSegment(value: 'copy', label: KeepAllText(t.cStaffChannelCopy)),
               ],
               selected: {channel},
               onSelectionChanged: (s) => set(() => channel = s.first),
@@ -53,12 +53,12 @@ Future<CodeDelivery?> pickCodeDelivery(
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t.cancel),
+            child: KeepAllText(t.cancel),
           ),
           FilledButton(
             style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.cStaffSendCode),
+            child: KeepAllText(t.cStaffSendCode),
           ),
         ],
       ),
@@ -100,12 +100,12 @@ class _CodeDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
-      title: Text(title),
+      title: KeepAllText(title),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.cStaffCodeBody),
+          KeepAllText(t.cStaffCodeBody),
           const SizedBox(height: Space.sm),
           SelectableText(
             code,
@@ -120,12 +120,12 @@ class _CodeDialog extends StatelessWidget {
             if (context.mounted) showToast(context, t.cMfaCopied);
           },
           icon: const Icon(Icons.copy_rounded, size: 18),
-          label: Text(t.cMfaCopy),
+          label: KeepAllText(t.cMfaCopy),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.cDone),
+          child: KeepAllText(t.cDone),
         ),
       ],
     );

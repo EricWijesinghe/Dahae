@@ -31,6 +31,10 @@ const _toggleMaxWidth = 220.0;
 
 /// Header chrome stops growing here; the page content follows the system text size in full.
 const _headerMaxTextScale = 1.3;
+
+/// The toggle labels shrink to fit a narrow phone, down to 12sp from the 16sp label style.
+const _toggleMinTextScale = 0.75;
+const _toggleScaleStep = 0.025;
 const _bellDot = 7.0;
 
 const _gridColumns = 4;
@@ -370,7 +374,7 @@ class _HomeTabState extends State<HomeTab> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: Space.xxxl),
                 child: Center(
-                  child: Text(
+                  child: KeepAllText(
                     t.noContent,
                     style: context.text.bodyMedium?.copyWith(
                       color: context.colors.inkMuted,
@@ -395,7 +399,9 @@ String timeGreeting(T t, DateTime now) {
   return t.greetEvening;
 }
 
-/// Logo lockup on the left, the all / PICK toggle centred in what is left.
+/// Logo lockup on the left, the all / PICK toggle centred in what is left. On a narrow phone the labels
+/// shrink to fit; when even that is not enough ("Uzipsa PICK" at 360dp) the lockup drops its wordmark, since
+/// the PICK label already names the brand.
 class _HeaderTitle extends StatelessWidget {
   const _HeaderTitle({required this.view, required this.onView});
   final _HomeView view;
@@ -404,39 +410,99 @@ class _HeaderTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.t;
-    return Row(
-      children: [
-        // The lockup is an image: it keeps its size at every system text size.
-        MediaQuery.withNoTextScaling(
-          // Plays once per cold start: the home tab stays mounted behind the others.
-          child: const DahaeLogo(
-            variant: DahaeLogoVariant.threeD,
-            wordmark: true,
-            size: _logoSize,
-            animate: true,
-          ),
-        ),
-        const SizedBox(width: Space.sm),
-        Expanded(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: _toggleMaxWidth),
-              child: MediaQuery.withClampedTextScaling(
-                maxScaleFactor: _headerMaxTextScale,
-                child: SegmentedControl<_HomeView>(
-                  segments: [
-                    (_HomeView.all, t.dhHomeAll),
-                    (_HomeView.pick, t.dhHomePick(context.brandName)),
-                  ],
-                  selected: view,
-                  onChanged: onView,
+    final segments = [
+      (_HomeView.all, t.dhHomeAll),
+      (_HomeView.pick, t.dhHomePick(context.brandName)),
+    ];
+    final labels = [for (final s in segments) s.$2];
+    return LayoutBuilder(
+      builder: (context, box) {
+        double room(double logo) =>
+            (box.maxWidth - logo - Space.sm).clamp(0.0, _toggleMaxWidth);
+        final full = room(_lockupWidth(context));
+        final fullScaler = _toggleScaler(context, labels, full);
+        final wordmark = fullScaler != null;
+        final width = wordmark ? full : room(_logoSize);
+        final scaler =
+            fullScaler ??
+            _toggleScaler(context, labels, width) ??
+            const TextScaler.linear(_toggleMinTextScale);
+        return Row(
+          children: [
+            // The lockup is an image: it keeps its size at every system text size.
+            MediaQuery.withNoTextScaling(
+              // Plays once per cold start: the home tab stays mounted behind the others.
+              child: DahaeLogo(
+                variant: DahaeLogoVariant.threeD,
+                wordmark: wordmark,
+                size: _logoSize,
+                animate: true,
+              ),
+            ),
+            const SizedBox(width: Space.sm),
+            Expanded(
+              child: Center(
+                child: SizedBox(
+                  width: width,
+                  child: MediaQuery(
+                    data: MediaQuery.of(context).copyWith(textScaler: scaler),
+                    child: SegmentedControl<_HomeView>(
+                      segments: segments,
+                      selected: view,
+                      onChanged: onView,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
+  }
+
+  /// Width of the [DahaeLogo] lockup with its wordmark.
+  static double _lockupWidth(BuildContext context) => DahaeLogo.lockupWidth(
+    context.brandName,
+    _logoSize,
+    textDirection: Directionality.of(context),
+  );
+
+  /// The system text scale (capped for the header), stepped down until the longest label fits its
+  /// half of a [width] toggle on one line; null when not even [_toggleMinTextScale] fits.
+  static TextScaler? _toggleScaler(
+    BuildContext context,
+    List<String> labels,
+    double width,
+  ) {
+    final base = MediaQuery.textScalerOf(
+      context,
+    ).clamp(maxScaleFactor: _headerMaxTextScale);
+    // SegmentedControl: 4dp track padding each side, Space.sm label padding each side; the selected label is bold.
+    final room = (width - 8) / labels.length - 2 * Space.sm;
+    final style = context.text.labelLarge?.copyWith(
+      fontWeight: FontWeight.w700,
+    );
+    final direction = Directionality.of(context);
+    bool fits(TextScaler scaler) => labels.every((label) {
+      final painter = TextPainter(
+        text: TextSpan(text: label, style: style),
+        textDirection: direction,
+        textScaler: scaler,
+        maxLines: 1,
+      )..layout();
+      final ok = painter.width <= room;
+      painter.dispose();
+      return ok;
+    });
+    if (fits(base)) return base;
+    final fontSize = style?.fontSize ?? 14;
+    var factor = base.scale(fontSize) / fontSize;
+    while (factor > _toggleMinTextScale) {
+      factor = (factor - _toggleScaleStep).clamp(_toggleMinTextScale, factor);
+      if (fits(TextScaler.linear(factor))) return TextScaler.linear(factor);
+    }
+    return null;
   }
 }
 
@@ -462,9 +528,9 @@ class _GuestReferralGate extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t.referralTitle, style: context.text.bodyMedium),
+                  KeepAllText(t.referralTitle, style: context.text.bodyMedium),
                   if (offers != null)
-                    Text(
+                    KeepAllText(
                       t.referralOfferLine(context.won(offers.referralAmount)),
                       style: context.text.bodySmall?.copyWith(
                         color: context.colors.inkSoft,
@@ -499,7 +565,7 @@ class _UpcomingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          KeepAllText(
             '${t.homeUpcoming} · ${days <= 0 ? t.today : t.dDay('$days')}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

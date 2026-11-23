@@ -5,6 +5,7 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:ui/ui.dart';
 
+import '../console_title.dart';
 import '../server_address.dart';
 import '../state.dart';
 import 'staff_mfa.dart';
@@ -86,8 +87,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         const SizedBox(height: Space.xl),
-                        Text(
-                          '${BrandScope.of(context).name} ${t.cTitle}',
+                        KeepAllText(
+                          consoleTitle(context),
                           style: context.text.headlineMedium,
                         ),
                         const SizedBox(height: Space.xl),
@@ -117,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (ServerChange.of(context) case final change?)
                           TextButton(
                             onPressed: change,
-                            child: Text(t.cServerChange),
+                            child: KeepAllText(t.cServerChange),
                           ),
                       ],
                     ),

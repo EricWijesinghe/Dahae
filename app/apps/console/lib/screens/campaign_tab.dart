@@ -57,7 +57,7 @@ class CampaignLog extends StatelessWidget {
     return FutureBuilder<List<dynamic>>(
       future: api.get('/admin/campaigns').then((v) => v as List<dynamic>),
       builder: (context, snap) {
-        if (snap.hasError) return Center(child: Text(t.error(snap.error!)));
+        if (snap.hasError) return Center(child: KeepAllText(t.error(snap.error!)));
         final rows = snap.data;
         if (rows == null) {
           return const Center(child: CircularProgressIndicator());
@@ -66,7 +66,7 @@ class CampaignLog extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.all(12),
-              child: Text(
+              child: KeepAllText(
                 t.cmLog,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
@@ -74,8 +74,8 @@ class CampaignLog extends StatelessWidget {
             for (final c in rows.cast<Json>())
               ListTile(
                 dense: true,
-                title: Text('${c['name']}'),
-                subtitle: Text('${c['channel']} · ${c['status']}'),
+                title: KeepAllText('${c['name']}'),
+                subtitle: KeepAllText('${c['channel']} · ${c['status']}'),
                 onTap: () async {
                   final d =
                       await api.get('/admin/campaigns/${c['id']}') as Json;

@@ -7,6 +7,7 @@ import '../brand_scope.dart';
 import '../theme.dart';
 import '../tokens.dart';
 import 'icon3d_registry.dart';
+import 'keep_all.dart';
 
 enum DahaeLogoVariant {
   /// Vector house + check in brand colours (app bars, login, small sizes).
@@ -67,6 +68,35 @@ class DahaeLogo extends StatefulWidget {
   static const frameCount = 24;
   static String frameAsset(int i) =>
       'assets/icons3d/logo_3d_f${i.toString().padLeft(2, '0')}.webp';
+
+  /// The wordmark's type at a lockup [size] (colour set by the lockup).
+  static TextStyle wordmarkStyle(double size) => TextStyle(
+    fontFamily: 'Dahae Sans',
+    package: 'ui',
+    fontWeight: FontWeight.w800,
+    letterSpacing: -0.8,
+    fontSize: size * 0.62,
+    height: 1,
+  );
+
+  static double _gap(double size) => size * 0.22;
+
+  /// Width of the mark plus [name] in the wordmark (no tagline) at [size], for layouts that
+  /// must fit around the lockup.
+  static double lockupWidth(
+    String name,
+    double size, {
+    TextDirection textDirection = TextDirection.ltr,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(text: name, style: wordmarkStyle(size)),
+      textDirection: textDirection,
+      maxLines: 1,
+    )..layout();
+    final width = size + _gap(size) + painter.width;
+    painter.dispose();
+    return width;
+  }
 
   @override
   State<DahaeLogo> createState() => _DahaeLogoState();
@@ -132,15 +162,9 @@ class _DahaeLogoState extends State<DahaeLogo>
     final name = brand.nameFor(
       Localizations.maybeLocaleOf(context)?.languageCode,
     );
-    final words = Text(
+    final words = KeepAllText(
       name,
-      style: TextStyle(
-        fontFamily: 'Dahae Sans',
-        package: 'ui',
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.8,
-        fontSize: size * 0.62,
-        height: 1,
+      style: DahaeLogo.wordmarkStyle(size).copyWith(
         color: w.variant == DahaeLogoVariant.mono
             ? (w.color ?? context.colors.ink)
             : onDark
@@ -153,7 +177,7 @@ class _DahaeLogoState extends State<DahaeLogo>
             mainAxisSize: MainAxisSize.min,
             children: [
               mark,
-              SizedBox(width: size * 0.22),
+              SizedBox(width: DahaeLogo._gap(size)),
               if (tagline == null)
                 words
               else
@@ -163,7 +187,7 @@ class _DahaeLogoState extends State<DahaeLogo>
                   children: [
                     words,
                     SizedBox(height: size * 0.1),
-                    Text(
+                    KeepAllText(
                       tagline,
                       style: TextStyle(
                         fontFamily: 'Dahae Sans',

@@ -26,12 +26,12 @@ Future<void> inviteStaff(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, set) => AlertDialog(
-        title: Text(t.cStaffInviteTitle),
+        title: KeepAllText(t.cStaffInviteTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(t.cStaffInviteBody),
+              KeepAllText(t.cStaffInviteBody),
               const SizedBox(height: Space.sm),
               TextField(
                 controller: name,
@@ -51,10 +51,10 @@ Future<void> inviteStaff(
                 segments: [
                   ButtonSegment(
                     value: 'consultant',
-                    label: Text(t.cRoleConsultant),
+                    label: KeepAllText(t.cRoleConsultant),
                   ),
                   if (context.console.isAdmin)
-                    ButtonSegment(value: 'admin', label: Text(t.cRoleAdmin)),
+                    ButtonSegment(value: 'admin', label: KeepAllText(t.cRoleAdmin)),
                 ],
                 selected: {role},
                 onSelectionChanged: (s) => set(() => role = s.first),
@@ -62,10 +62,10 @@ Future<void> inviteStaff(
               const SizedBox(height: Space.sm),
               SegmentedButton<String>(
                 segments: [
-                  ButtonSegment(value: 'sms', label: Text(t.cStaffChannelSms)),
+                  ButtonSegment(value: 'sms', label: KeepAllText(t.cStaffChannelSms)),
                   ButtonSegment(
                     value: 'copy',
-                    label: Text(t.cStaffChannelCopy),
+                    label: KeepAllText(t.cStaffChannelCopy),
                   ),
                 ],
                 selected: {channel},
@@ -77,12 +77,12 @@ Future<void> inviteStaff(
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t.cancel),
+            child: KeepAllText(t.cancel),
           ),
           FilledButton(
             style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.cStaffSendCode),
+            child: KeepAllText(t.cStaffSendCode),
           ),
         ],
       ),

@@ -193,10 +193,10 @@ class _CompleteScreenState extends State<CompleteScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             SuccessMark(size: 88, semanticLabel: t.pCompleted),
-            Text(t.pCompleted, style: ctx.text.headlineSmall),
+            KeepAllText(t.pCompleted, style: ctx.text.headlineSmall),
             const SizedBox(height: Space.xs),
             if (!widget.isMember)
-              Text(
+              KeepAllText(
                 date == null
                     ? t.pPayoutWaiting
                     : t.pPayoutOn(
@@ -209,7 +209,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
             const SizedBox(height: Space.xl),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(t.ok),
+              child: KeepAllText(t.ok),
             ),
           ],
         ),
@@ -224,7 +224,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
     final checks = [t.pCheck1, t.pCheck2, t.pCheck3, t.pCheck4];
     final waiting = [..._before, ..._after].where((p) => p.url == null).length;
     return Scaffold(
-      appBar: AppBar(title: Text(t.pComplete)),
+      appBar: AppBar(title: KeepAllText(t.pComplete)),
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [
@@ -234,7 +234,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
           if (waiting > 0)
             Padding(
               padding: const EdgeInsets.only(top: Space.sm),
-              child: Text(t.pPhotoWaiting, style: context.text.labelSmall),
+              child: KeepAllText(t.pPhotoWaiting, style: context.text.labelSmall),
             ),
           const SizedBox(height: Space.lg),
           SectionTitle(t.pChecklist),
@@ -245,7 +245,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
                 for (var i = 0; i < checks.length; i++)
                   CheckboxListTile(
                     value: _checks[i],
-                    title: Text(checks[i]),
+                    title: KeepAllText(checks[i]),
                     onChanged: (v) {
                       setState(() => _checks[i] = v ?? false);
                       _saveDraft().ignore();
@@ -257,7 +257,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
           if (!_ready)
             Padding(
               padding: const EdgeInsets.only(top: Space.sm),
-              child: Text(t.pCompleteNeed, style: context.text.labelSmall),
+              child: KeepAllText(t.pCompleteNeed, style: context.text.labelSmall),
             ),
           if (_needsReason) ...[
             const SizedBox(height: Space.lg),
@@ -289,7 +289,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
       children: [
         SectionTitle('$title (${list.length})'),
         if (_sending.any(list.contains))
-          Text(
+          KeepAllText(
             context.t.pUploadedCount('${list.length}', '$uploaded'),
             style: context.text.labelSmall,
           ),
@@ -314,7 +314,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
                       const ExcludeSemantics(
                         child: Icon3D('p_camera', size: 40),
                       ),
-                      Text(context.t.pAddPhoto, style: context.text.labelSmall),
+                      KeepAllText(context.t.pAddPhoto, style: context.text.labelSmall),
                     ],
                   ),
                 ),

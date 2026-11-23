@@ -280,7 +280,7 @@ class _ProfileCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      KeepAllText(
                         guest
                             ? t.introStart
                             : name.isEmpty
@@ -291,7 +291,7 @@ class _ProfileCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
+                      KeepAllText(
                         t.moreGreeting(brand),
                         style: context.text.bodySmall?.copyWith(
                           color: c.inkSoft,
@@ -316,6 +316,7 @@ class _ProfileCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _Counter(
+                      stacked: guest,
                       label: t.moreCoupons,
                       value: guest
                           ? _guestHint(context)
@@ -335,11 +336,12 @@ class _ProfileCard extends StatelessWidget {
                   ),
                   Expanded(
                     child: _Counter(
+                      stacked: guest,
                       label: t.morePoints,
                       value: guest
                           ? _guestHint(context)
                           : points == null
-                          ? Text('-', style: _counterStyle(context))
+                          ? KeepAllText('-', style: _counterStyle(context))
                           : CountUp(
                               value: points!,
                               format: (v) => t.walletPoints('$v'),
@@ -363,22 +365,25 @@ class _ProfileCard extends StatelessWidget {
       ?.copyWith(fontWeight: FontWeight.w800, color: context.colors.accent);
 
   /// A guest's counter shows what sign-in unlocks, not a dash or a zero.
-  static Widget _guestHint(BuildContext context) => Text(
+  static Widget _guestHint(BuildContext context) => KeepAllText(
     context.t.guestAccountHint,
     style: context.text.labelSmall?.copyWith(color: context.colors.inkSoft),
   );
 }
 
-/// One strip cell: label left, value right; the whole cell is the tap target.
+/// One strip cell: label left, value right; the whole cell is the tap target. [stacked] puts the value under
+/// the label at its own size (the guest hint is a sentence: beside the label it was shrunk to ~6px).
 class _Counter extends StatelessWidget {
   const _Counter({
     required this.label,
     required this.value,
     required this.onTap,
+    this.stacked = false,
   });
   final String label;
   final Widget value;
   final VoidCallback onTap;
+  final bool stacked;
 
   @override
   Widget build(BuildContext context) => InkWell(
@@ -391,33 +396,39 @@ class _Counter extends StatelessWidget {
           horizontal: Space.md,
           vertical: Space.sm,
         ),
-        child: Row(
-          // The value sits at the cell's end ("쿠폰    2장"), not right after the label.
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.text.bodySmall?.copyWith(
-                  color: context.colors.inkSoft,
-                ),
-              ),
-            ),
-            const SizedBox(width: Space.xs),
-            // Large balances at large text shrink instead of overflowing the half-width cell.
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: AlignmentDirectional.centerEnd,
-                child: value,
-              ),
-            ),
-          ],
-        ),
+        child: stacked ? _stacked(context) : _beside(context),
       ),
     ),
+  );
+
+  Text _label(BuildContext context) => KeepAllText(
+    label,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: context.text.bodySmall?.copyWith(color: context.colors.inkSoft),
+  );
+
+  Widget _stacked(BuildContext context) => Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [_label(context), const SizedBox(height: 2), value],
+  );
+
+  Widget _beside(BuildContext context) => Row(
+    // The value sits at the cell's end ("쿠폰    2장"), not right after the label.
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Expanded(child: _label(context)),
+      const SizedBox(width: Space.xs),
+      // Large balances at large text shrink instead of overflowing the half-width cell.
+      Flexible(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerEnd,
+          child: value,
+        ),
+      ),
+    ],
   );
 }
 
@@ -492,9 +503,9 @@ class _MoreRowState extends State<_MoreRow> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(widget.label, style: context.text.bodyLarge),
+                    KeepAllText(widget.label, style: context.text.bodyLarge),
                     if (widget.subtitle case final s?)
-                      Text(
+                      KeepAllText(
                         s,
                         style: context.text.bodySmall?.copyWith(
                           color: c.inkSoft,
@@ -546,7 +557,7 @@ class _LabelValueRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Flexible(
-            child: Text(
+            child: KeepAllText(
               label,
               style: context.text.bodyMedium?.copyWith(
                 color: context.colors.inkSoft,
@@ -561,7 +572,7 @@ class _LabelValueRow extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Flexible(
-                  child: Text(
+                  child: KeepAllText(
                     value,
                     textAlign: TextAlign.end,
                     maxLines: 2,
@@ -594,7 +605,7 @@ class LanguageScreen extends StatelessWidget {
     final current = deps.locale.locale?.languageCode;
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.moreLanguage)),
+      appBar: AppBar(title: KeepAllText(t.moreLanguage)),
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [
@@ -631,7 +642,7 @@ class _RowValue extends StatelessWidget {
     constraints: BoxConstraints(
       maxWidth: MediaQuery.sizeOf(context).width * 0.3,
     ),
-    child: Text(
+    child: KeepAllText(
       text,
       style: style,
       maxLines: 1,
@@ -648,7 +659,7 @@ class ContentListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(title)),
+    appBar: AppBar(title: KeepAllText(title)),
     body: ContentListBody(kind: kind),
   );
 }
@@ -670,9 +681,9 @@ class ContentListBody extends StatelessWidget {
             itemCount: items.length,
             separatorBuilder: (_, _) => const Divider(),
             itemBuilder: (_, i) => ListTile(
-              title: Text(items[i].title(context.lang)),
+              title: KeepAllText(items[i].title(context.lang)),
               subtitle: kind == 'notice' && noticeDateLabel(items[i]).isNotEmpty
-                  ? Text(noticeDateLabel(items[i]))
+                  ? KeepAllText(noticeDateLabel(items[i]))
                   : null,
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.of(context).push(
@@ -700,11 +711,11 @@ class ContentDetailScreen extends StatelessWidget {
     body: ListView(
       padding: const EdgeInsets.all(Space.gutter),
       children: [
-        Text(item.title(context.lang), style: context.text.headlineSmall),
+        KeepAllText(item.title(context.lang), style: context.text.headlineSmall),
         if (noticeDateLabel(item).isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: Space.xs),
-            child: Text(
+            child: KeepAllText(
               noticeDateLabel(item),
               style: context.text.bodySmall?.copyWith(
                 color: context.colors.inkMuted,

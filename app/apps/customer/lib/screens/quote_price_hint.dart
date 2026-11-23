@@ -35,14 +35,14 @@ class QuotePriceHint extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              KeepAllText(
                 t.guestPriceLine(context.won(total)),
                 style: context.text.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: Space.xs),
-              Text(
+              KeepAllText(
                 t.guestPeakNote,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.inkMuted,

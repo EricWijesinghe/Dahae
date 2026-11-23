@@ -30,15 +30,15 @@ class MemberApprovals extends StatelessWidget {
                 vertical: Space.xs,
               ),
               child: ListTile(
-                title: Text(
+                title: KeepAllText(
                   '${m['team_name']} · ${m['name']}',
                   style: context.text.titleSmall,
                 ),
-                subtitle: Text('${t.cPro_pending} · ${m['phone']}'),
+                subtitle: KeepAllText('${t.cPro_pending} · ${m['phone']}'),
                 trailing: FilledButton.tonal(
                   style: compactFilled,
                   onPressed: () => _approve(context, '${m['id']}', reload),
-                  child: Text(t.cVerify),
+                  child: KeepAllText(t.cVerify),
                 ),
               ),
             ),

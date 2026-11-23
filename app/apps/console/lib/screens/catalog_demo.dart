@@ -20,21 +20,21 @@ class DemoTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(Space.lg),
       children: [
-        Text(t.cgDemoTitle, style: context.text.titleMedium),
+        KeepAllText(t.cgDemoTitle, style: context.text.titleMedium),
         const SizedBox(height: Space.xs),
-        Text(t.cgDemoBody, style: context.text.bodySmall),
+        KeepAllText(t.cgDemoBody, style: context.text.bodySmall),
         const SizedBox(height: Space.md),
         FilledButton(
           onPressed: admin ? () => _load(context) : null,
-          child: Text(t.cgDemoLoad),
+          child: KeepAllText(t.cgDemoLoad),
         ),
         const SizedBox(height: Space.sm),
         OutlinedButton(
           onPressed: admin ? () => _clear(context) : null,
-          child: Text(t.cgDemoClear),
+          child: KeepAllText(t.cgDemoClear),
         ),
         const SizedBox(height: Space.xs),
-        Text(t.cgDemoClearBody, style: context.text.bodySmall),
+        KeepAllText(t.cgDemoClearBody, style: context.text.bodySmall),
       ],
     );
   }
@@ -77,7 +77,7 @@ Future<String?> _askOwnerCode(BuildContext context) async {
   final code = await showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text(t.cgDemoClear),
+      title: KeepAllText(t.cgDemoClear),
       content: TextField(
         controller: ctrl,
         autofocus: true,
@@ -88,12 +88,12 @@ Future<String?> _askOwnerCode(BuildContext context) async {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(),
-          child: Text(t.cancel),
+          child: KeepAllText(t.cancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
-          child: Text(t.save),
+          child: KeepAllText(t.save),
         ),
       ],
     ),

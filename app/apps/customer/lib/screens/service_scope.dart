@@ -129,7 +129,7 @@ class _ServiceScopeScreenState extends State<ServiceScopeScreen> {
                   Padding(
                     padding: const EdgeInsets.only(right: Space.xs),
                     child: ChoiceChip(
-                      label: Text(_groupLabel(t, g)),
+                      label: KeepAllText(_groupLabel(t, g)),
                       selected: g == _group,
                       showCheckmark: false,
                       selectedColor: context.colors.ink,
@@ -173,7 +173,7 @@ class _ServiceScopeScreenState extends State<ServiceScopeScreen> {
           const Divider(height: 1),
           FlowSection(
             children: [
-              Text(
+              KeepAllText(
                 t.dfBasicService,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.inkMuted,
@@ -203,7 +203,7 @@ class _ServiceScopeScreenState extends State<ServiceScopeScreen> {
                   ).copyWith(dividerColor: Colors.transparent),
                   child: ExpansionTile(
                     initiallyExpanded: true,
-                    title: Text(
+                    title: KeepAllText(
                       t.dfNotProvided,
                       style: context.text.titleSmall,
                     ),
@@ -218,7 +218,7 @@ class _ServiceScopeScreenState extends State<ServiceScopeScreen> {
                       for (final n in [t.dfNp1, t.dfNp2, t.dfNp3, t.dfNp4])
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
-                          child: Text('·  $n', style: context.text.bodySmall),
+                          child: KeepAllText('·  $n', style: context.text.bodySmall),
                         ),
                     ],
                   ),
@@ -262,7 +262,7 @@ class _AreaTab extends StatelessWidget {
             ),
           ),
         ),
-        child: Text(
+        child: KeepAllText(
           label,
           style: context.text.titleMedium?.copyWith(
             color: selected ? context.colors.ink : context.colors.inkMuted,
@@ -352,7 +352,7 @@ class FloorPlan extends StatelessWidget {
                             ? context.primary
                             : context.primary.withValues(alpha: 0),
                         child: ExcludeSemantics(
-                          child: Text(
+                          child: KeepAllText(
                             label(a),
                             style: context.text.labelSmall?.copyWith(
                               color: a == highlight ? Colors.white : c.inkMuted,

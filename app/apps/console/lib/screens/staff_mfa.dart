@@ -150,7 +150,7 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
   Widget build(BuildContext context) {
     final t = context.t;
     final children = <Widget>[
-      Text(
+      KeepAllText(
         _codes != null
             ? t.cMfaCodesTitle
             : widget.challenge.enrol
@@ -167,7 +167,7 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
         ..._verifyView(t),
       if (_error != null) ...[
         const SizedBox(height: Space.sm),
-        Text(_error!, style: TextStyle(color: context.colors.danger)),
+        KeepAllText(_error!, style: TextStyle(color: context.colors.danger)),
       ],
       const SizedBox(height: Space.lg),
       if (_codes != null)
@@ -185,7 +185,7 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
       if (_codes == null)
         TextButton(
           onPressed: _busy ? null : widget.onCancel,
-          child: Text(t.cMfaBack),
+          child: KeepAllText(t.cMfaBack),
         ),
     ];
     return Column(
@@ -214,7 +214,7 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
               _code.clear();
               _error = null;
             }),
-      child: Text(_recovery ? t.cMfaUseCode : t.cMfaUseRecovery),
+      child: KeepAllText(_recovery ? t.cMfaUseCode : t.cMfaUseRecovery),
     ),
   ];
 
@@ -224,7 +224,7 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
       return const [Center(child: CircularProgressIndicator())];
     }
     return [
-      Text(t.cMfaEnrolBody, style: context.text.bodyMedium),
+      KeepAllText(t.cMfaEnrolBody, style: context.text.bodyMedium),
       const SizedBox(height: Space.md),
       _CopyField(
         label: t.cMfaSecret,
@@ -250,7 +250,7 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
   }
 
   List<Widget> _codesView(T t) => [
-    Text(t.cMfaCodesBody, style: context.text.bodyMedium),
+    KeepAllText(t.cMfaCodesBody, style: context.text.bodyMedium),
     const SizedBox(height: Space.md),
     Card(
       elevation: 0,
@@ -283,12 +283,12 @@ class _StaffMfaPanelState extends State<StaffMfaPanel> {
         OutlinedButton.icon(
           onPressed: () => _copy(_codes!.join('\n')),
           icon: const Icon(Icons.copy_rounded, size: 18),
-          label: Text(t.cMfaCopy),
+          label: KeepAllText(t.cMfaCopy),
         ),
         OutlinedButton.icon(
           onPressed: _download,
           icon: const Icon(Icons.download_rounded, size: 18),
-          label: Text(t.cMfaDownload),
+          label: KeepAllText(t.cMfaDownload),
         ),
       ],
     ),
@@ -312,7 +312,7 @@ class _CopyField extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: context.text.labelMedium),
+      KeepAllText(label, style: context.text.labelMedium),
       Row(
         children: [
           Expanded(

@@ -46,7 +46,7 @@ class SiteActionsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (checkedIn)
-            Text(
+            KeepAllText(
               t.checkedInAt(
                 TimeOfDay.fromDateTime(
                   b.checkedInAt!.toLocal(),
@@ -55,7 +55,7 @@ class SiteActionsCard extends StatelessWidget {
               style: context.text.bodySmall,
             ),
           if (b.checkedOutAt != null)
-            Text(
+            KeepAllText(
               t.checkedOutAt(
                 TimeOfDay.fromDateTime(
                   b.checkedOutAt!.toLocal(),
@@ -66,7 +66,7 @@ class SiteActionsCard extends StatelessWidget {
           if (active && !checkedIn)
             FilledButton.icon(
               icon: const Icon(Icons.login_rounded),
-              label: Text(t.checkInAction),
+              label: KeepAllText(t.checkInAction),
               onPressed: () => act(
                 () => context.api.post('$base/$id/check-in'),
                 t.checkInAction,
@@ -75,7 +75,7 @@ class SiteActionsCard extends StatelessWidget {
           if (active && checkedIn && b.checkedOutAt == null)
             FilledButton.tonalIcon(
               icon: const Icon(Icons.logout_rounded),
-              label: Text(t.checkOutAction),
+              label: KeepAllText(t.checkOutAction),
               onPressed: () => act(
                 () => context.api.post('$base/$id/check-out'),
                 t.checkOutAction,
@@ -84,13 +84,13 @@ class SiteActionsCard extends StatelessWidget {
           if (!member && b.entryCodeSet)
             OutlinedButton.icon(
               icon: const Icon(Icons.dialpad_rounded),
-              label: Text(_isToday ? t.entryCodeAction : t.entryCodeNotToday),
+              label: KeepAllText(_isToday ? t.entryCodeAction : t.entryCodeNotToday),
               onPressed: _isToday ? () => _showEntryCode(context, id) : null,
             ),
           if (!member)
             OutlinedButton.icon(
               icon: const Icon(Icons.report_problem_outlined),
-              label: Text(t.caseReportAction),
+              label: KeepAllText(t.caseReportAction),
               onPressed: () => showCaseReport(
                 context,
                 kinds: const ['damage', 'loss', 'complaint', 'safety'],
@@ -121,7 +121,7 @@ class SiteActionsCard extends StatelessWidget {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.entryCodeTitle),
+        title: KeepAllText(t.entryCodeTitle),
         content: SelectableText(
           code ?? t.entryCodeEmpty,
           style: ctx.text.headlineSmall,
@@ -129,7 +129,7 @@ class SiteActionsCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(MaterialLocalizations.of(ctx).okButtonLabel),
+            child: KeepAllText(MaterialLocalizations.of(ctx).okButtonLabel),
           ),
         ],
       ),

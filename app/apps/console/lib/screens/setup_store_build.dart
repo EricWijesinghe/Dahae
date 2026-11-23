@@ -78,21 +78,21 @@ class _StoreBuildCardState extends State<StoreBuildCard> {
               ),
               const SizedBox(width: Space.sm),
               Expanded(
-                child: Text(t.cRbStoreTitle, style: context.text.titleSmall),
+                child: KeepAllText(t.cRbStoreTitle, style: context.text.titleSmall),
               ),
             ],
           ),
           const SizedBox(height: Space.xs),
-          Text(t.cRbStoreBody, style: context.text.bodySmall),
+          KeepAllText(t.cRbStoreBody, style: context.text.bodySmall),
           const SizedBox(height: Space.sm),
-          Text(
+          KeepAllText(
             changed.isEmpty
                 ? t.cRbStoreNone
                 : t.cRbStoreChanged(changed.map((c) => _item(t, c)).join(', ')),
             style: context.text.bodyMedium,
           ),
           if (acked != null)
-            Text(
+            KeepAllText(
               t.cRbStoreLastAck(
                 DateFormat('yyyy-MM-dd HH:mm').format(acked.toLocal()),
               ),
@@ -115,31 +115,31 @@ class _StoreBuildCardState extends State<StoreBuildCard> {
                     ? () => launchUrl(url, mode: LaunchMode.externalApplication)
                     : null,
                 icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: Text(t.cRbStoreOpen),
+                label: KeepAllText(t.cRbStoreOpen),
               ),
               OutlinedButton(
                 onPressed: _busy ? null : _ack,
-                child: Text(t.cRbStoreAck),
+                child: KeepAllText(t.cRbStoreAck),
               ),
             ],
           ),
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
-            title: Text(
+            title: KeepAllText(
               t.cRbStoreBuildTimeTitle,
               style: context.text.labelLarge,
             ),
             expandedAlignment: Alignment.centerLeft,
             children: [
-              Text(t.cRbStoreBuildTimeList, style: context.text.bodySmall),
+              KeepAllText(t.cRbStoreBuildTimeList, style: context.text.bodySmall),
             ],
           ),
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
-            title: Text(t.cRbStoreOutsideTitle, style: context.text.labelLarge),
+            title: KeepAllText(t.cRbStoreOutsideTitle, style: context.text.labelLarge),
             expandedAlignment: Alignment.centerLeft,
             children: [
-              Text(t.cRbStoreOutsideList, style: context.text.bodySmall),
+              KeepAllText(t.cRbStoreOutsideList, style: context.text.bodySmall),
             ],
           ),
         ],

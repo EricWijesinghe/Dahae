@@ -16,7 +16,7 @@ class FlowCard extends StatelessWidget {
     final f = flow;
     if (f == null) {
       return AppCard(
-        child: Text(t.oFlowUnavailable, style: context.text.bodyMedium),
+        child: KeepAllText(t.oFlowUnavailable, style: context.text.bodyMedium),
       );
     }
     final median = f['median_hours_to_assign'] as num?;
@@ -27,7 +27,7 @@ class FlowCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.oFlowTitle, style: context.text.titleMedium),
+          KeepAllText(t.oFlowTitle, style: context.text.titleMedium),
           const SizedBox(height: Space.md),
           _FlowRow(
             label: t.oFlowAssign,
@@ -47,10 +47,10 @@ class FlowCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Space.xs),
-          Text(t.oFlowNoShow, style: context.text.labelLarge),
+          KeepAllText(t.oFlowNoShow, style: context.text.labelLarge),
           const SizedBox(height: Space.xxs),
           if (services.isEmpty)
-            Text(t.oFlowNoBookings, style: context.text.bodySmall),
+            KeepAllText(t.oFlowNoBookings, style: context.text.bodySmall),
           for (final s in services)
             _FlowRow(
               label: t.service(s['service_code'] as String),
@@ -78,9 +78,9 @@ class _FlowRow extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: Space.xxs),
     child: Row(
       children: [
-        Expanded(child: Text(label, style: context.text.bodyMedium)),
+        Expanded(child: KeepAllText(label, style: context.text.bodyMedium)),
         const SizedBox(width: Space.xs),
-        Text(value, style: context.text.titleSmall),
+        KeepAllText(value, style: context.text.titleSmall),
       ],
     ),
   );

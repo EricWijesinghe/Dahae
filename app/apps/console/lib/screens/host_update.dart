@@ -46,9 +46,9 @@ class _HostUpdateCardState extends State<HostUpdateCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.hjTitle, style: context.text.titleSmall),
+            KeepAllText(t.hjTitle, style: context.text.titleSmall),
             const SizedBox(height: Space.xs),
-            Text(t.hjBody, style: context.text.bodyMedium),
+            KeepAllText(t.hjBody, style: context.text.bodyMedium),
             if (isOwner) ...[
               const SizedBox(height: Space.sm),
               PrimaryButton(
@@ -65,14 +65,14 @@ class _HostUpdateCardState extends State<HostUpdateCard> {
               ServerRecoveryCard(onQueued: reload),
             ],
             const SizedBox(height: Space.md),
-            Text(t.hjRecent, style: context.text.labelLarge),
+            KeepAllText(t.hjRecent, style: context.text.labelLarge),
             if (jobs.isEmpty)
-              Text(t.hjEmpty, style: context.text.bodySmall)
+              KeepAllText(t.hjEmpty, style: context.text.bodySmall)
             else
               for (final j in jobs.take(5))
                 Padding(
                   padding: const EdgeInsets.only(top: Space.xs),
-                  child: Text(
+                  child: KeepAllText(
                     '${_kind(t, j['kind'] as String)} · ${_state(t, j['state'] as String)}'
                     '${j['step'] is String ? ' · ${j['step']}' : ''}',
                     style: context.text.bodySmall,

@@ -82,7 +82,7 @@ class _BusinessInfoState extends State<BusinessInfo> {
     );
     Widget link(IconData icon, String label, Uri uri) => TextButton.icon(
       icon: Icon(icon, size: 16),
-      label: Text(label),
+      label: KeepAllText(label),
       onPressed: () => widget.open(uri),
     );
     return Padding(
@@ -90,10 +90,10 @@ class _BusinessInfoState extends State<BusinessInfo> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.bizInfoTitle, style: context.text.labelMedium),
+          KeepAllText(t.bizInfoTitle, style: context.text.labelMedium),
           const SizedBox(height: Space.xs),
           for (final (label, value) in rows)
-            Text('$label  $value', style: muted),
+            KeepAllText('$label  $value', style: muted),
           Wrap(
             spacing: Space.xs,
             children: [

@@ -25,7 +25,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
   Widget build(BuildContext context) {
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.pEarnings)),
+      appBar: AppBar(title: KeepAllText(t.pEarnings)),
       body: AsyncView<Json>(
         key: ValueKey(_grain),
         load: () async =>
@@ -36,8 +36,8 @@ class _EarningsScreenState extends State<EarningsScreen> {
           children: [
             SegmentedButton<String>(
               segments: [
-                ButtonSegment(value: 'week', label: Text(t.pWeekly)),
-                ButtonSegment(value: 'month', label: Text(t.pMonthly)),
+                ButtonSegment(value: 'week', label: KeepAllText(t.pWeekly)),
+                ButtonSegment(value: 'month', label: KeepAllText(t.pMonthly)),
               ],
               selected: {_grain},
               onSelectionChanged: (s) => setState(() => _grain = s.first),
@@ -57,7 +57,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
                   builder: (_) => const SettlementsScreen(),
                 ),
               ),
-              child: Text('${t.pSettlements} ›'),
+              child: KeepAllText('${t.pSettlements} ›'),
             ),
           ],
         ),
@@ -79,16 +79,16 @@ class _NextPayoutCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.pNextPayout, style: context.text.labelMedium),
+          KeepAllText(t.pNextPayout, style: context.text.labelMedium),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             next == null
                 ? t.pNoPayout
                 : context.won((next['amount'] as num).toInt()),
             style: context.text.headlineSmall,
           ),
           if (next != null)
-            Text(
+            KeepAllText(
               t.pNextPayoutOn(next['date'] as String),
               style: context.text.bodySmall,
             ),
@@ -96,13 +96,13 @@ class _NextPayoutCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: KeepAllText(
                   '${t.pPendingTotal}\n${context.won((data['pending_total'] as num).toInt())}',
                   style: context.text.bodySmall,
                 ),
               ),
               Expanded(
-                child: Text(
+                child: KeepAllText(
                   '${t.pPaidTotal}\n${context.won((data['paid_total'] as num).toInt())}',
                   style: context.text.bodySmall,
                 ),
@@ -132,22 +132,22 @@ class _WithholdingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.tEstWithholding, style: context.text.labelMedium),
+          KeepAllText(t.tEstWithholding, style: context.text.labelMedium),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             '${t.tGrossAmount}  ${context.won(gross)}',
             style: context.text.bodyMedium,
           ),
-          Text(
+          KeepAllText(
             '${t.tWithholdingLabel}  −${context.won(tax)}',
             style: context.text.bodyMedium,
           ),
-          Text(
+          KeepAllText(
             '${t.tNetAmount}  ${context.won(net)}',
             style: context.text.titleSmall,
           ),
           if (data['tax_type'] == 'business')
-            Text(t.tNoWithholding, style: context.text.bodySmall),
+            KeepAllText(t.tNoWithholding, style: context.text.bodySmall),
         ],
       ),
     );

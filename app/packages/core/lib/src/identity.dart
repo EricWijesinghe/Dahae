@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:ui/ui.dart' show KeepAllText;
 
 import 'api.dart';
 import 'desktop.dart';
@@ -29,18 +30,18 @@ class DevIdentityVerifier extends IdentityVerifier {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(ctx.t.apIdentityDevTitle),
-        content: Text(ctx.t.apIdentityDevBody),
+        title: KeepAllText(ctx.t.apIdentityDevTitle),
+        content: KeepAllText(ctx.t.apIdentityDevBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(ctx.t.cancel),
+            child: KeepAllText(ctx.t.cancel),
           ),
           FilledButton(
             // The theme's full-width minimum would push Cancel onto its own line.
             style: FilledButton.styleFrom(minimumSize: const Size(64, 44)),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(ctx.t.apIdentityDevPass),
+            child: KeepAllText(ctx.t.apIdentityDevPass),
           ),
         ],
       ),

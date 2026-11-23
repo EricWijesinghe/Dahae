@@ -13,6 +13,7 @@ import 'depth.dart';
 import 'glyph.dart';
 import 'icon3d.dart';
 import 'interactive.dart';
+import 'keep_all.dart';
 
 /// "52,000원" in Korean, "₩52,000" elsewhere.
 String formatWon(int amount, String locale) {
@@ -136,7 +137,7 @@ class Tag extends StatelessWidget {
           ],
           // Flexible: a long translation wraps inside its pill instead of overflowing the row.
           Flexible(
-            child: Text(
+            child: KeepAllText(
               label,
               style: context.text.labelMedium?.copyWith(
                 color: fg,
@@ -163,7 +164,7 @@ class SectionTitle extends StatelessWidget {
         Expanded(
           child: Semantics(
             header: true,
-            child: Text(title, style: context.text.titleMedium),
+            child: KeepAllText(title, style: context.text.titleMedium),
           ),
         ),
         ?trailing,
@@ -250,7 +251,7 @@ class PrimaryButton extends StatelessWidget {
                       color: color == null ? Colors.white : _labelOn(color!),
                     ),
                   )
-                : Text(label, key: const ValueKey('label')),
+                : KeepAllText(label, key: const ValueKey('label')),
           ),
         ),
       ),
@@ -371,14 +372,14 @@ class EmptyState extends StatelessWidget {
             else
               _GlyphCluster(codes: codes, icon: icon, hue: h),
             const SizedBox(height: Space.lg),
-            Text(
+            KeepAllText(
               title,
               style: context.text.titleMedium,
               textAlign: TextAlign.center,
             ),
             if (body != null) ...[
               const SizedBox(height: Space.xs),
-              Text(
+              KeepAllText(
                 body!,
                 style: context.text.bodySmall,
                 textAlign: TextAlign.center,
@@ -525,11 +526,11 @@ class _ErrorRetryState extends State<ErrorRetry> {
             ),
           ),
           const SizedBox(width: Space.sm),
-          Expanded(child: Text(widget.message, style: context.text.bodyMedium)),
+          Expanded(child: KeepAllText(widget.message, style: context.text.bodyMedium)),
           TextButton.icon(
             onPressed: _busy ? null : _retry,
             icon: _retryIcon,
-            label: Text(widget.retryLabel),
+            label: KeepAllText(widget.retryLabel),
           ),
         ],
       ),
@@ -546,7 +547,7 @@ class _ErrorRetryState extends State<ErrorRetry> {
         OutlinedButton.icon(
           onPressed: _busy ? null : _retry,
           icon: _retryIcon,
-          label: Text(widget.retryLabel),
+          label: KeepAllText(widget.retryLabel),
         ),
         if (widget.secondary case final more?) ...[
           const SizedBox(height: Space.xs),
@@ -688,7 +689,7 @@ Future<T?> showAppSheet<T>(
             Space.gutter,
             Space.md,
           ),
-          child: Text(title, style: ctx.text.titleLarge),
+          child: KeepAllText(title, style: ctx.text.titleLarge),
         ),
         Flexible(child: builder(ctx)),
       ],
@@ -699,5 +700,5 @@ Future<T?> showAppSheet<T>(
 void showToast(BuildContext context, String message) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+    ..showSnackBar(SnackBar(content: KeepAllText(message)));
 }

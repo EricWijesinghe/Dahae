@@ -30,7 +30,7 @@ class PopularServices extends StatelessWidget {
         const SizedBox(height: Space.xl),
         Semantics(
           header: true,
-          child: Text(t.popularServices, style: context.text.titleLarge),
+          child: KeepAllText(t.popularServices, style: context.text.titleLarge),
         ),
         for (final s in shown)
           InkWell(
@@ -52,8 +52,8 @@ class PopularServices extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(t.service(s.code), style: context.text.titleSmall),
-                        Text(
+                        KeepAllText(t.service(s.code), style: context.text.titleSmall),
+                        KeepAllText(
                           s.isQuote
                               ? t.quoteBadge
                               : t.fromPrice(context.won(s.fromPrice ?? 0)),

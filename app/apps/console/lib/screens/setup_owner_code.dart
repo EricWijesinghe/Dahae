@@ -42,12 +42,12 @@ class _OwnerCodeDialogState extends State<_OwnerCodeDialog> {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
-      title: Text(t.cOwnerCodeTitle),
+      title: KeepAllText(t.cOwnerCodeTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.cOwnerCodeBody),
+          KeepAllText(t.cOwnerCodeBody),
           const SizedBox(height: Space.md),
           TextField(
             controller: _code,
@@ -64,12 +64,12 @@ class _OwnerCodeDialogState extends State<_OwnerCodeDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.cancel),
+          child: KeepAllText(t.cancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: _complete ? _submit : null,
-          child: Text(t.cOwnerCodeConfirm),
+          child: KeepAllText(t.cOwnerCodeConfirm),
         ),
       ],
     );

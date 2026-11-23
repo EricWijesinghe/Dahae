@@ -36,8 +36,8 @@ class _TossPayoutSwitchCardState extends State<TossPayoutSwitchCard> {
   Widget build(BuildContext context) => AppCard(
     child: SwitchListTile(
       contentPadding: EdgeInsets.zero,
-      title: Text(context.t.cRbPayoutSwitch, style: context.text.titleSmall),
-      subtitle: Text(context.t.cRbPayoutSwitchHint),
+      title: KeepAllText(context.t.cRbPayoutSwitch, style: context.text.titleSmall),
+      subtitle: KeepAllText(context.t.cRbPayoutSwitchHint),
       value: _on,
       onChanged: _flip,
     ),
@@ -126,8 +126,8 @@ class _HoursFormState extends State<_HoursForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.cRbHoursTitle, style: context.text.titleSmall),
-          Text(t.cRbHoursHint, style: context.text.bodySmall),
+          KeepAllText(t.cRbHoursTitle, style: context.text.titleSmall),
+          KeepAllText(t.cRbHoursHint, style: context.text.bodySmall),
           const SizedBox(height: Space.sm),
           Wrap(
             spacing: Space.xs,
@@ -135,7 +135,7 @@ class _HoursFormState extends State<_HoursForm> {
             children: [
               for (var d = 0; d < 7; d++)
                 FilterChip(
-                  label: Text(names[d]),
+                  label: KeepAllText(names[d]),
                   selected: _days.contains(d),
                   onSelected: (on) =>
                       setState(() => on ? _days.add(d) : _days.remove(d)),
@@ -154,7 +154,7 @@ class _HoursFormState extends State<_HoursForm> {
           if (_invalid)
             Padding(
               padding: const EdgeInsets.only(top: Space.xs),
-              child: Text(
+              child: KeepAllText(
                 t.cRbHoursInvalid,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.danger,
@@ -164,7 +164,7 @@ class _HoursFormState extends State<_HoursForm> {
           const SizedBox(height: Space.sm),
           OutlinedButton(
             onPressed: context.console.isAdmin ? _save : null,
-            child: Text(t.save),
+            child: KeepAllText(t.save),
           ),
         ],
       ),

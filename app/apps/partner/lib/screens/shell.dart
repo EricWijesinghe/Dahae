@@ -60,7 +60,7 @@ class _GateState extends State<Gate> {
             onRetry: _retry,
             secondary: TextButton(
               onPressed: () => Deps.read(context).session.logout(),
-              child: Text(context.t.logout),
+              child: KeepAllText(context.t.logout),
             ),
           ),
         );
@@ -103,15 +103,15 @@ class _Pending extends StatelessWidget {
                   builder: (_) => const PayoutAccountScreen(),
                 ),
               ),
-              child: Text(context.t.pPayoutAccount),
+              child: KeepAllText(context.t.pPayoutAccount),
             ),
             TextButton(
               onPressed: () => context.proRead.loadProfile(),
-              child: Text(context.t.retry),
+              child: KeepAllText(context.t.retry),
             ),
             TextButton(
               onPressed: Deps.read(context).session.logout,
-              child: Text(context.t.logout),
+              child: KeepAllText(context.t.logout),
             ),
           ],
         ),
@@ -131,7 +131,7 @@ class _Blocked extends StatelessWidget {
       hue: StatusHues.cancelled,
       action: OutlinedButton(
         onPressed: Deps.read(context).session.logout,
-        child: Text(context.t.logout),
+        child: KeepAllText(context.t.logout),
       ),
     ),
   );
@@ -234,8 +234,8 @@ class _PartnerShellState extends State<PartnerShell> {
           tab('p_nav_jobs', t.pTabJobs),
           tab('p_nav_quotes', t.pTabQuotes, pro.unseenQuotes),
           tab('p_nav_schedule', t.pTabSchedule),
-          tab('nav_chat', t.tabChat, pro.unreadChats),
-          tab('nav_more', t.tabMore),
+          tab('p_nav_chat', t.tabChat, pro.unreadChats),
+          tab('p_nav_more', t.tabMore),
         ],
       ),
     );

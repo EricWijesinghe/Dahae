@@ -53,11 +53,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   Widget build(BuildContext context) {
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.subTitle)),
+      appBar: AppBar(title: KeepAllText(t.subTitle)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _new,
         icon: const Icon(Icons.add),
-        label: Text(t.subNew),
+        label: KeepAllText(t.subNew),
       ),
       body: FutureBuilder<List<Json>>(
         future: _list,
@@ -72,8 +72,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(t.cSubsLoadFailed),
-                    TextButton(onPressed: _reload, child: Text(t.retry)),
+                    KeepAllText(t.cSubsLoadFailed),
+                    TextButton(onPressed: _reload, child: KeepAllText(t.retry)),
                   ],
                 ),
               ),
@@ -84,7 +84,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(Space.xl),
-                child: Text(t.subListEmpty),
+                child: KeepAllText(t.subListEmpty),
               ),
             );
           }
@@ -96,8 +96,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               final sub = rows[i];
               return Card(
                 child: ListTile(
-                  title: Text(subscriptionTitle(t, sub)),
-                  subtitle: Text(
+                  title: KeepAllText(subscriptionTitle(t, sub)),
+                  subtitle: KeepAllText(
                     subscriptionStatus(t, sub['status'] as String),
                   ),
                   trailing: const Icon(Icons.chevron_right),
@@ -166,7 +166,7 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(context.t.errorGeneric)));
+        ).showSnackBar(SnackBar(content: KeepAllText(context.t.errorGeneric)));
       }
     }
   }
@@ -176,15 +176,15 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        content: Text(t.subCancelConfirm),
+        content: KeepAllText(t.subCancelConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(t.cancel),
+            child: KeepAllText(t.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(t.subCancelSub),
+            child: KeepAllText(t.subCancelSub),
           ),
         ],
       ),
@@ -198,43 +198,43 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
     final view = _view;
     final sub = view?['subscription'] as Json?;
     return Scaffold(
-      appBar: AppBar(title: Text(t.subTitle)),
+      appBar: AppBar(title: KeepAllText(t.subTitle)),
       body: _failed
           ? Center(
-              child: TextButton(onPressed: _load, child: Text(t.retry)),
+              child: TextButton(onPressed: _load, child: KeepAllText(t.retry)),
             )
           : sub == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(Space.xl),
               children: [
-                Text(subscriptionTitle(t, sub), style: context.text.titleLarge),
+                KeepAllText(subscriptionTitle(t, sub), style: context.text.titleLarge),
                 const SizedBox(height: Space.sm),
-                Text(subscriptionStatus(t, sub['status'] as String)),
+                KeepAllText(subscriptionStatus(t, sub['status'] as String)),
                 if (sub['status'] == 'paused' &&
                     sub['paused_reason'] == 'payment') ...[
                   const SizedBox(height: Space.sm),
-                  Text(t.subPausedPayment),
+                  KeepAllText(t.subPausedPayment),
                 ],
                 const SizedBox(height: Space.lg),
                 if (sub['status'] == 'active')
                   OutlinedButton(
                     key: const Key('sub-pause'),
                     onPressed: () => _act('pause'),
-                    child: Text(t.subPause),
+                    child: KeepAllText(t.subPause),
                   ),
                 if (sub['status'] == 'paused')
                   FilledButton(
                     key: const Key('sub-resume'),
                     onPressed: () => _act('resume', const <String, Object?>{}),
-                    child: Text(t.subResume),
+                    child: KeepAllText(t.subResume),
                   ),
                 if (sub['status'] != 'cancelled') ...[
                   const SizedBox(height: Space.sm),
                   TextButton(
                     key: const Key('sub-cancel'),
                     onPressed: _cancel,
-                    child: Text(t.subCancelSub),
+                    child: KeepAllText(t.subCancelSub),
                   ),
                 ],
                 const SizedBox(height: Space.lg),
@@ -242,8 +242,8 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
                     in (view?['visits'] as List? ?? const []).cast<Json>())
                   ListTile(
                     key: Key('visit-${v['id']}'),
-                    title: Text(v['visit_date'] as String),
-                    subtitle: Text(_visitState(t, v['state'] as String)),
+                    title: KeepAllText(v['visit_date'] as String),
+                    subtitle: KeepAllText(_visitState(t, v['state'] as String)),
                     trailing: v['state'] == 'planned' || v['state'] == 'booked'
                         ? TextButton(
                             key: Key('skip-${v['id']}'),
@@ -251,7 +251,7 @@ class _SubscriptionDetailScreenState extends State<SubscriptionDetailScreen> {
                               'visits/${v['id']}/skip',
                               const <String, Object?>{},
                             ),
-                            child: Text(t.subSkip),
+                            child: KeepAllText(t.subSkip),
                           )
                         : null,
                   ),

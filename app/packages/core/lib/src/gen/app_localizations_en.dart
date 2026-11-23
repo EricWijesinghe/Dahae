@@ -7068,9 +7068,6 @@ class TEn extends T {
   String get err_schedule_overlap => 'You already have a job at this time';
 
   @override
-  String get servicePhotoSlot => 'Service photo goes here';
-
-  @override
   String get rulesTab => 'Operating rules';
 
   @override

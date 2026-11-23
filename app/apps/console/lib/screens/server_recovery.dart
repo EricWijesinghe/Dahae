@@ -224,17 +224,17 @@ class _ServerRecoveryCardState extends State<ServerRecoveryCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.srTitle, style: context.text.labelLarge),
+        KeepAllText(t.srTitle, style: context.text.labelLarge),
         const SizedBox(height: Space.xs),
-        Text(t.srRollbackBody, style: context.text.bodySmall),
+        KeepAllText(t.srRollbackBody, style: context.text.bodySmall),
         const SizedBox(height: Space.sm),
         OutlinedButton(
           onPressed: _busy ? null : _rollback,
-          child: Text(t.srRollbackButton),
+          child: KeepAllText(t.srRollbackButton),
         ),
         const SizedBox(height: Space.md),
-        Text(t.srKeysTitle, style: context.text.bodyMedium),
-        Text(t.srKeysBody, style: context.text.bodySmall),
+        KeepAllText(t.srKeysTitle, style: context.text.bodyMedium),
+        KeepAllText(t.srKeysBody, style: context.text.bodySmall),
         // Room for the filled fields' floating labels, which otherwise sit on the text above.
         const SizedBox(height: Space.sm),
         TextField(
@@ -254,12 +254,12 @@ class _ServerRecoveryCardState extends State<ServerRecoveryCard> {
         const SizedBox(height: Space.sm),
         OutlinedButton(
           onPressed: _busy ? null : _keys,
-          child: Text(t.srKeysButton),
+          child: KeepAllText(t.srKeysButton),
         ),
         if (_note case final note?)
           Padding(
             padding: const EdgeInsets.only(top: Space.xs),
-            child: Text(
+            child: KeepAllText(
               note,
               style: context.text.bodySmall?.copyWith(
                 color: _noteBad ? context.colors.danger : null,

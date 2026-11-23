@@ -3,6 +3,7 @@
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:ui/ui.dart' show KeepAllText;
 
 import 'server_address.dart';
 import 'state.dart';
@@ -51,11 +52,11 @@ class _ServerMovedBannerState extends State<ServerMovedBanner> {
     return Column(
       children: [
         MaterialBanner(
-          content: Text(context.t.cRbServerMoved(moved)),
+          content: KeepAllText(context.t.cRbServerMoved(moved)),
           actions: [
             TextButton(
               onPressed: change,
-              child: Text(context.t.cRbServerMovedAction),
+              child: KeepAllText(context.t.cRbServerMovedAction),
             ),
           ],
         ),

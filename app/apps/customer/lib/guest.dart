@@ -100,7 +100,7 @@ class _SignInSheetState extends State<_SignInSheet> {
               Space.gutter,
               Space.sm,
             ),
-            child: Text(widget.reason.title(t), style: context.text.titleLarge),
+            child: KeepAllText(widget.reason.title(t), style: context.text.titleLarge),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -109,7 +109,7 @@ class _SignInSheetState extends State<_SignInSheet> {
               Space.gutter,
               Space.md,
             ),
-            child: Text(
+            child: KeepAllText(
               t.guestSheetBody,
               style: context.text.bodyMedium?.copyWith(
                 color: context.colors.inkSoft,

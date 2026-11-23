@@ -54,7 +54,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       await context.api.post('/admin/subscriptions/${sub['id']}/$action');
       _reload();
     } on ApiException {
-      messenger.showSnackBar(SnackBar(content: Text(t.errorGeneric)));
+      messenger.showSnackBar(SnackBar(content: KeepAllText(t.errorGeneric)));
     }
   }
 
@@ -68,10 +68,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     final t = context.t;
     try {
       await context.api.put('/admin/subscriptions/${sub['id']}', draft);
-      messenger.showSnackBar(SnackBar(content: Text(t.cSaved)));
+      messenger.showSnackBar(SnackBar(content: KeepAllText(t.cSaved)));
       _reload();
     } on ApiException {
-      messenger.showSnackBar(SnackBar(content: Text(t.errorGeneric)));
+      messenger.showSnackBar(SnackBar(content: KeepAllText(t.errorGeneric)));
     }
   }
 
@@ -85,7 +85,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
-          title: Text(t.cgSubEdit),
+          title: KeepAllText(t.cgSubEdit),
           content: SizedBox(
             width: 420,
             child: SingleChildScrollView(
@@ -93,35 +93,35 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t.cgSubEditHint, style: context.text.bodySmall),
+                  KeepAllText(t.cgSubEditHint, style: context.text.bodySmall),
                   const SizedBox(height: Space.md),
-                  Text(t.cgSubCadence, style: context.text.titleSmall),
+                  KeepAllText(t.cgSubCadence, style: context.text.titleSmall),
                   Wrap(
                     spacing: Space.xs,
                     children: [
                       for (final w in const [1, 2, 4])
                         ChoiceChip(
-                          label: Text(_cadence(t, w)),
+                          label: KeepAllText(_cadence(t, w)),
                           selected: cadence == w,
                           onSelected: (_) => set(() => cadence = w),
                         ),
                     ],
                   ),
                   const SizedBox(height: Space.sm),
-                  Text(t.cgSubWeekday, style: context.text.titleSmall),
+                  KeepAllText(t.cgSubWeekday, style: context.text.titleSmall),
                   Wrap(
                     spacing: Space.xs,
                     children: [
                       for (var i = 0; i < 7; i++)
                         ChoiceChip(
-                          label: Text(_weekdayLabel(t, i)),
+                          label: KeepAllText(_weekdayLabel(t, i)),
                           selected: weekday == i,
                           onSelected: (_) => set(() => weekday = i),
                         ),
                     ],
                   ),
                   const SizedBox(height: Space.sm),
-                  Text(t.cgSubStartHour, style: context.text.titleSmall),
+                  KeepAllText(t.cgSubStartHour, style: context.text.titleSmall),
                   Wrap(
                     spacing: Space.xs,
                     children: [
@@ -140,7 +140,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(t.cancel),
+              child: KeepAllText(t.cancel),
             ),
             FilledButton(
               style: compactFilled,
@@ -149,7 +149,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 'weekday': weekday,
                 'start_hour': hour,
               }),
-              child: Text(t.save),
+              child: KeepAllText(t.save),
             ),
           ],
         ),
@@ -193,7 +193,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               for (final s in _statuses)
                 ChoiceChip(
                   key: Key('sub-filter-$s'),
-                  label: Text(_statusLabel(t, s)),
+                  label: KeepAllText(_statusLabel(t, s)),
                   selected: _status == s,
                   onSelected: (on) {
                     setState(() => _status = on ? s : null);
@@ -216,8 +216,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               padding: const EdgeInsets.all(Space.xl),
               children: [
                 header,
-                Text(t.cSubsLoadFailed),
-                TextButton(onPressed: _reload, child: Text(t.retry)),
+                KeepAllText(t.cSubsLoadFailed),
+                TextButton(onPressed: _reload, child: KeepAllText(t.retry)),
               ],
             );
           }
@@ -225,19 +225,19 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           return ListView(
             padding: const EdgeInsets.all(Space.xl),
             children: [
-              Text(t.cSubsTitle, style: context.text.headlineMedium),
+              KeepAllText(t.cSubsTitle, style: context.text.headlineMedium),
               const SizedBox(height: Space.md),
               header,
               const SizedBox(height: Space.md),
-              if (rows.isEmpty) Text(t.subListEmpty),
+              if (rows.isEmpty) KeepAllText(t.subListEmpty),
               for (final sub in rows)
                 Card(
                   child: ListTile(
                     key: Key('sub-${sub['id']}'),
-                    title: Text(
+                    title: KeepAllText(
                       '${t.service(sub['service_code'] as String)} · ${_cadence(t, sub['cadence_weeks'] as int)}',
                     ),
-                    subtitle: Text(
+                    subtitle: KeepAllText(
                       '${_statusLabel(t, sub['status'] as String)} · ${sub['start_hour']}:00',
                     ),
                     trailing: sub['status'] == 'cancelled'
@@ -249,12 +249,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                                 TextButton(
                                   key: Key('sub-edit-${sub['id']}'),
                                   onPressed: () => _edit(sub),
-                                  child: Text(t.cgSubEdit),
+                                  child: KeepAllText(t.cgSubEdit),
                                 ),
                               TextButton(
                                 key: Key('sub-toggle-${sub['id']}'),
                                 onPressed: () => _toggle(sub),
-                                child: Text(
+                                child: KeepAllText(
                                   sub['status'] == 'paused'
                                       ? t.subResume
                                       : t.subPause,

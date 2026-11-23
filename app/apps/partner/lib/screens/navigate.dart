@@ -64,12 +64,12 @@ Future<void> showNavigateSheet(BuildContext context, String address) async {
             Space.gutter,
             Space.sm,
           ),
-          child: Text(ctx.t.pNavHint, style: ctx.text.bodyMedium),
+          child: KeepAllText(ctx.t.pNavHint, style: ctx.text.bodyMedium),
         ),
         for (final o in navOptions(address, appName: appName))
           ListTile(
             leading: const Icon(Icons.map_rounded),
-            title: Text(o.name),
+            title: KeepAllText(o.name),
             trailing: const Icon(Icons.open_in_new_rounded),
             onTap: () {
               Navigator.of(ctx).pop();

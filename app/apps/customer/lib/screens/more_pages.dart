@@ -34,7 +34,7 @@ class CouponsScreen extends StatelessWidget {
     );
     var i = 0;
     return Scaffold(
-      appBar: AppBar(title: Text(t.moreCoupons)),
+      appBar: AppBar(title: KeepAllText(t.moreCoupons)),
       body: coupons.isEmpty
           ? EmptyState(
               icon: Icons.confirmation_number_rounded,
@@ -67,7 +67,7 @@ class CouponsScreen extends StatelessWidget {
                     ),
                 ],
                 const SizedBox(height: Space.xs),
-                Text(
+                KeepAllText(
                   t.couponsNote,
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.inkSoft,
@@ -107,7 +107,7 @@ class _CouponTicket extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    KeepAllText(
                       context.won(c.amount),
                       style: context.text.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -115,14 +115,14 @@ class _CouponTicket extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: Space.xxs),
-                    Text(
+                    KeepAllText(
                       t.couponName(c.name),
                       style: context.text.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    KeepAllText(
                       '$scope · ${t.couponUntil(_shortDay(c.expiresAt, context.lang))}',
                       style: context.text.bodySmall?.copyWith(
                         color: colors.inkSoft,
@@ -151,7 +151,7 @@ class _CouponTicket extends StatelessWidget {
                       )
                     : Padding(
                         padding: const EdgeInsets.all(Space.xs),
-                        child: Text(
+                        child: KeepAllText(
                           state,
                           textAlign: TextAlign.center,
                           style: context.text.labelMedium?.copyWith(
@@ -229,7 +229,7 @@ class _LoginBadge extends StatelessWidget {
             child: Center(
               child: provider == 'apple'
                   ? Icon(Icons.apple, size: 14, color: fg)
-                  : Text(
+                  : KeepAllText(
                       mark,
                       textScaler: TextScaler.noScaling,
                       style: TextStyle(
@@ -243,7 +243,7 @@ class _LoginBadge extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Flexible(
-          child: Text(
+          child: KeepAllText(
             _loginLabel(context.t, provider),
             style: context.text.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
@@ -268,13 +268,13 @@ class AccountScreen extends StatelessWidget {
     final logins = [
       for (final p in app.logins) _LoginBadge(p),
       if (app.phone.isNotEmpty)
-        Text(t.accountLoginPhone, style: context.text.bodyMedium),
+        KeepAllText(t.accountLoginPhone, style: context.text.bodyMedium),
     ];
     Widget divider() =>
         const Divider(height: 1, indent: Space.lg, endIndent: Space.lg);
     return Scaffold(
       backgroundColor: c.surface,
-      appBar: AppBar(title: Text(t.moreAccount)),
+      appBar: AppBar(title: KeepAllText(t.moreAccount)),
       body: ListView(
         children: [
           Padding(
@@ -302,14 +302,14 @@ class AccountScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      KeepAllText(
                         app.name,
                         style: context.text.titleLarge?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       if (joined != null)
-                        Text(
+                        KeepAllText(
                           t.accountJoined(
                             lang == 'ko'
                                 ? DateFormat('yyyy.MM.dd').format(joined)
@@ -336,7 +336,7 @@ class AccountScreen extends StatelessWidget {
                 initial: app.name,
                 isEmail: false,
               ),
-              child: Text(t.edit),
+              child: KeepAllText(t.edit),
             ),
           ),
           divider(),
@@ -345,7 +345,7 @@ class AccountScreen extends StatelessWidget {
             value: formatKoreanPhone(app.phone),
             extra: TextButton(
               onPressed: () => _push(context, const AccountIdentityScreen()),
-              child: Text(t.change),
+              child: KeepAllText(t.change),
             ),
           ),
           divider(),
@@ -359,7 +359,7 @@ class AccountScreen extends StatelessWidget {
                 initial: app.email ?? '',
                 isEmail: true,
               ),
-              child: Text(t.edit),
+              child: KeepAllText(t.edit),
             ),
           ),
           divider(),
@@ -376,7 +376,7 @@ class AccountScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Flexible(
-                    child: Text(
+                    child: KeepAllText(
                       t.accountLogin,
                       style: context.text.bodyMedium?.copyWith(
                         color: c.inkSoft,
@@ -414,12 +414,12 @@ class AccountScreen extends StatelessWidget {
           const FlowBand(),
           const IdentityEntryTile(),
           ListTile(
-            title: Text(t.pvManage),
+            title: KeepAllText(t.pvManage),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _push(context, const ConsentScreen()),
           ),
           ListTile(
-            title: Text(t.pvExport),
+            title: KeepAllText(t.pvExport),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => showDataExport(context),
           ),
@@ -431,7 +431,7 @@ class AccountScreen extends StatelessWidget {
               TextButton(
                 onPressed: Deps.read(context).session.logout,
                 style: TextButton.styleFrom(foregroundColor: c.inkSoft),
-                child: Text(
+                child: KeepAllText(
                   t.logout,
                   style: const TextStyle(decoration: TextDecoration.underline),
                 ),
@@ -439,7 +439,7 @@ class AccountScreen extends StatelessWidget {
               TextButton(
                 onPressed: () => _deleteAccount(context),
                 style: TextButton.styleFrom(foregroundColor: c.inkSoft),
-                child: Text(
+                child: KeepAllText(
                   t.deleteAccount,
                   style: const TextStyle(decoration: TextDecoration.underline),
                 ),
@@ -470,12 +470,12 @@ Future<void> _deleteAccount(BuildContext context) async {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(t.deleteAccountBody, style: ctx.text.bodyMedium),
+          KeepAllText(t.deleteAccountBody, style: ctx.text.bodyMedium),
           const SizedBox(height: Space.xl),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: ctx.colors.danger),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.deleteAccount),
+            child: KeepAllText(t.deleteAccount),
           ),
         ],
       ),
@@ -510,7 +510,7 @@ class _FaqScreenState extends State<FaqScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: context.colors.surface,
-    appBar: AppBar(title: Text(context.t.moreFaq)),
+    appBar: AppBar(title: KeepAllText(context.t.moreFaq)),
     body: AsyncView<List<ContentItem>>(
       load: () async =>
           (await context.api.get('/content', query: {'kind': 'faq'}) as List)
@@ -550,7 +550,7 @@ class _FaqScreenState extends State<FaqScreen> {
       return Padding(
         padding: const EdgeInsets.only(right: Space.xs),
         child: ChoiceChip(
-          label: Text(label),
+          label: KeepAllText(label),
           selected: on,
           showCheckmark: false,
           shape: const StadiumBorder(),
@@ -599,7 +599,7 @@ class FaqRow extends StatelessWidget {
         shape: const Border(),
         collapsedShape: const Border(),
         tilePadding: const EdgeInsets.symmetric(horizontal: Space.md),
-        leading: Text(
+        leading: KeepAllText(
           'Q',
           style: context.text.titleMedium?.copyWith(
             color: c.accent,
@@ -607,7 +607,7 @@ class FaqRow extends StatelessWidget {
           ),
         ),
         minTileHeight: 56,
-        title: Text(
+        title: KeepAllText(
           item.title(context.lang),
           style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
@@ -625,7 +625,7 @@ class FaqRow extends StatelessWidget {
               color: c.surfaceHigh,
               borderRadius: BorderRadius.circular(Radii.chip + 2),
             ),
-            child: Text(
+            child: KeepAllText(
               item.text(context.lang),
               style: context.text.bodyMedium?.copyWith(color: c.inkSoft),
             ),
@@ -685,7 +685,7 @@ class _AccountFieldDialogState extends State<_AccountFieldDialog> {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
-      title: Text(widget.label),
+      title: KeepAllText(widget.label),
       content: TextField(
         controller: _ctrl,
         autofocus: true,
@@ -698,11 +698,11 @@ class _AccountFieldDialogState extends State<_AccountFieldDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.cancel),
+          child: KeepAllText(t.cancel),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
-          child: Text(t.save),
+          child: KeepAllText(t.save),
         ),
       ],
     );

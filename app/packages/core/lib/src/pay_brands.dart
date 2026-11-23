@@ -82,7 +82,7 @@ class PayBrandBadge extends StatelessWidget {
         child: Center(
           widthFactor: 1,
           child: brand.wordmark != null
-              ? Text(
+              ? KeepAllText(
                   brand.wordmark!,
                   style: context.text.labelLarge?.copyWith(
                     color: fg,

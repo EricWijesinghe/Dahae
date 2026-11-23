@@ -95,16 +95,16 @@ class _BookingsScreenState extends State<BookingsScreen> with LiveReload {
                       child: DropdownButton<int?>(
                         isExpanded: true,
                         value: _status,
-                        hint: Text(t.cAllStatus),
+                        hint: KeepAllText(t.cAllStatus),
                         items: [
                           DropdownMenuItem(
                             value: null,
-                            child: Text(t.cAllStatus),
+                            child: KeepAllText(t.cAllStatus),
                           ),
                           for (final s in const [0, 1, 2, 3, -1])
                             DropdownMenuItem(
                               value: s,
-                              child: Text(t.status(s)),
+                              child: KeepAllText(t.status(s)),
                             ),
                         ],
                         onChanged: (v) {
@@ -118,11 +118,11 @@ class _BookingsScreenState extends State<BookingsScreen> with LiveReload {
                     child: DropdownButton<String?>(
                       isExpanded: true,
                       value: _service,
-                      hint: Text(t.cAllServices),
+                      hint: KeepAllText(t.cAllServices),
                       items: [
                         DropdownMenuItem(
                           value: null,
-                          child: Text(t.cAllServices),
+                          child: KeepAllText(t.cAllServices),
                         ),
                         for (final c
                             in widget.quoteDesk
@@ -137,7 +137,7 @@ class _BookingsScreenState extends State<BookingsScreen> with LiveReload {
                                     'move_out',
                                     'move_in',
                                   ])
-                          DropdownMenuItem(value: c, child: Text(t.service(c))),
+                          DropdownMenuItem(value: c, child: KeepAllText(t.service(c))),
                       ],
                       onChanged: (v) {
                         setState(() => _service = v);
@@ -226,7 +226,7 @@ class _Row extends StatelessWidget {
       title: Row(
         children: [
           Expanded(
-            child: Text(
+            child: KeepAllText(
               '${b.number} · ${t.serviceShort(b.serviceCode)}',
               style: context.text.titleSmall,
               overflow: TextOverflow.ellipsis,
@@ -237,7 +237,7 @@ class _Row extends StatelessWidget {
           ),
         ],
       ),
-      subtitle: Text(
+      subtitle: KeepAllText(
         '${dateLabel(b.visitDate, context.lang)} ${b.isQuote ? (b.startHour < 12 ? t.morning : t.afternoon) : hourLabel(b.startHour, context.lang)} · ${districtByCode(b.j['district_code'] as String)?.name(context.lang) ?? ''}${amount == null ? '' : ' · ${context.won(amount)}'}${b.teamName == null ? '' : ' · ${b.teamName}'}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -255,7 +255,7 @@ class BookingDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(query ?? context.t.detailTitle)),
+    appBar: AppBar(title: KeepAllText(query ?? context.t.detailTitle)),
     body: id != null
         ? BookingPanel(id: id!)
         : AsyncView<List<Json>>(
@@ -343,12 +343,12 @@ class _BookingPanelState extends State<BookingPanel> with LiveReload {
                     '${b.number} · ${t.service(b.serviceCode)}',
                     style: context.text.titleLarge,
                   ),
-                  Text(
+                  KeepAllText(
                     '${dateLabel(b.visitDate, context.lang)} ${hourLabel(b.startHour, context.lang)}',
                     style: context.text.bodySmall,
                   ),
                   if (countsLine != null)
-                    Text(countsLine, style: context.text.bodySmall),
+                    KeepAllText(countsLine, style: context.text.bodySmall),
                 ],
               ),
             ),
@@ -409,11 +409,11 @@ class _BookingPanelState extends State<BookingPanel> with LiveReload {
         if (b.threadId != null)
           OutlinedButton.icon(
             icon: const Icon(Icons.forum_rounded),
-            label: Text(t.cInbox),
+            label: KeepAllText(t.cInbox),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => Scaffold(
-                  appBar: AppBar(title: Text(b.number)),
+                  appBar: AppBar(title: KeepAllText(b.number)),
                   body: ThreadView(threadId: b.threadId!),
                 ),
               ),
@@ -429,7 +429,7 @@ class _BookingPanelState extends State<BookingPanel> with LiveReload {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.cCancelRefund),
+        title: KeepAllText(t.cCancelRefund),
         content: TextField(
           controller: amount,
           keyboardType: TextInputType.number,
@@ -439,14 +439,14 @@ class _BookingPanelState extends State<BookingPanel> with LiveReload {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t.cancel),
+            child: KeepAllText(t.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: ctx.colors.danger,
             ).merge(compactFilled),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.cCancelRefund),
+            child: KeepAllText(t.cCancelRefund),
           ),
         ],
       ),
@@ -528,7 +528,7 @@ class _StatusActionsState extends State<_StatusActions> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(t.cChangeStatus, style: context.text.titleSmall),
+          KeepAllText(t.cChangeStatus, style: context.text.titleSmall),
           const SizedBox(height: Space.sm),
           if (b.status == 1 && b.proId == null)
             Row(
@@ -546,7 +546,7 @@ class _StatusActionsState extends State<_StatusActions> {
                 FilledButton(
                   style: FilledButton.styleFrom(minimumSize: const Size(0, 56)),
                   onPressed: _busy ? null : () => _status(2, _team.text),
-                  child: Text(t.cAssign),
+                  child: KeepAllText(t.cAssign),
                 ),
               ],
             ),
@@ -570,12 +570,12 @@ class _StatusActionsState extends State<_StatusActions> {
                             await _status(3);
                           }
                         },
-                  child: Text(t.cMarkDone),
+                  child: KeepAllText(t.cMarkDone),
                 ),
               if (b.status == 2)
                 OutlinedButton(
                   onPressed: _busy ? null : () => _status(1),
-                  child: Text(t.cConfirm),
+                  child: KeepAllText(t.cConfirm),
                 ),
               if (b.status >= 0 && b.status < 3)
                 OutlinedButton(
@@ -583,7 +583,7 @@ class _StatusActionsState extends State<_StatusActions> {
                     foregroundColor: context.colors.danger,
                   ),
                   onPressed: _busy ? null : () => _run(widget.onCancel),
-                  child: Text(t.cCancelRefund),
+                  child: KeepAllText(t.cCancelRefund),
                 ),
             ],
           ),
@@ -605,7 +605,7 @@ class _InfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: context.text.labelSmall),
+          KeepAllText(title, style: context.text.labelSmall),
           const SizedBox(height: 4),
           for (final l in lines)
             SelectableText(l, style: context.text.bodyMedium),
@@ -688,8 +688,8 @@ class _QuoteDeskState extends State<_QuoteDesk> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.cQuoteOverride),
-        content: Text(
+        title: KeepAllText(t.cQuoteOverride),
+        content: KeepAllText(
           t.cQuoteOverrideBody(
             context.won(price),
             context.won(estimate),
@@ -699,12 +699,12 @@ class _QuoteDeskState extends State<_QuoteDesk> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t.cancel),
+            child: KeepAllText(t.cancel),
           ),
           FilledButton(
             style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.cQuoteOverride),
+            child: KeepAllText(t.cQuoteOverride),
           ),
         ],
       ),
@@ -732,11 +732,11 @@ class _QuoteDeskState extends State<_QuoteDesk> {
           Row(
             children: [
               Expanded(
-                child: Text(t.cQuoteDesk, style: context.text.titleMedium),
+                child: KeepAllText(t.cQuoteDesk, style: context.text.titleMedium),
               ),
               if (widget.booking.finalPrice != null)
                 Chip(
-                  label: Text(t.quoteSentChip),
+                  label: KeepAllText(t.quoteSentChip),
                   visualDensity: VisualDensity.compact,
                 ),
             ],
@@ -746,35 +746,35 @@ class _QuoteDeskState extends State<_QuoteDesk> {
             const SizedBox(height: Space.sm),
           ],
           // The server copies these booking rows into the customer's quote card.
-          Text(
+          KeepAllText(
             '${t.quoteVisit} ${dateLabel(widget.booking.visitDate, context.lang)} ${widget.booking.startHour < 12 ? t.morning : t.afternoon} · ${t.service(widget.booking.serviceCode)}',
             style: context.text.bodySmall,
           ),
           if (widget.countsLine != null)
-            Text(widget.countsLine!, style: context.text.bodySmall),
+            KeepAllText(widget.countsLine!, style: context.text.bodySmall),
           const SizedBox(height: Space.sm),
-          Text(t.cAnswers, style: context.text.labelSmall),
+          KeepAllText(t.cAnswers, style: context.text.labelSmall),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
               for (final (label, value) in quoteAnswerRows(t, a))
                 Chip(
-                  label: Text('$label: $value'),
+                  label: KeepAllText('$label: $value'),
                   visualDensity: VisualDensity.compact,
                 ),
             ],
           ),
           if (e != null) ...[
             const SizedBox(height: Space.md),
-            Text(t.cEstimateCalc, style: context.text.labelSmall),
+            KeepAllText(t.cEstimateCalc, style: context.text.labelSmall),
             for (final (label, value) in estimateRows(t, e, context.won))
-              Text('$label  $value', style: context.text.bodyMedium),
+              KeepAllText('$label  $value', style: context.text.bodyMedium),
           ],
           const SizedBox(height: Space.md),
-          Text(t.cProQuotes, style: context.text.labelSmall),
+          KeepAllText(t.cProQuotes, style: context.text.labelSmall),
           if (widget.quotes.isEmpty)
-            Text(t.cNoProQuotes, style: context.text.bodySmall),
+            KeepAllText(t.cNoProQuotes, style: context.text.bodySmall),
           for (final q in widget.quotes)
             Padding(
               padding: const EdgeInsets.only(top: 6),
@@ -835,14 +835,14 @@ class _SentQuote extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        KeepAllText(
           t.quoteSentEntry(amount, timeLabel(booking.updatedAt, context.lang)),
           style: context.text.labelMedium,
         ),
         Row(
           children: [
             ResendQuoteButton(bookingId: booking.id, label: t.quoteResend),
-            TextButton(onPressed: onRevise, child: Text(t.quoteRevise)),
+            TextButton(onPressed: onRevise, child: KeepAllText(t.quoteRevise)),
           ],
         ),
       ],

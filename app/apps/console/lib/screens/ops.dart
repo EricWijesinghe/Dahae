@@ -46,7 +46,7 @@ class _OpsScreenState extends State<OpsScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(t.cOps, style: context.text.headlineMedium),
+                    child: KeepAllText(t.cOps, style: context.text.headlineMedium),
                   ),
                   IconButton(
                     tooltip: t.oRefresh,
@@ -143,9 +143,9 @@ class _Overall extends StatelessWidget {
         children: [
           _Dot(level),
           const SizedBox(width: Space.sm),
-          Expanded(child: Text(t.oOverall, style: context.text.titleLarge)),
+          Expanded(child: KeepAllText(t.oOverall, style: context.text.titleLarge)),
           Flexible(
-            child: Text(
+            child: KeepAllText(
               levelLabel(t, level),
               textAlign: TextAlign.end,
               style: context.text.titleSmall,
@@ -153,7 +153,7 @@ class _Overall extends StatelessWidget {
           ),
           const SizedBox(width: Space.lg),
           Flexible(
-            child: Text(
+            child: KeepAllText(
               '${t.oVersion} ${status['version']} · ${t.oUptime} ${t.oUptimeValue('${uptime ~/ 3600}', '${(uptime % 3600) ~/ 60}')}',
               textAlign: TextAlign.end,
               style: context.text.bodySmall,
@@ -227,13 +227,13 @@ class _Checks extends StatelessWidget {
                       _Dot(c['level'] as String),
                       const SizedBox(width: Space.xs),
                       Expanded(
-                        child: Text(
+                        child: KeepAllText(
                           _checkTitle(t, c['key'] as String),
                           style: context.text.titleSmall,
                         ),
                       ),
                       Flexible(
-                        child: Text(
+                        child: KeepAllText(
                           levelLabel(t, c['level'] as String),
                           textAlign: TextAlign.end,
                           style: context.text.bodySmall,
@@ -242,14 +242,14 @@ class _Checks extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: Space.xs),
-                  Text(
+                  KeepAllText(
                     _checkValue(t, status, c),
                     style: context.text.bodyMedium,
                   ),
                   if (c['level'] == 'red' &&
                       _checkAction(t, c['key'] as String) != null) ...[
                     const SizedBox(height: Space.sm),
-                    Text(
+                    KeepAllText(
                       _checkAction(t, c['key'] as String)!,
                       style: context.text.bodySmall?.copyWith(
                         color: context.colors.danger,
@@ -292,7 +292,7 @@ class _Jobs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.t;
-    if (jobs.isEmpty) return Text(t.oNoData, style: context.text.bodyMedium);
+    if (jobs.isEmpty) return KeepAllText(t.oNoData, style: context.text.bodyMedium);
     return Wrap(
       spacing: Space.sm,
       runSpacing: Space.sm,
@@ -326,13 +326,13 @@ class _Jobs extends StatelessWidget {
             _Dot(level),
             const SizedBox(width: Space.xs),
             Expanded(
-              child: Text(
+              child: KeepAllText(
                 _jobName(t, j['job'] as String),
                 style: context.text.titleSmall,
               ),
             ),
             if (stalled)
-              Text(
+              KeepAllText(
                 t.oJobStalled,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.danger,
@@ -341,11 +341,11 @@ class _Jobs extends StatelessWidget {
           ],
         ),
         const SizedBox(height: Space.xs),
-        Text(when, style: context.text.bodyMedium),
+        KeepAllText(when, style: context.text.bodyMedium),
         if (errors > 0)
-          Text(t.oJobErrors('$errors'), style: context.text.bodySmall),
+          KeepAllText(t.oJobErrors('$errors'), style: context.text.bodySmall),
         if (j['job'] == 'notify_outbox' && deadLetters > 0)
-          Text(
+          KeepAllText(
             t.oJobDeadLetters('$deadLetters'),
             style: context.text.bodySmall?.copyWith(
               color: context.colors.danger,
@@ -419,13 +419,13 @@ class _IntegrationRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                KeepAllText(
                   _integrationNames[code]!(t),
                   style: context.text.titleSmall,
                 ),
-                Text(detail, style: context.text.bodySmall),
+                KeepAllText(detail, style: context.text.bodySmall),
                 if (action != null)
-                  Text(
+                  KeepAllText(
                     action,
                     style: context.text.bodySmall?.copyWith(
                       color: levelColor(context, level),
@@ -505,10 +505,10 @@ class _AlertsCardState extends State<_AlertsCard> {
         'quiet_end': _to,
         'alert_phone': _phone.text.trim(),
       });
-      messenger.showSnackBar(SnackBar(content: Text(t.oSaved)));
+      messenger.showSnackBar(SnackBar(content: KeepAllText(t.oSaved)));
       widget.onSaved();
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(t.oSaveFailed)));
+      messenger.showSnackBar(SnackBar(content: KeepAllText(t.oSaveFailed)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -523,19 +523,19 @@ class _AlertsCardState extends State<_AlertsCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.oAlertsHint, style: context.text.bodySmall),
+          KeepAllText(t.oAlertsHint, style: context.text.bodySmall),
           for (final e in _ruleLabels.entries)
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(e.value(t)),
+              title: KeepAllText(e.value(t)),
               value: _rules[e.key] ?? true,
               onChanged: canSave
                   ? (v) => setState(() => _rules[e.key] = v)
                   : null,
             ),
           const SizedBox(height: Space.sm),
-          Text(t.oQuietHours, style: context.text.titleSmall),
-          Text(t.oQuietHint, style: context.text.bodySmall),
+          KeepAllText(t.oQuietHours, style: context.text.titleSmall),
+          KeepAllText(t.oQuietHint, style: context.text.bodySmall),
           const SizedBox(height: Space.xs),
           Row(
             children: [
@@ -593,7 +593,7 @@ class _HourPicker extends StatelessWidget {
         decoration: InputDecoration(labelText: label),
         items: [
           for (var h = 0; h < 24; h++)
-            DropdownMenuItem(value: h, child: Text(t.oHour('$h'))),
+            DropdownMenuItem(value: h, child: KeepAllText(t.oHour('$h'))),
         ],
         onChanged: onChanged == null
             ? null

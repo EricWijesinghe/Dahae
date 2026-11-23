@@ -106,6 +106,8 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
 
   /// After a policy change the customer agrees again: the consent screen opens once per account start.
   Future<void> _askReconsent() async {
+    // Runs a frame after the start: a sign-out in that frame must not ask a guest's consents.
+    if (!_memberStarted) return;
     final nav = Navigator.of(context);
     final Json s;
     try {

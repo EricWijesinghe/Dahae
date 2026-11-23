@@ -90,7 +90,7 @@ class _ReviewAccountCardState extends State<ReviewAccountCard> {
             Icons.verified_user_rounded,
             color: active ? context.primary : null,
           ),
-          title: Text(t.cReviewTitle, style: context.text.titleMedium),
+          title: KeepAllText(t.cReviewTitle, style: context.text.titleMedium),
           subtitle: active
               ? Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -106,7 +106,7 @@ class _ReviewAccountCardState extends State<ReviewAccountCard> {
                 )
               : null,
           children: [
-            Text(t.cReviewHint, style: context.text.bodyMedium),
+            KeepAllText(t.cReviewHint, style: context.text.bodyMedium),
             const SizedBox(height: Space.md),
             TextField(
               controller: _phone,
@@ -139,7 +139,7 @@ class _ReviewAccountCardState extends State<ReviewAccountCard> {
                           }, headers),
                         ),
                   icon: const Icon(Icons.play_arrow_rounded),
-                  label: Text(t.cReviewEnable),
+                  label: KeepAllText(t.cReviewEnable),
                 ),
                 if (active)
                   TextButton(
@@ -152,7 +152,7 @@ class _ReviewAccountCardState extends State<ReviewAccountCard> {
                               headers,
                             ),
                           ),
-                    child: Text(t.cSetupClear),
+                    child: KeepAllText(t.cSetupClear),
                   ),
               ],
             ),

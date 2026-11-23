@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ui/ui.dart' show KeepAllText;
 
 import 'api.dart';
 import 'foreground.dart';
@@ -189,15 +190,15 @@ class _RequiredUpdate extends StatelessWidget {
                 color: theme.colorScheme.primary,
               ),
               const SizedBox(height: 24),
-              Text(
+              KeepAllText(
                 t.uUpdateRequiredTitle,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
-              Text(t.uUpdateRequiredBody, textAlign: TextAlign.center),
+              KeepAllText(t.uUpdateRequiredBody, textAlign: TextAlign.center),
               const SizedBox(height: 8),
-              Text(
+              KeepAllText(
                 t.uCurrentVersion(current),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall,
@@ -205,7 +206,7 @@ class _RequiredUpdate extends StatelessWidget {
               const SizedBox(height: 32),
               FilledButton(
                 onPressed: storeUrl == null ? null : () => _openStore(storeUrl),
-                child: Text(
+                child: KeepAllText(
                   storeUrl == null ? t.uUpdateStoreMissing : t.uUpdateStore,
                 ),
               ),
@@ -240,17 +241,17 @@ class _UpdateBanner extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(
+                child: KeepAllText(
                   t.uUpdateBanner(version),
                   style: TextStyle(color: scheme.onSecondaryContainer),
                 ),
               ),
-              TextButton(onPressed: onLater, child: Text(t.uUpdateLater)),
+              TextButton(onPressed: onLater, child: KeepAllText(t.uUpdateLater)),
               FilledButton.tonal(
                 // The theme's full-width minimum cannot lay out inside a Row.
                 style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
                 onPressed: storeUrl == null ? null : () => _openStore(storeUrl),
-                child: Text(t.uUpdateNow),
+                child: KeepAllText(t.uUpdateNow),
               ),
             ],
           ),

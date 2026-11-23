@@ -3,6 +3,7 @@
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:ui/ui.dart' show KeepAllText;
 
 /// Funnel totals for the window (GET /admin/analytics/funnel).
 typedef FunnelFn = Future<Json> Function(int days);
@@ -36,7 +37,7 @@ class AnalyticsView extends StatelessWidget {
         FutureBuilder<Json>(
           future: funnel(days),
           builder: (context, snap) {
-            if (snap.hasError) return Text(context.t.error(snap.error!));
+            if (snap.hasError) return KeepAllText(context.t.error(snap.error!));
             final f = snap.data;
             if (f == null) return const LinearProgressIndicator();
             final signed = (f['signed_up'] as num);
@@ -51,7 +52,7 @@ class AnalyticsView extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                KeepAllText(
                   t.anFunnel('$days'),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
@@ -61,7 +62,7 @@ class AnalyticsView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('$label · $n'),
+                        KeepAllText('$label · $n'),
                         LinearProgressIndicator(value: shareOf(n, signed)),
                       ],
                     ),
@@ -71,11 +72,11 @@ class AnalyticsView extends StatelessWidget {
           },
         ),
         const SizedBox(height: 16),
-        Text(t.anCohorts, style: Theme.of(context).textTheme.titleMedium),
+        KeepAllText(t.anCohorts, style: Theme.of(context).textTheme.titleMedium),
         FutureBuilder<List<Json>>(
           future: cohorts(weeks),
           builder: (context, snap) {
-            if (snap.hasError) return Text(context.t.error(snap.error!));
+            if (snap.hasError) return KeepAllText(context.t.error(snap.error!));
             final rows = snap.data;
             if (rows == null) return const LinearProgressIndicator();
             return Column(
@@ -83,12 +84,12 @@ class AnalyticsView extends StatelessWidget {
                 for (final r in rows)
                   ListTile(
                     dense: true,
-                    title: Text((r['week'] as String).substring(0, 10)),
-                    subtitle: Text(
+                    title: KeepAllText((r['week'] as String).substring(0, 10)),
+                    subtitle: KeepAllText(
                       '${t.anCohortSize('${r['size']}')} · ${t.anWeekAfter('1')} ${r['w1']} · '
                       '${t.anWeekAfter('2')} ${r['w2']} · ${t.anWeekAfter('3')} ${r['w3']} · ${t.anWeekAfter('4')} ${r['w4']}',
                     ),
-                    trailing: Text(
+                    trailing: KeepAllText(
                       '${(shareOf(r['w1'] as num, r['size'] as num) * 100).round()}%',
                     ),
                   ),

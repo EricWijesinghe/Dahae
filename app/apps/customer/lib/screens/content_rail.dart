@@ -62,7 +62,7 @@ class NewsList extends StatelessWidget {
             Expanded(
               child: Semantics(
                 header: true,
-                child: Text(
+                child: KeepAllText(
                   t.dhHomeNews(context.brandName),
                   style: context.text.titleLarge,
                 ),
@@ -145,7 +145,7 @@ class _NoticeRow extends StatelessWidget {
                   color: c.inkMuted,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
+                child: KeepAllText(
                   context.t.dhNoticeTag,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -157,7 +157,7 @@ class _NoticeRow extends StatelessWidget {
               ),
               const SizedBox(width: Space.sm),
               Expanded(
-                child: Text(
+                child: KeepAllText(
                   item.title(context.lang),
                   style: context.text.bodyMedium?.copyWith(color: c.ink),
                   maxLines: 1,
@@ -166,7 +166,7 @@ class _NoticeRow extends StatelessWidget {
               ),
               if (noticeDateLabel(item).isNotEmpty) ...[
                 const SizedBox(width: Space.sm),
-                Text(
+                KeepAllText(
                   noticeDateLabel(item),
                   style: context.text.labelSmall?.copyWith(color: c.inkMuted),
                 ),
@@ -232,7 +232,7 @@ class _ArticleRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  KeepAllText(
                     service != null
                         ? t.service(service)
                         : (item.kind == 'tip' ? t.moreTips : t.cKind_news),
@@ -241,7 +241,7 @@ class _ArticleRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Text(
+                  KeepAllText(
                     item.title(context.lang),
                     style: context.text.bodyLarge?.copyWith(color: c.ink),
                     maxLines: _titleLines,
@@ -463,8 +463,8 @@ class _BannerCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (label.isNotEmpty)
-              Text(label, style: context.text.labelSmall?.copyWith(color: on)),
-            Text(
+              KeepAllText(label, style: context.text.labelSmall?.copyWith(color: on)),
+            KeepAllText(
               value,
               style: context.text.titleLarge?.copyWith(
                 color: on,
@@ -508,7 +508,7 @@ class _BannerPage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    KeepAllText(
                       title,
                       style: context.text.titleLarge?.copyWith(color: c.ink),
                       maxLines: 2,
@@ -516,7 +516,7 @@ class _BannerPage extends StatelessWidget {
                     ),
                     if (body != null) ...[
                       const SizedBox(height: Space.xs),
-                      Text(
+                      KeepAllText(
                         body!,
                         style: context.text.bodySmall?.copyWith(
                           color: c.inkSoft,

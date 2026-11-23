@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:ui/ui.dart';
 
+import 'console_title.dart';
 import 'screens/first_run.dart';
 import 'server_address.dart';
 import 'shell.dart';
@@ -184,7 +185,7 @@ class ConsoleApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           builder: (context, child) =>
               DesktopColumn(child: child ?? const SizedBox.shrink()),
-          onGenerateTitle: (c) => '${b.name} ${T.of(c).cTitle}',
+          onGenerateTitle: consoleTitle,
           theme: buildTheme(b, Brightness.light),
           darkTheme: buildTheme(b, Brightness.dark),
           themeMode: theme.mode,

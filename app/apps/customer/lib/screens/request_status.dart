@@ -89,7 +89,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             ),
             StaggerIn(
               index: 0,
-              child: Text(
+              child: KeepAllText(
                 t.dfRequestDone,
                 textAlign: TextAlign.center,
                 style: ctx.text.headlineSmall?.copyWith(
@@ -100,7 +100,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             const SizedBox(height: Space.xs),
             StaggerIn(
               index: 1,
-              child: Text(
+              child: KeepAllText(
                 t.dfRequestDoneBody,
                 textAlign: TextAlign.center,
                 style: ctx.text.bodyMedium?.copyWith(color: ctx.colors.inkSoft),
@@ -126,7 +126,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                         ),
                       ),
                       const SizedBox(height: Space.xs),
-                      Text(
+                      KeepAllText(
                         t.dfAcUpsell,
                         textAlign: TextAlign.center,
                         style: ctx.text.bodyMedium,
@@ -138,7 +138,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                           minimumSize: const Size(0, 48),
                         ),
                         onPressed: () => Navigator.of(ctx).pop('aircon'),
-                        child: Text(t.dfAcUpsellCta),
+                        child: KeepAllText(t.dfAcUpsellCta),
                       ),
                     ],
                   ),
@@ -219,14 +219,14 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
             child: Column(
               children: [
-                Text(
+                KeepAllText(
                   DateFormat.yMMMEd(lang).format(b.visitDate),
                   textAlign: TextAlign.center,
                   style: context.text.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                Text(
+                KeepAllText(
                   '${visitHalf(t, b.startHour)} (${slotRangeLabel(b.startHour, lang)})',
                   style: context.text.titleSmall,
                 ),
@@ -239,14 +239,14 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                   ),
                 ),
                 const SizedBox(height: Space.md),
-                Text(t.dfRequested, style: context.text.titleLarge),
+                KeepAllText(t.dfRequested, style: context.text.titleLarge),
                 const SizedBox(height: Space.lg),
                 _Tracker(
                   labels: steps,
                   current: b.status.clamp(0, steps.length - 1),
                 ),
                 const SizedBox(height: Space.md),
-                Text(
+                KeepAllText(
                   t.dfStatusNote,
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.inkMuted,
@@ -261,7 +261,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             title: t.dfPayInfo,
             children: [
               if (depositBps != null)
-                Text(
+                KeepAllText(
                   t.dfPayInfoBody(pctOf(depositBps)),
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.inkMuted,
@@ -273,13 +273,13 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    KeepAllText(
                       t.dfQuoteMethod,
                       style: context.text.bodySmall?.copyWith(
                         color: context.colors.inkMuted,
                       ),
                     ),
-                    Text(
+                    KeepAllText(
                       t.dfSafeBooking(context.brandName),
                       style: context.text.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -329,7 +329,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                       backgroundColor: context.colors.surface,
                     ),
                     icon: const Icon(Icons.chat_bubble_outline_rounded),
-                    label: Text(t.dfChat),
+                    label: KeepAllText(t.dfChat),
                     onPressed: _openChat,
                   ),
                 if (b.status == 0 && b.deposit != null) ...[
@@ -343,7 +343,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                       padding: const EdgeInsets.only(top: Space.xs),
                       child: OutlinedButton(
                         onPressed: _openDetail,
-                        child: Text(t.reschedule),
+                        child: KeepAllText(t.reschedule),
                       ),
                     ),
                   ),
@@ -351,7 +351,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                   const SizedBox(height: Space.sm),
                   TextButton(
                     onPressed: _busy ? null : _cancel,
-                    child: Text(
+                    child: KeepAllText(
                       t.cancelBooking,
                       style: const TextStyle(
                         decoration: TextDecoration.underline,
@@ -427,7 +427,7 @@ class _Tracker extends StatelessWidget {
                       ),
                       const SizedBox(height: Space.xs),
                       ExcludeSemantics(
-                        child: Text(
+                        child: KeepAllText(
                           l,
                           textAlign: TextAlign.center,
                           style: context.text.labelMedium?.copyWith(

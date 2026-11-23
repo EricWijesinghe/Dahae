@@ -95,7 +95,7 @@ class DashboardScreen extends StatelessWidget {
         children: [
           StaggerIn(
             index: 0,
-            child: Text(t.cDashboard, style: context.text.headlineMedium),
+            child: KeepAllText(t.cDashboard, style: context.text.headlineMedium),
           ),
           if (failed != null) ...[const SizedBox(height: Space.md), failed],
           const SizedBox(height: Space.lg),
@@ -134,12 +134,12 @@ class DashboardScreen extends StatelessWidget {
                                 FittedBox(
                                   fit: BoxFit.scaleDown,
                                   alignment: Alignment.centerLeft,
-                                  child: Text(
+                                  child: KeepAllText(
                                     value,
                                     style: context.text.headlineSmall,
                                   ),
                                 ),
-                                Text(
+                                KeepAllText(
                                   label,
                                   style: context.text.labelSmall,
                                   maxLines: 1,
@@ -162,7 +162,7 @@ class DashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t.cByService, style: context.text.titleMedium),
+                  KeepAllText(t.cByService, style: context.text.titleMedium),
                   const SizedBox(height: Space.md),
                   for (final code in const [
                     'studio',
@@ -180,7 +180,7 @@ class DashboardScreen extends StatelessWidget {
                         children: [
                           SizedBox(
                             width: 120,
-                            child: Text(
+                            child: KeepAllText(
                               t.service(code),
                               style: context.text.bodySmall,
                               overflow: TextOverflow.ellipsis,
@@ -203,7 +203,7 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           SizedBox(
                             width: 44,
-                            child: Text(
+                            child: KeepAllText(
                               '${byService[code] ?? 0}',
                               textAlign: TextAlign.right,
                               style: context.text.labelMedium,

@@ -146,7 +146,7 @@ class _CouponsState extends State<_Coupons> {
                 items: [
                   DropdownMenuItem(
                     value: null,
-                    child: Text(t.couponAnyService),
+                    child: KeepAllText(t.couponAnyService),
                   ),
                   for (final c in const [
                     'studio',
@@ -158,14 +158,14 @@ class _CouponsState extends State<_Coupons> {
                     'move_out',
                     'move_in',
                   ])
-                    DropdownMenuItem(value: c, child: Text(t.service(c))),
+                    DropdownMenuItem(value: c, child: KeepAllText(t.service(c))),
                 ],
                 onChanged: (v) => setState(() => _service = v),
               ),
               const SizedBox(height: Space.sm),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(t.cAllCustomers),
+                title: KeepAllText(t.cAllCustomers),
                 value: _all,
                 onChanged: (v) => setState(() => _all = v),
               ),
@@ -249,7 +249,7 @@ class _ContentState extends State<_Content> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
-          title: Text(item == null ? t.cNewContent : t.edit),
+          title: KeepAllText(item == null ? t.cNewContent : t.edit),
           content: SizedBox(
             width: 640,
             child: SingleChildScrollView(
@@ -267,7 +267,7 @@ class _ContentState extends State<_Content> {
                             for (final k in _kinds)
                               DropdownMenuItem(
                                 value: k,
-                                child: Text(kindLabel(t, k)),
+                                child: KeepAllText(kindLabel(t, k)),
                               ),
                           ],
                           onChanged: (v) => set(() => kind = v!),
@@ -350,12 +350,12 @@ class _ContentState extends State<_Content> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(t.cancel),
+              child: KeepAllText(t.cancel),
             ),
             FilledButton(
               style: compactFilled,
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(t.save),
+              child: KeepAllText(t.save),
             ),
           ],
         ),
@@ -419,7 +419,7 @@ class _ContentState extends State<_Content> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _edit,
         icon: const Icon(Icons.add_rounded),
-        label: Text(t.cNewContent),
+        label: KeepAllText(t.cNewContent),
       ),
       body: AsyncView<List<Json>>(
         key: _view,
@@ -443,13 +443,13 @@ class _ContentState extends State<_Content> {
                       _ => 'move_in',
                     }),
                   ),
-                  title: Text(
+                  title: KeepAllText(
                     ((c['title'] as Json)[context.lang] ??
                             (c['title'] as Json)['ko'] ??
                             '')
                         as String,
                   ),
-                  subtitle: Text(
+                  subtitle: KeepAllText(
                     [
                       if (c['slug'] != null) c['slug'],
                       if (c['active'] != true) t.statusCancelled,

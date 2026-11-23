@@ -28,7 +28,7 @@ class RulesScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(Space.md),
-            child: Text(t.rulesIntro),
+            child: KeepAllText(t.rulesIntro),
           ),
           TabBar(
             isScrollable: true,
@@ -151,7 +151,7 @@ class _GroupFormState extends State<_GroupForm> {
             const SizedBox(height: Space.md),
             FilledButton(
               onPressed: _saving ? null : () => _save(reload),
-              child: Text(t.rulesSave),
+              child: KeepAllText(t.rulesSave),
             ),
           ],
         );
@@ -278,21 +278,21 @@ class _RuleRowState extends State<_RuleRow> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(_label(context), style: context.text.titleSmall),
+          KeepAllText(_label(context), style: context.text.titleSmall),
           const SizedBox(height: Space.xs),
           _input(readOnly),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             '${t.rulesSource}: ${_source(context)}',
             style: context.text.bodySmall,
           ),
-          for (final n in notes) Text(n, style: context.text.bodySmall),
+          for (final n in notes) KeepAllText(n, style: context.text.bodySmall),
           if (!readOnly && item['source'] == 'db')
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: widget.onReset,
-                child: Text(t.rulesReset),
+                child: KeepAllText(t.rulesReset),
               ),
             ),
         ],

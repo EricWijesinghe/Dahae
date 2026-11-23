@@ -33,7 +33,7 @@ class _EstimateView extends StatelessWidget {
     future: estimate,
     builder: (context, snap) {
       if (snap.hasError) {
-        return Text(
+        return KeepAllText(
           context.t.error(snap.error!),
           style: context.text.bodySmall,
         );
@@ -67,7 +67,7 @@ class QuoteReviewPage extends StatelessWidget {
 
   Widget _edit(BuildContext context, int step) => TextButton(
     onPressed: () => onEdit(step),
-    child: Text(
+    child: KeepAllText(
       context.t.dfChange,
       style: TextStyle(
         decoration: TextDecoration.underline,
@@ -81,12 +81,12 @@ class QuoteReviewPage extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        KeepAllText(
           label,
           style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 4),
-        Text(value, style: context.text.bodyMedium),
+        KeepAllText(value, style: context.text.bodyMedium),
       ],
     ),
   );
@@ -123,7 +123,7 @@ class QuoteReviewPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              KeepAllText(
                 t.dfVisitTimeLine(
                   '${visitHalf(t, hour)} (${slotRangeLabel(hour, lang)})',
                 ),
@@ -132,7 +132,7 @@ class QuoteReviewPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: Space.xs),
-              Text(
+              KeepAllText(
                 t.dfReviewNote,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.inkMuted,
@@ -177,14 +177,14 @@ class QuoteReviewPage extends StatelessWidget {
             title: t.dfSpaceInfo,
             trailing: _edit(context, 2),
             children: [
-              Text(
+              KeepAllText(
                 '${t.bathroomsLabel} ${t.dfCountN('${a.bathrooms}')} · ${t.balconiesLabel} ${t.dfCountN('${a.balconies}')} · '
                 '${t.dfElevatorTitle} ${a.elevator == true ? t.dfHas : t.dfNone}',
                 style: context.text.bodyMedium,
               ),
               if (addons.isNotEmpty) ...[
                 const SizedBox(height: Space.sm),
-                Text(
+                KeepAllText(
                   '${t.service('aircon')}: ${addons.join(' · ')}',
                   style: context.text.bodyMedium,
                 ),
@@ -212,7 +212,7 @@ class QuoteReviewPage extends StatelessWidget {
                       t.dfDepositOnConfirm,
                       context.won(_n(e, 'deposit')),
                     ),
-                    Text(
+                    KeepAllText(
                       t.quoteNoPayNow,
                       style: context.text.bodySmall?.copyWith(
                         color: context.primary,

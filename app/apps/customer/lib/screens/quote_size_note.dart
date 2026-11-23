@@ -53,14 +53,14 @@ class QuoteSizeNote extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            KeepAllText(
               t.quoteSizeTitle,
               style: context.text.titleSmall?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: Space.xs),
-            Text(
+            KeepAllText(
               t.quoteSizeBody(t.pyeong('$sizePyeong'), layoutLabel(t, layout)),
               style: context.text.bodySmall?.copyWith(
                 color: context.colors.inkMuted,
@@ -71,11 +71,11 @@ class QuoteSizeNote extends StatelessWidget {
               children: [
                 TextButton(
                   onPressed: onChangeLayout,
-                  child: Text(t.quoteSizeChangeLayout),
+                  child: KeepAllText(t.quoteSizeChangeLayout),
                 ),
                 TextButton(
                   onPressed: onChangeSize,
-                  child: Text(t.quoteSizeChangeSize),
+                  child: KeepAllText(t.quoteSizeChangeSize),
                 ),
               ],
             ),

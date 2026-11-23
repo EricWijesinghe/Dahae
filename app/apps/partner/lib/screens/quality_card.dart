@@ -16,7 +16,7 @@ class QualityCardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.pQualityScore)),
+      appBar: AppBar(title: KeepAllText(t.pQualityScore)),
       body: AsyncView<Json>(
         load: () async => await context.api.get('/partner/quality') as Json,
         builder: (context, data, _) => ListView(
@@ -28,7 +28,7 @@ class QualityCardScreen extends StatelessWidget {
             const SizedBox(height: Space.md),
             _TipsCard(data: data),
             const SizedBox(height: Space.md),
-            Text(t.pQualityReadOnly, style: context.text.bodySmall),
+            KeepAllText(t.pQualityReadOnly, style: context.text.bodySmall),
           ],
         ),
       ),
@@ -58,14 +58,14 @@ class _ScoreCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.t.pQualityScore, style: context.text.labelMedium),
+          KeepAllText(context.t.pQualityScore, style: context.text.labelMedium),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             score == null ? context.t.pQualityNone : '${score.toInt()}',
             style: context.text.displaySmall,
           ),
           if (score != null)
-            Text(
+            KeepAllText(
               _statusLabel(context, data['status'] as String?),
               style: context.text.bodyMedium,
             ),
@@ -95,10 +95,10 @@ class _ComponentsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.pQualityComponents, style: context.text.labelMedium),
+          KeepAllText(t.pQualityComponents, style: context.text.labelMedium),
           for (final (label, value) in rows) ...[
             const SizedBox(height: Space.sm),
-            Text(
+            KeepAllText(
               '$label · ${((value as num) * 100).round()}%',
               style: context.text.bodySmall,
             ),
@@ -126,10 +126,10 @@ class _TipsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.pQualityTips, style: context.text.labelMedium),
+          KeepAllText(t.pQualityTips, style: context.text.labelMedium),
           for (final tip in tips) ...[
             const SizedBox(height: Space.sm),
-            Text('· ${_tipText(context, tip)}', style: context.text.bodyMedium),
+            KeepAllText('· ${_tipText(context, tip)}', style: context.text.bodyMedium),
           ],
         ],
       ),

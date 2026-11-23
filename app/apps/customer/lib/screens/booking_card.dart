@@ -64,18 +64,18 @@ class BookingCard extends StatelessWidget {
                     spacing: Space.xxs,
                     children: [
                       if (showDate)
-                        Text(
+                        KeepAllText(
                           dateLabel(b.visitDate, context.lang),
                           style: title,
                         ),
-                      Text(bookingTime(context, b), style: title),
+                      KeepAllText(bookingTime(context, b), style: title),
                     ],
                   ),
                   const SizedBox(height: 2),
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
+                        child: KeepAllText(
                           context.t.service(b.serviceCode),
                           style: context.text.bodyMedium?.copyWith(
                             color: c.inkSoft,
@@ -163,7 +163,7 @@ class BookingStatusChip extends StatelessWidget {
           ),
         ),
         // A long translation wraps inside its pill instead of overflowing the row.
-        child: Text(
+        child: KeepAllText(
           bookingStepLabel(context.t, status),
           textAlign: TextAlign.center,
           style: context.text.labelMedium?.copyWith(

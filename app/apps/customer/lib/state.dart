@@ -31,7 +31,12 @@ class AppState extends ChangeNotifier {
   final Future<void> Function(ApiClient api) startPush;
 
   /// Analytics follow the server's marketing consent. Any failure leaves analytics off.
+  /// A guest has no consent record: analytics stay off and the server is not asked (it would answer 401).
   Future<void> syncAnalyticsConsent() async {
+    if (!api.session.signedIn) {
+      analytics.setConsent(false);
+      return;
+    }
     final epoch = _epoch;
     try {
       final s = await api.get('/me/consents') as Json;

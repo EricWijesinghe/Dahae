@@ -18,17 +18,17 @@ Future<bool> confirmBrandPreview(
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text(t.cRbPreviewTitle),
+      title: KeepAllText(t.cRbPreviewTitle),
       content: SingleChildScrollView(child: BrandPreviewGrid(files: files)),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: Text(t.cancel),
+          child: KeepAllText(t.cancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: Text(t.cSetupSave),
+          child: KeepAllText(t.cSetupSave),
         ),
       ],
     ),
@@ -58,14 +58,14 @@ class BrandPreviewGrid extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Space.xs),
-        Text(label, style: context.text.labelSmall),
+        KeepAllText(label, style: context.text.labelSmall),
       ],
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(t.cRbPreviewBody, style: context.text.bodySmall),
+        KeepAllText(t.cRbPreviewBody, style: context.text.bodySmall),
         const SizedBox(height: Space.md),
         Wrap(
           spacing: Space.lg,
@@ -88,13 +88,13 @@ class BrandPreviewGrid extends StatelessWidget {
 Future<void> showBrandApplied(BuildContext context) => showDialog<void>(
   context: context,
   builder: (ctx) => AlertDialog(
-    title: Text(ctx.t.cRbAppliedTitle),
-    content: Text(ctx.t.cRbAppliedList),
+    title: KeepAllText(ctx.t.cRbAppliedTitle),
+    content: KeepAllText(ctx.t.cRbAppliedList),
     actions: [
       FilledButton(
         style: compactFilled,
         onPressed: () => Navigator.of(ctx).pop(),
-        child: Text(ctx.t.ok),
+        child: KeepAllText(ctx.t.ok),
       ),
     ],
   ),

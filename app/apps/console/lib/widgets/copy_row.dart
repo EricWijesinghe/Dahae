@@ -17,7 +17,7 @@ class CopyRow extends StatelessWidget {
     padding: const EdgeInsets.only(top: Space.sm),
     child: ListTile(
       contentPadding: EdgeInsets.zero,
-      title: Text(label, style: context.text.labelLarge),
+      title: KeepAllText(label, style: context.text.labelLarge),
       subtitle: SelectableText(value),
       trailing: IconButton(
         tooltip: context.t.cCopy,

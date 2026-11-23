@@ -21,6 +21,8 @@ import 'interactive.dart' show Tilt3D;
 /// - Reduced motion (MediaQuery.disableAnimations): no tilt, bounce or lift; the
 ///   final state renders at once and active is shown by the art only.
 /// - Missing art: a clay plate with the registry's Material glyph, same size.
+/// - Mono art ([Icon3DSpec.mono], white line glyphs): painted in [color], else
+///   the spec's [MonoTone] (muted ink for an inactive tab icon with idle art).
 /// - [idle]: slow float or sway loop for hero, primary and grid icons only
 ///   (never list rows; keep it to ~12 on screen). Off while [enabled] is false,
 ///   under reduced motion, in a muted [TickerMode] and when [idleMotion] is false.
@@ -40,6 +42,7 @@ class Icon3D extends StatefulWidget {
     this.idle = Icon3DIdle.none,
     this.attention = 0,
     this.highlight = false,
+    this.color,
   });
 
   /// Global switch for [idle] loops. `flutter_test_config.dart` sets it false so
@@ -64,6 +67,10 @@ class Icon3D extends StatefulWidget {
 
   /// Pressed look driven by the caller (scales to [Motion.pressScale]).
   final bool highlight;
+
+  /// Paint for mono art (a white glyph on a filled, selected plate, say).
+  /// Colour art ignores it.
+  final Color? color;
 
   @override
   State<Icon3D> createState() => _Icon3DState();
@@ -185,6 +192,7 @@ class _Icon3DState extends State<Icon3D> with TickerProviderStateMixin {
       size: size,
       idle: !widget.active,
       enabled: widget.enabled,
+      color: widget.color,
     );
     if (!_still) {
       icon = AnimatedBuilder(
@@ -306,11 +314,13 @@ class _Icon3DArt extends StatelessWidget {
     required this.size,
     required this.idle,
     required this.enabled,
+    this.color,
   });
   final String id;
   final double size;
   final bool idle;
   final bool enabled;
+  final Color? color;
 
   /// The business's uploaded logo replaces the built-in wordmark art.
   static const _brandArt = 'brand_wordmark';
@@ -325,6 +335,9 @@ class _Icon3DArt extends StatelessWidget {
       hue: dimIdle ? const Color(0xFF8C9AA3) : spec.hue,
       size: size,
     );
+    final tint = spec.mono
+        ? color ?? _monoInk(context, spec.tone, idle: dimIdle)
+        : null;
     Widget image(String path, Widget Function() onError) => Image.asset(
       path,
       package: Icon3DRegistry.package,
@@ -332,6 +345,9 @@ class _Icon3DArt extends StatelessWidget {
       height: size,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,
+      // Mono art is a white alpha mask: keep its shape, take the tint's colour.
+      color: tint,
+      colorBlendMode: tint == null ? null : BlendMode.srcIn,
       // Keeps the old frame while the idle/active file swaps: no blink.
       gaplessPlayback: true,
       excludeFromSemantics: true,
@@ -364,6 +380,21 @@ class _Icon3DArt extends StatelessWidget {
       child: art,
     );
   }
+}
+
+/// Theme colour for mono art: [AppColors.ink] (the scheme's onSurface),
+/// [AppColors.inkMuted] for an inactive tab or a muted id, or the brand
+/// primary, so it reads in light and dark and follows the server theme.
+Color _monoInk(BuildContext context, MonoTone tone, {required bool idle}) {
+  final theme = Theme.of(context);
+  final ink = theme.extension<AppColors>();
+  final muted = ink?.inkMuted ?? theme.colorScheme.onSurfaceVariant;
+  if (idle) return muted;
+  return switch (tone) {
+    MonoTone.ink => ink?.ink ?? theme.colorScheme.onSurface,
+    MonoTone.muted => muted,
+    MonoTone.brand => theme.colorScheme.primary,
+  };
 }
 
 Widget _greyed(Widget child) => Opacity(

@@ -47,7 +47,7 @@ class ReviewTile extends StatelessWidget {
                     RatingStars(rating: rating, size: 14),
                     const SizedBox(width: Space.xs),
                     Flexible(
-                      child: Text(
+                      child: KeepAllText(
                         name,
                         style: context.text.labelMedium?.copyWith(
                           color: c.inkMuted,
@@ -59,7 +59,7 @@ class ReviewTile extends StatelessWidget {
                 ),
                 if (body.isNotEmpty) ...[
                   const SizedBox(height: Space.xxs),
-                  Text(
+                  KeepAllText(
                     body,
                     style: context.text.bodySmall,
                     maxLines: 3,
@@ -76,7 +76,7 @@ class ReviewTile extends StatelessWidget {
             itemBuilder: (_) => [
               PopupMenuItem<String>(
                 value: 'report',
-                child: Text(t.reportAction),
+                child: KeepAllText(t.reportAction),
               ),
             ],
           ),
@@ -95,7 +95,7 @@ class ReviewsAllScreen extends StatelessWidget {
     final t = context.t;
     final api = context.api;
     return Scaffold(
-      appBar: AppBar(title: Text(t.reviewsAllTitle)),
+      appBar: AppBar(title: KeepAllText(t.reviewsAllTitle)),
       body: PagedView<Json>(
         api: api,
         path: '/public/reviews',
@@ -108,7 +108,7 @@ class ReviewsAllScreen extends StatelessWidget {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(Space.xxxl),
-                      child: Center(child: Text(t.reviewsEmpty)),
+                      child: Center(child: KeepAllText(t.reviewsEmpty)),
                     ),
                   ],
                 )
@@ -166,7 +166,7 @@ class _RecentReviewsState extends State<RecentReviews> {
         Row(
           children: [
             Expanded(
-              child: Text(t.proofReviewsTitle, style: context.text.titleLarge),
+              child: KeepAllText(t.proofReviewsTitle, style: context.text.titleLarge),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).push(
@@ -174,7 +174,7 @@ class _RecentReviewsState extends State<RecentReviews> {
                   builder: (_) => const ReviewsAllScreen(),
                 ),
               ),
-              child: Text(t.reviewsSeeAll),
+              child: KeepAllText(t.reviewsSeeAll),
             ),
           ],
         ),

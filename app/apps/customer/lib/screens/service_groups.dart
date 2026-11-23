@@ -48,14 +48,14 @@ class ServiceGroupScreen extends StatelessWidget {
       backgroundColor: c.surface,
       appBar: AppBar(
         backgroundColor: c.surface,
-        title: Text(group.titleFor(lang)),
+        title: KeepAllText(group.titleFor(lang)),
       ),
       body: ListView(
         children: [
           for (final s in members)
             ListTile(
               leading: Icon3D(Icon3DRegistry.serviceId(s.code), size: 44),
-              title: Text(t.service(s.code)),
+              title: KeepAllText(t.service(s.code)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(

@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../theme.dart';
 import '../tokens.dart';
 import 'basics.dart' show formatWon;
+import 'keep_all.dart';
 
 /// OS "reduce motion" (Remove animations). Every motion helper below checks it.
 bool reducedMotion(BuildContext context) =>
@@ -154,7 +155,7 @@ class _Segment extends StatelessWidget {
                 color: selected ? c.ink : c.inkMuted,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
-              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: KeepAllText(label, maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
           ),
         ),

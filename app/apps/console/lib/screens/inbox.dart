@@ -86,7 +86,7 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => Scaffold(
-            appBar: AppBar(title: Text(context.t.service(th.topic))),
+            appBar: AppBar(title: KeepAllText(context.t.service(th.topic))),
             body: ThreadView(
               threadId: th.id,
               bookingId: th.bookingId,
@@ -114,7 +114,7 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
         if (_aiOutage)
           Padding(
             padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.md, 0),
-            child: Text(
+            child: KeepAllText(
               t.aiOutageBanner,
               style: context.text.labelSmall?.copyWith(
                 color: context.colors.danger,
@@ -124,7 +124,7 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
         if (_aiLine != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.md, 0),
-            child: Text(_aiLine!, style: context.text.labelSmall),
+            child: KeepAllText(_aiLine!, style: context.text.labelSmall),
           ),
         Padding(
           padding: const EdgeInsets.all(Space.md),
@@ -133,8 +133,8 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
             child: SegmentedButton<String>(
               showSelectedIcon: false,
               segments: [
-                ButtonSegment(value: 'customer', label: Text(t.cCustomerChats)),
-                ButtonSegment(value: 'partner', label: Text(t.cPartnerChats)),
+                ButtonSegment(value: 'customer', label: KeepAllText(t.cCustomerChats)),
+                ButtonSegment(value: 'partner', label: KeepAllText(t.cPartnerChats)),
               ],
               selected: {_audience},
               onSelectionChanged: (s) {
@@ -171,7 +171,7 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
                           ].contains(th.topic)
                           ? const CircleAvatar(child: Icon(Icons.chat_rounded))
                           : ServiceGlyph(th.topic, size: 40),
-                      title: Text(
+                      title: KeepAllText(
                         th.topic == 'other'
                             ? t.topicOther
                             : t.service(th.topic),
@@ -186,13 +186,13 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (customerLine(t, th) case final String line)
-                            Text(
+                            KeepAllText(
                               line,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: context.text.labelSmall,
                             ),
-                          Text(
+                          KeepAllText(
                             preview,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -203,7 +203,7 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
+                          KeepAllText(
                             timeLabel(th.lastMessageAt, context.lang),
                             style: context.text.labelSmall,
                           ),
@@ -219,7 +219,7 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
         if (context.isWide)
           Padding(
             padding: const EdgeInsets.all(Space.xs),
-            child: Text(t.cShortcuts, style: context.text.labelSmall),
+            child: KeepAllText(t.cShortcuts, style: context.text.labelSmall),
           ),
       ],
     );
@@ -398,7 +398,7 @@ class _ThreadViewState extends State<ThreadView> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(left: Space.lg),
-                  child: Text(t.aiPausedNote, style: context.text.labelSmall),
+                  child: KeepAllText(t.aiPausedNote, style: context.text.labelSmall),
                 ),
               )
             else
@@ -408,7 +408,7 @@ class _ThreadViewState extends State<ThreadView> {
                 _aiPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
                 size: 18,
               ),
-              label: Text(_aiPaused ? t.aiResume : t.aiPause),
+              label: KeepAllText(_aiPaused ? t.aiResume : t.aiPause),
               onPressed: _toggleAi,
             ),
           ],
@@ -426,7 +426,7 @@ class _ThreadViewState extends State<ThreadView> {
             alignment: Alignment.centerRight,
             child: TextButton.icon(
               icon: const Icon(Icons.open_in_new_rounded, size: 18),
-              label: Text(t.cOpenBooking),
+              label: KeepAllText(t.cOpenBooking),
               onPressed: () => _openBooking(context),
             ),
           ),
@@ -468,7 +468,7 @@ class _ThreadViewState extends State<ThreadView> {
                 FilledButton(
                   style: FilledButton.styleFrom(minimumSize: const Size(0, 56)),
                   onPressed: _sending ? null : _send,
-                  child: Text(t.chatSend),
+                  child: KeepAllText(t.chatSend),
                 ),
               ],
             ),
@@ -494,7 +494,7 @@ class _Message extends StatelessWidget {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(4),
-          child: Text(
+          child: KeepAllText(
             t.system(
               m.body['code'] as String? ?? '',
               (m.body['params'] as Json?) ?? const {},
@@ -533,7 +533,7 @@ class _Message extends StatelessWidget {
           ),
         ),
       ),
-      'card' => Text(
+      'card' => KeepAllText(
         '${t.requestCard} · ${t.service(m.body['service_code'] as String? ?? '')} · ${t.estimate} ${context.won((m.body['estimate'] as num? ?? 0).toInt())}',
       ),
       'quote' => _quoteEntry(context, t, m, bookingId),
@@ -559,7 +559,7 @@ class _Message extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (m.isAi) ...[const AiBadge(), const SizedBox(width: 6)],
-                Text(
+                KeepAllText(
                   timeLabel(m.createdAt, context.lang),
                   style: context.text.labelSmall?.copyWith(fontSize: 10),
                 ),
@@ -581,7 +581,7 @@ Widget _quoteEntry(
   String? bookingId,
 ) {
   final amount = context.won((m.body['final_price'] as num).toInt());
-  final card = Text(
+  final card = KeepAllText(
     '${t.finalPrice} $amount · ${t.deposit} ${context.won((m.body['deposit'] as num).toInt())}',
     style: context.text.titleSmall,
   );
@@ -593,7 +593,7 @@ Widget _quoteEntry(
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(
+      KeepAllText(
         t.quoteSentEntry(amount, timeLabel(m.createdAt, context.lang)),
         style: context.text.labelMedium,
       ),
@@ -601,7 +601,7 @@ Widget _quoteEntry(
       Row(
         children: [
           ResendQuoteButton(bookingId: id, label: t.quoteResend),
-          TextButton(onPressed: openDesk, child: Text(t.quoteRevise)),
+          TextButton(onPressed: openDesk, child: KeepAllText(t.quoteRevise)),
         ],
       ),
     ],
@@ -642,7 +642,7 @@ class _ResendQuoteButtonState extends State<ResendQuoteButton> {
 
   @override
   Widget build(BuildContext context) =>
-      TextButton(onPressed: _busy ? null : _resend, child: Text(widget.label));
+      TextButton(onPressed: _busy ? null : _resend, child: KeepAllText(widget.label));
 }
 
 /// Small "AI" tag on messages the AI support agent wrote.
@@ -657,7 +657,7 @@ class AiBadge extends StatelessWidget {
         color: context.primary,
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(
+      child: KeepAllText(
         context.t.aiBadge,
         style: context.text.labelSmall?.copyWith(
           color: Colors.white,

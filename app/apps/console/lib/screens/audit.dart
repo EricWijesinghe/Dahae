@@ -107,9 +107,9 @@ class _AuditScreenState extends State<AuditScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(t.cAudit, style: context.text.headlineMedium),
+              KeepAllText(t.cAudit, style: context.text.headlineMedium),
               const SizedBox(height: Space.xs),
-              Text(t.audIntro, style: context.text.bodyMedium),
+              KeepAllText(t.audIntro, style: context.text.bodyMedium),
               const SizedBox(height: Space.md),
               _Filters(
                 period: _period,
@@ -182,7 +182,7 @@ class _Filters extends StatelessWidget {
       children: [
         for (final e in periods.entries)
           ChoiceChip(
-            label: Text(e.value),
+            label: KeepAllText(e.value),
             selected: period == e.key,
             onSelected: (_) => onPeriod(e.key),
           ),
@@ -191,12 +191,12 @@ class _Filters extends StatelessWidget {
           items: [
             DropdownMenuItem(
               value: null,
-              child: Text('${t.audFilterWho}: ${t.audWhoAll}'),
+              child: KeepAllText('${t.audFilterWho}: ${t.audWhoAll}'),
             ),
             for (final r in roles)
               DropdownMenuItem(
                 value: r,
-                child: Text('${t.audFilterWho}: ${_roleLabel(t, r)}'),
+                child: KeepAllText('${t.audFilterWho}: ${_roleLabel(t, r)}'),
               ),
           ],
           onChanged: onRole,
@@ -207,7 +207,7 @@ class _Filters extends StatelessWidget {
             for (final e in prefixes.entries)
               DropdownMenuItem(
                 value: e.key,
-                child: Text('${t.audFilterWhat}: ${e.value}'),
+                child: KeepAllText('${t.audFilterWhat}: ${e.value}'),
               ),
           ],
           onChanged: onPrefix,
@@ -256,8 +256,8 @@ class _RowTile extends StatelessWidget {
         name ?? (role == 'system' ? t.audRoleSystem : t.audUnknownActor);
     final action = row['action'] as String? ?? '';
     return ListTile(
-      title: Text(auditActionLabel(t, action)),
-      subtitle: Text(
+      title: KeepAllText(auditActionLabel(t, action)),
+      subtitle: KeepAllText(
         '$who · ${auditStamp(row['created_at'] as String? ?? '')}',
       ),
       onTap: () => _showDetail(context, row),
@@ -271,16 +271,16 @@ class _RowTile extends StatelessWidget {
     return showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.audDetailTitle),
+        title: KeepAllText(t.audDetailTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(auditActionLabel(t, action), style: ctx.text.titleMedium),
+              KeepAllText(auditActionLabel(t, action), style: ctx.text.titleMedium),
               const SizedBox(height: Space.sm),
-              Text('${t.audActionCode}: $action'),
-              Text('${t.audTarget}: ${row['target'] ?? ''}'),
+              KeepAllText('${t.audActionCode}: $action'),
+              KeepAllText('${t.audTarget}: ${row['target'] ?? ''}'),
               const SizedBox(height: Space.sm),
               SelectableText(data.isEmpty ? t.audNoDetail : data),
             ],
@@ -289,7 +289,7 @@ class _RowTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(t.audClose),
+            child: KeepAllText(t.audClose),
           ),
         ],
       ),

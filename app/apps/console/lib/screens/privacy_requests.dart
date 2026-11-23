@@ -117,12 +117,12 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.prqDelete),
+        title: KeepAllText(t.prqDelete),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.prqDeleteAsk),
+            KeepAllText(t.prqDeleteAsk),
             const SizedBox(height: Space.sm),
             TextField(
               controller: controller,
@@ -134,12 +134,12 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t.cancel),
+            child: KeepAllText(t.cancel),
           ),
           FilledButton(
             style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.prqDelete),
+            child: KeepAllText(t.prqDelete),
           ),
         ],
       ),
@@ -160,9 +160,9 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
     return ListView(
       padding: const EdgeInsets.all(Space.xl),
       children: [
-        Text(t.prqTitle, style: context.text.headlineMedium),
+        KeepAllText(t.prqTitle, style: context.text.headlineMedium),
         const SizedBox(height: Space.xs),
-        Text(t.prqIntro, style: context.text.bodySmall),
+        KeepAllText(t.prqIntro, style: context.text.bodySmall),
         const SizedBox(height: Space.md),
         Row(
           children: [
@@ -182,16 +182,16 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
               // As tall as the phone field beside it.
               style: FilledButton.styleFrom(minimumSize: const Size(64, 56)),
               onPressed: _busy ? null : _find,
-              child: Text(t.prqFind),
+              child: KeepAllText(t.prqFind),
             ),
           ],
         ),
         const SizedBox(height: Space.sm),
         if (_found != null && _found!.isEmpty)
-          Text(t.prqNotFound, style: context.text.bodyMedium),
+          KeepAllText(t.prqNotFound, style: context.text.bodyMedium),
         for (final c in _found ?? const <Json>[]) _customerCard(c),
         const Divider(height: Space.xxl),
-        Text(t.prqLog, style: context.text.titleMedium),
+        KeepAllText(t.prqLog, style: context.text.titleMedium),
         const SizedBox(height: Space.xs),
         ..._logRows(),
       ],
@@ -208,11 +208,11 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            KeepAllText(
               '$name · ${formatKoreanPhone('${c['phone']}')}',
               style: context.text.labelLarge,
             ),
-            Text(
+            KeepAllText(
               '${t.prqBookings} ${c['bookings']}',
               style: context.text.bodySmall,
             ),
@@ -223,19 +223,19 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
               children: [
                 OutlinedButton(
                   onPressed: _busy ? null : () => _export(id),
-                  child: Text(t.prqExport),
+                  child: KeepAllText(t.prqExport),
                 ),
                 FilledButton(
                   style: inlineFilled,
                   onPressed: _busy || !context.console.isAdmin
                       ? null
                       : () => _delete(c),
-                  child: Text(t.prqDelete),
+                  child: KeepAllText(t.prqDelete),
                 ),
               ],
             ),
             if (!context.console.isAdmin)
-              Text(t.prqDeleteAdminOnly, style: context.text.labelSmall),
+              KeepAllText(t.prqDeleteAdminOnly, style: context.text.labelSmall),
           ],
         ),
       ),
@@ -247,16 +247,16 @@ class _PrivacyRequestsState extends State<PrivacyRequestsScreen> {
     final rows = _log;
     if (rows == null) return const [CircularProgressIndicator()];
     if (rows.isEmpty) {
-      return [Text(t.prqLogEmpty, style: context.text.bodySmall)];
+      return [KeepAllText(t.prqLogEmpty, style: context.text.bodySmall)];
     }
     return [
       for (final r in rows)
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(
+          title: KeepAllText(
             '${r['kind'] == 'delete' ? t.prqKindDelete : t.prqKindExport} · ${r['status'] == 'done' ? t.prqStatusDone : t.prqStatusFailed}',
           ),
-          subtitle: Text(
+          subtitle: KeepAllText(
             '${t.prqBy}: ${r['staff_name'] ?? '-'} · ${dateLabel(DateTime.parse(r['created_at'] as String), context.lang)}',
           ),
         ),

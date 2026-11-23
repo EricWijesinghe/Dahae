@@ -174,17 +174,17 @@ class _PaymentConfirmingScreenState extends State<PaymentConfirmingScreen> {
               children: [
                 const Center(child: CircularProgressIndicator()),
                 const SizedBox(height: Space.gutter),
-                Text(
+                KeepAllText(
                   t.payConfirmingTitle,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: Space.gutter / 2),
-                Text(t.payConfirmingBody, textAlign: TextAlign.center),
+                KeepAllText(t.payConfirmingBody, textAlign: TextAlign.center),
                 const SizedBox(height: Space.gutter),
                 OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text(t.goHome),
+                  child: KeepAllText(t.goHome),
                 ),
               ],
             ),

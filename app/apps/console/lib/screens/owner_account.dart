@@ -52,7 +52,7 @@ List<Widget> _adminCards(
             ? FilledButton.tonal(
                 style: compactFilled,
                 onPressed: () => _claim(context, reload),
-                child: Text(t.oaClaim),
+                child: KeepAllText(t.oaClaim),
               )
             : null,
       ),
@@ -85,7 +85,7 @@ List<Widget> _ownerCards(
         action: FilledButton.tonal(
           style: compactFilled,
           onPressed: () => _confirmCodes(context, reload),
-          child: Text(t.oaConfirmCodes),
+          child: KeepAllText(t.oaConfirmCodes),
         ),
       ),
     _Card(
@@ -95,7 +95,7 @@ List<Widget> _ownerCards(
       action: FilledButton.tonal(
         style: compactFilled,
         onPressed: () => _changePhone(context, reload),
-        child: Text(t.oaChangePhone),
+        child: KeepAllText(t.oaChangePhone),
       ),
     ),
     _Card(
@@ -105,7 +105,7 @@ List<Widget> _ownerCards(
       action: FilledButton.tonal(
         style: compactFilled,
         onPressed: () => _changePassword(context),
-        child: Text(t.oaPassword),
+        child: KeepAllText(t.oaPassword),
       ),
     ),
     _Card(
@@ -115,7 +115,7 @@ List<Widget> _ownerCards(
       action: FilledButton.tonal(
         style: compactFilled,
         onPressed: () => _reissueCodes(context, reload),
-        child: Text(t.oaRecoveryCodes),
+        child: KeepAllText(t.oaRecoveryCodes),
       ),
     ),
     _Card(
@@ -125,7 +125,7 @@ List<Widget> _ownerCards(
       action: FilledButton.tonal(
         style: compactFilled,
         onPressed: () => _signOutAll(context),
-        child: Text(t.oaSignOutAll),
+        child: KeepAllText(t.oaSignOutAll),
       ),
     ),
     _Card(
@@ -135,7 +135,7 @@ List<Widget> _ownerCards(
       action: FilledButton.tonal(
         style: compactFilled,
         onPressed: () => _transfer(context, me, reload),
-        child: Text(t.oaTransfer),
+        child: KeepAllText(t.oaTransfer),
       ),
     ),
   ];
@@ -160,13 +160,13 @@ class _Card extends StatelessWidget {
     elevation: 0,
     child: ListTile(
       leading: Icon(icon),
-      title: Text(title, style: context.text.titleSmall),
+      title: KeepAllText(title, style: context.text.titleSmall),
       subtitle: action == null
-          ? (body == null ? null : Text(body!))
+          ? (body == null ? null : KeepAllText(body!))
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (body != null) Text(body!),
+                if (body != null) KeepAllText(body!),
                 const SizedBox(height: Space.sm),
                 action!,
               ],

@@ -29,7 +29,7 @@ class MoreTab extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Text(t.tabMore, style: context.text.headlineSmall),
+        title: KeepAllText(t.tabMore, style: context.text.headlineSmall),
       ),
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
@@ -39,20 +39,20 @@ class MoreTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                KeepAllText(
                   '${pro.name} · ${pro.teamName}',
                   style: context.text.titleMedium?.copyWith(
                     color: context.colors.surface,
                   ),
                 ),
                 const SizedBox(height: Space.md),
-                Text(
+                KeepAllText(
                   t.pPendingPayout,
                   style: context.text.labelMedium?.copyWith(
                     color: context.colors.inkMuted,
                   ),
                 ),
-                Text(
+                KeepAllText(
                   context.won(pro.pendingPayout),
                   style: context.text.displaySmall?.copyWith(
                     color: context.colors.surface,
@@ -60,7 +60,7 @@ class MoreTab extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () => _go(context, const EarningsScreen()),
-                  child: Text(
+                  child: KeepAllText(
                     '${t.pEarnings} ›',
                     style: TextStyle(color: context.colors.fresh),
                   ),
@@ -75,48 +75,48 @@ class MoreTab extends StatelessWidget {
               children: [
                 ListTile(
                   leading: Icon(Icons.star_rounded, color: context.colors.sun),
-                  title: Text(t.pReviews),
-                  trailing: Text(rating == null ? '-' : '$rating'),
+                  title: KeepAllText(t.pReviews),
+                  trailing: KeepAllText(rating == null ? '-' : '$rating'),
                   onTap: () => _go(context, const ReviewsScreen()),
                 ),
                 ListTile(
                   leading: const Icon(Icons.insights_rounded),
-                  title: Text(t.pQualityScore),
+                  title: KeepAllText(t.pQualityScore),
                   onTap: () => _go(context, const QualityCardScreen()),
                 ),
                 ListTile(
                   leading: const Icon(Icons.map_rounded),
-                  title: Text(t.pServicesAreas),
+                  title: KeepAllText(t.pServicesAreas),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _go(context, const AreasScreen()),
                 ),
                 ListTile(
                   leading: const Icon(Icons.schedule_rounded),
-                  title: Text(t.pWorkSchedule),
+                  title: KeepAllText(t.pWorkSchedule),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _go(context, const WorkScheduleScreen()),
                 ),
                 ListTile(
                   leading: const Icon3D('p_payout', size: 32),
-                  title: Text(t.pPayoutAccount),
+                  title: KeepAllText(t.pPayoutAccount),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _go(context, const PayoutAccountScreen()),
                 ),
                 ListTile(
                   leading: const Icon(Icons.groups_rounded),
-                  title: Text(t.pTeam),
+                  title: KeepAllText(t.pTeam),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _go(context, const TeamScreen()),
                 ),
                 ListTile(
                   leading: const Icon(Icons.notifications_rounded),
-                  title: Text(t.pNotifications),
+                  title: KeepAllText(t.pNotifications),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _go(context, const NotifyScreen()),
                 ),
                 ListTile(
                   leading: const Icon(Icons.support_agent_rounded),
-                  title: Text(t.pChatOps),
+                  title: KeepAllText(t.pChatOps),
                   onTap: () => openOpsThread(context, topic: 'other'),
                 ),
               ],
@@ -129,7 +129,7 @@ class MoreTab extends StatelessWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.translate_rounded),
-                  title: Text(t.moreLanguage),
+                  title: KeepAllText(t.moreLanguage),
                   trailing: DropdownButton<String?>(
                     value: deps.locale.locale?.languageCode,
                     underline: const SizedBox(),
@@ -139,7 +139,7 @@ class MoreTab extends StatelessWidget {
                         for (final e in LocaleController.names.entries)
                           (e.key, e.value),
                       ])
-                        DropdownMenuItem(value: c, child: Text(n)),
+                        DropdownMenuItem(value: c, child: KeepAllText(n)),
                     ],
                     onChanged: (c) async {
                       await deps.locale.set(c == null ? null : Locale(c));
@@ -154,7 +154,7 @@ class MoreTab extends StatelessWidget {
                 ),
                 ListTile(
                   leading: const Icon(Icons.dark_mode_rounded),
-                  title: Text(t.themeTitle),
+                  title: KeepAllText(t.themeTitle),
                   trailing: DropdownButton<ThemeMode>(
                     value: deps.theme.mode,
                     underline: const SizedBox(),
@@ -162,7 +162,7 @@ class MoreTab extends StatelessWidget {
                       for (final m in ThemeMode.values)
                         DropdownMenuItem(
                           value: m,
-                          child: Text(t.themeLabel(m)),
+                          child: KeepAllText(t.themeLabel(m)),
                         ),
                     ],
                     onChanged: (m) => m == null ? null : deps.theme.set(m),
@@ -170,7 +170,7 @@ class MoreTab extends StatelessWidget {
                 ),
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_rounded),
-                  title: Text(t.morePrivacy),
+                  title: KeepAllText(t.morePrivacy),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -184,7 +184,7 @@ class MoreTab extends StatelessWidget {
                 ),
                 ListTile(
                   leading: const Icon(Icons.gavel_rounded),
-                  title: Text(t.moreTerms),
+                  title: KeepAllText(t.moreTerms),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -198,7 +198,7 @@ class MoreTab extends StatelessWidget {
                 ),
                 ListTile(
                   leading: const Icon(Icons.article_rounded),
-                  title: Text(t.moreLicenses),
+                  title: KeepAllText(t.moreLicenses),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () async {
                     final info = await PackageInfo.fromPlatform();
@@ -216,12 +216,12 @@ class MoreTab extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => _confirmLogout(context),
-            child: Text(t.logout),
+            child: KeepAllText(t.logout),
           ),
           TextButton(
             onPressed: () => _deleteAccount(context),
             style: TextButton.styleFrom(foregroundColor: context.colors.danger),
-            child: Text(t.deleteAccount),
+            child: KeepAllText(t.deleteAccount),
           ),
         ],
       ),
@@ -246,15 +246,15 @@ class MoreTab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(t.pLogoutBody, style: ctx.text.bodyMedium),
+            KeepAllText(t.pLogoutBody, style: ctx.text.bodyMedium),
             const SizedBox(height: Space.xl),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(t.logout),
+              child: KeepAllText(t.logout),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(t.cancel),
+              child: KeepAllText(t.cancel),
             ),
           ],
         ),
@@ -282,12 +282,12 @@ class MoreTab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(t.pDeleteAccountBody, style: ctx.text.bodyMedium),
+            KeepAllText(t.pDeleteAccountBody, style: ctx.text.bodyMedium),
             const SizedBox(height: Space.xl),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: ctx.colors.danger),
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(t.deleteAccount),
+              child: KeepAllText(t.deleteAccount),
             ),
           ],
         ),
@@ -316,7 +316,7 @@ class SettlementsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.pSettlements)),
+      appBar: AppBar(title: KeepAllText(t.pSettlements)),
       body: PagedView<Json>(
         api: context.api,
         path: '/partner/settlements',
@@ -343,11 +343,11 @@ class SettlementsScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
+                                  KeepAllText(
                                     t.service(s['service_code'] as String),
                                     style: context.text.titleSmall,
                                   ),
-                                  Text(
+                                  KeepAllText(
                                     s['payout_date'] == null
                                         ? t.pPayoutWaiting
                                         : dateLabel(
@@ -364,7 +364,7 @@ class SettlementsScreen extends StatelessWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
+                                KeepAllText(
                                   context.won((s['net'] as num).toInt()),
                                   style: context.text.titleSmall,
                                 ),
@@ -401,7 +401,7 @@ class _VersionLabel extends StatelessWidget {
     final t = context.t;
     return FutureBuilder<PackageInfo>(
       future: PackageInfo.fromPlatform(),
-      builder: (context, snap) => Text(
+      builder: (context, snap) => KeepAllText(
         snap.hasData ? t.moreVersion(snap.data!.version) : '',
         style: context.text.bodySmall,
       ),
@@ -415,7 +415,7 @@ class ReviewsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.pReviews)),
+      appBar: AppBar(title: KeepAllText(t.pReviews)),
       body: PagedView<Json>(
         api: context.api,
         path: '/partner/reviews',
@@ -447,7 +447,7 @@ class ReviewsScreen extends StatelessWidget {
                                     color: context.colors.sun,
                                   ),
                                 const Spacer(),
-                                Text(
+                                KeepAllText(
                                   t.service(r['service_code'] as String),
                                   style: context.text.labelSmall,
                                 ),
@@ -456,7 +456,7 @@ class ReviewsScreen extends StatelessWidget {
                             if ((r['body'] as String).isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: Space.xs),
-                                child: Text(r['body'] as String),
+                                child: KeepAllText(r['body'] as String),
                               ),
                             ReviewReportButton(
                               api: context.api,
@@ -519,7 +519,7 @@ class _AreasState extends _PrefsEditorState<AreasScreen> {
     final services = setOf<String>('services');
     final districts = setOf<String>('districts');
     return Scaffold(
-      appBar: AppBar(title: Text(t.pServicesAreas)),
+      appBar: AppBar(title: KeepAllText(t.pServicesAreas)),
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [
@@ -540,7 +540,7 @@ class _AreasState extends _PrefsEditorState<AreasScreen> {
                 ])
                   SwitchListTile(
                     secondary: ServiceGlyph(c, size: 36),
-                    title: Text(t.service(c)),
+                    title: KeepAllText(t.service(c)),
                     value: services.contains(c),
                     onChanged: (v) => toggle('services', c, v),
                   ),
@@ -555,7 +555,7 @@ class _AreasState extends _PrefsEditorState<AreasScreen> {
             children: [
               for (final d in seoulDistricts)
                 FilterChip(
-                  label: Text(d.name(context.lang)),
+                  label: KeepAllText(d.name(context.lang)),
                   selected: districts.contains(d.code),
                   onSelected: (v) => toggle('districts', d.code, v),
                 ),
@@ -586,7 +586,7 @@ class _WorkState extends _PrefsEditorState<WorkScheduleScreen> {
     // Server weekdays: 0 = Monday … 6 = Sunday.
     final names = MaterialLocalizations.of(context).narrowWeekdays;
     return Scaffold(
-      appBar: AppBar(title: Text(t.pWorkSchedule)),
+      appBar: AppBar(title: KeepAllText(t.pWorkSchedule)),
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [
@@ -596,7 +596,7 @@ class _WorkState extends _PrefsEditorState<WorkScheduleScreen> {
             children: [
               for (var d = 0; d < 7; d++)
                 FilterChip(
-                  label: Text(names[(d + 1) % 7]),
+                  label: KeepAllText(names[(d + 1) % 7]),
                   selected: days.contains(d),
                   onSelected: (v) => toggle('weekdays', d, v),
                 ),
@@ -608,12 +608,12 @@ class _WorkState extends _PrefsEditorState<WorkScheduleScreen> {
             spacing: 6,
             children: [
               FilterChip(
-                label: Text(t.morning),
+                label: KeepAllText(t.morning),
                 selected: parts.contains('morning'),
                 onSelected: (v) => toggle('day_parts', 'morning', v),
               ),
               FilterChip(
-                label: Text(t.afternoon),
+                label: KeepAllText(t.afternoon),
                 selected: parts.contains('afternoon'),
                 onSelected: (v) => toggle('day_parts', 'afternoon', v),
               ),
@@ -624,7 +624,7 @@ class _WorkState extends _PrefsEditorState<WorkScheduleScreen> {
             t.pDaysOff,
             trailing: TextButton.icon(
               icon: const Icon(Icons.add_rounded),
-              label: Text(t.pAddDayOff),
+              label: KeepAllText(t.pAddDayOff),
               onPressed: _addDayOff,
             ),
           ),
@@ -634,7 +634,7 @@ class _WorkState extends _PrefsEditorState<WorkScheduleScreen> {
             children: [
               for (final d in off)
                 InputChip(
-                  label: Text(dateLabel(DateTime.parse(d), context.lang)),
+                  label: KeepAllText(dateLabel(DateTime.parse(d), context.lang)),
                   onDeleted: () => toggle('days_off', d, false),
                 ),
             ],
@@ -676,12 +676,12 @@ class _NotifyState extends _PrefsEditorState<NotifyScreen> {
     final t = context.t;
     final n = {...(prefs['notify'] as Json? ?? const {})};
     Widget sw(String key, String label) => SwitchListTile(
-      title: Text(label),
+      title: KeepAllText(label),
       value: n[key] as bool? ?? true,
       onChanged: (v) => setState(() => prefs['notify'] = {...n, key: v}),
     );
     return Scaffold(
-      appBar: AppBar(title: Text(t.pNotifications)),
+      appBar: AppBar(title: KeepAllText(t.pNotifications)),
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [

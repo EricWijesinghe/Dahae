@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ui/ui.dart' show KeepAllText;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -320,7 +321,7 @@ class _HostedPageState<T> extends State<HostedPage<T>> {
     },
     child: Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: KeepAllText(widget.title),
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
           tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
@@ -357,9 +358,9 @@ class _HostedPageState<T> extends State<HostedPage<T>> {
           children: [
             const Icon(Icons.wifi_off_rounded, size: 48),
             const SizedBox(height: 12),
-            Text(context.t.errorNetwork, textAlign: TextAlign.center),
+            KeepAllText(context.t.errorNetwork, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            FilledButton(onPressed: _retry, child: Text(context.t.retry)),
+            FilledButton(onPressed: _retry, child: KeepAllText(context.t.retry)),
           ],
         ),
       ),

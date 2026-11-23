@@ -57,7 +57,7 @@ class _QuotesTabState extends State<QuotesTab> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Text(t.pTabQuotes, style: context.text.headlineSmall),
+        title: KeepAllText(t.pTabQuotes, style: context.text.headlineSmall),
       ),
       body: Column(
         children: [
@@ -77,7 +77,7 @@ class _QuotesTabState extends State<QuotesTab> {
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: ChoiceChip(
-                      label: Text(
+                      label: KeepAllText(
                         s == null ? t.pQuoteAll : quoteStateLabel(t, s),
                       ),
                       selected: _filter == s,
@@ -86,7 +86,7 @@ class _QuotesTabState extends State<QuotesTab> {
                     ),
                   ),
                 FilterChip(
-                  label: Text(t.pUnseenOnly),
+                  label: KeepAllText(t.pUnseenOnly),
                   selected: _unseen,
                   onSelected: (v) => setState(() => _unseen = v),
                 ),
@@ -140,7 +140,7 @@ class _QuotesTabState extends State<QuotesTab> {
                                         Row(
                                           children: [
                                             Expanded(
-                                              child: Text(
+                                              child: KeepAllText(
                                                 t.service(
                                                   q['service_code'] as String,
                                                 ),
@@ -165,12 +165,12 @@ class _QuotesTabState extends State<QuotesTab> {
                                             ),
                                           ],
                                         ),
-                                        Text(
+                                        KeepAllText(
                                           '${dateLabel(DateTime.parse(q['visit_date'] as String), context.lang)} · ${districtName(context, q['district_code'] as String)}',
                                           style: context.text.bodySmall,
                                         ),
                                         const SizedBox(height: 4),
-                                        Text(
+                                        KeepAllText(
                                           '${t.pMyQuote} ${context.won((q['amount'] as num).toInt())} · ${t.pCustomerEstimate} ${context.won((q['estimate'] as num? ?? 0).toInt())}',
                                           style: context.text.labelMedium,
                                         ),
@@ -218,25 +218,25 @@ class _QuotesTabState extends State<QuotesTab> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
+            KeepAllText(
               ctx.won((q['amount'] as num).toInt()),
               style: ctx.text.headlineMedium,
             ),
             if ((q['note'] as String?)?.isNotEmpty ?? false)
-              Text(q['note'] as String, style: ctx.text.bodySmall),
+              KeepAllText(q['note'] as String, style: ctx.text.bodySmall),
             const SizedBox(height: Space.lg),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop('edit'),
-              child: Text(t.edit),
+              child: KeepAllText(t.edit),
             ),
             const SizedBox(height: Space.xs),
             OutlinedButton(
               onPressed: () => Navigator.of(ctx).pop('withdraw'),
-              child: Text(t.pWithdraw),
+              child: KeepAllText(t.pWithdraw),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop('view'),
-              child: Text(t.pViewJob),
+              child: KeepAllText(t.pViewJob),
             ),
           ],
         ),

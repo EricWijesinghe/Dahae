@@ -75,14 +75,14 @@ class _FieldsDialogState extends State<_FieldsDialog> {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
-      title: Text(widget.title),
+      title: KeepAllText(widget.title),
       content: SizedBox(
         width: 360,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.body),
+            KeepAllText(widget.body),
             for (var i = 0; i < widget.fields.length; i++) ...[
               const SizedBox(height: Space.sm),
               TextField(
@@ -108,12 +108,12 @@ class _FieldsDialogState extends State<_FieldsDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.oaCancel),
+          child: KeepAllText(t.oaCancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: _filled ? _submit : null,
-          child: Text(widget.confirm),
+          child: KeepAllText(widget.confirm),
         ),
       ],
     );
@@ -125,7 +125,7 @@ Future<Json?> askTransferTarget(BuildContext context, List<Json> admins) =>
     showDialog<Json>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(context.t.oaTransferTarget),
+        title: KeepAllText(context.t.oaTransferTarget),
         content: SizedBox(
           width: 360,
           child: ListView(
@@ -133,8 +133,8 @@ Future<Json?> askTransferTarget(BuildContext context, List<Json> admins) =>
             children: [
               for (final a in admins)
                 ListTile(
-                  title: Text('${a['name']}'),
-                  subtitle: Text('${a['email']}'),
+                  title: KeepAllText('${a['name']}'),
+                  subtitle: KeepAllText('${a['email']}'),
                   onTap: () => Navigator.of(ctx).pop(a),
                 ),
             ],
@@ -143,7 +143,7 @@ Future<Json?> askTransferTarget(BuildContext context, List<Json> admins) =>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(context.t.oaCancel),
+            child: KeepAllText(context.t.oaCancel),
           ),
         ],
       ),
@@ -158,12 +158,12 @@ Future<String?> askRecoveryCode(BuildContext context) async {
   final code = await showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text(t.oaRecoveryTypeTitle),
+      title: KeepAllText(t.oaRecoveryTypeTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.oaRecoveryTypeBody),
+          KeepAllText(t.oaRecoveryTypeBody),
           const SizedBox(height: Space.sm),
           TextField(
             controller: typed,
@@ -175,12 +175,12 @@ Future<String?> askRecoveryCode(BuildContext context) async {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(),
-          child: Text(t.oaCancel),
+          child: KeepAllText(t.oaCancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: () => Navigator.of(ctx).pop(typed.text.trim()),
-          child: Text(t.oaContinue),
+          child: KeepAllText(t.oaContinue),
         ),
       ],
     ),
@@ -195,7 +195,7 @@ Future<bool> showRecoveryCodes(BuildContext context, List<String> codes) async {
     context: context,
     barrierDismissible: false,
     builder: (ctx) => AlertDialog(
-      title: Text(t.oaRecoveryShown),
+      title: KeepAllText(t.oaRecoveryShown),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,7 +205,7 @@ Future<bool> showRecoveryCodes(BuildContext context, List<String> codes) async {
             style: const TextStyle(fontFamily: 'monospace'),
           ),
           const SizedBox(height: Space.sm),
-          Text(t.oaRecoveryBody),
+          KeepAllText(t.oaRecoveryBody),
         ],
       ),
       actions: [
@@ -213,12 +213,12 @@ Future<bool> showRecoveryCodes(BuildContext context, List<String> codes) async {
           onPressed: () =>
               Clipboard.setData(ClipboardData(text: codes.join('\n'))),
           icon: const Icon(Icons.copy_rounded, size: 18),
-          label: Text(t.cMfaCopy),
+          label: KeepAllText(t.cMfaCopy),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: Text(t.oaConfirmCodes),
+          child: KeepAllText(t.oaConfirmCodes),
         ),
       ],
     ),

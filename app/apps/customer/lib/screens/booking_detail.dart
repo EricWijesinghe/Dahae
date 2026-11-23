@@ -125,7 +125,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(context.t.detailTitle)),
+    appBar: AppBar(title: KeepAllText(context.t.detailTitle)),
     body: AsyncView<Booking>(
       key: _view,
       load: _load,
@@ -164,8 +164,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 children: [
                   BookingStatusChip(status: b.status),
                   const SizedBox(height: 4),
-                  Text(bookingWhen(context, b), style: context.text.titleLarge),
-                  Text(
+                  KeepAllText(bookingWhen(context, b), style: context.text.titleLarge),
+                  KeepAllText(
                     [
                       t.service(b.serviceCode),
                       ?unit,
@@ -245,16 +245,16 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.place_outlined),
-                title: Text(t.visitAddress),
-                subtitle: Text(
+                title: KeepAllText(t.visitAddress),
+                subtitle: KeepAllText(
                   '${fullAddressLine(b.address)}\n${t.pyeong('${b.address['size_pyeong']}')}',
                 ),
               ),
               if (b.paidAmount > 0)
                 ListTile(
                   leading: const Icon(Icons.receipt_long_outlined),
-                  title: Text(t.paid),
-                  trailing: Text(
+                  title: KeepAllText(t.paid),
+                  trailing: KeepAllText(
                     context.won(b.paidAmount),
                     style: context.text.titleSmall,
                   ),
@@ -262,8 +262,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               if (b.isActive)
                 ListTile(
                   leading: const Icon(Icons.edit_note_rounded),
-                  title: Text(t.visitNotes),
-                  subtitle: Text(
+                  title: KeepAllText(t.visitNotes),
+                  subtitle: KeepAllText(
                     [
                           b.visitNotes['entry'],
                           b.visitNotes['parking'],
@@ -281,7 +281,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         ),
         if (b.checkedInAt != null) ...[
           const SizedBox(height: Space.sm),
-          Text(
+          KeepAllText(
             t.checkedInAt(
               TimeOfDay.fromDateTime(b.checkedInAt!.toLocal()).format(context),
             ),
@@ -294,7 +294,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           const SizedBox(height: Space.sm),
           OutlinedButton.icon(
             icon: const Icon(Icons.report_problem_outlined),
-            label: Text(t.caseReportAction),
+            label: KeepAllText(t.caseReportAction),
             onPressed: () async {
               final api = context.api;
               final messenger = ScaffoldMessenger.of(context);
@@ -315,7 +315,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               );
               if (sent) {
                 messenger.showSnackBar(
-                  SnackBar(content: Text(t.caseSubmitted)),
+                  SnackBar(content: KeepAllText(t.caseSubmitted)),
                 );
               }
             },
@@ -324,7 +324,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         const SizedBox(height: Space.lg),
         FilledButton.tonalIcon(
           icon: const Icon(Icons.chat_bubble_outline_rounded),
-          label: Text(t.askTeam),
+          label: KeepAllText(t.askTeam),
           onPressed: () =>
               openTopicChat(context, b.serviceCode, bookingId: b.id),
         ),
@@ -337,7 +337,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   bookingId: b.id,
                   child: OutlinedButton(
                     onPressed: () => _reschedule(b),
-                    child: Text(t.reschedule),
+                    child: KeepAllText(t.reschedule),
                   ),
                 ),
               ),
@@ -345,7 +345,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _cancel(b),
-                  child: Text(t.cancelBooking),
+                  child: KeepAllText(t.cancelBooking),
                 ),
               ),
             ],
@@ -355,7 +355,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           const SizedBox(height: Space.xs),
           OutlinedButton.icon(
             icon: const Icon(Icons.replay_rounded),
-            label: Text(t.bookAgain),
+            label: KeepAllText(t.bookAgain),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => ServiceScreen(
@@ -394,8 +394,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: context.text.titleSmall),
-                    if (body != null) Text(body, style: context.text.bodySmall),
+                    KeepAllText(title, style: context.text.titleSmall),
+                    if (body != null) KeepAllText(body, style: context.text.bodySmall),
                   ],
                 ),
               ),
@@ -416,10 +416,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(title, style: context.text.titleSmall),
-          if (body != null) Text(body, style: context.text.bodySmall),
+          KeepAllText(title, style: context.text.titleSmall),
+          if (body != null) KeepAllText(body, style: context.text.bodySmall),
           const SizedBox(height: Space.md),
-          FilledButton(onPressed: onTap, child: Text(cta)),
+          FilledButton(onPressed: onTap, child: KeepAllText(cta)),
         ],
       ),
     ),
@@ -435,9 +435,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           Row(
             children: [
               Expanded(
-                child: Text(t.prepCheck, style: context.text.titleSmall),
+                child: KeepAllText(t.prepCheck, style: context.text.titleSmall),
               ),
-              Text(
+              KeepAllText(
                 all
                     ? t.prepAllSet
                     : '${_prepDone.length} / ${prepTools.length}',
@@ -454,7 +454,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             children: [
               for (final tool in prepTools)
                 FilterChip(
-                  label: Text(t.tool(tool)),
+                  label: KeepAllText(t.tool(tool)),
                   selected: _prepDone.contains(tool),
                   onSelected: (on) => setState(
                     () => on ? _prepDone.add(tool) : _prepDone.remove(tool),
@@ -509,7 +509,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           const SizedBox(height: Space.md),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.save),
+            child: KeepAllText(t.save),
           ),
         ],
       ),

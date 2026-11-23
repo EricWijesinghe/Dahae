@@ -88,7 +88,7 @@ String _teamName(BuildContext context, T t) =>
     '${context.brandName} ${t.chatTeam}';
 
 /// Tab-root title: large, bold and left-aligned (design p03, p05).
-Widget tabRootTitle(BuildContext context, String title) => Text(
+Widget tabRootTitle(BuildContext context, String title) => KeepAllText(
   title,
   style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
 );
@@ -165,7 +165,7 @@ class _ChatListTabState extends State<ChatListTab> {
                               )
                             : ServiceGlyph(code, size: 52),
                         const SizedBox(height: 6),
-                        Text(
+                        KeepAllText(
                           code == 'other' ? t.topicOther : t.serviceShort(code),
                           style: ctx.text.labelMedium,
                           textAlign: TextAlign.center,
@@ -183,7 +183,7 @@ class _ChatListTabState extends State<ChatListTab> {
               Space.gutter,
               Space.gutter,
             ),
-            child: Text(
+            child: KeepAllText(
               t.chatAiNotice,
               style: ctx.text.bodySmall,
               textAlign: TextAlign.center,
@@ -221,7 +221,7 @@ class _ChatListTabState extends State<ChatListTab> {
                       padding: const EdgeInsets.symmetric(horizontal: Space.sm),
                     ),
                     icon: Icon3D('chat_new', size: 20, attention: _nudge),
-                    label: Text(t.chatNew),
+                    label: KeepAllText(t.chatNew),
                   )
                 : IconButton(
                     tooltip: t.chatNew,
@@ -314,13 +314,8 @@ class _HoursBar extends StatelessWidget {
           ),
           const SizedBox(width: Space.xs),
           Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: '${t.chatHoursTitle} · $hours'),
-                  TextSpan(text: ' · ${t.chatReplyFast}'),
-                ],
-              ),
+            child: KeepAllText(
+              '${t.chatHoursTitle} · $hours · ${t.chatReplyFast}',
               style: context.text.bodySmall?.copyWith(color: c.inkSoft),
             ),
           ),
@@ -365,13 +360,13 @@ class _ThreadTile extends StatelessWidget {
             ? Icon(Icons.chat_bubble_outline_rounded, color: c.inkSoft)
             : ServiceGlyph(thread.topic, size: 30),
       ),
-      title: Text(
+      title: KeepAllText(
         _threadTitle(t, thread.topic),
         style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text(
+      subtitle: KeepAllText(
         preview,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -381,7 +376,7 @@ class _ThreadTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(
+          KeepAllText(
             _threadTime(t, thread.lastMessageAt, context.lang),
             style: context.text.labelSmall?.copyWith(color: c.inkMuted),
           ),

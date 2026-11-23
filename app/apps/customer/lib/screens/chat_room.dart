@@ -247,7 +247,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          KeepAllText(
             _teamName(context, t),
             style: context.text.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
@@ -257,7 +257,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           ),
           FutureBuilder<String?>(
             future: _hours,
-            builder: (context, snap) => Text(
+            builder: (context, snap) => KeepAllText(
               '${snap.data ?? t.chatHours} · ${t.chatReplyFast}',
               style: context.text.labelSmall?.copyWith(
                 color: context.colors.inkSoft,
@@ -281,7 +281,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       foregroundColor: context.colors.ink,
                       padding: const EdgeInsets.symmetric(horizontal: Space.sm),
                     ),
-                    child: Text(t.viewBooking),
+                    child: KeepAllText(t.viewBooking),
                   ),
                 )
               // Small phones and large text: an icon keeps the team name readable.
@@ -387,7 +387,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     child: Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: ActionChip(
-                        label: Text(q),
+                        label: KeepAllText(q),
                         shape: const StadiumBorder(),
                         visualDensity: VisualDensity.compact,
                         labelPadding: const EdgeInsets.symmetric(

@@ -74,10 +74,10 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
         'weekday': _weekday,
         'start_hour': _hour,
       });
-      messenger.showSnackBar(SnackBar(content: Text(t.subCreated)));
+      messenger.showSnackBar(SnackBar(content: KeepAllText(t.subCreated)));
       nav.pop(true);
     } on ApiException {
-      messenger.showSnackBar(SnackBar(content: Text(t.errorGeneric)));
+      messenger.showSnackBar(SnackBar(content: KeepAllText(t.errorGeneric)));
       if (mounted) setState(() => _saving = false);
     }
   }
@@ -100,17 +100,17 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
         !paused;
     final narrow = MaterialLocalizations.of(context).narrowWeekdays;
     return Scaffold(
-      appBar: AppBar(title: Text(t.subNew)),
+      appBar: AppBar(title: KeepAllText(t.subNew)),
       body: ListView(
         padding: const EdgeInsets.all(Space.xl),
         children: [
-          if (addresses.isEmpty) Text(t.subNeedAddress),
+          if (addresses.isEmpty) KeepAllText(t.subNeedAddress),
           DropdownButtonFormField<String>(
             key: const Key('sub-service'),
             initialValue: _service,
             items: [
               for (final s in services)
-                DropdownMenuItem(value: s.code, child: Text(t.service(s.code))),
+                DropdownMenuItem(value: s.code, child: KeepAllText(t.service(s.code))),
             ],
             onChanged: (v) => setState(() => _service = v),
           ),
@@ -120,7 +120,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
             initialValue: _address,
             items: [
               for (final a in addresses)
-                DropdownMenuItem(value: a.id, child: Text(a.label)),
+                DropdownMenuItem(value: a.id, child: KeepAllText(a.label)),
             ],
             onChanged: (v) => setState(() => _address = v),
           ),
@@ -130,24 +130,24 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
             initialValue: _method,
             items: [
               for (final m in methods)
-                DropdownMenuItem(value: m.id, child: Text(m.displayName)),
+                DropdownMenuItem(value: m.id, child: KeepAllText(m.displayName)),
             ],
             onChanged: (v) => setState(() => _method = v),
           ),
           const SizedBox(height: Space.lg),
-          Text(t.subCadence),
+          KeepAllText(t.subCadence),
           const SizedBox(height: Space.xs),
           SegmentedButton<int>(
             key: const Key('sub-cadence'),
             segments: [
               for (final w in subscriptionCadences)
-                ButtonSegment(value: w, label: Text(cadenceLabel(t, w))),
+                ButtonSegment(value: w, label: KeepAllText(cadenceLabel(t, w))),
             ],
             selected: {_cadence},
             onSelectionChanged: (s) => setState(() => _cadence = s.first),
           ),
           const SizedBox(height: Space.lg),
-          Text(t.subWeekday),
+          KeepAllText(t.subWeekday),
           const SizedBox(height: Space.xs),
           SegmentedButton<int>(
             key: const Key('sub-weekday'),
@@ -155,13 +155,13 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
             showSelectedIcon: false,
             segments: [
               for (var i = 0; i < 7; i++)
-                ButtonSegment(value: i, label: Text(narrow[(i + 1) % 7])),
+                ButtonSegment(value: i, label: KeepAllText(narrow[(i + 1) % 7])),
             ],
             selected: {_weekday},
             onSelectionChanged: (s) => setState(() => _weekday = s.first),
           ),
           const SizedBox(height: Space.lg),
-          Text(t.subHour),
+          KeepAllText(t.subHour),
           const SizedBox(height: Space.xs),
           SegmentedButton<int>(
             key: const Key('sub-hour'),
@@ -176,14 +176,14 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
             onSelectionChanged: (s) => setState(() => _hour = s.first),
           ),
           const SizedBox(height: Space.lg),
-          if (_percent > 0) Text(t.subDiscountNote('$_percent')),
+          if (_percent > 0) KeepAllText(t.subDiscountNote('$_percent')),
           const SizedBox(height: Space.sm),
-          Text(t.subChargeNote),
+          KeepAllText(t.subChargeNote),
           const SizedBox(height: Space.xl),
           FilledButton(
             key: const Key('sub-submit'),
             onPressed: ready ? _submit : null,
-            child: Text(t.subCreate),
+            child: KeepAllText(t.subCreate),
           ),
         ],
       ),

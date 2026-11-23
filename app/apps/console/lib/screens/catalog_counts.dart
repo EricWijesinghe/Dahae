@@ -228,7 +228,7 @@ class _CountsDialogState extends State<_CountsDialog> {
     final cap = _d.maxEachValue ?? countsMaxEachCap;
     final quote = countQuote(options, _basket, _d.discountBps);
     return AlertDialog(
-      title: Text(t.cntTitle),
+      title: KeepAllText(t.cntTitle),
       content: SizedBox(
         width: 480,
         child: SingleChildScrollView(
@@ -236,7 +236,7 @@ class _CountsDialogState extends State<_CountsDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(t.cntHelp),
+              KeepAllText(t.cntHelp),
               const SizedBox(height: 12),
               for (var i = 0; i < _d.rows.length; i++) _optionRow(i, t),
               Align(
@@ -253,7 +253,7 @@ class _CountsDialogState extends State<_CountsDialog> {
                     ),
                   ),
                   icon: const Icon(Icons.add),
-                  label: Text(t.cntAddOption),
+                  label: KeepAllText(t.cntAddOption),
                 ),
               ),
               const SizedBox(height: 8),
@@ -267,21 +267,21 @@ class _CountsDialogState extends State<_CountsDialog> {
                 ],
               ),
               const Divider(height: 24),
-              Text(t.cntPreview, style: Theme.of(context).textTheme.titleSmall),
+              KeepAllText(t.cntPreview, style: Theme.of(context).textTheme.titleSmall),
               for (var i = 0; i < _d.rows.length; i++)
                 _stepper(i, cap, options[i].label, t),
               const SizedBox(height: 8),
-              Text(
+              KeepAllText(
                 t.cntPreviewTotal(
                   context.won(quote.won),
                   t.duration(quote.minutes),
                 ),
               ),
               if (quote.off > 0)
-                Text(t.cntPreviewDiscount(context.won(quote.off))),
+                KeepAllText(t.cntPreviewDiscount(context.won(quote.off))),
               if (_error != null) ...[
                 const SizedBox(height: 8),
-                Text(
+                KeepAllText(
                   _error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
@@ -293,12 +293,12 @@ class _CountsDialogState extends State<_CountsDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.cancel),
+          child: KeepAllText(t.cancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: () => _save(t),
-          child: Text(t.save),
+          child: KeepAllText(t.save),
         ),
       ],
     );
@@ -364,7 +364,7 @@ class _CountsDialogState extends State<_CountsDialog> {
     final n = _basket[i];
     return Row(
       children: [
-        Expanded(child: Text(label.isEmpty ? '-' : label)),
+        Expanded(child: KeepAllText(label.isEmpty ? '-' : label)),
         IconButton(
           tooltip: t.cntLess,
           onPressed: n == 0 ? null : () => _refresh(() => _basket[i]--),

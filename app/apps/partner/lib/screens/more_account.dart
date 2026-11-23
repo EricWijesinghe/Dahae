@@ -66,7 +66,7 @@ class _PayoutAccountState extends State<PayoutAccountScreen> {
     final t = context.t;
     final c = _current;
     return Scaffold(
-      appBar: AppBar(title: Text(t.pPayoutAccount)),
+      appBar: AppBar(title: KeepAllText(t.pPayoutAccount)),
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [
@@ -81,7 +81,7 @@ class _PayoutAccountState extends State<PayoutAccountScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        KeepAllText(
                           '${c['bank']} •••• ${c['account_last4']}\n${c['holder']}',
                           style: context.text.titleSmall,
                         ),
@@ -180,7 +180,7 @@ class _TeamState extends State<TeamScreen> {
             const SizedBox(height: Space.md),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(t.pInvite),
+              child: KeepAllText(t.pInvite),
             ),
           ],
         ),
@@ -206,11 +206,11 @@ class _TeamState extends State<TeamScreen> {
   Widget build(BuildContext context) {
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.pTeam)),
+      appBar: AppBar(title: KeepAllText(t.pTeam)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _invite,
         icon: const Icon(Icons.person_add_rounded),
-        label: Text(t.pInvite),
+        label: KeepAllText(t.pInvite),
       ),
       body: AsyncView<List<Json>>(
         key: _view,
@@ -222,13 +222,13 @@ class _TeamState extends State<TeamScreen> {
             for (final m in members)
               ListTile(
                 leading: CircleAvatar(
-                  child: Text(
+                  child: KeepAllText(
                     ((m['name'] as String).isEmpty
                         ? '?'
                         : (m['name'] as String).characters.first),
                   ),
                 ),
-                title: Text(
+                title: KeepAllText(
                   (m['name'] as String).isEmpty
                       ? formatKoreanPhone(m['phone'] as String)
                       : m['name'] as String,

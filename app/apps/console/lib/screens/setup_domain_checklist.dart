@@ -64,8 +64,8 @@ class _DomainChecklistState extends State<DomainChecklist> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.cRbChecklistTitle, style: context.text.labelLarge),
-        Text(t.cRbChecklistHint, style: context.text.bodySmall),
+        KeepAllText(t.cRbChecklistTitle, style: context.text.labelLarge),
+        KeepAllText(t.cRbChecklistHint, style: context.text.bodySmall),
         for (final i in widget.items)
           Row(
             children: [
@@ -86,7 +86,7 @@ class _DomainChecklistState extends State<DomainChecklist> {
     return value.isEmpty
         ? Padding(
             padding: const EdgeInsets.symmetric(vertical: Space.sm),
-            child: Text(label, style: context.text.labelLarge),
+            child: KeepAllText(label, style: context.text.labelLarge),
           )
         : _values(label, value.split('\n'));
   }
@@ -100,7 +100,7 @@ class _DomainChecklistState extends State<DomainChecklist> {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: Space.sm),
-          child: Text(label, style: context.text.labelLarge),
+          child: KeepAllText(label, style: context.text.labelLarge),
         ),
         for (final l in lines)
           if (_variable.firstMatch(l) case final m?)
@@ -156,10 +156,10 @@ class AliasRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Expanded(child: Text(host, style: context.text.bodyMedium)),
+      Expanded(child: KeepAllText(host, style: context.text.bodyMedium)),
       TextButton(
         onPressed: () => _retire(context),
-        child: Text(context.t.cRbDomainRetire),
+        child: KeepAllText(context.t.cRbDomainRetire),
       ),
     ],
   );
@@ -181,29 +181,29 @@ class _RetireDialogState extends State<_RetireDialog> {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
-      title: Text(t.cRbRetireTitle(widget.host)),
+      title: KeepAllText(t.cRbRetireTitle(widget.host)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.body),
+          KeepAllText(widget.body),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
             value: _confirmed,
             onChanged: (v) => setState(() => _confirmed = v ?? false),
-            title: Text(t.cRbRetireConfirm),
+            title: KeepAllText(t.cRbRetireConfirm),
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: Text(t.cancel),
+          child: KeepAllText(t.cancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: _confirmed ? () => Navigator.of(context).pop(true) : null,
-          child: Text(t.cRbDomainRetire),
+          child: KeepAllText(t.cRbDomainRetire),
         ),
       ],
     );

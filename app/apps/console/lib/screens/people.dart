@@ -85,7 +85,7 @@ class PartnersScreen extends StatelessWidget {
                       title: Row(
                         children: [
                           Expanded(
-                            child: Text(
+                            child: KeepAllText(
                               '${p['team_name']} · ${p['name']}',
                               style: context.text.titleSmall,
                             ),
@@ -100,7 +100,7 @@ class PartnersScreen extends StatelessWidget {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          KeepAllText(
                             '${formatKoreanPhone('${p['phone']}')} · ${t.cCompleted} ${p['completed']} · ${t.cCancelledN} ${p['cancelled']} · ${t.cRating} ${p['rating'] ?? '-'} · ${t.cFeeRate(_percent(p['fee_bps'] as num))} · ${t.cQualityScore} ${p['quality_score'] ?? '-'} (${qualityStatusLabel(t, p['quality_status'] as String?)})',
                           ),
                           if (admin) ...[
@@ -115,7 +115,7 @@ class PartnersScreen extends StatelessWidget {
                                     '${p['id']}',
                                     reload,
                                   ),
-                                  child: Text(t.cPfTabProfile),
+                                  child: KeepAllText(t.cPfTabProfile),
                                 ),
                                 if (p['status'] != 'verified')
                                   FilledButton.tonal(
@@ -125,7 +125,7 @@ class PartnersScreen extends StatelessWidget {
                                       '${p['id']}',
                                       reload,
                                     ),
-                                    child: Text(t.cVerify),
+                                    child: KeepAllText(t.cVerify),
                                   ),
                                 if (p['status'] == 'verified')
                                   OutlinedButton(
@@ -146,7 +146,7 @@ class PartnersScreen extends StatelessWidget {
                                         reload,
                                       );
                                     },
-                                    child: Text(t.cSuspend),
+                                    child: KeepAllText(t.cSuspend),
                                   ),
                               ],
                             ),
@@ -279,12 +279,12 @@ class _SettlementsState extends State<SettlementsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            KeepAllText(
               '${p['pro_name']}$team · ${p['bank']} ${p['account_last4']}',
               style: context.text.titleSmall,
             ),
             const SizedBox(height: Space.xxs),
-            Text(
+            KeepAllText(
               '${t.tGrossAmount} ${context.won((p['amount'] as num).toInt())} · ${t.tWithholdingLabel} ${context.won(((p['income_tax'] as num?) ?? 0).toInt() + ((p['local_tax'] as num?) ?? 0).toInt())} · ${t.tNetAmount} ${context.won(((p['net'] as num?) ?? (p['amount'] as num)).toInt())} · ${p['payout_date']} · ${manual ? t.poProviderManual : t.poProviderToss}$failure',
               style: context.text.bodySmall,
             ),
@@ -312,27 +312,27 @@ class _SettlementsState extends State<SettlementsScreen> {
                 if (admin && state == 'requested' && manual)
                   TextButton(
                     onPressed: () => _showAccount(context, id),
-                    child: Text(t.poShowAccount),
+                    child: KeepAllText(t.poShowAccount),
                   ),
                 if (admin && state == 'requested' && manual)
                   TextButton(
                     onPressed: () => post('confirm'),
-                    child: Text(t.poConfirmPaid),
+                    child: KeepAllText(t.poConfirmPaid),
                   ),
                 if (admin && state == 'requested' && !manual)
                   TextButton(
                     onPressed: () => post('send'),
-                    child: Text(t.poSend),
+                    child: KeepAllText(t.poSend),
                   ),
                 if (admin && state == 'sent')
                   TextButton(
                     onPressed: () => post('sync'),
-                    child: Text(t.poSync),
+                    child: KeepAllText(t.poSync),
                   ),
                 if (admin && ambiguous)
                   TextButton(
                     onPressed: () => _checkToss(context, id, reload),
-                    child: Text(t.poCheckToss),
+                    child: KeepAllText(t.poCheckToss),
                   ),
                 if (admin && ambiguous && _tossUnreachable.contains(id))
                   TextButton(
@@ -342,30 +342,30 @@ class _SettlementsState extends State<SettlementsScreen> {
                         await reload();
                       }
                     },
-                    child: Text(t.poNotSent),
+                    child: KeepAllText(t.poNotSent),
                   ),
                 if (admin && state == 'failed')
                   TextButton(
                     onPressed: () => post('retry'),
-                    child: Text(t.poRetry),
+                    child: KeepAllText(t.poRetry),
                   ),
                 // The server refuses a plain fail on an ambiguous send; the not-sent check replaces it.
                 if (admin && state == 'requested' && !ambiguous)
                   TextButton(
                     onPressed: () => _fail(context, id, reload),
-                    child: Text(t.poMarkFailed),
+                    child: KeepAllText(t.poMarkFailed),
                   ),
                 if (admin)
                   TextButton(
                     onPressed: () => setPartnerTaxType(context, p, reload),
-                    child: Text(t.tTaxType),
+                    child: KeepAllText(t.tTaxType),
                   ),
                 if (admin &&
                     !manual &&
                     (state == 'requested' || state == 'failed'))
                   TextButton(
                     onPressed: () => _seller(context, p['pro_id'] as String),
-                    child: Text(t.poSellerAction),
+                    child: KeepAllText(t.poSellerAction),
                   ),
               ],
             ),
@@ -438,7 +438,7 @@ class _SettlementsState extends State<SettlementsScreen> {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text(t.poAccountTitle),
+          title: KeepAllText(t.poAccountTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,13 +452,13 @@ class _SettlementsState extends State<SettlementsScreen> {
                 ),
               ),
               const SizedBox(height: Space.sm),
-              Text(t.poRevealNote, style: ctx.text.bodySmall),
+              KeepAllText(t.poRevealNote, style: ctx.text.bodySmall),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(t.close),
+              child: KeepAllText(t.close),
             ),
           ],
         ),
@@ -478,7 +478,7 @@ class _SettlementsState extends State<SettlementsScreen> {
     final reason = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.poReasonTitle),
+        title: KeepAllText(t.poReasonTitle),
         content: TextField(
           controller: c,
           decoration: InputDecoration(hintText: t.poReasonHint),
@@ -486,12 +486,12 @@ class _SettlementsState extends State<SettlementsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(t.close),
+            child: KeepAllText(t.close),
           ),
           FilledButton(
             style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(c.text.trim()),
-            child: Text(t.poMarkFailed),
+            child: KeepAllText(t.poMarkFailed),
           ),
         ],
       ),
@@ -535,8 +535,8 @@ class _SettlementsState extends State<SettlementsScreen> {
             children: [
               SegmentedButton<bool>(
                 segments: [
-                  ButtonSegment(value: false, label: Text(t.poTabSettlements)),
-                  ButtonSegment(value: true, label: Text(t.poTabPayouts)),
+                  ButtonSegment(value: false, label: KeepAllText(t.poTabSettlements)),
+                  ButtonSegment(value: true, label: KeepAllText(t.poTabPayouts)),
                 ],
                 selected: {_payouts},
                 onSelectionChanged: (s) => setState(() => _payouts = s.first),
@@ -548,14 +548,14 @@ class _SettlementsState extends State<SettlementsScreen> {
                     isExpanded: true,
                     value: _state,
                     items: [
-                      DropdownMenuItem(value: null, child: Text(t.cAllStatus)),
+                      DropdownMenuItem(value: null, child: KeepAllText(t.cAllStatus)),
                       for (final s in const [
                         'waiting_balance',
                         'pending',
                         'paid',
                         'held',
                       ])
-                        DropdownMenuItem(value: s, child: Text(stateLabel(s))),
+                        DropdownMenuItem(value: s, child: KeepAllText(stateLabel(s))),
                     ],
                     onChanged: (v) {
                       setState(() => _state = v);
@@ -567,7 +567,7 @@ class _SettlementsState extends State<SettlementsScreen> {
                 FilledButton.icon(
                   style: inlineFilled,
                   icon: const Icon(Icons.send_rounded),
-                  label: Text(t.cRunPayouts),
+                  label: KeepAllText(t.cRunPayouts),
                   onPressed: _run,
                 ),
             ],
@@ -592,8 +592,8 @@ class _SettlementsState extends State<SettlementsScreen> {
                         Card(
                           elevation: 0,
                           child: ListTile(
-                            title: Text('${s['team_name']} · ${s['number']}'),
-                            subtitle: Text(
+                            title: KeepAllText('${s['team_name']} · ${s['number']}'),
+                            subtitle: KeepAllText(
                               '${t.cNet} ${context.won((s['net'] as num).toInt())} · ${s['payout_date'] ?? '-'}',
                             ),
                             trailing: Wrap(
@@ -619,7 +619,7 @@ class _SettlementsState extends State<SettlementsScreen> {
                                       ),
                                       reload,
                                     ),
-                                    child: Text(t.cHold),
+                                    child: KeepAllText(t.cHold),
                                   ),
                                 if (admin && s['state'] == 'held')
                                   TextButton(
@@ -631,7 +631,7 @@ class _SettlementsState extends State<SettlementsScreen> {
                                       ),
                                       reload,
                                     ),
-                                    child: Text(t.cRelease),
+                                    child: KeepAllText(t.cRelease),
                                   ),
                               ],
                             ),
@@ -696,13 +696,13 @@ class _CustomersState extends State<CustomersScreen> {
                 for (final c in rows)
                   ListTile(
                     leading: CircleAvatar(
-                      child: Text(customerInitial(c['name'] as String?)),
+                      child: KeepAllText(customerInitial(c['name'] as String?)),
                     ),
-                    title: Text(customerNameLabel(t, c['name'] as String?)),
-                    subtitle: Text(
+                    title: KeepAllText(customerNameLabel(t, c['name'] as String?)),
+                    subtitle: KeepAllText(
                       '${formatKoreanPhone('${c['phone']}')} · ${t.cJoined} ${dateLabel(DateTime.parse(c['created_at'] as String), context.lang)}',
                     ),
-                    trailing: Text(t.cBookingsCount('${c['bookings']}')),
+                    trailing: KeepAllText(t.cBookingsCount('${c['bookings']}')),
                     // The points ledger is admin-only on the server too.
                     onTap: context.console.isAdmin
                         ? () => Navigator.of(context).push(
@@ -742,7 +742,7 @@ class _StaffState extends State<StaffScreen> {
         onPressed: () =>
             inviteStaff(context, () async => _view.currentState?.reload()),
         icon: const Icon(Icons.person_add_rounded),
-        label: Text(t.cStaffInvite),
+        label: KeepAllText(t.cStaffInvite),
       ),
       body: AsyncView<List<Json>>(
         key: _view,
@@ -753,8 +753,8 @@ class _StaffState extends State<StaffScreen> {
           children: [
             for (final s in rows)
               ListTile(
-                title: Text('${s['name']} · ${s['email']}'),
-                subtitle: Text(
+                title: KeepAllText('${s['name']} · ${s['email']}'),
+                subtitle: KeepAllText(
                   [
                     s['role'] == 'admin' ? t.cRoleAdmin : t.cRoleConsultant,
                     if (s['invited'] == true) t.cStaffInvitePending,
@@ -766,14 +766,14 @@ class _StaffState extends State<StaffScreen> {
                     if (s['active'] == true)
                       TextButton(
                         onPressed: () => issueStaffPasswordReset(context, s),
-                        child: Text(t.cStaffReset),
+                        child: KeepAllText(t.cStaffReset),
                       ),
                     // A pending invite cannot be switched on by hand; a fresh invite code is the way in.
                     if (s['invited'] == true)
                       TextButton(
                         onPressed: () =>
                             issueStaffPasswordReset(context, s, invite: true),
-                        child: Text(t.cStaffInviteResend),
+                        child: KeepAllText(t.cStaffInviteResend),
                       )
                     // The owner leaves only by handing the role over, so the owner row has no switch.
                     else if (s['is_owner'] != true)
@@ -795,7 +795,7 @@ class _StaffState extends State<StaffScreen> {
                             reload,
                           );
                         },
-                        child: Text(
+                        child: KeepAllText(
                           s['active'] == true ? t.cDeactivate : t.cActivate,
                         ),
                       ),

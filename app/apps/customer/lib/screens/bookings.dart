@@ -227,7 +227,7 @@ class _BookingsTabState extends State<BookingsTab>
                         for (final w in loc.narrowWeekdays)
                           Expanded(
                             child: Center(
-                              child: Text(
+                              child: KeepAllText(
                                 w,
                                 style: context.text.labelSmall?.copyWith(
                                   color: c.inkMuted,
@@ -384,7 +384,7 @@ class _CalendarHeader extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(title, style: context.text.headlineSmall),
+                        KeepAllText(title, style: context.text.headlineSmall),
                         AnimatedRotation(
                           turns: folded ? -0.25 : 0,
                           duration: motionFor(context, Motion.standard),
@@ -427,7 +427,7 @@ class _CalendarHeader extends StatelessWidget {
             ),
           ),
           onPressed: onToday,
-          child: Text(context.t.today),
+          child: KeepAllText(context.t.today),
         ),
         const SizedBox(width: Space.xs),
       ],
@@ -756,7 +756,7 @@ class _DayList extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: Space.lg),
               child: Center(
-                child: Text(t.bookingsEmptyDay, style: context.text.bodySmall),
+                child: KeepAllText(t.bookingsEmptyDay, style: context.text.bodySmall),
               ),
             ),
           for (final MapEntry(key: label, value: list) in groups.entries) ...[

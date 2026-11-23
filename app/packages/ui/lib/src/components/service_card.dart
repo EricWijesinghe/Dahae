@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../tokens.dart';
 import 'glyph.dart';
 import 'interactive.dart';
+import 'keep_all.dart';
 
 /// Service card with depth: a hue-tinted face with a colored lift shadow, the
 /// clay [ServiceGlyph] floating above the face, and a tilt that follows touch
@@ -78,7 +79,7 @@ class ServiceCard3D extends StatelessWidget {
                       : Hero(tag: heroTag!, child: glyph),
                 ),
                 const SizedBox(height: Space.sm),
-                Text(
+                KeepAllText(
                   title,
                   style: context.text.titleSmall,
                   maxLines: 1,

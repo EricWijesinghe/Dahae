@@ -85,12 +85,12 @@ class _StepUpDialogState extends State<_StepUpDialog> {
         horizontal: Space.gutter,
         vertical: Space.xl,
       ),
-      title: Text(t.cStepUpTitle),
+      title: KeepAllText(t.cStepUpTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(t.cStepUpBody, style: context.text.bodyMedium),
+          KeepAllText(t.cStepUpBody, style: context.text.bodyMedium),
           const SizedBox(height: Space.md),
           TextField(
             controller: _code,
@@ -101,14 +101,14 @@ class _StepUpDialogState extends State<_StepUpDialog> {
           ),
           if (_error != null) ...[
             const SizedBox(height: Space.sm),
-            Text(_error!, style: TextStyle(color: context.colors.danger)),
+            KeepAllText(_error!, style: TextStyle(color: context.colors.danger)),
           ],
         ],
       ),
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.of(context).pop(false),
-          child: Text(t.cStepUpCancel),
+          child: KeepAllText(t.cStepUpCancel),
         ),
         // PrimaryButton takes no style: the compact size comes from the theme, under its own gradient style.
         Theme(

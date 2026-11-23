@@ -12984,12 +12984,6 @@ abstract class T {
   /// **'이 시간에 이미 다른 일정이 있어요'**
   String get err_schedule_overlap;
 
-  /// No description provided for @servicePhotoSlot.
-  ///
-  /// In ko, this message translates to:
-  /// **'서비스 대표 사진 자리'**
-  String get servicePhotoSlot;
-
   /// No description provided for @rulesTab.
   ///
   /// In ko, this message translates to:

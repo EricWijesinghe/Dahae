@@ -101,17 +101,17 @@ class _RenewalsState extends State<RenewalsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.rnwDelete),
-        content: Text(t.rnwDeleteAsk),
+        title: KeepAllText(t.rnwDelete),
+        content: KeepAllText(t.rnwDeleteAsk),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t.rnwCancel),
+            child: KeepAllText(t.rnwCancel),
           ),
           FilledButton(
             style: compactFilled,
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.rnwDelete),
+            child: KeepAllText(t.rnwDelete),
           ),
         ],
       ),
@@ -133,21 +133,21 @@ class _RenewalsState extends State<RenewalsScreen> {
     return ListView(
       padding: const EdgeInsets.all(Space.xl),
       children: [
-        Text(t.rnwTitle, style: context.text.headlineMedium),
+        KeepAllText(t.rnwTitle, style: context.text.headlineMedium),
         const SizedBox(height: Space.xs),
-        Text(t.rnwIntro, style: context.text.bodySmall),
+        KeepAllText(t.rnwIntro, style: context.text.bodySmall),
         const SizedBox(height: Space.md),
         // Not inside a Row: the theme's full-width minimum size needs a bounded width.
         FilledButton.icon(
           onPressed: () => _edit(),
           icon: const Icon(Icons.add),
-          label: Text(t.rnwAdd),
+          label: KeepAllText(t.rnwAdd),
         ),
         const SizedBox(height: Space.md),
         if (items == null)
           const Center(child: CircularProgressIndicator())
         else if (items.isEmpty)
-          Text(t.rnwEmpty)
+          KeepAllText(t.rnwEmpty)
         else
           for (final item in items) _row(t, item),
       ],
@@ -159,11 +159,11 @@ class _RenewalsState extends State<RenewalsScreen> {
     final left = item['days_left'] as int;
     return Card(
       child: ListTile(
-        title: Text(item['name'] as String),
-        subtitle: Text(
+        title: KeepAllText(item['name'] as String),
+        subtitle: KeepAllText(
           '${_kindLabel(t, item['kind'] as String)} · ${t.rnwDate}: ${item['due_on']}',
         ),
-        leading: Text(_daysText(t, left), style: context.text.labelLarge),
+        leading: KeepAllText(_daysText(t, left), style: context.text.labelLarge),
         trailing: keys
             ? null
             : Wrap(
@@ -244,7 +244,7 @@ class _RenewalFormState extends State<_RenewalForm> {
     final t = context.t;
     final due = _due;
     return AlertDialog(
-      title: Text(widget.item == null ? t.rnwAdd : t.rnwEdit),
+      title: KeepAllText(widget.item == null ? t.rnwAdd : t.rnwEdit),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -260,30 +260,30 @@ class _RenewalFormState extends State<_RenewalForm> {
                 ),
               ),
               const SizedBox(height: Space.md),
-              Text(t.rnwKind, style: context.text.titleSmall),
+              KeepAllText(t.rnwKind, style: context.text.titleSmall),
               Wrap(
                 spacing: Space.xs,
                 children: [
                   for (final k in _kinds)
                     ChoiceChip(
-                      label: Text(_kindLabel(t, k)),
+                      label: KeepAllText(_kindLabel(t, k)),
                       selected: _kind == k,
                       onSelected: (_) => setState(() => _kind = k),
                     ),
                 ],
               ),
               const SizedBox(height: Space.md),
-              Text(t.rnwDate, style: context.text.titleSmall),
+              KeepAllText(t.rnwDate, style: context.text.titleSmall),
               TextButton.icon(
                 onPressed: _pickDate,
                 icon: const Icon(Icons.event),
-                label: Text(due == null ? t.rnwPickDate : _fmtDate(due)),
+                label: KeepAllText(due == null ? t.rnwPickDate : _fmtDate(due)),
               ),
               const SizedBox(height: Space.sm),
-              Text(t.rnwSmsNote, style: context.text.bodySmall),
+              KeepAllText(t.rnwSmsNote, style: context.text.bodySmall),
               if (_error != null) ...[
                 const SizedBox(height: Space.sm),
-                Text(
+                KeepAllText(
                   _error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
@@ -295,12 +295,12 @@ class _RenewalFormState extends State<_RenewalForm> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.rnwCancel),
+          child: KeepAllText(t.rnwCancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: _submit,
-          child: Text(t.rnwSave),
+          child: KeepAllText(t.rnwSave),
         ),
       ],
     );

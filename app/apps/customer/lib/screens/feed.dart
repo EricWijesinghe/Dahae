@@ -130,7 +130,7 @@ class FeedSection extends StatelessWidget {
       children: [
         Semantics(
           header: true,
-          child: Text(
+          child: KeepAllText(
             context.t.dhHomeRecommended,
             style: context.text.titleLarge,
           ),
@@ -170,13 +170,13 @@ class _RecRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: context.text.titleLarge),
+                KeepAllText(title, style: context.text.titleLarge),
                 if (body != null && body!.isNotEmpty) ...[
                   const SizedBox(height: Space.xxs),
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
+                        child: KeepAllText(
                           body!,
                           style: context.text.bodyMedium?.copyWith(
                             color: c.inkSoft,

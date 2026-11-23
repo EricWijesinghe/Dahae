@@ -16,8 +16,8 @@ class IdentityEntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListTile(
     leading: const Icon(Icons.verified_user_outlined),
-    title: Text(context.t.apIdentityTitle),
-    subtitle: Text(context.t.apIdentityUnverified),
+    title: KeepAllText(context.t.apIdentityTitle),
+    subtitle: KeepAllText(context.t.apIdentityUnverified),
     trailing: const Icon(Icons.chevron_right_rounded),
     onTap: () => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const AccountIdentityScreen()),
@@ -73,7 +73,7 @@ class _AccountIdentityScreenState extends State<AccountIdentityScreen> {
   Widget build(BuildContext context) {
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.apIdentityTitle)),
+      appBar: AppBar(title: KeepAllText(t.apIdentityTitle)),
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [
@@ -94,14 +94,14 @@ class _AccountIdentityScreenState extends State<AccountIdentityScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      KeepAllText(
                         _verified
                             ? t.apIdentityVerified
                             : t.apIdentityUnverified,
                         style: context.text.titleMedium,
                       ),
                       const SizedBox(height: Space.xxs),
-                      Text(t.apIdentityBody, style: context.text.bodySmall),
+                      KeepAllText(t.apIdentityBody, style: context.text.bodySmall),
                     ],
                   ),
                 ),

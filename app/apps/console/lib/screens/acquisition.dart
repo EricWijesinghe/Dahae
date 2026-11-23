@@ -45,7 +45,7 @@ class _AcquisitionTableState extends State<AcquisitionTable> {
     bool bold = false,
     bool end = false,
   }) => Expanded(
-    child: Text(
+    child: KeepAllText(
       text,
       textAlign: end ? TextAlign.end : TextAlign.start,
       overflow: TextOverflow.ellipsis,
@@ -61,18 +61,18 @@ class _AcquisitionTableState extends State<AcquisitionTable> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('유입 경로별 가입·예약 (최근 30일)', style: context.text.titleMedium),
-          Text(
+          KeepAllText('유입 경로별 가입·예약 (최근 30일)', style: context.text.titleMedium),
+          KeepAllText(
             'Signups and bookings by first-touch source, last 30 days.',
             style: context.text.bodySmall,
           ),
           const SizedBox(height: Space.sm),
           if (_failed)
-            const Text('불러오지 못했어요.')
+            const KeepAllText('불러오지 못했어요.')
           else if (rows == null)
             const Center(child: CircularProgressIndicator())
           else if (rows.isEmpty)
-            const Text('아직 집계된 가입이 없어요.')
+            const KeepAllText('아직 집계된 가입이 없어요.')
           else ...[
             Row(
               children: [

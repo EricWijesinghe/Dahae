@@ -66,9 +66,9 @@ class _ReviewReportQueueState extends State<ReviewReportQueue> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.modTitle, style: context.text.titleMedium),
+        KeepAllText(t.modTitle, style: context.text.titleMedium),
         const SizedBox(height: Space.xs),
-        if (rows.isEmpty) Text(t.modEmpty, style: context.text.bodySmall),
+        if (rows.isEmpty) KeepAllText(t.modEmpty, style: context.text.bodySmall),
         for (final r in rows)
           _ReportCard(
             row: r,
@@ -111,20 +111,20 @@ class _ReportCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            KeepAllText(
               '★${row['rating']}  ${row['customer_name']} · ${row['pro_name'] ?? ''}',
               style: context.text.labelLarge,
             ),
             if ((row['body'] as String? ?? '').isNotEmpty)
-              Text(row['body'] as String, style: context.text.bodyMedium),
+              KeepAllText(row['body'] as String, style: context.text.bodyMedium),
             if (row['hidden'] == true)
-              Text(t.modHidden, style: context.text.labelSmall),
-            Text(
+              KeepAllText(t.modHidden, style: context.text.labelSmall),
+            KeepAllText(
               t.modReports('${reports.length}'),
               style: context.text.labelMedium,
             ),
             for (final rep in reports)
-              Text(
+              KeepAllText(
                 '· ${reviewReportLabel(t, rep['reason'] as String)}${(rep['note'] as String? ?? '').isEmpty ? '' : ': ${rep['note']}'}',
                 style: context.text.bodySmall,
               ),
@@ -134,19 +134,19 @@ class _ReportCard extends StatelessWidget {
               children: [
                 OutlinedButton(
                   onPressed: busy ? null : () => onAction('keep'),
-                  child: Text(t.modKeep),
+                  child: KeepAllText(t.modKeep),
                 ),
                 OutlinedButton(
                   onPressed: busy ? null : () => onAction('hide'),
-                  child: Text(t.modHide),
+                  child: KeepAllText(t.modHide),
                 ),
                 OutlinedButton(
                   onPressed: busy ? null : () => onAction('delete'),
-                  child: Text(t.modDelete),
+                  child: KeepAllText(t.modDelete),
                 ),
                 TextButton(
                   onPressed: busy ? null : onBlock,
-                  child: Text(blocked ? t.modUnblockAuthor : t.modBlockAuthor),
+                  child: KeepAllText(blocked ? t.modUnblockAuthor : t.modBlockAuthor),
                 ),
               ],
             ),

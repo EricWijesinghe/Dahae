@@ -41,7 +41,7 @@ class _AddressesScreenState extends State<AddressesScreen>
     return Scaffold(
       backgroundColor: c.surface,
       appBar: AppBar(
-        title: Text(t.moreAddresses),
+        title: KeepAllText(t.moreAddresses),
         bottom: app.addresses.isEmpty
             ? null
             : TabBar(
@@ -70,7 +70,7 @@ class _AddressesScreenState extends State<AddressesScreen>
                     if (shown.isEmpty)
                       Padding(
                         padding: const EdgeInsets.all(Space.gutter),
-                        child: Text(
+                        child: KeepAllText(
                           t.addressEmpty,
                           style: context.text.bodyMedium?.copyWith(
                             color: c.inkSoft,
@@ -122,14 +122,14 @@ class _AddressRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  KeepAllText(
                     a.label,
                     style: context.text.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
+                  KeepAllText(
                     '${a.roadAddress} ${a.detail} · ${t.pyeong('${a.sizePyeong}')}',
                     style: context.text.bodySmall?.copyWith(
                       color: context.colors.inkSoft,
@@ -309,16 +309,16 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
     final agreed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.locConsentTitle),
-        content: SingleChildScrollView(child: Text(t.locConsentBody)),
+        title: KeepAllText(t.locConsentTitle),
+        content: SingleChildScrollView(child: KeepAllText(t.locConsentBody)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t.cancel),
+            child: KeepAllText(t.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.locConsentAgree),
+            child: KeepAllText(t.locConsentAgree),
           ),
         ],
       ),
@@ -398,7 +398,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
         backgroundColor: context.colors.surface,
         // A sheet (design p25): the title, then close on the right.
         automaticallyImplyLeading: false,
-        title: Text(widget.existing == null ? t.addressAdd : t.edit),
+        title: KeepAllText(widget.existing == null ? t.addressAdd : t.edit),
         actions: [
           if (widget.existing != null)
             IconButton(
@@ -447,7 +447,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
             decoration: deco(t.addressDistrict),
             items: [
               for (final d in seoulDistricts)
-                DropdownMenuItem(value: d.code, child: Text(d.name(lang))),
+                DropdownMenuItem(value: d.code, child: KeepAllText(d.name(lang))),
             ],
             onChanged: (v) => setState(() => _district = v),
           ),
@@ -458,14 +458,14 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
               child: TextButton.icon(
                 onPressed: _locating ? null : _useLocation,
                 icon: const Icon(Icons.my_location_rounded),
-                label: Text(t.locUseCurrent),
+                label: KeepAllText(t.locUseCurrent),
               ),
             ),
             if (_locating) const LinearProgressIndicator(),
             if (_locationNote != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: Space.xs),
-                child: Text(
+                child: KeepAllText(
                   _locationNote!,
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.danger,
@@ -479,18 +479,18 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(t.locSuggestionTitle, style: context.text.bodySmall),
-                      Text(_suggestion!, style: context.text.titleSmall),
+                      KeepAllText(t.locSuggestionTitle, style: context.text.bodySmall),
+                      KeepAllText(_suggestion!, style: context.text.titleSmall),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
                             onPressed: () => setState(() => _suggestion = null),
-                            child: Text(t.close),
+                            child: KeepAllText(t.close),
                           ),
                           TextButton(
                             onPressed: _acceptSuggestion,
-                            child: Text(t.locUseAddress),
+                            child: KeepAllText(t.locUseAddress),
                           ),
                         ],
                       ),
@@ -529,7 +529,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                     ),
                   ),
                   onPressed: searchOn && !_searching ? _search : null,
-                  child: Text(t.addressSearchButton),
+                  child: KeepAllText(t.addressSearchButton),
                 ),
               ],
             ],
@@ -538,7 +538,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
             if (_searchError != null)
               Padding(
                 padding: const EdgeInsets.only(top: Space.xs),
-                child: Text(
+                child: KeepAllText(
                   _searchError!,
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.danger,
@@ -547,7 +547,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
               ),
             Padding(
               padding: const EdgeInsets.only(top: Space.xs),
-              child: Text(
+              child: KeepAllText(
                 _searchError == null
                     ? t.addressSearchOffHint
                     : t.addressSearchFailedHint,
@@ -559,7 +559,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
             Padding(
               padding: const EdgeInsets.only(top: Space.xs),
               child: AppCard(
-                child: Text(_road.text, style: context.text.titleSmall),
+                child: KeepAllText(_road.text, style: context.text.titleSmall),
               ),
             ),
           if (searchOn) ...[
@@ -571,8 +571,8 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(h.road, style: context.text.titleSmall),
-                      Text(
+                      KeepAllText(h.road, style: context.text.titleSmall),
+                      KeepAllText(
                         [
                           h.building,
                           h.jibun,
@@ -592,7 +592,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
             if (_searchError != null)
               Padding(
                 padding: const EdgeInsets.only(top: Space.xs),
-                child: Text(
+                child: KeepAllText(
                   _searchError!,
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.danger,
@@ -600,7 +600,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                 ),
               ),
             if (_searched && _hits.isEmpty && _searchError == null)
-              Text(t.addressNoResults, style: context.text.bodySmall),
+              KeepAllText(t.addressNoResults, style: context.text.bodySmall),
           ],
           const SizedBox(height: Space.md),
           Row(
@@ -633,7 +633,7 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
             ],
           ),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             switch (context.app.service('studio')?.maxPyeong) {
               final max? => t.addressPyeongNote('$max'),
               null => t.addressSizeHelp,
@@ -694,7 +694,7 @@ class _KindTile extends StatelessWidget {
           child: SizedBox(
             height: 48,
             child: Center(
-              child: Text(
+              child: KeepAllText(
                 label,
                 style: context.text.titleSmall?.copyWith(
                   color: selected ? context.primary : c.ink,

@@ -123,8 +123,8 @@ class _GrowthSettingsState extends State<GrowthSettings> {
   }
 
   List<Widget> _packEditor(T t) => [
-    Text(t.welcomePackTitle, style: context.text.titleMedium),
-    Text(t.welcomePackBody, style: context.text.bodySmall),
+    KeepAllText(t.welcomePackTitle, style: context.text.titleMedium),
+    KeepAllText(t.welcomePackBody, style: context.text.bodySmall),
     for (final c in _pack)
       Padding(
         padding: const EdgeInsets.only(top: Space.sm),
@@ -163,7 +163,7 @@ class _GrowthSettingsState extends State<GrowthSettings> {
           ],
         ),
         icon: const Icon(Icons.add_rounded),
-        label: Text(t.welcomePackAdd),
+        label: KeepAllText(t.welcomePackAdd),
       ),
     ),
     Align(
@@ -171,7 +171,7 @@ class _GrowthSettingsState extends State<GrowthSettings> {
       child: FilledButton(
         style: inlineFilled,
         onPressed: _savePack,
-        child: Text(t.save),
+        child: KeepAllText(t.save),
       ),
     ),
     const Divider(height: Space.xxl),
@@ -218,11 +218,11 @@ class _GrowthSettingsState extends State<GrowthSettings> {
             children: [
               if (_welcome != null) ..._packEditor(t),
               if (_welcome != null) ...[
-                Text(t.welcomeOfferTitle, style: context.text.titleMedium),
-                Text(t.welcomeOfferBody, style: context.text.bodySmall),
+                KeepAllText(t.welcomeOfferTitle, style: context.text.titleMedium),
+                KeepAllText(t.welcomeOfferBody, style: context.text.bodySmall),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(t.offerEnabled),
+                  title: KeepAllText(t.offerEnabled),
                   value: _welcomeOn,
                   onChanged: (v) => setState(() => _welcomeOn = v),
                 ),
@@ -233,11 +233,11 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                   items: [
                     DropdownMenuItem(
                       value: 'amount',
-                      child: Text(t.offerKindAmount),
+                      child: KeepAllText(t.offerKindAmount),
                     ),
                     DropdownMenuItem(
                       value: 'percent',
-                      child: Text(t.offerKindPercent),
+                      child: KeepAllText(t.offerKindPercent),
                     ),
                   ],
                   onChanged: (v) => setState(() => _kind = v ?? 'amount'),
@@ -255,17 +255,17 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                   child: FilledButton(
                     style: inlineFilled,
                     onPressed: _saveWelcome,
-                    child: Text(t.save),
+                    child: KeepAllText(t.save),
                   ),
                 ),
                 const Divider(height: Space.xxl),
               ],
               if (_referral != null) ...[
-                Text(t.referralSettingsTitle, style: context.text.titleMedium),
-                Text(t.referralSettingsBody, style: context.text.bodySmall),
+                KeepAllText(t.referralSettingsTitle, style: context.text.titleMedium),
+                KeepAllText(t.referralSettingsBody, style: context.text.bodySmall),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(t.offerEnabled),
+                  title: KeepAllText(t.offerEnabled),
                   value: _referralOn,
                   onChanged: (v) => setState(() => _referralOn = v),
                 ),
@@ -283,7 +283,7 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                   child: FilledButton(
                     style: inlineFilled,
                     onPressed: _saveReferral,
-                    child: Text(t.save),
+                    child: KeepAllText(t.save),
                   ),
                 ),
                 const Divider(height: Space.xxl),
@@ -316,10 +316,10 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                 isAdmin: context.console.isAdmin,
               ),
               const Divider(height: Space.xxl),
-              Text(t.reviewsModerationTitle, style: context.text.titleMedium),
+              KeepAllText(t.reviewsModerationTitle, style: context.text.titleMedium),
               const SizedBox(height: Space.sm),
               if (_reviews.isEmpty)
-                Text(t.growthReviewCount('0'), style: context.text.bodySmall),
+                KeepAllText(t.growthReviewCount('0'), style: context.text.bodySmall),
               for (final r in _reviews)
                 Padding(
                   padding: const EdgeInsets.only(bottom: Space.sm),
@@ -329,23 +329,23 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                       children: [
                         Row(
                           children: [
-                            Text(
+                            KeepAllText(
                               '★${r['rating']}',
                               style: context.text.titleSmall,
                             ),
                             const SizedBox(width: Space.xs),
                             Expanded(
-                              child: Text(
+                              child: KeepAllText(
                                 '${r['number']} · ${r['customer_name']}',
                                 style: context.text.bodySmall,
                               ),
                             ),
                             if (r['hidden'] == true)
-                              Chip(label: Text(t.reviewHiddenTag)),
+                              Chip(label: KeepAllText(t.reviewHiddenTag)),
                           ],
                         ),
                         if ((r['body'] as String).isNotEmpty)
-                          Text(
+                          KeepAllText(
                             r['body'] as String,
                             style: context.text.bodyMedium,
                           ),
@@ -353,7 +353,7 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () => _moderate(r),
-                            child: Text(
+                            child: KeepAllText(
                               r['hidden'] == true ? t.reviewShow : t.reviewHide,
                             ),
                           ),

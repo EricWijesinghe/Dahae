@@ -211,12 +211,12 @@ class _DomainBodyState extends State<_DomainBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.cRbDomainTitle, style: context.text.titleSmall),
+          KeepAllText(t.cRbDomainTitle, style: context.text.titleSmall),
           const SizedBox(height: Space.xs),
-          Text(t.cRbDomainCurrent(_current), style: context.text.bodyMedium),
+          KeepAllText(t.cRbDomainCurrent(_current), style: context.text.bodyMedium),
           if (aliases.isNotEmpty) ...[
             const SizedBox(height: Space.sm),
-            Text(t.cRbDomainAliases, style: context.text.labelLarge),
+            KeepAllText(t.cRbDomainAliases, style: context.text.labelLarge),
             for (final a in aliases)
               AliasRow(
                 host: a['host'] as String,
@@ -243,7 +243,7 @@ class _DomainBodyState extends State<_DomainBody> {
         ?status,
         OutlinedButton(
           onPressed: () => setState(() => _editing = true),
-          child: Text(t.cRbDomainChange),
+          child: KeepAllText(t.cRbDomainChange),
         ),
       ];
     }
@@ -264,7 +264,7 @@ class _DomainBodyState extends State<_DomainBody> {
       const SizedBox(height: Space.sm),
       OutlinedButton(
         onPressed: _checking || busy ? null : _check,
-        child: Text(_checking ? t.cRbDomainChecking : t.cRbDomainCheck),
+        child: KeepAllText(_checking ? t.cRbDomainChecking : t.cRbDomainCheck),
       ),
       if (dns != null) ...[
         const SizedBox(height: Space.sm),
@@ -272,13 +272,13 @@ class _DomainBodyState extends State<_DomainBody> {
       ],
       if (dns?['match'] == true) ...[
         const SizedBox(height: Space.md),
-        Text(t.cRbDomainWhatTitle, style: context.text.labelLarge),
-        Text(t.cRbDomainWhatList, style: context.text.bodySmall),
+        KeepAllText(t.cRbDomainWhatTitle, style: context.text.labelLarge),
+        KeepAllText(t.cRbDomainWhatList, style: context.text.bodySmall),
         const SizedBox(height: Space.sm),
         FilledButton(
           style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
           onPressed: busy ? null : _move,
-          child: Text(t.cRbDomainApply),
+          child: KeepAllText(t.cRbDomainApply),
         ),
       ],
       ?status,
@@ -309,18 +309,18 @@ class _DomainBodyState extends State<_DomainBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          KeepAllText(
             text,
             style: context.text.bodyMedium?.copyWith(
               color: bad ? context.colors.danger : null,
             ),
           ),
           if (_phase == MovePhase.awaiting)
-            TextButton(onPressed: _follow, child: Text(t.cRbApprovalEnter)),
+            TextButton(onPressed: _follow, child: KeepAllText(t.cRbApprovalEnter)),
           if (_phase == MovePhase.done && _moved != null)
             TextButton(
               onPressed: () => launchUrl(Uri.parse('https://$_moved/admin/')),
-              child: Text(t.cRbDomainOpenNew),
+              child: KeepAllText(t.cRbDomainOpenNew),
             ),
         ],
       ),
@@ -344,7 +344,7 @@ class DnsResult extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        KeepAllText(
           aOk
               ? t.cRbDomainDnsOk(ip)
               : t.cRbDomainDnsBad(ip, a.isEmpty ? t.cRbDomainDnsNone : a),
@@ -353,7 +353,7 @@ class DnsResult extends StatelessWidget {
           ),
         ),
         if (result['aaaa_ok'] == false)
-          Text(
+          KeepAllText(
             t.cRbDomainDnsAaaa,
             style: context.text.bodyMedium?.copyWith(
               color: context.colors.danger,

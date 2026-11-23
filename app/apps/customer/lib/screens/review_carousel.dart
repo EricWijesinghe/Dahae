@@ -61,7 +61,7 @@ class _ReviewCarouselState extends State<ReviewCarousel> {
                       builder: (_) => const ReviewsAllScreen(),
                     ),
                   ),
-                  child: Text(t.reviewsSeeAll),
+                  child: KeepAllText(t.reviewsSeeAll),
                 ),
               ),
               SizedBox(
@@ -118,7 +118,7 @@ class _ReviewCarouselState extends State<ReviewCarousel> {
                                       _ReviewHeader(api: context.api, row: r),
                                       const SizedBox(height: Space.xs),
                                       Expanded(
-                                        child: Text(
+                                        child: KeepAllText(
                                           r['body'] as String? ?? '',
                                           style: context.text.bodySmall,
                                           overflow: TextOverflow.fade,
@@ -169,7 +169,7 @@ class _ReviewHeader extends StatelessWidget {
         RatingStars(rating: (row['rating'] as num?)?.toDouble() ?? 5, size: 12),
         const SizedBox(width: Space.xs),
         Expanded(
-          child: Text(
+          child: KeepAllText(
             row['name'] as String? ?? '',
             style: context.text.labelMedium?.copyWith(color: c.inkMuted),
             maxLines: 1,
@@ -185,7 +185,7 @@ class _ReviewHeader extends StatelessWidget {
             itemBuilder: (_) => [
               PopupMenuItem<String>(
                 value: 'report',
-                child: Text(t.reportAction),
+                child: KeepAllText(t.reportAction),
               ),
             ],
           ),
@@ -225,7 +225,7 @@ class _Shot extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
             ),
             child: ExcludeSemantics(
-              child: Text(
+              child: KeepAllText(
                 label,
                 style: context.text.labelSmall?.copyWith(
                   color: after ? context.primary : c.inkSoft,

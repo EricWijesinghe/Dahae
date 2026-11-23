@@ -50,7 +50,7 @@ class PartnerIntro extends StatelessWidget {
                       horizontal: 10,
                       vertical: 4,
                     ),
-                    child: Text(
+                    child: KeepAllText(
                       'PARTNER',
                       style: context.text.labelMedium?.copyWith(
                         color: const Color(0xFF5CC8DE),
@@ -83,12 +83,12 @@ class PartnerIntro extends StatelessWidget {
               ),
             ),
             const SizedBox(height: Space.xxl),
-            Text(
+            KeepAllText(
               context.t.pIntroTitle,
               style: context.text.displaySmall?.copyWith(color: Colors.white),
             ),
             const SizedBox(height: Space.sm),
-            Text(
+            KeepAllText(
               context.t.pIntroBody,
               style: context.text.bodyLarge?.copyWith(color: Neutral.c300),
             ),
@@ -203,7 +203,7 @@ class _PhoneScreenState extends State<_PhoneScreen> {
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [
-          Text(
+          KeepAllText(
             _sent ? t.loginCodeTitle : t.loginPhoneTitle,
             style: context.text.headlineSmall,
           ),
@@ -236,7 +236,7 @@ class _PhoneScreenState extends State<_PhoneScreen> {
             ),
             TextButton(
               onPressed: _busy ? null : _send,
-              child: Text(t.loginResend),
+              child: KeepAllText(t.loginResend),
             ),
           ],
           if (!_sent) ...[
@@ -334,7 +334,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.pOnbTitle)),
+      appBar: AppBar(title: KeepAllText(t.pOnbTitle)),
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [
@@ -364,7 +364,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     size: 18,
                     color: ServiceHues.of(c).tone,
                   ),
-                  label: Text(t.serviceShort(c)),
+                  label: KeepAllText(t.serviceShort(c)),
                   selected: _services.contains(c),
                   onSelected: (on) => setState(
                     () => on ? _services.add(c) : _services.remove(c),
@@ -380,7 +380,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               for (final d in seoulDistricts)
                 FilterChip(
-                  label: Text(d.name(context.lang)),
+                  label: KeepAllText(d.name(context.lang)),
                   selected: _districts.contains(d.code),
                   onSelected: (on) => setState(
                     () =>

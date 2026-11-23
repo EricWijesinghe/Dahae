@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../theme.dart';
 import '../tokens.dart';
 import 'interactive.dart';
+import 'keep_all.dart';
 
 /// Big tappable radio row: title, subtitle, trailing value. Used for options and pickers.
 class OptionCard extends StatelessWidget {
@@ -89,14 +90,14 @@ class OptionCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: context.text.titleSmall),
+                          KeepAllText(title, style: context.text.titleSmall),
                           if (subtitle != null)
-                            Text(subtitle!, style: context.text.bodySmall),
+                            KeepAllText(subtitle!, style: context.text.bodySmall),
                         ],
                       ),
                     ),
                     if (trailing != null)
-                      Text(
+                      KeepAllText(
                         trailing!,
                         style: context.text.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
@@ -185,14 +186,14 @@ class CountStepper extends StatelessWidget {
         );
     return Row(
       children: [
-        Expanded(child: Text(label, style: context.text.titleSmall)),
+        Expanded(child: KeepAllText(label, style: context.text.titleSmall)),
         btn(Icons.remove_rounded, value - 1, value > min, '−'),
         SizedBox(
           width: 44,
           child: Semantics(
             liveRegion: true,
             label: '$label $value',
-            child: Text(
+            child: KeepAllText(
               '$value',
               textAlign: TextAlign.center,
               style: context.text.titleLarge,
@@ -224,7 +225,7 @@ class ChoiceRow<T> extends StatelessWidget {
     children: [
       for (final (v, label) in options)
         ChoiceChip(
-          label: Text(label),
+          label: KeepAllText(label),
           selected: v == value,
           showCheckmark: false,
           onSelected: (_) {
@@ -256,14 +257,14 @@ class YesNo extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: context.text.titleSmall),
+      KeepAllText(label, style: context.text.titleSmall),
       const SizedBox(height: Space.xs),
       SegmentedButton<bool>(
         showSelectedIcon: false,
         emptySelectionAllowed: true,
         segments: [
-          ButtonSegment(value: true, label: Text(yes)),
-          ButtonSegment(value: false, label: Text(no)),
+          ButtonSegment(value: true, label: KeepAllText(yes)),
+          ButtonSegment(value: false, label: KeepAllText(no)),
         ],
         selected: value == null ? {} : {value!},
         onSelectionChanged: (s) => s.isEmpty ? null : onChanged(s.first),

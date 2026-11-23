@@ -55,7 +55,7 @@ class _WalletScreenState extends State<WalletScreen> {
   Widget build(BuildContext context) {
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.walletTitle)),
+      appBar: AppBar(title: KeepAllText(t.walletTitle)),
       body: RefreshIndicator(
         onRefresh: () async {
           final f = _load();
@@ -66,7 +66,7 @@ class _WalletScreenState extends State<WalletScreen> {
           future: _points,
           builder: (context, snap) {
             if (snap.hasError) {
-              return ListView(children: [Text(t.error(snap.error!))]);
+              return ListView(children: [KeepAllText(t.error(snap.error!))]);
             }
             if (!snap.hasData) {
               return const Center(child: CircularProgressIndicator());
@@ -92,23 +92,23 @@ class _WalletScreenState extends State<WalletScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                KeepAllText(
                   t.walletBalance,
                   style: context.text.bodyMedium?.copyWith(
                     color: context.colors.inkSoft,
                   ),
                 ),
                 const SizedBox(height: Space.xs),
-                Text(
+                KeepAllText(
                   t.walletPoints('$balance'),
                   style: context.text.headlineMedium,
                 ),
                 if (p['enabled'] != true) ...[
                   const SizedBox(height: Space.sm),
-                  Text(t.walletOff, style: context.text.bodySmall),
+                  KeepAllText(t.walletOff, style: context.text.bodySmall),
                 ] else if (expiring > 0) ...[
                   const SizedBox(height: Space.sm),
-                  Text(
+                  KeepAllText(
                     t.walletExpiring('$days', '$expiring'),
                     style: context.text.bodySmall,
                   ),
@@ -117,10 +117,10 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
           ),
           const SizedBox(height: Space.lg),
-          Text(t.walletHistory, style: context.text.titleSmall),
+          KeepAllText(t.walletHistory, style: context.text.titleSmall),
           const SizedBox(height: Space.sm),
           if (entries.isEmpty)
-            Text(t.walletEmpty, style: context.text.bodyMedium)
+            KeepAllText(t.walletEmpty, style: context.text.bodyMedium)
           else
             for (final e in entries) _entryRow(context, e),
         ],
@@ -139,15 +139,15 @@ class _WalletScreenState extends State<WalletScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                KeepAllText(
                   _kindLabel(context, e['kind'] as String),
                   style: context.text.bodyMedium,
                 ),
-                Text(_ymd(e['at']), style: context.text.labelSmall),
+                KeepAllText(_ymd(e['at']), style: context.text.labelSmall),
               ],
             ),
           ),
-          Text(
+          KeepAllText(
             '$sign$amount P',
             style: context.text.titleSmall?.copyWith(
               color: amount > 0 ? context.primary : context.colors.inkSoft,
@@ -189,7 +189,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   Widget build(BuildContext context) {
     final t = context.t;
     return Scaffold(
-      appBar: AppBar(title: Text(t.payHistoryTitle)),
+      appBar: AppBar(title: KeepAllText(t.payHistoryTitle)),
       body: RefreshIndicator(
         onRefresh: () async {
           final f = _load();
@@ -200,7 +200,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
           future: _rows,
           builder: (context, snap) {
             if (snap.hasError) {
-              return ListView(children: [Text(t.error(snap.error!))]);
+              return ListView(children: [KeepAllText(t.error(snap.error!))]);
             }
             if (!snap.hasData) {
               return const Center(child: CircularProgressIndicator());
@@ -219,11 +219,11 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                     ListTile(
                       key: ValueKey('pay-row-${r['id']}'),
                       contentPadding: EdgeInsets.zero,
-                      title: Text(
+                      title: KeepAllText(
                         context.won((r['amount'] as num).toInt()),
                         style: context.text.titleSmall,
                       ),
-                      subtitle: Text(
+                      subtitle: KeepAllText(
                         '${t.payMethod(r['method'] as String)} · ${_ymd(r['created_at'])} · ${_status(context, r['status'] as String)}',
                       ),
                       trailing: const Icon(Icons.chevron_right_rounded),
@@ -331,7 +331,7 @@ class _ReceiptViewState extends State<ReceiptView> {
                 ),
               ),
               const SizedBox(height: Space.sm),
-              Text(
+              KeepAllText(
                 t.receiptNote,
                 style: context.text.labelSmall,
                 textAlign: TextAlign.center,
@@ -363,7 +363,7 @@ class _ReceiptViewState extends State<ReceiptView> {
       padding: const EdgeInsets.only(bottom: Space.xs),
       child: Row(
         children: [
-          Text(
+          KeepAllText(
             k,
             style: context.text.bodySmall?.copyWith(
               color: context.colors.inkSoft,
@@ -371,7 +371,7 @@ class _ReceiptViewState extends State<ReceiptView> {
           ),
           const Spacer(),
           Flexible(
-            child: Text(
+            child: KeepAllText(
               v,
               style: context.text.bodySmall,
               textAlign: TextAlign.end,

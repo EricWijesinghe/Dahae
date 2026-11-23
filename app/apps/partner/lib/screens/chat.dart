@@ -97,7 +97,7 @@ class _OpsChatTabState extends State<OpsChatTab> {
           ])
             ListTile(
               leading: Icon(icon),
-              title: Text(opsTopicLabel(t, code)),
+              title: KeepAllText(opsTopicLabel(t, code)),
               onTap: () => Navigator.of(ctx).pop(code),
             ),
         ],
@@ -115,12 +115,12 @@ class _OpsChatTabState extends State<OpsChatTab> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Text(t.chatTitle, style: context.text.headlineSmall),
+        title: KeepAllText(t.chatTitle, style: context.text.headlineSmall),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _new,
         icon: const Icon(Icons.add_comment_rounded),
-        label: Text(t.pNewInquiry),
+        label: KeepAllText(t.pNewInquiry),
       ),
       body: AsyncView<List<ChatThread>>(
         key: _view,
@@ -152,15 +152,15 @@ class _OpsChatTabState extends State<OpsChatTab> {
                                 radius: 22,
                                 child: Icon(Icons.support_agent_rounded),
                               ),
-                        title: Text(opsTopicLabel(t, th.topic)),
-                        subtitle: Text(
+                        title: KeepAllText(opsTopicLabel(t, th.topic)),
+                        subtitle: KeepAllText(
                           preview,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         trailing: th.unreadMember > 0
                             ? Badge(label: Text('${th.unreadMember}'))
-                            : Text(
+                            : KeepAllText(
                                 timeLabel(th.lastMessageAt, context.lang),
                                 style: context.text.labelSmall,
                               ),
@@ -299,8 +299,8 @@ class _OpsRoomState extends State<OpsRoom> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.pOpsTeam, style: context.text.titleMedium),
-            Text(
+            KeepAllText(t.pOpsTeam, style: context.text.titleMedium),
+            KeepAllText(
               opsTopicLabel(t, widget.topic),
               style: context.text.labelSmall,
             ),
@@ -314,7 +314,7 @@ class _OpsRoomState extends State<OpsRoom> {
                   builder: (_) => JobDetailScreen(id: widget.bookingId!),
                 ),
               ),
-              child: Text(t.pViewJob),
+              child: KeepAllText(t.pViewJob),
             ),
         ],
       ),
@@ -332,7 +332,7 @@ class _OpsRoomState extends State<OpsRoom> {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(Space.xs),
-                      child: Text(
+                      child: KeepAllText(
                         t.system(
                           m.body['code'] as String? ?? '',
                           (m.body['params'] as Json?) ?? const {},
@@ -391,7 +391,7 @@ class _OpsRoomState extends State<OpsRoom> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (m.isAi)
-                              Text(
+                              KeepAllText(
                                 t.aiLabel,
                                 style: context.text.labelSmall?.copyWith(
                                   color: mine
@@ -401,7 +401,7 @@ class _OpsRoomState extends State<OpsRoom> {
                                         ),
                                 ),
                               ),
-                            Text(
+                            KeepAllText(
                               m.body['text'] as String? ?? '',
                               style: context.text.bodyMedium?.copyWith(
                                 color: mine

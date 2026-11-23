@@ -57,13 +57,13 @@ class MemberShell extends StatelessWidget {
             child: CustomScrollView(
               slivers: [
                 SliverAppBar.large(
-                  title: Text(t.mMyJobs),
+                  title: KeepAllText(t.mMyJobs),
                   actions: [
                     PopupMenuButton<String>(
                       onSelected: (v) =>
                           v == 'logout' ? deps.session.logout() : null,
                       itemBuilder: (_) => [
-                        PopupMenuItem(value: 'logout', child: Text(t.logout)),
+                        PopupMenuItem(value: 'logout', child: KeepAllText(t.logout)),
                       ],
                     ),
                   ],
@@ -73,7 +73,7 @@ class MemberShell extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                       horizontal: Space.gutter,
                     ),
-                    child: Text(
+                    child: KeepAllText(
                       t.mTeam(me['team_name'] as String? ?? ''),
                       style: context.text.titleMedium?.copyWith(
                         color: context.colors.inkSoft,
@@ -139,15 +139,15 @@ class _JobCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  KeepAllText(
                     t.service(b.serviceCode),
                     style: context.text.titleMedium,
                   ),
-                  Text(
+                  KeepAllText(
                     '${dateLabel(b.visitDate, context.lang)} · ${b.startHour}:00',
                     style: context.text.bodyMedium,
                   ),
-                  Text(
+                  KeepAllText(
                     '${b.address['road_address'] ?? ''}',
                     style: context.text.bodySmall,
                     maxLines: 1,
@@ -201,7 +201,7 @@ class MemberJobScreen extends StatelessWidget {
                   ServiceGlyph(b.serviceCode, size: 56),
                   const SizedBox(width: Space.md),
                   Expanded(
-                    child: Text(
+                    child: KeepAllText(
                       t.service(b.serviceCode),
                       style: context.text.headlineSmall,
                     ),
@@ -237,13 +237,13 @@ class MemberJobScreen extends StatelessWidget {
                 for (final n in notes)
                   Padding(
                     padding: const EdgeInsets.only(bottom: Space.xs),
-                    child: Text('• $n'),
+                    child: KeepAllText('• $n'),
                   ),
               ],
               if (memo != null && memo.isNotEmpty) ...[
                 const SizedBox(height: Space.md),
                 SectionTitle(t.pTeamMemo),
-                Text(memo),
+                KeepAllText(memo),
               ],
               const SizedBox(height: Space.md),
               SiteActionsCard(
@@ -289,7 +289,7 @@ class _Line extends StatelessWidget {
       children: [
         Icon(icon, size: 20, color: context.primary),
         const SizedBox(width: Space.sm),
-        Expanded(child: Text(text, style: context.text.bodyLarge)),
+        Expanded(child: KeepAllText(text, style: context.text.bodyLarge)),
       ],
     ),
   );

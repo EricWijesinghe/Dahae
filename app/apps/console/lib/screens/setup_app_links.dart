@@ -105,11 +105,11 @@ class _AppLinksFormState extends State<_AppLinksForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.cAppLinkTitle, style: context.text.titleSmall),
+          KeepAllText(t.cAppLinkTitle, style: context.text.titleSmall),
           const SizedBox(height: Space.xs),
-          Text(t.cAppLinkHint, style: context.text.bodySmall),
+          KeepAllText(t.cAppLinkHint, style: context.text.bodySmall),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             _fromDb ? t.cAppLinkSourceDb : t.cAppLinkSourceEnv,
             style: context.text.bodySmall,
           ),
@@ -153,13 +153,13 @@ class _AppLinksFormState extends State<_AppLinksForm> {
           const SizedBox(height: Space.md),
           Row(
             children: [
-              OutlinedButton(onPressed: _check, child: Text(t.cAppLinkCheck)),
+              OutlinedButton(onPressed: _check, child: KeepAllText(t.cAppLinkCheck)),
               const SizedBox(width: Space.sm),
               FilledButton(
                 // The theme's full-width minimum cannot lay out inside a Row.
                 style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
                 onPressed: !context.console.isAdmin ? null : _save,
-                child: Text(t.save),
+                child: KeepAllText(t.save),
               ),
             ],
           ),
@@ -182,17 +182,17 @@ class _CheckResult extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        KeepAllText(
           android ? t.cAppLinkAndroidOn : t.cAppLinkAndroidOff,
           style: context.text.bodyMedium,
         ),
-        Text(
+        KeepAllText(
           ios ? t.cAppLinkIosOn : t.cAppLinkIosOff,
           style: context.text.bodyMedium,
         ),
         if (!android || !ios)
-          Text(t.cAppLinkNone, style: context.text.bodySmall),
-        Text(t.cAppLinkChecked, style: context.text.bodySmall),
+          KeepAllText(t.cAppLinkNone, style: context.text.bodySmall),
+        KeepAllText(t.cAppLinkChecked, style: context.text.bodySmall),
       ],
     );
   }

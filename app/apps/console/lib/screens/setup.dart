@@ -92,9 +92,9 @@ class _SetupScreenState extends State<SetupScreen> {
                 for (final c in cards) ...[
                   const SizedBox(height: Space.md),
                   if (c['code'] == 'portone') ...[
-                    Text(t.cPaymentsTitle, style: context.text.titleMedium),
+                    KeepAllText(t.cPaymentsTitle, style: context.text.titleMedium),
                     if (_gatewayLine(t, data, context.lang) case final line?)
-                      Text(line, style: context.text.bodyMedium),
+                      KeepAllText(line, style: context.text.bodyMedium),
                     const SizedBox(height: Space.sm),
                   ],
                   IntegrationCard(
@@ -116,7 +116,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   },
                 ),
                 const SizedBox(height: Space.xl),
-                Text(
+                KeepAllText(
                   t.cSetupProgress('$done', '$total'),
                   textAlign: TextAlign.center,
                   style: context.text.bodySmall,
@@ -185,13 +185,13 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(width: Space.sm),
               Expanded(
-                child: Text(
+                child: KeepAllText(
                   finished ? t.cSetupAllDone : t.cSetupTitle,
                   style: context.text.titleLarge,
                 ),
               ),
               Flexible(
-                child: Text(
+                child: KeepAllText(
                   t.cSetupProgress('$done', '$total'),
                   textAlign: TextAlign.end,
                   style: context.text.titleSmall,
@@ -217,7 +217,7 @@ class _Header extends StatelessWidget {
                 const Icon(Icons.science_rounded, size: 18),
                 const SizedBox(width: Space.xs),
                 Expanded(
-                  child: Text(t.cSetupDevMode, style: context.text.bodySmall),
+                  child: KeepAllText(t.cSetupDevMode, style: context.text.bodySmall),
                 ),
               ],
             ),
@@ -542,7 +542,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
                 : Icons.radio_button_unchecked_rounded,
             color: configured ? context.primary : null,
           ),
-          title: Text(_guide.title(t), style: context.text.titleMedium),
+          title: KeepAllText(_guide.title(t), style: context.text.titleMedium),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Wrap(
@@ -595,7 +595,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
                   style: inlineFilled,
                   onPressed: _busy || _locked ? null : _save,
                   icon: const Icon(Icons.save_rounded),
-                  label: Text(t.cSetupSave),
+                  label: KeepAllText(t.cSetupSave),
                 ),
                 // The server tests the saved values and takes none, so the owner runs it on a locked card
                 // with no unlock. Anyone else gets a refusal there, so the server hides it (`can_test`).
@@ -603,7 +603,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
                   OutlinedButton.icon(
                     onPressed: _busy ? null : () => _run(_test),
                     icon: const Icon(Icons.wifi_tethering_rounded),
-                    label: Text(
+                    label: KeepAllText(
                       _gatewayCard ? t.cSetupTestApiKey : t.cSetupTest,
                     ),
                   ),
@@ -612,18 +612,18 @@ class _IntegrationCardState extends State<IntegrationCard> {
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _unlock,
                     icon: const Icon(Icons.lock_open_rounded),
-                    label: Text(t.cSetupUnlock),
+                    label: KeepAllText(t.cSetupUnlock),
                   ),
                 if (widget.card['unlock_expires_at'] != null)
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _lockNow,
                     icon: const Icon(Icons.lock_rounded),
-                    label: Text(t.cSetupLockNow),
+                    label: KeepAllText(t.cSetupLockNow),
                   ),
                 if (widget.card['source'] == 'console')
                   TextButton(
                     onPressed: _busy || _locked ? null : _clear,
-                    child: Text(t.cSetupClear),
+                    child: KeepAllText(t.cSetupClear),
                   ),
                 if (_busy)
                   const Padding(
@@ -719,14 +719,14 @@ class _IntegrationCardState extends State<IntegrationCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: context.text.labelLarge),
+            KeepAllText(label, style: context.text.labelLarge),
             const SizedBox(height: Space.xs),
             for (final e in entries)
               if (!otherSlotKeys.contains(e.key))
                 _slotField(context, name, e, savedSlots.contains(e.key)),
             if (entries.any((e) => otherSlotKeys.contains(e.key))) ...[
               const SizedBox(height: Space.xs),
-              Text(t.cSetupOtherMethods, style: context.text.labelMedium),
+              KeepAllText(t.cSetupOtherMethods, style: context.text.labelMedium),
               for (final e in entries)
                 if (otherSlotKeys.contains(e.key))
                   _slotField(context, name, e, savedSlots.contains(e.key)),
@@ -740,8 +740,8 @@ class _IntegrationCardState extends State<IntegrationCard> {
       final hint = g?.hint?.of(context.lang);
       return SwitchListTile(
         contentPadding: EdgeInsets.zero,
-        title: Text(label),
-        subtitle: hint == null ? null : Text(hint),
+        title: KeepAllText(label),
+        subtitle: hint == null ? null : KeepAllText(hint),
         value: _toggles[name] ?? preview == true,
         // A locked card cannot be saved, so its switches do not move either.
         onChanged: _locked ? null : (on) => setState(() => _toggles[name] = on),
@@ -794,7 +794,7 @@ class _Steps extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(t.cSetupGuide, style: context.text.labelLarge),
+              child: KeepAllText(t.cSetupGuide, style: context.text.labelLarge),
             ),
             TextButton.icon(
               onPressed: () => launchUrl(
@@ -802,7 +802,7 @@ class _Steps extends StatelessWidget {
                 mode: LaunchMode.externalApplication,
               ),
               icon: const Icon(Icons.open_in_new_rounded, size: 18),
-              label: Text(t.cSetupOpenSite),
+              label: KeepAllText(t.cSetupOpenSite),
             ),
           ],
         ),
@@ -811,7 +811,7 @@ class _Steps extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: Space.xs),
             child: Chip(
               avatar: const Icon(Icons.engineering_rounded, size: 18),
-              label: Text(
+              label: KeepAllText(
                 const Tr(
                   '개발자 첫 도움 필요',
                   'Needs a developer the first time',
@@ -831,7 +831,7 @@ class _Steps extends StatelessWidget {
                 ),
                 const SizedBox(width: Space.sm),
                 Expanded(
-                  child: Text(
+                  child: KeepAllText(
                     step.of(context.lang),
                     style: context.text.bodyMedium,
                   ),
@@ -848,7 +848,7 @@ class _Steps extends StatelessWidget {
               border: Border.all(color: Theme.of(context).dividerColor),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(shot.of(context.lang), style: context.text.bodySmall),
+            child: KeepAllText(shot.of(context.lang), style: context.text.bodySmall),
           ),
       ],
     );

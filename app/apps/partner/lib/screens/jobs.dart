@@ -70,7 +70,7 @@ class _JobsTabState extends State<JobsTab> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Text(t.pTabJobs, style: context.text.headlineSmall),
+        title: KeepAllText(t.pTabJobs, style: context.text.headlineSmall),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: Space.md),
@@ -82,7 +82,7 @@ class _JobsTabState extends State<JobsTab> {
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text(
+                  child: KeepAllText(
                     '${t.pPendingPayout} ${context.won(pro.pendingPayout)}',
                     style: context.text.labelMedium,
                   ),
@@ -110,8 +110,8 @@ class _JobsTabState extends State<JobsTab> {
                   child: SegmentedButton<String>(
                     showSelectedIcon: false,
                     segments: [
-                      ButtonSegment(value: 'direct', label: Text(t.pDirect)),
-                      ButtonSegment(value: 'quote', label: Text(t.pQuoteReq)),
+                      ButtonSegment(value: 'direct', label: KeepAllText(t.pDirect)),
+                      ButtonSegment(value: 'quote', label: KeepAllText(t.pQuoteReq)),
                     ],
                     selected: {_kind},
                     onSelectionChanged: (s) => _set(() => _kind = s.first),
@@ -121,7 +121,7 @@ class _JobsTabState extends State<JobsTab> {
                   children: [
                     Flexible(
                       child: FilterChip(
-                        label: Text(
+                        label: KeepAllText(
                           t.pShowClosed,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -137,15 +137,15 @@ class _JobsTabState extends State<JobsTab> {
                         itemBuilder: (_) => [
                           PopupMenuItem(
                             value: 'newest',
-                            child: Text(t.pSortNewest),
+                            child: KeepAllText(t.pSortNewest),
                           ),
                           PopupMenuItem(
                             value: 'visit',
-                            child: Text(t.pSortVisit),
+                            child: KeepAllText(t.pSortVisit),
                           ),
                           PopupMenuItem(
                             value: 'amount',
-                            child: Text(t.pSortAmount),
+                            child: KeepAllText(t.pSortAmount),
                           ),
                         ],
                         // 48 dp minimum tap target; the bare label is only ~34 dp tall.
@@ -157,7 +157,7 @@ class _JobsTabState extends State<JobsTab> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Flexible(
-                                  child: Text(
+                                  child: KeepAllText(
                                     switch (_sort) {
                                       'visit' => t.pSortVisit,
                                       'amount' => t.pSortAmount,
@@ -222,7 +222,7 @@ class _JobsTabState extends State<JobsTab> {
                               ),
                               const SizedBox(width: 6),
                               Expanded(
-                                child: Text(
+                                child: KeepAllText(
                                   t.pPrivacyNote,
                                   style: context.text.labelSmall,
                                 ),
@@ -287,7 +287,7 @@ class _JobCard extends StatelessWidget {
                   ServiceGlyph(code, size: 40),
                   const SizedBox(width: Space.sm),
                   Expanded(
-                    child: Text(
+                    child: KeepAllText(
                       t.service(code),
                       style: context.text.titleSmall,
                     ),
@@ -298,11 +298,11 @@ class _JobCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: Space.sm),
-              Text(
+              KeepAllText(
                 '${dateLabel(DateTime.parse(job['visit_date'] as String), context.lang)} ${slotLabel(context, (job['start_hour'] as num).toInt(), isQuote)}',
                 style: context.text.bodyMedium,
               ),
-              Text(facts, style: context.text.bodySmall),
+              KeepAllText(facts, style: context.text.bodySmall),
               const Divider(height: Space.xl),
               Row(
                 children: [
@@ -310,11 +310,11 @@ class _JobCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        KeepAllText(
                           isQuote ? t.pCustomerEstimate : t.pPayout,
                           style: context.text.labelSmall,
                         ),
-                        Text(
+                        KeepAllText(
                           isQuote
                               ? context.won(
                                   (job['estimate'] as num? ?? 0).toInt(),

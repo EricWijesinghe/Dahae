@@ -56,7 +56,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Text(t.pTabSchedule, style: context.text.headlineSmall),
+        title: KeepAllText(t.pTabSchedule, style: context.text.headlineSmall),
       ),
       body: AsyncView<List<Booking>>(
         key: _view,
@@ -88,7 +88,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
                             onPressed: () => _shift(-1),
                           ),
                           Expanded(
-                            child: Text(
+                            child: KeepAllText(
                               DateFormat.yMMMM(context.lang).format(_month),
                               textAlign: TextAlign.center,
                               style: context.text.titleMedium,
@@ -106,7 +106,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
                           for (final w in loc.narrowWeekdays)
                             Expanded(
                               child: Center(
-                                child: Text(w, style: context.text.labelSmall),
+                                child: KeepAllText(w, style: context.text.labelSmall),
                               ),
                             ),
                         ],
@@ -134,7 +134,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
                   Padding(
                     padding: const EdgeInsets.all(Space.lg),
                     child: Center(
-                      child: Text(t.pNoSchedule, style: context.text.bodySmall),
+                      child: KeepAllText(t.pNoSchedule, style: context.text.bodySmall),
                     ),
                   ),
                 for (final j in dayJobs) _JobRow(job: j),
@@ -161,7 +161,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
+            KeepAllText(
               '${date.day}',
               style: context.text.labelLarge?.copyWith(
                 fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
@@ -175,7 +175,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
                   color: context.colors.ink,
                   borderRadius: BorderRadius.circular(Radii.pill),
                 ),
-                child: Text(
+                child: KeepAllText(
                   context.t.pJobsCount('$active'),
                   style: context.text.labelSmall?.copyWith(
                     color: context.colors.surface,
@@ -208,12 +208,12 @@ class _JobRow extends StatelessWidget {
           children: [
             Column(
               children: [
-                Text(
+                KeepAllText(
                   slotLabel(context, j.startHour, j.isQuote),
                   style: context.text.titleSmall,
                 ),
                 if (j.minutes != null)
-                  Text(t.duration(j.minutes!), style: context.text.labelSmall),
+                  KeepAllText(t.duration(j.minutes!), style: context.text.labelSmall),
               ],
             ),
             const SizedBox(width: Space.md),
@@ -233,7 +233,7 @@ class _JobRow extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: KeepAllText(
                           t.service(j.serviceCode),
                           style: context.text.titleSmall,
                         ),
@@ -247,7 +247,7 @@ class _JobRow extends StatelessWidget {
                         Tag(label: t.reschedule, hue: StatusHues.consultation),
                     ],
                   ),
-                  Text(
+                  KeepAllText(
                     '${j.address['road_address']}',
                     style: context.text.bodySmall,
                     maxLines: 1,

@@ -104,12 +104,12 @@ class _CancelSheetBodyState extends State<_CancelSheetBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!p.canCancel)
-            Text(
+            KeepAllText(
               t.err_cancellation_window_closed,
               style: context.text.bodyMedium,
             )
           else ...[
-            Text(
+            KeepAllText(
               p.fee > 0
                   ? t.cancelTierLine('${p.days}', '${p.percent ?? 0}')
                   : t.cancelFree,
@@ -117,18 +117,18 @@ class _CancelSheetBodyState extends State<_CancelSheetBody> {
             ),
             const SizedBox(height: Space.sm),
             if (p.fee > 0)
-              Text(
+              KeepAllText(
                 t.cancelFeeLine(context.won(p.fee)),
                 style: context.text.bodyMedium,
               ),
-            Text(
+            KeepAllText(
               p.refund > 0
                   ? t.cancelRefundLine(context.won(p.refund))
                   : t.cancelNoRefund,
               style: context.text.titleSmall,
             ),
             if (p.refund > 0)
-              Text(t.cancelMethodLine, style: context.text.bodySmall),
+              KeepAllText(t.cancelMethodLine, style: context.text.bodySmall),
             TextButton(
               onPressed: () => showAppSheet<void>(
                 context,
@@ -138,10 +138,10 @@ class _CancelSheetBodyState extends State<_CancelSheetBody> {
                   child: CancelPolicyCard(total: p.paid),
                 ),
               ),
-              child: Text(t.cancelPolicyLink),
+              child: KeepAllText(t.cancelPolicyLink),
             ),
             const SizedBox(height: Space.sm),
-            Text(t.cancelReasonTitle, style: context.text.titleSmall),
+            KeepAllText(t.cancelReasonTitle, style: context.text.titleSmall),
             const SizedBox(height: Space.xs),
             _reasonPicker(context),
           ],
@@ -151,7 +151,7 @@ class _CancelSheetBodyState extends State<_CancelSheetBody> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text(t.cancelKeep),
+                  child: KeepAllText(t.cancelKeep),
                 ),
               ),
               const SizedBox(width: Space.xs),
@@ -165,7 +165,7 @@ class _CancelSheetBodyState extends State<_CancelSheetBody> {
                           context,
                         ).pop(CancelConfirmation(fee: p.fee, reason: _reason))
                       : null,
-                  child: Text(refundCta),
+                  child: KeepAllText(refundCta),
                 ),
               ),
             ],
@@ -189,7 +189,7 @@ class _CancelSheetBodyState extends State<_CancelSheetBody> {
       children: [
         for (final e in reasons.entries)
           ChoiceChip(
-            label: Text(e.value),
+            label: KeepAllText(e.value),
             selected: _reason == e.key,
             onSelected: (on) => setState(() => _reason = on ? e.key : null),
           ),

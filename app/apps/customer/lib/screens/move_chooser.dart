@@ -91,8 +91,8 @@ class _MoveChooserScreenState extends State<MoveChooserScreen> {
                 children: [
                   for (final h in moveHomesFor(_config))
                     ListTile(
-                      title: Text(_homeLabel(t, h)),
-                      subtitle: Text(t.hgEstimateOnly),
+                      title: KeepAllText(_homeLabel(t, h)),
+                      subtitle: KeepAllText(t.hgEstimateOnly),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => _open(h),
                     ),
@@ -100,7 +100,7 @@ class _MoveChooserScreenState extends State<MoveChooserScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.all(Space.gutter),
-                child: Text(
+                child: KeepAllText(
                   t.hgEstimateNote,
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.inkMuted,

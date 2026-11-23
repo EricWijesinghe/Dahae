@@ -130,10 +130,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
       );
       final saved = await saveCsv(bytes, fileName);
       messenger.showSnackBar(
-        SnackBar(content: Text(saved ? t.fDownload : t.fDownloadWebOnly)),
+        SnackBar(content: KeepAllText(saved ? t.fDownload : t.fDownloadWebOnly)),
       );
     } on ApiException {
-      messenger.showSnackBar(SnackBar(content: Text(t.fDownloadFailed)));
+      messenger.showSnackBar(SnackBar(content: KeepAllText(t.fDownloadFailed)));
     }
   }
 
@@ -145,7 +145,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
       child: ListView(
         padding: const EdgeInsets.all(Space.xl),
         children: [
-          Text(t.fFinance, style: context.text.headlineMedium),
+          KeepAllText(t.fFinance, style: context.text.headlineMedium),
           const SizedBox(height: Space.md),
           _PeriodBar(period: _period, custom: _custom, onPick: _pickPeriod),
           const SizedBox(height: Space.lg),
@@ -161,7 +161,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
           else ...[
             _KpiGrid(summary: _summary),
             const SizedBox(height: Space.sm),
-            Text(t.fVatNote, style: context.text.labelSmall),
+            KeepAllText(t.fVatNote, style: context.text.labelSmall),
             const SizedBox(height: Space.xl),
             _TrendCard(
               series: _series,
@@ -228,16 +228,16 @@ class _PeriodBar extends StatelessWidget {
       children: [
         SegmentedButton<_Period>(
           segments: [
-            ButtonSegment(value: _Period.day, label: Text(t.fPeriodDay)),
-            ButtonSegment(value: _Period.week, label: Text(t.fPeriodWeek)),
-            ButtonSegment(value: _Period.month, label: Text(t.fPeriodMonth)),
-            ButtonSegment(value: _Period.custom, label: Text(t.fPeriodCustom)),
+            ButtonSegment(value: _Period.day, label: KeepAllText(t.fPeriodDay)),
+            ButtonSegment(value: _Period.week, label: KeepAllText(t.fPeriodWeek)),
+            ButtonSegment(value: _Period.month, label: KeepAllText(t.fPeriodMonth)),
+            ButtonSegment(value: _Period.custom, label: KeepAllText(t.fPeriodCustom)),
           ],
           selected: {period},
           onSelectionChanged: (s) => onPick(s.first),
         ),
         if (custom != null && period == _Period.custom)
-          Text(
+          KeepAllText(
             '${_ymd(custom!.start)} ~ ${_ymd(custom!.end)}',
             style: context.text.labelMedium,
           ),
@@ -369,9 +369,9 @@ class _KpiGrid extends StatelessWidget {
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: Text(value, style: context.text.headlineSmall),
+                        child: KeepAllText(value, style: context.text.headlineSmall),
                       ),
-                      Text(
+                      KeepAllText(
                         label,
                         style: context.text.labelSmall,
                         maxLines: 1,
@@ -413,7 +413,7 @@ class _TrendCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(t.fTrend, style: context.text.titleMedium)),
+              Expanded(child: KeepAllText(t.fTrend, style: context.text.titleMedium)),
               Wrap(
                 spacing: Space.xs,
                 children: [
@@ -424,7 +424,7 @@ class _TrendCard extends StatelessWidget {
                     (_Grain.month, t.fPeriodMonth),
                   ])
                     ChoiceChip(
-                      label: Text(label),
+                      label: KeepAllText(label),
                       selected: grain == g,
                       onSelected: (_) => onGrain(g),
                     ),
@@ -436,7 +436,7 @@ class _TrendCard extends StatelessWidget {
           if (!hasData)
             Padding(
               padding: const EdgeInsets.all(Space.lg),
-              child: Text(t.fNoRecords, style: context.text.bodySmall),
+              child: KeepAllText(t.fNoRecords, style: context.text.bodySmall),
             )
           else ...[
             SizedBox(
@@ -590,10 +590,10 @@ class _MixRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.fMethods, style: context.text.titleMedium),
+          KeepAllText(t.fMethods, style: context.text.titleMedium),
           const SizedBox(height: Space.md),
           if (methods.isEmpty)
-            Text(t.fNoRecords, style: context.text.bodySmall)
+            KeepAllText(t.fNoRecords, style: context.text.bodySmall)
           else
             Row(
               children: [
@@ -623,7 +623,7 @@ class _MixRow extends StatelessWidget {
                       for (var i = 0; i < methods.length; i++)
                         Padding(
                           padding: const EdgeInsets.only(bottom: Space.xs),
-                          child: Text(
+                          child: KeepAllText(
                             '${methods[i]['method']} · ${context.won(_n(methods[i], 'amount'))}'
                             '${total > 0 ? ' (${(_n(methods[i], 'amount') * 100 / total).round()}%)' : ''}',
                             style: context.text.bodySmall,
@@ -651,38 +651,38 @@ class _PartnerCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.fByPartner, style: context.text.titleMedium),
+          KeepAllText(t.fByPartner, style: context.text.titleMedium),
           const SizedBox(height: Space.md),
           if (partners.isEmpty)
-            Text(t.fNoRecords, style: context.text.bodySmall)
+            KeepAllText(t.fNoRecords, style: context.text.bodySmall)
           else
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 columns: [
-                  DataColumn(label: Text(t.fColPartner)),
-                  DataColumn(label: Text(t.fColJobs), numeric: true),
-                  DataColumn(label: Text(t.fColSettled), numeric: true),
-                  DataColumn(label: Text(t.fColFee), numeric: true),
-                  DataColumn(label: Text(t.fColNet), numeric: true),
-                  DataColumn(label: Text(t.fPaidOut), numeric: true),
-                  DataColumn(label: Text(t.fPendingOut), numeric: true),
+                  DataColumn(label: KeepAllText(t.fColPartner)),
+                  DataColumn(label: KeepAllText(t.fColJobs), numeric: true),
+                  DataColumn(label: KeepAllText(t.fColSettled), numeric: true),
+                  DataColumn(label: KeepAllText(t.fColFee), numeric: true),
+                  DataColumn(label: KeepAllText(t.fColNet), numeric: true),
+                  DataColumn(label: KeepAllText(t.fPaidOut), numeric: true),
+                  DataColumn(label: KeepAllText(t.fPendingOut), numeric: true),
                 ],
                 rows: [
                   for (final p in partners)
                     DataRow(
                       cells: [
                         DataCell(
-                          Text(
+                          KeepAllText(
                             '${p['name']}${(p['team_name'] as String? ?? '').isEmpty ? '' : ' · ${p['team_name']}'}',
                           ),
                         ),
                         DataCell(Text('${_n(p, 'jobs')}')),
-                        DataCell(Text(context.won(_n(p, 'settled_gross')))),
-                        DataCell(Text(context.won(_n(p, 'fee')))),
-                        DataCell(Text(context.won(_n(p, 'net')))),
-                        DataCell(Text(context.won(_n(p, 'paid')))),
-                        DataCell(Text(context.won(_n(p, 'pending')))),
+                        DataCell(KeepAllText(context.won(_n(p, 'settled_gross')))),
+                        DataCell(KeepAllText(context.won(_n(p, 'fee')))),
+                        DataCell(KeepAllText(context.won(_n(p, 'net')))),
+                        DataCell(KeepAllText(context.won(_n(p, 'paid')))),
+                        DataCell(KeepAllText(context.won(_n(p, 'pending')))),
                       ],
                     ),
                 ],
@@ -709,10 +709,10 @@ class _ServiceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.fByService, style: context.text.titleMedium),
+          KeepAllText(t.fByService, style: context.text.titleMedium),
           const SizedBox(height: Space.md),
           if (services.isEmpty)
-            Text(t.fNoRecords, style: context.text.bodySmall),
+            KeepAllText(t.fNoRecords, style: context.text.bodySmall),
           for (final s in services)
             Padding(
               padding: const EdgeInsets.only(bottom: Space.sm),
@@ -720,7 +720,7 @@ class _ServiceCard extends StatelessWidget {
                 children: [
                   SizedBox(
                     width: 110,
-                    child: Text(
+                    child: KeepAllText(
                       t.service(s['service_code'] as String),
                       style: context.text.bodySmall,
                       overflow: TextOverflow.ellipsis,
@@ -745,7 +745,7 @@ class _ServiceCard extends StatelessWidget {
                   ),
                   SizedBox(
                     width: 110,
-                    child: Text(
+                    child: KeepAllText(
                       context.won(_n(s, 'gross')),
                       textAlign: TextAlign.right,
                       style: context.text.labelMedium,
@@ -771,7 +771,7 @@ class _ExportCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.fExportTitle, style: context.text.titleMedium),
+          KeepAllText(t.fExportTitle, style: context.text.titleMedium),
           const SizedBox(height: Space.md),
           Wrap(
             spacing: Space.sm,
@@ -780,18 +780,18 @@ class _ExportCard extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: () => onExport('ledger'),
                 icon: const Icon(Icons.download_rounded),
-                label: Text(t.fExportLedger),
+                label: KeepAllText(t.fExportLedger),
               ),
               OutlinedButton.icon(
                 onPressed: () => onExport('settlements'),
                 icon: const Icon(Icons.download_rounded),
-                label: Text(t.fExportSettlements),
+                label: KeepAllText(t.fExportSettlements),
               ),
               FilledButton.icon(
                 style: inlineFilled,
                 onPressed: () => onExport('monthly'),
                 icon: const Icon(Icons.download_rounded),
-                label: Text(t.fExportMonthly),
+                label: KeepAllText(t.fExportMonthly),
               ),
             ],
           ),
@@ -811,9 +811,9 @@ class _ErrorCard extends StatelessWidget {
     return AppCard(
       child: Column(
         children: [
-          Text(t.fLoadFailed, style: context.text.bodyMedium),
+          KeepAllText(t.fLoadFailed, style: context.text.bodyMedium),
           const SizedBox(height: Space.sm),
-          TextButton(onPressed: onRetry, child: Text(t.fRetry)),
+          TextButton(onPressed: onRetry, child: KeepAllText(t.fRetry)),
         ],
       ),
     );

@@ -139,12 +139,12 @@ class _FirstRunScreenState extends State<FirstRunScreen> {
                               ],
                             ),
                             const SizedBox(height: Space.lg),
-                            Text(
+                            KeepAllText(
                               t.cFirstRunTitle,
                               style: context.text.headlineSmall,
                             ),
                             const SizedBox(height: Space.sm),
-                            Text(
+                            KeepAllText(
                               t.cFirstRunBody,
                               style: context.text.bodyMedium,
                             ),

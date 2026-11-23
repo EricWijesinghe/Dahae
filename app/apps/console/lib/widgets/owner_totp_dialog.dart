@@ -76,12 +76,12 @@ class _OwnerTotpDialogState extends State<_OwnerTotpDialog> {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
-      title: Text(widget.title ?? t.oaTotpTitle),
+      title: KeepAllText(widget.title ?? t.oaTotpTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.body ?? t.oaTotpBody),
+          KeepAllText(widget.body ?? t.oaTotpBody),
           const SizedBox(height: Space.sm),
           TextField(
             controller: _code,
@@ -104,12 +104,12 @@ class _OwnerTotpDialogState extends State<_OwnerTotpDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.oaCancel),
+          child: KeepAllText(t.oaCancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: _submit,
-          child: Text(t.oaContinue),
+          child: KeepAllText(t.oaContinue),
         ),
       ],
     );

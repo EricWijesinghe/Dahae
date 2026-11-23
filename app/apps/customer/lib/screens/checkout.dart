@@ -329,7 +329,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   initiallyExpanded: true,
                   tilePadding: EdgeInsets.zero,
                   childrenPadding: EdgeInsets.zero,
-                  title: Text(
+                  title: KeepAllText(
                     [
                       t.service(d.service.code),
                       if (d.service.isCounts)
@@ -386,7 +386,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: Space.sm,
                 children: [
-                  Text(t.dfDue, style: context.text.titleMedium),
+                  KeepAllText(t.dfDue, style: context.text.titleMedium),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: RollingAmount(
@@ -482,7 +482,7 @@ class _PointsFirst extends StatelessWidget {
             shape: const CircleBorder(),
           ),
           Flexible(
-            child: Text(
+            child: KeepAllText(
               context.t.dfPointsFirst,
               style: context.text.bodyMedium,
             ),
@@ -522,7 +522,7 @@ class _IconRow extends StatelessWidget {
                 alignment: AlignmentDirectional.centerStart,
                 children: [...previous, ?current],
               ),
-              child: Text(
+              child: KeepAllText(
                 title,
                 key: ValueKey(title),
                 style: context.text.titleSmall?.copyWith(
@@ -531,7 +531,7 @@ class _IconRow extends StatelessWidget {
               ),
             ),
             if (subtitle != null)
-              Text(
+              KeepAllText(
                 subtitle!,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.inkMuted,
@@ -546,7 +546,7 @@ class _IconRow extends StatelessWidget {
           _actionShare,
           TextButton(
             onPressed: onTap,
-            child: Text(
+            child: KeepAllText(
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -581,8 +581,8 @@ class AgreementBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.dfCancelNote, style: small),
-          Text(t.dfPgNotice, style: small),
+          KeepAllText(t.dfCancelNote, style: small),
+          KeepAllText(t.dfPgNotice, style: small),
           Wrap(
             spacing: Space.xs,
             children: [
@@ -596,7 +596,7 @@ class AgreementBox extends StatelessWidget {
                     ),
                   ),
                 ),
-                child: Text(t.moreTerms),
+                child: KeepAllText(t.moreTerms),
               ),
               TextButton(
                 onPressed: () => showAppSheet<void>(
@@ -612,7 +612,7 @@ class AgreementBox extends StatelessWidget {
                     child: CancelPolicyCard(total: total),
                   ),
                 ),
-                child: Text(t.dfRefundPolicy),
+                child: KeepAllText(t.dfRefundPolicy),
               ),
             ],
           ),

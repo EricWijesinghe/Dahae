@@ -3,6 +3,7 @@
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:ui/ui.dart' show KeepAllText;
 import '../widgets/inline_button.dart';
 
 /// Asks before a destructive action. [action] names both the title and the confirm button, so the owner
@@ -16,17 +17,17 @@ Future<bool> confirmAction(
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text(action),
-      content: Text(message ?? t.cConfirmAsk),
+      title: KeepAllText(action),
+      content: KeepAllText(message ?? t.cConfirmAsk),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: Text(t.cancel),
+          child: KeepAllText(t.cancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: Text(action),
+          child: KeepAllText(action),
         ),
       ],
     ),

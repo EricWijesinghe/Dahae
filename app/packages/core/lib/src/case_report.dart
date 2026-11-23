@@ -105,7 +105,7 @@ class _CaseReportSheetState extends State<CaseReportSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.caseReportTitle, style: context.text.titleMedium),
+          KeepAllText(t.caseReportTitle, style: context.text.titleMedium),
           const SizedBox(height: Space.sm),
           Wrap(
             spacing: Space.xs,
@@ -113,7 +113,7 @@ class _CaseReportSheetState extends State<CaseReportSheet> {
             children: [
               for (final kind in widget.kinds)
                 ChoiceChip(
-                  label: Text(caseKindLabel(t, kind)),
+                  label: KeepAllText(caseKindLabel(t, kind)),
                   selected: _kind == kind,
                   onSelected: _busy
                       ? null
@@ -131,13 +131,13 @@ class _CaseReportSheetState extends State<CaseReportSheet> {
             onChanged: (_) => setState(() {}),
           ),
           if (_error != null)
-            Text(_error!, style: TextStyle(color: context.colors.danger)),
+            KeepAllText(_error!, style: TextStyle(color: context.colors.danger)),
           const SizedBox(height: Space.sm),
           FilledButton(
             onPressed: _kind == null || _summary.text.trim().isEmpty || _busy
                 ? null
                 : _send,
-            child: Text(t.caseSubmit),
+            child: KeepAllText(t.caseSubmit),
           ),
         ],
       ),
@@ -160,14 +160,14 @@ class EmergencyContactsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.safetyEmergency, style: context.text.titleSmall),
+            KeepAllText(t.safetyEmergency, style: context.text.titleSmall),
             for (final c in contacts)
               if (c is Map && c['number'] != null)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
-                  title: Text(_contactLabel(t, '${c['label']}')),
-                  trailing: Text(
+                  title: KeepAllText(_contactLabel(t, '${c['label']}')),
+                  trailing: KeepAllText(
                     '${c['number']}',
                     style: context.text.titleMedium,
                   ),

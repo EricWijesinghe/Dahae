@@ -65,8 +65,8 @@ class _Summary extends StatelessWidget {
         Space.md,
       ),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
-      title: Text(t.inboxSummaryTitle, style: context.text.titleSmall),
-      subtitle: Text(
+      title: KeepAllText(t.inboxSummaryTitle, style: context.text.titleSmall),
+      subtitle: KeepAllText(
         '${t.service(b.serviceCode)} · $visit',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -96,10 +96,10 @@ class _SummaryRow extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(width: 72, child: Text(label, style: context.text.labelSmall)),
-        Expanded(child: Text(value, style: context.text.bodyMedium)),
+        SizedBox(width: 72, child: KeepAllText(label, style: context.text.labelSmall)),
+        Expanded(child: KeepAllText(value, style: context.text.bodyMedium)),
         if (chip != null)
-          Chip(label: Text(chip!), visualDensity: VisualDensity.compact),
+          Chip(label: KeepAllText(chip!), visualDensity: VisualDensity.compact),
       ],
     ),
   );

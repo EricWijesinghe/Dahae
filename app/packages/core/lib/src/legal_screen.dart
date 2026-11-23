@@ -60,14 +60,14 @@ class _LegalScreenState extends State<LegalScreen> {
       title: context.t.noContent,
       action: OutlinedButton(
         onPressed: _openWeb,
-        child: Text(context.t.rbLegalOpenWeb),
+        child: KeepAllText(context.t.rbLegalOpenWeb),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.title)),
+    appBar: AppBar(title: KeepAllText(widget.title)),
     body: AsyncView<List<ContentItem>>(
       load: () async =>
           (await widget.api.get('/content', query: {'kind': 'legal'}) as List)

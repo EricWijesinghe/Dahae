@@ -93,7 +93,7 @@ class _TossSellerDialogState extends State<_TossSellerDialog> {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
-      title: Text(t.poSellerTitle),
+      title: KeepAllText(t.poSellerTitle),
       content: SingleChildScrollView(
         child: Form(
           key: _form,
@@ -101,17 +101,17 @@ class _TossSellerDialogState extends State<_TossSellerDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(t.poSellerHint, style: context.text.bodySmall),
+              KeepAllText(t.poSellerHint, style: context.text.bodySmall),
               const SizedBox(height: Space.sm),
               SegmentedButton<String>(
                 segments: [
                   ButtonSegment(
                     value: 'individual',
-                    label: Text(t.poSellerIndividual),
+                    label: KeepAllText(t.poSellerIndividual),
                   ),
                   ButtonSegment(
                     value: 'company',
-                    label: Text(t.poSellerCompany),
+                    label: KeepAllText(t.poSellerCompany),
                   ),
                 ],
                 selected: {_type},
@@ -169,12 +169,12 @@ class _TossSellerDialogState extends State<_TossSellerDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.of(context).pop(),
-          child: Text(t.close),
+          child: KeepAllText(t.close),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: _busy ? null : _submit,
-          child: Text(t.poSellerSubmit),
+          child: KeepAllText(t.poSellerSubmit),
         ),
       ],
     );

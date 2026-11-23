@@ -116,9 +116,9 @@ class _ServerAddressScreenState extends State<ServerAddressScreen> {
               children: [
                 const Icon(Icons.dns_rounded, size: 40),
                 const SizedBox(height: Space.xl),
-                Text(t.cServerTitle, style: context.text.headlineMedium),
+                KeepAllText(t.cServerTitle, style: context.text.headlineMedium),
                 const SizedBox(height: Space.sm),
-                Text(t.cServerBody),
+                KeepAllText(t.cServerBody),
                 const SizedBox(height: Space.lg),
                 TextField(
                   controller: _controller,

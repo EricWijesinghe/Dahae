@@ -36,7 +36,7 @@ class IntroScreen extends StatelessWidget {
                         const SizedBox(height: Space.xl),
                         StaggerIn(
                           index: 0,
-                          child: Text(
+                          child: KeepAllText(
                             context.brandName,
                             style: context.text.titleLarge?.copyWith(
                               color: context.primary,
@@ -54,7 +54,7 @@ class IntroScreen extends StatelessWidget {
                         ),
                         StaggerIn(
                           index: 1,
-                          child: Text(
+                          child: KeepAllText(
                             t.introTitle,
                             style: context.text.displaySmall,
                           ),
@@ -62,7 +62,7 @@ class IntroScreen extends StatelessWidget {
                         const SizedBox(height: Space.sm),
                         StaggerIn(
                           index: 2,
-                          child: Text(
+                          child: KeepAllText(
                             t.introBody,
                             style: context.text.bodyLarge?.copyWith(
                               color: context.colors.inkSoft,
@@ -80,7 +80,7 @@ class IntroScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: Space.sm),
                         Center(
-                          child: Text(
+                          child: KeepAllText(
                             t.loginTerms,
                             style: context.text.labelSmall,
                             textAlign: TextAlign.center,
@@ -310,7 +310,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(Space.gutter),
               children: [
-                Text(
+                KeepAllText(
                   context.t.loginPhoneTitle,
                   style: context.text.headlineSmall,
                 ),
@@ -345,7 +345,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                   granted: _granted,
                   onChanged: (kind, v) => setState(() => _granted[kind] = v),
                 ),
-                Text(context.t.sgConsentHint, style: context.text.bodySmall),
+                KeepAllText(context.t.sgConsentHint, style: context.text.bodySmall),
                 const SizedBox(height: Space.xl),
                 SocialSignInRow(
                   providers: defaultSocialSignIns(
@@ -479,12 +479,12 @@ class _CodeScreenState extends State<CodeScreen> {
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(Space.gutter),
               children: [
-                Text(
+                KeepAllText(
                   context.t.loginCodeTitle,
                   style: context.text.headlineSmall,
                 ),
                 const SizedBox(height: Space.xs),
-                Text(
+                KeepAllText(
                   context.t.loginCodeSentTo(formatKoreanPhone(widget.phone)),
                   style: context.text.bodyMedium?.copyWith(
                     color: context.colors.inkMuted,
@@ -518,7 +518,7 @@ class _CodeScreenState extends State<CodeScreen> {
                 Center(
                   child: TextButton(
                     onPressed: _left == 0 ? _resend : null,
-                    child: Text(
+                    child: KeepAllText(
                       _left == 0
                           ? context.t.loginResend
                           : '${context.t.loginResend} ($_left)',
@@ -609,7 +609,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(Space.gutter),
               children: [
-                Text(context.t.profileTitle, style: context.text.headlineSmall),
+                KeepAllText(context.t.profileTitle, style: context.text.headlineSmall),
                 const SizedBox(height: Space.xl),
                 TextField(
                   controller: _ctrl,
@@ -660,7 +660,7 @@ class _InlineError extends StatelessWidget {
         Expanded(
           child: Semantics(
             liveRegion: true,
-            child: Text(
+            child: KeepAllText(
               message,
               style: context.text.bodyMedium?.copyWith(
                 color: context.colors.danger,
@@ -668,7 +668,7 @@ class _InlineError extends StatelessWidget {
             ),
           ),
         ),
-        TextButton(onPressed: onRetry, child: Text(context.t.retry)),
+        TextButton(onPressed: onRetry, child: KeepAllText(context.t.retry)),
       ],
     ),
   );

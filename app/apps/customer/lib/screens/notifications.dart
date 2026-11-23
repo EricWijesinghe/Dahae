@@ -30,7 +30,7 @@ class NotificationsScreen extends StatelessWidget {
     if (!Deps.of(context).session.signedIn) {
       // Alerts belong to an account: a guest sees only the public notices.
       return Scaffold(
-        appBar: AppBar(title: Text(t.moreNotices)),
+        appBar: AppBar(title: KeepAllText(t.moreNotices)),
         body: const ContentListBody(kind: 'notice'),
       );
     }
@@ -38,7 +38,7 @@ class NotificationsScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(t.nAlerts),
+          title: KeepAllText(t.nAlerts),
           bottom: TabBar(
             tabs: [
               Tab(text: t.nAlerts),
@@ -146,11 +146,11 @@ class _AlertTile extends StatelessWidget {
             ),
         ],
       ),
-      title: Text(
+      title: KeepAllText(
         data['title'] as String? ?? '',
         style: unread ? context.text.titleSmall : context.text.bodyLarge,
       ),
-      subtitle: Text(
+      subtitle: KeepAllText(
         [
           if ((data['body'] as String?)?.isNotEmpty ?? false)
             data['body'] as String,

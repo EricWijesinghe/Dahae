@@ -114,7 +114,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
           if (s.maxPyeong != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
-              child: Text(
+              child: KeepAllText(
                 t.dfStudioNote('${s.maxPyeong}'),
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.inkMuted,
@@ -124,7 +124,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
           if (!Deps.of(context).session.signedIn) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
-              child: Text(
+              child: KeepAllText(
                 t.guestSeePrices,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.inkMuted,
@@ -198,29 +198,32 @@ class _ServiceScreenState extends State<ServiceScreen> {
         ],
       ),
     ),
-    const FlowBand(),
-    FlowSection(
-      children: [
-        Text(
-          t.dfBasicService,
-          style: context.text.bodySmall?.copyWith(
-            color: context.colors.inkMuted,
-          ),
-        ),
-        const SizedBox(height: Space.sm),
-        if (s.code == 'studio')
-          CheckList([for (final k in studioScope) scopeLabel(t, k)]),
-        if (s.needsPreparation) ...[
-          const SizedBox(height: Space.xs),
-          Text(
-            t.prepBody,
+    // The 기본 서비스 band only when it has a scope list or a preparation note under it.
+    if (s.code == 'studio' || s.needsPreparation) ...[
+      const FlowBand(),
+      FlowSection(
+        children: [
+          KeepAllText(
+            t.dfBasicService,
             style: context.text.bodySmall?.copyWith(
               color: context.colors.inkMuted,
             ),
           ),
+          const SizedBox(height: Space.sm),
+          if (s.code == 'studio')
+            CheckList([for (final k in studioScope) scopeLabel(t, k)]),
+          if (s.needsPreparation) ...[
+            const SizedBox(height: Space.xs),
+            KeepAllText(
+              t.prepBody,
+              style: context.text.bodySmall?.copyWith(
+                color: context.colors.inkMuted,
+              ),
+            ),
+          ],
         ],
-      ],
-    ),
+      ),
+    ],
   ];
 
   List<Widget> _units(BuildContext context, T t, BookingDraft d) => [
@@ -259,7 +262,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
           Space.gutter,
           Space.xs,
         ),
-        child: Text(
+        child: KeepAllText(
           t.unitHint,
           style: context.text.bodySmall?.copyWith(
             color: context.colors.inkMuted,
@@ -284,7 +287,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
             if (discounted)
               Padding(
                 padding: const EdgeInsets.only(top: Space.xs),
-                child: Text(
+                child: KeepAllText(
                   t.countsDiscount('${s.multiDiscountBps ~/ 100}'),
                   style: context.text.bodyMedium?.copyWith(
                     color: context.primary,
@@ -308,7 +311,7 @@ class _Fact extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(
+      KeepAllText(
         label,
         style: context.text.bodySmall?.copyWith(color: context.colors.inkMuted),
       ),
@@ -322,7 +325,8 @@ class _Fact extends StatelessWidget {
   );
 }
 
-/// The design's photo slot (p07): the catalog photo when the console set one, else the grey placeholder.
+/// The design's photo slot (p07): the catalog photo when the console set one, else the service's own 3D art
+/// on its tint.
 class ServiceHero extends StatelessWidget {
   const ServiceHero({super.key, required this.service});
   final Service service;
@@ -330,12 +334,13 @@ class ServiceHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = service.content['image_url'];
+    final art = _ServiceArt(code: service.code);
     return ClipRRect(
       borderRadius: BorderRadius.circular(Radii.card),
       child: AspectRatio(
         aspectRatio: 12 / 7,
         child: ColoredBox(
-          color: context.colors.surfaceHigh,
+          color: context.colors.tintOf(ServiceHues.of(service.code)),
           child: url is String && url.startsWith('https://')
               ? Image.network(
                   url,
@@ -343,35 +348,31 @@ class ServiceHero extends StatelessWidget {
                   // Hero box is at most ~full width; 1080 covers a 3x phone without decoding the original.
                   cacheWidth: 1080,
                   semanticLabel: context.t.service(service.code),
-                  errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
+                  errorBuilder: (_, _, _) => art,
                 )
-              : const _PhotoPlaceholder(),
+              : art,
         ),
       ),
     );
   }
 }
 
-class _PhotoPlaceholder extends StatelessWidget {
-  const _PhotoPlaceholder();
+class _ServiceArt extends StatelessWidget {
+  const _ServiceArt({required this.code});
+  final String code;
 
+  /// The svc art ships at 64dp (192 px at 3x); larger reads soft.
+  static const _size = 88.0;
+
+  // Still, like the photo it stands in for (design p07): no idle float.
   @override
-  Widget build(BuildContext context) {
-    final muted = context.colors.inkMuted;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.image_outlined, size: 36, color: muted),
-          const SizedBox(height: Space.xs),
-          Text(
-            context.t.servicePhotoSlot,
-            style: context.text.bodyMedium?.copyWith(color: muted),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Center(
+    child: Icon3D(
+      Icon3DRegistry.serviceId(code),
+      size: _size,
+      semanticLabel: context.t.service(code),
+    ),
+  );
 }
 
 /// "ⓘ 서비스 범위" in the app bar (design p07, p08, p14).
@@ -387,7 +388,7 @@ class ScopeLink extends StatelessWidget {
     child: TextButton.icon(
       // Design p07: a filled dark-teal disc, not the button's default tone.
       icon: Icon(Icons.info_rounded, color: context.primary),
-      label: Text(context.t.moreScope, overflow: TextOverflow.ellipsis),
+      label: KeepAllText(context.t.moreScope, overflow: TextOverflow.ellipsis),
       onPressed: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => ServiceScopeScreen(initialGroup: scopeGroupFor(code)),

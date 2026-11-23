@@ -97,7 +97,7 @@ class SocialSignInButton extends StatelessWidget {
                     ExcludeSemantics(child: _mark(provider, fg)),
                     const SizedBox(width: Space.xs),
                     Flexible(
-                      child: Text(
+                      child: KeepAllText(
                         label,
                         style: context.text.titleSmall?.copyWith(
                           color: fg,
@@ -119,11 +119,11 @@ class SocialSignInButton extends StatelessWidget {
       size: 18,
       color: fg,
     ),
-    SocialProviders.naver => Text(
+    SocialProviders.naver => KeepAllText(
       'N',
       style: TextStyle(color: fg, fontSize: 18, fontWeight: FontWeight.w900),
     ),
-    SocialProviders.google => const Text(
+    SocialProviders.google => const KeepAllText(
       'G',
       style: TextStyle(
         color: Color(0xFF4285F4),
@@ -164,7 +164,7 @@ class SocialSignInRow extends StatelessWidget {
             Expanded(child: Divider(color: context.colors.line)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Space.sm),
-              child: Text(
+              child: KeepAllText(
                 t.apSocialOr,
                 style: context.text.labelMedium?.copyWith(
                   color: context.colors.inkMuted,
@@ -175,7 +175,7 @@ class SocialSignInRow extends StatelessWidget {
           ],
         ),
         const SizedBox(height: Space.sm),
-        Text(t.apSocialSignIn, style: context.text.titleSmall),
+        KeepAllText(t.apSocialSignIn, style: context.text.titleSmall),
         const SizedBox(height: Space.xs),
         for (final p in providers)
           Padding(
@@ -189,7 +189,7 @@ class SocialSignInRow extends StatelessWidget {
             ),
           ),
         if (devMode)
-          Text(
+          KeepAllText(
             t.apDevSocialNote,
             style: context.text.labelSmall?.copyWith(
               color: context.colors.inkMuted,

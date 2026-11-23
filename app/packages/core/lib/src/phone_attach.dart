@@ -99,12 +99,12 @@ class _PhoneAttachScreenState extends State<PhoneAttachScreen> {
       body: ListView(
         padding: const EdgeInsets.all(Space.gutter),
         children: [
-          Text(
+          KeepAllText(
             _sent ? t.loginCodeTitle : t.apPhoneAttachTitle,
             style: context.text.headlineSmall,
           ),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             _sent
                 ? t.loginCodeSentTo(formatKoreanPhone(_digits))
                 : t.apPhoneAttachBody,
@@ -154,7 +154,7 @@ class _PhoneAttachScreenState extends State<PhoneAttachScreen> {
             Center(
               child: TextButton(
                 onPressed: _busy || _left > 0 ? null : _send,
-                child: Text(
+                child: KeepAllText(
                   _left == 0 ? t.loginResend : '${t.loginResend} ($_left)',
                 ),
               ),

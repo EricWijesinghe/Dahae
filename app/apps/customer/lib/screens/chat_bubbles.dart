@@ -96,7 +96,7 @@ class _DayDivider extends StatelessWidget {
           color: context.colors.surfaceHigh,
           borderRadius: BorderRadius.circular(Radii.pill),
         ),
-        child: Text(
+        child: KeepAllText(
           received ? '$label · ${t.chatDayReceived}' : label,
           style: context.text.labelSmall?.copyWith(
             color: context.colors.inkSoft,
@@ -147,7 +147,7 @@ class _Bubble extends StatelessWidget {
               color: c.surfaceHigh,
               borderRadius: BorderRadius.circular(Radii.pill),
             ),
-            child: Text(
+            child: KeepAllText(
               t.system(
                 m.body['code'] as String? ?? '',
                 (m.body['params'] as Json?) ?? const {},
@@ -196,13 +196,13 @@ class _Bubble extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (m.isAi)
-              Text(
+              KeepAllText(
                 t.aiLabel,
                 style: context.text.labelSmall?.copyWith(
                   color: mine ? Colors.white70 : c.ink.withValues(alpha: 0.6),
                 ),
               ),
-            Text(
+            KeepAllText(
               m.body['text'] as String? ?? '',
               style: context.text.bodyMedium?.copyWith(
                 color: mine ? Colors.white : c.ink,
@@ -212,7 +212,7 @@ class _Bubble extends StatelessWidget {
         ),
       ),
     };
-    final time = Text(
+    final time = KeepAllText(
       timeLabel(m.createdAt, context.lang),
       style: context.text.labelSmall?.copyWith(fontSize: 10, color: c.inkMuted),
     );
@@ -306,7 +306,7 @@ class _RequestCard extends StatelessWidget {
                 horizontal: Space.md,
                 vertical: Space.sm,
               ),
-              child: Text(
+              child: KeepAllText(
                 t.chatRequestTitle(t.service(code)),
                 style: context.text.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
@@ -330,7 +330,7 @@ class _RequestCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(
+                            child: KeepAllText(
                               label,
                               style: context.text.bodySmall?.copyWith(
                                 color: c.inkSoft,
@@ -340,7 +340,7 @@ class _RequestCard extends StatelessWidget {
                           const SizedBox(width: Space.xs),
                           Flexible(
                             flex: 2,
-                            child: Text(
+                            child: KeepAllText(
                               value,
                               textAlign: TextAlign.end,
                               style: strong
@@ -443,10 +443,10 @@ class _QuoteCardState extends State<_QuoteCard>
                   ? const SuccessMark(size: 32)
                   : const Icon(Icons.check_rounded, size: 18),
               const SizedBox(width: 6),
-              Text(t.quotePaid),
+              KeepAllText(t.quotePaid),
             ],
           )
-        : Text(
+        : KeepAllText(
             widget.refunding
                 ? t.payStatusRefundPending
                 : widget.superseded
@@ -464,7 +464,7 @@ class _QuoteCardState extends State<_QuoteCard>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
+          KeepAllText(
             t.quoteConfirmedTitle,
             style: context.text.labelLarge?.copyWith(
               fontWeight: FontWeight.w700,
@@ -472,14 +472,14 @@ class _QuoteCardState extends State<_QuoteCard>
             ),
           ),
           const SizedBox(height: Space.xxs),
-          Text(
+          KeepAllText(
             context.won(finalPrice),
             style: context.text.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             finalPrice > 0
                 ? t.quoteDepositLine(
                     '${(deposit * 100 / finalPrice).round()}',
@@ -490,7 +490,7 @@ class _QuoteCardState extends State<_QuoteCard>
           ),
           if (note?.isNotEmpty ?? false) ...[
             const SizedBox(height: Space.xs),
-            Text(note!, style: context.text.bodySmall),
+            KeepAllText(note!, style: context.text.bodySmall),
           ],
           const SizedBox(height: Space.sm),
           FilledButton(

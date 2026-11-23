@@ -104,7 +104,7 @@ class _AcAddonBannerState extends State<AcAddonBanner> {
                   ),
                 ),
               ),
-            Text(ctx.t.dfAcAddonNote, style: ctx.text.bodySmall),
+            KeepAllText(ctx.t.dfAcAddonNote, style: ctx.text.bodySmall),
           ],
         ),
       ),
@@ -144,7 +144,7 @@ class _AcAddonBannerState extends State<AcAddonBanner> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
+                    KeepAllText(
                       // The amount is the coupon's own; no price lives in the app.
                       coupon == null
                           ? t.dfAcAddonBanner
@@ -156,7 +156,7 @@ class _AcAddonBannerState extends State<AcAddonBanner> {
                     OneShot(
                       trigger: _kicks,
                       builder: kick,
-                      child: Text(
+                      child: KeepAllText(
                         count > 0
                             ? t.dfAcAddonAdded('$count')
                             : _claimed
@@ -203,7 +203,7 @@ class _AcAddonBannerState extends State<AcAddonBanner> {
                           size: 22,
                         ),
                         const SizedBox(height: 2),
-                        Text(
+                        KeepAllText(
                           _claimed ? t.dfAcAddonAdd : t.dfAcCouponCta,
                           textAlign: TextAlign.center,
                           style: context.text.labelMedium?.copyWith(

@@ -78,7 +78,7 @@ class _SocialProofCardState extends State<SocialProofCard> {
             ),
           if (rating != null && count != null) ...[
             const SizedBox(height: Space.xs),
-            Text(
+            KeepAllText(
               t.proofRating(rating.toStringAsFixed(1), '$count'),
               style: context.text.bodySmall,
             ),
@@ -88,7 +88,7 @@ class _SocialProofCardState extends State<SocialProofCard> {
             Row(
               children: [
                 Expanded(
-                  child: Text(
+                  child: KeepAllText(
                     t.proofReviewsTitle,
                     style: context.text.labelLarge,
                   ),
@@ -99,7 +99,7 @@ class _SocialProofCardState extends State<SocialProofCard> {
                       builder: (_) => const ReviewsAllScreen(),
                     ),
                   ),
-                  child: Text(t.reviewsSeeAll),
+                  child: KeepAllText(t.reviewsSeeAll),
                 ),
               ],
             ),
@@ -171,31 +171,31 @@ class _ReferralCardState extends State<ReferralCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.referralTitle, style: context.text.titleSmall),
+          KeepAllText(t.referralTitle, style: context.text.titleSmall),
           const SizedBox(height: Space.xs),
-          Text(
+          KeepAllText(
             t.referralBody(context.won((info['amount'] as num).toInt())),
             style: context.text.bodySmall,
           ),
           const SizedBox(height: Space.xs),
           Row(
             children: [
-              Expanded(child: Text(code, style: context.text.titleMedium)),
+              Expanded(child: KeepAllText(code, style: context.text.titleMedium)),
               TextButton(
                 onPressed: () async {
                   await Clipboard.setData(ClipboardData(text: code));
                   if (context.mounted) showToast(context, t.referralCopied);
                 },
-                child: Text(t.referralCopy),
+                child: KeepAllText(t.referralCopy),
               ),
             ],
           ),
-          Text(
+          KeepAllText(
             t.referralStats('${info['invited']}', '${info['rewarded']}'),
             style: context.text.bodySmall,
           ),
           const Divider(height: Space.xl),
-          Text(t.referralClaimTitle, style: context.text.labelLarge),
+          KeepAllText(t.referralClaimTitle, style: context.text.labelLarge),
           Row(
             children: [
               Expanded(
@@ -210,7 +210,7 @@ class _ReferralCardState extends State<ReferralCard> {
                 // As tall as the field beside it; the theme's full-width minimum cannot lay out in a Row.
                 style: FilledButton.styleFrom(minimumSize: const Size(64, 56)),
                 onPressed: _busy ? null : _claimCode,
-                child: Text(t.referralClaimButton),
+                child: KeepAllText(t.referralClaimButton),
               ),
             ],
           ),
@@ -291,7 +291,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
       // Close first, then confirm on the screen underneath (the sheet's own context is gone after pop).
       final messenger = ScaffoldMessenger.maybeOf(context);
       Navigator.of(context).pop(true);
-      messenger?.showSnackBar(SnackBar(content: Text(t.reviewSaved)));
+      messenger?.showSnackBar(SnackBar(content: KeepAllText(t.reviewSaved)));
     } catch (e) {
       if (mounted) showToast(context, t.error(e));
     } finally {
@@ -306,17 +306,17 @@ class _ReviewSheetState extends State<ReviewSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
+        KeepAllText(
           t.reviewTitle,
           style: context.text.titleMedium,
           textAlign: TextAlign.center,
         ),
-        Text(
+        KeepAllText(
           t.reviewSheetTitle,
           style: context.text.bodySmall,
           textAlign: TextAlign.center,
         ),
-        Text(
+        KeepAllText(
           t.reviewRuleLine,
           style: context.text.bodySmall,
           textAlign: TextAlign.center,
@@ -358,15 +358,15 @@ class _ReviewSheetState extends State<ReviewSheet> {
               OutlinedButton.icon(
                 onPressed: _busy ? null : _addPhoto,
                 icon: const Icon(Icons.add_photo_alternate_outlined),
-                label: Text(t.reviewPhotosAdd),
+                label: KeepAllText(t.reviewPhotosAdd),
               ),
           ],
         ),
-        Text(t.reviewPhotosHint, style: context.text.bodySmall),
+        KeepAllText(t.reviewPhotosHint, style: context.text.bodySmall),
         const SizedBox(height: Space.md),
         FilledButton(
           onPressed: _rating == 0 || _busy ? null : _submit,
-          child: Text(t.reviewSubmit),
+          child: KeepAllText(t.reviewSubmit),
         ),
       ],
     );

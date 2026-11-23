@@ -67,10 +67,10 @@ class ReviewReportButton extends StatelessWidget {
         if (sent && context.mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text(context.t.reportThanks)));
+          ).showSnackBar(SnackBar(content: KeepAllText(context.t.reportThanks)));
         }
       },
-      child: Text(context.t.reportAction),
+      child: KeepAllText(context.t.reportAction),
     );
   }
 }
@@ -139,7 +139,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.reportSheetTitle, style: context.text.titleMedium),
+          KeepAllText(t.reportSheetTitle, style: context.text.titleMedium),
           const SizedBox(height: Space.sm),
           Wrap(
             spacing: Space.xs,
@@ -147,7 +147,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             children: [
               for (final reason in reviewReportReasons)
                 ChoiceChip(
-                  label: Text(reviewReportLabel(t, reason)),
+                  label: KeepAllText(reviewReportLabel(t, reason)),
                   selected: _reason == reason,
                   onSelected: _busy
                       ? null
@@ -163,11 +163,11 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             enabled: !_busy,
             decoration: InputDecoration(hintText: t.reportNoteHint),
           ),
-          if (_error != null) Text(_error!, style: context.text.bodySmall),
+          if (_error != null) KeepAllText(_error!, style: context.text.bodySmall),
           const SizedBox(height: Space.sm),
           FilledButton(
             onPressed: _reason == null || _busy ? null : _send,
-            child: Text(t.reportSubmit),
+            child: KeepAllText(t.reportSubmit),
           ),
         ],
       ),

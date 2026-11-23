@@ -60,14 +60,14 @@ class _GroupsTabState extends State<GroupsTab> {
       builder: (context, data, _) => ListView(
         padding: const EdgeInsets.all(Space.lg),
         children: [
-          Text(t.cgGroupsHelp),
+          KeepAllText(t.cgGroupsHelp),
           const SizedBox(height: Space.md),
           for (final g in data.groups)
             Card(
               elevation: 0,
               child: ListTile(
-                title: Text((g['title'] as Json)['ko'] as String),
-                subtitle: Text(_info(context, g)),
+                title: KeepAllText((g['title'] as Json)['ko'] as String),
+                subtitle: KeepAllText(_info(context, g)),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -177,7 +177,7 @@ class _GroupDialogState extends State<_GroupDialog> {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
-      title: Text(_d.titleKo.isEmpty ? t.cgTabGroups : _d.titleKo),
+      title: KeepAllText(_d.titleKo.isEmpty ? t.cgTabGroups : _d.titleKo),
       content: SizedBox(
         width: 480,
         child: SingleChildScrollView(
@@ -195,23 +195,23 @@ class _GroupDialogState extends State<_GroupDialog> {
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(t.cgGroupShown),
+                title: KeepAllText(t.cgGroupShown),
                 value: _d.active,
                 onChanged: (v) => setState(() => _d.active = v),
               ),
               const Divider(height: 24),
               _chooserPicker(t),
               const Divider(height: 24),
-              Text(
+              KeepAllText(
                 t.cgGroupMembers,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              Text(t.cgGroupMembersHelp),
+              KeepAllText(t.cgGroupMembersHelp),
               for (final s in widget.data.services) _memberRow(s, t),
               if (_d.chooser == 'move') ..._moveFields(t),
               if (_error != null) ...[
                 const SizedBox(height: 8),
-                Text(
+                KeepAllText(
                   _error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
@@ -223,12 +223,12 @@ class _GroupDialogState extends State<_GroupDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.cancel),
+          child: KeepAllText(t.cancel),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: () => _save(t),
-          child: Text(t.save),
+          child: KeepAllText(t.save),
         ),
       ],
     );
@@ -264,21 +264,21 @@ class _GroupDialogState extends State<_GroupDialog> {
   Widget _chooserPicker(T t) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(t.cgGroupChooser, style: Theme.of(context).textTheme.titleSmall),
+      KeepAllText(t.cgGroupChooser, style: Theme.of(context).textTheme.titleSmall),
       const SizedBox(height: 4),
       Wrap(
         spacing: 8,
         children: [
           for (final c in groupChoosers)
             ChoiceChip(
-              label: Text(_chooserLabel(t, c)),
+              label: KeepAllText(_chooserLabel(t, c)),
               selected: _d.chooser == c,
               onSelected: (_) => setState(() => _d.chooser = c),
             ),
         ],
       ),
       const SizedBox(height: 4),
-      Text(_chooserHelp(t, _d.chooser)),
+      KeepAllText(_chooserHelp(t, _d.chooser)),
     ],
   );
 
@@ -303,8 +303,8 @@ class _GroupDialogState extends State<_GroupDialog> {
       contentPadding: EdgeInsets.zero,
       dense: true,
       value: picked,
-      title: Text(_name(s)),
-      subtitle: other == null ? null : Text(t.cgMemberOtherGroup(other)),
+      title: KeepAllText(_name(s)),
+      subtitle: other == null ? null : KeepAllText(t.cgMemberOtherGroup(other)),
       secondary: picked
           ? Row(
               mainAxisSize: MainAxisSize.min,
@@ -358,13 +358,13 @@ class _GroupDialogState extends State<_GroupDialog> {
         (v) => _d.oldService = v,
       ),
       const SizedBox(height: 8),
-      Text(t.cgMoveHomeTypes),
+      KeepAllText(t.cgMoveHomeTypes),
       Wrap(
         spacing: 8,
         children: [
           for (final h in groupHomeTypes)
             FilterChip(
-              label: Text(_homeLabel(t, h)),
+              label: KeepAllText(_homeLabel(t, h)),
               selected: _d.homeTypes.contains(h),
               onSelected: (v) => setState(() {
                 if (v) {
@@ -399,7 +399,7 @@ class _GroupDialogState extends State<_GroupDialog> {
       decoration: InputDecoration(labelText: label, isDense: true),
       items: [
         for (final code in options)
-          DropdownMenuItem(value: code, child: Text(names[code] ?? code)),
+          DropdownMenuItem(value: code, child: KeepAllText(names[code] ?? code)),
       ],
       onChanged: (v) => setState(() => set(v)),
     );

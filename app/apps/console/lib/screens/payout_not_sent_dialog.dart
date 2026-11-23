@@ -58,15 +58,15 @@ class _PayoutNotSentDialogState extends State<PayoutNotSentDialog> {
     final p = widget.payout;
     final amount = ((p['net'] as num?) ?? (p['amount'] as num)).toInt();
     return AlertDialog(
-      title: Text(t.poNotSentTitle),
+      title: KeepAllText(t.poNotSentTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.poNotSentBody('${p['pro_name']}', context.won(amount))),
+            KeepAllText(t.poNotSentBody('${p['pro_name']}', context.won(amount))),
             const SizedBox(height: Space.sm),
-            Text(
+            KeepAllText(
               t.poNotSentWarning,
               style: context.text.bodyMedium?.copyWith(
                 color: context.colors.danger,
@@ -78,7 +78,7 @@ class _PayoutNotSentDialogState extends State<PayoutNotSentDialog> {
               controlAffinity: ListTileControlAffinity.leading,
               value: _checked,
               onChanged: (v) => setState(() => _checked = v ?? false),
-              title: Text(t.poNotSentChecked),
+              title: KeepAllText(t.poNotSentChecked),
             ),
           ],
         ),
@@ -86,12 +86,12 @@ class _PayoutNotSentDialogState extends State<PayoutNotSentDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: Text(t.close),
+          child: KeepAllText(t.close),
         ),
         FilledButton(
           style: compactFilled,
           onPressed: _checked ? () => Navigator.of(context).pop(true) : null,
-          child: Text(t.poNotSentConfirm),
+          child: KeepAllText(t.poNotSentConfirm),
         ),
       ],
     );

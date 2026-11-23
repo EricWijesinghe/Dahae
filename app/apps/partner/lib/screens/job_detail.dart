@@ -100,7 +100,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     ServiceGlyph(code, size: 44),
                     const SizedBox(width: Space.sm),
                     Expanded(
-                      child: Text(
+                      child: KeepAllText(
                         t.service(code),
                         style: context.text.titleMedium,
                       ),
@@ -109,17 +109,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ],
                 ),
                 const SizedBox(height: Space.md),
-                Text(
+                KeepAllText(
                   isQuote && payout == null ? t.pCustomerEstimate : t.pPayout,
                   style: context.text.labelMedium,
                 ),
-                Text(
+                KeepAllText(
                   payout != null
                       ? context.won((payout['net'] as num).toInt())
                       : context.won((b['estimate'] as num? ?? 0).toInt()),
                   style: context.text.displaySmall,
                 ),
-                Text(
+                KeepAllText(
                   '${t.pBookingNo(b['number'] as String)} · ${t.pyeong('${b['size_pyeong']}')}',
                   style: context.text.bodySmall,
                 ),
@@ -141,15 +141,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.event_rounded),
-                title: Text(t.pSchedule),
-                subtitle: Text(
+                title: KeepAllText(t.pSchedule),
+                subtitle: KeepAllText(
                   '${dateLabel(DateTime.parse(b['visit_date'] as String), context.lang)} ${slotLabel(context, (b['start_hour'] as num).toInt(), isQuote)}${b['minutes'] == null ? '' : ' · ${t.about(t.duration((b['minutes'] as num).toInt()))}'}',
                 ),
               ),
               ListTile(
                 leading: const Icon(Icons.place_outlined),
-                title: Text(committed ? t.visitAddress : t.addressDistrict),
-                subtitle: Text(
+                title: KeepAllText(committed ? t.visitAddress : t.addressDistrict),
+                subtitle: KeepAllText(
                   addr ?? districtName(context, b['district_code'] as String),
                 ),
                 trailing: addr == null
@@ -163,14 +163,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               if (answers != null)
                 ListTile(
                   leading: const Icon(Icons.home_work_outlined),
-                  title: Text(t.pSpace),
-                  subtitle: Text(_answersText(t, answers)),
+                  title: KeepAllText(t.pSpace),
+                  subtitle: KeepAllText(_answersText(t, answers)),
                 ),
               if (jobCountsLabel(t, b) case final counts?)
                 ListTile(
                   leading: const Icon(Icons.format_list_numbered_rounded),
-                  title: Text(t.pCountsTitle),
-                  subtitle: Text(counts),
+                  title: KeepAllText(t.pCountsTitle),
+                  subtitle: KeepAllText(counts),
                 ),
             ],
           ),
@@ -198,7 +198,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 if (isQuote)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
+                    child: KeepAllText(
                       t.pAfterBalance,
                       style: context.text.labelSmall,
                     ),
@@ -218,7 +218,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(t.pPrivacyNote, style: context.text.labelSmall),
+                child: KeepAllText(t.pPrivacyNote, style: context.text.labelSmall),
               ),
             ],
           ),
@@ -261,8 +261,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.person_outline_rounded),
-              title: Text('${t.pCustomer} ${d['customer_name'] ?? ''}'),
-              subtitle: Text(t.pQuietHours),
+              title: KeepAllText('${t.pCustomer} ${d['customer_name'] ?? ''}'),
+              subtitle: KeepAllText(t.pQuietHours),
               trailing: IconButton.filledTonal(
                 tooltip: t.pCall,
                 icon: const Icon(Icons.call_rounded),
@@ -271,31 +271,31 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.badge_outlined),
-              title: Text(t.pAssignee),
-              subtitle: Text(
+              title: KeepAllText(t.pAssignee),
+              subtitle: KeepAllText(
                 (d['assignee'] as Json?)?['name'] as String? ?? '-',
               ),
               trailing: TextButton(
                 onPressed: _busy ? null : () => _assign(b),
-                child: Text(t.change),
+                child: KeepAllText(t.change),
               ),
             ),
             if (householdLines.isNotEmpty)
               ListTile(
                 leading: const Icon(Icons.home_outlined),
-                title: Text(t.pHousehold),
-                subtitle: Text(householdLines.join('\n')),
+                title: KeepAllText(t.pHousehold),
+                subtitle: KeepAllText(householdLines.join('\n')),
               ),
             if (noteLines.isNotEmpty)
               ListTile(
                 leading: const Icon(Icons.sticky_note_2_outlined),
-                title: Text(t.pCustomerRequests),
-                subtitle: Text(noteLines.join('\n')),
+                title: KeepAllText(t.pCustomerRequests),
+                subtitle: KeepAllText(noteLines.join('\n')),
               ),
             ListTile(
               leading: const Icon(Icons.lock_outline_rounded),
-              title: Text(t.pTeamMemo),
-              subtitle: Text(
+              title: KeepAllText(t.pTeamMemo),
+              subtitle: KeepAllText(
                 (d['team_memo'] as String?)?.isNotEmpty == true
                     ? d['team_memo'] as String
                     : '-',
@@ -309,7 +309,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       const SizedBox(height: Space.sm),
       OutlinedButton.icon(
         icon: const Icon(Icons.chat_bubble_outline_rounded),
-        label: Text(t.pChatOps),
+        label: KeepAllText(t.pChatOps),
         onPressed: () => openOpsThread(
           context,
           topic: b['service_code'] as String,
@@ -397,9 +397,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     padding: const EdgeInsets.symmetric(vertical: 2),
     child: Row(
       children: [
-        Text(l, style: context.text.bodyMedium),
+        KeepAllText(l, style: context.text.bodyMedium),
         const Spacer(),
-        Text(
+        KeepAllText(
           v,
           style: bold ? context.text.titleMedium : context.text.bodyMedium,
         ),
@@ -415,7 +415,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         children: [
           Icon(i, color: hue.tone),
           const SizedBox(width: Space.sm),
-          Expanded(child: Text(text, style: context.text.titleSmall)),
+          Expanded(child: KeepAllText(text, style: context.text.titleSmall)),
         ],
       ),
     ),
@@ -435,7 +435,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(t.pRescheduleBanner(from, to), style: context.text.titleSmall),
+            KeepAllText(t.pRescheduleBanner(from, to), style: context.text.titleSmall),
             const SizedBox(height: Space.sm),
             Row(
               children: [
@@ -448,7 +448,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                       t.pSaved,
                     ),
-                    child: Text(t.pRescheduleNo),
+                    child: KeepAllText(t.pRescheduleNo),
                   ),
                 ),
                 const SizedBox(width: Space.xs),
@@ -461,7 +461,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                       t.pSaved,
                     ),
-                    child: Text(t.pRescheduleOk),
+                    child: KeepAllText(t.pRescheduleOk),
                   ),
                 ),
               ],
@@ -489,7 +489,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(t.pAcceptBody, style: ctx.text.bodyMedium),
+            KeepAllText(t.pAcceptBody, style: ctx.text.bodyMedium),
             const SizedBox(height: Space.xl),
             PrimaryButton(
               label: t.pAccept,
@@ -537,12 +537,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         children: [
           for (final m in team)
             ListTile(
-              title: Text(
+              title: KeepAllText(
                 (m['name'] as String).isEmpty
                     ? formatKoreanPhone(m['phone'] as String)
                     : m['name'] as String,
               ),
-              subtitle: Text(m['role'] == 'owner' ? ctx.t.pOwner : ''),
+              subtitle: KeepAllText(m['role'] == 'owner' ? ctx.t.pOwner : ''),
               onTap: () => Navigator.of(ctx).pop(m['id'] as String),
             ),
         ],
@@ -580,7 +580,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             ),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(ctx.t.save),
+              child: KeepAllText(ctx.t.save),
             ),
           ],
         ),
@@ -629,7 +629,7 @@ Future<bool?> showQuoteSheet(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
+              KeepAllText(
                 '${t.pCustomerEstimate} ${ctx.won(estimate)}',
                 style: ctx.text.bodySmall,
               ),
@@ -655,7 +655,7 @@ Future<bool?> showQuoteSheet(
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: KeepAllText(
                         '${t.pYouGet} (${t.pFee(pro.feeLabel)})',
                         style: ctx.text.bodySmall,
                       ),
@@ -737,7 +737,7 @@ class _PhoneGate extends StatelessWidget {
             Icon(Icons.phone_iphone_rounded, color: context.colors.sun),
             const SizedBox(width: Space.sm),
             Expanded(
-              child: Text(t.err_phone_required, style: context.text.bodyMedium),
+              child: KeepAllText(t.err_phone_required, style: context.text.bodyMedium),
             ),
             const SizedBox(width: Space.sm),
             FilledButton(
@@ -751,7 +751,7 @@ class _PhoneGate extends StatelessWidget {
                 );
                 await pro.loadProfile();
               },
-              child: Text(t.pVerifyPhone),
+              child: KeepAllText(t.pVerifyPhone),
             ),
           ],
         ),

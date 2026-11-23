@@ -91,7 +91,7 @@ class _CancelPolicyTabState extends State<CancelPolicyTab> {
           padding: const EdgeInsets.all(Space.lg),
           children: [
             if (_isDefault)
-              Text(t.cPolicyDefaultBanner, style: context.text.bodyMedium),
+              KeepAllText(t.cPolicyDefaultBanner, style: context.text.bodyMedium),
             const SizedBox(height: Space.sm),
             for (var i = 0; i < _days.length; i++)
               Padding(
@@ -108,11 +108,11 @@ class _CancelPolicyTabState extends State<CancelPolicyTab> {
             const SizedBox(height: Space.sm),
             _field(_reschedule, t.cPolicyReschedule),
             const SizedBox(height: Space.sm),
-            Text(t.cPolicyHint, style: context.text.bodySmall),
+            KeepAllText(t.cPolicyHint, style: context.text.bodySmall),
             const SizedBox(height: Space.md),
             FilledButton(
               onPressed: !context.console.isAdmin ? null : _save,
-              child: Text(t.save),
+              child: KeepAllText(t.save),
             ),
           ],
         );

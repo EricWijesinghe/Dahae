@@ -145,7 +145,7 @@ class _CampaignBuilderState extends State<CampaignBuilder> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(t.cmAudience, style: Theme.of(context).textTheme.titleMedium),
+        KeepAllText(t.cmAudience, style: Theme.of(context).textTheme.titleMedium),
         Wrap(
           spacing: 8,
           children: [
@@ -155,7 +155,7 @@ class _CampaignBuilderState extends State<CampaignBuilder> {
               (AudienceKind.lapsed, t.cmSegLapsed(_daysValue.toString())),
             ])
               ChoiceChip(
-                label: Text(label),
+                label: KeepAllText(label),
                 selected: _kind == kind,
                 onSelected: (_) {
                   setState(() => _kind = kind);
@@ -174,16 +174,16 @@ class _CampaignBuilderState extends State<CampaignBuilder> {
         if (_total != null)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
+            child: KeepAllText(
               t.cmConsentCount('${_total ?? 0}', '${_consented ?? 0}'),
             ),
           ),
         const SizedBox(height: 12),
-        Text(t.cmChannel, style: Theme.of(context).textTheme.titleMedium),
+        KeepAllText(t.cmChannel, style: Theme.of(context).textTheme.titleMedium),
         SegmentedButton<String>(
           segments: [
-            ButtonSegment(value: 'push', label: Text(t.cmPush)),
-            ButtonSegment(value: 'sms', label: Text(t.cmSms)),
+            ButtonSegment(value: 'push', label: KeepAllText(t.cmPush)),
+            ButtonSegment(value: 'sms', label: KeepAllText(t.cmSms)),
           ],
           selected: {_channel},
           onSelectionChanged: (s) => setState(() => _channel = s.first),
@@ -214,11 +214,11 @@ class _CampaignBuilderState extends State<CampaignBuilder> {
             onChanged: (_) => setState(() {}),
           ),
         const SizedBox(height: 12),
-        Text(t.cmPreview, style: Theme.of(context).textTheme.titleMedium),
+        KeepAllText(t.cmPreview, style: Theme.of(context).textTheme.titleMedium),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Text(
+            child: KeepAllText(
               _channel == 'sms'
                   ? smsAdText(_body.text, _optout.text)
                   : '${_title.text}\n${_body.text}',
@@ -243,16 +243,16 @@ class _CampaignBuilderState extends State<CampaignBuilder> {
                       _body.text.trim(),
                       _optout.text.trim(),
                     ),
-              child: Text(t.cmTestSend),
+              child: KeepAllText(t.cmTestSend),
             ),
             OutlinedButton(
               onPressed: _busy || !_canSend ? null : () => _pickTime(t),
-              child: Text(t.cmSchedule),
+              child: KeepAllText(t.cmSchedule),
             ),
             FilledButton(
               style: inlineFilled,
               onPressed: _busy || !_canSend ? null : () => _send(t, null),
-              child: Text(t.cmSendNow),
+              child: KeepAllText(t.cmSendNow),
             ),
           ],
         ),

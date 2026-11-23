@@ -128,7 +128,7 @@ class _PeakTabState extends State<PeakTab> {
         return ListView(
           padding: const EdgeInsets.all(Space.lg),
           children: [
-            Text(t.cgPeakHint, style: context.text.bodySmall),
+            KeepAllText(t.cgPeakHint, style: context.text.bodySmall),
             const SizedBox(height: Space.md),
             for (final k in [
               ..._percentKeys,
@@ -145,8 +145,8 @@ class _PeakTabState extends State<PeakTab> {
               ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(t.cgPeakFixedScope),
-              subtitle: Text(t.cgPeakFixedScopeHint),
+              title: KeepAllText(t.cgPeakFixedScope),
+              subtitle: KeepAllText(t.cgPeakFixedScopeHint),
               value: _applyToFixed,
               onChanged: context.console.isAdmin
                   ? (v) => setState(() => _applyToFixed = v)
@@ -155,7 +155,7 @@ class _PeakTabState extends State<PeakTab> {
             const SizedBox(height: Space.md),
             FilledButton(
               onPressed: context.console.isAdmin ? _save : null,
-              child: Text(t.save),
+              child: KeepAllText(t.save),
             ),
           ],
         );
@@ -218,7 +218,7 @@ class _QualityTabState extends State<QualityTab> {
         return ListView(
           padding: const EdgeInsets.all(Space.lg),
           children: [
-            Text(t.cgQualityHint, style: context.text.bodySmall),
+            KeepAllText(t.cgQualityHint, style: context.text.bodySmall),
             const SizedBox(height: Space.md),
             _field(_warning, t.cgQualityWarning),
             const SizedBox(height: Space.sm),
@@ -226,7 +226,7 @@ class _QualityTabState extends State<QualityTab> {
             const SizedBox(height: Space.md),
             FilledButton(
               onPressed: context.console.isAdmin ? _save : null,
-              child: Text(t.save),
+              child: KeepAllText(t.save),
             ),
           ],
         );

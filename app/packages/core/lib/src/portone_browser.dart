@@ -59,7 +59,7 @@ class _BrowserReturnSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
+          KeepAllText(
             t.apPgBrowserNote,
             style: context.text.bodyMedium,
             textAlign: TextAlign.center,
@@ -72,7 +72,7 @@ class _BrowserReturnSheet extends StatelessWidget {
           const SizedBox(height: Space.xs),
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(t.apPgCancel),
+            child: KeepAllText(t.apPgCancel),
           ),
         ],
       ),

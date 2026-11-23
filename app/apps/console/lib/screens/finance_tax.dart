@@ -36,7 +36,7 @@ class TaxSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.tTaxSection, style: context.text.titleLarge),
+        KeepAllText(t.tTaxSection, style: context.text.titleLarge),
         const SizedBox(height: Space.md),
         _VatExportCard(onExport: onExport),
         const SizedBox(height: Space.md),
@@ -52,7 +52,7 @@ class TaxSection extends StatelessWidget {
                   'withholding.csv',
                 ),
                 icon: const Icon(Icons.download_rounded),
-                label: Text(t.tExportWithholding),
+                label: KeepAllText(t.tExportWithholding),
               ),
               OutlinedButton.icon(
                 onPressed: () => onExport(
@@ -61,18 +61,18 @@ class TaxSection extends StatelessWidget {
                   'tax-invoices.csv',
                 ),
                 icon: const Icon(Icons.download_rounded),
-                label: Text(t.tExportTaxInvoices),
+                label: KeepAllText(t.tExportTaxInvoices),
               ),
               OutlinedButton.icon(
                 onPressed: () => _confirmReExport(context),
                 icon: const Icon(Icons.replay_rounded),
-                label: Text(t.tReExport),
+                label: KeepAllText(t.tReExport),
               ),
             ],
           ),
         ),
         const SizedBox(height: Space.xs),
-        Text(t.tTaxLayoutNote, style: context.text.labelSmall),
+        KeepAllText(t.tTaxLayoutNote, style: context.text.labelSmall),
         const SizedBox(height: Space.md),
         _TaxInvoiceQueue(periodQuery: periodQuery),
         const SizedBox(height: Space.md),
@@ -86,17 +86,17 @@ class TaxSection extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.tReExportTitle),
-        content: Text(t.tReExportConfirm),
+        title: KeepAllText(t.tReExportTitle),
+        content: KeepAllText(t.tReExportConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(t.cancel),
+            child: KeepAllText(t.cancel),
           ),
           FilledButton(
             style: compactFilled,
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(t.tReExport),
+            child: KeepAllText(t.tReExport),
           ),
         ],
       ),
@@ -144,7 +144,7 @@ class _VatExportCardState extends State<_VatExportCard> {
             FilledButton.tonal(
               style: inlineFilled,
               onPressed: () => _export(q),
-              child: Text(t.tVatQuarter('$q')),
+              child: KeepAllText(t.tVatQuarter('$q')),
             ),
         ],
       ),
@@ -182,27 +182,27 @@ class _TaxInvoiceQueue extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.tTaxInvoices, style: context.text.titleMedium),
+            KeepAllText(t.tTaxInvoices, style: context.text.titleMedium),
             if (rows.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: Space.sm),
-                child: Text(t.tQueueEmpty),
+                child: KeepAllText(t.tQueueEmpty),
               ),
             for (final r in rows)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('${r['company_name']} · ${r['business_number']}'),
+                title: KeepAllText('${r['company_name']} · ${r['business_number']}'),
                 // The button goes under the line: beside it a phone-width tile left the company name unreadable.
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_invoiceLine(t, r)),
+                    KeepAllText(_invoiceLine(t, r)),
                     if (r['state'] == 'requested') ...[
                       const SizedBox(height: Space.sm),
                       FilledButton(
                         style: compactFilled,
                         onPressed: () => _markIssued(context, r, reload),
-                        child: Text(t.tMarkIssued),
+                        child: KeepAllText(t.tMarkIssued),
                       ),
                     ],
                   ],
@@ -266,7 +266,7 @@ class _ApprovalDialogState extends State<_ApprovalDialog> {
   Widget build(BuildContext context) {
     final t = context.t;
     return AlertDialog(
-      title: Text(t.tMarkIssued),
+      title: KeepAllText(t.tMarkIssued),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -285,14 +285,14 @@ class _ApprovalDialogState extends State<_ApprovalDialog> {
               );
               if (picked != null) setState(() => _day = picked);
             },
-            child: Text('${t.tIssuedOn}: ${_ymd(_day)}'),
+            child: KeepAllText('${t.tIssuedOn}: ${_ymd(_day)}'),
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          child: KeepAllText(MaterialLocalizations.of(context).cancelButtonLabel),
         ),
         FilledButton(
           style: compactFilled,
@@ -301,7 +301,7 @@ class _ApprovalDialogState extends State<_ApprovalDialog> {
             if (approval.isEmpty) return;
             Navigator.of(context).pop(_IssuedInput(approval, _ymd(_day)));
           },
-          child: Text(t.tMarkIssued),
+          child: KeepAllText(t.tMarkIssued),
         ),
       ],
     );
@@ -329,23 +329,23 @@ class _CashReceiptList extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.tCashReceipts, style: context.text.titleMedium),
+            KeepAllText(t.tCashReceipts, style: context.text.titleMedium),
             if (rows.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: Space.sm),
-                child: Text(t.tQueueEmpty),
+                child: KeepAllText(t.tQueueEmpty),
               ),
             for (final r in rows)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(
+                title: KeepAllText(
                   '${r['purpose']} · ****${r['identity_last4']} · ${_stateLabel(t, r['state'] as String)}',
                 ),
-                subtitle: Text(_receiptLine(r)),
+                subtitle: KeepAllText(_receiptLine(r)),
                 trailing: r['state'] == 'failed'
                     ? TextButton(
                         onPressed: () => _reissue(context, r, reload),
-                        child: Text(t.tReissue),
+                        child: KeepAllText(t.tReissue),
                       )
                     : null,
               ),
@@ -391,15 +391,15 @@ Future<void> setPartnerTaxType(
   final picked = await showDialog<String>(
     context: context,
     builder: (ctx) => SimpleDialog(
-      title: Text(t.tTaxType),
+      title: KeepAllText(t.tTaxType),
       children: [
         SimpleDialogOption(
           onPressed: () => Navigator.of(ctx).pop('freelancer'),
-          child: Text(t.tTaxFreelancer),
+          child: KeepAllText(t.tTaxFreelancer),
         ),
         SimpleDialogOption(
           onPressed: () => Navigator.of(ctx).pop('business'),
-          child: Text(t.tTaxBusiness),
+          child: KeepAllText(t.tTaxBusiness),
         ),
       ],
     ),
@@ -414,7 +414,7 @@ Future<void> setPartnerTaxType(
     );
     await reload();
   } on ApiException catch (e) {
-    messenger.showSnackBar(SnackBar(content: Text(t.error(e))));
+    messenger.showSnackBar(SnackBar(content: KeepAllText(t.error(e))));
   }
 }
 

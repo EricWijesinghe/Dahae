@@ -25,7 +25,7 @@ class NotifyTemplatesScreen extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(Space.lg),
           children: [
-            Text(t.ntIntro, style: context.text.bodyMedium),
+            KeepAllText(t.ntIntro, style: context.text.bodyMedium),
             const SizedBox(height: Space.md),
             for (final item in items)
               Padding(
@@ -158,12 +158,12 @@ class _EventCardState extends State<_EventCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(name, style: context.text.titleSmall),
-        Text(
+        KeepAllText(name, style: context.text.titleSmall),
+        KeepAllText(
           '${t.ntBuiltIn}: ${built['title']} / ${built['body']}',
           style: context.text.bodySmall,
         ),
-        Text(
+        KeepAllText(
           _custom[lang]! ? t.ntUsingCustom : t.ntUsingBuiltIn,
           style: context.text.bodySmall,
         ),
@@ -188,25 +188,25 @@ class _EventCardState extends State<_EventCard> {
           children: [
             OutlinedButton(
               onPressed: () => _preview(lang),
-              child: Text(t.ntPreview),
+              child: KeepAllText(t.ntPreview),
             ),
             FilledButton(
               style: inlineFilled,
               onPressed: !canEdit ? null : () => _save(lang),
-              child: Text(t.ntSave),
+              child: KeepAllText(t.ntSave),
             ),
             TextButton(
               onPressed: !canEdit || !_custom[lang]!
                   ? null
                   : () => _restore(lang),
-              child: Text(t.ntRestore),
+              child: KeepAllText(t.ntRestore),
             ),
           ],
         ),
         if (preview != null) ...[
           const SizedBox(height: Space.sm),
-          Text(t.ntPreviewResult, style: context.text.labelMedium),
-          Text(preview, style: context.text.bodyMedium),
+          KeepAllText(t.ntPreviewResult, style: context.text.labelMedium),
+          KeepAllText(preview, style: context.text.bodyMedium),
         ],
       ],
     );
@@ -222,13 +222,13 @@ class _EventCardState extends State<_EventCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            KeepAllText(
               widget.item['label'] as String,
               style: context.text.titleMedium,
             ),
             if (vars.isNotEmpty) ...[
               const SizedBox(height: Space.xs),
-              Text(
+              KeepAllText(
                 t.ntVars(vars.map((v) => '{$v}').join(' ')),
                 style: context.text.bodySmall,
               ),

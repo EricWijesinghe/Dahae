@@ -327,7 +327,7 @@ class _BusinessCardState extends State<BusinessCard> {
       if (name.isNotEmpty && name != BrandConfig.placeholder.name)
         Padding(
           padding: const EdgeInsets.only(top: Space.sm),
-          child: Text(
+          child: KeepAllText(
             t.cRbNoLogoWarn,
             style: context.text.bodySmall?.copyWith(
               color: context.colors.danger,
@@ -339,7 +339,7 @@ class _BusinessCardState extends State<BusinessCard> {
         child: TextButton.icon(
           onPressed: _busy || name.isEmpty ? null : _letterMark,
           icon: const Icon(Icons.abc_rounded),
-          label: Text(t.cRbLetterMark),
+          label: KeepAllText(t.cRbLetterMark),
         ),
       ),
     ];
@@ -379,7 +379,7 @@ class _BusinessCardState extends State<BusinessCard> {
             done ? Icons.check_circle_rounded : Icons.storefront_rounded,
             color: done ? context.primary : null,
           ),
-          title: Text(t.cSetupBusiness, style: context.text.titleMedium),
+          title: KeepAllText(t.cSetupBusiness, style: context.text.titleMedium),
           children: [
             _Preview(
               name: _c['name']!.text,
@@ -392,7 +392,7 @@ class _BusinessCardState extends State<BusinessCard> {
             ..._logoHelp(t),
             const SizedBox(height: Space.md),
             for (final k in _top) field(k),
-            Text(t.cSetupColor, style: context.text.labelLarge),
+            KeepAllText(t.cSetupColor, style: context.text.labelLarge),
             const SizedBox(height: Space.xs),
             Wrap(
               spacing: Space.xs,
@@ -437,7 +437,7 @@ class _BusinessCardState extends State<BusinessCard> {
             if (parseHex(_color.text) case final c? when !whiteTextReadsOn(c))
               Padding(
                 padding: const EdgeInsets.only(top: Space.xs),
-                child: Text(
+                child: KeepAllText(
                   t.cSetupColorContrast,
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.danger,
@@ -445,21 +445,21 @@ class _BusinessCardState extends State<BusinessCard> {
                 ),
               ),
             const SizedBox(height: Space.lg),
-            Text(t.cSetupCompany, style: context.text.labelLarge),
+            KeepAllText(t.cSetupCompany, style: context.text.labelLarge),
             const SizedBox(height: Space.xs),
             for (final k in _company) field('company.$k'),
             const SizedBox(height: Space.md),
-            Text(t.cSetupStoreLinks, style: context.text.labelLarge),
+            KeepAllText(t.cSetupStoreLinks, style: context.text.labelLarge),
             const SizedBox(height: Space.xs),
             for (final k in _links) field(k),
             const SizedBox(height: Space.md),
-            Text('검색·문의 (Search & chat)', style: context.text.labelLarge),
+            KeepAllText('검색·문의 (Search & chat)', style: context.text.labelLarge),
             const SizedBox(height: Space.xs),
             for (final k in _seo) field(k),
             const SizedBox(height: Space.md),
-            Text(t.uAppVersionTitle, style: context.text.labelLarge),
+            KeepAllText(t.uAppVersionTitle, style: context.text.labelLarge),
             const SizedBox(height: Space.xs),
-            Text(t.uAppVersionHint, style: context.text.bodySmall),
+            KeepAllText(t.uAppVersionHint, style: context.text.bodySmall),
             const SizedBox(height: Space.xs),
             for (final k in _versions) field(k),
             const SizedBox(height: Space.sm),
@@ -469,13 +469,13 @@ class _BusinessCardState extends State<BusinessCard> {
                 style: inlineFilled,
                 onPressed: _busy ? null : _save,
                 icon: const Icon(Icons.save_rounded),
-                label: Text(t.cSetupSave),
+                label: KeepAllText(t.cSetupSave),
               ),
             ),
             if (_progress case final p?)
               Padding(
                 padding: const EdgeInsets.only(top: Space.xs),
-                child: Text(p, style: context.text.bodySmall),
+                child: KeepAllText(p, style: context.text.bodySmall),
               ),
           ],
         ),
@@ -557,7 +557,7 @@ class _Preview extends StatelessWidget {
           ),
           const SizedBox(width: Space.md),
           Expanded(
-            child: Text(
+            child: KeepAllText(
               name.isEmpty ? BrandConfig.placeholder.name : name,
               style: context.text.headlineSmall?.copyWith(
                 color: onColor,

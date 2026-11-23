@@ -93,7 +93,7 @@ class _ServicesState extends State<_Services> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, set) => AlertDialog(
-          title: Text(t.service(s['code'] as String)),
+          title: KeepAllText(t.service(s['code'] as String)),
           content: SizedBox(
             width: 420,
             child: SingleChildScrollView(
@@ -102,8 +102,8 @@ class _ServicesState extends State<_Services> {
                 children: [
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(t.cActive),
-                    subtitle: Text(t.cgArchiveHint),
+                    title: KeepAllText(t.cActive),
+                    subtitle: KeepAllText(t.cgArchiveHint),
                     value: active,
                     onChanged: (v) => set(() => active = v),
                   ),
@@ -120,7 +120,7 @@ class _ServicesState extends State<_Services> {
                           children: [
                             SizedBox(
                               width: 120,
-                              child: Text(
+                              child: KeepAllText(
                                 t.unit(units[i]['label_key'] as String),
                               ),
                             ),
@@ -147,12 +147,12 @@ class _ServicesState extends State<_Services> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(t.cancel),
+              child: KeepAllText(t.cancel),
             ),
             FilledButton(
               style: compactFilled,
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(t.save),
+              child: KeepAllText(t.save),
             ),
           ],
         ),
@@ -220,7 +220,7 @@ class _ServicesState extends State<_Services> {
                 style: inlineFilled,
                 onPressed: () => _create(),
                 icon: const Icon(Icons.add),
-                label: Text(t.cgNewService),
+                label: KeepAllText(t.cgNewService),
               ),
             ),
           for (final s in rows)
@@ -228,8 +228,8 @@ class _ServicesState extends State<_Services> {
               elevation: 0,
               child: ListTile(
                 leading: ServiceGlyph(s['code'] as String, size: 40),
-                title: Text(_name(context, s)),
-                subtitle: Text(_priceSummary(context, s['pricing'] as Json)),
+                title: KeepAllText(_name(context, s)),
+                subtitle: KeepAllText(_priceSummary(context, s['pricing'] as Json)),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -324,7 +324,7 @@ Future<Json?> _askNewService(BuildContext context) async {
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, set) => AlertDialog(
-        title: Text(t.cgNewServiceTitle),
+        title: KeepAllText(t.cgNewServiceTitle),
         content: SizedBox(
           width: 420,
           child: SingleChildScrollView(
@@ -352,12 +352,12 @@ Future<Json?> _askNewService(BuildContext context) async {
                   spacing: 8,
                   children: [
                     ChoiceChip(
-                      label: Text(t.cgPriceFixed),
+                      label: KeepAllText(t.cgPriceFixed),
                       selected: !quote,
                       onSelected: (_) => set(() => quote = false),
                     ),
                     ChoiceChip(
-                      label: Text(t.cgPriceQuote),
+                      label: KeepAllText(t.cgPriceQuote),
                       selected: quote,
                       onSelected: (_) => set(() => quote = true),
                     ),
@@ -376,7 +376,7 @@ Future<Json?> _askNewService(BuildContext context) async {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(t.cancel),
+            child: KeepAllText(t.cancel),
           ),
           FilledButton(
             style: compactFilled,
@@ -389,7 +389,7 @@ Future<Json?> _askNewService(BuildContext context) async {
                 minutes: minutes.text,
               ),
             ),
-            child: Text(t.save),
+            child: KeepAllText(t.save),
           ),
         ],
       ),
@@ -439,7 +439,7 @@ class _CapacityState extends State<_Capacity> {
                   children: [
                     SizedBox(
                       width: 120,
-                      child: Text(
+                      child: KeepAllText(
                         hourLabel(e.key, context.lang),
                         style: context.text.titleSmall,
                       ),
@@ -472,7 +472,7 @@ class _CapacityState extends State<_Capacity> {
                   if (context.mounted) showToast(context, t.error(err));
                 }
               },
-              child: Text(t.save),
+              child: KeepAllText(t.save),
             ),
           ],
         );
@@ -542,7 +542,7 @@ class _FormulaState extends State<_Formula> {
                 padding: const EdgeInsets.only(bottom: Space.sm),
                 child: _num(_ctrls[k]!, _label(t, k)),
               ),
-            Text(
+            KeepAllText(
               '${t.cSurcharge} ${f['type_bps']} · ${t.luggageTitle} ${f['luggage_bps']} · VAT ${(f['vat_bps'] as num) / 100}% · ${t.deposit} ${(f['deposit_bps'] as num) / 100}%',
               style: context.text.bodySmall,
             ),
@@ -562,7 +562,7 @@ class _FormulaState extends State<_Formula> {
                         if (context.mounted) showToast(context, t.error(e));
                       }
                     },
-              child: Text(t.save),
+              child: KeepAllText(t.save),
             ),
           ],
         );

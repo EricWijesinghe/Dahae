@@ -84,7 +84,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
     final t = context.t;
     final s = _state;
     return Scaffold(
-      appBar: AppBar(title: Text(t.pvManage)),
+      appBar: AppBar(title: KeepAllText(t.pvManage)),
       body: s == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -93,7 +93,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                 if (s['reconsent_required'] == true)
                   Padding(
                     padding: const EdgeInsets.only(bottom: Space.lg),
-                    child: Text(t.pvReconsent, style: context.text.bodyMedium),
+                    child: KeepAllText(t.pvReconsent, style: context.text.bodyMedium),
                   ),
                 AppCard(
                   padding: EdgeInsets.zero,
@@ -103,11 +103,11 @@ class _ConsentScreenState extends State<ConsentScreen> {
                         CheckboxListTile(
                           key: ValueKey('consent-${item['kind']}'),
                           value: _granted[item['kind']] ?? false,
-                          title: Text(_label(t, item['kind'] as String)),
+                          title: KeepAllText(_label(t, item['kind'] as String)),
                           subtitle: item['kind'] == 'marketing'
-                              ? Text(t.pvMarketingHint)
+                              ? KeepAllText(t.pvMarketingHint)
                               : null,
-                          secondary: Text(
+                          secondary: KeepAllText(
                             item['required'] == true
                                 ? t.required
                                 : t.pvOptional,
@@ -130,7 +130,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                 const SizedBox(height: Space.xl),
                 FilledButton(
                   onPressed: _saving ? null : () => _save(t),
-                  child: Text(t.save),
+                  child: KeepAllText(t.save),
                 ),
               ],
             ),
@@ -149,7 +149,7 @@ Future<void> showDataExport(BuildContext context) async {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.pvExport),
+        title: KeepAllText(t.pvExport),
         content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
@@ -157,7 +157,7 @@ Future<void> showDataExport(BuildContext context) async {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t.pvExportHint, style: ctx.text.bodySmall),
+                KeepAllText(t.pvExportHint, style: ctx.text.bodySmall),
                 const SizedBox(height: Space.md),
                 SelectableText(text, style: ctx.text.bodySmall),
               ],
@@ -170,11 +170,11 @@ Future<void> showDataExport(BuildContext context) async {
               await Clipboard.setData(ClipboardData(text: text));
               if (ctx.mounted) showToast(ctx, t.pvCopied);
             },
-            child: Text(t.pvCopy),
+            child: KeepAllText(t.pvCopy),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(t.close),
+            child: KeepAllText(t.close),
           ),
         ],
       ),

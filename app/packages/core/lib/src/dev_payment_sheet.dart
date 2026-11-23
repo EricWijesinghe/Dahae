@@ -87,7 +87,7 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
   List<Widget> _pick(BuildContext context) {
     final t = context.t;
     return [
-      Text(t.apPgPickMethod, style: context.text.titleSmall),
+      KeepAllText(t.apPgPickMethod, style: context.text.titleSmall),
       const SizedBox(height: Space.sm),
       for (final code in devPaymentMethods)
         _MethodTile(
@@ -113,7 +113,7 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
   List<Widget> _confirm(BuildContext context) {
     final t = context.t;
     return [
-      Text(t.apPgConfirmTitle, style: context.text.titleSmall),
+      KeepAllText(t.apPgConfirmTitle, style: context.text.titleSmall),
       const SizedBox(height: Space.sm),
       AppCard(
         child: Row(
@@ -121,7 +121,7 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
             PayBrandBadge(code: _method),
             const SizedBox(width: Space.md),
             Expanded(
-              child: Text(t.payMethod(_method), style: context.text.titleSmall),
+              child: KeepAllText(t.payMethod(_method), style: context.text.titleSmall),
             ),
           ],
         ),
@@ -144,7 +144,7 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
       const SizedBox(height: Space.lg),
       const Center(child: CircularProgressIndicator()),
       const SizedBox(height: Space.md),
-      Text(
+      KeepAllText(
         context.t.apPgProcessing,
         textAlign: TextAlign.center,
         style: context.text.bodyMedium,
@@ -156,13 +156,13 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
   List<Widget> _done(BuildContext context) {
     final t = context.t;
     return [
-      Text(t.apPgDoneTitle, style: context.text.titleSmall),
+      KeepAllText(t.apPgDoneTitle, style: context.text.titleSmall),
       const SizedBox(height: Space.sm),
       AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(t.apPgReceiptTitle, style: context.text.labelLarge),
+            KeepAllText(t.apPgReceiptTitle, style: context.text.labelLarge),
             const SizedBox(height: Space.sm),
             _line(context, t.apPgReceiptMethod, t.payMethod(_method)),
             _line(context, t.apPgReceiptApproval, _approval),
@@ -172,7 +172,7 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
       ),
       if (_isVa) ...[
         const SizedBox(height: Space.sm),
-        Text(
+        KeepAllText(
           t.apPgVaIssued,
           style: context.text.bodySmall,
           textAlign: TextAlign.center,
@@ -190,14 +190,14 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
   Widget _amountRow(BuildContext context, String label) {
     return Row(
       children: [
-        Text(
+        KeepAllText(
           label,
           style: context.text.bodyMedium?.copyWith(
             color: context.colors.inkSoft,
           ),
         ),
         const Spacer(),
-        Text(
+        KeepAllText(
           context.won(widget.intent.amount),
           style: context.text.headlineSmall,
         ),
@@ -210,14 +210,14 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
       padding: const EdgeInsets.only(bottom: Space.xs),
       child: Row(
         children: [
-          Text(
+          KeepAllText(
             k,
             style: context.text.bodySmall?.copyWith(
               color: context.colors.inkSoft,
             ),
           ),
           const Spacer(),
-          Text(v, style: context.text.bodySmall),
+          KeepAllText(v, style: context.text.bodySmall),
         ],
       ),
     );
@@ -226,14 +226,14 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
   Widget _cancelButton(BuildContext context) {
     return TextButton(
       onPressed: () => Navigator.of(context).pop(),
-      child: Text(context.t.apPgCancel),
+      child: KeepAllText(context.t.apPgCancel),
     );
   }
 
   Widget _testNote(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: Space.xs),
-      child: Text(
+      child: KeepAllText(
         '${context.t.apPgTestBadge} · ${context.t.apPgDevNote}',
         style: context.text.labelSmall,
         textAlign: TextAlign.center,
@@ -271,7 +271,7 @@ class _MethodTile extends StatelessWidget {
             children: [
               PayBrandBadge(code: code),
               const SizedBox(width: Space.md),
-              Expanded(child: Text(label, style: context.text.bodyMedium)),
+              Expanded(child: KeepAllText(label, style: context.text.bodyMedium)),
               Icon(
                 selected
                     ? Icons.radio_button_checked_rounded

@@ -80,12 +80,12 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
             Space.lg,
           ),
           leading: Icon(Icons.credit_card_rounded, color: context.primary),
-          title: Text(t.cSetupPayMethods, style: context.text.titleMedium),
+          title: KeepAllText(t.cSetupPayMethods, style: context.text.titleMedium),
           subtitle: methods == null
               ? null
-              : Text('$on / ${methods.length}', style: context.text.bodySmall),
+              : KeepAllText('$on / ${methods.length}', style: context.text.bodySmall),
           children: [
-            Text(t.cSetupPayMethodsHint, style: context.text.bodyMedium),
+            KeepAllText(t.cSetupPayMethodsHint, style: context.text.bodyMedium),
             const SizedBox(height: Space.sm),
             if (methods == null)
               const Center(
@@ -110,18 +110,18 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
                       ),
                     ),
                   ),
-                  title: Text(t.payMethod(m['code'] as String)),
+                  title: KeepAllText(t.payMethod(m['code'] as String)),
                   subtitle: switch (gatewayNames[m['gateway']]) {
-                    final g? => Text(
+                    final g? => KeepAllText(
                       t.cPayMethodGateway(g.of(context.lang)),
                       style: context.text.bodySmall,
                     ),
                     _ when m['configured'] == true => null,
-                    _ when m['enabled'] == true => Text(
+                    _ when m['enabled'] == true => KeepAllText(
                       t.cPayMethodNoKey,
                       style: context.text.bodySmall,
                     ),
-                    _ => Text(t.cSetupNeedsKey),
+                    _ => KeepAllText(t.cSetupNeedsKey),
                   },
                   value: m['enabled'] == true,
                   onChanged:

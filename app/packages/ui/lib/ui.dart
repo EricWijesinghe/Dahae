@@ -21,6 +21,7 @@ export 'src/components/icon3d.dart';
 export 'src/components/icon3d_registry.dart';
 export 'src/components/inputs.dart';
 export 'src/components/interactive.dart';
+export 'src/components/keep_all.dart';
 export 'src/components/logo.dart';
 export 'src/components/modern.dart';
 export 'src/components/motion.dart';

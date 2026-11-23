@@ -33,7 +33,7 @@ class PointsLedgerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('${context.t.pointsLedgerTitle} · $name')),
+    appBar: AppBar(title: KeepAllText('${context.t.pointsLedgerTitle} · $name')),
     body: PointsLedgerPanel(userId: userId),
   );
 }
@@ -52,7 +52,7 @@ class PointsLedgerPanel extends StatelessWidget {
     final input = await showDialog<(int, String)>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t.walletKindOther),
+        title: KeepAllText(t.walletKindOther),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -74,14 +74,14 @@ class PointsLedgerPanel extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(t.close),
+            child: KeepAllText(t.close),
           ),
           FilledButton(
             style: compactFilled,
             onPressed: () => Navigator.of(
               ctx,
             ).pop((int.tryParse(amount.text) ?? 0, reason.text.trim())),
-            child: Text(t.save),
+            child: KeepAllText(t.save),
           ),
         ],
       ),
@@ -123,15 +123,15 @@ class PointsLedgerPanel extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(t.walletBalance, style: context.text.bodySmall),
-                  Text(
+                  KeepAllText(t.walletBalance, style: context.text.bodySmall),
+                  KeepAllText(
                     t.walletPoints('${p['balance'] ?? 0}'),
                     style: context.text.headlineSmall,
                   ),
                   const SizedBox(height: Space.sm),
                   FilledButton.tonalIcon(
                     icon: const Icon(Icons.tune_rounded),
-                    label: Text(t.walletKindOther),
+                    label: KeepAllText(t.walletKindOther),
                     onPressed: () => _adjust(context, reload),
                   ),
                 ],
@@ -156,9 +156,9 @@ class PointsLedgerPanel extends StatelessWidget {
     final at = DateTime.parse(e['at'] as String).toLocal();
     final reason = e['reason'] as String?;
     return ListTile(
-      title: Text(_kindLabel(t, e['kind'] as String)),
-      subtitle: Text([dateTimeLabel(at, context.lang), ?reason].join(' · ')),
-      trailing: Text(
+      title: KeepAllText(_kindLabel(t, e['kind'] as String)),
+      subtitle: KeepAllText([dateTimeLabel(at, context.lang), ?reason].join(' · ')),
+      trailing: KeepAllText(
         t.walletPoints(amount > 0 ? '+$amount' : '$amount'),
         style: context.text.titleSmall?.copyWith(
           color: amount > 0 ? context.colors.fresh : context.colors.inkSoft,

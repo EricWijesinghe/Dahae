@@ -22,7 +22,7 @@ class CancelPolicyCard extends StatelessWidget {
       builder: (context, snap) {
         if (snap.hasError) {
           return AppCard(
-            child: Text(t.error(snap.error!), style: context.text.bodySmall),
+            child: KeepAllText(t.error(snap.error!), style: context.text.bodySmall),
           );
         }
         final data = snap.data;
@@ -33,12 +33,12 @@ class CancelPolicyCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(t.cpTitle, style: context.text.titleSmall),
+              KeepAllText(t.cpTitle, style: context.text.titleSmall),
               const SizedBox(height: Space.xs),
               for (final tier in (policy['tiers'] as List).cast<Json>())
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
+                  child: KeepAllText(
                     _line(context, tier, minFee),
                     style: context.text.bodySmall,
                   ),

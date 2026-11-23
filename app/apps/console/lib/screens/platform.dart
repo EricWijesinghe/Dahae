@@ -55,10 +55,10 @@ class _FlagsCardState extends State<FlagsCard> {
         'flags': _flags,
         'maintenance': {'on': _maintenance, 'message': _message.text.trim()},
       });
-      messenger.showSnackBar(SnackBar(content: Text(t.oSaved)));
+      messenger.showSnackBar(SnackBar(content: KeepAllText(t.oSaved)));
       widget.onSaved();
     } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(t.oSaveFailed)));
+      messenger.showSnackBar(SnackBar(content: KeepAllText(t.oSaveFailed)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -75,7 +75,7 @@ class _FlagsCardState extends State<FlagsCard> {
           for (final e in _flagLabels.entries)
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(e.value(t)),
+              title: KeepAllText(e.value(t)),
               value: _flags[e.key] ?? true,
               onChanged: canSave
                   ? (v) => setState(() => _flags[e.key] = v)
@@ -84,8 +84,8 @@ class _FlagsCardState extends State<FlagsCard> {
           const Divider(),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(t.oMaintenance),
-            subtitle: Text(t.oMaintenanceHint),
+            title: KeepAllText(t.oMaintenance),
+            subtitle: KeepAllText(t.oMaintenanceHint),
             value: _maintenance,
             onChanged: canSave ? (v) => setState(() => _maintenance = v) : null,
           ),
@@ -123,11 +123,11 @@ class ClientErrorsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t.oClientErrorsHint, style: context.text.bodySmall),
+            KeepAllText(t.oClientErrorsHint, style: context.text.bodySmall),
             if (items.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: Space.md),
-                child: Text(t.oClientErrorsEmpty),
+                child: KeepAllText(t.oClientErrorsEmpty),
               ),
             for (final e in items) _ErrorRow(item: e),
           ],
@@ -150,12 +150,12 @@ class _ErrorRow extends StatelessWidget {
     final stack = item['stack'] as String? ?? '';
     return ExpansionTile(
       tilePadding: EdgeInsets.zero,
-      title: Text(
+      title: KeepAllText(
         item['message'] as String,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text('${item['app']} · ${item['version']} · $when'),
+      subtitle: KeepAllText('${item['app']} · ${item['version']} · $when'),
       children: [
         if (stack.isNotEmpty)
           SelectableText(stack, style: context.text.bodySmall),

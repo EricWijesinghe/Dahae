@@ -113,7 +113,7 @@ class _PayMethodPickerState extends State<PayMethodPicker> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (app.methods.isNotEmpty) ...[
-            Text(t.apPaySavedTitle, style: context.text.titleSmall),
+            KeepAllText(t.apPaySavedTitle, style: context.text.titleSmall),
             const SizedBox(height: Space.xs),
             for (final m in app.methods)
               Padding(
@@ -127,9 +127,9 @@ class _PayMethodPickerState extends State<PayMethodPicker> {
               ),
             const SizedBox(height: Space.sm),
           ],
-          Text(t.apPayMoreTitle, style: context.text.titleSmall),
+          KeepAllText(t.apPayMoreTitle, style: context.text.titleSmall),
           const SizedBox(height: Space.xxs),
-          Text(
+          KeepAllText(
             t.apPayCheckoutHint,
             style: context.text.labelSmall?.copyWith(
               color: context.colors.inkMuted,
@@ -247,7 +247,7 @@ class PayChannelTile extends StatelessWidget {
                     ),
                     const SizedBox(width: Space.xs),
                     Expanded(
-                      child: Text(
+                      child: KeepAllText(
                         label,
                         style: context.text.labelLarge,
                         maxLines: 2,

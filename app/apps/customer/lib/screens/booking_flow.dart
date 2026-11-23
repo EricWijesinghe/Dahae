@@ -75,7 +75,7 @@ class AddressRadioList extends StatelessWidget {
         SnackBar(
           // With an action a SnackBar would stay up forever by default.
           persist: false,
-          content: Text(
+          content: KeepAllText(
             t.dfStudioToast(
               t.service(draft.service.code),
               '${draft.service.maxPyeong}',
@@ -110,7 +110,7 @@ class AddressRadioList extends StatelessWidget {
                 '${a.roadAddress} ${a.detail} · ${t.pyeong('${a.sizePyeong}')}',
             subtitleTrailing: InkWell(
               onTap: () => _edit(context, a),
-              child: Text(
+              child: KeepAllText(
                 t.dfEdit,
                 style: context.text.bodyMedium?.copyWith(
                   color: context.primary,
@@ -130,7 +130,7 @@ class AddressRadioList extends StatelessWidget {
         Center(
           child: OutlinedButton.icon(
             icon: const Icon(Icons.add_rounded),
-            label: Text(t.addressAdd),
+            label: KeepAllText(t.addressAdd),
             style: OutlinedButton.styleFrom(
               shape: const StadiumBorder(),
               minimumSize: const Size(0, 48),
@@ -249,13 +249,13 @@ class VisitDateRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              KeepAllText(
                 t.dfVisitDay,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.inkMuted,
                 ),
               ),
-              Text(
+              KeepAllText(
                 dateLabel(date, context.lang),
                 style: context.text.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
@@ -299,7 +299,7 @@ class _PillButton extends StatelessWidget {
         minimumSize: const Size(64, 48),
       ),
       onPressed: onPressed,
-      child: Text(label, textAlign: TextAlign.center),
+      child: KeepAllText(label, textAlign: TextAlign.center),
     ),
   );
 }
@@ -378,7 +378,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
+              KeepAllText(
                 dateLabel(d.date!, ctx.lang),
                 style: ctx.text.bodySmall,
                 textAlign: TextAlign.end,
@@ -472,7 +472,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(t.dfManagerIntro, style: context.text.bodyMedium),
+                      KeepAllText(t.dfManagerIntro, style: context.text.bodyMedium),
                       TextButton.icon(
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
@@ -482,7 +482,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         ),
                         iconAlignment: IconAlignment.end,
                         icon: const Icon(Icons.chevron_right_rounded, size: 18),
-                        label: Text(t.dfTrainingLink),
+                        label: KeepAllText(t.dfTrainingLink),
                         onPressed: _openTraining,
                       ),
                     ],
@@ -508,13 +508,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           FlowSection(
             children: [
               if (d.minutes > 0) ...[
-                Text(
+                KeepAllText(
                   t.duration(d.minutes),
                   style: context.text.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                Text(
+                KeepAllText(
                   t.dfServiceTime,
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.inkMuted,
@@ -536,13 +536,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        KeepAllText(
                           t.dfVisitTime,
                           style: context.text.bodySmall?.copyWith(
                             color: context.colors.inkMuted,
                           ),
                         ),
-                        Text(
+                        KeepAllText(
                           d.hour == null ? '—' : slotRangeLabel(d.hour!, lang),
                           style: context.text.titleLarge?.copyWith(
                             fontWeight: FontWeight.w800,
@@ -563,7 +563,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ),
               if (_hours.every((h) => !_open(h))) ...[
                 const SizedBox(height: Space.sm),
-                Text(
+                KeepAllText(
                   t.scheduleFull,
                   style: context.text.bodySmall?.copyWith(
                     color: context.colors.danger,
@@ -631,7 +631,7 @@ class _SlotTile extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: Space.xs,
             children: [
-              Text(
+              KeepAllText(
                 label,
                 textAlign: TextAlign.center,
                 style: context.text.titleSmall?.copyWith(
@@ -650,7 +650,7 @@ class _SlotTile extends StatelessWidget {
                     color: c.line,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text(note!, style: context.text.labelSmall),
+                  child: KeepAllText(note!, style: context.text.labelSmall),
                 ),
             ],
           ),

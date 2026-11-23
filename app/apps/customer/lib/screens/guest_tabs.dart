@@ -29,7 +29,7 @@ class GuestBookingsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(Space.gutter),
       children: [
-        Text(t.guestFlowTitle, style: context.text.titleMedium),
+        KeepAllText(t.guestFlowTitle, style: context.text.titleMedium),
         const SizedBox(height: Space.md),
         for (var i = 0; i < steps.length; i++)
           _FlowStep(index: i + 1, title: steps[i].$1, body: steps[i].$2),
@@ -71,8 +71,8 @@ class _FlowStep extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: context.text.titleSmall),
-                Text(
+                KeepAllText(title, style: context.text.titleSmall),
+                KeepAllText(
                   body,
                   style: context.text.bodySmall?.copyWith(color: c.inkSoft),
                 ),
@@ -102,7 +102,7 @@ class GuestChatTab extends StatelessWidget {
             Space.gutter,
             Space.sm,
           ),
-          child: Text(t.guestFaqTitle, style: context.text.titleMedium),
+          child: KeepAllText(t.guestFaqTitle, style: context.text.titleMedium),
         ),
         AsyncView<List<ContentItem>>(
           load: () async =>
@@ -115,12 +115,12 @@ class GuestChatTab extends StatelessWidget {
         ),
         const SizedBox(height: Space.md),
         ListTile(
-          title: Text(t.moreTerms),
+          title: KeepAllText(t.moreTerms),
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: () => _openLegal(context, 'terms', t.moreTerms),
         ),
         ListTile(
-          title: Text(t.morePrivacy),
+          title: KeepAllText(t.morePrivacy),
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: () => _openLegal(context, 'privacy', t.morePrivacy),
         ),

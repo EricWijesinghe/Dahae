@@ -61,9 +61,9 @@ class SignupConsentChecks extends StatelessWidget {
             key: ValueKey('signup-consent-$kind'),
             value: granted[kind] ?? false,
             controlAffinity: ListTileControlAffinity.leading,
-            title: Text(_title(t, kind)),
+            title: KeepAllText(_title(t, kind)),
             subtitle: _subtitle(context, t, kind),
-            secondary: Text(
+            secondary: KeepAllText(
               signupRequiredKinds.contains(kind) ? t.required : t.pvOptional,
               style: context.text.labelSmall,
             ),
@@ -82,11 +82,11 @@ class SignupConsentChecks extends StatelessWidget {
 
   static Widget? _subtitle(BuildContext context, T t, String kind) {
     return switch (kind) {
-      'overseas_transfer' => Text(
+      'overseas_transfer' => KeepAllText(
         t.sgOverseasNote,
         style: context.text.bodySmall,
       ),
-      'marketing' => Text(t.pvMarketingHint, style: context.text.bodySmall),
+      'marketing' => KeepAllText(t.pvMarketingHint, style: context.text.bodySmall),
       _ => null,
     };
   }

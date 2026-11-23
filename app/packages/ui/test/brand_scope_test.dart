@@ -76,6 +76,38 @@ void main() {
     }
   });
 
+  testWidgets('lockupWidth matches the laid-out wordmark lockup', (
+    tester,
+  ) async {
+    for (final (name, size) in [
+      ('우집사', 34.0),
+      ('Uzipsa', 34.0),
+      ('Test Co', 48.0),
+    ]) {
+      final brand = BrandConfig(
+        name: name,
+        primary: _custom.primary,
+        primaryDeep: _custom.primaryDeep,
+        fresh: _custom.fresh,
+        sun: _custom.sun,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildTheme(brand, Brightness.light),
+          home: Center(
+            child: DahaeLogo(wordmark: true, size: size, brand: brand),
+          ),
+        ),
+      );
+      expect(find.text(name), findsOneWidget);
+      expect(
+        tester.getSize(find.byType(DahaeLogo)).width,
+        closeTo(DahaeLogo.lockupWidth(name, size), 0.5),
+        reason: '$name @ $size',
+      );
+    }
+  });
+
   testWidgets(
     'an uploaded logo stands in for the flat, mono, 3D and wordmark art',
     (tester) async {

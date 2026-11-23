@@ -183,18 +183,18 @@ class _MaintenanceBanner extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    KeepAllText(
                       t.uMaintenanceTitle,
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: scheme.onPrimaryContainer,
                       ),
                     ),
-                    Text(
+                    KeepAllText(
                       msg.isEmpty ? t.uMaintenanceBody : msg,
                       style: TextStyle(color: scheme.onPrimaryContainer),
                     ),
-                    Text(
+                    KeepAllText(
                       t.uMaintenanceBookingPaused,
                       style: TextStyle(color: scheme.onPrimaryContainer),
                     ),

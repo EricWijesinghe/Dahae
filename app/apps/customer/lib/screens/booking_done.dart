@@ -21,7 +21,7 @@ class PrepToolsScreen extends StatelessWidget {
           FlowSection(
             title: t.dfPrepTools,
             children: [
-              Text(
+              KeepAllText(
                 t.prepBody,
                 style: context.text.bodySmall?.copyWith(
                   color: context.colors.inkMuted,
@@ -46,7 +46,7 @@ class PrepToolsScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: Space.xs),
-                        Text(
+                        KeepAllText(
                           t.tool(tool),
                           style: context.text.bodySmall,
                           textAlign: TextAlign.center,
@@ -85,8 +85,8 @@ class PrepToolsScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(t.dfNoTools, style: context.text.titleSmall),
-                        Text(t.dfNoToolsBody, style: context.text.bodySmall),
+                        KeepAllText(t.dfNoTools, style: context.text.titleSmall),
+                        KeepAllText(t.dfNoToolsBody, style: context.text.bodySmall),
                       ],
                     ),
                   ),
@@ -153,7 +153,7 @@ class DoneScreen extends StatelessWidget {
             ),
             StaggerIn(
               index: 1,
-              child: Text(
+              child: KeepAllText(
                 title,
                 style: context.text.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
@@ -164,7 +164,7 @@ class DoneScreen extends StatelessWidget {
             const SizedBox(height: Space.xs),
             StaggerIn(
               index: 1,
-              child: Text(
+              child: KeepAllText(
                 b.isQuote ? t.doneQuoteBody : t.doneBody,
                 style: context.text.bodyMedium?.copyWith(
                   color: context.colors.inkSoft,
@@ -225,7 +225,7 @@ class DoneScreen extends StatelessWidget {
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52)),
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(t.goHome),
+                child: KeepAllText(t.goHome),
               ),
             ),
             const SizedBox(width: Space.xs),
@@ -237,7 +237,7 @@ class DoneScreen extends StatelessWidget {
                     builder: (_) => BookingDetailScreen(id: b.id),
                   ),
                 ),
-                child: Text(t.viewBooking),
+                child: KeepAllText(t.viewBooking),
               ),
             ),
           ],

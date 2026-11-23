@@ -49,8 +49,8 @@ class PendingDepositsBanner extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(t.apVaBannerTitle, style: context.text.titleSmall),
-                        Text(
+                        KeepAllText(t.apVaBannerTitle, style: context.text.titleSmall),
+                        KeepAllText(
                           due == null
                               ? amount
                               : t.apVaBannerBody(
@@ -62,7 +62,7 @@ class PendingDepositsBanner extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Text(
+                  KeepAllText(
                     t.apVaBannerAction,
                     style: context.text.labelLarge?.copyWith(
                       color: context.primary,

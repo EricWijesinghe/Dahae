@@ -207,7 +207,7 @@ class ReceiptSettingsLine extends StatelessWidget {
           child: TextButton.icon(
             onPressed: () => _edit(context),
             icon: const Icon(Icons.receipt_long_rounded, size: 18),
-            label: Text(context.t.tReceiptSettings),
+            label: KeepAllText(context.t.tReceiptSettings),
           ),
         );
       },
@@ -314,15 +314,15 @@ class _ReceiptFormState extends State<_ReceiptForm> {
           if (widget.cashAllowed) ...[
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(t.tWantCashReceipt),
+              title: KeepAllText(t.tWantCashReceipt),
               value: _cash,
               onChanged: (v) => setState(() => _cash = v),
             ),
             if (_cash) ...[
               SegmentedButton<bool>(
                 segments: [
-                  ButtonSegment(value: false, label: Text(t.tCashForIncome)),
-                  ButtonSegment(value: true, label: Text(t.tCashForBusiness)),
+                  ButtonSegment(value: false, label: KeepAllText(t.tCashForIncome)),
+                  ButtonSegment(value: true, label: KeepAllText(t.tCashForBusiness)),
                 ],
                 selected: {_corporate},
                 onSelectionChanged: (s) => setState(() => _corporate = s.first),
@@ -344,7 +344,7 @@ class _ReceiptFormState extends State<_ReceiptForm> {
           ],
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(t.tWantTaxInvoice),
+            title: KeepAllText(t.tWantTaxInvoice),
             value: _invoice,
             onChanged: (v) => setState(() => _invoice = v),
           ),
@@ -369,7 +369,7 @@ class _ReceiptFormState extends State<_ReceiptForm> {
             ),
           ],
           const SizedBox(height: Space.md),
-          FilledButton(onPressed: _save, child: Text(t.tReceiptSave)),
+          FilledButton(onPressed: _save, child: KeepAllText(t.tReceiptSave)),
         ],
       ),
     );

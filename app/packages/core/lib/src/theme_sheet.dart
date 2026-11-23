@@ -3,6 +3,7 @@
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:ui/ui.dart' show KeepAllText;
 
 /// Bottom sheet with the three theme choices; the current one is checked. Picking one applies and closes.
 Future<void> showThemeSheet(BuildContext context, ThemeController theme) {
@@ -20,7 +21,7 @@ Future<void> showThemeSheet(BuildContext context, ThemeController theme) {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                child: Text(
+                child: KeepAllText(
                   t.themeTitle,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
@@ -32,7 +33,7 @@ Future<void> showThemeSheet(BuildContext context, ThemeController theme) {
               ])
                 ListTile(
                   key: ValueKey('theme_${mode.name}'),
-                  title: Text(t.themeLabel(mode)),
+                  title: KeepAllText(t.themeLabel(mode)),
                   trailing: theme.mode == mode ? const Icon(Icons.check) : null,
                   selected: theme.mode == mode,
                   onTap: () async {

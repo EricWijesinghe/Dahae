@@ -54,7 +54,7 @@ class _ProfileTabs extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(Space.lg),
-            child: Text(t.cPfTitle, style: context.text.titleSmall),
+            child: KeepAllText(t.cPfTitle, style: context.text.titleSmall),
           ),
           TabBar(
             tabs: [
@@ -151,16 +151,16 @@ class _ChecklistTabState extends State<_ChecklistTab> {
     return ListView(
       padding: const EdgeInsets.all(Space.lg),
       children: [
-        Text(t.cPfChecklistHelp),
+        KeepAllText(t.cPfChecklistHelp),
         if (_status == 'verified' && widget.data['decided_at'] == null)
           Padding(
             padding: const EdgeInsets.only(top: Space.sm),
-            child: Text(t.cPfLegacyNote),
+            child: KeepAllText(t.cPfLegacyNote),
           ),
         for (final k in _checks.keys)
           CheckboxListTile(
             value: _checks[k],
-            title: Text(_itemLabel(context, k)),
+            title: KeepAllText(_itemLabel(context, k)),
             onChanged: _saving
                 ? null
                 : (v) => setState(() => _checks[k] = v ?? false),
@@ -171,12 +171,12 @@ class _ChecklistTabState extends State<_ChecklistTab> {
           children: [
             OutlinedButton(
               onPressed: _saving ? null : () => _send(_status),
-              child: Text(t.cPfSaveChecklist),
+              child: KeepAllText(t.cPfSaveChecklist),
             ),
             FilledButton(
               style: inlineFilled,
               onPressed: _saving || _status == 'verified' ? null : _approve,
-              child: Text(t.cPfApprove),
+              child: KeepAllText(t.cPfApprove),
             ),
           ],
         ),
@@ -264,20 +264,20 @@ class _ProfileTabState extends State<_ProfileTab> {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text(t.cPfPayeeRevealTitle),
+          title: KeepAllText(t.cPfPayeeRevealTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SelectableText('${r['identifier']}'),
               const SizedBox(height: Space.sm),
-              Text(t.cPfPayeeRevealBody, style: ctx.text.bodySmall),
+              KeepAllText(t.cPfPayeeRevealBody, style: ctx.text.bodySmall),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(t.cDone),
+              child: KeepAllText(t.cDone),
             ),
           ],
         ),
@@ -318,7 +318,7 @@ class _ProfileTabState extends State<_ProfileTab> {
         OutlinedButton.icon(
           onPressed: _saving ? null : _pickPhoto,
           icon: Icon(_photo == null ? Icons.add_a_photo_outlined : Icons.check),
-          label: Text(t.cPfPickPhoto),
+          label: KeepAllText(t.cPfPickPhoto),
         ),
         const SizedBox(height: Space.sm),
         TextField(
@@ -331,9 +331,9 @@ class _ProfileTabState extends State<_ProfileTab> {
         SegmentedButton<String>(
           emptySelectionAllowed: true,
           segments: [
-            ButtonSegment(value: 'freelance', label: Text(t.cPfEmpFreelance)),
-            ButtonSegment(value: 'employee', label: Text(t.cPfEmpEmployee)),
-            ButtonSegment(value: 'contract', label: Text(t.cPfEmpContract)),
+            ButtonSegment(value: 'freelance', label: KeepAllText(t.cPfEmpFreelance)),
+            ButtonSegment(value: 'employee', label: KeepAllText(t.cPfEmpEmployee)),
+            ButtonSegment(value: 'contract', label: KeepAllText(t.cPfEmpContract)),
           ],
           selected: {?_employment},
           onSelectionChanged: (s) =>
@@ -363,12 +363,12 @@ class _ProfileTabState extends State<_ProfileTab> {
           TextButton.icon(
             onPressed: _saving ? null : _reveal,
             icon: const Icon(Icons.visibility_outlined),
-            label: Text(t.cPfPayeeReveal),
+            label: KeepAllText(t.cPfPayeeReveal),
           ),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(t.cPfHiredOn),
-          subtitle: Text(
+          title: KeepAllText(t.cPfHiredOn),
+          subtitle: KeepAllText(
             _hired == null
                 ? t.cPfNoDate
                 : DateFormat('yyyy-MM-dd').format(_hired!),
@@ -379,7 +379,7 @@ class _ProfileTabState extends State<_ProfileTab> {
         const SizedBox(height: Space.sm),
         FilledButton(
           onPressed: _saving ? null : _save,
-          child: Text(t.cPfSaveProfile),
+          child: KeepAllText(t.cPfSaveProfile),
         ),
       ],
     );

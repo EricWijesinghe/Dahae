@@ -16,6 +16,8 @@ class Icon3DSpec {
     this.hasIdle = false,
     this.alias,
     this.large = false,
+    this.mono = false,
+    this.tone = MonoTone.ink,
   });
 
   /// Material glyph on the clay fallback plate.
@@ -33,6 +35,26 @@ class Icon3DSpec {
 
   /// Also rendered at 160dp (`large/`, 320/480 px) for hero sizes.
   final bool large;
+
+  /// The art is a white line glyph on transparency (cut from the design PDF),
+  /// not colour art: [Icon3D] paints it in a theme colour, never as shipped
+  /// (white on the light canvas is invisible).
+  final bool mono;
+
+  /// Default paint of [mono] art when the caller passes no colour.
+  final MonoTone tone;
+}
+
+/// Theme colour a [Icon3DSpec.mono] glyph is painted in by default.
+enum MonoTone {
+  /// Body ink (muted ink for an idle tab).
+  ink,
+
+  /// Muted ink: placeholders and secondary marks.
+  muted,
+
+  /// The brand primary from the server theme.
+  brand,
 }
 
 const _teal = Color(0xFF1E9EBA);
@@ -57,14 +79,23 @@ abstract final class Icon3DRegistry {
   static const unknown = Icon3DSpec(Icons.circle_outlined, hue: _grey);
 
   static final Map<String, Icon3DSpec> specs = {
-    // Bottom nav (customer + partner).
-    'nav_home': const Icon3DSpec(Icons.home_rounded, hasIdle: true),
+    // Customer bottom nav: the design's ink line glyphs.
+    'nav_home': const Icon3DSpec(Icons.home_rounded, hasIdle: true, mono: true),
     'nav_bookings': const Icon3DSpec(
       Icons.event_available_rounded,
       hasIdle: true,
+      mono: true,
     ),
-    'nav_chat': const Icon3DSpec(Icons.chat_bubble_rounded, hasIdle: true),
-    'nav_more': const Icon3DSpec(Icons.grid_view_rounded, hasIdle: true),
+    'nav_chat': const Icon3DSpec(
+      Icons.chat_bubble_rounded,
+      hasIdle: true,
+      mono: true,
+    ),
+    'nav_more': const Icon3DSpec(
+      Icons.grid_view_rounded,
+      hasIdle: true,
+      mono: true,
+    ),
     // Services.
     'svc_studio': _svc('studio'),
     'svc_move': const Icon3DSpec(
@@ -105,18 +136,25 @@ abstract final class Icon3DRegistry {
     'scope_bathroom': const Icon3DSpec(Icons.wc_rounded),
     'scope_trash': const Icon3DSpec(Icons.delete_rounded),
     // Prep tools (core prepTools codes).
-    'tool_vacuum': const Icon3DSpec(Icons.cleaning_services_rounded),
-    'tool_mop': const Icon3DSpec(Icons.cleaning_services_rounded),
-    'tool_trash': const Icon3DSpec(Icons.delete_outline_rounded),
-    'tool_gloves': const Icon3DSpec(Icons.back_hand_rounded, hue: _sun),
-    'tool_cloth': const Icon3DSpec(Icons.layers_rounded),
-    'tool_sponge': const Icon3DSpec(Icons.water_drop_rounded),
-    'tool_spray': const Icon3DSpec(Icons.sanitizer_rounded),
+    'tool_vacuum': const Icon3DSpec(
+      Icons.cleaning_services_rounded,
+      mono: true,
+    ),
+    'tool_mop': const Icon3DSpec(Icons.cleaning_services_rounded, mono: true),
+    'tool_trash': const Icon3DSpec(Icons.delete_outline_rounded, mono: true),
+    'tool_gloves': const Icon3DSpec(
+      Icons.back_hand_rounded,
+      hue: _sun,
+      mono: true,
+    ),
+    'tool_cloth': const Icon3DSpec(Icons.layers_rounded, mono: true),
+    'tool_sponge': const Icon3DSpec(Icons.water_drop_rounded, mono: true),
+    'tool_spray': const Icon3DSpec(Icons.sanitizer_rounded, mono: true),
     // Aircon units.
-    'ac_wall': const Icon3DSpec(Icons.ac_unit_rounded),
-    'ac_stand': const Icon3DSpec(Icons.kitchen_rounded),
-    'ac_two_in_one': const Icon3DSpec(Icons.devices_rounded),
-    'ac_ceiling': const Icon3DSpec(Icons.grid_4x4_rounded),
+    'ac_wall': const Icon3DSpec(Icons.ac_unit_rounded, mono: true),
+    'ac_stand': const Icon3DSpec(Icons.kitchen_rounded, mono: true),
+    'ac_two_in_one': const Icon3DSpec(Icons.devices_rounded, mono: true),
+    'ac_ceiling': const Icon3DSpec(Icons.grid_4x4_rounded, mono: true),
     // Move step 1: luggage and cleaning type.
     'box_empty': const Icon3DSpec(Icons.inventory_2_outlined),
     'box_partial': const Icon3DSpec(Icons.inventory_2_rounded),
@@ -126,36 +164,41 @@ abstract final class Icon3DRegistry {
     'type_after_interior': const Icon3DSpec(Icons.format_paint_rounded),
     'type_lived_in': const Icon3DSpec(Icons.auto_awesome_rounded),
     'type_standard': const Icon3DSpec(Icons.inventory_2_rounded),
-    'type_same_day': const Icon3DSpec(Icons.local_shipping_rounded),
-    'type_some_luggage': const Icon3DSpec(Icons.chair_rounded),
+    'type_same_day': const Icon3DSpec(Icons.local_shipping_rounded, mono: true),
+    'type_some_luggage': const Icon3DSpec(Icons.chair_rounded, mono: true),
     // Move step 2: building and layout.
-    'bld_apartment': const Icon3DSpec(Icons.apartment_rounded),
-    'bld_villa': const Icon3DSpec(Icons.holiday_village_rounded),
-    'bld_commercial': const Icon3DSpec(Icons.storefront_rounded),
-    'bld_officetel': const Icon3DSpec(Icons.domain_rounded),
-    'bld_house': const Icon3DSpec(Icons.house_rounded),
+    'bld_apartment': const Icon3DSpec(Icons.apartment_rounded, mono: true),
+    // 빌라/주택 is the house line glyph in the design.
+    'bld_villa': const Icon3DSpec(
+      Icons.holiday_village_rounded,
+      alias: 'bld_house',
+      mono: true,
+    ),
+    'bld_commercial': const Icon3DSpec(Icons.storefront_rounded, mono: true),
+    'bld_officetel': const Icon3DSpec(Icons.domain_rounded, mono: true),
+    'bld_house': const Icon3DSpec(Icons.house_rounded, mono: true),
     'bld_other': const Icon3DSpec(Icons.more_horiz_rounded, hue: _grey),
     'room_studio': const Icon3DSpec(Icons.crop_square_rounded),
     'room_one_half': const Icon3DSpec(Icons.view_sidebar_rounded),
     'room_two': const Icon3DSpec(Icons.view_module_rounded),
     'room_three': const Icon3DSpec(Icons.view_quilt_rounded),
     'room_four_plus': const Icon3DSpec(Icons.dashboard_rounded),
-    'duplex_stairs': const Icon3DSpec(Icons.stairs_rounded),
+    'duplex_stairs': const Icon3DSpec(Icons.stairs_rounded, mono: true),
     // Move step 3.
     'cnt_bathroom': const Icon3DSpec(Icons.bathtub_rounded),
     'cnt_balcony': const Icon3DSpec(Icons.balcony_rounded),
-    'elev_yes': const Icon3DSpec(Icons.elevator_rounded),
-    'elev_no': const Icon3DSpec(Icons.stairs_rounded, hue: _ink),
+    'elev_yes': const Icon3DSpec(Icons.elevator_rounded, mono: true),
+    'elev_no': const Icon3DSpec(Icons.stairs_rounded, hue: _ink, mono: true),
     // Schedule.
     'ui_calendar': const Icon3DSpec(Icons.calendar_month_rounded),
-    'ui_clock': const Icon3DSpec(Icons.schedule_rounded),
+    'ui_clock': const Icon3DSpec(Icons.schedule_rounded, mono: true),
     'slot_am': const Icon3DSpec(Icons.wb_twilight_rounded, hue: _sun),
     'slot_pm': const Icon3DSpec(Icons.wb_sunny_rounded, hue: _sun),
     // Wallet / app bar.
     'ui_coupon': const Icon3DSpec(Icons.confirmation_number_rounded, hue: _sun),
     'ui_points': const Icon3DSpec(Icons.toll_rounded, hue: _sun),
     'ui_pin': const Icon3DSpec(Icons.place_rounded),
-    'ui_bell': const Icon3DSpec(Icons.notifications_rounded),
+    'ui_bell': const Icon3DSpec(Icons.notifications_rounded, mono: true),
     'promo_ac_addon': const Icon3DSpec(Icons.discount_rounded),
     // Chat.
     'chat_new': const Icon3DSpec(Icons.add_comment_rounded),
@@ -168,21 +211,33 @@ abstract final class Icon3DRegistry {
     'pay_bank': const Icon3DSpec(Icons.account_balance_rounded),
     'pay_virtual': const Icon3DSpec(Icons.receipt_long_rounded),
     // More menu (first group = the brief's ten).
-    'menu_scope': const Icon3DSpec(Icons.checklist_rounded),
-    'menu_payments': const Icon3DSpec(Icons.payments_rounded),
-    'menu_addresses': const Icon3DSpec(Icons.maps_home_work_rounded),
-    'menu_account': const Icon3DSpec(Icons.badge_rounded),
-    'menu_notices': const Icon3DSpec(Icons.campaign_rounded),
-    'menu_tips': const Icon3DSpec(Icons.lightbulb_rounded, hue: _sun),
-    'menu_faq': const Icon3DSpec(Icons.help_rounded),
-    'menu_contact': const Icon3DSpec(Icons.headset_mic_rounded),
+    'menu_scope': const Icon3DSpec(Icons.checklist_rounded, mono: true),
+    'menu_payments': const Icon3DSpec(Icons.payments_rounded, mono: true),
+    'menu_addresses': const Icon3DSpec(
+      Icons.maps_home_work_rounded,
+      mono: true,
+    ),
+    'menu_account': const Icon3DSpec(Icons.badge_rounded, mono: true),
+    'menu_notices': const Icon3DSpec(Icons.campaign_rounded, mono: true),
+    'menu_tips': const Icon3DSpec(
+      Icons.lightbulb_rounded,
+      hue: _sun,
+      mono: true,
+    ),
+    'menu_faq': const Icon3DSpec(Icons.help_rounded, mono: true),
+    'menu_contact': const Icon3DSpec(Icons.headset_mic_rounded, mono: true),
     'menu_version': const Icon3DSpec(Icons.info_rounded),
     'menu_coupons': const Icon3DSpec(
       Icons.confirmation_number_rounded,
       hue: _sun,
+      mono: true,
     ),
     'menu_subscriptions': const Icon3DSpec(Icons.autorenew_rounded, hue: _deep),
-    'menu_partner': const Icon3DSpec(Icons.handshake_rounded, hue: _deep),
+    'menu_partner': const Icon3DSpec(
+      Icons.handshake_rounded,
+      hue: _deep,
+      mono: true,
+    ),
     'menu_language': const Icon3DSpec(Icons.language_rounded, hue: _deep),
     'menu_theme': const Icon3DSpec(Icons.dark_mode_rounded, hue: _deep),
     'menu_privacy': const Icon3DSpec(Icons.privacy_tip_rounded, hue: _deep),
@@ -200,6 +255,10 @@ abstract final class Icon3DRegistry {
       hasIdle: true,
     ),
     'p_nav_schedule': const Icon3DSpec(Icons.calendar_month_rounded),
+    // Colour clay chat/more beside the clay partner tabs (the customer nav_*
+    // are the design's ink line glyphs).
+    'p_nav_chat': const Icon3DSpec(Icons.chat_bubble_rounded, hasIdle: true),
+    'p_nav_more': const Icon3DSpec(Icons.grid_view_rounded, hasIdle: true),
     'p_camera': const Icon3DSpec(Icons.photo_camera_rounded),
     'p_verified': const Icon3DSpec(Icons.verified_rounded),
     'p_payout': const Icon3DSpec(Icons.savings_rounded, hue: _deep),
@@ -234,41 +293,66 @@ abstract final class Icon3DRegistry {
       alias: 'c_bookings',
     ),
     // Icons cut from the client's design PDF (screenshots). Line icons are
-    // tintable white masks; colour art is full colour.
-    'circle_box': const Icon3DSpec(Icons.inventory_2_outlined),
-    'circle_truck': const Icon3DSpec(Icons.local_shipping_outlined),
-    'circle_truck_teal': const Icon3DSpec(Icons.local_shipping_outlined),
-    'circle_aircon': const Icon3DSpec(Icons.ac_unit_rounded),
-    'circle_chat': const Icon3DSpec(Icons.chat_bubble_outline_rounded),
-    'chat_back': const Icon3DSpec(Icons.arrow_back_rounded),
-    'chat_camera': const Icon3DSpec(Icons.photo_camera_outlined),
-    'chat_bubble': const Icon3DSpec(Icons.chat_bubble_outline_rounded),
+    // white masks (mono: true, tinted by Icon3D); colour art is full colour.
+    'circle_box': const Icon3DSpec(Icons.inventory_2_outlined, mono: true),
+    'circle_truck': const Icon3DSpec(Icons.local_shipping_outlined, mono: true),
+    'circle_truck_teal': const Icon3DSpec(
+      Icons.local_shipping_outlined,
+      mono: true,
+    ),
+    'circle_aircon': const Icon3DSpec(Icons.ac_unit_rounded, mono: true),
+    'circle_chat': const Icon3DSpec(
+      Icons.chat_bubble_outline_rounded,
+      mono: true,
+    ),
+    'chat_back': const Icon3DSpec(Icons.arrow_back_rounded, mono: true),
+    'chat_camera': const Icon3DSpec(Icons.photo_camera_outlined, mono: true),
+    'chat_bubble': const Icon3DSpec(
+      Icons.chat_bubble_outline_rounded,
+      mono: true,
+    ),
     'manager_avatar': const Icon3DSpec(Icons.person_rounded),
-    'account_avatar': const Icon3DSpec(Icons.person_outline_rounded),
+    'account_avatar': const Icon3DSpec(
+      Icons.person_outline_rounded,
+      mono: true,
+    ),
     'badge_kakao': const Icon3DSpec(Icons.chat_bubble_rounded, hue: _sun),
-    'coupon_percent': const Icon3DSpec(Icons.percent_rounded),
-    'coupon_ticket': const Icon3DSpec(Icons.confirmation_number_outlined),
+    'coupon_percent': const Icon3DSpec(Icons.percent_rounded, mono: true),
+    'coupon_ticket': const Icon3DSpec(
+      Icons.confirmation_number_outlined,
+      mono: true,
+    ),
     'point_badge': const Icon3DSpec(Icons.paid_rounded),
     'card_badge': const Icon3DSpec(Icons.credit_card_rounded),
     'pay_kakao': const Icon3DSpec(Icons.payments_rounded, hue: _sun),
     'pay_naver': const Icon3DSpec(Icons.payments_rounded, hue: _deep),
     'pay_toss': const Icon3DSpec(Icons.payments_rounded, hue: _deep),
-    'news_box': const Icon3DSpec(Icons.inventory_2_outlined),
-    'news_aircon': const Icon3DSpec(Icons.ac_unit_rounded),
-    'news_bed': const Icon3DSpec(Icons.bed_outlined),
-    'news_truck': const Icon3DSpec(Icons.local_shipping_outlined),
-    'type_move_out': const Icon3DSpec(Icons.inventory_2_outlined),
-    'duplex_none': const Icon3DSpec(Icons.crop_portrait_rounded),
-    'menu_points': const Icon3DSpec(Icons.toll_rounded, hue: _sun),
-    'ui_check': const Icon3DSpec(Icons.check_rounded),
+    'news_box': const Icon3DSpec(Icons.inventory_2_outlined, mono: true),
+    'news_aircon': const Icon3DSpec(Icons.ac_unit_rounded, mono: true),
+    'news_bed': const Icon3DSpec(Icons.bed_outlined, mono: true),
+    'news_truck': const Icon3DSpec(Icons.local_shipping_outlined, mono: true),
+    'type_move_out': const Icon3DSpec(Icons.inventory_2_outlined, mono: true),
+    'duplex_none': const Icon3DSpec(Icons.crop_portrait_rounded, mono: true),
+    'menu_points': const Icon3DSpec(Icons.toll_rounded, hue: _sun, mono: true),
+    'ui_check': const Icon3DSpec(Icons.check_rounded, mono: true),
     'ui_check_circle': const Icon3DSpec(Icons.check_circle_rounded),
-    'ui_close': const Icon3DSpec(Icons.close_rounded),
-    'ui_download': const Icon3DSpec(Icons.file_download_outlined),
-    'ui_image_placeholder': const Icon3DSpec(Icons.image_outlined, hue: _grey),
+    'ui_close': const Icon3DSpec(Icons.close_rounded, mono: true),
+    'ui_download': const Icon3DSpec(Icons.file_download_outlined, mono: true),
+    'ui_image_placeholder': const Icon3DSpec(
+      Icons.image_outlined,
+      hue: _grey,
+      mono: true,
+      tone: MonoTone.muted,
+    ),
     'ui_info': const Icon3DSpec(Icons.info_rounded, hue: _deep),
-    'ui_note': const Icon3DSpec(Icons.edit_note_rounded),
-    'ui_chevron_down': const Icon3DSpec(Icons.expand_more_rounded),
-    'brand_wordmark': const Icon3DSpec(Icons.home_rounded, hue: _deep),
+    'ui_note': const Icon3DSpec(Icons.edit_note_rounded, mono: true),
+    'ui_chevron_down': const Icon3DSpec(Icons.expand_more_rounded, mono: true),
+    'brand_wordmark': const Icon3DSpec(
+      Icons.home_rounded,
+      hue: _deep,
+      mono: true,
+      tone: MonoTone.brand,
+    ),
     'brand_confirm_check': const Icon3DSpec(Icons.check_rounded),
     // Home group tiles (CR-2): the group art is the member art of its own composite.
     'svc_living': const Icon3DSpec(

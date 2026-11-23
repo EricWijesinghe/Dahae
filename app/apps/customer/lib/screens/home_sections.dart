@@ -118,11 +118,12 @@ class _GroupTile extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: Space.xs),
-                Text(
+                KeepAllText(
                   name,
                   style: context.text.labelMedium,
                   textAlign: TextAlign.center,
-                  maxLines: 2,
+                  // English group names ("Move-in & move-out cleaning") need a third line on a 360dp phone.
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -171,7 +172,7 @@ class _TileBadge extends StatelessWidget {
               heightFactor: 1,
               // The pill is a fixed-size mark on the art, like the art itself.
               child: MediaQuery.withNoTextScaling(
-                child: Text(
+                child: KeepAllText(
                   label,
                   style: context.text.labelSmall?.copyWith(
                     color: Colors.white,
@@ -200,7 +201,7 @@ class _AddAddressCard extends StatelessWidget {
         Icon(Icons.add_location_alt_rounded, color: context.primary, size: 32),
         const SizedBox(width: Space.md),
         Expanded(
-          child: Text(context.t.homeAddAddress, style: context.text.bodyMedium),
+          child: KeepAllText(context.t.homeAddAddress, style: context.text.bodyMedium),
         ),
         const Icon(Icons.chevron_right_rounded),
       ],
@@ -237,11 +238,11 @@ class _RebookCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                KeepAllText(
                   context.t.homeRebook(context.t.service(booking.serviceCode)),
                   style: context.text.titleSmall,
                 ),
-                Text(context.t.homeRebookBody, style: context.text.bodySmall),
+                KeepAllText(context.t.homeRebookBody, style: context.text.bodySmall),
               ],
             ),
           ),
@@ -279,7 +280,7 @@ class _TrustRow extends StatelessWidget {
                   children: [
                     _TrustBadge(icon: items[i].$1, hue: items[i].$3),
                     const SizedBox(height: 8),
-                    Text(
+                    KeepAllText(
                       items[i].$2,
                       style: context.text.labelSmall?.copyWith(
                         color: context.colors.inkSoft,
