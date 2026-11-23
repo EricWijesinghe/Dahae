@@ -10,8 +10,9 @@
 x-logging: &log { driver: json-file, options: { max-size: 10m, max-file: "14" } }
 # Every container: no privilege gain through setuid binaries or file capabilities, no Linux capability
 # unless listed under cap_add, a read-only root filesystem (writes go to volumes and tmpfs only), and
-# memory and process caps sized for a 2 GB VPS. No CPU caps: `cpus` above the host's core count stops
-# `docker compose up` on a 1-vCPU server.
+# memory and process caps sized for a 2 GB VPS: db 768m + api 512m + web 384m = 1664m (1984m with the optional
+# uptime monitor). They are ceilings, not reservations: the stack uses far less on an idle server. No CPU caps:
+# `cpus` above the host's core count stops `docker compose up` on a 1-vCPU server.
 x-hardened: &hardened
   restart: unless-stopped
   logging: *log
@@ -49,6 +50,8 @@ services:
     init: true
     mem_limit: 512m
     pids_limit: 256
+    # Every signed-in app keeps a /ws socket open (one file each): Docker's default 1024 would stall near 1,000 apps.
+    ulimits: { nofile: { soft: 65536, hard: 65536 } }
     depends_on: { db: { condition: service_healthy } }
     environment:
       # Non-superuser app role (owner of the cleaning DB); `app` stays the admin/backup superuser.
@@ -84,8 +87,11 @@ services:
     # Certificates and config live in the caddydata/caddyconfig volumes.
     cap_add: [NET_BIND_SERVICE]
     tmpfs: [/tmp]
-    mem_limit: 256m
+    # TLS buffers for ~1,000+ long-lived app sockets; 256m was tight.
+    mem_limit: 384m
     pids_limit: 256
+    # Two open files per proxied socket (the app's side and the API's side).
+    ulimits: { nofile: { soft: 65536, hard: 65536 } }
     # Plain start order, not service_healthy: an API that never gets healthy would make `docker compose up`
     # fail before `dahae update` can roll back to the previous version.
     depends_on: [api]

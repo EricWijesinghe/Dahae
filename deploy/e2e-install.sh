@@ -71,8 +71,8 @@ fresh_totp() { # each 30 s step is accepted once: wait for one not used yet (a f
   while [ "$(($(date +%s) / 30))" = "$(cat "$LOG/totp-step" 2>/dev/null)" ]; do sleep 2; done
   echo "$(($(date +%s) / 30))" > "$LOG/totp-step"; totp "$SECRET"
 }
-memcap() { # the stack on a 2 GB VPS (compose auto-loads docker-compose.override.yml)
-  printf 'services:\n  db: {mem_limit: 768m}\n  api: {mem_limit: 512m}\n  web: {mem_limit: 256m}\n' \
+memcap() { # the stack's own caps (db 768m + api 512m + web 384m = 1664m, fits a 2 GB VPS); compose auto-loads the override
+  printf 'services:\n  db: {mem_limit: 768m}\n  api: {mem_limit: 512m}\n  web: {mem_limit: 384m}\n' \
     | $SUDO tee /opt/malkkeum/docker-compose.override.yml >/dev/null
 }
 wait_until() { # wait_until 초 명령... : 명령이 성공할 때까지 기다려요

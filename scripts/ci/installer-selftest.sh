@@ -330,6 +330,19 @@ for k in 'no-new-privileges:true' 'cap_drop: \[ALL\]' 'read_only: true'; do
   t "hardening has $k" grep -q "^  .*$k" "$ROOT/deploy/docker-compose.yml"
 done
 t  "every service memory-capped" eq "$(grep -c '^    mem_limit:' "$ROOT/deploy/docker-compose.yml")" 4
+# one open file per app socket (two in Caddy): api and web lift Docker's default 1024 open files
+for f in "$ROOT/deploy/docker-compose.yml" "$SB/compose/docker-compose.yml"; do
+  t "api and web raise open files (${f#"$ROOT/"})" eq "$(grep -c '^    ulimits: { nofile: { soft: 65536, hard: 65536 } }$' "$f")" 2
+done
+t  "api ulimit sits in the api service" eq "$(awk '/^  [a-z-]+:$/ { s = $1 } /nofile/ { print s }' "$ROOT/deploy/docker-compose.yml" | tr '
+' ' ')" "api: web: "
+t  "web (Caddy) memory cap for long-lived sockets" grep -qx '    mem_limit: 384m' "$ROOT/deploy/docker-compose.yml"
+# the sizing comment states the sum of the caps: keep it true when a cap changes
+mem_sum() { awk '/^  [a-z-]+:$/ { s = $1 } /^    mem_limit:/ { v = $2; sub(/m$/, "", v); t += v; if (s != "uptime-kuma:") d += v } END { print d "m " t "m" }' "$1"; }
+t  "mem caps add up to the sizing comment" eq "$(mem_sum "$ROOT/deploy/docker-compose.yml")" "1664m 1984m"
+t  "sizing comment names the default total" grep -qF '= 1664m (1984m with the optional' "$ROOT/deploy/docker-compose.yml"
+t  "default stack fits a 2 GB VPS with room for the host" test "$(mem_sum "$ROOT/deploy/docker-compose.yml" | cut -dm -f1)" -le 1700
+nt "compose written in place (no leftover temp file)" test -e "$SB/compose/docker-compose.yml.new"
 
 # ---- local backups: plaintext stays until its sealed copy exists; restore takes only backups/ paths ----
 mkdir -p backups
@@ -723,6 +736,23 @@ backup_warn_after() { ( api_backup() { case "$*" in backup-seal*) [ -f "${2#/}" 
   dc() { case "$1" in exec) printf 'dump' ;; run) printf 'tar' ;; esac; return 0; }
   cmd_backup >/dev/null 2>&1; printf '%s' "$BACKUP_WARN" ); }
 t  "photo offsite failure sets the warning"  eq "$(backup_warn_after)" 1
+# local retention: DB dumps 14 days; photo archives 3 days only when this run's photos reached offsite storage
+# backup_keeps_after 외부(uploaded|unset|fail) : 오래된 사본을 둔 뒤 백업하고 남은 이름을 돌려줘요
+backup_keeps_after() { ( OFF=$1; rm -f backups/db-old* backups/uploads-old* backups/backup.log
+  for n in db-old5.sql.gz.enc uploads-old5.tar.gz.enc db-old20.sql.gz.enc uploads-old20.tar.gz.enc; do
+    : > "backups/$n"; d=${n#*old}; touch -d "${d%%.*} days ago" "backups/$n"
+  done
+  api_backup() { case "$*" in backup-seal*) [ -f "${2#/}" ] && printf 'MKB1' > "${3#/}"; return 0 ;;
+    "backup-upload /backups/uploads-"*) case "$OFF" in uploaded) echo "offsite backup uploaded: ${2##*/}" ;; unset) echo "offsite backup not set up (console: 설정 > 백업)" ;; fail) return 1 ;; esac ;;
+    *) return 0 ;; esac; }
+  dc() { case "$1" in exec) printf 'dump' ;; run) printf 'tar' ;; esac; return 0; }
+  cmd_backup >/dev/null 2>&1; cd backups && ls -1 db-old* uploads-old* 2>/dev/null | tr '
+' ' ' ); }
+t  "offsite photos: 3 local photo days, 14 DB days" eq "$(backup_keeps_after uploaded)" "db-old5.sql.gz.enc "
+t  "no offsite: photos and DB both kept 14 days"    eq "$(backup_keeps_after unset)" "db-old5.sql.gz.enc uploads-old5.tar.gz.enc "
+t  "offsite failed: photos kept 14 days"            eq "$(backup_keeps_after fail)" "db-old5.sql.gz.enc uploads-old5.tar.gz.enc "
+t  "photo retention is a named constant"            eq "$PHOTO_KEEP_DAYS_OFFSITE $BACKUP_KEEP_DAYS" "3 14"
+rm -f backups/db-old* backups/uploads-old*
 rm -f .env backups/db-p07.sql.gz* backups/uploads-* 2>/dev/null
 
 # ---- dahae domain: the new name is checked over HTTPS before anything changes; then .env backed up, DOMAIN set,
