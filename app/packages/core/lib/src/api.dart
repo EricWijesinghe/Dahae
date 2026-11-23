@@ -235,8 +235,10 @@ class ApiClient {
         );
       }
     }
-    final decoded = raw ? res.bodyBytes : _decode(res);
-    if (res.statusCode >= 200 && res.statusCode < 300) {
+    final ok = res.statusCode >= 200 && res.statusCode < 300;
+    // A raw (CSV) call's error body is still JSON: its code drives step-up and messages.
+    final decoded = raw && ok ? res.bodyBytes : _decode(res);
+    if (ok) {
       onHeaders?.call(res.headers);
       return decoded;
     }

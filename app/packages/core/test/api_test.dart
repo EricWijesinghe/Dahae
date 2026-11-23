@@ -175,6 +175,29 @@ void main() {
     },
   );
 
+  test('a CSV download refused by the server keeps its error code', () async {
+    // The console asks for the authenticator code only on `stepup_required`; `http_403` skips it.
+    final (api, _, _) = await signedIn(
+      (req) async => json(403, {
+        'error': {'code': 'stepup_required'},
+      }),
+    );
+    await expectLater(
+      api.getBytes('/admin/finance/export/ledger'),
+      throwsA(
+        isA<ApiException>()
+            .having((e) => e.status, 'status', 403)
+            .having((e) => e.code, 'code', 'stepup_required'),
+      ),
+    );
+    await expectLater(
+      api.postBytes('/admin/finance/export/vat'),
+      throwsA(
+        isA<ApiException>().having((e) => e.code, 'code', 'stepup_required'),
+      ),
+    );
+  });
+
   test('an HTML error page becomes a clean ApiException', () async {
     final (api, _, _) = await signedIn(
       (req) async => http.Response('<html>Bad gateway</html>', 502),
