@@ -7263,7 +7263,7 @@ class TKo extends T {
   String get cOwnerCodeTitle => '사장님 인증 코드';
 
   @override
-  String get cOwnerCodeBody => '토스 지급 설정을 바꾸려면 인증 앱에 나온 6자리 코드를 입력하세요.';
+  String get cOwnerCodeBody => '이 설정을 바꾸려면 인증 앱에 나온 6자리 코드를 입력하세요.';
 
   @override
   String get cOwnerCodeField => '6자리 인증 코드';

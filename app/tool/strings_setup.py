@@ -81,7 +81,7 @@ S = {
   "cSetupModeTest": ["테스트", "Test"],
   "cSetupModeLive": ["실거래", "Live"],
   "cOwnerCodeTitle": ["사장님 인증 코드", "Owner authenticator code"],
-  "cOwnerCodeBody": ["토스 지급 설정을 바꾸려면 인증 앱에 나온 6자리 코드를 입력하세요.", "To change Toss payouts, enter the 6-digit code from your authenticator app."],
+  "cOwnerCodeBody": ["이 설정을 바꾸려면 인증 앱에 나온 6자리 코드를 입력하세요.", "To change this setting, enter the 6-digit code from your authenticator app."],
   "cOwnerCodeField": ["6자리 인증 코드", "6-digit code"],
   "cOwnerCodeConfirm": ["확인", "Confirm"],
   "cOwnerCodeWrong": ["인증 코드가 맞지 않아요. 앱에 지금 나온 코드를 입력해 주세요", "That code is not right. Enter the code your app shows now"],

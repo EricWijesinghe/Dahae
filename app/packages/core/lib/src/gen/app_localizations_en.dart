@@ -7494,7 +7494,7 @@ class TEn extends T {
 
   @override
   String get cOwnerCodeBody =>
-      'To change Toss payouts, enter the 6-digit code from your authenticator app.';
+      'To change this setting, enter the 6-digit code from your authenticator app.';
 
   @override
   String get cOwnerCodeField => '6-digit code';

@@ -2277,7 +2277,7 @@
  "cSetupModeTest": "Test",
  "cSetupModeLive": "Live",
  "cOwnerCodeTitle": "Owner authenticator code",
- "cOwnerCodeBody": "To change Toss payouts, enter the 6-digit code from your authenticator app.",
+ "cOwnerCodeBody": "To change this setting, enter the 6-digit code from your authenticator app.",
  "cOwnerCodeField": "6-digit code",
  "cOwnerCodeConfirm": "Confirm",
  "cOwnerCodeWrong": "That code is not right. Enter the code your app shows now",

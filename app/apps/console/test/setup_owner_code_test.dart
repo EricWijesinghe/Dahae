@@ -55,6 +55,17 @@ void main() {
     await unmount(tester);
   });
 
+  // The same prompt guards a payment card's first save and every card's unlock, not only Toss payouts.
+  testWidgets('the owner code prompt does not name Toss payouts', (
+    tester,
+  ) async {
+    await _pump(tester, (_) {});
+
+    expect(find.textContaining('토스 지급'), findsNothing);
+    expect(find.text(koT.cOwnerCodeBody), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets('cancelling the owner code prompt answers null', (tester) async {
     final answers = <String?>[];
     await _pump(tester, answers.add);
