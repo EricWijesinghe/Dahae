@@ -8,6 +8,33 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-11-24
+
+### Added
+- Website: an unknown address shows the website's own "page not found" page (sent as 404) instead of the home page.
+- Website: `/favicon.ico`, `/apple-touch-icon.png` and `/apple-touch-icon-precomposed.png` point to the brand icon, so browsers and phones that ask for them directly get it.
+
+### Changed
+- Customer app: the design's line icons (bottom bar, menu, booking choices, air-conditioner types, chat, coupons, news) are painted in the theme's ink colour, so they show on the light screen and in dark mode instead of white on white; on a selected choice the icon takes the same colour as its label. The partner app keeps its own colour tab icons.
+- Customer app: a service without a photo shows its own art on its colour instead of a grey "photo goes here" box, and the 기본 서비스 band appears only when it has something to list. On a narrow phone the 전체 / PICK toggle shrinks its text to fit, and the logo drops its name when even that is not enough. The guest line in More is shown at full size under its label, and long English group names get a third line.
+- Apps: Korean text wraps at the spaces between words instead of splitting a word across lines.
+- Console: in English the title leads with the brand's English name; a brand with no English name goes after the title ("Operations console · 다해").
+- Website: the service grid shows every service with its name, art and "from" price, including whole-home, window and disinfection cleaning and per-item (counts) prices; a service added later gets a generic name and picture instead of its code, and prices line up at the bottom of each card.
+- Legal pages and the website footer show "준비 중" for a business detail the owner has not entered yet (for example "통신판매업 신고 준비 중") instead of a bracketed placeholder such as `[상호]`.
+- Server: the API and web containers may hold 65,536 open files (Docker's default 1,024 would stall at about 1,000 connected apps), and the web container's memory cap is 384 MB (was 256 MB). The caps add up to 1,664 MB, which still fits a 2 GB server.
+- Server backups: after a backup whose photo archive reached the offsite storage, local photo archives older than 3 days are removed; otherwise they are kept 14 days. Database dumps are still kept 14 days. This stops photo archives filling a 50 GB disk. When a restore finds no local photo archive it points to `dahae restore-offsite`.
+
+### Fixed
+- Website: error pages carry the same security headers as the rest of the site, and the website's own test files are not served.
+- A server with demo data can still create its owner in setup: the inactive sample staff that `demo load` adds no longer count as an owner. A real owner, even a deactivated one, still closes setup.
+- The apps show AI 상담 only while the owner's AI switch is on and an AI key is saved, so a customer never opens a chat that cannot answer. The console still shows the owner's own switch.
+- A guest (not signed in) no longer asks the server for consent records, which answered 401; analytics stay off for guests.
+- Server jobs from the console were sometimes refused as "from the future" when the job runner picked them up in the same second they were queued; the "kept off the server" confirmation of the key copy was the one most often hit. Job times are now compared to the millisecond, with 2 seconds of leeway.
+- The server's compose file is written to a new file and then renamed, so a full disk can no longer leave a half-written one.
+
+### Before going live
+- Servers get the new container limits, photo retention and job-runner fix with the next `dahae update`, which also refreshes the host tools. Servers that load images themselves (no delivery address) run the install line once more instead.
+
 ## [1.6.2] - 2026-11-23
 
 ### Added

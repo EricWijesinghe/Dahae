@@ -201,7 +201,7 @@ sudo docker system df                         # 이미지와 볼륨 요약
 ```
 
 **원인별 조치**
-- **백업**이 큰 경우: 서버 안 백업은 14일 뒤 자동으로 지워져요 ([OPERATIONS.md §6](OPERATIONS.md#6-백업--backups)). 외부 백업이 **켜져 있는 것을 확인한 뒤에만** 오래된 `.enc` 를 직접 지우세요. 외부 백업이 없으면 지우지 마세요.
+- **백업**이 큰 경우: 서버 안 백업은 자동으로 지워져요: DB 덤프는 14일 뒤예요. 사진 묶음은 그날 백업의 사진이 외부 백업에 올라가면 3일이 지난 것을 모두 지우고, 아니면 14일 뒤 지워요 ([OPERATIONS.md §6](OPERATIONS.md#6-백업--backups)). 외부 백업이 **켜져 있는 것을 확인한 뒤에만** 오래된 `.enc` 를 직접 지우세요. 외부 백업이 없으면 지우지 마세요. 자동 정리는 묶음마다 외부 사본을 확인하지 않아요.
 - **Docker 이미지**: `sudo docker image prune` 은 태그가 없는 이미지를 지워요. `.env` 의 `PREV_API_IMAGE`·`PREV_WEB_IMAGE` 가 가리키는 이미지는 롤백에 쓰니 따로 지우지 마세요. 다른 명령(`docker system prune -a`)은 쓰지 마세요.
 - **사진**: 어디에도 연결되지 않은 사진은 30일 뒤 자동으로 지워요. 사진이 계속 늘면 디스크를 늘리는 게 맞아요.
 - **데이터베이스 볼륨이 가득 찼다면** 서버를 늘리는 것이 가장 안전해요. 엔지니어 없이 파일을 직접 지우지 마세요.
@@ -361,7 +361,7 @@ Open the console **시스템 상태** (system status) and note red items. On the
 <a id="8-disk-full"></a>
 ## 8. Disk full
 **Check:** `df -h /opt/malkkeum`, `sudo du -sh /opt/malkkeum/backups`, `sudo docker system df`.
-**Fix:** server backups older than 14 days are deleted automatically. Delete old `.enc` backups by hand only when an offsite backup is confirmed. `sudo docker image prune` removes untagged images only; do not run `docker system prune -a`. Unlinked photos are removed after 30 days. If the database volume is full, add disk; do not delete database files by hand. With WAL archiving on, a failing archive piles WAL up on disk.
+**Fix:** server backups are deleted automatically: database dumps after 14 days, after a backup whose photo archive reached offsite storage, photo archives older than 3 days are removed (otherwise after 14). Delete old `.enc` backups by hand only when an offsite backup is confirmed; the automatic cleanup does not check each archive's own offsite copy. `sudo docker image prune` removes untagged images only; do not run `docker system prune -a`. Unlinked photos are removed after 30 days. If the database volume is full, add disk; do not delete database files by hand. With WAL archiving on, a failing archive piles WAL up on disk.
 **Never delete:** `.env`, `backups/keys-*.env.enc`, or backups that have no offsite copy.
 **Call the developer** when space stays under 10 % after cleanup.
 

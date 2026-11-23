@@ -106,10 +106,10 @@ Source: [`deploy/docker-compose.yml`](../deploy/docker-compose.yml). The same fi
 |---|---|---|---|---|---|
 | `db` | `postgres:17` | Application database, `cleaning` DB, role `app` (superuser for admin and backup) | 768 MB | 200 | `cap_add`: CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID (entrypoint fixes data ownership, then drops to `postgres`) |
 | `api` | `ghcr.io/ericwijesinghe/malkkeum-api` (built from [`backend/Dockerfile`](../backend/Dockerfile)) | Rust API, background jobs, migrations at start | 512 MB | 256 | none. Runs as uid 10001 |
-| `web` | `malkkeum-web` (built from [`deploy/web.Dockerfile`](../deploy/web.Dockerfile)) | Caddy 2.11.9 with the website, both Flutter web builds and the font mirror | 256 MB | 256 | `cap_add`: NET_BIND_SERVICE only |
+| `web` | `malkkeum-web` (built from [`deploy/web.Dockerfile`](../deploy/web.Dockerfile)) | Caddy 2.11.9 with the website, both Flutter web builds and the font mirror | 384 MB | 256 | `cap_add`: NET_BIND_SERVICE only |
 | `uptime-kuma` | `louislam/uptime-kuma:2.1.1` | Optional monitor, profile `monitoring`, bound to 127.0.0.1:3001 | 320 MB | 128 | none |
 
-The API uses `DB_MAX_CONNECTIONS=20`; PostgreSQL runs with `max_connections=50` and `shared_buffers=256MB` (both in the compose file).
+The API uses `DB_MAX_CONNECTIONS=20`; PostgreSQL runs with `max_connections=50` and `shared_buffers=256MB` (both in the compose file). `api` and `web` raise the open-file limit to 65,536 (`ulimits: nofile`): every signed-in app keeps a `/ws` socket open, one file in the API and two in Caddy, and Docker's default 1,024 would stall near 1,000 apps. The default caps add up to 1,664 MB (1,984 MB with the monitor), within a 2 GB VPS.
 
 ### 3.2 Volumes and host paths
 
@@ -374,7 +374,7 @@ sequenceDiagram
   else seal failed
     SH->>SH: keep plaintext, warn, backup returns error
   end
-  SH->>SH: prune backups older than BACKUP_KEEP_DAYS
+  SH->>SH: prune db dumps older than BACKUP_KEEP_DAYS, photo archives older than PHOTO_KEEP_DAYS_OFFSITE (offsite ok) or BACKUP_KEEP_DAYS
 ```
 
 - **Format.** `MKB1` magic, 8-byte random nonce prefix, frames of 64 KiB, each frame authenticated with a last-frame flag, so truncation and reordering fail ([`backup.rs`](../backend/crates/api/src/backup.rs)).
@@ -382,7 +382,7 @@ sequenceDiagram
 - **Atomic writes.** Output goes to `.part` and is renamed into place ([`backup.rs`, `convert`](../backend/crates/api/src/backup.rs)).
 - **Dependent steps.** Update, rollback and restore stop when sealing fails, so a plaintext copy is never silently left behind for a rollback that then fails.
 - **Offsite is optional and non-fatal.** A failed upload is recorded in backup status and does not hide a good local dump.
-- **Retention.** Offsite default 30 days, maximum 3650 (`BACKUP_RETENTION_DEFAULT`, `BACKUP_RETENTION_MAX` in [`integrations.rs`](../backend/crates/api/src/integrations.rs)). Local retention is `BACKUP_KEEP_DAYS` in `install.sh` (default 14).
+- **Retention.** Offsite default 30 days, maximum 3650 (`BACKUP_RETENTION_DEFAULT`, `BACKUP_RETENTION_MAX` in [`integrations.rs`](../backend/crates/api/src/integrations.rs)). Local retention in `install.sh`: database dumps `BACKUP_KEEP_DAYS` (14); photo archives `PHOTO_KEEP_DAYS_OFFSITE` (3) when that run's photo upload is logged as `offsite backup uploaded`, otherwise 14. Photo archives are full copies each night, so 14 of them filled a 50 GB disk at about 3 GB of photos.
 - **Key escrow, two ways.**
   - The API keys bundle (`POST /v1/admin/keys/bundle`, owner authenticator code each time) seals `DATA_KEY` and `JWT_SECRET` as `MKK1` (PBKDF2-HMAC-SHA256, 600 000 rounds, AES-256-GCM) under a server-generated passphrase, then proves it opens with an upload test ([`keys_bundle.rs`](../backend/crates/api/src/keys_bundle.rs)).
   - `dahae keys-backup` seals `.env` with a passphrase of at least 12 characters (`openssl enc -aes-256-cbc -pbkdf2 -iter 600000`) and asks the owner to confirm in a terminal that the copy is stored off the server ([`install.sh`](../deploy/install.sh), `cmd_keys_backup`, `key_escrow_confirm`).

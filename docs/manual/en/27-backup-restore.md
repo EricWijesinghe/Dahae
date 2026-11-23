@@ -18,7 +18,7 @@ The on-server backup and the offsite backup happen by themselves. There is nothi
 
 | What | When | Where | Kept for |
 |---|---|---|---|
-| **On-server backup** (customer and booking data + photo files) | Every day at 3:30 in the morning (Korea time). Also once right before every update, rollback and restore | The backup folder on the server disk | 14 days |
+| **On-server backup** (customer and booking data + photo files) | Every day at 3:30 in the morning (Korea time). Also once right before every update, rollback and restore | The backup folder on the server disk | Data 14 days. Photo files: after a backup whose photos reached the offsite backup, those older than 3 days are removed; otherwise 14 days |
 | **Offsite backup** (a copy of the on-server backup) | Right after the on-server backup | The S3-compatible store you connected in chapter 17 (for example Cloudflare R2, Naver Cloud Object Storage, AWS S3). On AWS: the stack's own S3 bucket, with no keys to type (27.3) | The card's retention (starts at 30 days, 1 to 3650 days). AWS bucket: 35 days, plus 35 more for replaced copies |
 | **Secret key copy** | Not automatic. You make one in the console right after install (27.4), and again whenever the keys change | Off the server (password manager, USB stick) | Kept by you |
 
