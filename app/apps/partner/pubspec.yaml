@@ -4,7 +4,7 @@
 name: partner
 description: partner app
 publish_to: none
-version: 1.6.3+163
+version: 1.6.4+164
 resolution: workspace
 environment:
   sdk: ^3.9.0

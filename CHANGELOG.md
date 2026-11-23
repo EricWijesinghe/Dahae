@@ -8,7 +8,9 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
-## [1.6.3] - 2026-11-24
+## [1.6.4] - 2026-11-24
+
+The 1.6.3 tag was never published: a test script failed the release check. 1.6.4 is 1.6.3 with that test fixed; everything below ships in 1.6.4.
 
 ### Added
 - Website: an unknown address shows the website's own "page not found" page (sent as 404) instead of the home page.
@@ -34,6 +36,10 @@ from the release branches; no tags existed for them.
 
 ### Before going live
 - Servers get the new container limits, photo retention and job-runner fix with the next `dahae update`, which also refreshes the host tools. Servers that load images themselves (no delivery address) run the install line once more instead.
+
+## [1.6.3] - 2026-11-24
+
+Tagged but not published (see 1.6.4).
 
 ## [1.6.2] - 2026-11-23
 
