@@ -8,6 +8,17 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-11-23
+
+### Added
+- First console sign-in now asks the owner to type one recovery code back, confirming the codes were saved before they are needed.
+
+### Fixed
+- The web apps can read a picked image (the app CSP allows `blob:`), so the console logo/photo upload and the customer chat and growth photos work; a logo the console cannot read shows a message instead of silently keeping the old one.
+- Finance and privacy CSV exports ask for the authenticator code instead of failing; a step-up code sent after the access token expired renews the sign-in and goes through.
+- A second console tab on one login no longer signs both tabs out.
+- An address can be typed when address search fails or a road name has no district; several console messages, colour swatches, empty states and confirmations are clearer; a server job the host agent never picks up says so after 3 minutes.
+
 ## [1.6.1] - 2026-11-23
 
 ### Fixed
