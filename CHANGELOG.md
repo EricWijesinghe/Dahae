@@ -8,6 +8,20 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+### Security
+- Payments: a PortOne payment can back only its own checkout. A payment made with another checkout's id is refused, and a payment already recorded or held by another checkout is never refunded automatically; a staff case is opened instead.
+- Staff: only the partner assigned to a booking can read its door code, on the visit day; the staff route is removed. Re-issuing an admin invite or switching an admin back on needs the owner code. Only admins can invite staff. Setting the tax type and registering the Toss seller ask for a fresh second code.
+- Privacy: deleting a partner clears their photo, bio, emergency contact and verification checklist and removes their uploads; their payee number can no longer be shown. Closed bookings drop the team memo with the other personal fields.
+- Server: the job runner moves an approval file into its own folder before reading it and reads job files with a time limit, so a stuck file can no longer hold the server's update and backup lock. Private API answers are sent with `Cache-Control: no-store`. The database no longer logs statement text.
+
+### Changed
+- Updates: a build that was rolled back automatically is held and not retried every week; a server pinned to a version rejoins its channel once the channel reaches it; an update stops before changing anything when the disk is too full. Release images are built without a cache. CI refuses a migration that drops or renames something unless it carries a contract marker.
+- Website: Korean lines break between words, and whole-home cleaning has a description.
+
+### Before going live
+- Owners who kept an AAAA (IPv6) record, as older manual pages said, should delete it now on every name that points at the server (the domain, `www.`, and an old domain that still answers), even if it points at this server. IPv6 visitors are not served yet: they all arrive from Docker's gateway address and share one sign-in limit. No check warns about a record that was already there (manual chapter 5, 5.3).
+- The database container's settings changed, so the first `dahae update` after this release restarts Postgres once (a short pause while the update runs). Later updates do not.
+
 ## [1.6.4] - 2026-11-24
 
 The 1.6.3 tag was never published: a test script failed the release check. 1.6.4 is 1.6.3 with that test fixed; everything below ships in 1.6.4.
