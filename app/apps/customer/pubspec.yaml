@@ -4,7 +4,7 @@
 name: customer
 description: customer app
 publish_to: none
-version: 1.6.4+164
+version: 1.6.5+165
 resolution: workspace
 environment:
   sdk: ^3.9.0

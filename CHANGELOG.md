@@ -8,6 +8,12 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+## [1.6.5] - 2026-11-24
+
+### Added
+- Updates check free disk space first and stop, with nothing changed, when the disk is too full.
+- CI refuses a migration that drops or renames something unless it carries a contract marker.
+
 ### Security
 - Payments: a PortOne payment can back only its own checkout. A payment made with another checkout's id is refused, and a payment already recorded or held by another checkout is never refunded automatically; a staff case is opened instead.
 - Staff: only the partner assigned to a booking can read its door code, on the visit day; the staff route is removed. Re-issuing an admin invite or switching an admin back on needs the owner code. Only admins can invite staff. Setting the tax type and registering the Toss seller ask for a fresh second code.
@@ -15,7 +21,7 @@ from the release branches; no tags existed for them.
 - Server: the job runner moves an approval file into its own folder before reading it and reads job files with a time limit, so a stuck file can no longer hold the server's update and backup lock. Private API answers are sent with `Cache-Control: no-store`. The database no longer logs statement text.
 
 ### Changed
-- Updates: a build that was rolled back automatically is held and not retried every week; a server pinned to a version rejoins its channel once the channel reaches it; an update stops before changing anything when the disk is too full. Release images are built without a cache. CI refuses a migration that drops or renames something unless it carries a contract marker.
+- Updates: a build that was rolled back automatically is held and not retried every week, and a server pinned to a version rejoins its channel once the channel reaches it. Release images are built without a cache.
 - Website: Korean lines break between words, and whole-home cleaning has a description.
 
 ### Before going live
