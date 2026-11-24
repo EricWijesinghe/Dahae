@@ -35,6 +35,8 @@ EOF
 printf 'DOMAIN=myshop.co.kr\nCHANNEL=stable\nVERSION=stable\n' > "$DAHAE_DIR/.env"
 chmod +x "$DAHAE_CLI"
 DAHAE_JOB_UID=$(id -u); DAHAE_OWNER_UID=$(id -u); export DAHAE_JOB_UID DAHAE_OWNER_UID
+# the real timeout, found before the fake one below goes first on PATH (the FIFO tests need it to stop a hung read)
+REAL_TIMEOUT=$(command -v timeout) || { echo "agent self-test needs coreutils timeout" >&2; exit 1; }
 # fake docker: records the working folder and argv of every compose call; `logs` prints the file $SB/logs.txt
 mkdir -p "$SB/bin"
 cat > "$SB/bin/docker" <<EOF
@@ -601,7 +603,6 @@ t  "keys-confirm queued in the same second, with a token, ends ok" eq "$(state "
 id=$(uuid7); t  "keys-confirm takes no argument"      refuse "$id" "id=$id\nkind=keys-confirm\narg=x\n"
 
 # ---- an .approve FIFO (or one swapped in after the -f check) is rejected without hanging the root agent ----
-REAL_TIMEOUT=$(type -aP timeout | grep -vxF "$SB/bin/timeout" | head -n1)
 # shellcheck disable=SC2016 # expanded by the inner bash
 approve_bounded() { # approve_bounded 경로 : 진짜 timeout 으로 감싸 승인 파일 하나를 받아요 (멈추면 124)
   DAHAE_SELFTEST=1 "$REAL_TIMEOUT" 20 bash -c '. "$1"; approve_one "$2"' _ "$ROOT/deploy/agent.sh" "$1" </dev/null >/dev/null 2>&1
