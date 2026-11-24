@@ -130,6 +130,8 @@
 
 	@api path /v1/* /health /.well-known/assetlinks.json /.well-known/apple-app-site-association
 	handle @api {
+		# Signed-in JSON (bookings, addresses) must not stay in a shared PC's disk cache; `?` keeps the API's own value.
+		header ?Cache-Control "no-store"
 		reverse_proxy api:8080
 	}
 

@@ -69,7 +69,7 @@ Menu names differ by provider. Look for **"DNS 관리"** (DNS management) or **"
 8. Save.
 9. For a domain without a prefix, add one more record with host `www` and the same IP.
 
-> **Warning** If there is an **AAAA record (IPv6)** with the same name pointing somewhere else, delete it. If it stays, getting the certificate can fail.
+> **Warning** If there is an **AAAA record (IPv6)** with the same name, delete it, even if it points to this server. IPv6 visitors are not served yet: if it stays, getting the certificate can fail, or sign-in can be blocked for every IPv6 visitor at once.
 
 ## 5.4 Wait and check
 

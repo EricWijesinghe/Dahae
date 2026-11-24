@@ -562,6 +562,10 @@ def check_web():
     api_paths = m.group(1).split() if m else []
     for want in ["/.well-known/assetlinks.json", "/.well-known/apple-app-site-association"]:
         check(want in api_paths, f"deploy/Caddyfile: {want} must be proxied to the API")
+    # Signed-in JSON must not stay in a shared PC's browser cache; `?` keeps the API's own Cache-Control.
+    api_handle = re.search(r"handle @api \{([^}]*)\}", caddy)
+    check(api_handle is not None and 'header ?Cache-Control "no-store"' in api_handle.group(1),
+          'deploy/Caddyfile: the @api handle needs header ?Cache-Control "no-store"')
     api = (REPO / "backend" / "crates" / "api" / "src" / "app_links.rs").read_text(encoding="utf-8")
     check('"webcredentials"' in api, "backend app_links.rs: AASA needs a webcredentials section (ASWebAuthenticationSession https callback)")
     check('"/.well-known/assetlinks.json"' in api and '"/.well-known/apple-app-site-association"' in api,

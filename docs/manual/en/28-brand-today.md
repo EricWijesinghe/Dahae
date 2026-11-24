@@ -242,7 +242,7 @@ Big jobs such as a domain change need a **server approval code** on top of your 
 2. Make an **A record** for the new domain with **this server's IP** as the value. The IP also appears in the check result in 28.8.3.
 3. Add an A record with the same IP for `www.<new domain>` too.
 4. **Do not delete the old domain's A record.** Keep it until you retire the old domain (28.8.7).
-5. If the new domain has an **AAAA record** (IPv6), delete it or point it to this server.
+5. If the new domain has an **AAAA record** (IPv6), delete it, even if it points to this server.
 6. Wait a few minutes to a few hours (chapter 5, 5.4).
 
 ### 28.8.3 Check the DNS
@@ -336,7 +336,7 @@ At the bottom of the **Domain** card is the **After the move** list: **Copy each
 | **Microsoft Partner Center: privacy and support URLs** | The same two addresses | Only if you are in the Windows store |
 | **GitHub store environment variables, then a store build** | `API_BASE=https://new.co.kr` and `APP_LINK_DOMAIN=new.co.kr,(old domain)` | **[Developer]** The developer changes them and makes a new store build (chapters 25 and 33) |
 | **AlimTalk templates with web link buttons (need approval again)** | `https://new.co.kr` | If an AlimTalk template has a web link button, change it to the new address and get Kakao's approval again (chapter 14) |
-| **Keep the old A/AAAA records until retiring; add www.<new>** | The old domain and `www.new.co.kr` | On the DNS page: keep the old domain's records and check that `www.<new domain>` has a record (28.8.2) |
+| **Keep the old A record until retiring; delete every AAAA record; add www.<new>** | The old domain and `www.new.co.kr` | On the DNS page: keep the old domain's A record, check that `www.<new domain>` has an A record (28.8.2), and delete any AAAA record (IPv6) on the old domain and on `www.<new domain>`, even one that points to this server ([chapter 5](05-domain-dns.md#53-if-you-use-another-registrar-gabia-whois-cafe24-and-others) says why) |
 | **After the new store builds are live: raise the minimum app version in Business profile** | (no value) | Once apps built with the new address are out in both stores, raise **Minimum version** under **Business profile** → **App versions** to that version (chapter 10, 10.7) |
 
 > **Warning** Do the three webhook lines (PortOne, Toss Payments, Toss payouts) **first**. Webhooks still arrive on the old address, but they stop the moment you retire the old domain.
@@ -360,7 +360,7 @@ At the bottom of the **Domain** card is the **After the move** list: **Copy each
 
 **You should now see:** **Old address retired**, and the address disappears from the old addresses list.
 
-6. Now you may delete the old domain's A/AAAA records on the DNS page.
+6. Now you may delete the old domain's A record on the DNS page.
 
 ### 28.8.8 If you use the console app installed on a PC
 

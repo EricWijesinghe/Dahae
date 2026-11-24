@@ -502,10 +502,10 @@ t  "result file gone after 10 minutes"    test ! -e "$DAHAE_JOBS/out/$TOK5"
 
 # domain-check: the server asks for its own IP; the answer is the A and AAAA records
 id=$(uuid7); submit "$id" "id=$id\nkind=domain-check\narg=myshop.co.kr\ntoken=$TOK5\n"
-t  "domain-check reports a match"         grep -q '"match":true' "$DAHAE_JOBS/out/$TOK5"
 t  "domain-check reports the server IP"   grep -q '"server_ip":"203.0.113.7"' "$DAHAE_JOBS/out/$TOK5"
 t  "domain-check lists the AAAA record"   grep -q '"aaaa":\["2001:db8::1"\]' "$DAHAE_JOBS/out/$TOK5"
-t  "domain-check: AAAA is this server's"  grep -q '"aaaa_ok":true' "$DAHAE_JOBS/out/$TOK5"
+t  "domain-check: any AAAA, even this server's, is not ok" grep -q '"aaaa_ok":false' "$DAHAE_JOBS/out/$TOK5"
+t  "domain-check: an AAAA record means no match" grep -q '"match":false' "$DAHAE_JOBS/out/$TOK5"
 touch "$SB/bin/stray-aaaa"
 id=$(uuid7); submit "$id" "id=$id\nkind=domain-check\narg=myshop.co.kr\ntoken=$TOK5\n"
 t  "stray AAAA elsewhere: aaaa_ok false"  grep -q '"aaaa_ok":false' "$DAHAE_JOBS/out/$TOK5"
@@ -515,6 +515,7 @@ touch "$SB/bin/a4-only"
 id=$(uuid7); submit "$id" "id=$id\nkind=domain-check\narg=myshop.co.kr\ntoken=$TOK5\n"
 t  "A record only: the mapped address is no AAAA" grep -q '"aaaa":\[\]' "$DAHAE_JOBS/out/$TOK5"
 t  "A record only: match true"            grep -q '"match":true' "$DAHAE_JOBS/out/$TOK5"
+t  "A record only: aaaa_ok true"          grep -q '"aaaa_ok":true' "$DAHAE_JOBS/out/$TOK5"
 rm -f "$SB/bin/a4-only"
 id=$(uuid7); t  "domain-check takes a domain only" refuse "$id" "id=$id\nkind=domain-check\narg=localhost\ntoken=$TOK5\n"
 
@@ -598,6 +599,52 @@ id=$(uuid7 $(( $(now_ms) + 999 ))); submit "$id" "id=$id\nkind=keys-confirm\ntok
 t  "keys-confirm runs dahae keys-confirm"    argv_has "keys-confirm YES=1"
 t  "keys-confirm queued in the same second, with a token, ends ok" eq "$(state "$id")" ok
 id=$(uuid7); t  "keys-confirm takes no argument"      refuse "$id" "id=$id\nkind=keys-confirm\narg=x\n"
+
+# ---- an .approve FIFO (or one swapped in after the -f check) is rejected without hanging the root agent ----
+REAL_TIMEOUT=$(type -aP timeout | grep -vxF "$SB/bin/timeout" | head -n1)
+# shellcheck disable=SC2016 # expanded by the inner bash
+approve_bounded() { # approve_bounded 경로 : 진짜 timeout 으로 감싸 승인 파일 하나를 받아요 (멈추면 124)
+  DAHAE_SELFTEST=1 "$REAL_TIMEOUT" 20 bash -c '. "$1"; approve_one "$2"' _ "$ROOT/deploy/agent.sh" "$1" </dev/null >/dev/null 2>&1
+}
+id=$(uuid7); mkfifo "$DAHAE_JOBS/inbox/$id.approve"
+approve_bounded "$DAHAE_JOBS/inbox/$id.approve"; rc=$?
+nt "FIFO .approve does not hang"              eq "$rc" 124
+nt "FIFO .approve is not accepted"            eq "$rc" 0
+t  "FIFO .approve is gone from the inbox"     test ! -e "$DAHAE_JOBS/inbox/$id.approve"
+t  "FIFO .approve is not left in work"        test ! -e "$DAHAE_JOBS/work/$id.approve"
+# a fake stat that swaps an inbox .approve for a FIFO between the -f check and the read (the API-side race)
+REAL_STAT=$(type -aP stat | head -n1)
+cat > "$SB/bin/stat" <<EOF
+#!/usr/bin/env bash
+for p; do :; done
+case "\$p" in "$DAHAE_JOBS/inbox/"*.approve) rm -f -- "\$p"; mkfifo -- "\$p" ;; esac
+exec "$REAL_STAT" "\$@"
+EOF
+chmod +x "$SB/bin/stat"
+id=$(uuid7); printf 'code=000000\n' > "$DAHAE_JOBS/inbox/$id.approve"
+approve_bounded "$DAHAE_JOBS/inbox/$id.approve"; rc=$?
+rm -f "$SB/bin/stat" "$DAHAE_JOBS/inbox/$id.approve"; hash -r
+nt "swapped-in FIFO does not hang (read from work/)" eq "$rc" 124
+: > "$SB/timeout.log"; printf 'x' > "$SB/small"
+t  "copy_small accepts a small own file"      copy_small "$SB/small" "$SB/small.copy" 10
+t  "copy_small read is time-limited (5s)"     eq "$(cat "$SB/timeout.log")" 5
+
+# ---- a directory named like an .approve or .job is removed and never swallows a later file ----
+id=$(uuid7); mkdir "$DAHAE_JOBS/inbox/$id.approve"
+nt "directory .approve is not accepted"       approve_one "$DAHAE_JOBS/inbox/$id.approve"
+t  "directory .approve is not left in work"   test ! -e "$DAHAE_JOBS/work/$id.approve"
+id=$(uuid7); mkdir "$DAHAE_JOBS/inbox/$id.job"
+intake_one "$DAHAE_JOBS/inbox/$id.job" >/dev/null 2>&1
+t  "directory .job is not left in work"       test ! -e "$DAHAE_JOBS/work/$id.job"
+id=$(uuid7); mkdir "$DAHAE_JOBS/work/$id.approve"      # left by an older agent
+printf 'code=000000\n' > "$DAHAE_JOBS/inbox/$id.approve"
+approve_one "$DAHAE_JOBS/inbox/$id.approve" >/dev/null 2>&1
+t  "later .approve is not moved inside a stale directory" test ! -e "$DAHAE_JOBS/work/$id.approve/$id.approve"
+rm -f "$DAHAE_JOBS/inbox/$id.approve"
+id2=$(uuid7); printf 'code=000000\n' > "$DAHAE_JOBS/work/$id2.approve"
+sweep_work
+t  "stale work .approve directory swept"      test ! -e "$DAHAE_JOBS/work/$id.approve"
+t  "stale work .approve file swept"           test ! -e "$DAHAE_JOBS/work/$id2.approve"
 
 # ---- rollback stopped by the payout guard says why ----
 touch "$SB/payouts-next"

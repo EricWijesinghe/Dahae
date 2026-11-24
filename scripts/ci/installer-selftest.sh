@@ -43,6 +43,22 @@ nt "heartbeat ampersand"   valid_hb_url 'https://x.io/a?b=1&c=2'
 # shellcheck disable=SC2016 # literal $(id) on purpose
 nt "heartbeat subshell"    valid_hb_url 'https://x.io/$(id)'
 
+# ---- installer: DNS check. Any AAAA record is refused, even this server's (IPv6 visitors all show up as the
+# Docker gateway, so one of them could lock every IPv6 user out of sign-in) ----
+# dns_out [AAAA 주소] : 가짜 dig·ip 로 dns_check 를 한 번 돌려요. 출력 끝에 DNS_OK 를 붙여요
+# shellcheck disable=SC2030,SC2034 # TLS_MODE, DOMAIN and DNS_MAX_TRIES are read by dns_check, in this subshell only
+dns_out() {
+  ( TLS_MODE=auto DOMAIN=myshop.co.kr DNS_MAX_TRIES=1 A6="${1:-}"; unset MALKKEUM_SKIP_DNS_CHECK
+    public_ip() { echo 203.0.113.7; }; has_tty() { return 1; }
+    dig() { case "$2" in A) echo 203.0.113.7 ;; AAAA) [ -z "$A6" ] || echo "$A6" ;; esac; }
+    ip() { echo "inet6 2001:db8::1/64 scope global"; }
+    dns_check; echo "DNS_OK=$DNS_OK" ) 2>&1
+}
+t  "dns: A only passes"                       grep -qx 'DNS_OK=1' <<< "$(dns_out)"
+t  "dns: AAAA elsewhere fails"                grep -qx 'DNS_OK=0' <<< "$(dns_out 2001:db8::99)"
+t  "dns: AAAA of this server fails too"       grep -qx 'DNS_OK=0' <<< "$(dns_out 2001:db8::1)"
+t  "dns: the owner is told to delete the AAAA" grep -q 'AAAA(IPv6) 레코드 2001:db8::1 를 지우세요' <<< "$(dns_out 2001:db8::1)"
+
 # ---- installer: result ping (MALKKEUM_NOTIFY_URL, EXIT trap) ----
 # ping_url <url> <exit code>: the address notify_result would call; curl is replaced by a recorder
 ping_url() {
@@ -333,6 +349,10 @@ t  "every service memory-capped" eq "$(grep -c '^    mem_limit:' "$ROOT/deploy/d
 # one open file per app socket (two in Caddy): api and web lift Docker's default 1024 open files
 for f in "$ROOT/deploy/docker-compose.yml" "$SB/compose/docker-compose.yml"; do
   t "api and web raise open files (${f#"$ROOT/"})" eq "$(grep -c '^    ulimits: { nofile: { soft: 65536, hard: 65536 } }$' "$f")" 2
+done
+# slow-query lines must not carry bind values (phones, names, addresses) into the container logs
+for f in "$ROOT/deploy/docker-compose.yml" "$SB/compose/docker-compose.yml"; do
+  t "postgres logs no bind values (${f#"$ROOT/"})" grep -qF -- '-c log_parameter_max_length=0 -c log_error_verbosity=terse' "$f"
 done
 t  "api ulimit sits in the api service" eq "$(awk '/^  [a-z-]+:$/ { s = $1 } /nofile/ { print s }' "$ROOT/deploy/docker-compose.yml" | tr '
 ' ' ')" "api: web: "
@@ -797,7 +817,8 @@ domain_run() {
         if grep -qx 'DOMAIN=old.co.kr' .env; then [ "$HEALTH" != fail ]; else
           [ "$HEALTH" != term ] || kill -TERM "$BASHPID"; [ "$HEALTH" = ok ]; fi ;;
       *) return 1 ;; esac; }
-    getent() { [ "$1" != ahostsv4 ] || echo "${DNS_IP:-203.0.113.7}  STREAM $2"; }
+    getent() { case "$1" in ahostsv4) echo "${DNS_IP:-203.0.113.7}  STREAM $2" ;; ahostsv6) [ -z "${DNS_AAAA:-}" ] || echo "$DNS_AAAA  STREAM $2" ;; esac; }
+    ip() { echo "inet6 ${DNS_AAAA:-2001:db8::1}/64 scope global"; }
     cmd_domain "$2" ) >/dev/null 2>&1
 }
 domain_env() { printf 'DOMAIN=old.co.kr\nJWT_SECRET=keep\n' > "$SB/.env"; chmod 600 "$SB/.env"; rm -f "$SB"/backups/env-before-domain-* "$SB/dc.log" "$SB/curl.log" "$SB/jobs/out/domain-rolled-back"; }
@@ -811,6 +832,9 @@ t  "domain: api and web recreated"         grep -qx 'up -d api web' "$SB/dc.log"
 t  "domain: checked before the switch, with a certificate allowed" grep -q 'https://new.co.kr/health|new.co.kr$' "$SB/curl.log"
 t  "domain: checked on this server, not through NAT" grep -q -- '--resolve new.co.kr:443:127.0.0.1' "$SB/curl.log"
 nt "domain: the certificate allowance is removed" test -e "$SB/jobs/out/domain-pending"
+domain_env; DNS_AAAA=2001:db8::1 domain_run ok new.co.kr; rc=$?
+t  "domain: an AAAA record (even this server's) is refused" eq "$rc" 1
+t  "...with .env untouched (AAAA)"         grep -qx 'DOMAIN=old.co.kr' "$SB/.env"
 domain_env; domain_run fail new.co.kr; rc=$?
 t  "domain: no answer before the switch is refused" eq "$rc" 1
 t  "...with .env untouched"                grep -qx 'DOMAIN=old.co.kr' "$SB/.env"

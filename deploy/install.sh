@@ -306,11 +306,12 @@ dns_check() { # DNS_OK=1 이면 도메인이 이 서버를 가리켜요
   for i in $(seq "$DNS_MAX_TRIES"); do
     a4=$(dig +short A "$DOMAIN" 2>/dev/null | only_ipv4 || true)
     a6=$(dig +short AAAA "$DOMAIN" 2>/dev/null | only_ipv6 || true); bad6=""
-    for v in $a6; do ip -6 addr show scope global 2>/dev/null | grep -qiF "$v" || bad6="$bad6 $v"; done
+    # AAAA 는 이 서버 주소여도 막아요: IPv6 손님이 모두 도커 게이트웨이 주소로 보여, 한 사람이 모든 IPv6 손님의 로그인을 막을 수 있어요
+    for v in $a6; do bad6="$bad6 $v"; done
     if ip_in_list "$server" "$a4" && [ -z "$bad6" ]; then ok "$DOMAIN → $server (이 서버)"; return 0; fi
     warn "$DOMAIN 이 아직 이 서버를 가리키지 않아요 (현재 A: ${a4:-없음})."
     printf '   도메인 관리 화면에서 이렇게 설정하세요:  A 레코드   %s   →   %s\n' "$DOMAIN" "$server"
-    [ -z "$bad6" ] || printf '   AAAA(IPv6) 레코드%s 는 이 서버가 아니에요. 지우거나 이 서버 주소로 바꾸세요.\n' "$bad6"
+    [ -z "$bad6" ] || printf '   AAAA(IPv6) 레코드%s 를 지우세요. 이 서버 주소여도 지워야 해요 (IPv6 접속은 아직 받지 않아요).\n' "$bad6"
     if ! has_tty; then break; fi
     [ "$(ask "설정한 뒤 Enter 를 누르면 다시 확인해요. 반영까지 몇 분 걸릴 수 있어요 (건너뛰려면 s, $i/$DNS_MAX_TRIES)" "")" = s ] && break
   done
@@ -352,7 +353,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
     # Sized for a 2 GB VPS (API pool 10 + headroom). Autovacuum is tuned for churn; see docs/DEPLOY.md.
     command: >-
-      postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=top -c archive_mode=${WAL_ARCHIVE_MODE:-off} -c "archive_command=pgbackrest archive-push %p" -c archive_timeout=300 -c shared_buffers=256MB -c effective_cache_size=1GB -c work_mem=8MB -c maintenance_work_mem=128MB -c max_connections=50 -c wal_compression=on -c max_wal_size=1GB -c min_wal_size=256MB -c checkpoint_completion_target=0.9 -c random_page_cost=1.1 -c password_encryption=scram-sha-256 -c autovacuum_max_workers=2 -c autovacuum_naptime=30s -c autovacuum_vacuum_scale_factor=0.05 -c autovacuum_analyze_scale_factor=0.02 -c autovacuum_vacuum_cost_limit=1000 -c log_min_duration_statement=500 -c log_lock_waits=on -c log_temp_files=10MB -c log_checkpoints=on
+      postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=top -c archive_mode=${WAL_ARCHIVE_MODE:-off} -c "archive_command=pgbackrest archive-push %p" -c archive_timeout=300 -c shared_buffers=256MB -c effective_cache_size=1GB -c work_mem=8MB -c maintenance_work_mem=128MB -c max_connections=50 -c wal_compression=on -c max_wal_size=1GB -c min_wal_size=256MB -c checkpoint_completion_target=0.9 -c random_page_cost=1.1 -c password_encryption=scram-sha-256 -c autovacuum_max_workers=2 -c autovacuum_naptime=30s -c autovacuum_vacuum_scale_factor=0.05 -c autovacuum_analyze_scale_factor=0.02 -c autovacuum_vacuum_cost_limit=1000 -c log_min_duration_statement=500 -c log_parameter_max_length=0 -c log_error_verbosity=terse -c log_lock_waits=on -c log_temp_files=10MB -c log_checkpoints=on
     shm_size: 256mb
     volumes: [dbdata:/var/lib/postgresql/data]
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U app -d cleaning"], interval: 5s, retries: 20 }
@@ -1177,14 +1178,12 @@ new_domain_ok() { # new_domain_ok 도메인 : 설치 프로그램의 valid_domai
   [ "${#1}" -le 253 ] && printf '%s' "$1" | grep -Eq "$DOMAIN_RE" && case "$1" in *.local) return 1 ;; esac
 }
 
-domain_dns_ok() { # domain_dns_ok 도메인 : A 에 이 서버의 공인 IPv4 가 있고, AAAA 는 없거나 이 서버 것이어야 해요 (테스트 설치는 건너뛰어요)
-  local d="$1" ip v
+domain_dns_ok() { # domain_dns_ok 도메인 : A 에 이 서버의 공인 IPv4 가 있고, AAAA 는 없어야 해요 (IPv6 접속은 아직 받지 않아요. 테스트 설치는 건너뛰어요)
+  local d="$1" ip
   if [ "$(env_get TLS_MODE)" = internal ] || [ -n "${MALKKEUM_SKIP_DNS_CHECK:-}" ]; then return 0; fi
   ip=$(curl -fsS4 --max-time 5 https://api.ipify.org 2>/dev/null) || return 1
   getent ahostsv4 "$d" 2>/dev/null | awk '{ print $1 }' | grep -qxF "$ip" || return 1
-  for v in $(getent ahostsv6 "$d" 2>/dev/null | awk '$1 ~ /:/ && $1 !~ /^::ffff:/ { print $1 }' | sort -u); do
-    ip -6 addr show scope global 2>/dev/null | grep -qiF "$v" || return 1
-  done
+  [ -z "$(getent ahostsv6 "$d" 2>/dev/null | awk '$1 ~ /:/ && $1 !~ /^::ffff:/ { print $1 }')" ]
 }
 
 domain_https_ok() { # domain_https_ok 도메인 : 이 서버의 443 으로 https://<도메인>/health 를 10초마다 봐요 (인증서 발급을 기다려요)
@@ -1204,7 +1203,7 @@ cmd_domain() { # dahae domain <새 도메인> [--yes] : .env 를 백업하고 DO
   new_domain_ok "$new" || die "사용법: dahae domain <새 도메인> (예: myshop.co.kr)"
   old=$(env_get DOMAIN)
   [ "$new" != "$old" ] || die "지금 쓰는 도메인이에요: $new"
-  domain_dns_ok "$new" || die "$new 이 아직 이 서버를 가리키지 않아요. A 레코드를 이 서버의 IP 로 맞춘 뒤 다시 해 주세요. 지금 서비스는 그대로예요."
+  domain_dns_ok "$new" || die "$new 이 아직 이 서버를 가리키지 않아요. A 레코드를 이 서버의 IP 로 맞추고 AAAA(IPv6) 레코드는 지운 뒤 다시 해 주세요. 지금 서비스는 그대로예요."
   confirm "서비스 주소를 $old 에서 $new 로 바꿀까요? 30초쯤 멈춰요. 예전 주소도 계속 응답해요." "$new"
   # 바꾸기 전에 새 주소를 https 로 확인해요: API 가 이 파일(읽기 전용)을 보고 15분 동안 인증서를 허락하고, Caddy 는
   # 받은 인증서를 바꾼 뒤에도 그대로 써요. 응답하지 않으면 아무것도 바꾸지 않고 끝나요
