@@ -7,6 +7,7 @@ import 'package:ui/ui.dart';
 
 import '../state.dart';
 import '../widgets/inline_button.dart';
+import 'stepup.dart';
 
 /// Registers a partner as a Toss seller. Returns the seller status the server reported, or null when cancelled.
 /// The payout account is the partner's verified one on the server; only business details are typed here.
@@ -63,9 +64,12 @@ class _TossSellerDialogState extends State<_TossSellerDialog> {
     setState(() => _busy = true);
     try {
       final r =
-          await context.api.post(
-                '/admin/settlements/toss-sellers/${widget.proId}',
-                _body(),
+          await withStepUp(
+                context,
+                () => context.api.post(
+                  '/admin/settlements/toss-sellers/${widget.proId}',
+                  _body(),
+                ),
               )
               as Json;
       if (mounted) {

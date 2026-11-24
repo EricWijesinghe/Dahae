@@ -146,7 +146,6 @@ pub fn router(state: AppState) -> Router {
                 .merge(tax_invoices::admin_routes())
                 .merge(ops::admin_routes())
                 .merge(cases::admin_routes())
-                .merge(site::admin_routes())
                 .merge(crate::marketing::admin_routes())
                 .merge(crate::app_links::admin_routes())
                 .merge(crate::domains::admin_routes())

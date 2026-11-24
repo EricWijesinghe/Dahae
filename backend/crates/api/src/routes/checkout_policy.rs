@@ -99,6 +99,8 @@ pub fn bind(checkout: Uuid, payment_id: &str) -> Binding {
         Some(None) => Binding::Bound(format!("{payment_id}:{own}")),
         Some(Some((_, owner))) if owner == own => Binding::Bound(payment_id.to_string()),
         Some(Some(_)) => Binding::Foreign,
+        // Another checkout's id: the browser picks paymentId and customData alike, so customData cannot bind it.
+        None if Uuid::parse_str(payment_id).is_ok() => Binding::Foreign,
         None => Binding::AskProvider,
     }
 }
@@ -248,8 +250,12 @@ mod tests {
     fn a_payment_binds_only_to_its_own_checkout() {
         let (ck, other) = (Uuid::now_v7(), Uuid::now_v7());
         assert_eq!(bind(ck, &ck.to_string()), Binding::Bound(ck.to_string()));
-        assert_eq!(bind(ck, &other.to_string()), Binding::AskProvider, "only customData can bind a foreign id");
-        assert_eq!(bind(ck, &ck.simple().to_string()), Binding::AskProvider, "exact id only");
+        assert_eq!(
+            bind(ck, &other.to_string()),
+            Binding::Foreign,
+            "another checkout's id: customData cannot bind it"
+        );
+        assert_eq!(bind(ck, &ck.simple().to_string()), Binding::Foreign, "exact id only");
         assert_eq!(bind(ck, "pay-123"), Binding::AskProvider);
         assert_eq!(bind(ck, "dev:paid"), Binding::Bound(format!("dev:paid:{ck}")));
         assert_eq!(bind(ck, &format!("dev:paid:{ck}")), Binding::Bound(format!("dev:paid:{ck}")));

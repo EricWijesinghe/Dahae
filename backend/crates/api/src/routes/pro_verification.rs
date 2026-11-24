@@ -268,10 +268,12 @@ pub async fn reveal_payee_identifier(State(s): State<AppState>, Admin(a): Admin,
     live_admin(&s, a.id).await?;
     require_recent_stepup(&s, a.id).await?;
     let mut tx = s.db.begin().await?;
-    let row: Option<Option<String>> = sqlx::query_scalar("SELECT payee_identifier_enc FROM pro_profiles WHERE pro_id = $1")
-        .bind(id)
-        .fetch_optional(&mut *tx)
-        .await?;
+    // A deleted partner's number is kept for the tax record but no longer revealed.
+    let row: Option<Option<String>> =
+        sqlx::query_scalar("SELECT f.payee_identifier_enc FROM pro_profiles f JOIN pros p ON p.id = f.pro_id WHERE f.pro_id = $1 AND p.deleted_at IS NULL")
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await?;
     let enc = row.flatten().ok_or(ApiError::NotFound)?;
     let digits =
         crypto::decrypt(&s.config.data_key, crypto::aad::PRO_PAYEE_IDENTIFIER, &enc).ok_or(ApiError::Internal("cannot decrypt payee identifier".into()))?;

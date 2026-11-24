@@ -6,7 +6,7 @@
 
 use super::audit;
 use crate::{
-    auth::{self, Admin, Role, Staff, live_staff_role},
+    auth::{self, Admin, Role, live_staff_role},
     contract,
     error::{ApiError, ApiResult},
     owner,
@@ -93,7 +93,7 @@ async fn invite(
     State(s): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
-    Staff(actor): Staff,
+    Admin(actor): Admin,
     Json(n): Json<InviteInput>,
 ) -> ApiResult<Json<Value>> {
     let actor_role = live_staff_role(&s.db, actor.id).await?;
@@ -145,8 +145,13 @@ async fn issue_reset(
     Path(id): Path<Uuid>,
     Json(req): Json<ResetInput>,
 ) -> ApiResult<Json<Value>> {
-    // The owner's own password is reset only with the owner's code: a reset code would otherwise be a way in.
-    if owner::is_owner(&s.db, id).await? {
+    // An admin's code (the owner's included) only with the owner's code: by copy, or to a phone the caller gives,
+    // it would hand the caller a second admin identity that outlives their own removal.
+    let admin_row: Option<bool> = sqlx::query_scalar("SELECT is_owner OR role = 'admin' FROM staff WHERE id = $1")
+        .bind(id)
+        .fetch_optional(&s.db)
+        .await?;
+    if admin_row == Some(true) {
         owner::verify_owner(&s, me, &headers, Some(peer.ip()), true).await?;
     }
     let mut tx = s.db.begin().await?;

@@ -220,4 +220,45 @@ void main() {
       await unmount(tester);
     },
   );
+
+  testWidgets('an admin account gets a reset code only with the owner code', (
+    tester,
+  ) async {
+    setViewport(tester, wideSize);
+    final fake = FakeApi()
+      ..reply('GET', '/admin/staff', [
+        {
+          'id': 'st-1',
+          'name': '서준',
+          'email': 'seo@example.test',
+          'role': 'admin',
+          'active': true,
+          'has_phone': true,
+          'invited': false,
+        },
+      ])
+      ..onPost(
+        '/admin/staff/st-1/password-reset',
+        (_) => {'code': '482910', 'expires_in': 86400},
+      );
+    final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+    await pumpConsoleScreen(tester, env, const StaffScreen());
+    await settle(tester);
+
+    await tester.tap(find.widgetWithText(TextButton, koT.cStaffReset));
+    await settle(tester);
+    await tester.tap(find.widgetWithText(FilledButton, koT.cStaffReset));
+    await settle(tester);
+    expect(find.text(koT.oaTotpTitle), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, '123456');
+    await tester.tap(find.widgetWithText(FilledButton, koT.oaContinue));
+    await settle(tester);
+    await tester.tap(find.text(koT.cStaffChannelCopy));
+    await tester.tap(find.widgetWithText(FilledButton, koT.cStaffSendCode));
+    await settle(tester);
+
+    final sent = fake.lastCall('POST', '/admin/staff/st-1/password-reset')!;
+    expect(sent.headers['x-owner-totp'], '123456');
+    await unmount(tester);
+  });
 }

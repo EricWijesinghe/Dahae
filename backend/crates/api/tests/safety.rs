@@ -128,16 +128,20 @@ async fn entry_code_is_encrypted_and_revealed_only_to_the_assigned_partner_on_th
     assert_eq!((st, b["entry_code"].as_str()), (StatusCode::OK, Some("1234#")), "{b}");
     assert_eq!(audit_count(&pool, "entry_code.reveal").await, 1, "reveal is audited");
 
-    let (st, b) = call(
-        &app,
-        "GET",
-        &format!("/v1/admin/bookings/{id}/entry-code"),
-        Some(staff(&pool, Role::StaffConsultant).await.as_str()),
-        None,
-    )
-    .await;
-    assert_eq!((st, b["entry_code"].as_str()), (StatusCode::OK, Some("1234#")), "{b}");
-    assert_eq!(audit_count(&pool, "entry_code.reveal").await, 2, "staff reveal is audited too");
+    // Staff have no door-code route (AUTHZ-1): the code is the visiting partner's, on the visit day only.
+    for role in [Role::StaffConsultant, Role::StaffAdmin] {
+        let (st, b) = call(
+            &app,
+            "GET",
+            &format!("/v1/admin/bookings/{id}/entry-code"),
+            Some(staff(&pool, role).await.as_str()),
+            None,
+        )
+        .await;
+        assert!(matches!(st, StatusCode::NOT_FOUND | StatusCode::FORBIDDEN), "{role:?}: {st} {b}");
+        assert!(b["entry_code"].is_null(), "{b}");
+    }
+    assert_eq!(audit_count(&pool, "entry_code.reveal").await, 1, "only the partner's reveal");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

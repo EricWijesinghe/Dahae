@@ -192,3 +192,77 @@ async fn the_profile_is_console_only(pool: PgPool) {
 
     assert_eq!(st, StatusCode::UNAUTHORIZED);
 }
+
+/// PRIV-1: deleting a partner wipes the console profile (photo, bio, emergency contact), the verification
+/// checklist and the partner's unattached uploads, and the payee number can no longer be revealed.
+#[sqlx::test(migrations = "../../migrations")]
+async fn deleting_a_partner_wipes_the_profile_checklist_and_uploads(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let (staff, staff_id) = staff_token(&pool, Role::StaffAdmin).await;
+    let (token, pro) = login(&app, "010-5600-0299", "partner").await;
+    let pro_id: Uuid = pro.parse().expect("id");
+    let dir = common::test_config().upload_dir;
+    std::fs::create_dir_all(&dir).expect("upload dir");
+    // Unique names: the upload dir is shared by every test.
+    let (photo, own) = (format!("{}.jpg", Uuid::now_v7().simple()), format!("{}.jpg", Uuid::now_v7().simple()));
+    for (role, owner, file) in [("staff", staff_id, &photo), ("pro", pro_id, &own)] {
+        std::fs::write(dir.join(file), b"jpeg").expect("file");
+        sqlx::query("INSERT INTO uploads (owner_role, owner_id, file, bytes) VALUES ($1, $2, $3, 4)")
+            .bind(role)
+            .bind(owner)
+            .bind(file)
+            .execute(&pool)
+            .await
+            .expect("upload row");
+    }
+    let uri = format!("/v1/admin/pros/{pro}/profile");
+    let body = json!({
+        "photo_url": format!("{}/files/{photo}", common::BASE_URL),
+        "bio": "꼼꼼하게 청소합니다.",
+        "emergency_contact": "010-1234-5678",
+        "payee_identifier": "900101-1234568"
+    });
+    let (st, b) = call(&app, "PUT", &uri, Some(staff.as_str()), Some(body)).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    sqlx::query("INSERT INTO pro_verifications (pro_id, checklist, decided_by) VALUES ($1, '{\"identity\": true}', $2)")
+        .bind(pro_id)
+        .bind(staff_id)
+        .execute(&pool)
+        .await
+        .expect("checklist");
+
+    let (st, b) = call(&app, "DELETE", "/v1/partner/me", Some(token.as_str()), None).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+
+    let (photo_url, bio, contact): (Option<String>, String, Option<String>) =
+        sqlx::query_as("SELECT photo_url, bio, emergency_contact_enc FROM pro_profiles WHERE pro_id = $1")
+            .bind(pro_id)
+            .fetch_one(&pool)
+            .await
+            .expect("profile");
+    assert_eq!((photo_url, bio.as_str(), contact), (None, "", None), "profile wiped");
+    let checklists: i64 = sqlx::query_scalar("SELECT count(*) FROM pro_verifications WHERE pro_id = $1")
+        .bind(pro_id)
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(checklists, 0, "verification checklist deleted");
+    for file in [&photo, &own] {
+        let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM uploads WHERE file = $1")
+            .bind(file)
+            .fetch_one(&pool)
+            .await
+            .expect("count");
+        assert_eq!(rows, 0, "{file}: upload row removed");
+        assert!(!dir.join(file).exists(), "{file}: file removed");
+    }
+    let (st, b) = call(
+        &app,
+        "POST",
+        &format!("/v1/admin/pros/{pro}/payee-identifier/reveal"),
+        Some(staff.as_str()),
+        None,
+    )
+    .await;
+    assert_eq!(st, StatusCode::NOT_FOUND, "a deleted partner's number is not revealed: {b}");
+}

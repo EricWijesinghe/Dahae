@@ -154,34 +154,79 @@ async fn invite_creates_an_inactive_staff_who_activates_by_redeeming(db: PgPool)
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn consultant_can_invite_a_consultant_but_not_an_admin(db: PgPool) {
+async fn consultants_cannot_invite_staff(db: PgPool) {
+    // AUTHZ-4: copy hands the caller the code and the caller picks the phone, so an invite is an account they own.
     let consultant = insert(&db, "consultant-caller@test.local", "consultant", None).await;
     let token = auth::issue_access(SECRET, consultant, Role::StaffConsultant).expect("token");
-    let app = common::app(db);
+    let app = common::app(db.clone());
 
-    let (st, _) = call(
-        &app,
-        "POST",
-        "/v1/admin/staff/invite",
-        Some(&token),
-        Some(json!({
-            "email": "a@test.local", "name": "박", "phone": "01011112222", "role": "admin", "channel": "copy"
-        })),
-    )
-    .await;
-    assert_eq!(st, StatusCode::FORBIDDEN);
+    for (role, phone) in [("admin", "01011112222"), ("consultant", "01033334444")] {
+        let (st, b) = call(
+            &app,
+            "POST",
+            "/v1/admin/staff/invite",
+            Some(&token),
+            Some(json!({
+                "email": format!("{role}@test.local"), "name": "박", "phone": phone, "role": role, "channel": "copy"
+            })),
+        )
+        .await;
+        assert_eq!(st, StatusCode::FORBIDDEN, "{role}: {b}");
+    }
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM staff").fetch_one(&db).await.expect("staff");
+    assert_eq!(rows, 1, "no account was made");
+}
 
-    let (st, b) = call(
-        &app,
-        "POST",
-        "/v1/admin/staff/invite",
-        Some(&token),
-        Some(json!({
-            "email": "b@test.local", "name": "박", "phone": "01033334444", "role": "consultant", "channel": "copy"
-        })),
+/// The owner's current code, with the replay mark cleared so each request can spend one.
+async fn owner_code(db: &PgPool, owner: Uuid) -> String {
+    sqlx::query("UPDATE staff SET totp_last_step = NULL WHERE id = $1")
+        .bind(owner)
+        .execute(db)
+        .await
+        .expect("reset step");
+    format!(
+        "{:06}",
+        api::totp::code_at(OWNER_SEED, (chrono::Utc::now().timestamp() / api::totp::STEP_SECS) as u64)
     )
-    .await;
-    assert_eq!(st, StatusCode::OK, "{b}");
+}
+
+const OWNER_SEED: &[u8] = b"12345678901234567890";
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn admin_accounts_get_codes_only_with_the_owner_code(db: PgPool) {
+    // AUTH-2: a re-issued admin invite (or an admin reset) by copy would hand another admin a second admin identity.
+    let owner = insert(&db, "owner-codes@test.local", "admin", None).await;
+    common::enrol_owner(&db, owner, OWNER_SEED).await;
+    let plain = insert(&db, "plain-codes@test.local", "admin", None).await;
+    let pending: Uuid = sqlx::query_scalar(
+        "INSERT INTO staff (email, name, role, phone, password_hash, active) VALUES ('pending-admin@test.local', 'B', 'admin', $1, '', FALSE) RETURNING id",
+    )
+    .bind(auth::normalize_phone(PHONE).expect("phone"))
+    .fetch_one(&db)
+    .await
+    .expect("pending invite");
+    let active = insert(&db, "active-admin@test.local", "admin", Some("010-2222-3333")).await;
+    enrolled(&db, active).await;
+    let app = common::app(db.clone());
+    let (plain_tok, owner_tok) = (admin_token(plain), admin_token(owner));
+
+    for target in [pending, active] {
+        let uri = format!("/v1/admin/staff/{target}/password-reset");
+        let (st, b) = reset_code(&app, &plain_tok, target).await;
+        assert_eq!(st, StatusCode::FORBIDDEN, "a non-owner admin: {b}");
+        let (st, b) = reset_code(&app, &owner_tok, target).await;
+        assert_eq!(st, StatusCode::BAD_REQUEST, "the owner without a code: {b}");
+        let codes: i64 = sqlx::query_scalar("SELECT count(*) FROM staff_sms_codes WHERE staff_id = $1")
+            .bind(target)
+            .fetch_one(&db)
+            .await
+            .expect("codes");
+        assert_eq!(codes, 0, "a refused request issues no code");
+        let code = owner_code(&db, owner).await;
+        let (st, b) = common::call_owner(&app, "POST", &uri, &owner_tok, Some(&code), json!({ "channel": "copy" })).await;
+        assert_eq!(st, StatusCode::OK, "the owner with a code: {b}");
+        assert!(b["code"].is_string(), "{b}");
+    }
 }
 
 #[sqlx::test(migrations = "../../migrations")]

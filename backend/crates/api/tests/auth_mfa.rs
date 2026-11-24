@@ -168,6 +168,15 @@ async fn payouts_and_bank_reveal_need_a_fresh_step_up(db: PgPool) {
     assert_eq!(b["error"]["code"], json!("stepup_required"));
     let (st, b) = call(&app, "GET", &reveal, Some(token.as_str()), None).await;
     assert_eq!(b["error"]["code"], json!("stepup_required"), "bank details: {st} {b}");
+    // Withholding class and Toss seller registration move payout money too (MONEY-2).
+    let pro = Uuid::now_v7();
+    let tax = format!("/v1/admin/settlements/partners/{pro}/tax-type");
+    let seller = format!("/v1/admin/settlements/toss-sellers/{pro}");
+    let (st, b) = call(&app, "POST", &tax, Some(token.as_str()), Some(json!({ "tax_type": "business" }))).await;
+    assert_eq!(b["error"]["code"], json!("stepup_required"), "tax type: {st} {b}");
+    let body = json!({ "business_type": "individual", "name": "파트너", "email": "p@test.local", "phone": "010-0000-0000" });
+    let (st, b) = call(&app, "POST", &seller, Some(token.as_str()), Some(body)).await;
+    assert_eq!(b["error"]["code"], json!("stepup_required"), "seller: {st} {b}");
 
     let (st, b) = call(
         &app,
@@ -182,6 +191,8 @@ async fn payouts_and_bank_reveal_need_a_fresh_step_up(db: PgPool) {
     assert_ne!(b["error"]["code"], json!("stepup_required"), "{st} {b}");
     let (_, b) = call(&app, "GET", &reveal, Some(token.as_str()), None).await;
     assert_ne!(b["error"]["code"], json!("stepup_required"), "{b}");
+    let (st, b) = call(&app, "POST", &tax, Some(token.as_str()), Some(json!({ "tax_type": "business" }))).await;
+    assert_eq!(st, StatusCode::NOT_FOUND, "stepped up, the unknown partner is the only refusal: {b}");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

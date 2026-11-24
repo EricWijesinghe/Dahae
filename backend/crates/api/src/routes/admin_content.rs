@@ -609,17 +609,28 @@ struct Active {
     active: bool,
 }
 
-async fn set_staff_active(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<Uuid>, Json(x): Json<Active>) -> ApiResult<Json<Value>> {
+async fn set_staff_active(
+    State(s): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Admin(a): Admin,
+    Path(id): Path<Uuid>,
+    Json(x): Json<Active>,
+) -> ApiResult<Json<Value>> {
     if id == a.id && !x.active {
         return Err(ApiError::BadRequest("cannot_deactivate_self"));
     }
-    // The owner leaves the console only by handing the role over (transfer), never by deactivation.
-    let is_owner: Option<bool> = sqlx::query_scalar("SELECT is_owner FROM staff WHERE id = $1")
+    let row: Option<(bool, String)> = sqlx::query_as("SELECT is_owner, role FROM staff WHERE id = $1")
         .bind(id)
         .fetch_optional(&s.db)
         .await?;
-    if is_owner == Some(true) && !x.active {
+    // The owner leaves the console only by handing the role over (transfer), never by deactivation.
+    if row.as_ref().is_some_and(|(owner, _)| *owner) && !x.active {
         return Err(ApiError::BadRequest("owner_cannot_deactivate"));
+    }
+    // Switching an admin back on is making an admin: the owner's code, as for a new one.
+    if x.active && row.as_ref().is_some_and(|(_, role)| role == "admin") {
+        owner::verify_owner(&s, a, &headers, Some(peer.ip()), true).await?;
     }
     // An invite that has not been redeemed has no password yet, so it cannot be switched on by hand.
     let mut tx = s.db.begin().await?;

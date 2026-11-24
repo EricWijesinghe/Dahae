@@ -5099,28 +5099,6 @@
         }
       }
     },
-    "/v1/admin/bookings/{id}/entry-code": {
-      "get": {
-        "operationId": "staffEntryCode",
-        "tags": [
-          "admin"
-        ],
-        "summary": "Entry code for a booking (staff, audited)",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Id"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "default": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v1/auth/staff/mfa/enrol": {
       "post": {
         "operationId": "staffMfaEnrol",

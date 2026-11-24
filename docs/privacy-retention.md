@@ -27,7 +27,7 @@ Source of truth for what the server keeps, purges and deletes. Code: `backend/cr
 | Reviews | Text and photos cleared; rating kept for the partner score |
 | Chat messages sent by the customer | `sender_id` unlinked; text kept for disputes |
 | Referral record | Phone replaced by `hmac:<hex>` (HMAC-SHA256, pepper derived from DATA_KEY) so one reward per phone still holds |
-| Finished bookings (completed or cancelled) | Street address, answers, visit notes and household cleared; the district code, size, dwelling type, amounts, dates, service and status kept |
+| Finished bookings (completed or cancelled) | Street address, answers, visit notes, household and the partner's team memo cleared; the district code, size, dwelling type, amounts, dates, service and status kept |
 | Open bookings (upcoming or in progress) | Kept whole until the booking is completed or cancelled; the retention purge then clears the personal fields as above |
 | Bookings, payments, paid checkouts, tips, cash receipts, tax invoice requests, payouts | Kept 5 years (전자상거래법, 부가가치세법), linked to the anonymised row |
 | Consent log | Kept as proof of consent (internal 5-year rule, see lawyer list) |
@@ -56,7 +56,7 @@ JSON: profile, consent history, addresses, payment method labels (no keys), coup
 | AI-assisted chat messages (threads with an `ai_usage` row) | older than N days | `AI_CHAT_RETENTION_DAYS`, default 180 |
 | Uploads not referenced by bookings, chat, pros, users, cases, completion reports, reviews, pro profiles, content or settings | older than N days; file removed, then row | `UPLOAD_ORPHAN_DAYS`, default 30 |
 | Deleted customers' unpaid checkout snapshots | older than 30 days | fixed |
-| Bookings of deleted customers that are completed or cancelled and still hold an address, answers, visit notes or household | cleared (see Deletion) | fixed (`privacy::pseudonymise_closed_bookings`) |
+| Bookings of deleted customers that are completed or cancelled and still hold an address, answers, visit notes, household or team memo | cleared (see Deletion) | fixed (`privacy::pseudonymise_closed_bookings`) |
 | Pending partner deletions (Apple `account-delete`) | retried until no open job or payout | fixed |
 | `apple_notifications` (seen JWS ids, no user data) | never purged (replay guard) | fixed |
 
@@ -74,8 +74,14 @@ Every staff read of a customer's contact details writes `audit_log` with `action
 - A refund is sent to the payment gateway before its audit row is written. If the audit write then fails, the gateway may already have refunded the money while our books still show the payment as paid. The next cancel is refused by the gateway balance check, so it cannot refund twice; reconcile the payment with the gateway.
 - Demo clear (`DELETE` of demo rows) is the one exception: it switches the guards off inside its own transaction and turns them back on before commit.
 
+## Container logs
+
+- Every service writes Docker `json-file` logs, rotated at 10 MB per file and 14 files per service (`x-logging` in `deploy/docker-compose.yml`); the oldest file is deleted when the 15th would start. There is no time limit: a quiet service keeps older lines longer.
+- Postgres logs slow statements without bind values (`log_parameter_max_length=0`) and errors without DETAIL or CONTEXT lines (`log_error_verbosity=terse`), so customer phones, names and addresses from queries do not reach these logs. The statement text itself is kept; it holds placeholders, not values. An error message can still quote one bad input value (for example an invalid id).
+- The console log view masks phone numbers. Check any `dahae logs` output before pasting it into a ticket.
+
 ## Not yet covered
 
-- Partner (pro) account deletion and export: the partner route deletes but does not run this cascade; export is not built.
+- Partner (pro) payee number: partner deletion (`partner::delete_pro`) clears the name, phone, payout account, sign-ins, sessions, the console profile (photo, bio, emergency contact) and the verification checklist in one transaction, then removes the partner's uploads and profile photo that no completion report, case or chat message names. The payee number (주민등록번호 or 사업자등록번호) is kept for the 지급명세서 of payouts already made and can no longer be revealed in the console. It has no purge date yet: the period (deletion date plus the tax retention period) is pending accountant review.
 - Access (connection) logs: nothing in the database stores IP-level access logs; the 3-month rule depends on the hosting proxy's logs.
 - Customers with an open booking can still delete the account. The open booking keeps its personal fields until it is completed or cancelled, then the purge clears them. A booking the partner never closes keeps them until someone closes it.

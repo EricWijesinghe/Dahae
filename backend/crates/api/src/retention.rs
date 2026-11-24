@@ -118,18 +118,42 @@ pub async fn purge(db: &PgPool, cfg: &Config) -> Result<Report, Box<dyn std::err
     })
 }
 
-/// Deletes uploads older than `days` that no record refers to. The file goes first, then its row, so a
-/// failed file removal leaves the row for the next run.
-async fn purge_orphan_uploads(db: &PgPool, dir: &Path, days: u32) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-    let refs = UPLOAD_REFERENCE_TABLES
+type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
+/// SQL condition: upload `u` is named in none of `UPLOAD_REFERENCE_TABLES`.
+fn unreferenced() -> String {
+    UPLOAD_REFERENCE_TABLES
         .iter()
         .map(|t| format!("NOT EXISTS (SELECT 1 FROM {t} r WHERE to_jsonb(r)::text LIKE '%' || u.file || '%')"))
         .collect::<Vec<_>>()
-        .join(" AND ");
-    let sql = format!("SELECT u.id, u.file FROM uploads u WHERE u.created_at < now() - make_interval(days => $1) AND {refs}");
+        .join(" AND ")
+}
+
+/// Deletes uploads older than `days` that no record refers to.
+async fn purge_orphan_uploads(db: &PgPool, dir: &Path, days: u32) -> Result<u64, BoxError> {
+    let sql = format!(
+        "SELECT u.id, u.file FROM uploads u WHERE u.created_at < now() - make_interval(days => $1) AND {}",
+        unreferenced()
+    );
     let orphans: Vec<(uuid::Uuid, String)> = sqlx::query_as(&sql).bind(days as i32).fetch_all(db).await?;
+    remove_uploads(db, dir, orphans).await
+}
+
+/// A deleted partner's own uploads and the profile `photo` the console put up for them, once nothing names
+/// them. Job photos still in a completion report, case or chat stay with that record and its retention.
+pub(crate) async fn purge_pro_uploads(db: &PgPool, dir: &Path, pro: uuid::Uuid, photo: Option<&str>) -> Result<u64, BoxError> {
+    let sql = format!(
+        "SELECT u.id, u.file FROM uploads u WHERE ((u.owner_role = 'pro' AND u.owner_id = $1) OR $2 LIKE '%/' || u.file) AND {}",
+        unreferenced()
+    );
+    let files: Vec<(uuid::Uuid, String)> = sqlx::query_as(&sql).bind(pro).bind(photo).fetch_all(db).await?;
+    remove_uploads(db, dir, files).await
+}
+
+/// The file goes first, then its row, so a failed file removal leaves the row for the next run.
+async fn remove_uploads(db: &PgPool, dir: &Path, files: Vec<(uuid::Uuid, String)>) -> Result<u64, BoxError> {
     let mut removed = 0;
-    for (id, file) in orphans {
+    for (id, file) in files {
         match tokio::fs::remove_file(dir.join(&file)).await {
             Ok(()) => {}
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}

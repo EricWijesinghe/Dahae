@@ -91,6 +91,21 @@ pub(crate) async fn delete_pro(s: &AppState, id: Uuid) -> ApiResult<()> {
         .execute(&mut *tx)
         .await?;
     sqlx::query("DELETE FROM payout_accounts WHERE pro_id = $1").bind(id).execute(&mut *tx).await?;
+    // The console profile and checklist: the pros row is only soft-deleted, so ON DELETE CASCADE never runs.
+    // The payee number stays for the 지급명세서 of payouts already made.
+    let photo: Option<String> = sqlx::query_scalar("SELECT photo_url FROM pro_profiles WHERE pro_id = $1")
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .flatten();
+    sqlx::query("UPDATE pro_profiles SET photo_url = NULL, bio = '', emergency_contact_enc = NULL WHERE pro_id = $1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM pro_verifications WHERE pro_id = $1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("DELETE FROM user_identities WHERE role = 'pro' AND subject_id = $1")
         .bind(id)
         .execute(&mut *tx)
@@ -115,6 +130,9 @@ pub(crate) async fn delete_pro(s: &AppState, id: Uuid) -> ApiResult<()> {
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
+    if let Err(e) = crate::retention::purge_pro_uploads(&s.db, &s.config.upload_dir, id, photo.as_deref()).await {
+        tracing::warn!(pro = %id, error = %e, "partner uploads not removed on deletion; the orphan purge retries them");
+    }
     crate::providers::social::unlink(&s.providers, "pro", id, links).await;
     Ok(())
 }

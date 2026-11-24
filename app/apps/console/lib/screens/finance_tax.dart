@@ -7,6 +7,7 @@ import 'package:ui/ui.dart';
 
 import '../state.dart';
 import '../widgets/inline_button.dart';
+import 'stepup.dart';
 
 /// Downloads one CSV for the given path and query. Owned by the finance screen, which knows how to save.
 typedef ExportAt =
@@ -191,7 +192,9 @@ class _TaxInvoiceQueue extends StatelessWidget {
             for (final r in rows)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: KeepAllText('${r['company_name']} · ${r['business_number']}'),
+                title: KeepAllText(
+                  '${r['company_name']} · ${r['business_number']}',
+                ),
                 // The button goes under the line: beside it a phone-width tile left the company name unreadable.
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -292,7 +295,9 @@ class _ApprovalDialogState extends State<_ApprovalDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: KeepAllText(MaterialLocalizations.of(context).cancelButtonLabel),
+          child: KeepAllText(
+            MaterialLocalizations.of(context).cancelButtonLabel,
+          ),
         ),
         FilledButton(
           style: compactFilled,
@@ -408,9 +413,13 @@ Future<void> setPartnerTaxType(
     return;
   }
   try {
-    await context.api.post(
-      '/admin/settlements/partners/${payout['pro_id']}/tax-type',
-      {'tax_type': picked},
+    // Withholding moves payout money, so the server asks for a fresh authenticator code.
+    await withStepUp(
+      context,
+      () => context.api.post(
+        '/admin/settlements/partners/${payout['pro_id']}/tax-type',
+        {'tax_type': picked},
+      ),
     );
     await reload();
   } on ApiException catch (e) {

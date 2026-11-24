@@ -19,6 +19,7 @@ import 'points_ledger.dart';
 import 'staff_invite.dart';
 import 'member_approvals.dart';
 import '../widgets/inline_button.dart';
+import '../widgets/owner_totp_dialog.dart';
 
 Future<void> _act(
   BuildContext context,
@@ -535,8 +536,14 @@ class _SettlementsState extends State<SettlementsScreen> {
             children: [
               SegmentedButton<bool>(
                 segments: [
-                  ButtonSegment(value: false, label: KeepAllText(t.poTabSettlements)),
-                  ButtonSegment(value: true, label: KeepAllText(t.poTabPayouts)),
+                  ButtonSegment(
+                    value: false,
+                    label: KeepAllText(t.poTabSettlements),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    label: KeepAllText(t.poTabPayouts),
+                  ),
                 ],
                 selected: {_payouts},
                 onSelectionChanged: (s) => setState(() => _payouts = s.first),
@@ -548,14 +555,20 @@ class _SettlementsState extends State<SettlementsScreen> {
                     isExpanded: true,
                     value: _state,
                     items: [
-                      DropdownMenuItem(value: null, child: KeepAllText(t.cAllStatus)),
+                      DropdownMenuItem(
+                        value: null,
+                        child: KeepAllText(t.cAllStatus),
+                      ),
                       for (final s in const [
                         'waiting_balance',
                         'pending',
                         'paid',
                         'held',
                       ])
-                        DropdownMenuItem(value: s, child: KeepAllText(stateLabel(s))),
+                        DropdownMenuItem(
+                          value: s,
+                          child: KeepAllText(stateLabel(s)),
+                        ),
                     ],
                     onChanged: (v) {
                       setState(() => _state = v);
@@ -592,7 +605,9 @@ class _SettlementsState extends State<SettlementsScreen> {
                         Card(
                           elevation: 0,
                           child: ListTile(
-                            title: KeepAllText('${s['team_name']} · ${s['number']}'),
+                            title: KeepAllText(
+                              '${s['team_name']} · ${s['number']}',
+                            ),
                             subtitle: KeepAllText(
                               '${t.cNet} ${context.won((s['net'] as num).toInt())} · ${s['payout_date'] ?? '-'}',
                             ),
@@ -698,7 +713,9 @@ class _CustomersState extends State<CustomersScreen> {
                     leading: CircleAvatar(
                       child: KeepAllText(customerInitial(c['name'] as String?)),
                     ),
-                    title: KeepAllText(customerNameLabel(t, c['name'] as String?)),
+                    title: KeepAllText(
+                      customerNameLabel(t, c['name'] as String?),
+                    ),
                     subtitle: KeepAllText(
                       '${formatKoreanPhone('${c['phone']}')} · ${t.cJoined} ${dateLabel(DateTime.parse(c['created_at'] as String), context.lang)}',
                     ),
@@ -779,18 +796,27 @@ class _StaffState extends State<StaffScreen> {
                     else if (s['is_owner'] != true)
                       TextButton(
                         onPressed: () async {
-                          // Only deactivation needs a confirm; reactivating is harmless.
+                          // Only deactivation needs a confirm.
                           final deactivating = s['active'] == true;
                           if (deactivating &&
                               !await confirmAction(context, t.cDeactivate)) {
                             return;
                           }
                           if (!context.mounted) return;
+                          // Switching an admin back on is making an admin: the owner's code, as for an invite.
+                          final needsOwner =
+                              !deactivating && s['role'] == 'admin';
+                          final code = needsOwner
+                              ? await askOwnerTotp(context)
+                              : '';
+                          if (code == null || !context.mounted) return;
                           await _act(
                             context,
                             () => context.api.post(
                               '/admin/staff/${s['id']}/active',
                               {'active': !deactivating},
+                              null,
+                              needsOwner ? ownerHeaders(code) : null,
                             ),
                             reload,
                           );

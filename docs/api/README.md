@@ -359,7 +359,6 @@ Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see 
 | GET | `/v1/admin/finance/export/vat` | Export VAT summary (CSV) | bearer: staff |  |
 | GET | `/v1/admin/finance/export/withholding` | Export withholding summary (CSV) | bearer: staff |  |
 | GET | `/v1/admin/finance/export/payroll` | Export paid payouts per partner for payroll and withholding filing (CSV, admin only, audited) | bearer: staff |  |
-| GET | `/v1/admin/bookings/{id}/entry-code` | Entry code for a booking (staff, audited) | bearer: staff |  |
 | POST | `/v1/admin/staff/{id}/password-reset` | Issue a one-time password-reset link for a staff account | bearer: staff |  |
 | GET | `/v1/admin/finance/tax-invoices` | List tax-invoice requests | bearer: staff |  |
 | GET | `/v1/admin/finance/export/tax-invoices` | Export tax-invoice requests (CSV) | bearer: staff |  |

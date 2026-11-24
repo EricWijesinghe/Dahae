@@ -6,7 +6,7 @@
 
 use super::{audit, bookings::load_booking};
 use crate::{
-    auth::{Pro, Staff},
+    auth::Pro,
     crypto,
     error::{ApiError, ApiResult},
     realtime::{Recipient, notify},
@@ -29,10 +29,6 @@ pub fn partner_routes() -> Router<AppState> {
         .route("/jobs/{id}/check-in", post(check_in))
         .route("/jobs/{id}/check-out", post(check_out))
         .route("/jobs/{id}/entry-code", get(partner_entry_code))
-}
-
-pub fn admin_routes() -> Router<AppState> {
-    Router::new().route("/bookings/{id}/entry-code", get(staff_entry_code))
 }
 
 /// The partner's own job that is still open (assigned, or completed), or 404 for anyone else's.
@@ -142,12 +138,5 @@ async fn partner_entry_code(State(s): State<AppState>, Pro(a): Pro, Path(id): Pa
         return Err(ApiError::Conflict("entry_code_not_today"));
     }
     audit(&s.db, "pro", Some(a.id), "entry_code.reveal", &id.to_string(), json!({})).await?;
-    Ok(Json(json!({ "entry_code": stored_code(&s, id).await? })))
-}
-
-/// Staff reveal any time, always audited with the staff member.
-async fn staff_entry_code(State(s): State<AppState>, Staff(st): Staff, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
-    load_booking(&s.db, id).await?;
-    audit(&s.db, "staff", Some(st.id), "entry_code.reveal", &id.to_string(), json!({})).await?;
     Ok(Json(json!({ "entry_code": stored_code(&s, id).await? })))
 }

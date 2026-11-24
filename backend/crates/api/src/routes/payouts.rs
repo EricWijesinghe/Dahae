@@ -185,6 +185,8 @@ pub struct TaxTypeBody {
 
 /// Owner classifies a partner for withholding. Affects payouts created after this, never ones already made.
 pub async fn set_tax_type(AxState(s): AxState<AppState>, Admin(a): Admin, Path(pro): Path<Uuid>, Json(b): Json<TaxTypeBody>) -> ApiResult<Json<Value>> {
+    live_admin(&s, a.id).await?;
+    require_recent_stepup(&s, a.id).await?;
     if !matches!(b.tax_type.as_str(), "freelancer" | "business") {
         return Err(ApiError::BadRequest("tax_type"));
     }
@@ -375,6 +377,8 @@ fn seller_draft(pro: Uuid, rev: i32, b: &SellerInput, bank_code: &'static str, a
 /// Registers a pro as a Toss seller, or re-registers after the payout account changed. Stores the seller id,
 /// its status and the account fingerprint that payouts are checked against.
 pub async fn register_seller(AxState(s): AxState<AppState>, Admin(a): Admin, Path(pro): Path<Uuid>, Json(b): Json<SellerInput>) -> ApiResult<Json<Value>> {
+    live_admin(&s, a.id).await?;
+    require_recent_stepup(&s, a.id).await?;
     if s.providers.payout_mode() != PayoutMode::Toss {
         return Err(ApiError::Conflict("payout_provider"));
     }

@@ -21,9 +21,9 @@ Future<void> issueStaffPasswordReset(
   final t = context.t;
   final prompt = invite ? t.cStaffInviteResend : t.cStaffReset;
   if (!await confirmAction(context, prompt) || !context.mounted) return;
-  // Resetting the owner's own password needs the owner's code; any other staff member does not.
-  final isOwner = staff['is_owner'] == true;
-  final code = isOwner ? await askOwnerTotp(context) : '';
+  // An admin account (the owner's included) gets a code only with the owner's code; a consultant does not.
+  final needsOwner = staff['is_owner'] == true || staff['role'] == 'admin';
+  final code = needsOwner ? await askOwnerTotp(context) : '';
   if (code == null || !context.mounted) return;
   final delivery = await pickCodeDelivery(
     context,
@@ -36,7 +36,7 @@ Future<void> issueStaffPasswordReset(
               '/admin/staff/${staff['id']}/password-reset',
               {'channel': delivery.channel, 'phone': delivery.phone},
               null,
-              isOwner ? ownerHeaders(code) : null,
+              needsOwner ? ownerHeaders(code) : null,
             )
             as Json;
     if (!context.mounted) return;

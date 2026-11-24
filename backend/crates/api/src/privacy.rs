@@ -475,7 +475,7 @@ async fn clear_customer_content(tx: &mut Transaction<'_, Postgres>, user: Uuid) 
 }
 
 /// Finished bookings (completed or cancelled) of deleted customers lose the street address, the answers,
-/// the visit notes (entrance instructions) and the household profile. Amounts, dates, service code, status,
+/// the visit notes (entrance instructions), the household profile and the partner's team memo. Amounts, dates, service code, status,
 /// the district and the size stay for the 전자상거래법 record. Answers become `{}` rather than NULL so a
 /// completed quote still reads as a quote to the partner. Open bookings are skipped: the visit and the
 /// quote-job payout rule still read them. Idempotent: a row is matched only while it still holds personal
@@ -485,10 +485,10 @@ pub(crate) async fn pseudonymise_closed_bookings<'c>(conn: impl sqlx::PgExecutor
         "UPDATE bookings SET
            address = jsonb_build_object('district_code', district_code, 'size_pyeong', address -> 'size_pyeong', 'kind', address -> 'kind'),
            answers = CASE WHEN answers IS NULL THEN NULL ELSE '{}'::jsonb END,
-           visit_notes = '{}'::jsonb, household = '{}'::jsonb
+           visit_notes = '{}'::jsonb, household = '{}'::jsonb, team_memo = ''
          WHERE status IN ($1, $2)
            AND (answers IS NOT NULL AND answers <> '{}'::jsonb OR address ->> 'road_address' IS NOT NULL
-                OR visit_notes <> '{}'::jsonb OR household <> '{}'::jsonb)
+                OR visit_notes <> '{}'::jsonb OR household <> '{}'::jsonb OR team_memo <> '')
            AND user_id IN (SELECT id FROM users WHERE deleted_at IS NOT NULL)
            AND ($3::uuid IS NULL OR user_id = $3)",
     )

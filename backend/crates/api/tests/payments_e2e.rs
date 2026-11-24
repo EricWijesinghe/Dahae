@@ -39,6 +39,8 @@ const WEBHOOK_KEY: &[u8] = b"e2e-webhook-key-0123456789abcdef";
 #[derive(Default)]
 struct Gateway {
     payments: HashMap<String, (i64, i64)>,
+    /// `customData` a payment was created with (the browser picks it, so tests can forge it).
+    custom: HashMap<String, Value>,
     cancels: Vec<Value>,
 }
 
@@ -68,7 +70,10 @@ async fn payment(State(g): State<Shared>, Path(id): Path<String>, h: HeaderMap) 
     };
     (
         StatusCode::OK,
-        Json(json!({ "status": status, "amount": { "total": total, "cancelled": cancelled }, "currency": "KRW", "method": {} })),
+        Json(
+            json!({ "status": status, "amount": { "total": total, "cancelled": cancelled }, "currency": "KRW", "method": {},
+                     "customData": g.custom.get(&id) }),
+        ),
     )
 }
 
@@ -142,19 +147,17 @@ async fn late_cancel_policy(db: &PgPool) {
         .expect("policy");
 }
 
-#[sqlx::test(migrations = "../../migrations")]
-async fn keys_checkout_signed_webhook_partial_refund_and_repeat_webhook(pool: PgPool) {
-    seed_catalog(&pool).await;
-    late_cancel_policy(&pool).await;
+/// Production mode against the mock, with the PortOne keys and webhook secret saved by the owner (step-up), and
+/// one signed-in customer. Returns (prod app, customer, mock).
+async fn keyed_prod(pool: &PgPool, phone: &str) -> (Router, common::Customer, Shared) {
+    seed_catalog(pool).await;
     let (base, gateway) = start_gateway().await;
     let dev = common::app(pool.clone());
-    let c = customer(&dev, &pool, "010-7100-0100").await;
+    let c = customer(&dev, pool, phone).await;
     let prod = prod_app(pool.clone(), &base);
-    let (owner, owner_id) = staff_token(&pool, Role::StaffAdmin).await;
+    let (owner, owner_id) = staff_token(pool, Role::StaffAdmin).await;
     let seed = b"12345678901234567890";
-    common::enrol_owner(&pool, owner_id, seed).await;
-
-    // 1. The owner saves the PortOne keys and webhook secret; the live providers pick them up.
+    common::enrol_owner(pool, owner_id, seed).await;
     let webhook_secret = format!("whsec_{}", STANDARD.encode(WEBHOOK_KEY));
     let keys = json!({
         "store_id": STORE,
@@ -168,28 +171,140 @@ async fn keys_checkout_signed_webhook_partial_refund_and_repeat_webhook(pool: Pg
     );
     let (st, saved) = common::call_owner(&prod, "PUT", "/v1/admin/setup/portone", &owner, Some(&code), keys).await;
     assert_eq!(st, StatusCode::OK, "{saved}");
+    (prod, c, gateway)
+}
 
-    // 2. Checkout for a visit two days out, paid at PortOne, then confirmed with the PortOne payment id.
-    let visit = api::util::today_kst() + chrono::Duration::days(2);
+/// A booking checkout `days` out; returns (id, amount).
+async fn new_checkout(prod: &Router, pool: &PgPool, c: &common::Customer, days: i64) -> (Uuid, i64) {
+    let visit = api::util::today_kst() + chrono::Duration::days(days);
     let body = json!({ "kind": "booking", "method": "card",
         "booking": { "service_code": "studio", "address_id": c.address, "visit_date": visit, "start_hour": 9, "visit_notes": {} } });
-    let (st, intent) = call(&prod, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(body)).await;
+    let (st, intent) = call(prod, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(body)).await;
     assert_eq!(st, StatusCode::OK, "{intent}");
-    let checkout: Uuid = intent["id"].as_str().expect("checkout id").parse().expect("uuid");
-    let amount: i64 = sqlx::query_scalar("SELECT amount FROM checkouts WHERE id = $1")
-        .bind(checkout)
-        .fetch_one(&pool)
+    let id: Uuid = intent["id"].as_str().expect("checkout id").parse().expect("uuid");
+    let amount = sqlx::query_scalar("SELECT amount FROM checkouts WHERE id = $1")
+        .bind(id)
+        .fetch_one(pool)
         .await
         .expect("amount");
-    gateway.lock().expect("gateway").payments.insert(checkout.to_string(), (amount, 0));
-    let (st, done) = call(
-        &prod,
+    (id, amount)
+}
+
+async fn confirm(prod: &Router, c: &common::Customer, checkout: Uuid, payment_id: &str) -> (StatusCode, Value) {
+    call(
+        prod,
         "POST",
         &format!("/v1/checkouts/{checkout}/confirm"),
         Some(c.token.as_str()),
-        Some(json!({ "payment_id": checkout.to_string() })),
+        Some(json!({ "payment_id": payment_id })),
     )
-    .await;
+    .await
+}
+
+async fn count(pool: &PgPool, sql: &str) -> i64 {
+    sqlx::query_scalar(sql).fetch_one(pool).await.expect(sql)
+}
+
+async fn status_of(pool: &PgPool, checkout: Uuid) -> String {
+    sqlx::query_scalar("SELECT status FROM checkouts WHERE id = $1")
+        .bind(checkout)
+        .fetch_one(pool)
+        .await
+        .expect("status")
+}
+
+fn error_code(body: &Value) -> Option<&str> {
+    body["error"]["code"].as_str()
+}
+
+/// MONEY-1: the browser picks both paymentId and customData. A payment made with checkout B's id and
+/// customData naming A backs neither: confirming A with it is refused, and B's webhook and confirm neither
+/// book nor refund it.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_payment_with_another_checkouts_id_backs_neither_and_is_never_refunded(pool: PgPool) {
+    let (prod, c, gateway) = keyed_prod(&pool, "010-7100-0101").await;
+    let (a, amount_a) = new_checkout(&prod, &pool, &c, 10).await;
+    let (b, _) = new_checkout(&prod, &pool, &c, 12).await;
+    {
+        let mut g = gateway.lock().expect("gateway");
+        g.payments.insert(b.to_string(), (amount_a, 0));
+        g.custom.insert(b.to_string(), json!({ "checkoutId": a }));
+    }
+
+    let (st, body) = confirm(&prod, &c, a, &b.to_string()).await;
+    assert_eq!((st, error_code(&body)), (StatusCode::BAD_REQUEST, Some("payment_not_for_checkout")), "{body}");
+    assert_eq!(status_of(&pool, a).await, "pending", "A is not booked with B's payment");
+
+    assert_eq!(signed_webhook(&prod, "Transaction.Paid", &b.to_string()).await, StatusCode::OK);
+    let (st, body) = confirm(&prod, &c, b, &b.to_string()).await;
+    assert_eq!((st, error_code(&body)), (StatusCode::BAD_REQUEST, Some("payment_not_for_checkout")), "{body}");
+    assert_eq!(status_of(&pool, b).await, "pending", "B is not settled with a payment made out to A");
+    assert!(gateway.lock().expect("gateway").cancels.is_empty(), "no provider cancel");
+    assert_eq!(count(&pool, "SELECT count(*) FROM refund_queue").await, 0, "no refund queued");
+    assert_eq!(count(&pool, "SELECT count(*) FROM bookings").await, 0, "nothing booked");
+}
+
+/// MONEY-1 refund guard: a payment already recorded for a booking (here A, booked under B's id the way the old
+/// bind rule allowed) is never refunded by B's settle. Staff get one case; A's money stays.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_payment_that_already_backs_a_booking_is_not_refunded_by_another_checkout(pool: PgPool) {
+    let (prod, c, gateway) = keyed_prod(&pool, "010-7100-0102").await;
+    let (a, amount_a) = new_checkout(&prod, &pool, &c, 10).await;
+    let (b, _) = new_checkout(&prod, &pool, &c, 12).await;
+    gateway.lock().expect("gateway").payments.insert(b.to_string(), (amount_a, 0));
+    gateway.lock().expect("gateway").payments.insert(a.to_string(), (amount_a, 0));
+    let (st, done) = confirm(&prod, &c, a, &a.to_string()).await;
+    assert_eq!((st, done["status"].as_str()), (StatusCode::OK, Some("paid")), "{done}");
+    gateway.lock().expect("gateway").payments.remove(&a.to_string());
+    for sql in [
+        "UPDATE payments SET provider_tx_id = $1 WHERE provider_tx_id = $2",
+        "UPDATE checkouts SET provider_payment_id = $1 WHERE provider_payment_id = $2",
+    ] {
+        sqlx::query(sql).bind(b.to_string()).bind(a.to_string()).execute(&pool).await.expect(sql);
+    }
+    // B for another amount takes the mismatch branch; the same amount fails on the payment's unique index.
+    for bump in [1000, -1000] {
+        sqlx::query("UPDATE checkouts SET amount = amount + $2 WHERE id = $1")
+            .bind(b)
+            .bind(bump)
+            .execute(&pool)
+            .await
+            .expect("amount");
+        assert_eq!(signed_webhook(&prod, "Transaction.Paid", &b.to_string()).await, StatusCode::OK);
+        let (st, body) = confirm(&prod, &c, b, &b.to_string()).await;
+        assert_eq!(
+            (st, error_code(&body)),
+            (StatusCode::BAD_REQUEST, Some("payment_not_for_checkout")),
+            "{bump}: {body}"
+        );
+    }
+
+    assert!(gateway.lock().expect("gateway").cancels.is_empty(), "no provider cancel");
+    assert_eq!(count(&pool, "SELECT count(*) FROM refund_queue").await, 0, "no refund queued");
+    assert_eq!(status_of(&pool, a).await, "paid");
+    assert_eq!(status_of(&pool, b).await, "pending", "B stays as it was");
+    assert_eq!(
+        count(&pool, "SELECT count(*) FROM payments WHERE status = 'paid' AND refunded_amount = 0").await,
+        1,
+        "A's payment is untouched"
+    );
+    assert_eq!(
+        count(&pool, "SELECT count(*) FROM cases WHERE kind = 'payment_dispute' AND source = 'provider'").await,
+        1,
+        "one staff case however often B settles"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn keys_checkout_signed_webhook_partial_refund_and_repeat_webhook(pool: PgPool) {
+    // 1. The owner saves the PortOne keys and webhook secret; the live providers pick them up.
+    let (prod, c, gateway) = keyed_prod(&pool, "010-7100-0100").await;
+    late_cancel_policy(&pool).await;
+
+    // 2. Checkout for a visit two days out, paid at PortOne, then confirmed with the PortOne payment id.
+    let (checkout, amount) = new_checkout(&prod, &pool, &c, 2).await;
+    gateway.lock().expect("gateway").payments.insert(checkout.to_string(), (amount, 0));
+    let (st, done) = confirm(&prod, &c, checkout, &checkout.to_string()).await;
     assert_eq!((st, done["status"].as_str()), (StatusCode::OK, Some("paid")), "{done}");
     let booking: Uuid = done["booking_id"].as_str().expect("booking id").parse().expect("uuid");
 

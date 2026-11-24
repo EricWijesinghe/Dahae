@@ -267,7 +267,8 @@ async fn deletion_pseudonymises_finished_bookings_and_keeps_amounts(pool: PgPool
     sqlx::query(
         "UPDATE bookings SET status = 3, address = address || '{\"kind\": \"apartment\"}'::jsonb,
            answers = '{\"size_pyeong\": 24, \"note\": \"door code 1234\"}'::jsonb,
-           visit_notes = '{\"parking\": \"B2 visitor spot\"}'::jsonb, household = '{\"pets\": [{\"kind\": \"cat\", \"count\": 2}]}'::jsonb
+           visit_notes = '{\"parking\": \"B2 visitor spot\"}'::jsonb, household = '{\"pets\": [{\"kind\": \"cat\", \"count\": 2}]}'::jsonb,
+           team_memo = '비밀번호 1234, 강아지 있음'
          WHERE id = $1",
     )
     .bind(done)
@@ -275,7 +276,7 @@ async fn deletion_pseudonymises_finished_bookings_and_keeps_amounts(pool: PgPool
     .await
     .expect("finish booking");
     let before: serde_json::Value =
-        sqlx::query_scalar("SELECT to_jsonb(b) - 'address' - 'answers' - 'visit_notes' - 'household' FROM bookings b WHERE id = $1")
+        sqlx::query_scalar("SELECT to_jsonb(b) - 'address' - 'answers' - 'visit_notes' - 'household' - 'team_memo' FROM bookings b WHERE id = $1")
             .bind(done)
             .fetch_one(&pool)
             .await
@@ -299,11 +300,18 @@ async fn deletion_pseudonymises_finished_bookings_and_keeps_amounts(pool: PgPool
     assert_eq!(answers, Some(json!({})), "answers emptied, not NULL, so the booking still reads as a quote");
     assert_eq!(notes, json!({}), "visit notes cleared");
     assert_eq!(household, json!({}), "household cleared");
-    let after: serde_json::Value = sqlx::query_scalar("SELECT to_jsonb(b) - 'address' - 'answers' - 'visit_notes' - 'household' FROM bookings b WHERE id = $1")
+    let memo: String = sqlx::query_scalar("SELECT team_memo FROM bookings WHERE id = $1")
         .bind(done)
         .fetch_one(&pool)
         .await
-        .expect("after columns");
+        .expect("memo");
+    assert_eq!(memo, "", "the partner's note about the home is cleared (PRIV-2)");
+    let after: serde_json::Value =
+        sqlx::query_scalar("SELECT to_jsonb(b) - 'address' - 'answers' - 'visit_notes' - 'household' - 'team_memo' FROM bookings b WHERE id = $1")
+            .bind(done)
+            .fetch_one(&pool)
+            .await
+            .expect("after columns");
     assert_eq!(after, before, "amounts, dates, service and status unchanged");
 }
 

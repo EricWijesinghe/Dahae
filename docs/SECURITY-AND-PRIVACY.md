@@ -129,6 +129,7 @@ sequenceDiagram
 - **Recovery codes**: ten per set, 80 bits each, base32 with dashes, stored as SHA-256 of the normalised text, each usable once ([owner.rs `new_code`, `code_hash`](../backend/crates/api/src/owner.rs), [routes/staff_mfa.rs](../backend/crates/api/src/routes/staff_mfa.rs)).
 - **Lockouts**: five wrong passwords lock the staff account for 15 minutes ([routes/auth.rs `staff_login`](../backend/crates/api/src/routes/auth.rs)); five wrong second factors do the same ([staff_mfa.rs `record_failure`](../backend/crates/api/src/routes/staff_mfa.rs)). A password that passes but whose second factor is still pending does not reset the counter, so a password holder cannot retry codes forever (comment in `staff_login`).
 - **Invites and password resets** send a one-time 6-digit code by SMS (or the admin copies it). A code lives 24 hours, is burned after 5 wrong tries, and at most 5 codes per staff member per day with a 60-second cooldown ([routes/staff_sms.rs](../backend/crates/api/src/routes/staff_sms.rs) constants, `consume_attempt`, `check_cooldown`). Redeeming a code sets the password and revokes every refresh token; access tokens already issued last up to 15 minutes ([routes/staff_sms.rs](../backend/crates/api/src/routes/staff_sms.rs) `redeem`).
+- **Who may issue codes**: only admins invite staff (a consultant gets 403, `invite` takes `Admin`). Any code for an admin account needs the owner's code in `X-Owner-Totp`: a new admin invite, a re-sent admin invite and an admin password reset (the owner's own included). Switching a deactivated admin back on needs it too; deactivating does not ([routes/staff_sms.rs](../backend/crates/api/src/routes/staff_sms.rs) `invite`, `issue_reset`; [routes/admin_content.rs](../backend/crates/api/src/routes/admin_content.rs) `set_staff_active`). Without this, a copied code for a pending admin invite would give the issuing admin a second admin identity that outlives their own removal.
 
 #### 2.5 Sessions and tokens
 
@@ -173,7 +174,7 @@ Money and privacy actions do not trust the token's role: `live_admin` and `live_
 
 `require_recent_stepup` requires a TOTP or recovery code proven within `STEP_UP_MINUTES` = 5 ([routes/staff_mfa.rs](../backend/crates/api/src/routes/staff_mfa.rs) line 169). It guards:
 
-- payouts: run, reveal bank account, and each payout action ([routes/payouts.rs](../backend/crates/api/src/routes/payouts.rs));
+- payouts: run, reveal bank account, each payout action, a partner's withholding class (`set_tax_type`) and Toss seller registration (`register_seller`) ([routes/payouts.rs](../backend/crates/api/src/routes/payouts.rs));
 - pro payee identifier reveal ([routes/pro_verification.rs](../backend/crates/api/src/routes/pro_verification.rs) `reveal_payee_identifier`);
 - customer export and deletion from the console ([routes/privacy_requests.rs](../backend/crates/api/src/routes/privacy_requests.rs)).
 
@@ -182,6 +183,8 @@ Step-up is skipped only when second factors are off, which configuration allows 
 #### 3.3 Ownership (cross-owner checks)
 
 Every `:id` route that serves a booking, chat thread or partner job is expected to answer 403 or 404 when the caller is not the record's owner. [backend/crates/api/tests/authz.rs](../backend/crates/api/tests/authz.rs) (`cross_owner_requests_are_refused_and_change_nothing`) runs a table of 27 requests from a second customer and a second partner against one record. It first proves the owner can reach the same paths, so a wrong path cannot pass as a refusal. It then checks that the booking row is unchanged. Covered groups: booking routes (customer side), chat thread routes (members only) and partner job routes. Routes outside this table, such as checkout and payment routes, are not exercised by this test.
+
+Checkout payments have their own binding rule: one provider payment backs exactly one checkout. A payment id that is another checkout's id, or a PortOne payment whose `customData.checkoutId` names another checkout, is refused with 400 `payment_not_for_checkout` before anything is read, changed or refunded. A payment already recorded for a booking, or held by another checkout, is never refunded from a second checkout; a `payment_dispute` case is opened instead ([routes/checkout_policy.rs](../backend/crates/api/src/routes/checkout_policy.rs) `bind`, [routes/checkouts.rs](../backend/crates/api/src/routes/checkouts.rs) `bound_payment`, `refund_own`; [tests/payments_e2e.rs](../backend/crates/api/tests/payments_e2e.rs)).
 
 Role-separation tests include: a consultant cannot read the audit log, look up or export customers, or search customers ([tests/authz.rs](../backend/crates/api/tests/authz.rs), [tests/audit.rs](../backend/crates/api/tests/audit.rs) `audit_is_owner_only`, [tests/auth_mfa.rs](../backend/crates/api/tests/auth_mfa.rs)). Note: the audit test is named "owner only", but the handler requires the `Admin` role, not the owner flag ([routes/audit.rs](../backend/crates/api/src/routes/audit.rs) `list`).
 
@@ -287,7 +290,7 @@ Plain SHA-256 is used for values that are already random (refresh tokens, recove
 | `webhook` | `/v1/webhooks/toss` | 120 | No |
 | `general` | everything else | 300 (`RATE_LIMIT_GENERAL_PER_MIN`) | No |
 
-The client address is the right-most `X-Forwarded-For` entry only when `TRUSTED_PROXY` is set; otherwise it is the socket peer ([ratelimit.rs `client_ip`](../backend/crates/api/src/ratelimit.rs)). If the shared counter cannot be read, the request is let through on the in-memory verdict (logged). Some costly endpoints also have a per-user limiter (`UserLimiter`, [ratelimit.rs](../backend/crates/api/src/ratelimit.rs)); the address-search cap per user is in [routes/address.rs](../backend/crates/api/src/routes/address.rs), and the chat-thread daily cap is `MAX_CHAT_THREADS_PER_DAY` ([config.rs](../backend/crates/api/src/config.rs)).
+The client address is the right-most `X-Forwarded-For` entry only when `TRUSTED_PROXY` is set; otherwise it is the socket peer ([ratelimit.rs `client_ip`](../backend/crates/api/src/ratelimit.rs)). If the shared counter cannot be read, the request is let through on the in-memory verdict (logged). IPv6 is not served yet: Docker forwards IPv6 visitors from the bridge gateway, so they would all share one address and one bucket. The installer's DNS check, `dahae domain` and the console's domain check therefore refuse any AAAA record, even one that points at this server ([install.sh `dns_check`, `domain_dns_ok`](../deploy/install.sh), [agent.sh `domain_check`](../deploy/agent.sh)). The installer and `dahae domain` tell the owner to delete it; the console's message still says to remove it or point it at this server, and is being reworded. These checks run only when a domain is set, so a server that kept an AAAA record from before gets no warning, and Docker still publishes ports 80/443 on the server's own IPv6 address, which reaches Caddy with no AAAA record at all. Requests made on the host through docker-proxy (for example the HTTPS check after `dahae domain`) share the same gateway address and bucket. Some costly endpoints also have a per-user limiter (`UserLimiter`, [ratelimit.rs](../backend/crates/api/src/ratelimit.rs)); the address-search cap per user is in [routes/address.rs](../backend/crates/api/src/routes/address.rs), and the chat-thread daily cap is `MAX_CHAT_THREADS_PER_DAY` ([config.rs](../backend/crates/api/src/config.rs)).
 
 #### 7.2 Login and OTP lockouts
 
@@ -304,6 +307,7 @@ Lock length is 30 seconds, doubling, capped at 1 hour. Failures are forgotten af
 - Request timeout 30 seconds ([routes/mod.rs](../backend/crates/api/src/routes/mod.rs) `REQUEST_TIMEOUT`).
 - Idempotency: money-moving POSTs take an `Idempotency-Key`, scoped to the caller and path, bound to the body hash, replayed for 24 hours; server errors and refusals release the key ([idempotency.rs](../backend/crates/api/src/idempotency.rs) module comment).
 - Database: per-statement and idle-transaction timeouts ([config.rs `DbSettings`](../backend/crates/api/src/config.rs)).
+- Database logs: Postgres logs slow statements (over 500 ms) without bind values (`log_parameter_max_length=0`) and errors without DETAIL or CONTEXT lines (`log_error_verbosity=terse`), where duplicate-key values such as phones would show ([deploy/docker-compose.yml](../deploy/docker-compose.yml) `db` command).
 - Edge: Caddy removes the `Authorization` and `Cookie` headers and drops every query string (phone numbers, names and addresses from admin lookups included) and masks ops-progress tokens before writing its access log, and keeps 14 files of 10 MB for at most 3 months ([deploy/Caddyfile](../deploy/Caddyfile) `log` block). The stock Caddy image has no rate-limit module, so there is no edge limit on `/v1/auth/*`; a shortcut comment in the same file records this.
 - Feature switches: a database error lets the request through. Flags are documented as not a security boundary ([routes/config.rs `enforce`](../backend/crates/api/src/routes/config.rs)).
 
@@ -320,6 +324,7 @@ Set by [deploy/Caddyfile](../deploy/Caddyfile) on every response:
 | `Permissions-Policy` | camera, microphone, USB off; geolocation for own pages only |
 | `Cross-Origin-Opener-Policy` | `same-origin-allow-popups` (for payment popups) |
 | `Server` | removed |
+| `Cache-Control` | `no-store` on `/v1/*`, `/health` and the app-link files, unless the API set its own value (signed-in JSON must not stay in a shared PC's browser cache) |
 
 Two Content Security Policies, chosen by path:
 
@@ -379,7 +384,7 @@ Note the verification split: the reference verifier is [scripts/release/verify-m
 - Analytics: anonymous per-install id, allowlisted event names; no user id, free text or contact data; sent only after the user opts in (checked in the app, not on the server) ([analytics.rs](../backend/crates/api/src/analytics.rs) header).
 - Client error reports are capped and scrubbed of personal data before storage ([client_errors.rs](../backend/crates/api/src/client_errors.rs) header).
 - Names are masked for display (`김*은`) and phones are shown as the first three and last four digits ([auth.rs `mask_name`](../backend/crates/api/src/auth.rs), [owner.rs `mask_phone`](../backend/crates/api/src/owner.rs)).
-- Entry codes (door codes) are decrypted only on the visit day in Seoul time, and are erased 24 hours after the job ends or is cancelled ([safety.rs](../backend/crates/api/src/safety.rs) `reveal_allowed`, `CODE_RETENTION_HOURS`, `purge_codes`).
+- Entry codes (door codes) are decrypted only for the assigned partner, only on the visit day in Seoul time, and are erased 24 hours after the job ends or is cancelled ([safety.rs](../backend/crates/api/src/safety.rs) `reveal_allowed`, `CODE_RETENTION_HOURS`, `purge_codes`). Staff have no route that returns the code ([routes/site.rs](../backend/crates/api/src/routes/site.rs)).
 
 #### 11.2 Retention and purge
 
@@ -393,7 +398,7 @@ Note the verification split: the reference verifier is [scripts/release/verify-m
 | Chat messages in threads the helper answered | Older than `AI_CHAT_RETENTION_DAYS`, default 180 |
 | Orphan uploads | Older than `UPLOAD_ORPHAN_DAYS`, default 30; file removed before its row |
 | Unpaid checkout snapshots of deleted customers | Older than 30 days: booking snapshot and virtual account cleared; row kept ([retention.rs](../backend/crates/api/src/retention.rs) lines 35-42) |
-| Closed bookings of deleted customers | Personal fields cleared |
+| Closed bookings of deleted customers | Personal fields cleared (street address, answers, visit notes, household, team memo) |
 | Partner deletions requested by Apple and blocked by an open job or payout | Retried until no open job or payout |
 
 The full table, including the 5-year rule for payment and tax records and open questions, is in [privacy-retention.md](privacy-retention.md).
@@ -401,6 +406,8 @@ The full table, including the 5-year rule for payment and tax records and open q
 #### 11.3 Account deletion (탈퇴)
 
 `delete_account` ([privacy.rs](../backend/crates/api/src/privacy.rs)) anonymises the user row and runs one transaction. It removes contact data, sign-in identities, addresses, devices, notifications, uploads and review text, and deletes the saved-card billing key at PortOne first; if that fails, nothing changes and the call returns 503. It ends subscriptions and waitlist places. It keeps payment, tip, receipt, tax-invoice and payout records linked to the anonymised row, keeps the consent log, and keeps the referral phone only as a keyed digest. It is safe to run twice. Provider unlinks (Apple revoke, Kakao unlink, Naver delete) run after commit, best effort.
+
+Partner deletion (`delete_pro`) clears the name, phone, payout account, sign-in identities and sessions, and in the same transaction the console profile (photo, bio, emergency contact) and the verification checklist. After commit it removes the partner's uploads and the profile photo unless a completion report, case or chat message still names them. The payee number (주민등록번호 or 사업자등록번호) stays for the 지급명세서 of payouts already made, but is no longer revealed once the partner is deleted ([routes/pro_verification.rs](../backend/crates/api/src/routes/pro_verification.rs) `reveal_payee_identifier`); its purge date is still open (see [privacy-retention.md](privacy-retention.md)).
 
 A direct partner deletion blocked by an open job or payout returns 409 and is not queued ([routes/partner.rs `delete_pro`](../backend/crates/api/src/routes/partner.rs), lines 61-82). An Apple `account-delete` notification that is blocked is queued (`deletion_requested_at`, [privacy.rs](../backend/crates/api/src/privacy.rs) lines 482-495 and 543) and completed by the retention job once no job or payout is open ([retention.rs](../backend/crates/api/src/retention.rs) line 42).
 

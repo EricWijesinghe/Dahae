@@ -447,6 +447,11 @@ pub async fn settle(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResu
 async fn bound_payment(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResult<String> {
     let foreign = ApiError::BadRequest("payment_not_for_checkout");
     match bind(ck.id, payment_id) {
+        // A payment made out to another checkout (customData) is that checkout's, even under this id.
+        Binding::Bound(id) if ck.gateway == "portone" && !id.starts_with("dev:") => match portone::custom_checkout_id(&s.providers, &id).await? {
+            Some(owner) if owner != ck.id => Err(foreign),
+            _ => Ok(id),
+        },
         Binding::Bound(id) => Ok(id),
         Binding::Foreign => Err(foreign),
         Binding::AskProvider if ck.gateway != "portone" => Err(foreign),
@@ -477,12 +482,12 @@ pub(super) async fn apply(s: &AppState, ck: &CheckoutRow, payment_id: &str, info
         },
         Action::RefundMismatch => {
             // This checkout's payment, for another amount: give it back.
-            let refund = give_back(s, ck, payment_id, info).await;
+            let refund = give_back(s, ck, payment_id, info).await?;
             failed_or_pending(s, ck, "amount_mismatch", refund).await?;
             Err(ApiError::BadRequest("amount_mismatch"))
         }
         Action::RefundClosed => {
-            let refund = give_back(s, ck, payment_id, info).await;
+            let refund = give_back(s, ck, payment_id, info).await?;
             if ck.status != "paid" {
                 refund_late(s, ck, Some("closed_checkout"), refund).await?;
             }
@@ -528,7 +533,7 @@ async fn unfulfilled(s: &AppState, ck: &CheckoutRow, payment_id: &str, action: A
         // Unknown state: refunding an unfulfilled charge is the safe default.
         Err(re) => tracing::error!(error = %re, checkout = %ck.id, "re-reading checkout before refund failed"),
     }
-    let refund = refund_durably(s, &ck.gateway, payment_id, ck.charge(), Some(ck.id)).await;
+    let refund = refund_own(s, ck, payment_id, ck.charge()).await?;
     let reason = refund_reason(&e);
     if ck.kind == "deposit" && deposit_changed(&e) {
         // Re-quoted or changed after the customer paid: the money goes back, say so, and keep the reason.
@@ -548,12 +553,55 @@ async fn unfulfilled(s: &AppState, ck: &CheckoutRow, payment_id: &str, action: A
 }
 
 /// Refunds this checkout's PAID payment in full, as the provider reports it.
-async fn give_back(s: &AppState, ck: &CheckoutRow, payment_id: &str, info: Option<&PaymentInfo>) -> Refund {
+async fn give_back(s: &AppState, ck: &CheckoutRow, payment_id: &str, info: Option<&PaymentInfo>) -> ApiResult<Refund> {
     match info {
-        Some(i) => refund_durably(s, &ck.gateway, payment_id, i.total, Some(ck.id)).await,
+        Some(i) => refund_own(s, ck, payment_id, i.total).await,
         // Nothing was paid, so nothing is owed.
-        None => Refund::Done,
+        None => Ok(Refund::Done),
     }
+}
+
+/// Refunds `payment_id` unless it already backs a recorded payment or another checkout: that money paid for
+/// something else, so it is not this checkout's to give back. Staff get one case per payment and nothing moves.
+async fn refund_own(s: &AppState, ck: &CheckoutRow, payment_id: &str, amount: i64) -> ApiResult<Refund> {
+    let held: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM payments WHERE provider = $1 AND provider_tx_id = $2)
+             OR EXISTS (SELECT 1 FROM checkouts WHERE gateway = $1 AND provider_payment_id = $2 AND id <> $3)",
+    )
+    .bind(&ck.gateway)
+    .bind(payment_id)
+    .bind(ck.id)
+    .fetch_one(&s.db)
+    .await?;
+    if !held {
+        return Ok(refund_durably(s, &ck.gateway, payment_id, amount, Some(ck.id)).await);
+    }
+    let summary = format!(
+        "Payment {payment_id} was presented for checkout {} but already backs another booking or checkout, so it was not refunded. Check the payment in the payment gateway's console.",
+        ck.id
+    );
+    let open: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM cases WHERE kind = 'payment_dispute' AND summary = $1)")
+        .bind(&summary)
+        .fetch_one(&s.db)
+        .await?;
+    if !open {
+        super::cases::insert(
+            &s.db,
+            super::cases::NewCase {
+                booking: None,
+                kind: "payment_dispute",
+                source: "provider",
+                reporter: "system",
+                reporter_id: None,
+                summary: &summary,
+                photos: json!([]),
+            },
+        )
+        .await?;
+        tracing::error!(checkout = %ck.id, payment_id, "payment held by another checkout presented for a refund");
+        crate::ops::record(&s.db, "payment_stuck", Err("payment_held_elsewhere")).await;
+    }
+    Err(ApiError::BadRequest("payment_not_for_checkout"))
 }
 
 /// 'failed' once the money is back; 'refund_pending' (with notice) while it is not.

@@ -70,4 +70,37 @@ void main() {
     expect(calls.single.body, {'active': false});
     await unmount(tester);
   });
+
+  testWidgets('switching an admin back on sends the owner code', (
+    tester,
+  ) async {
+    setViewport(tester, tallPhoneSize);
+    final fake = FakeApi()
+      ..reply('GET', '/admin/staff', [
+        {
+          'id': 's-1',
+          'name': 'Lee',
+          'email': 'lee@example.com',
+          'role': 'admin',
+          'active': false,
+        },
+      ])
+      ..reply('POST', _staffPath, {'ok': true});
+    await _pumpStaff(tester, fake);
+    await pumpUntilFound(
+      tester,
+      find.widgetWithText(TextButton, koT.cActivate),
+    );
+
+    await tester.tap(find.widgetWithText(TextButton, koT.cActivate));
+    await pumpUntilFound(tester, find.text(koT.oaTotpTitle));
+    await tester.enterText(find.byType(TextField).last, '123456');
+    await tester.tap(find.widgetWithText(FilledButton, koT.oaContinue));
+    await settle(tester);
+
+    final sent = fake.lastCall('POST', _staffPath)!;
+    expect(sent.body, {'active': true});
+    expect(sent.headers['x-owner-totp'], '123456');
+    await unmount(tester);
+  });
 }

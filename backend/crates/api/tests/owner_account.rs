@@ -795,3 +795,41 @@ async fn admin_invite_needs_the_owner_code_and_a_consultant_invite_does_not(db: 
     let (st, b) = call(&app, "POST", "/v1/admin/staff/invite", Some(plain.token.as_str()), Some(consultant)).await;
     assert_eq!(st, StatusCode::OK, "consultant invite needs no owner code: {b}");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn reactivating_an_admin_needs_the_owner_code(db: PgPool) {
+    // AUTHZ-5: an admin the owner removed is not switched back on by another admin.
+    let app = common::app(db.clone());
+    let owner = enrolled(&db, &app, "revive-owner@test.local", true).await;
+    let plain = enrolled(&db, &app, "revive-plain@test.local", false).await;
+    let removed = insert_staff(&db, "revive-removed@test.local", "admin", false).await;
+    let consultant = insert_staff(&db, "revive-consultant@test.local", "consultant", false).await;
+    for id in [removed, consultant] {
+        sqlx::query("UPDATE staff SET active = FALSE WHERE id = $1")
+            .bind(id)
+            .execute(&db)
+            .await
+            .expect("deactivate");
+    }
+    let on = Some(json!({ "active": true }));
+    let uri = format!("/v1/admin/staff/{removed}/active");
+
+    let (st, b) = call(&app, "POST", &uri, Some(plain.token.as_str()), on.clone()).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "{b}");
+    let (st, b) = owner_call(&app, "POST", &uri, &owner.token, None, on.clone()).await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "no owner code: {b}");
+    let active: bool = sqlx::query_scalar("SELECT active FROM staff WHERE id = $1")
+        .bind(removed)
+        .fetch_one(&db)
+        .await
+        .expect("row");
+    assert!(!active, "still off");
+    let code = fresh(&db, &owner).await;
+    let (st, b) = owner_call(&app, "POST", &uri, &owner.token, Some(code.as_str()), on.clone()).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+
+    let (st, b) = call(&app, "POST", &format!("/v1/admin/staff/{consultant}/active"), Some(plain.token.as_str()), on).await;
+    assert_eq!(st, StatusCode::OK, "a consultant needs no owner code: {b}");
+    let (st, b) = call(&app, "POST", &uri, Some(plain.token.as_str()), Some(json!({ "active": false }))).await;
+    assert_eq!(st, StatusCode::OK, "removing an admin needs no owner code: {b}");
+}
