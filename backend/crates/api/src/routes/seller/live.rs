@@ -19,7 +19,7 @@ const SITE_DESCRIPTION: &str = "검증된 청소 전문가가 욕실부터 이�
 
 /// Every field this module answers. The website contract test checks pages against `all_fields`.
 #[cfg(test)]
-pub const FIELDS: [&str; 26] = [
+pub const FIELDS: [&str; 27] = [
     "name",
     "name_en",
     "short_name",
@@ -47,6 +47,8 @@ pub const FIELDS: [&str; 26] = [
     "tagline",
     "tagline_en",
     "privacy_email",
+    // Search Console / Search Advisor meta tags for the home page <head> (empty until a token is saved).
+    "verify_meta",
 ];
 
 /// Caddy renders included text as a template again, so a `{{` typed into the console must never reach it.
@@ -85,6 +87,14 @@ pub fn brand_fragment(base: &str, b: &Value, field: &str) -> Option<String> {
         "apple_icon" => escape_html(&asset_path(b, "apple_180", DEFAULT_APPLE)),
         "og_image" => escape_html(&format!("{base}{}", asset_path(b, "og_1200", DEFAULT_OG))),
         "ld_json" => ld_json(base, b),
+        "verify_meta" => [
+            ("google-site-verification", "google_site_verification"),
+            ("naver-site-verification", "naver_site_verification"),
+        ]
+        .into_iter()
+        .filter_map(|(meta, key)| text(b, key).map(|t| format!("<meta name=\"{meta}\" content=\"{}\">", escape_html(t))))
+        .collect::<Vec<_>>()
+        .join("\n"),
         "privacy_email" => escape_html(
             text(&b["company"], "privacy_email")
                 .or_else(|| text(b, "support_email"))

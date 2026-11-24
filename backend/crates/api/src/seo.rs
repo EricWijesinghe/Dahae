@@ -675,7 +675,12 @@ async fn verification_file(State(s): State<AppState>, Path(file): Path<String>) 
             .into_response());
     }
     if let Some(token) = text(&business, "naver_site_verification").filter(|t| file == format!("naver{t}.html")) {
-        return Ok(html(format!("<meta name=\"naver-site-verification\" content=\"{}\"/>\n", escape_html(&token))));
+        // Search Advisor's download is plain text naming the file, like Google's; it checks that content.
+        return Ok((
+            [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+            format!("naver-site-verification: naver{}.html\n", escape_html(&token)),
+        )
+            .into_response());
     }
     Err(ApiError::NotFound)
 }

@@ -159,3 +159,22 @@ async fn provider_status_flips_with_its_card(pool: PgPool) {
     let (_, after) = fragment(&app, "uses_ai").await;
     assert_eq!(after, "이용 중");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn verify_meta_carries_saved_search_tokens_for_the_home_page(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let (st, empty) = fragment(&app, "verify_meta").await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(empty, "", "no token saved: nothing in <head>");
+    let token = admin(&pool).await;
+    let profile = json!({"name": "우집사", "google_site_verification": "g0ogLe-Tok_en",
+                         "naver_site_verification": "e64f527b44d14ffc7bd4612e454ff068565064ce"});
+    let (st, b) = call(&app, "PUT", "/v1/admin/setup/business", Some(&token), Some(profile)).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let (_, html) = fragment(&app, "verify_meta").await;
+    assert!(html.contains("<meta name=\"google-site-verification\" content=\"g0ogLe-Tok_en\">"), "{html}");
+    assert!(
+        html.contains("<meta name=\"naver-site-verification\" content=\"e64f527b44d14ffc7bd4612e454ff068565064ce\">"),
+        "{html}"
+    );
+}

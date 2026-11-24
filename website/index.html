@@ -8,6 +8,7 @@
   <meta name="theme-color" content="#0B1217">
   <!-- Brand values and absolute URLs are filled on the server by Caddy (backend routes/seller/live.rs). -->
   <link rel="canonical" href="{{httpInclude "/v1/public/seller-info?field=base_url"}}/">
+  {{httpInclude "/v1/public/seller-info?field=verify_meta"}}
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="{{httpInclude "/v1/public/seller-info?field=name"}}">
   <meta property="og:locale" content="ko_KR">
