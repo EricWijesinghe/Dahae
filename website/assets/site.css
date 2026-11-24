@@ -59,6 +59,9 @@ body {
   color: var(--ink);
   line-height: 1.6;
   overflow-x: hidden;
+  /* Korean lines break between words, not inside one; a word longer than its box still wraps. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   transition: background 0.4s ease, color 0.4s ease;
 }
 img, svg { display: block; max-width: 100%; }
