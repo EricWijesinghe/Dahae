@@ -41,8 +41,18 @@ fn random_salt() -> String {
 }
 
 pub async fn send_sms(http: &reqwest::Client, cfg: &SolapiConfig, to: &str, text: &str) -> Result<(), ProviderError> {
+    post(http, cfg, sms_message(to, &cfg.sender, text)).await
+}
+
+/// SMS body: `SMS` up to the short-message length, `LMS` beyond it.
+pub fn sms_message(to: &str, from: &str, text: &str) -> Value {
     let kind = if text.chars().count() <= SMS_MAX_CHARS { "SMS" } else { "LMS" };
-    post(http, cfg, json!({ "to": to, "from": cfg.sender, "text": text, "type": kind })).await
+    json!({ "to": to, "from": from, "text": text, "type": kind })
+}
+
+/// The `#{..}` variables every approved template fills.
+pub fn alimtalk_variables(brand: &str, title: &str, body: &str) -> Value {
+    json!({ "#{brand}": brand, "#{title}": title, "#{body}": body })
 }
 
 /// AlimTalk body. `disableSms: false` lets Solapi send `text` as an SMS when KakaoTalk can't deliver

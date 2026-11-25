@@ -1,0 +1,373 @@
+{
+  "sms_length": [
+    {
+      "chars": 44,
+      "type": "SMS"
+    },
+    {
+      "chars": 45,
+      "type": "SMS"
+    },
+    {
+      "chars": 46,
+      "type": "LMS"
+    },
+    {
+      "chars": 90,
+      "type": "LMS"
+    },
+    {
+      "chars": 91,
+      "type": "LMS"
+    }
+  ],
+  "templates": [
+    {
+      "alert_data": {
+        "status": 1
+      },
+      "alert_key": "booking.confirmed",
+      "alert_kind": "booking.status",
+      "alimtalk": {
+        "from": "15880000",
+        "kakaoOptions": {
+          "disableSms": false,
+          "pfId": "PF_KR",
+          "templateId": "TPL_KR",
+          "variables": {
+            "#{body}": "B-20261111-0042",
+            "#{brand}": "다해클린",
+            "#{title}": "예약 상태가 바뀌었어요"
+          }
+        },
+        "text": "예약 상태가 바뀌었어요\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "ATA"
+      },
+      "outbox_with_template": {
+        "body": "B-20261111-0042",
+        "channel": "alimtalk",
+        "data": {
+          "brand": "다해클린",
+          "template": "booking.confirmed"
+        },
+        "title": "예약 상태가 바뀌었어요"
+      },
+      "outbox_without_template": {
+        "body": "예약 상태가 바뀌었어요\nB-20261111-0042",
+        "channel": "sms",
+        "data": {},
+        "title": ""
+      },
+      "sms_english": {
+        "from": "15880000",
+        "text": "Your booking status changed\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "sms_fallback": {
+        "from": "15880000",
+        "text": "예약 상태가 바뀌었어요\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "template": "booking.confirmed"
+    },
+    {
+      "alert_data": {
+        "status": 2
+      },
+      "alert_key": "partner.assigned",
+      "alert_kind": "booking.status",
+      "alimtalk": {
+        "from": "15880000",
+        "kakaoOptions": {
+          "disableSms": false,
+          "pfId": "PF_KR",
+          "templateId": "TPL_KR",
+          "variables": {
+            "#{body}": "B-20261111-0042",
+            "#{brand}": "다해클린",
+            "#{title}": "청소팀이 배정됐어요"
+          }
+        },
+        "text": "청소팀이 배정됐어요\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "ATA"
+      },
+      "outbox_with_template": {
+        "body": "B-20261111-0042",
+        "channel": "alimtalk",
+        "data": {
+          "brand": "다해클린",
+          "template": "partner.assigned"
+        },
+        "title": "청소팀이 배정됐어요"
+      },
+      "outbox_without_template": {
+        "body": "청소팀이 배정됐어요\nB-20261111-0042",
+        "channel": "sms",
+        "data": {},
+        "title": ""
+      },
+      "sms_english": {
+        "from": "15880000",
+        "text": "Your cleaning team is assigned\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "LMS"
+      },
+      "sms_fallback": {
+        "from": "15880000",
+        "text": "청소팀이 배정됐어요\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "template": "partner.assigned"
+    },
+    {
+      "alert_data": {},
+      "alert_key": null,
+      "alert_kind": "booking.reminder",
+      "alimtalk": {
+        "from": "15880000",
+        "kakaoOptions": {
+          "disableSms": false,
+          "pfId": "PF_KR",
+          "templateId": "TPL_KR",
+          "variables": {
+            "#{body}": "B-20261111-0042",
+            "#{brand}": "다해클린",
+            "#{title}": "내일 청소 예정이에요"
+          }
+        },
+        "text": "내일 청소 예정이에요\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "ATA"
+      },
+      "outbox_with_template": {
+        "body": "B-20261111-0042",
+        "channel": "alimtalk",
+        "data": {
+          "brand": "다해클린",
+          "template": "booking.reminder"
+        },
+        "title": "내일 청소 예정이에요"
+      },
+      "outbox_without_template": {
+        "body": "내일 청소 예정이에요\nB-20261111-0042",
+        "channel": "sms",
+        "data": {},
+        "title": ""
+      },
+      "sms_english": {
+        "from": "15880000",
+        "text": "Your cleaning is tomorrow\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "sms_fallback": {
+        "from": "15880000",
+        "text": "내일 청소 예정이에요\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "template": "booking.reminder"
+    },
+    {
+      "alert_data": {},
+      "alert_key": "booking.arrival",
+      "alert_kind": "booking.arrival",
+      "alimtalk": {
+        "from": "15880000",
+        "kakaoOptions": {
+          "disableSms": false,
+          "pfId": "PF_KR",
+          "templateId": "TPL_KR",
+          "variables": {
+            "#{body}": "B-20261111-0042",
+            "#{brand}": "다해클린",
+            "#{title}": "청소팀이 도착했어요"
+          }
+        },
+        "text": "청소팀이 도착했어요\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "ATA"
+      },
+      "outbox_with_template": {
+        "body": "B-20261111-0042",
+        "channel": "alimtalk",
+        "data": {
+          "brand": "다해클린",
+          "template": "booking.arrival"
+        },
+        "title": "청소팀이 도착했어요"
+      },
+      "outbox_without_template": {
+        "body": "청소팀이 도착했어요\nB-20261111-0042",
+        "channel": "sms",
+        "data": {},
+        "title": ""
+      },
+      "sms_english": {
+        "from": "15880000",
+        "text": "The cleaning team has arrived\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "sms_fallback": {
+        "from": "15880000",
+        "text": "청소팀이 도착했어요\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "template": "booking.arrival"
+    },
+    {
+      "alert_data": {},
+      "alert_key": "booking.completed",
+      "alert_kind": "booking.completed",
+      "alimtalk": {
+        "from": "15880000",
+        "kakaoOptions": {
+          "disableSms": false,
+          "pfId": "PF_KR",
+          "templateId": "TPL_KR",
+          "variables": {
+            "#{body}": "전후 사진을 확인하고 후기를 남겨 주세요",
+            "#{brand}": "다해클린",
+            "#{title}": "청소가 끝났어요"
+          }
+        },
+        "text": "청소가 끝났어요\n전후 사진을 확인하고 후기를 남겨 주세요",
+        "to": "01070003001",
+        "type": "ATA"
+      },
+      "outbox_with_template": {
+        "body": "전후 사진을 확인하고 후기를 남겨 주세요",
+        "channel": "alimtalk",
+        "data": {
+          "brand": "다해클린",
+          "template": "booking.completed"
+        },
+        "title": "청소가 끝났어요"
+      },
+      "outbox_without_template": {
+        "body": "청소가 끝났어요\n전후 사진을 확인하고 후기를 남겨 주세요",
+        "channel": "sms",
+        "data": {},
+        "title": ""
+      },
+      "sms_english": {
+        "from": "15880000",
+        "text": "Cleaning is done\nCheck the before and after photos and leave a review",
+        "to": "01070003001",
+        "type": "LMS"
+      },
+      "sms_fallback": {
+        "from": "15880000",
+        "text": "청소가 끝났어요\n전후 사진을 확인하고 후기를 남겨 주세요",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "template": "booking.completed"
+    },
+    {
+      "alert_data": {},
+      "alert_key": "payment.receipt",
+      "alert_kind": "payment.receipt",
+      "alimtalk": {
+        "from": "15880000",
+        "kakaoOptions": {
+          "disableSms": false,
+          "pfId": "PF_KR",
+          "templateId": "TPL_KR",
+          "variables": {
+            "#{body}": "결제 내역은 예약 상세에서 확인할 수 있어요",
+            "#{brand}": "다해클린",
+            "#{title}": "결제가 완료됐어요"
+          }
+        },
+        "text": "결제가 완료됐어요\n결제 내역은 예약 상세에서 확인할 수 있어요",
+        "to": "01070003001",
+        "type": "ATA"
+      },
+      "outbox_with_template": {
+        "body": "결제 내역은 예약 상세에서 확인할 수 있어요",
+        "channel": "alimtalk",
+        "data": {
+          "brand": "다해클린",
+          "template": "payment.receipt"
+        },
+        "title": "결제가 완료됐어요"
+      },
+      "outbox_without_template": {
+        "body": "결제가 완료됐어요\n결제 내역은 예약 상세에서 확인할 수 있어요",
+        "channel": "sms",
+        "data": {},
+        "title": ""
+      },
+      "sms_english": {
+        "from": "15880000",
+        "text": "Payment complete\nYou can check the payment details in your booking",
+        "to": "01070003001",
+        "type": "LMS"
+      },
+      "sms_fallback": {
+        "from": "15880000",
+        "text": "결제가 완료됐어요\n결제 내역은 예약 상세에서 확인할 수 있어요",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "template": "payment.receipt"
+    },
+    {
+      "alert_data": {},
+      "alert_key": "booking.cancelled",
+      "alert_kind": "booking.cancelled",
+      "alimtalk": {
+        "from": "15880000",
+        "kakaoOptions": {
+          "disableSms": false,
+          "pfId": "PF_KR",
+          "templateId": "TPL_KR",
+          "variables": {
+            "#{body}": "B-20261111-0042",
+            "#{brand}": "다해클린",
+            "#{title}": "예약이 취소됐어요"
+          }
+        },
+        "text": "예약이 취소됐어요\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "ATA"
+      },
+      "outbox_with_template": {
+        "body": "B-20261111-0042",
+        "channel": "alimtalk",
+        "data": {
+          "brand": "다해클린",
+          "template": "booking.cancelled"
+        },
+        "title": "예약이 취소됐어요"
+      },
+      "outbox_without_template": {
+        "body": "예약이 취소됐어요\nB-20261111-0042",
+        "channel": "sms",
+        "data": {},
+        "title": ""
+      },
+      "sms_english": {
+        "from": "15880000",
+        "text": "Your booking was cancelled\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "sms_fallback": {
+        "from": "15880000",
+        "text": "예약이 취소됐어요\nB-20261111-0042",
+        "to": "01070003001",
+        "type": "SMS"
+      },
+      "template": "booking.cancelled"
+    }
+  ]
+}

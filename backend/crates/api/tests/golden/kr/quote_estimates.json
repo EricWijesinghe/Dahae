@@ -1,0 +1,785 @@
+{
+  "addon_totals": [
+    {
+      "discount_bps": 0,
+      "total": 327000
+    },
+    {
+      "discount_bps": 1000,
+      "total": 294300
+    },
+    {
+      "discount_bps": 10000,
+      "total": 0
+    },
+    {
+      "discount_bps": 10001,
+      "total": {
+        "detail": "value out of range: ac_addon_discount_bps",
+        "error": "out_of_range"
+      }
+    }
+  ],
+  "cases": [
+    {
+      "case": "studio_plain",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 180000,
+        "deposit": 19800,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 0,
+        "total": 198000
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "studio_plain",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 198000,
+        "deposit": 21800,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 18000,
+        "peak_bps": 1000,
+        "surcharge_bps": 0,
+        "total": 217800
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "studio_plain",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 234000,
+        "deposit": 25700,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 54000,
+        "peak_bps": 3000,
+        "surcharge_bps": 0,
+        "total": 257400
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "studio_plain",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 225000,
+        "deposit": 24800,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 247500
+      },
+      "service": "whole_home"
+    },
+    {
+      "case": "one_and_half",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 230000,
+        "before_vat": 230000,
+        "deposit": 25300,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 0,
+        "total": 253000
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "one_and_half",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 230000,
+        "before_vat": 253000,
+        "deposit": 27800,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 23000,
+        "peak_bps": 1000,
+        "surcharge_bps": 0,
+        "total": 278300
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "one_and_half",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 230000,
+        "before_vat": 299000,
+        "deposit": 32900,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 69000,
+        "peak_bps": 3000,
+        "surcharge_bps": 0,
+        "total": 328900
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "one_and_half",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 230000,
+        "before_vat": 287500,
+        "deposit": 31600,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 316300
+      },
+      "service": "whole_home"
+    },
+    {
+      "case": "two_rooms_same_day",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 300000,
+        "before_vat": 330000,
+        "deposit": 36300,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 1000,
+        "total": 363000
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "two_rooms_same_day",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 300000,
+        "before_vat": 360000,
+        "deposit": 39600,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 30000,
+        "peak_bps": 1000,
+        "surcharge_bps": 1000,
+        "total": 396000
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "two_rooms_same_day",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 300000,
+        "before_vat": 420000,
+        "deposit": 46200,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 90000,
+        "peak_bps": 3000,
+        "surcharge_bps": 1000,
+        "total": 462000
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "two_rooms_same_day",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 300000,
+        "before_vat": 375000,
+        "deposit": 41300,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 412500
+      },
+      "service": "whole_home"
+    },
+    {
+      "case": "three_rooms_after_interior",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 380000,
+        "before_vat": 528000,
+        "deposit": 58100,
+        "deposit_bps": 1000,
+        "extras": 60000,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2000,
+        "total": 580800
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "three_rooms_after_interior",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 380000,
+        "before_vat": 572000,
+        "deposit": 62900,
+        "deposit_bps": 1000,
+        "extras": 60000,
+        "peak": 44000,
+        "peak_bps": 1000,
+        "surcharge_bps": 2000,
+        "total": 629200
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "three_rooms_after_interior",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 380000,
+        "before_vat": 660000,
+        "deposit": 72600,
+        "deposit_bps": 1000,
+        "extras": 60000,
+        "peak": 132000,
+        "peak_bps": 3000,
+        "surcharge_bps": 2000,
+        "total": 726000
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "three_rooms_after_interior",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 380000,
+        "before_vat": 550000,
+        "deposit": 60500,
+        "deposit_bps": 1000,
+        "extras": 60000,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 605000
+      },
+      "service": "whole_home"
+    },
+    {
+      "case": "four_plus_lived_in",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 460000,
+        "before_vat": 650000,
+        "deposit": 71500,
+        "deposit_bps": 1000,
+        "extras": 60000,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 715000
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "four_plus_lived_in",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 460000,
+        "before_vat": 702000,
+        "deposit": 77200,
+        "deposit_bps": 1000,
+        "extras": 60000,
+        "peak": 52000,
+        "peak_bps": 1000,
+        "surcharge_bps": 2500,
+        "total": 772200
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "four_plus_lived_in",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 460000,
+        "before_vat": 806000,
+        "deposit": 88700,
+        "deposit_bps": 1000,
+        "extras": 60000,
+        "peak": 156000,
+        "peak_bps": 3000,
+        "surcharge_bps": 2500,
+        "total": 886600
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "four_plus_lived_in",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 460000,
+        "before_vat": 650000,
+        "deposit": 71500,
+        "deposit_bps": 1000,
+        "extras": 60000,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 715000
+      },
+      "service": "whole_home"
+    },
+    {
+      "case": "walk_up_high_floor",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 300000,
+        "before_vat": 350200,
+        "deposit": 38500,
+        "deposit_bps": 1000,
+        "extras": 40000,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 300,
+        "total": 385200
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "walk_up_high_floor",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 300000,
+        "before_vat": 384200,
+        "deposit": 42300,
+        "deposit_bps": 1000,
+        "extras": 40000,
+        "peak": 34000,
+        "peak_bps": 1000,
+        "surcharge_bps": 300,
+        "total": 422600
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "walk_up_high_floor",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 300000,
+        "before_vat": 452200,
+        "deposit": 49700,
+        "deposit_bps": 1000,
+        "extras": 40000,
+        "peak": 102000,
+        "peak_bps": 3000,
+        "surcharge_bps": 300,
+        "total": 497400
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "walk_up_high_floor",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 300000,
+        "before_vat": 425000,
+        "deposit": 46800,
+        "deposit_bps": 1000,
+        "extras": 40000,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 467500
+      },
+      "service": "whole_home"
+    },
+    {
+      "case": "some_luggage_unknown",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 207000,
+        "deposit": 22800,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 1500,
+        "total": 227700
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "some_luggage_unknown",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 225000,
+        "deposit": 24800,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 18000,
+        "peak_bps": 1000,
+        "surcharge_bps": 1500,
+        "total": 247500
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "some_luggage_unknown",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 261000,
+        "deposit": 28700,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 54000,
+        "peak_bps": 3000,
+        "surcharge_bps": 1500,
+        "total": 287100
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "some_luggage_unknown",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 225000,
+        "deposit": 24800,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 247500
+      },
+      "service": "whole_home"
+    },
+    {
+      "case": "partly_unpacked_move_in",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 189000,
+        "deposit": 20800,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 500,
+        "total": 207900
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "partly_unpacked_move_in",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 207000,
+        "deposit": 22800,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 18000,
+        "peak_bps": 1000,
+        "surcharge_bps": 500,
+        "total": 227700
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "partly_unpacked_move_in",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 243000,
+        "deposit": 26700,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 54000,
+        "peak_bps": 3000,
+        "surcharge_bps": 500,
+        "total": 267300
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "partly_unpacked_move_in",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 180000,
+        "before_vat": 225000,
+        "deposit": 24800,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 247500
+      },
+      "service": "whole_home"
+    },
+    {
+      "case": "max_rooms",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 460000,
+        "before_vat": 655000,
+        "deposit": 72100,
+        "deposit_bps": 1000,
+        "extras": 195000,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 0,
+        "total": 720500
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "max_rooms",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 460000,
+        "before_vat": 720500,
+        "deposit": 79300,
+        "deposit_bps": 1000,
+        "extras": 195000,
+        "peak": 65500,
+        "peak_bps": 1000,
+        "surcharge_bps": 0,
+        "total": 792600
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "max_rooms",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 460000,
+        "before_vat": 851500,
+        "deposit": 93700,
+        "deposit_bps": 1000,
+        "extras": 195000,
+        "peak": 196500,
+        "peak_bps": 3000,
+        "surcharge_bps": 0,
+        "total": 936700
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "max_rooms",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 460000,
+        "before_vat": 818750,
+        "deposit": 90100,
+        "deposit_bps": 1000,
+        "extras": 195000,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 900600
+      },
+      "service": "whole_home"
+    },
+    {
+      "case": "too_many_bathrooms",
+      "estimate": {
+        "detail": "value out of range: bathrooms",
+        "error": "out_of_range"
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "too_many_bathrooms",
+      "estimate": {
+        "detail": "value out of range: bathrooms",
+        "error": "out_of_range"
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "too_many_bathrooms",
+      "estimate": {
+        "detail": "value out of range: bathrooms",
+        "error": "out_of_range"
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "too_many_bathrooms",
+      "estimate": {
+        "detail": "value out of range: bathrooms",
+        "error": "out_of_range"
+      },
+      "service": "whole_home"
+    },
+    {
+      "case": "with_ac_addons",
+      "estimate": {
+        "addon_discount_bps": 1000,
+        "addons": 142200,
+        "base": 300000,
+        "before_vat": 300000,
+        "deposit": 47200,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 0,
+        "total": 472200
+      },
+      "peak_bps": 0
+    },
+    {
+      "case": "with_ac_addons",
+      "estimate": {
+        "addon_discount_bps": 1000,
+        "addons": 142200,
+        "base": 300000,
+        "before_vat": 330000,
+        "deposit": 50500,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 30000,
+        "peak_bps": 1000,
+        "surcharge_bps": 0,
+        "total": 505200
+      },
+      "peak_bps": 1000
+    },
+    {
+      "case": "with_ac_addons",
+      "estimate": {
+        "addon_discount_bps": 1000,
+        "addons": 142200,
+        "base": 300000,
+        "before_vat": 390000,
+        "deposit": 57100,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 90000,
+        "peak_bps": 3000,
+        "surcharge_bps": 0,
+        "total": 571200
+      },
+      "peak_bps": 3000
+    },
+    {
+      "case": "with_ac_addons",
+      "estimate": {
+        "addon_discount_bps": 0,
+        "addons": 0,
+        "base": 300000,
+        "before_vat": 375000,
+        "deposit": 41300,
+        "deposit_bps": 1000,
+        "extras": 0,
+        "peak": 0,
+        "peak_bps": 0,
+        "surcharge_bps": 2500,
+        "total": 412500
+      },
+      "service": "whole_home"
+    }
+  ],
+  "deposits": [
+    [
+      0,
+      0
+    ],
+    [
+      99000,
+      9900
+    ],
+    [
+      180000,
+      18000
+    ],
+    [
+      234560,
+      23500
+    ],
+    [
+      1000049,
+      100000
+    ]
+  ],
+  "formula": {
+    "ac_addon_discount_bps": 1000,
+    "base_four_plus": 460000,
+    "base_one_and_half": 230000,
+    "base_studio": 180000,
+    "base_three_rooms": 380000,
+    "base_two_rooms": 300000,
+    "deposit_bps": 1000,
+    "duplex": 60000,
+    "luggage_bps": {
+      "fully_lived_in": 1500,
+      "not_unpacked": 300,
+      "partly_unpacked": 500,
+      "unknown": 1000
+    },
+    "no_elevator_high_floor": 40000,
+    "per_balcony": 15000,
+    "per_extra_bathroom": 30000,
+    "type_bps": {
+      "after_interior": 2000,
+      "lived_in_deep_clean": 1000,
+      "same_day_move": 1000,
+      "some_luggage_left": 500
+    },
+    "vat_bps": 1000
+  }
+}

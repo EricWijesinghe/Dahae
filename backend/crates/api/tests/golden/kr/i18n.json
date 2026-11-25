@@ -1,0 +1,682 @@
+{
+  "events": [
+    {
+      "en": [
+        "New booking",
+        "{예약번호}"
+      ],
+      "kind": "booking.created",
+      "ko": [
+        "새 예약",
+        "{예약번호}"
+      ],
+      "label": "새 예약 (직원)",
+      "vars": [
+        "예약번호"
+      ]
+    },
+    {
+      "en": [
+        "New quote request",
+        "{예약번호}"
+      ],
+      "kind": "booking.quote_requested",
+      "ko": [
+        "견적 요청",
+        "{예약번호}"
+      ],
+      "label": "견적 요청 (직원)",
+      "vars": [
+        "예약번호"
+      ]
+    },
+    {
+      "en": [
+        "Pay the deposit",
+        "{예약번호}"
+      ],
+      "kind": "booking.deposit_paid",
+      "ko": [
+        "예약금 결제",
+        "{예약번호}"
+      ],
+      "label": "예약금 결제 (직원)",
+      "vars": [
+        "예약번호"
+      ]
+    },
+    {
+      "en": [
+        "Your booking was cancelled",
+        "{예약번호}"
+      ],
+      "kind": "booking.cancelled",
+      "ko": [
+        "예약이 취소됐어요",
+        "{예약번호}"
+      ],
+      "label": "예약 취소 (고객)",
+      "vars": [
+        "예약번호"
+      ]
+    },
+    {
+      "en": [
+        "The cleaning team has arrived",
+        "{예약번호}"
+      ],
+      "kind": "booking.arrival",
+      "ko": [
+        "청소팀이 도착했어요",
+        "{예약번호}"
+      ],
+      "label": "청소팀 도착 (고객)",
+      "vars": [
+        "예약번호"
+      ]
+    },
+    {
+      "en": [
+        "Cleaning is done",
+        "Check the before and after photos and leave a review"
+      ],
+      "kind": "booking.completed",
+      "ko": [
+        "청소가 끝났어요",
+        "전후 사진을 확인하고 후기를 남겨 주세요"
+      ],
+      "label": "청소 완료 (고객)",
+      "vars": [
+        "예약번호",
+        "업체명"
+      ]
+    },
+    {
+      "en": [
+        "Your new schedule is confirmed",
+        "{예약번호}"
+      ],
+      "kind": "booking.reschedule_confirmed",
+      "ko": [
+        "변경된 일정이 확정됐어요",
+        "{예약번호}"
+      ],
+      "label": "일정 변경 확정 (고객)",
+      "vars": [
+        "예약번호"
+      ]
+    },
+    {
+      "en": [
+        "Payment complete",
+        "You can check the payment details in your booking"
+      ],
+      "kind": "payment.receipt",
+      "ko": [
+        "결제가 완료됐어요",
+        "결제 내역은 예약 상세에서 확인할 수 있어요"
+      ],
+      "label": "결제 완료 (고객)",
+      "vars": []
+    },
+    {
+      "en": [
+        "Booking cancelled",
+        "{예약번호}"
+      ],
+      "kind": "job.cancelled",
+      "ko": [
+        "예약 취소",
+        "{예약번호}"
+      ],
+      "label": "예약 취소 (청소팀)",
+      "vars": [
+        "예약번호"
+      ]
+    },
+    {
+      "en": [
+        "Reschedule request",
+        "{예약번호}"
+      ],
+      "kind": "job.reschedule_requested",
+      "ko": [
+        "일정 변경 요청",
+        "{예약번호}"
+      ],
+      "label": "일정 변경 요청 (청소팀)",
+      "vars": [
+        "예약번호"
+      ]
+    },
+    {
+      "en": [
+        "Your quote was accepted",
+        "{예약번호}"
+      ],
+      "kind": "quote.selected",
+      "ko": [
+        "견적이 선택됐어요",
+        "{예약번호}"
+      ],
+      "label": "견적 선택 (청소팀)",
+      "vars": [
+        "예약번호"
+      ]
+    },
+    {
+      "en": [
+        "Your quality score dropped",
+        "Check your quality score and how to improve it."
+      ],
+      "kind": "quality.warning",
+      "ko": [
+        "품질 점수가 낮아졌어요",
+        "품질 점수를 확인하고 개선해 주세요."
+      ],
+      "label": "품질 점수 경고 (청소팀)",
+      "vars": []
+    },
+    {
+      "en": [
+        "Your regular cleaning is paused",
+        "Check your payment method, then resume it"
+      ],
+      "kind": "subscription.paused",
+      "ko": [
+        "정기 청소가 일시 정지됐어요",
+        "결제 수단을 확인한 뒤 재개해 주세요"
+      ],
+      "label": "정기 청소 일시 정지 (고객)",
+      "vars": []
+    },
+    {
+      "en": [
+        "Your regular cleaning payment failed",
+        "Please check your card details"
+      ],
+      "kind": "subscription.payment_failed",
+      "ko": [
+        "정기 청소 결제가 실패했어요",
+        "카드 정보를 확인해 주세요"
+      ],
+      "label": "정기 청소 결제 실패 (고객)",
+      "vars": []
+    },
+    {
+      "en": [
+        "Your regular cleaning time is full",
+        "빈자리가 생기면 다시 예약을 시도할게요"
+      ],
+      "kind": "subscription.slot_full",
+      "ko": [
+        "정기 청소 시간이 가득 찼어요",
+        "빈자리가 생기면 다시 예약을 시도할게요"
+      ],
+      "label": "정기 청소 시간 마감 (고객)",
+      "vars": []
+    },
+    {
+      "en": [
+        "Your regular cleaning time is full",
+        "결제된 금액은 환불해 드려요. 빈자리가 생기면 다시 예약을 시도할게요"
+      ],
+      "kind": "subscription.slot_full_refunded",
+      "ko": [
+        "정기 청소 시간이 가득 찼어요",
+        "결제된 금액은 환불해 드려요. 빈자리가 생기면 다시 예약을 시도할게요"
+      ],
+      "label": "정기 청소 시간 마감, 결제 환불 (고객)",
+      "vars": []
+    },
+    {
+      "en": [
+        "Your regular cleaning price changed",
+        "We're refunding the earlier payment"
+      ],
+      "kind": "subscription.price_changed",
+      "ko": [
+        "정기 청소 금액이 바뀌었어요",
+        "먼저 결제된 금액은 환불해 드려요"
+      ],
+      "label": "정기 청소 금액 변경 (고객)",
+      "vars": []
+    },
+    {
+      "en": [
+        "We couldn't book your regular cleaning",
+        "Please check your address and payment method"
+      ],
+      "kind": "subscription.visit_blocked",
+      "ko": [
+        "정기 청소 예약을 진행하지 못했어요",
+        "주소와 결제 수단을 확인해 주세요"
+      ],
+      "label": "정기 청소 예약 불가 (고객)",
+      "vars": []
+    },
+    {
+      "en": [
+        "We couldn't book this regular cleaning",
+        "Please contact customer support"
+      ],
+      "kind": "subscription.visit_missed",
+      "ko": [
+        "이번 정기 청소를 잡지 못했어요",
+        "고객센터로 문의해 주세요"
+      ],
+      "label": "정기 청소 미배정 (고객)",
+      "vars": []
+    },
+    {
+      "en": [
+        "정기 청소 시간이 바뀌었어요",
+        "요청하신 시간이 가득 차 가까운 시간으로 옮겼어요"
+      ],
+      "kind": "subscription.visit_moved",
+      "ko": [
+        "정기 청소 시간이 바뀌었어요",
+        "요청하신 시간이 가득 차 가까운 시간으로 옮겼어요"
+      ],
+      "label": "정기 청소 시간 변경 (고객)",
+      "vars": []
+    },
+    {
+      "en": [
+        "정기 청소 시간을 잡지 못했어요",
+        "Please contact customer support"
+      ],
+      "kind": "subscription.visit_unplaced",
+      "ko": [
+        "정기 청소 시간을 잡지 못했어요",
+        "고객센터로 문의해 주세요"
+      ],
+      "label": "정기 청소 시간 미배정 (고객)",
+      "vars": []
+    },
+    {
+      "en": [
+        "정기 청소 정원이 가득 찼어요",
+        "배정 시간을 확인해 주세요"
+      ],
+      "kind": "subscription.capacity_full",
+      "ko": [
+        "정기 청소 정원이 가득 찼어요",
+        "배정 시간을 확인해 주세요"
+      ],
+      "label": "정기 청소 정원 초과 (직원)",
+      "vars": []
+    },
+    {
+      "en": [
+        "A slot opened up",
+        "Confirm your booking within 15 minutes."
+      ],
+      "kind": "waitlist.offer",
+      "ko": [
+        "빈 자리가 생겼어요",
+        "15분 안에 예약을 확정해 주세요."
+      ],
+      "label": "빈 자리 안내 (고객)",
+      "vars": [
+        "업체명"
+      ]
+    }
+  ],
+  "shipped": [
+    "ko",
+    "en",
+    "en",
+    "en"
+  ],
+  "tr": [
+    {
+      "en": "Account status",
+      "ja": "Account status",
+      "ko": "계정 상태",
+      "source": "계정 상태"
+    },
+    {
+      "en": "Your account is approved",
+      "ja": "Your account is approved",
+      "ko": "계정이 승인됐어요",
+      "source": "verified"
+    },
+    {
+      "en": "Your account is suspended",
+      "ja": "Your account is suspended",
+      "ko": "계정이 일시 중지됐어요",
+      "source": "suspended"
+    },
+    {
+      "en": "Your account is under review",
+      "ja": "Your account is under review",
+      "ko": "계정을 검토하고 있어요",
+      "source": "pending"
+    },
+    {
+      "en": "Payout sent",
+      "ja": "Payout sent",
+      "ko": "정산 완료",
+      "source": "정산 완료"
+    },
+    {
+      "en": "New quote request",
+      "ja": "New quote request",
+      "ko": "견적 요청",
+      "source": "견적 요청"
+    },
+    {
+      "en": "Booking cancelled",
+      "ja": "Booking cancelled",
+      "ko": "예약 취소",
+      "source": "예약 취소"
+    },
+    {
+      "en": "Your booking was cancelled",
+      "ja": "Your booking was cancelled",
+      "ko": "예약이 취소됐어요",
+      "source": "예약이 취소됐어요"
+    },
+    {
+      "en": "Reschedule request",
+      "ja": "Reschedule request",
+      "ko": "일정 변경 요청",
+      "source": "일정 변경 요청"
+    },
+    {
+      "en": "Your quote was accepted",
+      "ja": "Your quote was accepted",
+      "ko": "견적이 선택됐어요",
+      "source": "견적이 선택됐어요"
+    },
+    {
+      "en": "Pay the deposit",
+      "ja": "Pay the deposit",
+      "ko": "예약금 결제",
+      "source": "예약금 결제"
+    },
+    {
+      "en": "New booking",
+      "ja": "New booking",
+      "ko": "새 예약",
+      "source": "새 예약"
+    },
+    {
+      "en": "Support team",
+      "ja": "Support team",
+      "ko": "상담팀",
+      "source": "상담팀"
+    },
+    {
+      "en": "Cleaning is done",
+      "ja": "Cleaning is done",
+      "ko": "청소가 끝났어요",
+      "source": "청소가 끝났어요"
+    },
+    {
+      "en": "Check the before and after photos and leave a review",
+      "ja": "Check the before and after photos and leave a review",
+      "ko": "전후 사진을 확인하고 후기를 남겨 주세요",
+      "source": "전후 사진을 확인하고 후기를 남겨 주세요"
+    },
+    {
+      "en": "The cleaning team has arrived",
+      "ja": "The cleaning team has arrived",
+      "ko": "청소팀이 도착했어요",
+      "source": "청소팀이 도착했어요"
+    },
+    {
+      "en": "Payment complete",
+      "ja": "Payment complete",
+      "ko": "결제가 완료됐어요",
+      "source": "결제가 완료됐어요"
+    },
+    {
+      "en": "You can check the payment details in your booking",
+      "ja": "You can check the payment details in your booking",
+      "ko": "결제 내역은 예약 상세에서 확인할 수 있어요",
+      "source": "결제 내역은 예약 상세에서 확인할 수 있어요"
+    },
+    {
+      "en": "Your booking status changed",
+      "ja": "Your booking status changed",
+      "ko": "예약 상태가 바뀌었어요",
+      "source": "예약 상태가 바뀌었어요"
+    },
+    {
+      "en": "Your payment was cancelled automatically",
+      "ja": "Your payment was cancelled automatically",
+      "ko": "결제가 자동으로 취소됐어요",
+      "source": "결제가 자동으로 취소됐어요"
+    },
+    {
+      "en": "The booking changed, so we refunded your payment",
+      "ja": "The booking changed, so we refunded your payment",
+      "ko": "예약 조건이 바뀌어 결제 금액을 환불했어요",
+      "source": "예약 조건이 바뀌어 결제 금액을 환불했어요"
+    },
+    {
+      "en": "We're cancelling your payment",
+      "ja": "We're cancelling your payment",
+      "ko": "결제 취소를 진행하고 있어요",
+      "source": "결제 취소를 진행하고 있어요"
+    },
+    {
+      "en": "The booking changed, so we're refunding your payment. We'll let you know once it's done",
+      "ja": "The booking changed, so we're refunding your payment. We'll let you know once it's done",
+      "ko": "예약 조건이 바뀌어 결제 금액을 환불하고 있어요. 환불이 끝나면 알려드릴게요",
+      "source": "예약 조건이 바뀌어 결제 금액을 환불하고 있어요. 환불이 끝나면 알려드릴게요"
+    },
+    {
+      "en": "Your cleaning team is assigned",
+      "ja": "Your cleaning team is assigned",
+      "ko": "청소팀이 배정됐어요",
+      "source": "청소팀이 배정됐어요"
+    },
+    {
+      "en": "You have a new job",
+      "ja": "You have a new job",
+      "ko": "새 작업이 배정됐어요",
+      "source": "새 작업이 배정됐어요"
+    },
+    {
+      "en": "Check the time and address in the app",
+      "ja": "Check the time and address in the app",
+      "ko": "앱에서 일정과 주소를 확인하세요",
+      "source": "앱에서 일정과 주소를 확인하세요"
+    },
+    {
+      "en": "Your new schedule is confirmed",
+      "ja": "Your new schedule is confirmed",
+      "ko": "변경된 일정이 확정됐어요",
+      "source": "변경된 일정이 확정됐어요"
+    },
+    {
+      "en": "Verification code",
+      "ja": "Verification code",
+      "ko": "인증번호",
+      "source": "인증번호"
+    },
+    {
+      "en": "You were invited to a cleaning team. Please install the partner app.",
+      "ja": "You were invited to a cleaning team. Please install the partner app.",
+      "ko": "팀원으로 초대됐어요. 파트너 앱을 설치해 주세요.",
+      "source": "팀원으로 초대됐어요. 파트너 앱을 설치해 주세요."
+    },
+    {
+      "en": "Your cleaning is tomorrow",
+      "ja": "Your cleaning is tomorrow",
+      "ko": "내일 청소 예정이에요",
+      "source": "내일 청소 예정이에요"
+    },
+    {
+      "en": "Book your next cleaning",
+      "ja": "Book your next cleaning",
+      "ko": "다음 청소를 예약해 보세요",
+      "source": "다음 청소를 예약해 보세요"
+    },
+    {
+      "en": "Rebook with the same settings in a few taps",
+      "ja": "Rebook with the same settings in a few taps",
+      "ko": "지난번과 같은 조건으로 빠르게 예약할 수 있어요",
+      "source": "지난번과 같은 조건으로 빠르게 예약할 수 있어요"
+    },
+    {
+      "en": "Your quote request is still open",
+      "ja": "Your quote request is still open",
+      "ko": "견적 요청이 아직 남아 있어요",
+      "source": "견적 요청이 아직 남아 있어요"
+    },
+    {
+      "en": "Get a cleaning team quote for your time slot",
+      "ja": "Get a cleaning team quote for your time slot",
+      "ko": "원하는 시간에 청소팀을 바로 받아 보세요",
+      "source": "원하는 시간에 청소팀을 바로 받아 보세요"
+    },
+    {
+      "en": "No arrival check-in",
+      "ja": "No arrival check-in",
+      "ko": "도착 확인 없음",
+      "source": "도착 확인 없음"
+    },
+    {
+      "en": "Your assignment changed",
+      "ja": "Your assignment changed",
+      "ko": "배정이 변경됐어요",
+      "source": "배정이 변경됐어요"
+    },
+    {
+      "en": "You have a new job site",
+      "ja": "You have a new job site",
+      "ko": "새 현장이 배정됐어요",
+      "source": "새 현장이 배정됐어요"
+    },
+    {
+      "en": "Your cleaning team changed",
+      "ja": "Your cleaning team changed",
+      "ko": "청소팀이 변경됐어요",
+      "source": "청소팀이 변경됐어요"
+    },
+    {
+      "en": "Sorry for the trouble. A different cleaning team is assigned.",
+      "ja": "Sorry for the trouble. A different cleaning team is assigned.",
+      "ko": "불편을 드려 죄송합니다. 다른 청소팀이 배정됐어요.",
+      "source": "불편을 드려 죄송합니다. 다른 청소팀이 배정됐어요."
+    },
+    {
+      "en": "Your quality score dropped",
+      "ja": "Your quality score dropped",
+      "ko": "품질 점수가 낮아졌어요",
+      "source": "품질 점수가 낮아졌어요"
+    },
+    {
+      "en": "Check your quality score and how to improve it.",
+      "ja": "Check your quality score and how to improve it.",
+      "ko": "품질 점수를 확인하고 개선해 주세요.",
+      "source": "품질 점수를 확인하고 개선해 주세요."
+    },
+    {
+      "en": "Your regular cleaning is paused",
+      "ja": "Your regular cleaning is paused",
+      "ko": "정기 청소가 일시 정지됐어요",
+      "source": "정기 청소가 일시 정지됐어요"
+    },
+    {
+      "en": "Check your payment method, then resume it",
+      "ja": "Check your payment method, then resume it",
+      "ko": "결제 수단을 확인한 뒤 재개해 주세요",
+      "source": "결제 수단을 확인한 뒤 재개해 주세요"
+    },
+    {
+      "en": "Your regular cleaning payment failed",
+      "ja": "Your regular cleaning payment failed",
+      "ko": "정기 청소 결제가 실패했어요",
+      "source": "정기 청소 결제가 실패했어요"
+    },
+    {
+      "en": "Please check your card details",
+      "ja": "Please check your card details",
+      "ko": "카드 정보를 확인해 주세요",
+      "source": "카드 정보를 확인해 주세요"
+    },
+    {
+      "en": "We couldn't book this regular cleaning",
+      "ja": "We couldn't book this regular cleaning",
+      "ko": "이번 정기 청소를 잡지 못했어요",
+      "source": "이번 정기 청소를 잡지 못했어요"
+    },
+    {
+      "en": "Please contact customer support",
+      "ja": "Please contact customer support",
+      "ko": "고객센터로 문의해 주세요",
+      "source": "고객센터로 문의해 주세요"
+    },
+    {
+      "en": "Your regular cleaning time is full",
+      "ja": "Your regular cleaning time is full",
+      "ko": "정기 청소 시간이 가득 찼어요",
+      "source": "정기 청소 시간이 가득 찼어요"
+    },
+    {
+      "en": "We're refunding your payment",
+      "ja": "We're refunding your payment",
+      "ko": "결제된 금액은 환불해 드려요",
+      "source": "결제된 금액은 환불해 드려요"
+    },
+    {
+      "en": "Your regular cleaning price changed",
+      "ja": "Your regular cleaning price changed",
+      "ko": "정기 청소 금액이 바뀌었어요",
+      "source": "정기 청소 금액이 바뀌었어요"
+    },
+    {
+      "en": "We're refunding the earlier payment",
+      "ja": "We're refunding the earlier payment",
+      "ko": "먼저 결제된 금액은 환불해 드려요",
+      "source": "먼저 결제된 금액은 환불해 드려요"
+    },
+    {
+      "en": "We couldn't book your regular cleaning",
+      "ja": "We couldn't book your regular cleaning",
+      "ko": "정기 청소 예약을 진행하지 못했어요",
+      "source": "정기 청소 예약을 진행하지 못했어요"
+    },
+    {
+      "en": "Please check your address and payment method",
+      "ja": "Please check your address and payment method",
+      "ko": "주소와 결제 수단을 확인해 주세요",
+      "source": "주소와 결제 수단을 확인해 주세요"
+    },
+    {
+      "en": "A slot opened up",
+      "ja": "A slot opened up",
+      "ko": "빈 자리가 생겼어요",
+      "source": "빈 자리가 생겼어요"
+    },
+    {
+      "en": "Confirm your booking within 15 minutes.",
+      "ja": "Confirm your booking within 15 minutes.",
+      "ko": "15분 안에 예약을 확정해 주세요.",
+      "source": "15분 안에 예약을 확정해 주세요."
+    },
+    {
+      "en": "B-20261111-0042",
+      "ja": "B-20261111-0042",
+      "ko": "B-20261111-0042",
+      "source": "B-20261111-0042"
+    },
+    {
+      "en": "52,000원",
+      "ja": "52,000원",
+      "ko": "52,000원",
+      "source": "52,000원"
+    },
+    {
+      "en": "",
+      "ja": "",
+      "ko": "",
+      "source": ""
+    }
+  ]
+}

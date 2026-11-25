@@ -1,0 +1,335 @@
+{
+  "exports": [
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"ledger-2026-03-01_2026-03-31.csv\"",
+        "content-type": "text/csv; charset=utf-8"
+      },
+      "lines": [
+        "﻿결제일,결제ID,예약번호,서비스,구분,결제수단,PG거래번호,결제금액,환불금액,상태\r",
+        "2026-03-01,6b000000-0000-0004-0000-000000000001,BK2603-00001,studio,full,portone,pg-tx-1,99000,0,paid\r",
+        "2026-03-05,6b000000-0000-0004-0000-000000000002,BK2603-00002,bathroom,full,portone,pg-tx-2,47000,0,paid\r",
+        "2026-03-10,6b000000-0000-0004-0000-000000000003,BK2603-00003,aircon,full,portone,pg-tx-3,375300,0,paid\r",
+        "2026-03-12,6b000000-0000-0004-0000-000000000004,BK2603-00004,bathroom,full,portone,pg-tx-4,52000,52000,refunded\r",
+        "2026-03-20,6b000000-0000-0004-0000-000000000005,BK2603-00005,mattress,full,portone,pg-tx-5,100300,30000,partially_refunded\r",
+        "2026-03-31,6b000000-0000-0004-0000-000000000006,BK2603-00006,studio,full,portone,pg-tx-6,99000,0,paid\r",
+        ""
+      ],
+      "status": 200,
+      "uri": "/v1/admin/finance/export/ledger?period=custom&from=2026-03-01&to=2026-03-31"
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"settlements-2026-03-01_2026-03-31.csv\"",
+        "content-type": "text/csv; charset=utf-8"
+      },
+      "lines": [
+        "﻿정산ID,정산일,예약번호,서비스,방문일,파트너,팀명,총액,수수료,지급액,지급예정일,지급일,상태\r",
+        "6b000000-0000-0007-0000-000000000001,2026-03-02,BK2603-00001,studio,2026-03-04,김파트너,깨끗팀,99000,19800,79200,2026-03-04,2026-03-04,paid\r",
+        "6b000000-0000-0007-0000-000000000002,2026-03-08,BK2603-00002,bathroom,2026-03-08,김파트너,깨끗팀,47000,9400,37600,2026-03-11,2026-03-11,paid\r",
+        "6b000000-0000-0007-0000-000000000003,2026-03-13,BK2603-00003,aircon,2026-03-13,김파트너,깨끗팀,375300,75060,300240,2026-03-18,,pending\r",
+        "6b000000-0000-0007-0000-000000000005,2026-03-23,BK2603-00005,mattress,2026-03-23,박사업,반짝(주),100300,20060,80240,2026-03-25,,held\r",
+        "합계,,,,,,,621600,124320,497280,,,\r",
+        ""
+      ],
+      "status": 200,
+      "uri": "/v1/admin/finance/export/settlements?period=custom&from=2026-03-01&to=2026-03-31"
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"monthly-2026-03-01_2026-03-31.csv\"",
+        "content-type": "text/csv; charset=utf-8"
+      },
+      "lines": [
+        "﻿월,예약건수,취소건수,총결제액,환불액,순매출,플랫폼수수료,부가세추정(수수료의10%),파트너지급(완료),지급예정,보류\r",
+        "2026-03,6,1,772600,82000,690600,104260,10426,116800,300240,80240\r",
+        "합계,6,1,772600,82000,690600,104260,10426,116800,300240,80240\r",
+        ""
+      ],
+      "status": 200,
+      "uri": "/v1/admin/finance/export/monthly?period=custom&from=2026-03-01&to=2026-03-31"
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"withholding-2026-03-01_2026-03-31.csv\"",
+        "content-type": "text/csv; charset=utf-8"
+      },
+      "lines": [
+        "﻿지급일,상호,팀명,소득구분,지급총액,소득세,지방소득세,실지급액\r",
+        "2026-03-04,김파트너,깨끗팀,사업소득,79200,2376,230,76594\r",
+        "2026-03-11,김파트너,깨끗팀,사업소득,337840,10135,1010,326695\r",
+        "2026-03-31,이미등록,새팀,사업소득,33333,999,90,32244\r",
+        ""
+      ],
+      "status": 200,
+      "uri": "/v1/admin/finance/export/withholding?period=custom&from=2026-03-01&to=2026-03-31"
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"payroll-2026-03-01_2026-03-31.csv\"",
+        "content-type": "text/csv; charset=utf-8"
+      },
+      "lines": [
+        "﻿이름,팀명,고용형태,지급건수,지급총액,소득세,지방소득세,실지급액\r",
+        "김파트너,깨끗팀,프리랜서,2,417040,12511,1240,403289\r",
+        "박사업,반짝(주),계약,1,80240,0,0,80240\r",
+        "이미등록,새팀,미등록,1,33333,999,90,32244\r",
+        "합계,,,4,530613,13510,1330,515773\r",
+        ""
+      ],
+      "status": 200,
+      "uri": "/v1/admin/finance/export/payroll?period=custom&from=2026-03-01&to=2026-03-31"
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"monthly-2026-02-01_2026-04-30.csv\"",
+        "content-type": "text/csv; charset=utf-8"
+      },
+      "lines": [
+        "﻿월,예약건수,취소건수,총결제액,환불액,순매출,플랫폼수수료,부가세추정(수수료의10%),파트너지급(완료),지급예정,보류\r",
+        "2026-02,0,0,0,0,0,0,0,0,0,0\r",
+        "2026-03,6,1,772600,82000,690600,104260,10426,116800,300240,80240\r",
+        "2026-04,1,0,99000,0,99000,19800,1980,0,79200,0\r",
+        "합계,7,1,871600,82000,789600,124060,12406,116800,379440,80240\r",
+        ""
+      ],
+      "status": 200,
+      "uri": "/v1/admin/finance/export/monthly?period=custom&from=2026-02-01&to=2026-04-30"
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"vat-2026-01-01_2026-03-31.csv\"",
+        "content-type": "text/csv; charset=utf-8"
+      },
+      "lines": [
+        "﻿결제수단,건수,결제액\r",
+        "card,4,625300\r",
+        "virtual_account,1,100300\r",
+        "kakaopay,1,47000\r",
+        "합계,6,772600\r",
+        "환불액,0,82000\r",
+        "플랫폼수수료(과세표준 추정),0,104260\r",
+        "부가세 추정(수수료의 10%),0,10426\r",
+        ""
+      ],
+      "status": 200,
+      "uri": "/v1/admin/finance/export/vat?year=2026&quarter=1"
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"vat-2026-04-01_2026-06-30.csv\"",
+        "content-type": "text/csv; charset=utf-8"
+      },
+      "lines": [
+        "﻿결제수단,건수,결제액\r",
+        "card,1,99000\r",
+        "합계,1,99000\r",
+        "환불액,0,0\r",
+        "플랫폼수수료(과세표준 추정),0,19800\r",
+        "부가세 추정(수수료의 10%),0,1980\r",
+        ""
+      ],
+      "status": 200,
+      "uri": "/v1/admin/finance/export/vat?year=2026&quarter=2"
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"tax-invoices-2026-03-01_2026-03-31.csv\"",
+        "content-type": "text/csv; charset=utf-8"
+      },
+      "lines": [
+        "﻿작성일자,사업자등록번호,상호,대표자,업태,종목,주소,이메일,품목,공급가액,세액,합계\r",
+        "2026-03-01,2208162517,에이스(주),홍길동,서비스,청소,서울특별시 강남구 테헤란로 1,tax@example.test,청소 서비스,90000,9000,99000\r",
+        "2026-03-10,2208162517,\"'=HYPERLINK(\"\"x\"\")\",,서비스,청소,서울특별시 강남구 테헤란로 1,tax@example.test,청소 서비스,341182,34118,375300\r",
+        "2026-03-31,2208162517,\"주식회사 \"\"반짝\"\", 본점\",김대표,서비스,청소,서울특별시 강남구 테헤란로 1,tax@example.test,청소 서비스,90000,9000,99000\r",
+        ""
+      ],
+      "status": 200,
+      "uri": "/v1/admin/finance/export/tax-invoices?period=custom&from=2026-03-01&to=2026-03-31"
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-disposition": "attachment; filename=\"tax-invoices-2026-03-01_2026-03-31.csv\"",
+        "content-type": "text/csv; charset=utf-8"
+      },
+      "lines": [
+        "﻿작성일자,사업자등록번호,상호,대표자,업태,종목,주소,이메일,품목,공급가액,세액,합계\r",
+        ""
+      ],
+      "status": 200,
+      "uri": "/v1/admin/finance/export/tax-invoices?period=custom&from=2026-03-01&to=2026-03-31"
+    }
+  ],
+  "summaries": [
+    {
+      "body": {
+        "avg_order_value": 144120,
+        "bookings": 6,
+        "cancellation_bps": 1667,
+        "cancelled": 1,
+        "discount": 64400,
+        "from": "2026-03-01",
+        "gross": 772600,
+        "net_revenue": 690600,
+        "payment_methods": [
+          {
+            "amount": 625300,
+            "count": 4,
+            "method": "card"
+          },
+          {
+            "amount": 100300,
+            "count": 1,
+            "method": "virtual_account"
+          },
+          {
+            "amount": 47000,
+            "count": 1,
+            "method": "kakaopay"
+          }
+        ],
+        "payouts": {
+          "held": 80240,
+          "paid": 116800,
+          "pending": 300240
+        },
+        "platform_fee": 104260,
+        "recurring": {
+          "active": 0,
+          "active_at_start": 0,
+          "cancelled": 0,
+          "churn_bps": null,
+          "from": "2026-03-01",
+          "mrr": 0,
+          "recognized": 0,
+          "started": 0,
+          "to": "2026-03-31"
+        },
+        "refunds": 82000,
+        "to": "2026-03-31",
+        "vat_basis": "platform_fee_10pct_estimate",
+        "vat_estimate": 10426
+      },
+      "status": 200,
+      "view": "summary"
+    },
+    {
+      "body": [
+        {
+          "fee": 104260,
+          "held": 0,
+          "jobs": 3,
+          "name": "김파트너",
+          "net": 417040,
+          "paid": 116800,
+          "pending": 300240,
+          "pro_id": "6b000000-0000-0000-0000-0000000000a1",
+          "settled_gross": 521300,
+          "team_name": "깨끗팀"
+        },
+        {
+          "fee": 0,
+          "held": 80240,
+          "jobs": 0,
+          "name": "박사업",
+          "net": 0,
+          "paid": 0,
+          "pending": 0,
+          "pro_id": "6b000000-0000-0000-0000-0000000000b2",
+          "settled_gross": 0,
+          "team_name": "반짝(주)"
+        }
+      ],
+      "status": 200,
+      "view": "partners"
+    },
+    {
+      "body": [
+        {
+          "avg_order_value": 375300,
+          "bookings": 1,
+          "cancellation_bps": 0,
+          "cancelled": 0,
+          "discount": 41700,
+          "gross": 375300,
+          "net_revenue": 375300,
+          "payouts": {
+            "held": 0,
+            "paid": 0,
+            "pending": 300240
+          },
+          "platform_fee": 75060,
+          "refunds": 0,
+          "service_code": "aircon",
+          "vat_estimate": 7506
+        },
+        {
+          "avg_order_value": 99000,
+          "bookings": 2,
+          "cancellation_bps": 0,
+          "cancelled": 0,
+          "discount": 0,
+          "gross": 198000,
+          "net_revenue": 198000,
+          "payouts": {
+            "held": 0,
+            "paid": 79200,
+            "pending": 0
+          },
+          "platform_fee": 19800,
+          "refunds": 0,
+          "service_code": "studio",
+          "vat_estimate": 1980
+        },
+        {
+          "avg_order_value": 100300,
+          "bookings": 1,
+          "cancellation_bps": 0,
+          "cancelled": 0,
+          "discount": 17700,
+          "gross": 100300,
+          "net_revenue": 70300,
+          "payouts": {
+            "held": 80240,
+            "paid": 0,
+            "pending": 0
+          },
+          "platform_fee": 0,
+          "refunds": 30000,
+          "service_code": "mattress",
+          "vat_estimate": 0
+        },
+        {
+          "avg_order_value": 47000,
+          "bookings": 2,
+          "cancellation_bps": 5000,
+          "cancelled": 1,
+          "discount": 5000,
+          "gross": 99000,
+          "net_revenue": 47000,
+          "payouts": {
+            "held": 0,
+            "paid": 37600,
+            "pending": 0
+          },
+          "platform_fee": 9400,
+          "refunds": 52000,
+          "service_code": "bathroom",
+          "vat_estimate": 940
+        }
+      ],
+      "status": 200,
+      "view": "services"
+    }
+  ]
+}

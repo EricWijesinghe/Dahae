@@ -1,0 +1,53 @@
+{
+  "portone": [],
+  "toss": [
+    {
+      "body": {
+        "authKey": "auth_1",
+        "customerKey": "<uuid-0>"
+      },
+      "kind": "issue",
+      "path": "/v1/billing/authorizations/issue",
+      "secret": "test_sk_billing0001"
+    },
+    {
+      "body": {
+        "amount": 45000,
+        "customerKey": "<uuid-0>",
+        "orderId": "full-<uuid-1>",
+        "orderName": "다해 청소"
+      },
+      "kind": "charge",
+      "path": "/v1/billing/bk_auth_1",
+      "secret": "test_sk_billing0001"
+    },
+    {
+      "body": null,
+      "kind": "order",
+      "path": "/v1/payments/orders/full-<uuid-1>",
+      "secret": "test_sk_billing0001"
+    },
+    {
+      "body": {
+        "cancelAmount": 45000,
+        "cancelReason": "예약 환불",
+        "refundableAmount": 45000
+      },
+      "kind": "cancel",
+      "path": "/v1/payments/pk_full-<uuid-1>/cancel",
+      "secret": "test_sk_billing0001"
+    },
+    {
+      "body": null,
+      "kind": "delete",
+      "path": "/v1/billing/bk_auth_1",
+      "secret": "test_sk_billing0001"
+    },
+    {
+      "body": null,
+      "kind": "delete",
+      "path": "/v1/billing/bk_auth_1",
+      "secret": "test_sk_billing0001"
+    }
+  ]
+}

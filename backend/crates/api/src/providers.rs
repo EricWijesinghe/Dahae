@@ -25,7 +25,7 @@ use crate::{
 };
 use payout::{Transfer, TransferStatus};
 use reqwest::{Request, StatusCode};
-use serde_json::{Value, json};
+use serde_json::Value;
 use sqlx::PgPool;
 use std::{
     sync::{Arc, RwLock},
@@ -276,7 +276,7 @@ impl Providers {
             self.observe("solapi", outcome(&sent)).await;
             return sent;
         };
-        let variables = json!({ "#{brand}": brand, "#{title}": title, "#{body}": body });
+        let variables = sms::alimtalk_variables(brand, title, body);
         let sent = sms::send_alimtalk(&self.http, cfg, pf_id, template_id, phone, &text, variables).await;
         let final_result = match sent {
             Ok(()) => Ok(()),

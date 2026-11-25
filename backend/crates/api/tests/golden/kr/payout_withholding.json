@@ -1,0 +1,718 @@
+{
+  "business_withholding": [
+    {
+      "gross": 0,
+      "income_tax": 0,
+      "local_tax": 0,
+      "net": 0
+    },
+    {
+      "gross": 0,
+      "income_tax": 0,
+      "local_tax": 0,
+      "net": 0
+    },
+    {
+      "gross": 1,
+      "income_tax": 0,
+      "local_tax": 0,
+      "net": 1
+    },
+    {
+      "gross": 33,
+      "income_tax": 0,
+      "local_tax": 0,
+      "net": 33
+    },
+    {
+      "gross": 99,
+      "income_tax": 2,
+      "local_tax": 0,
+      "net": 97
+    },
+    {
+      "gross": 333,
+      "income_tax": 9,
+      "local_tax": 0,
+      "net": 324
+    },
+    {
+      "gross": 1000,
+      "income_tax": 30,
+      "local_tax": 0,
+      "net": 970
+    },
+    {
+      "gross": 3333,
+      "income_tax": 99,
+      "local_tax": 0,
+      "net": 3234
+    },
+    {
+      "gross": 9999,
+      "income_tax": 299,
+      "local_tax": 20,
+      "net": 9680
+    },
+    {
+      "gross": 52000,
+      "income_tax": 1560,
+      "local_tax": 150,
+      "net": 50290
+    },
+    {
+      "gross": 80000,
+      "income_tax": 2400,
+      "local_tax": 240,
+      "net": 77360
+    },
+    {
+      "gross": 100000,
+      "income_tax": 3000,
+      "local_tax": 300,
+      "net": 96700
+    },
+    {
+      "gross": 123456,
+      "income_tax": 3703,
+      "local_tax": 370,
+      "net": 119383
+    },
+    {
+      "gross": 1000000,
+      "income_tax": 30000,
+      "local_tax": 3000,
+      "net": 967000
+    },
+    {
+      "gross": 5000000,
+      "income_tax": 150000,
+      "local_tax": 15000,
+      "net": 4835000
+    }
+  ],
+  "default_fee_bps": 2000,
+  "payout": [
+    {
+      "fee_bps": 0,
+      "gross": -1000,
+      "payout": {
+        "fee": 0,
+        "gross": -1000,
+        "net": -1000
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": -1000,
+      "payout": {
+        "fee": -200,
+        "gross": -1000,
+        "net": -800
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": -1000,
+      "payout": {
+        "fee": -150,
+        "gross": -1000,
+        "net": -850
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": -1000,
+      "payout": {
+        "fee": -333,
+        "gross": -1000,
+        "net": -667
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 0,
+      "payout": {
+        "fee": 0,
+        "gross": 0,
+        "net": 0
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 0,
+      "payout": {
+        "fee": 0,
+        "gross": 0,
+        "net": 0
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 0,
+      "payout": {
+        "fee": 0,
+        "gross": 0,
+        "net": 0
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 0,
+      "payout": {
+        "fee": 0,
+        "gross": 0,
+        "net": 0
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 1,
+      "payout": {
+        "fee": 0,
+        "gross": 1,
+        "net": 1
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 1,
+      "payout": {
+        "fee": 0,
+        "gross": 1,
+        "net": 1
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 1,
+      "payout": {
+        "fee": 0,
+        "gross": 1,
+        "net": 1
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 1,
+      "payout": {
+        "fee": 0,
+        "gross": 1,
+        "net": 1
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 33,
+      "payout": {
+        "fee": 0,
+        "gross": 33,
+        "net": 33
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 33,
+      "payout": {
+        "fee": 7,
+        "gross": 33,
+        "net": 26
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 33,
+      "payout": {
+        "fee": 5,
+        "gross": 33,
+        "net": 28
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 33,
+      "payout": {
+        "fee": 11,
+        "gross": 33,
+        "net": 22
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 99,
+      "payout": {
+        "fee": 0,
+        "gross": 99,
+        "net": 99
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 99,
+      "payout": {
+        "fee": 20,
+        "gross": 99,
+        "net": 79
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 99,
+      "payout": {
+        "fee": 15,
+        "gross": 99,
+        "net": 84
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 99,
+      "payout": {
+        "fee": 33,
+        "gross": 99,
+        "net": 66
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 333,
+      "payout": {
+        "fee": 0,
+        "gross": 333,
+        "net": 333
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 333,
+      "payout": {
+        "fee": 67,
+        "gross": 333,
+        "net": 266
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 333,
+      "payout": {
+        "fee": 50,
+        "gross": 333,
+        "net": 283
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 333,
+      "payout": {
+        "fee": 111,
+        "gross": 333,
+        "net": 222
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 1000,
+      "payout": {
+        "fee": 0,
+        "gross": 1000,
+        "net": 1000
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 1000,
+      "payout": {
+        "fee": 200,
+        "gross": 1000,
+        "net": 800
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 1000,
+      "payout": {
+        "fee": 150,
+        "gross": 1000,
+        "net": 850
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 1000,
+      "payout": {
+        "fee": 333,
+        "gross": 1000,
+        "net": 667
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 3333,
+      "payout": {
+        "fee": 0,
+        "gross": 3333,
+        "net": 3333
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 3333,
+      "payout": {
+        "fee": 667,
+        "gross": 3333,
+        "net": 2666
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 3333,
+      "payout": {
+        "fee": 500,
+        "gross": 3333,
+        "net": 2833
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 3333,
+      "payout": {
+        "fee": 1111,
+        "gross": 3333,
+        "net": 2222
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 9999,
+      "payout": {
+        "fee": 0,
+        "gross": 9999,
+        "net": 9999
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 9999,
+      "payout": {
+        "fee": 2000,
+        "gross": 9999,
+        "net": 7999
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 9999,
+      "payout": {
+        "fee": 1500,
+        "gross": 9999,
+        "net": 8499
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 9999,
+      "payout": {
+        "fee": 3333,
+        "gross": 9999,
+        "net": 6666
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 52000,
+      "payout": {
+        "fee": 0,
+        "gross": 52000,
+        "net": 52000
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 52000,
+      "payout": {
+        "fee": 10400,
+        "gross": 52000,
+        "net": 41600
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 52000,
+      "payout": {
+        "fee": 7800,
+        "gross": 52000,
+        "net": 44200
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 52000,
+      "payout": {
+        "fee": 17332,
+        "gross": 52000,
+        "net": 34668
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 80000,
+      "payout": {
+        "fee": 0,
+        "gross": 80000,
+        "net": 80000
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 80000,
+      "payout": {
+        "fee": 16000,
+        "gross": 80000,
+        "net": 64000
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 80000,
+      "payout": {
+        "fee": 12000,
+        "gross": 80000,
+        "net": 68000
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 80000,
+      "payout": {
+        "fee": 26664,
+        "gross": 80000,
+        "net": 53336
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 100000,
+      "payout": {
+        "fee": 0,
+        "gross": 100000,
+        "net": 100000
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 100000,
+      "payout": {
+        "fee": 20000,
+        "gross": 100000,
+        "net": 80000
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 100000,
+      "payout": {
+        "fee": 15000,
+        "gross": 100000,
+        "net": 85000
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 100000,
+      "payout": {
+        "fee": 33330,
+        "gross": 100000,
+        "net": 66670
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 123456,
+      "payout": {
+        "fee": 0,
+        "gross": 123456,
+        "net": 123456
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 123456,
+      "payout": {
+        "fee": 24691,
+        "gross": 123456,
+        "net": 98765
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 123456,
+      "payout": {
+        "fee": 18518,
+        "gross": 123456,
+        "net": 104938
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 123456,
+      "payout": {
+        "fee": 41148,
+        "gross": 123456,
+        "net": 82308
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 1000000,
+      "payout": {
+        "fee": 0,
+        "gross": 1000000,
+        "net": 1000000
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 1000000,
+      "payout": {
+        "fee": 200000,
+        "gross": 1000000,
+        "net": 800000
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 1000000,
+      "payout": {
+        "fee": 150000,
+        "gross": 1000000,
+        "net": 850000
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 1000000,
+      "payout": {
+        "fee": 333300,
+        "gross": 1000000,
+        "net": 666700
+      }
+    },
+    {
+      "fee_bps": 0,
+      "gross": 5000000,
+      "payout": {
+        "fee": 0,
+        "gross": 5000000,
+        "net": 5000000
+      }
+    },
+    {
+      "fee_bps": 2000,
+      "gross": 5000000,
+      "payout": {
+        "fee": 1000000,
+        "gross": 5000000,
+        "net": 4000000
+      }
+    },
+    {
+      "fee_bps": 1500,
+      "gross": 5000000,
+      "payout": {
+        "fee": 750000,
+        "gross": 5000000,
+        "net": 4250000
+      }
+    },
+    {
+      "fee_bps": 3333,
+      "gross": 5000000,
+      "payout": {
+        "fee": 1666500,
+        "gross": 5000000,
+        "net": 3333500
+      }
+    }
+  ],
+  "payout_date": [
+    [
+      "2026-03-09",
+      "2026-03-11"
+    ],
+    [
+      "2026-03-10",
+      "2026-03-11"
+    ],
+    [
+      "2026-03-11",
+      "2026-03-18"
+    ],
+    [
+      "2026-03-12",
+      "2026-03-18"
+    ],
+    [
+      "2026-03-13",
+      "2026-03-18"
+    ],
+    [
+      "2026-03-14",
+      "2026-03-18"
+    ],
+    [
+      "2026-03-15",
+      "2026-03-18"
+    ],
+    [
+      "2026-03-16",
+      "2026-03-18"
+    ]
+  ],
+  "payout_withholding": [
+    {
+      "on_123456": {
+        "gross": 123456,
+        "income_tax": 3703,
+        "local_tax": 370,
+        "net": 119383
+      },
+      "tax_type": "freelancer"
+    },
+    {
+      "on_123456": {
+        "gross": 123456,
+        "income_tax": 3703,
+        "local_tax": 370,
+        "net": 119383
+      },
+      "tax_type": "unset"
+    },
+    {
+      "on_123456": {
+        "gross": 123456,
+        "income_tax": 0,
+        "local_tax": 0,
+        "net": 123456
+      },
+      "tax_type": "business"
+    },
+    {
+      "on_123456": {
+        "gross": 123456,
+        "income_tax": 0,
+        "local_tax": 0,
+        "net": 123456
+      },
+      "tax_type": "untracked"
+    },
+    {
+      "on_123456": {
+        "gross": 123456,
+        "income_tax": 0,
+        "local_tax": 0,
+        "net": 123456
+      },
+      "tax_type": "other"
+    }
+  ]
+}

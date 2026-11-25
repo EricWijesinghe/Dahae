@@ -1,0 +1,117 @@
+{
+  "monthly_equivalent": [
+    {
+      "on_46800": {
+        "Ok": 202800
+      },
+      "weeks": 1
+    },
+    {
+      "on_46800": {
+        "Ok": 101400
+      },
+      "weeks": 2
+    },
+    {
+      "on_46800": {
+        "Err": "out_of_range"
+      },
+      "weeks": 3
+    },
+    {
+      "on_46800": {
+        "Ok": 50700
+      },
+      "weeks": 4
+    }
+  ],
+  "prorate": [
+    [
+      100000,
+      0,
+      31,
+      0
+    ],
+    [
+      100000,
+      15,
+      31,
+      48387
+    ],
+    [
+      100000,
+      31,
+      31,
+      100000
+    ],
+    [
+      99999,
+      14,
+      28,
+      50000
+    ],
+    [
+      100000,
+      5,
+      0,
+      0
+    ]
+  ],
+  "visit_price": [
+    {
+      "on_52000": {
+        "discount": 0,
+        "total": 52000
+      },
+      "on_99999": {
+        "discount": 0,
+        "total": 99999
+      },
+      "percent": 0
+    },
+    {
+      "on_52000": {
+        "discount": 2600,
+        "total": 49400
+      },
+      "on_99999": {
+        "discount": 4999,
+        "total": 95000
+      },
+      "percent": 5
+    },
+    {
+      "on_52000": {
+        "discount": 5200,
+        "total": 46800
+      },
+      "on_99999": {
+        "discount": 9999,
+        "total": 90000
+      },
+      "percent": 10
+    },
+    {
+      "on_52000": {
+        "discount": 15600,
+        "total": 36400
+      },
+      "on_99999": {
+        "discount": 29999,
+        "total": 70000
+      },
+      "percent": 30
+    },
+    {
+      "on_52000": {
+        "detail": "value out of range: discount_percent",
+        "error": "out_of_range"
+      },
+      "on_99999": {
+        "detail": "value out of range: discount_percent",
+        "error": "out_of_range"
+      },
+      "percent": 31
+    }
+  ]
+}

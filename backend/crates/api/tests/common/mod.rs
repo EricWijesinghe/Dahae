@@ -398,3 +398,61 @@ pub async fn book(app: &Router, c: &Customer, days: i64, coupon: Option<Uuid>) -
     let id = b["id"].as_str().expect("booking id").parse().expect("uuid");
     (id, b)
 }
+
+/// Compares `value` with `tests/golden/kr/<name>.json`, or rewrites it when `UPDATE_GOLDENS=1` (PLAN section 8.1 step 1).
+pub fn golden(name: &str, value: &Value) {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/golden/kr")
+        .join(format!("{name}.json"));
+    let actual = serde_json::to_string_pretty(value).expect("golden JSON") + "\n";
+    if std::env::var("UPDATE_GOLDENS").as_deref() == Ok("1") {
+        std::fs::create_dir_all(path.parent().expect("golden dir")).expect("create golden dir");
+        std::fs::write(&path, &actual).expect("write golden");
+        return;
+    }
+    let expected = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}; run with UPDATE_GOLDENS=1 to create it", path.display()));
+    assert!(
+        expected == actual,
+        "{} differs from today's output (run with UPDATE_GOLDENS=1 only for a reviewed change):\n{actual}",
+        path.display()
+    );
+}
+
+/// `value` with every UUID (hyphenated, or 32 hex digits on their own) replaced by `<uuid-N>`, numbered in order of
+/// first appearance, so ids made per run compare equal in a golden.
+pub fn redact_uuids(value: &Value) -> Value {
+    let text = value.to_string();
+    let hex = |b: Option<&u8>| b.is_some_and(u8::is_ascii_hexdigit);
+    let mut seen: Vec<Uuid> = Vec::new();
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0;
+    while i < text.len() {
+        let bytes = text.as_bytes();
+        let found = [36, 32].into_iter().find_map(|len| {
+            let s = text.get(i..i + len)?;
+            let alone = !hex(i.checked_sub(1).and_then(|p| bytes.get(p))) && !hex(bytes.get(i + len));
+            let shaped = if len == 36 {
+                bytes[i + 8] == b'-'
+            } else {
+                s.bytes().all(|b| b.is_ascii_hexdigit())
+            };
+            (alone && shaped).then(|| Uuid::parse_str(s).ok().map(|id| (id, len))).flatten()
+        });
+        match found {
+            Some((id, len)) => {
+                let n = seen.iter().position(|s| *s == id).unwrap_or_else(|| {
+                    seen.push(id);
+                    seen.len() - 1
+                });
+                out.push_str(&format!("<uuid-{n}>"));
+                i += len;
+            }
+            None => {
+                let ch = text[i..].chars().next().expect("char");
+                out.push(ch);
+                i += ch.len_utf8();
+            }
+        }
+    }
+    serde_json::from_str(&out).expect("redacted JSON")
+}

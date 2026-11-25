@@ -1,0 +1,2001 @@
+{
+  "peak_out_of_range": [
+    {
+      "peak_bps": 10001,
+      "price": {
+        "detail": "value out of range: peak_bps",
+        "error": "out_of_range"
+      }
+    },
+    {
+      "peak_bps": -1,
+      "price": {
+        "detail": "value out of range: peak_bps",
+        "error": "out_of_range"
+      }
+    }
+  ],
+  "services": [
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 45000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 45000,
+            "total_discount": 0
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 50000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 50000,
+            "total_discount": 0
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 54000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 54000,
+            "total_discount": 0
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        }
+      ],
+      "code": "studio",
+      "kind": "fixed",
+      "pricing": {
+        "minutes": 120,
+        "price": 45000,
+        "type": "fixed"
+      }
+    },
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 45000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 45000,
+            "total_discount": 0
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 50000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 50000,
+            "total_discount": 0
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 54000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 54000,
+            "total_discount": 0
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        }
+      ],
+      "code": "kitchen",
+      "kind": "fixed",
+      "pricing": {
+        "minutes": 120,
+        "price": 45000,
+        "type": "fixed"
+      }
+    },
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 39000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 39000,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 43300,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 43300,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 46800,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 46800,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 52000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 52000,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 57700,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 57700,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 62400,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 62400,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 69000,
+            "minutes": 180,
+            "multi_discount": 0,
+            "total": 69000,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 76600,
+            "minutes": 180,
+            "multi_discount": 0,
+            "total": 76600,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 82800,
+            "minutes": 180,
+            "multi_discount": 0,
+            "total": 82800,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 84000,
+            "minutes": 240,
+            "multi_discount": 0,
+            "total": 84000,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 93200,
+            "minutes": 240,
+            "multi_discount": 0,
+            "total": 93200,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 100800,
+            "minutes": 240,
+            "multi_discount": 0,
+            "total": 100800,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        }
+      ],
+      "code": "bathroom",
+      "kind": "unit",
+      "pricing": {
+        "type": "unit",
+        "units": [
+          {
+            "label_key": "count_1",
+            "minutes": 120,
+            "price": 39000
+          },
+          {
+            "label_key": "count_2",
+            "minutes": 120,
+            "price": 52000
+          },
+          {
+            "label_key": "count_3",
+            "minutes": 180,
+            "price": 69000
+          },
+          {
+            "label_key": "count_4",
+            "minutes": 240,
+            "price": 84000
+          }
+        ]
+      }
+    },
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 59000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 59000,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 65500,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 65500,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 70800,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 70800,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 1
+        },
+        {
+          "counts": [
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 59000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 59000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 59000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 59000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            2
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 118000,
+            "minutes": 120,
+            "multi_discount": 17700,
+            "total": 100300,
+            "total_discount": 17700
+          }
+        },
+        {
+          "counts": [
+            20
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 1180000,
+            "minutes": 1200,
+            "multi_discount": 177000,
+            "total": 1003000,
+            "total_discount": 177000
+          }
+        },
+        {
+          "counts": [
+            21
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            1,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        }
+      ],
+      "code": "mattress",
+      "kind": "counts",
+      "pricing": {
+        "max_each": null,
+        "multi_discount_bps": 1500,
+        "type": "counts",
+        "units": [
+          {
+            "label_key": "mattress",
+            "minutes": 60,
+            "price": 59000
+          }
+        ]
+      }
+    },
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 79000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 79000,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 87700,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 87700,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 94800,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 94800,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 119000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 119000,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 132100,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 132100,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 142800,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 142800,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 179000,
+            "minutes": 180,
+            "multi_discount": 0,
+            "total": 179000,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 198700,
+            "minutes": 180,
+            "multi_discount": 0,
+            "total": 198700,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 214800,
+            "minutes": 180,
+            "multi_discount": 0,
+            "total": 214800,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 139000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 139000,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 154300,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 154300,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 166800,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 166800,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "counts": [
+            1,
+            0,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 79000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 79000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            0,
+            1,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 119000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 119000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            0,
+            0,
+            1,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 179000,
+            "minutes": 180,
+            "multi_discount": 0,
+            "total": 179000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 139000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 139000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 516000,
+            "minutes": 510,
+            "multi_discount": 51600,
+            "total": 464400,
+            "total_discount": 51600
+          }
+        },
+        {
+          "counts": [
+            2,
+            0,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 158000,
+            "minutes": 180,
+            "multi_discount": 15800,
+            "total": 142200,
+            "total_discount": 15800
+          }
+        },
+        {
+          "counts": [
+            20,
+            20,
+            20,
+            20
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 10320000,
+            "minutes": 10200,
+            "multi_discount": 1032000,
+            "total": 9288000,
+            "total_discount": 1032000
+          }
+        },
+        {
+          "counts": [
+            21,
+            21,
+            21,
+            21
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        }
+      ],
+      "code": "aircon",
+      "kind": "counts",
+      "pricing": {
+        "max_each": null,
+        "multi_discount_bps": 1000,
+        "type": "counts",
+        "units": [
+          {
+            "label_key": "wall",
+            "minutes": 90,
+            "price": 79000
+          },
+          {
+            "label_key": "stand",
+            "minutes": 120,
+            "price": 119000
+          },
+          {
+            "label_key": "two_in_one",
+            "minutes": 180,
+            "price": 179000
+          },
+          {
+            "label_key": "ceiling",
+            "minutes": 120,
+            "price": 139000
+          }
+        ]
+      }
+    },
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 59000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 59000,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 65500,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 65500,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 70800,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 70800,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 79000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 79000,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 87700,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 87700,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 94800,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 94800,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 99000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 99000,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 109900,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 109900,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 118800,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 118800,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 119000,
+            "minutes": 150,
+            "multi_discount": 0,
+            "total": 119000,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 132100,
+            "minutes": 150,
+            "multi_discount": 0,
+            "total": 132100,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 142800,
+            "minutes": 150,
+            "multi_discount": 0,
+            "total": 142800,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "counts": [
+            1,
+            0,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 59000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 59000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            0,
+            1,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 79000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 79000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            0,
+            0,
+            1,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 99000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 99000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 119000,
+            "minutes": 150,
+            "multi_discount": 0,
+            "total": 119000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 356000,
+            "minutes": 420,
+            "multi_discount": 35600,
+            "total": 320400,
+            "total_discount": 35600
+          }
+        },
+        {
+          "counts": [
+            2,
+            0,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 118000,
+            "minutes": 120,
+            "multi_discount": 11800,
+            "total": 106200,
+            "total_discount": 11800
+          }
+        },
+        {
+          "counts": [
+            20,
+            20,
+            20,
+            20
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 7120000,
+            "minutes": 8400,
+            "multi_discount": 712000,
+            "total": 6408000,
+            "total_discount": 712000
+          }
+        },
+        {
+          "counts": [
+            21,
+            21,
+            21,
+            21
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        }
+      ],
+      "code": "sofa",
+      "kind": "counts",
+      "pricing": {
+        "max_each": null,
+        "multi_discount_bps": 1000,
+        "type": "counts",
+        "units": [
+          {
+            "label_key": "seat_1_2",
+            "minutes": 60,
+            "price": 59000
+          },
+          {
+            "label_key": "seat_3",
+            "minutes": 90,
+            "price": 79000
+          },
+          {
+            "label_key": "seat_4_plus",
+            "minutes": 120,
+            "price": 99000
+          },
+          {
+            "label_key": "l_shape",
+            "minutes": 150,
+            "price": 119000
+          }
+        ]
+      }
+    },
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        }
+      ],
+      "code": "move_out",
+      "kind": "quote",
+      "pricing": {
+        "type": "quote"
+      }
+    },
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        }
+      ],
+      "code": "move_in",
+      "kind": "quote",
+      "pricing": {
+        "type": "quote"
+      }
+    },
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": null
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 0
+        }
+      ],
+      "code": "whole_home",
+      "kind": "quote",
+      "pricing": {
+        "type": "quote"
+      }
+    },
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 9000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 9000,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 10000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 10000,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 10800,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 10800,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 15000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 15000,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 16700,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 16700,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 18000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 18000,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 2
+        },
+        {
+          "counts": [
+            1,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 9000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 9000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            0,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 15000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 15000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            1,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 24000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 24000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            2,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 18000,
+            "minutes": 60,
+            "multi_discount": 0,
+            "total": 18000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            20,
+            20
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 480000,
+            "minutes": 800,
+            "multi_discount": 0,
+            "total": 480000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            21,
+            21
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            1,
+            1,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        }
+      ],
+      "code": "window",
+      "kind": "counts",
+      "pricing": {
+        "max_each": null,
+        "multi_discount_bps": 0,
+        "type": "counts",
+        "units": [
+          {
+            "label_key": "window_small",
+            "minutes": 15,
+            "price": 9000
+          },
+          {
+            "label_key": "window_large",
+            "minutes": 25,
+            "price": 15000
+          }
+        ]
+      }
+    },
+    {
+      "cases": [
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 80000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 80000,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 88800,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 88800,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 96000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 96000,
+            "total_discount": 0
+          },
+          "unit_index": 0
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 90000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 90000,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 99900,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 99900,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 108000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 108000,
+            "total_discount": 0
+          },
+          "unit_index": 1
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 100000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 100000,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 111000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 111000,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 120000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 120000,
+            "total_discount": 0
+          },
+          "unit_index": 2
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 300000,
+            "minutes": 240,
+            "multi_discount": 0,
+            "total": 300000,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "discount": 0,
+            "list_price": 333000,
+            "minutes": 240,
+            "multi_discount": 0,
+            "total": 333000,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "discount": 0,
+            "list_price": 360000,
+            "minutes": 240,
+            "multi_discount": 0,
+            "total": 360000,
+            "total_discount": 0
+          },
+          "unit_index": 3
+        },
+        {
+          "peak_bps": 0,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "peak_bps": 1100,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "peak_bps": 2000,
+          "price": {
+            "detail": "unit option index is invalid",
+            "error": "invalid_unit"
+          },
+          "unit_index": 4
+        },
+        {
+          "counts": [
+            1,
+            0,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 80000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 80000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            0,
+            1,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 90000,
+            "minutes": 120,
+            "multi_discount": 0,
+            "total": 90000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            0,
+            0,
+            1,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 100000,
+            "minutes": 90,
+            "multi_discount": 0,
+            "total": 100000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 300000,
+            "minutes": 240,
+            "multi_discount": 0,
+            "total": 300000,
+            "total_discount": 0
+          }
+        },
+        {
+          "counts": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 570000,
+            "minutes": 540,
+            "multi_discount": 57000,
+            "total": 513000,
+            "total_discount": 57000
+          }
+        },
+        {
+          "counts": [
+            2,
+            0,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "discount": 0,
+            "list_price": 570000,
+            "minutes": 540,
+            "multi_discount": 57000,
+            "total": 513000,
+            "total_discount": 57000
+          }
+        },
+        {
+          "counts": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        },
+        {
+          "counts": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "peak_bps": 0,
+          "price": {
+            "detail": "value out of range: counts",
+            "error": "out_of_range"
+          }
+        }
+      ],
+      "code": "disinfection",
+      "kind": "counts",
+      "pricing": {
+        "max_each": 1,
+        "multi_discount_bps": 1000,
+        "type": "counts",
+        "units": [
+          {
+            "label_key": "pest",
+            "minutes": 90,
+            "price": 80000
+          },
+          {
+            "label_key": "mite_bedbug",
+            "minutes": 120,
+            "price": 90000
+          },
+          {
+            "label_key": "sanitize",
+            "minutes": 90,
+            "price": 100000
+          },
+          {
+            "label_key": "sick_house",
+            "minutes": 240,
+            "price": 300000
+          }
+        ]
+      }
+    }
+  ]
+}

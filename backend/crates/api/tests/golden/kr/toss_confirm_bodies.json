@@ -1,0 +1,15 @@
+{
+  "portone": [],
+  "toss": [
+    {
+      "body": {
+        "amount": 45000,
+        "orderId": "<uuid-0>",
+        "paymentKey": "pk_1"
+      },
+      "kind": "confirm",
+      "path": "/v1/payments/confirm",
+      "secret": "test_sk_window0001"
+    }
+  ]
+}

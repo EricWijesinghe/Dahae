@@ -202,6 +202,8 @@ jobs:
         run: bash scripts/ci/installer-selftest.sh
       - name: Pinned versions agree (Rust, Flutter, cosign)
         run: bash scripts/ci/check-pins.sh
+      - name: Legal pages match their generator
+        run: python3 -I scripts/build_legal.py website --check
       - name: Caddyfile parses with every installer setting (public HTTPS, internal CA, with and without email)
         run: bash scripts/ci/caddy-check.sh
       - name: Workflows pass actionlint

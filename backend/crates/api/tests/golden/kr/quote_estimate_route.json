@@ -1,0 +1,554 @@
+[
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "empty",
+      "service_code": "move_out"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 300000,
+      "before_vat": 345000,
+      "deposit": 38000,
+      "deposit_bps": 1000,
+      "extras": 45000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 0,
+      "total": 379500
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "after_interior",
+      "duplex": true,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "four_plus",
+      "luggage": "empty",
+      "service_code": "move_out"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 460000,
+      "before_vat": 678000,
+      "deposit": 74600,
+      "deposit_bps": 1000,
+      "extras": 105000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 2000,
+      "total": 745800
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "same_day_move",
+      "duplex": false,
+      "elevator": false,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "partly_unpacked",
+      "service_code": "move_out"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 300000,
+      "before_vat": 442750,
+      "deposit": 48700,
+      "deposit_bps": 1000,
+      "extras": 85000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 1500,
+      "total": 487000
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "ac_addons": [
+        {
+          "count": 1,
+          "unit": "wall"
+        }
+      ],
+      "balconies": 0,
+      "bathrooms": 1,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "studio",
+      "luggage": "empty",
+      "service_code": "move_out"
+    },
+    "response": {
+      "addon_discount_bps": 1000,
+      "addons": 71100,
+      "base": 180000,
+      "before_vat": 180000,
+      "deposit": 26900,
+      "deposit_bps": 1000,
+      "extras": 0,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 0,
+      "total": 269100
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 9,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "empty",
+      "service_code": "move_out"
+    },
+    "response": {
+      "error": {
+        "code": "out_of_range"
+      }
+    },
+    "status": 422
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "empty",
+      "service_code": "move_in"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 300000,
+      "before_vat": 345000,
+      "deposit": 38000,
+      "deposit_bps": 1000,
+      "extras": 45000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 0,
+      "total": 379500
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "after_interior",
+      "duplex": true,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "four_plus",
+      "luggage": "empty",
+      "service_code": "move_in"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 460000,
+      "before_vat": 678000,
+      "deposit": 74600,
+      "deposit_bps": 1000,
+      "extras": 105000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 2000,
+      "total": 745800
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "same_day_move",
+      "duplex": false,
+      "elevator": false,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "partly_unpacked",
+      "service_code": "move_in"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 300000,
+      "before_vat": 442750,
+      "deposit": 48700,
+      "deposit_bps": 1000,
+      "extras": 85000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 1500,
+      "total": 487000
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "ac_addons": [
+        {
+          "count": 1,
+          "unit": "wall"
+        }
+      ],
+      "balconies": 0,
+      "bathrooms": 1,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "studio",
+      "luggage": "empty",
+      "service_code": "move_in"
+    },
+    "response": {
+      "addon_discount_bps": 1000,
+      "addons": 71100,
+      "base": 180000,
+      "before_vat": 180000,
+      "deposit": 26900,
+      "deposit_bps": 1000,
+      "extras": 0,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 0,
+      "total": 269100
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 9,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "empty",
+      "service_code": "move_in"
+    },
+    "response": {
+      "error": {
+        "code": "out_of_range"
+      }
+    },
+    "status": 422
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "empty",
+      "service_code": "whole_home"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 300000,
+      "before_vat": 431250,
+      "deposit": 47400,
+      "deposit_bps": 1000,
+      "extras": 45000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 2500,
+      "total": 474400
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "after_interior",
+      "duplex": true,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "four_plus",
+      "luggage": "empty",
+      "service_code": "whole_home"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 460000,
+      "before_vat": 706250,
+      "deposit": 77700,
+      "deposit_bps": 1000,
+      "extras": 105000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 2500,
+      "total": 776900
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "same_day_move",
+      "duplex": false,
+      "elevator": false,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "partly_unpacked",
+      "service_code": "whole_home"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 300000,
+      "before_vat": 481250,
+      "deposit": 52900,
+      "deposit_bps": 1000,
+      "extras": 85000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 2500,
+      "total": 529400
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "ac_addons": [
+        {
+          "count": 1,
+          "unit": "wall"
+        }
+      ],
+      "balconies": 0,
+      "bathrooms": 1,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "studio",
+      "luggage": "empty",
+      "service_code": "whole_home"
+    },
+    "response": {
+      "addon_discount_bps": 1000,
+      "addons": 71100,
+      "base": 180000,
+      "before_vat": 225000,
+      "deposit": 31900,
+      "deposit_bps": 1000,
+      "extras": 0,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 2500,
+      "total": 318600
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 9,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "empty",
+      "service_code": "whole_home"
+    },
+    "response": {
+      "error": {
+        "code": "out_of_range"
+      }
+    },
+    "status": 422
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "empty",
+      "service_code": "bathroom"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 300000,
+      "before_vat": 345000,
+      "deposit": 38000,
+      "deposit_bps": 1000,
+      "extras": 45000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 0,
+      "total": 379500
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "after_interior",
+      "duplex": true,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "four_plus",
+      "luggage": "empty",
+      "service_code": "bathroom"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 460000,
+      "before_vat": 678000,
+      "deposit": 74600,
+      "deposit_bps": 1000,
+      "extras": 105000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 2000,
+      "total": 745800
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 2,
+      "building": "apartment",
+      "cleaning_type": "same_day_move",
+      "duplex": false,
+      "elevator": false,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "partly_unpacked",
+      "service_code": "bathroom"
+    },
+    "response": {
+      "addon_discount_bps": 0,
+      "addons": 0,
+      "base": 300000,
+      "before_vat": 442750,
+      "deposit": 48700,
+      "deposit_bps": 1000,
+      "extras": 85000,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 1500,
+      "total": 487000
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "ac_addons": [
+        {
+          "count": 1,
+          "unit": "wall"
+        }
+      ],
+      "balconies": 0,
+      "bathrooms": 1,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "studio",
+      "luggage": "empty",
+      "service_code": "bathroom"
+    },
+    "response": {
+      "addon_discount_bps": 1000,
+      "addons": 71100,
+      "base": 180000,
+      "before_vat": 180000,
+      "deposit": 26900,
+      "deposit_bps": 1000,
+      "extras": 0,
+      "peak": 0,
+      "peak_bps": 0,
+      "surcharge_bps": 0,
+      "total": 269100
+    },
+    "status": 200
+  },
+  {
+    "request": {
+      "balconies": 1,
+      "bathrooms": 9,
+      "building": "apartment",
+      "cleaning_type": "standard",
+      "duplex": false,
+      "elevator": true,
+      "floor_3_or_higher": true,
+      "layout": "two_rooms",
+      "luggage": "empty",
+      "service_code": "bathroom"
+    },
+    "response": {
+      "error": {
+        "code": "out_of_range"
+      }
+    },
+    "status": 422
+  }
+]

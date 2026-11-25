@@ -1,0 +1,40 @@
+{
+  "fresh_install": {
+    "api_base": "http://127.0.0.1:8080",
+    "app_versions": {},
+    "brand_version": "44136fa355b3678a",
+    "flags": {
+      "ai": false,
+      "booking": true,
+      "chat": true,
+      "payments": true
+    },
+    "install_id": "54fcedd42b825a97",
+    "maintenance": {
+      "message": "",
+      "on": false
+    },
+    "providers": []
+  },
+  "headers": {
+    "cache-control": "public, max-age=30",
+    "content-type": "application/json"
+  },
+  "kr_business": {
+    "api_base": "http://127.0.0.1:8080",
+    "app_versions": {},
+    "brand_version": "f428fd383ded47e9",
+    "flags": {
+      "ai": false,
+      "booking": true,
+      "chat": false,
+      "payments": true
+    },
+    "install_id": "54fcedd42b825a97",
+    "maintenance": {
+      "message": "",
+      "on": false
+    },
+    "providers": []
+  }
+}

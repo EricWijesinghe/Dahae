@@ -41,7 +41,7 @@ pub enum Message<'a> {
 
 /// Row columns for a message: channel, title, body, data. `template_ready` is whether the Solapi
 /// config has the template and the channel id.
-fn stored(msg: Message<'_>, template_ready: bool) -> (&'static str, String, String, Value) {
+pub fn stored(msg: Message<'_>, template_ready: bool) -> (&'static str, String, String, Value) {
     match msg {
         Message::Sms(text) => (CHANNEL_SMS, String::new(), text.to_string(), json!({})),
         Message::Alimtalk { template, brand, title, body } if template_ready => (

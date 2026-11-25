@@ -15,7 +15,7 @@ use crate::realtime::Recipient;
 
 // i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)
 /// Korean source -> English. Status codes are keys too (body of pro.status).
-const TABLE: &[(&str, &str)] = &[
+pub const TABLE: &[(&str, &str)] = &[
     ("계정 상태", "Account status"),
     ("verified", "Your account is approved"),
     ("suspended", "Your account is suspended"),

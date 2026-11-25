@@ -1,0 +1,226 @@
+{
+  "allocate": [
+    {
+      "amount": 1,
+      "lots": {
+        "Ok": [
+          [
+            2,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "amount": 4999,
+      "lots": {
+        "Ok": [
+          [
+            2,
+            4999
+          ]
+        ]
+      }
+    },
+    {
+      "amount": 5000,
+      "lots": {
+        "Ok": [
+          [
+            2,
+            5000
+          ]
+        ]
+      }
+    },
+    {
+      "amount": 6500,
+      "lots": {
+        "Ok": [
+          [
+            2,
+            5000
+          ],
+          [
+            1,
+            1500
+          ]
+        ]
+      }
+    },
+    {
+      "amount": 7000,
+      "lots": {
+        "Ok": [
+          [
+            2,
+            5000
+          ],
+          [
+            1,
+            2000
+          ]
+        ]
+      }
+    },
+    {
+      "amount": 7001,
+      "lots": {
+        "Err": "points_insufficient"
+      }
+    },
+    {
+      "amount": 0,
+      "lots": {
+        "Err": "points_non_positive"
+      }
+    }
+  ],
+  "available": 7000,
+  "cash_share": [
+    {
+      "amount": 46800,
+      "cash": 46800,
+      "paid": 52000,
+      "points": 0
+    },
+    {
+      "amount": 46800,
+      "cash": 23400,
+      "paid": 52000,
+      "points": 26000
+    },
+    {
+      "amount": 52000,
+      "cash": 42000,
+      "paid": 52000,
+      "points": 10000
+    },
+    {
+      "amount": 100,
+      "cash": 66,
+      "paid": 3,
+      "points": 1
+    },
+    {
+      "amount": 100,
+      "cash": 100,
+      "paid": 0,
+      "points": 5
+    },
+    {
+      "amount": 10000,
+      "cash": 0,
+      "paid": 52000,
+      "points": 60000
+    }
+  ],
+  "cashback": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      99,
+      1,
+      10
+    ],
+    [
+      100,
+      1,
+      10
+    ],
+    [
+      52000,
+      520,
+      5200
+    ],
+    [
+      375300,
+      3753,
+      37530
+    ]
+  ],
+  "expires_at": "2027-03-10T01:00:00+00:00",
+  "expiring_within_7": 5000,
+  "lapsed": [
+    [
+      3,
+      2000
+    ]
+  ],
+  "policy": {
+    "earn_bps": 100,
+    "enabled": false,
+    "expiry_days": 365,
+    "max_use_bps": 10000,
+    "notify_days": 30,
+    "referral_points": 3000,
+    "welcome_points": 3000
+  },
+  "split_payment": [
+    {
+      "available": 10000,
+      "max_use_bps": 10000,
+      "requested": 0,
+      "split": {
+        "pg": 52000,
+        "points": 0
+      },
+      "total": 52000
+    },
+    {
+      "available": 20000,
+      "max_use_bps": 10000,
+      "requested": 10000,
+      "split": {
+        "pg": 42000,
+        "points": 10000
+      },
+      "total": 52000
+    },
+    {
+      "available": 20000,
+      "max_use_bps": 10000,
+      "requested": 30000,
+      "split": {
+        "error": "points_insufficient"
+      },
+      "total": 52000
+    },
+    {
+      "available": 50000,
+      "max_use_bps": 5000,
+      "requested": 30000,
+      "split": {
+        "error": "points_over_cap"
+      },
+      "total": 52000
+    },
+    {
+      "available": 0,
+      "max_use_bps": 10000,
+      "requested": -1,
+      "split": {
+        "error": "points_non_positive"
+      },
+      "total": 52000
+    },
+    {
+      "available": 40000,
+      "max_use_bps": 3333,
+      "requested": 33333,
+      "split": {
+        "error": "points_over_cap"
+      },
+      "total": 99999
+    }
+  ],
+  "valid": null
+}

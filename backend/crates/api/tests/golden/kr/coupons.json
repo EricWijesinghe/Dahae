@@ -1,0 +1,187 @@
+{
+  "applied": [
+    {
+      "aircon_counts_0210": {
+        "discount": 5000,
+        "list_price": 417000,
+        "minutes": 420,
+        "multi_discount": 41700,
+        "total": 370300,
+        "total_discount": 46700
+      },
+      "bathroom_unit1": {
+        "discount": 5000,
+        "list_price": 52000,
+        "minutes": 120,
+        "multi_discount": 0,
+        "total": 47000,
+        "total_discount": 5000
+      },
+      "bathroom_unit1_peak2000": {
+        "discount": 5000,
+        "list_price": 62400,
+        "minutes": 120,
+        "multi_discount": 0,
+        "total": 57400,
+        "total_discount": 5000
+      },
+      "coupon": "any_5000"
+    },
+    {
+      "aircon_counts_0210": {
+        "detail": "coupon does not apply to this service",
+        "error": "coupon_wrong_service"
+      },
+      "bathroom_unit1": {
+        "discount": 10000,
+        "list_price": 52000,
+        "minutes": 120,
+        "multi_discount": 0,
+        "total": 42000,
+        "total_discount": 10000
+      },
+      "bathroom_unit1_peak2000": {
+        "discount": 10000,
+        "list_price": 62400,
+        "minutes": 120,
+        "multi_discount": 0,
+        "total": 52400,
+        "total_discount": 10000
+      },
+      "coupon": "bathroom_10000"
+    },
+    {
+      "aircon_counts_0210": {
+        "discount": 10000,
+        "list_price": 417000,
+        "minutes": 420,
+        "multi_discount": 41700,
+        "total": 365300,
+        "total_discount": 51700
+      },
+      "bathroom_unit1": {
+        "detail": "coupon does not apply to this service",
+        "error": "coupon_wrong_service"
+      },
+      "bathroom_unit1_peak2000": {
+        "detail": "coupon does not apply to this service",
+        "error": "coupon_wrong_service"
+      },
+      "coupon": "other_service"
+    },
+    {
+      "aircon_counts_0210": {
+        "discount": 375300,
+        "list_price": 417000,
+        "minutes": 420,
+        "multi_discount": 41700,
+        "total": 0,
+        "total_discount": 417000
+      },
+      "bathroom_unit1": {
+        "discount": 52000,
+        "list_price": 52000,
+        "minutes": 120,
+        "multi_discount": 0,
+        "total": 0,
+        "total_discount": 52000
+      },
+      "bathroom_unit1_peak2000": {
+        "discount": 62400,
+        "list_price": 62400,
+        "minutes": 120,
+        "multi_discount": 0,
+        "total": 0,
+        "total_discount": 62400
+      },
+      "coupon": "over_price"
+    },
+    {
+      "aircon_counts_0210": {
+        "detail": "coupon is expired",
+        "error": "coupon_expired"
+      },
+      "bathroom_unit1": {
+        "detail": "coupon is expired",
+        "error": "coupon_expired"
+      },
+      "bathroom_unit1_peak2000": {
+        "detail": "coupon is expired",
+        "error": "coupon_expired"
+      },
+      "coupon": "expired"
+    },
+    {
+      "aircon_counts_0210": {
+        "detail": "coupon was already used",
+        "error": "coupon_used"
+      },
+      "bathroom_unit1": {
+        "detail": "coupon was already used",
+        "error": "coupon_used"
+      },
+      "bathroom_unit1_peak2000": {
+        "detail": "coupon was already used",
+        "error": "coupon_used"
+      },
+      "coupon": "used"
+    }
+  ],
+  "lifetime_days": 14,
+  "welcome_packs": [
+    {
+      "issued": [
+        {
+          "amount": 15000,
+          "expires_at": "2026-03-24T01:00:00+00:00",
+          "service_code": null
+        }
+      ],
+      "name": "default",
+      "valid": null
+    },
+    {
+      "issued": [
+        {
+          "amount": 20000,
+          "expires_at": "2026-03-24T01:00:00+00:00",
+          "service_code": null
+        },
+        {
+          "amount": 15000,
+          "expires_at": "2026-03-24T01:00:00+00:00",
+          "service_code": "aircon"
+        },
+        {
+          "amount": 15000,
+          "expires_at": "2026-03-24T01:00:00+00:00",
+          "service_code": "bathroom"
+        }
+      ],
+      "name": "three_mixed",
+      "valid": null
+    },
+    {
+      "issued": [
+        {
+          "amount": 30000,
+          "expires_at": "2026-03-24T01:00:00+00:00",
+          "service_code": null
+        }
+      ],
+      "name": "over_total",
+      "valid": "value out of range: welcome_total"
+    },
+    {
+      "issued": [
+        {
+          "amount": 15050,
+          "expires_at": "2026-03-24T01:00:00+00:00",
+          "service_code": null
+        }
+      ],
+      "name": "not_hundreds",
+      "valid": "value out of range: welcome_amount"
+    }
+  ]
+}

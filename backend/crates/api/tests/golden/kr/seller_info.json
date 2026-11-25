@@ -1,0 +1,690 @@
+{
+  "fresh_install": [
+    {
+      "field": "",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "<span>사업자 정보는 준비 중이에요. 고객센터로 문의해 주세요.</span>",
+      "status": 200
+    },
+    {
+      "field": "bizcheck",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "<a href=\"https://www.ftc.go.kr/bizCommPop.do\" target=\"_blank\" rel=\"noopener\" data-t=\"c_bizcheck\">사업자정보확인</a>",
+      "status": 200
+    },
+    {
+      "field": "legal_name",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "준비 중",
+      "status": 200
+    },
+    {
+      "field": "ceo",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "준비 중",
+      "status": 200
+    },
+    {
+      "field": "registration_no",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "준비 중",
+      "status": 200
+    },
+    {
+      "field": "mail_order_no",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "준비 중",
+      "status": 200
+    },
+    {
+      "field": "address",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "준비 중",
+      "status": 200
+    },
+    {
+      "field": "privacy_officer",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "준비 중",
+      "status": 200
+    },
+    {
+      "field": "hosting_provider",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "준비 중",
+      "status": 200
+    },
+    {
+      "field": "support_phone",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "준비 중",
+      "status": 200
+    },
+    {
+      "field": "support_email",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "준비 중",
+      "status": 200
+    },
+    {
+      "field": "name",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "다해",
+      "status": 200
+    },
+    {
+      "field": "name_en",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "다해",
+      "status": 200
+    },
+    {
+      "field": "short_name",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "다해",
+      "status": 200
+    },
+    {
+      "field": "base_url",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "http://127.0.0.1:8080",
+      "status": 200
+    },
+    {
+      "field": "primary_color",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "#187A8F",
+      "status": 200
+    },
+    {
+      "field": "logo_img",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    },
+    {
+      "field": "favicon",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "/assets/favicon.svg",
+      "status": 200
+    },
+    {
+      "field": "apple_icon",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "/assets/icon-192.png",
+      "status": 200
+    },
+    {
+      "field": "og_image",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "http://127.0.0.1:8080/assets/og-image.png",
+      "status": 200
+    },
+    {
+      "field": "ld_json",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "<script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@graph\":[{\"@id\":\"http://127.0.0.1:8080/#website\",\"@type\":\"WebSite\",\"inLanguage\":[\"ko\",\"en\"],\"name\":\"다해\",\"url\":\"http://127.0.0.1:8080/\"},{\"@id\":\"http://127.0.0.1:8080/#business\",\"@type\":\"LocalBusiness\",\"areaServed\":{\"@type\":\"AdministrativeArea\",\"name\":\"서울특별시\"},\"description\":\"검증된 청소 전문가가 욕실부터 이사 청소까지. 앱에서 가격을 확인하고 1분 만에 예약하세요.\",\"image\":\"http://127.0.0.1:8080/assets/icon-512.png\",\"logo\":\"http://127.0.0.1:8080/assets/icon-512.png\",\"name\":\"다해\",\"priceRange\":\"₩₩\",\"url\":\"http://127.0.0.1:8080/\"},{\"@type\":\"Service\",\"areaServed\":{\"@type\":\"AdministrativeArea\",\"name\":\"서울특별시\"},\"name\":\"홈클리닝\",\"provider\":{\"@id\":\"http://127.0.0.1:8080/#business\"},\"serviceType\":\"가정 청소\",\"url\":\"http://127.0.0.1:8080/#services\"}]}</script>",
+      "status": 200
+    },
+    {
+      "field": "cancel_policy",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "<li>방문일 2일 전까지 취소: 전액 환불</li><li>방문일 1일 전까지 취소: 앱에서 취소 불가, 상담팀 확인 후 처리</li><li>방문 당일 취소: 앱에서 취소 불가, 상담팀 확인 후 처리</li>",
+      "status": 200
+    },
+    {
+      "field": "ai_chat_retention_days",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "180",
+      "status": 200
+    },
+    {
+      "field": "upload_orphan_days",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "30",
+      "status": 200
+    },
+    {
+      "field": "uses_portone",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_toss",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_solapi",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_fcm",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_ai",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_backup",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_juso",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "legal_terms",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    },
+    {
+      "field": "legal_privacy",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    },
+    {
+      "field": "legal_location",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    },
+    {
+      "field": "tagline",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    },
+    {
+      "field": "tagline_en",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    },
+    {
+      "field": "privacy_email",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "준비 중",
+      "status": 200
+    },
+    {
+      "field": "verify_meta",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    }
+  ],
+  "kr_business": [
+    {
+      "field": "",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "<span>주식회사 다해클린</span><span>대표 홍길동</span><span>사업자등록번호 220-81-62517</span><span>통신판매업 신고 제2026-서울강남-0001호</span><span>주소 서울특별시 강남구 테헤란로 1, 10층</span><span>개인정보 보호책임자 김보호 (privacy@example.co.kr)</span><span>호스팅 제공자 예시호스팅(주)</span><a href=\"https://www.ftc.go.kr/bizCommPop.do?wrkr_no=2208162517\" target=\"_blank\" rel=\"noopener\" data-t=\"c_bizcheck\">사업자정보확인</a>",
+      "status": 200
+    },
+    {
+      "field": "bizcheck",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "<a href=\"https://www.ftc.go.kr/bizCommPop.do?wrkr_no=2208162517\" target=\"_blank\" rel=\"noopener\" data-t=\"c_bizcheck\">사업자정보확인</a>",
+      "status": 200
+    },
+    {
+      "field": "legal_name",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "주식회사 다해클린",
+      "status": 200
+    },
+    {
+      "field": "ceo",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "홍길동",
+      "status": 200
+    },
+    {
+      "field": "registration_no",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "220-81-62517",
+      "status": 200
+    },
+    {
+      "field": "mail_order_no",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "제2026-서울강남-0001호",
+      "status": 200
+    },
+    {
+      "field": "address",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "서울특별시 강남구 테헤란로 1, 10층",
+      "status": 200
+    },
+    {
+      "field": "privacy_officer",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "김보호 (privacy@example.co.kr)",
+      "status": 200
+    },
+    {
+      "field": "hosting_provider",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "예시호스팅(주)",
+      "status": 200
+    },
+    {
+      "field": "support_phone",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "<a href=\"tel:15880000\">1588-0000</a>",
+      "status": 200
+    },
+    {
+      "field": "support_email",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "<a href=\"mailto:help@example.co.kr\">help@example.co.kr</a>",
+      "status": 200
+    },
+    {
+      "field": "name",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "다해클린",
+      "status": 200
+    },
+    {
+      "field": "name_en",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "Dahae Clean",
+      "status": 200
+    },
+    {
+      "field": "short_name",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "다해",
+      "status": 200
+    },
+    {
+      "field": "base_url",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "http://127.0.0.1:8080",
+      "status": 200
+    },
+    {
+      "field": "primary_color",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "#3B5BFD",
+      "status": 200
+    },
+    {
+      "field": "logo_img",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    },
+    {
+      "field": "favicon",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "/assets/favicon.svg",
+      "status": 200
+    },
+    {
+      "field": "apple_icon",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "/assets/icon-192.png",
+      "status": 200
+    },
+    {
+      "field": "og_image",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "http://127.0.0.1:8080/assets/og-image.png",
+      "status": 200
+    },
+    {
+      "field": "ld_json",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "<script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@graph\":[{\"@id\":\"http://127.0.0.1:8080/#website\",\"@type\":\"WebSite\",\"inLanguage\":[\"ko\",\"en\"],\"name\":\"다해클린\",\"url\":\"http://127.0.0.1:8080/\"},{\"@id\":\"http://127.0.0.1:8080/#business\",\"@type\":\"LocalBusiness\",\"areaServed\":{\"@type\":\"AdministrativeArea\",\"name\":\"서울특별시\"},\"description\":\"검증된 청소 전문가가 욕실부터 이사 청소까지. 앱에서 가격을 확인하고 1분 만에 예약하세요.\",\"image\":\"http://127.0.0.1:8080/assets/icon-512.png\",\"logo\":\"http://127.0.0.1:8080/assets/icon-512.png\",\"name\":\"다해클린\",\"priceRange\":\"₩₩\",\"telephone\":\"1588-0000\",\"url\":\"http://127.0.0.1:8080/\"},{\"@type\":\"Service\",\"areaServed\":{\"@type\":\"AdministrativeArea\",\"name\":\"서울특별시\"},\"name\":\"홈클리닝\",\"provider\":{\"@id\":\"http://127.0.0.1:8080/#business\"},\"serviceType\":\"가정 청소\",\"url\":\"http://127.0.0.1:8080/#services\"}]}</script>",
+      "status": 200
+    },
+    {
+      "field": "cancel_policy",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "<li>방문일 2일 전까지 취소: 전액 환불</li><li>방문일 1일 전까지 취소: 앱에서 취소 불가, 상담팀 확인 후 처리</li><li>방문 당일 취소: 앱에서 취소 불가, 상담팀 확인 후 처리</li>",
+      "status": 200
+    },
+    {
+      "field": "ai_chat_retention_days",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "180",
+      "status": 200
+    },
+    {
+      "field": "upload_orphan_days",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "30",
+      "status": 200
+    },
+    {
+      "field": "uses_portone",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_toss",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_solapi",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_fcm",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_ai",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_backup",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "uses_juso",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "현재 이용하지 않음",
+      "status": 200
+    },
+    {
+      "field": "legal_terms",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    },
+    {
+      "field": "legal_privacy",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    },
+    {
+      "field": "legal_location",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    },
+    {
+      "field": "tagline",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "집 청소, 예약부터 결제까지",
+      "status": 200
+    },
+    {
+      "field": "tagline_en",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "Home cleaning, booked and paid",
+      "status": 200
+    },
+    {
+      "field": "privacy_email",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "privacy@example.co.kr",
+      "status": 200
+    },
+    {
+      "field": "verify_meta",
+      "headers": {
+        "cache-control": "public, max-age=300",
+        "content-type": "text/html; charset=utf-8"
+      },
+      "html": "",
+      "status": 200
+    }
+  ]
+}

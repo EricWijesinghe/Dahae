@@ -1,0 +1,3985 @@
+{
+  "default_json": "{\n  \"tiers\": [\n    { \"min_days\": 2, \"percent\": 0 },\n    { \"min_days\": 1, \"percent\": null },\n    { \"min_days\": 0, \"percent\": null }\n  ],\n  \"min_fee\": 0,\n  \"reschedule_min_days\": 2\n}\n",
+  "policies": [
+    {
+      "days": [
+        {
+          "days_before": -2,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": -1,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 0,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 1,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 2,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 3,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 4,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 5,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 6,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 7,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 8,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        }
+      ],
+      "name": "default",
+      "policy": {
+        "min_fee": 0,
+        "reschedule_min_days": 2,
+        "tiers": [
+          {
+            "min_days": 2,
+            "percent": 0
+          },
+          {
+            "min_days": 1,
+            "percent": null
+          },
+          {
+            "min_days": 0,
+            "percent": null
+          }
+        ]
+      },
+      "valid": null
+    },
+    {
+      "days": [
+        {
+          "days_before": -2,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": -1,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 0,
+          "outcome": {
+            "Fee": {
+              "percent": 50
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 3000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 3000,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 26000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 52000,
+                "refund": 26000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 55000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 110000,
+                "refund": 55000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 1,
+          "outcome": {
+            "Fee": {
+              "percent": 30
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 30
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 3000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 30
+                  }
+                },
+                "paid": 3000,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 15600,
+                "outcome": {
+                  "Fee": {
+                    "percent": 30
+                  }
+                },
+                "paid": 52000,
+                "refund": 36400
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 33000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 30
+                  }
+                },
+                "paid": 110000,
+                "refund": 77000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 2,
+          "outcome": {
+            "Fee": {
+              "percent": 30
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 30
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 3000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 30
+                  }
+                },
+                "paid": 3000,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 15600,
+                "outcome": {
+                  "Fee": {
+                    "percent": 30
+                  }
+                },
+                "paid": 52000,
+                "refund": 36400
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 33000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 30
+                  }
+                },
+                "paid": 110000,
+                "refund": 77000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 3,
+          "outcome": {
+            "Fee": {
+              "percent": 10
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 3000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 3000,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 5200,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 52000,
+                "refund": 46800
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 11000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 110000,
+                "refund": 99000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 4,
+          "outcome": {
+            "Fee": {
+              "percent": 10
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 3000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 3000,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 5200,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 52000,
+                "refund": 46800
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 11000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 110000,
+                "refund": 99000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 5,
+          "outcome": {
+            "Fee": {
+              "percent": 10
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 3000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 3000,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 5200,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 52000,
+                "refund": 46800
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 11000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 110000,
+                "refund": 99000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 6,
+          "outcome": {
+            "Fee": {
+              "percent": 10
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 3000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 3000,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 5200,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 52000,
+                "refund": 46800
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 11000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 110000,
+                "refund": 99000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 7,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 8,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        }
+      ],
+      "name": "tiered_min_fee",
+      "policy": {
+        "min_fee": 5000,
+        "reschedule_min_days": 2,
+        "tiers": [
+          {
+            "min_days": 7,
+            "percent": 0
+          },
+          {
+            "min_days": 3,
+            "percent": 10
+          },
+          {
+            "min_days": 1,
+            "percent": 30
+          },
+          {
+            "min_days": 0,
+            "percent": 50
+          }
+        ]
+      },
+      "valid": null
+    },
+    {
+      "days": [
+        {
+          "days_before": -2,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": -1,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 0,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 1,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 2,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 3,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 4,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 5,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 6,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 7,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 8,
+          "outcome": "Free",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 3000,
+                "refund": 3000
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 52000,
+                "refund": 52000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 110000,
+                "refund": 110000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        }
+      ],
+      "name": "same_day_closed",
+      "policy": {
+        "min_fee": 0,
+        "reschedule_min_days": 2,
+        "tiers": [
+          {
+            "min_days": 1,
+            "percent": 0
+          },
+          {
+            "min_days": 0,
+            "percent": null
+          }
+        ]
+      },
+      "valid": null
+    },
+    {
+      "days": [
+        {
+          "days_before": -2,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": -1,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 0,
+          "outcome": "Closed",
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": null,
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": null,
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 1,
+          "outcome": {
+            "Fee": {
+              "percent": 10
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 300,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 3000,
+                "refund": 2700
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 5200,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 52000,
+                "refund": 46800
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 11000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 110000,
+                "refund": 99000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": false
+        },
+        {
+          "days_before": 2,
+          "outcome": {
+            "Fee": {
+              "percent": 10
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 300,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 3000,
+                "refund": 2700
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 5200,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 52000,
+                "refund": 46800
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 11000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 10
+                  }
+                },
+                "paid": 110000,
+                "refund": 99000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 3,
+          "outcome": {
+            "Fee": {
+              "percent": 50
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 1500,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 3000,
+                "refund": 1500
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 26000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 52000,
+                "refund": 26000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 55000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 110000,
+                "refund": 55000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 4,
+          "outcome": {
+            "Fee": {
+              "percent": 50
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 1500,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 3000,
+                "refund": 1500
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 26000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 52000,
+                "refund": 26000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 55000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 110000,
+                "refund": 55000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 5,
+          "outcome": {
+            "Fee": {
+              "percent": 50
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 1500,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 3000,
+                "refund": 1500
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 26000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 52000,
+                "refund": 26000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 55000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 110000,
+                "refund": 55000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 6,
+          "outcome": {
+            "Fee": {
+              "percent": 50
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 1500,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 3000,
+                "refund": 1500
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 26000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 52000,
+                "refund": 26000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 55000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 110000,
+                "refund": 55000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 7,
+          "outcome": {
+            "Fee": {
+              "percent": 50
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 1500,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 3000,
+                "refund": 1500
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 26000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 52000,
+                "refund": 26000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 55000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 110000,
+                "refund": 55000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        },
+        {
+          "days_before": 8,
+          "outcome": {
+            "Fee": {
+              "percent": 50
+            }
+          },
+          "quotes": [
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 0,
+              "quote": {
+                "fee": 0,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 1
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 3000,
+              "quote": {
+                "fee": 1500,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 3000,
+                "refund": 1500
+              },
+              "status": 1
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 52000,
+              "quote": {
+                "fee": 26000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 52000,
+                "refund": 26000
+              },
+              "status": 1
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 0,
+                "outcome": "Free",
+                "paid": 0,
+                "refund": 0
+              },
+              "status": 0
+            },
+            {
+              "paid": 110000,
+              "quote": {
+                "fee": 55000,
+                "outcome": {
+                  "Fee": {
+                    "percent": 50
+                  }
+                },
+                "paid": 110000,
+                "refund": 55000
+              },
+              "status": 1
+            }
+          ],
+          "reschedule_allowed": true
+        }
+      ],
+      "name": "invalid_rising_refund",
+      "policy": {
+        "min_fee": 0,
+        "reschedule_min_days": 2,
+        "tiers": [
+          {
+            "min_days": 3,
+            "percent": 50
+          },
+          {
+            "min_days": 1,
+            "percent": 10
+          }
+        ]
+      },
+      "valid": "invalid_policy"
+    }
+  ]
+}

@@ -102,11 +102,10 @@ async fn any_fragment(s: &AppState, business: &Value, field: Option<&str>) -> Ap
     Ok(fragment(business, field))
 }
 
-/// Every `?field=` the endpoint answers (website contract test).
-#[cfg(test)]
-fn all_fields() -> Vec<&'static str> {
-    let mut out: Vec<&str> = FIELDS.to_vec();
-    out.push("bizcheck");
+/// Every `?field=` the endpoint answers (website contract test and the KR golden).
+pub fn all_fields() -> Vec<&'static str> {
+    let mut out = vec!["bizcheck"];
+    out.extend(FIELDS);
     out.extend(live::FIELDS);
     out
 }

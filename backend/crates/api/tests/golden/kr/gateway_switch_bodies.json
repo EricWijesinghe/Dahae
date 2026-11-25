@@ -1,0 +1,56 @@
+{
+  "portone": [
+    {
+      "body": {
+        "amount": 45000,
+        "currentCancellableAmount": 45000,
+        "reason": "booking refund"
+      },
+      "call": "cancel",
+      "id": "<uuid-0>"
+    },
+    {
+      "body": {
+        "amount": {
+          "total": 45000
+        },
+        "billingKey": "bk_test_<uuid-1>",
+        "currency": "KRW",
+        "customer": {
+          "id": "<uuid-1>"
+        },
+        "orderName": "다해 청소"
+      },
+      "call": "charge",
+      "id": "full-<uuid-2>"
+    }
+  ],
+  "toss": [
+    {
+      "body": {
+        "amount": 45000,
+        "orderId": "<uuid-3>",
+        "paymentKey": "pk_sw"
+      },
+      "kind": "confirm",
+      "path": "/v1/payments/confirm",
+      "secret": "test_sk_window0001"
+    },
+    {
+      "body": null,
+      "kind": "order",
+      "path": "/v1/payments/orders/<uuid-3>",
+      "secret": "test_sk_window0001"
+    },
+    {
+      "body": {
+        "cancelAmount": 45000,
+        "cancelReason": "예약 환불",
+        "refundableAmount": 45000
+      },
+      "kind": "cancel",
+      "path": "/v1/payments/pk_sw/cancel",
+      "secret": "test_sk_window0001"
+    }
+  ]
+}

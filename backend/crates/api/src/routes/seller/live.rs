@@ -18,7 +18,6 @@ const DEFAULT_ICON: &str = "/assets/icon-512.png";
 const SITE_DESCRIPTION: &str = "검증된 청소 전문가가 욕실부터 이사 청소까지. 앱에서 가격을 확인하고 1분 만에 예약하세요.";
 
 /// Every field this module answers. The website contract test checks pages against `all_fields`.
-#[cfg(test)]
 pub const FIELDS: [&str; 27] = [
     "name",
     "name_en",

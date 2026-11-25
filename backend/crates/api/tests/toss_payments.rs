@@ -36,6 +36,8 @@ struct PortOneMock {
     payments: HashMap<String, (i64, i64)>,
     cancels: Vec<String>,
     charges: Vec<String>,
+    /// Every cancel and charge request: call, payment id and body, for the KR golden.
+    bodies: Vec<Value>,
     /// The next charge answers 500: `Some(true)` after charging (answer lost), `Some(false)` without charging.
     fail_next_charge: Option<bool>,
 }
@@ -57,6 +59,7 @@ async fn po_payment(State(g): State<PortOneShared>, Path(id): Path<String>) -> (
 async fn po_cancel(State(g): State<PortOneShared>, Path(id): Path<String>, Json(b): Json<Value>) -> Json<Value> {
     let mut g = g.lock().expect("portone");
     g.cancels.push(id.clone());
+    g.bodies.push(json!({ "call": "cancel", "id": id, "body": b }));
     if let Some(p) = g.payments.get_mut(&id) {
         p.1 += b["amount"].as_i64().unwrap_or(0);
     }
@@ -66,6 +69,7 @@ async fn po_cancel(State(g): State<PortOneShared>, Path(id): Path<String>, Json(
 async fn po_charge(State(g): State<PortOneShared>, Path(id): Path<String>, Json(b): Json<Value>) -> (StatusCode, Json<Value>) {
     let mut g = g.lock().expect("portone");
     g.charges.push(id.clone());
+    g.bodies.push(json!({ "call": "charge", "id": id, "body": b }));
     let fail = g.fail_next_charge.take();
     if fail != Some(false) {
         let total = b["amount"]["total"].as_i64().unwrap_or(0);
@@ -93,6 +97,20 @@ async fn start_portone() -> (String, PortOneShared) {
     let addr = listener.local_addr().expect("addr");
     tokio::spawn(async move { axum::serve(listener, app).await.expect("mock serves") });
     (format!("http://{addr}"), g)
+}
+
+/// Every request body both gateways saw, with per-run ids redacted (PLAN section 8.1 step 1 golden).
+fn gateway_bodies(w: &World) -> Value {
+    let toss: Vec<Value> = w
+        .toss
+        .lock()
+        .expect("fake")
+        .calls
+        .iter()
+        .map(|c| json!({ "kind": c.kind, "path": c.path, "secret": c.secret, "body": c.body }))
+        .collect();
+    let portone = w.portone.lock().expect("portone").bodies.clone();
+    common::redact_uuids(&json!({ "toss": toss, "portone": portone }))
 }
 
 struct World {
@@ -224,6 +242,7 @@ async fn toss_confirm_captures_with_the_stored_amount_once(pool: PgPool) {
     .await;
     assert_eq!((st, app["booking_id"].as_str()), (StatusCode::OK, Some(booking.to_string().as_str())), "{app}");
     assert_eq!(w.toss.lock().expect("fake").calls_of("confirm").len(), 1, "never captured twice");
+    common::golden("toss_confirm_bodies", &gateway_bodies(&w));
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -426,6 +445,7 @@ async fn a_config_change_never_moves_a_row(pool: PgPool) {
     assert_eq!(cancels[0].path, "/v1/payments/pk_sw/cancel", "the paymentKey comes from the lookup");
     assert_eq!(cancels[0].body["refundableAmount"].as_i64(), Some(amount));
     assert_eq!(w.portone.lock().expect("portone").cancels.len(), 1, "PortOne saw only its own refund");
+    common::golden("gateway_switch_bodies", &gateway_bodies(&w));
 }
 
 /// Registers a card under Toss. Returns the payment method id and the customerKey (the ticket).
@@ -500,6 +520,7 @@ async fn saved_cards_under_toss_use_the_billing_mid(pool: PgPool) {
     let deletes = w.toss.lock().expect("fake").calls_of("delete");
     assert_eq!(deletes.len(), 2);
     assert_eq!((deletes[1].secret.as_str(), deletes[1].path.as_str()), (BILLING_SK, "/v1/billing/bk_auth_1"));
+    common::golden("toss_billing_bodies", &gateway_bodies(&w));
 }
 
 fn clone_customer(c: &Customer) -> Customer {

@@ -9,7 +9,7 @@ use crate::{
     routes::cases::{self, NewCase},
     state::AppState,
 };
-use chrono::{NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde_json::{Value, json};
 use sqlx::PgConnection;
 use std::{
@@ -21,7 +21,12 @@ use uuid::Uuid;
 
 /// Business dates are Korean dates, whatever timezone the server or DB runs in.
 pub fn today_kst() -> NaiveDate {
-    (Utc::now() + chrono::Duration::hours(9)).date_naive()
+    today_kst_at(Utc::now())
+}
+
+/// [`today_kst`] at a given instant.
+pub fn today_kst_at(now: DateTime<Utc>) -> NaiveDate {
+    (now + chrono::Duration::hours(9)).date_naive()
 }
 
 /// SQL equivalent of [`today_kst`]; never use bare `current_date` (it follows the DB timezone).

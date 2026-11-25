@@ -1,0 +1,389 @@
+{
+  "boundary": [
+    {
+      "days_before": 3,
+      "kst_today": "2026-03-14",
+      "now": "2026-03-14T14:59:59Z",
+      "quotes": [
+        {
+          "policy": "default",
+          "quote": {
+            "fee": 0,
+            "outcome": "Free",
+            "paid": 52000,
+            "refund": 52000
+          },
+          "reschedule_allowed": true
+        },
+        {
+          "policy": "tiered_min_fee",
+          "quote": {
+            "fee": 5200,
+            "outcome": {
+              "Fee": {
+                "percent": 10
+              }
+            },
+            "paid": 52000,
+            "refund": 46800
+          },
+          "reschedule_allowed": true
+        }
+      ],
+      "sql_kst_today": "2026-03-14",
+      "visit_date": "2026-03-17"
+    },
+    {
+      "days_before": 2,
+      "kst_today": "2026-03-15",
+      "now": "2026-03-14T15:00:00Z",
+      "quotes": [
+        {
+          "policy": "default",
+          "quote": {
+            "fee": 0,
+            "outcome": "Free",
+            "paid": 52000,
+            "refund": 52000
+          },
+          "reschedule_allowed": true
+        },
+        {
+          "policy": "tiered_min_fee",
+          "quote": {
+            "fee": 15600,
+            "outcome": {
+              "Fee": {
+                "percent": 30
+              }
+            },
+            "paid": 52000,
+            "refund": 36400
+          },
+          "reschedule_allowed": true
+        }
+      ],
+      "sql_kst_today": "2026-03-15",
+      "visit_date": "2026-03-17"
+    },
+    {
+      "days_before": 2,
+      "kst_today": "2026-03-15",
+      "now": "2026-03-15T14:59:59Z",
+      "quotes": [
+        {
+          "policy": "default",
+          "quote": {
+            "fee": 0,
+            "outcome": "Free",
+            "paid": 52000,
+            "refund": 52000
+          },
+          "reschedule_allowed": true
+        },
+        {
+          "policy": "tiered_min_fee",
+          "quote": {
+            "fee": 15600,
+            "outcome": {
+              "Fee": {
+                "percent": 30
+              }
+            },
+            "paid": 52000,
+            "refund": 36400
+          },
+          "reschedule_allowed": true
+        }
+      ],
+      "sql_kst_today": "2026-03-15",
+      "visit_date": "2026-03-17"
+    },
+    {
+      "days_before": 1,
+      "kst_today": "2026-03-16",
+      "now": "2026-03-15T15:00:00Z",
+      "quotes": [
+        {
+          "policy": "default",
+          "quote": null,
+          "reschedule_allowed": false
+        },
+        {
+          "policy": "tiered_min_fee",
+          "quote": {
+            "fee": 15600,
+            "outcome": {
+              "Fee": {
+                "percent": 30
+              }
+            },
+            "paid": 52000,
+            "refund": 36400
+          },
+          "reschedule_allowed": false
+        }
+      ],
+      "sql_kst_today": "2026-03-16",
+      "visit_date": "2026-03-17"
+    },
+    {
+      "days_before": 1,
+      "kst_today": "2026-03-16",
+      "now": "2026-03-16T23:30:00+09:00",
+      "quotes": [
+        {
+          "policy": "default",
+          "quote": null,
+          "reschedule_allowed": false
+        },
+        {
+          "policy": "tiered_min_fee",
+          "quote": {
+            "fee": 15600,
+            "outcome": {
+              "Fee": {
+                "percent": 30
+              }
+            },
+            "paid": 52000,
+            "refund": 36400
+          },
+          "reschedule_allowed": false
+        }
+      ],
+      "sql_kst_today": "2026-03-16",
+      "visit_date": "2026-03-17"
+    },
+    {
+      "days_before": 0,
+      "kst_today": "2026-03-17",
+      "now": "2026-03-16T15:00:00Z",
+      "quotes": [
+        {
+          "policy": "default",
+          "quote": null,
+          "reschedule_allowed": false
+        },
+        {
+          "policy": "tiered_min_fee",
+          "quote": {
+            "fee": 26000,
+            "outcome": {
+              "Fee": {
+                "percent": 50
+              }
+            },
+            "paid": 52000,
+            "refund": 26000
+          },
+          "reschedule_allowed": false
+        }
+      ],
+      "sql_kst_today": "2026-03-17",
+      "visit_date": "2026-03-17"
+    }
+  ],
+  "route": [
+    {
+      "policy": "default",
+      "previews": [
+        {
+          "preview": {
+            "can_cancel": false,
+            "days_before": 0,
+            "fee": 0,
+            "paid": 52000,
+            "percent": null,
+            "refund": 0,
+            "reschedule_allowed": false
+          },
+          "visit_in_days": 0
+        },
+        {
+          "preview": {
+            "can_cancel": false,
+            "days_before": 1,
+            "fee": 0,
+            "paid": 52000,
+            "percent": null,
+            "refund": 0,
+            "reschedule_allowed": false
+          },
+          "visit_in_days": 1
+        },
+        {
+          "preview": {
+            "can_cancel": true,
+            "days_before": 2,
+            "fee": 0,
+            "paid": 52000,
+            "percent": null,
+            "refund": 52000,
+            "reschedule_allowed": true
+          },
+          "visit_in_days": 2
+        },
+        {
+          "preview": {
+            "can_cancel": true,
+            "days_before": 3,
+            "fee": 0,
+            "paid": 52000,
+            "percent": null,
+            "refund": 52000,
+            "reschedule_allowed": true
+          },
+          "visit_in_days": 3
+        },
+        {
+          "preview": {
+            "can_cancel": true,
+            "days_before": 7,
+            "fee": 0,
+            "paid": 52000,
+            "percent": null,
+            "refund": 52000,
+            "reschedule_allowed": true
+          },
+          "visit_in_days": 7
+        },
+        {
+          "preview": {
+            "can_cancel": true,
+            "days_before": 30,
+            "fee": 0,
+            "paid": 52000,
+            "percent": null,
+            "refund": 52000,
+            "reschedule_allowed": true
+          },
+          "visit_in_days": 30
+        }
+      ],
+      "public": {
+        "is_default": true,
+        "policy": {
+          "min_fee": 0,
+          "reschedule_min_days": 2,
+          "tiers": [
+            {
+              "min_days": 2,
+              "percent": 0
+            },
+            {
+              "min_days": 1,
+              "percent": null
+            },
+            {
+              "min_days": 0,
+              "percent": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "policy": "tiered_min_fee",
+      "previews": [
+        {
+          "preview": {
+            "can_cancel": true,
+            "days_before": 0,
+            "fee": 26000,
+            "paid": 52000,
+            "percent": 50,
+            "refund": 26000,
+            "reschedule_allowed": false
+          },
+          "visit_in_days": 0
+        },
+        {
+          "preview": {
+            "can_cancel": true,
+            "days_before": 1,
+            "fee": 15600,
+            "paid": 52000,
+            "percent": 30,
+            "refund": 36400,
+            "reschedule_allowed": false
+          },
+          "visit_in_days": 1
+        },
+        {
+          "preview": {
+            "can_cancel": true,
+            "days_before": 2,
+            "fee": 15600,
+            "paid": 52000,
+            "percent": 30,
+            "refund": 36400,
+            "reschedule_allowed": true
+          },
+          "visit_in_days": 2
+        },
+        {
+          "preview": {
+            "can_cancel": true,
+            "days_before": 3,
+            "fee": 5200,
+            "paid": 52000,
+            "percent": 10,
+            "refund": 46800,
+            "reschedule_allowed": true
+          },
+          "visit_in_days": 3
+        },
+        {
+          "preview": {
+            "can_cancel": true,
+            "days_before": 7,
+            "fee": 0,
+            "paid": 52000,
+            "percent": null,
+            "refund": 52000,
+            "reschedule_allowed": true
+          },
+          "visit_in_days": 7
+        },
+        {
+          "preview": {
+            "can_cancel": true,
+            "days_before": 30,
+            "fee": 0,
+            "paid": 52000,
+            "percent": null,
+            "refund": 52000,
+            "reschedule_allowed": true
+          },
+          "visit_in_days": 30
+        }
+      ],
+      "public": {
+        "is_default": false,
+        "policy": {
+          "min_fee": 5000,
+          "reschedule_min_days": 2,
+          "tiers": [
+            {
+              "min_days": 7,
+              "percent": 0
+            },
+            {
+              "min_days": 3,
+              "percent": 10
+            },
+            {
+              "min_days": 1,
+              "percent": 30
+            },
+            {
+              "min_days": 0,
+              "percent": 50
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

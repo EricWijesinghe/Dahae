@@ -1,0 +1,144 @@
+{
+  "config": {
+    "apply_to_fixed": false,
+    "evening_bps": 1000,
+    "evening_end_hour": 22,
+    "evening_start_hour": 18,
+    "lunar_period_bps": 3000,
+    "max_bps": 5000,
+    "public_holiday_bps": 2000,
+    "weekend_bps": 1000
+  },
+  "slots": [
+    {
+      "kst_date": "2026-03-10",
+      "kst_hour": 9,
+      "on_100000": 0,
+      "surcharge": {
+        "bps": 0,
+        "day_bps": 0,
+        "day_kind": null,
+        "evening_bps": 0,
+        "is_weekend": false
+      },
+      "utc": "2026-03-10T00:00:00+00:00"
+    },
+    {
+      "kst_date": "2026-03-10",
+      "kst_hour": 17,
+      "on_100000": 0,
+      "surcharge": {
+        "bps": 0,
+        "day_bps": 0,
+        "day_kind": null,
+        "evening_bps": 0,
+        "is_weekend": false
+      },
+      "utc": "2026-03-10T08:00:00+00:00"
+    },
+    {
+      "kst_date": "2026-03-10",
+      "kst_hour": 18,
+      "on_100000": 10000,
+      "surcharge": {
+        "bps": 1000,
+        "day_bps": 0,
+        "day_kind": null,
+        "evening_bps": 1000,
+        "is_weekend": false
+      },
+      "utc": "2026-03-10T09:00:00+00:00"
+    },
+    {
+      "kst_date": "2026-03-10",
+      "kst_hour": 21,
+      "on_100000": 10000,
+      "surcharge": {
+        "bps": 1000,
+        "day_bps": 0,
+        "day_kind": null,
+        "evening_bps": 1000,
+        "is_weekend": false
+      },
+      "utc": "2026-03-10T12:00:00+00:00"
+    },
+    {
+      "kst_date": "2026-03-10",
+      "kst_hour": 22,
+      "on_100000": 0,
+      "surcharge": {
+        "bps": 0,
+        "day_bps": 0,
+        "day_kind": null,
+        "evening_bps": 0,
+        "is_weekend": false
+      },
+      "utc": "2026-03-10T13:00:00+00:00"
+    },
+    {
+      "kst_date": "2026-03-14",
+      "kst_hour": 10,
+      "on_100000": 10000,
+      "surcharge": {
+        "bps": 1000,
+        "day_bps": 1000,
+        "day_kind": null,
+        "evening_bps": 0,
+        "is_weekend": true
+      },
+      "utc": "2026-03-14T01:00:00+00:00"
+    },
+    {
+      "kst_date": "2026-03-15",
+      "kst_hour": 19,
+      "on_100000": 20000,
+      "surcharge": {
+        "bps": 2000,
+        "day_bps": 1000,
+        "day_kind": null,
+        "evening_bps": 1000,
+        "is_weekend": true
+      },
+      "utc": "2026-03-15T10:00:00+00:00"
+    },
+    {
+      "kst_date": "2026-01-01",
+      "kst_hour": 10,
+      "on_100000": 20000,
+      "surcharge": {
+        "bps": 2000,
+        "day_bps": 2000,
+        "day_kind": "public",
+        "evening_bps": 0,
+        "is_weekend": false
+      },
+      "utc": "2026-01-01T01:00:00+00:00"
+    },
+    {
+      "kst_date": "2026-02-17",
+      "kst_hour": 20,
+      "on_100000": 40000,
+      "surcharge": {
+        "bps": 4000,
+        "day_bps": 3000,
+        "day_kind": "lunar_period",
+        "evening_bps": 1000,
+        "is_weekend": false
+      },
+      "utc": "2026-02-17T11:00:00+00:00"
+    },
+    {
+      "kst_date": "2026-12-25",
+      "kst_hour": 18,
+      "on_100000": 30000,
+      "surcharge": {
+        "bps": 3000,
+        "day_bps": 2000,
+        "day_kind": "public",
+        "evening_bps": 1000,
+        "is_weekend": false
+      },
+      "utc": "2026-12-25T09:00:00+00:00"
+    }
+  ]
+}

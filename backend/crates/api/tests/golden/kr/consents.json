@@ -1,0 +1,609 @@
+{
+  "kinds": [
+    [
+      "terms",
+      true
+    ],
+    [
+      "privacy",
+      true
+    ],
+    [
+      "overseas_transfer",
+      false
+    ],
+    [
+      "marketing",
+      false
+    ],
+    [
+      "location",
+      false
+    ]
+  ],
+  "steps": [
+    {
+      "after": {
+        "marketing_allowed": false,
+        "overseas_allowed": true,
+        "state": {
+          "items": [
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": false,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": false,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": false,
+          "version": "2026-11-17"
+        }
+      },
+      "step": "signed_up"
+    },
+    {
+      "after": {
+        "marketing_allowed": false,
+        "overseas_allowed": true,
+        "state": {
+          "items": [
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": false,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": false,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": false,
+          "version": "2026-11-17"
+        }
+      },
+      "error": "required_consent",
+      "put": {
+        "consents": [
+          {
+            "granted": false,
+            "kind": "terms",
+            "version": "2026-11-17"
+          }
+        ]
+      },
+      "status": 400,
+      "step": "withdraw_terms"
+    },
+    {
+      "after": {
+        "marketing_allowed": false,
+        "overseas_allowed": true,
+        "state": {
+          "items": [
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": false,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": false,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": false,
+          "version": "2026-11-17"
+        }
+      },
+      "error": "stale_consent_version",
+      "put": {
+        "consents": [
+          {
+            "granted": true,
+            "kind": "terms",
+            "version": "2020-01-01"
+          }
+        ]
+      },
+      "status": 400,
+      "step": "stale_version"
+    },
+    {
+      "after": {
+        "marketing_allowed": false,
+        "overseas_allowed": true,
+        "state": {
+          "items": [
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": false,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": false,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": false,
+          "version": "2026-11-17"
+        }
+      },
+      "error": "invalid_consent_kind",
+      "put": {
+        "consents": [
+          {
+            "granted": true,
+            "kind": "newsletter",
+            "version": "2026-11-17"
+          }
+        ]
+      },
+      "status": 400,
+      "step": "unknown_kind"
+    },
+    {
+      "after": {
+        "marketing_allowed": true,
+        "overseas_allowed": true,
+        "state": {
+          "items": [
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": false,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": false,
+          "version": "2026-11-17"
+        }
+      },
+      "error": null,
+      "put": {
+        "consents": [
+          {
+            "granted": true,
+            "kind": "marketing",
+            "version": "2026-11-17"
+          }
+        ]
+      },
+      "status": 200,
+      "step": "grant_marketing"
+    },
+    {
+      "after": {
+        "marketing_allowed": false,
+        "overseas_allowed": true,
+        "state": {
+          "items": [
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": true,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": false,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": false,
+          "version": "2026-11-17"
+        }
+      },
+      "error": null,
+      "put": {
+        "consents": [
+          {
+            "granted": false,
+            "kind": "marketing",
+            "version": "2026-11-17"
+          }
+        ]
+      },
+      "status": 200,
+      "step": "withdraw_marketing"
+    },
+    {
+      "after": {
+        "marketing_allowed": false,
+        "overseas_allowed": true,
+        "state": {
+          "items": [
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": true,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": false,
+          "version": "2026-11-17"
+        }
+      },
+      "error": null,
+      "put": {
+        "consents": [
+          {
+            "granted": true,
+            "kind": "location",
+            "version": "2026-11-17"
+          }
+        ]
+      },
+      "status": 200,
+      "step": "grant_location"
+    },
+    {
+      "after": {
+        "marketing_allowed": false,
+        "overseas_allowed": false,
+        "state": {
+          "items": [
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": false,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": true,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": false,
+          "version": "2026-11-17"
+        }
+      },
+      "error": null,
+      "put": {
+        "consents": [
+          {
+            "granted": false,
+            "kind": "overseas_transfer",
+            "version": "2026-11-17"
+          }
+        ]
+      },
+      "status": 200,
+      "step": "withdraw_overseas"
+    },
+    {
+      "after": {
+        "marketing_allowed": false,
+        "overseas_allowed": true,
+        "state": {
+          "items": [
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": true,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": false,
+          "version": "2026-11-17"
+        }
+      },
+      "error": null,
+      "put": {
+        "consents": [
+          {
+            "granted": true,
+            "kind": "overseas_transfer",
+            "version": "2026-11-17"
+          }
+        ]
+      },
+      "status": 200,
+      "step": "regrant_overseas"
+    },
+    {
+      "after": {
+        "marketing_allowed": false,
+        "overseas_allowed": false,
+        "state": {
+          "items": [
+            {
+              "granted": false,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": false,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": false,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": true,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": true,
+          "version": "2026-11-17"
+        }
+      },
+      "step": "policy_bumped"
+    },
+    {
+      "after": {
+        "marketing_allowed": false,
+        "overseas_allowed": true,
+        "state": {
+          "items": [
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "terms",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "privacy",
+              "required": true
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "overseas_transfer",
+              "required": false
+            },
+            {
+              "granted": false,
+              "granted_at": true,
+              "kind": "marketing",
+              "required": false
+            },
+            {
+              "granted": true,
+              "granted_at": true,
+              "kind": "location",
+              "required": false
+            }
+          ],
+          "reconsent_required": false,
+          "version": "2026-11-17"
+        }
+      },
+      "error": null,
+      "put": {
+        "consents": [
+          {
+            "granted": true,
+            "kind": "terms",
+            "version": "2026-11-17"
+          },
+          {
+            "granted": true,
+            "kind": "privacy",
+            "version": "2026-11-17"
+          },
+          {
+            "granted": true,
+            "kind": "overseas_transfer",
+            "version": "2026-11-17"
+          }
+        ]
+      },
+      "status": 200,
+      "step": "regranted"
+    }
+  ],
+  "version": "2026-11-17"
+}

@@ -37,6 +37,8 @@ mod privacy_requests;
 mod pro_verification;
 mod renewals;
 pub(crate) mod seller;
+/// Every `?field=` the public seller-info endpoint answers.
+pub use seller::all_fields as seller_info_fields;
 mod service_groups;
 mod settings;
 pub mod setup;
