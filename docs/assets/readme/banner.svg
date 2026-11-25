@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" role="img" aria-labelledby="t d">
   <!-- © 2026 Eric Wijesinghe. All rights reserved. Dahae and 다해 are trademarks of Eric Wijesinghe. -->
   <metadata>© 2026 Eric Wijesinghe. All rights reserved. Dahae and 다해 are trademarks of Eric Wijesinghe.</metadata>
-  <title id="t">다해 (Dahae) banner</title>
-  <desc id="d">Dahae house-and-check logo with the name 다해, the tagline 집안일, 다 해드려요 and the English tagline.</desc>
+  <title id="t">Dahae banner</title>
+  <desc id="d">Dahae house-and-check logo with the name Dahae and the tagline: home services, booked and paid, on your own server.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#F7FAFB"/>
@@ -19,10 +19,10 @@
     <path d="M345 650 L455 760 L690 520" fill="none" stroke="#FFD95A" stroke-width="105" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
 
-  <g font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif">
-    <text x="440" y="178" font-size="118" font-weight="800" fill="#187A8F">다해</text>
-    <text x="444" y="236" font-size="40" font-weight="700" fill="#17232C">집안일, 다 해드려요</text>
-    <text x="444" y="280" font-size="26" fill="#5A6B76">We take care of your chores</text>
+  <g font-family="Pretendard, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+    <text x="440" y="178" font-size="118" font-weight="800" fill="#187A8F">Dahae</text>
+    <text x="444" y="236" font-size="40" font-weight="700" fill="#17232C">Home services, booked and paid</text>
+    <text x="444" y="280" font-size="26" fill="#5A6B76">Self-hosted, on your own server</text>
     <rect x="444" y="306" width="36" height="6" rx="3" fill="#FFD95A"/>
     <text x="496" y="316" font-size="22" fill="#3A4A55">Customer app · Partner app · Owner console</text>
   </g>

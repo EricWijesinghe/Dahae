@@ -505,7 +505,7 @@ function Step-StoreDocs {
   $store = Join-Path $root 'docs\store'
   Act "copy store listings, data-safety, review notes and READMEs from $store and scripts\release\kit -> $Android, $Msix, $Apple" {
     Get-ChildItem $store -Filter 'listing-*.md' | ForEach-Object { Copy-Item $_.FullName $Android -Force }
-    Copy-Item "$store\data-safety.md", "$store\review-notes.md" $Android -Force
+    Copy-Item "$store\data-safety.md", "$store\data-safety.ko.md", "$store\review-notes.md", "$store\review-notes.ko.md" $Android -Force
     Copy-Item (Join-Path $root 'scripts\release\kit\store-android-README.md') "$Android\README.md" -Force
     Copy-Item (Join-Path $root 'scripts\release\kit\content-rating-draft.md') $Android -Force
     if (Get-ChildItem "$store\screenshots" -Recurse -File -EA SilentlyContinue) {
@@ -513,7 +513,7 @@ function Step-StoreDocs {
     }
     Copy-Item "$store\microsoft-store.md" $Msix -Force
     Copy-Item (Join-Path $root 'scripts\release\kit\store-microsoft-README.md') "$Msix\README.md" -Force
-    Copy-Item "$store\app-privacy.md", "$store\review-notes.md" $Apple -Force
+    Copy-Item "$store\app-privacy.md", "$store\app-privacy.ko.md", "$store\review-notes.md", "$store\review-notes.ko.md" $Apple -Force
     Copy-Item (Join-Path $root 'scripts\release\kit\store-apple-README.md') "$Apple\README.md" -Force
   }
 }

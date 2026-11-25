@@ -1,5 +1,8 @@
 # 출시 계획 (안드로이드 · iOS · 서버) / Launch plan (Android · iOS · server)
 
+> **Korea edition (DODA), see Uzipsa.** This plan covers one Korean operator's launch and is kept for reference. It is not part of Dahae's default documentation: start from the [README](../README.md) and the [guides](guide/README.md).
+> 한국 에디션(DODA) 문서예요. DODA 의 제품은 우집사(Uzipsa)예요. 다해 기본 문서는 [README](../README.ko.md) 와 [안내서](guide/README.ko.md) 에서 시작하세요.
+
 대상: 다해 운영사(DODA)와 개발자(Eric). Audience: DODA (operator of the Dahae service) and the developer (Eric).
 세부 절차는 [03 앱 출시](guide/03-앱-출시.md), [10 AWS 배포](guide/10-AWS-배포.md), [11 스토어 앱 빌드](guide/11-앱-직접-빌드.md), [store/ios-release.md](store/ios-release.md), [DEPLOY.md](DEPLOY.md) §1·§3·§4 에 있어요.
 

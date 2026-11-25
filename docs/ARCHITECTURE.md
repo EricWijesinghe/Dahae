@@ -1,19 +1,10 @@
-# Architecture / 아키텍처
+# Architecture
 
-> Engineering reference for Dahae (다해), a self-hosted home-cleaning platform. Every claim cites the code it describes.
+English · [한국어 요약](ARCHITECTURE.ko.md)
+
+> Engineering reference for Dahae, a self-hosted home-services booking platform. Every claim cites the code it describes.
 > Status is stated per feature. Items marked **planned** or **unverified** are not production-proven.
-
-## 요약 (Korean summary)
-
-다해는 청소 업체 한 곳이 자기 서버 한 대에 설치해 운영하는 예약·결제·파트너 배정 시스템입니다.
-
-- **구성**: 고객 앱(모바일·웹 PWA), 파트너(청소 기사) 앱, 사장님 콘솔(관리자 웹·Android), Rust API, PostgreSQL 17, Caddy 웹 서버 한 개로 이루어진 Docker Compose 스택입니다. 설치와 업데이트는 `dahae` 명령(설치 스크립트)으로 합니다.
-- **돈의 흐름**: 결제는 PortOne, 토스페이먼츠(직접 연동), 또는 둘 다가 처리합니다. 사장님이 콘솔에서 설정한 결제사의 결제수단이 모두 고객에게 보이고, 결제수단마다 PortOne 에 채널 키가 있으면 PortOne, 없으면 토스페이먼츠로 갑니다. 결제와 저장 카드는 시작한 결제사에 고정되어 확인·환불·대사가 그 결제사로 갑니다. 서버는 결제 결과를 항상 결제사에 직접 다시 확인하고, 앱이나 웹훅 본문은 금액 근거로 쓰지 않습니다. 기사 정산은 주 1회(수요일) 지급 날짜로 계산하며, 지급대행(Toss)은 아직 샌드박스 검증 전입니다.
-- **비밀 키**: PortOne·Toss·문자 발송 키는 콘솔에서 붙여 넣고, 암호화(AES-256-GCM)해 DB에 저장한 뒤 카드처럼 잠급니다. PortOne 카드, 토스페이먼츠 결제 카드, 토스 지급대행 카드를 처음 저장할 때와 잠금 해제할 때 사장님의 인증 앱 코드를 요구하며, 저장과 해제는 모두 감사 기록됩니다.
-- **백업**: 매일 03:30 DB와 사진을 덤프해 같은 키에서 파생한 키로 봉인(MKB1)합니다. 봉인이 끝나면 평문은 지웁니다. 외부 S3 호환 저장소 업로드는 선택 사항입니다.
-- **업데이트**: 이미지는 cosign으로 서명되어 있고, 설치·업데이트 때 서명을 확인합니다. DB 백업이 실패하면 업데이트를 시작하지 않고, 새 버전이 응답하지 않으면 직전 버전으로 되돌립니다.
-- **고객 상담 도우미**: 외부 API(Anthropic Messages API)를 호출하는 상담 응답 기능이 있습니다. 전화번호와 이메일은 전송 전에 가리고, 국외 이전 필수 동의가 가입 때 받아집니다. 상세는 [§5.1](#51-backend-crates-backendcrates)의 `ai.rs`를 보세요.
-- **진행 중 (feat/ntd-redesign, 병합 중)**: 홈 4개 서비스 묶음, 개수(counts) 가격, 이사·입주 견적 흐름, 묶음 관리 API와 콘솔 편집이 feat/ntd-redesign 브랜치에 있습니다 (병합 중). 본 문서는 이를 시스템의 일부로 기술합니다. 해당 파일은 병합 후 링크가 연결됩니다.
+> Today every install runs the Korea country pack; the pack design for other countries is in [§9](#9-country-packs-roadmap).
 
 ---
 
@@ -623,3 +614,28 @@ Each item is stated as the code and documents state it, with the owner-facing ac
 | CI workflows | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (backend, supply chain, secrets, app analyze and tests, goldens, shell, migrations, native), [`e2e.yml`](../.github/workflows/e2e.yml) (install end to end), [`release.yml`](../.github/workflows/release.yml) |
 
 Related documents: [DEPLOY.md](DEPLOY.md) (operator steps), [guide/](guide/README.md) (owner guides), [payments-reference.md](guide/payments-reference.md), [CHANGELOG.md](../CHANGELOG.md), [SECURITY.md](../SECURITY.md), [privacy-retention.md](privacy-retention.md).
+
+---
+
+## 9. Country packs (roadmap)
+
+Status: **planned**. Nothing in this section is built yet, except that today's Korea code is the first pack to be extracted. Until the work below ships, every install behaves as the Korea pack, and the code cited in sections 1 to 8 is the Korea behaviour.
+
+| Country | Status |
+|---|---|
+| Korea (KR) | Available: the current code |
+| UK, Ireland, Australia, New Zealand, Singapore | Planned, first wave |
+| China, United States | Out of the first wave (China needs a local-partner hosting tier; the US needs per-state sales tax) |
+
+**Shape.**
+
+- **One signed image for every country.** Every provider adapter is compiled in; there are no per-region images and no plugin channel. Packs ride the same cosign-verified image as the code ([`deploy/install.sh`](../deploy/install.sh)).
+- **One install = one country pack = one currency = one default time zone.** The owner picks the country in the setup wizard. It can change, with a preview of what changes, until the first live payment; then it locks. Existing installs are set to KR automatically.
+- **Packs are data.** JSON under `backend/packs/` (a strict `_base` pack, regional packs such as EU, then countries), embedded at build time and validated in CI. Numbers, texts, field lists, dates and choices are pack data. URLs, signature schemes, check-digit validators, wire formats and money logic stay in Rust, and a pack refers to them by id.
+- **One trait per capability** (payments, payouts, messaging, sign-in, address search, invoicing, identity) with a static registry of adapters. Today's providers (`providers/*`) get thin implementations of those traits; their logic is not rewritten.
+- **Money** stays integer minor units. A currency is stamped on rows that cross a provider boundary (checkouts, payments, tax documents), and core checks amount **and** currency before marking anything paid.
+- **Adapters never decide "paid".** A webhook is a hint; core fetches the payment from the provider and compares it with its own row before money state moves, as `handle_payment` in [`routes/webhooks.rs`](../backend/crates/api/src/routes/webhooks.rs) does today.
+- **Legal text is never published automatically.** Pack updates to legal templates wait in a Legal inbox until the owner publishes them; tax-rate changes switch on their dates because they are statute and tested in CI.
+- **Live checkout is blocked** while a payment key is in test mode, a required legal document or business identifier is missing, or the marketplace model is not allowed in the country.
+
+**Release rules.** KR golden tests land before any refactor and must stay byte-identical. A release only writes values (columns, enum strings, adapter ids) that the previous release already reads, so a rollback is always safe; a new adapter ships hidden one release before the wizard offers it. Adapter ids stored in rows are never removed or renamed. Integration secrets keep their current encryption binding, so no re-sealing is needed.

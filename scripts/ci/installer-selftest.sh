@@ -85,6 +85,19 @@ nt "install page leaves no placeholder"  grep -q '__INSTALL_' "$PAGE_DIR/index.h
 t  "setup code alphabet: page = installer" eq \
   "$(sed -n 's/^const CODE_ALPHABET = "\([^"]*\)";/\1/p' "$PAGE_DIR/index.html")" \
   "$(sed -n 's/.*local alphabet=\([^ ]*\) .*/\1/p' "$ROOT/deploy/install.sh")"
+# the language toggle swaps every data-i18n / -ph / -aria text for its KO entry: the two key sets must match
+ko_keys_match() {
+  python3 -I - "$PAGE_DIR/index.html" <<'PY'
+import re, sys
+html = open(sys.argv[1], encoding="utf-8").read()
+used = set(re.findall(r'data-i18n(?:-ph|-aria)?="([^"]+)"', html))
+ko = set(re.findall(r'^  "([^"]+)":', html[html.index("const KO = {"):html.index("\n};", html.index("const KO = {"))], re.M))
+for k in sorted(used - ko): print("   no KO text for", k)
+for k in sorted(ko - used): print("   KO text not used:", k)
+sys.exit(0 if used and used == ko else 1)
+PY
+}
+t  "install page: KO texts match the page keys" ko_keys_match
 
 # the page's three outputs: #cloud-config must parse as YAML, the #!/bin/bash and browser-SSH forms must pass bash -n.
 # node runs the page's own generator functions (CI has node; in WSL set NODE_BIN to a node binary, e.g. node.exe)
@@ -434,6 +447,11 @@ t  "tag README uses the tag URL" has v1.0.0:README.md "raw.githubusercontent.com
 t  "beta guide follows the beta channel"  has "beta:guide/01-서버-설치.md" "raw.githubusercontent.com/$DIST/beta/install.sh"
 nt "beta guide 00 names no page file"     has "beta:guide/00-한번에-설치.md" "dahae-install-page.html"
 t  "tag guide 00 names the page file"    has "v1.0.0:guide/00-한번에-설치.md" "dahae-install-page.html"
+nt "beta English guide 00 names no page file" has "beta:guide/00-install.md" "dahae-install-page.html"
+t  "tag English guide 00 names the page file" has "v1.0.0:guide/00-install.md" "dahae-install-page.html"
+t  "tag English guide 00 uses the tag URL" has "v1.0.0:guide/00-install.md" "raw.githubusercontent.com/$DIST/v1.0.0/install.sh"
+t  "tag Korean README uses the tag URL"  has v1.0.0:README.ko.md "raw.githubusercontent.com/$DIST/v1.0.0/SHA256SUMS"
+nt "beta Korean README has no page link" has beta:README.ko.md "dahae-install-page.html"
 # the install page is built for the tagged branch only: its hash must be the tag's install.sh
 t  "tag ships the install page"          has v1.0.0:dahae-install-page.html "INSTALL_SH_SHA256 = \"$(g show v1.0.0:install.sh | sha256sum | cut -d' ' -f1)\""
 nt "beta branch has no install page"     g cat-file -e "beta:dahae-install-page.html"

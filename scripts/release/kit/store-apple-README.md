@@ -15,8 +15,8 @@
 
 ## 3. App Store Connect 체크리스트 / Checklist
 - [ ] 앱 등록 (이름, 기본 언어, SKU, 번들 ID) / App record created
-- [ ] 개인정보 라벨: `../3-Store-Android/data-safety.md` 의 App Store 항목, `docs/store/app-privacy.md` 답안 / App Privacy answers
-- [ ] 심사 메모: `review-notes.md` (로그인, 계정 삭제, 결제 안내) / Review notes pasted
+- [ ] 개인정보 라벨: `../3-Store-Android/data-safety.md` 의 App Store 항목, `app-privacy.ko.md` 답안 (영어: `app-privacy.md`) / App Privacy answers (`app-privacy.md`)
+- [ ] 심사 메모: `review-notes.ko.md` 를 보고 영어판 `review-notes.md` 붙여 넣기 (로그인, 계정 삭제, 결제 안내) / Review notes pasted
 - [ ] 스크린샷 (6.7", 6.5" 등 요구 크기) / Screenshots at required sizes
 - [ ] 연령 등급: `content-rating-draft.md` 답안 기준 / Age rating from the draft
 - [ ] 계정 삭제 경로 (앱 내) 가 심사 메모와 같은지 확인 / In-app account deletion matches the notes

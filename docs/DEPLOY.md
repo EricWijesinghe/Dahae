@@ -1,6 +1,6 @@
 # Delivery runbook (developer)
 
-The source repo (github.com/EricWijesinghe/Dahae) is public but proprietary: reading it grants no right to use it (LICENSE §1.4, §3.1); a client uses it under a signed licence agreement. Servers install from the **public delivery repo** (installer + Korean guides),
+The source repo (github.com/EricWijesinghe/Dahae) is public but proprietary: reading it grants no right to use it (LICENSE §1.4, §3.1); a client uses it under a signed licence agreement. Servers install from the **public delivery repo** (installer, plus guides in English with Korean translations),
 public server images, and store apps that the developer builds with GitHub Actions and uploads to the client's own
 store accounts (guide 11).
 
@@ -204,8 +204,8 @@ The release also uploads `dahae-aws.yaml` (CloudFormation, pinned to the same `i
 ## 3. Store apps (per client)
 
 The developer builds the store apps with GitHub Actions in the public repository (workflow `store-apps`, manual
-run, GitHub-hosted runners incl. macOS, free for public repos). The apps are uploaded to DODA's own store accounts
-(DODA owns the Apple organization and the Play organization and grants the developer admin access). Follow
+run, GitHub-hosted runners incl. macOS, free for public repos). The apps are uploaded to the client's own store accounts
+(the client owns the Apple organization and the Play organization and grants the developer admin access). Follow
 [guide 11](guide/11-앱-직접-빌드.md). Setup, in the repository:
 1. Settings → Environments → `store`: deployment branch `master`; required reviewers optional.
 2. Environment `store` → Variables: `API_BASE=https://<client domain>`, `APPLE_TEAM_ID` (10 characters),
@@ -236,7 +236,7 @@ run, GitHub-hosted runners incl. macOS, free for public repos). The apps are upl
 (flattened to RGB). Gradle and `Keys.xcconfig` take `APP_LABEL` / `APP_ID` from it. The build fails when the server
 cannot be read or has no logo yet; run the workflow with `brand_from_server` off only for a build before the server is up.
 
-**Domain changes.** The owner moves the domain in the console (설정 > 도메인; [guide 04](guide/04-사장님-가이드.md)).
+**Domain changes.** The owner moves the domain in the console (Settings > Domain; [guide 04](guide/04-owner-guide.md)).
 The old domain keeps serving the API, payment pages, app links and the apps (only website and SEO pages get a 301, sent with no-store so browsers do not keep it), so
 installed apps keep working. Apps bake in the first `API_BASE`; builds with runtime base discovery move to the new
 address by themselves on their next start. After a move, set `API_BASE=https://<new>` and
@@ -413,3 +413,11 @@ The server cannot report its own outage, so watch it from outside.
   are untouched but need the old `DATA_KEY` to decrypt. Docker itself is left installed.
 - `--yes` (or `DAHAE_YES=1`) skips the `yes` prompt for scripts, but never the `--purge` one: a script
   must pass the domain itself, `sudo dahae uninstall --purge --confirm <domain>`.
+
+## 11. Country packs
+
+Every release ships one signed image for every country; there are no per-region images or builds. Today the only
+pack is Korea (KR), so section 4 lists Korean providers. Planned packs (UK, Ireland, Australia, New Zealand,
+Singapore) arrive as data plus adapters inside the same image, and the owner will pick the country in the setup wizard.
+Delivery and update steps in this runbook do not change per country. Design and release rules:
+[ARCHITECTURE.md §9](ARCHITECTURE.md#9-country-packs-roadmap).

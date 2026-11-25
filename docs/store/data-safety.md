@@ -1,96 +1,98 @@
-# Google Play 데이터 보안 (Data safety) 답안
+# Google Play Data safety answers
 
-Play Console → 앱 → [정책] → [앱 콘텐츠] → [데이터 보안] 에 아래대로 입력해요. 고객 앱과 파트너 앱은 **따로** 입력해요.
-같은 사실을 Apple 양식에 맞춰 적은 문서는 `app-privacy.md`, 나머지 Play 신고(광고, 대상 연령, 금융 기능 등)는 `play-declarations.md` 예요. 하나를 고치면 나머지도 같이 고치세요.
+English · [한국어](data-safety.ko.md)
 
-근거는 실제 코드예요: 앱 `app/packages/core/lib/src/`, 서버 `backend/migrations/`, `backend/crates/api/src/`. 개인정보처리방침 `website/privacy.html` 과도 맞아야 해요.
+Enter these answers in Play Console → app → **Policy** → **App content** → **Data safety**. The customer app and the partner app are entered **separately**.
+The same facts in Apple's format are in `app-privacy.md`; the other Play declarations (ads, target age, financial features and so on) are in `play-declarations.md`. When you change one, change the others.
 
-Google 의 기준 (2026-11 확인, https://support.google.com/googleplay/android-developer/answer/10787469):
-- **수집** = 앱이 데이터를 기기 밖으로 보내는 것. 기기 안에서만 쓰는 데이터는 수집이 아니에요.
-- **공유** = 제3자에게 넘기는 것. 다만 우리를 대신해 처리만 하는 **수탁자**(결제대행사, 문자 발송사, 푸시, AI 처리)에게 보내는 것과, 사용자가 직접 시작한 전달은 "공유"로 적지 않아도 돼요.
-- 익명 ID 로 모은 데이터도 적어야 해요.
+The evidence is the code itself: apps `app/packages/core/lib/src/`, server `backend/migrations/` and `backend/crates/api/src/`. The answers must also match the privacy policy, `website/privacy.html`.
 
-## 기준 빌드
+Google's definitions (checked 2026-11, https://support.google.com/googleplay/android-developer/answer/10787469):
+- **Collected** = the app sends the data off the device. Data used only on the device is not collected.
+- **Shared** = handed to a third party. Data sent to a **service provider** that processes it on our behalf (payment gateway, SMS sender, push, AI processing), and transfers the user starts themselves, need not be declared as shared.
+- Data collected under an anonymous ID must be declared too.
 
-아래 답은 **v1.6.1 출시 빌드** 기준이에요. 포인트, 앱 오류 보고(외부 SDK 없음), 탈퇴 시 소셜 연결 삭제와 Apple 토큰 해지가 모두 들어 있어요.
+## Reference build
 
-## 1. 공통 질문 (두 앱 모두)
+These answers match the **v1.6.1 release build**. It includes points, in-app error reports (no third-party SDK), and removal of social sign-in links plus Apple token revocation on account deletion.
 
-| 질문 | 답 |
+## 1. General questions (both apps)
+
+| Question | Answer |
 |---|---|
-| 앱이 필수 사용자 데이터 유형을 수집하거나 공유하나요? | 예 |
-| 수집하는 모든 사용자 데이터가 전송 중에 암호화되나요? | 예 (HTTPS 만 사용) |
-| 계정을 만들 수 있나요? 어떤 방법인가요? | 예. 휴대폰 번호 인증(문자), 소셜 로그인(카카오·네이버·구글, iOS 는 애플도) |
-| 계정 삭제 URL | `https://도메인/delete-account.html` |
-| 사용자가 데이터 삭제를 요청할 방법이 있나요? | 예. 앱 안 [더보기] → [계정] → [회원 탈퇴], 그리고 위 웹 주소 |
-| 계정을 지우지 않고 일부 데이터만 삭제 요청할 수 있나요? (선택 질문) | 아니요 (주소·저장 카드는 앱에서 직접 지울 수 있지만, 별도 요청 창구 주소는 없어요) |
+| Does the app collect or share any of the required user data types? | Yes |
+| Is all collected user data encrypted in transit? | Yes (HTTPS only) |
+| Can users create an account? How? | Yes. Phone number verification (SMS) and social sign-in (Kakao, Naver, Google, and Apple on iOS) |
+| Account deletion URL | `https://<domain>/delete-account.html` |
+| Can users request that their data be deleted? | Yes. In the app: **More** → **Account** → **Delete account**, and the web address above |
+| Can users request deletion of some data without deleting the account? (optional question) | No (addresses and saved cards can be removed in the app, but there is no separate request address) |
 
-탈퇴해도 법으로 보관해야 하는 기록은 남아요: 예약·결제·환불 기록 5년, 소비자 불만·분쟁 기록 3년(전자상거래법), 동의 기록. 채팅은 보낸 사람 연결을 끊어 보관해요. 이 내용은 `privacy.html` 3항과 `delete-account.html` 에 적혀 있고, Google 도 법적 보관은 허용해요 (보관 사실을 안내하면 됨).
+Records the law requires us to keep stay after deletion: bookings, payments and refunds for 5 years, consumer complaints and disputes for 3 years (Korean E-Commerce Act), and consent records. Chat messages are kept with the sender link removed. This is stated in section 3 of `privacy.html` and in `delete-account.html`; Google allows legally required retention as long as it is disclosed.
 
-## 2. 고객 앱 (다해) — 데이터 유형별 답
+## 2. Customer app (Dahae): answers by data type
 
-"필수/선택" 은 사용자가 주지 않고도 앱을 쓸 수 있으면 선택이에요. "처리 방식" 질문(임시 처리 여부)은 모두 **아니요**(서버에 저장)예요.
+"Required/optional": optional if the user can use the app without providing it. The "processed ephemerally" question is **No** for every row (stored on the server).
 
-| Google 분류 | 항목 | 수집 | 공유 | 필수? | 목적 | 근거 |
+| Google category | Data type | Collected | Shared | Required? | Purpose | Evidence |
 |---|---|---|---|---|---|---|
-| 개인 정보 | 이름 | 예 | 예 (배정된 청소 파트너에게 일부 가려서 전달) | 선택 | 앱 기능, 계정 관리 | `users.name` |
-| 개인 정보 | 이메일 주소 | 예 (소셜 로그인, 세금계산서 요청 시) | 아니요 | 선택 | 계정 관리, 앱 기능 | `users.email`, `user_identities.email`, `tax_invoice_requests.email` |
-| 개인 정보 | 사용자 ID | 예 | 아니요 | 필수 | 앱 기능, 계정 관리, 사기 방지·보안·규정 준수 | 내부 ID `users.id`, 소셜 제공자 ID `user_identities`, 본인확인 CI 의 해시 `users.ci_hash` (원문은 저장 안 함) |
-| 개인 정보 | 주소 | 예 | 예 (배정된 파트너) | 필수 | 앱 기능 | `addresses` (도로명·상세 주소, 평수, 집 정보: 반려동물·주차·엘리베이터) |
-| 개인 정보 | 전화번호 | 예 | 아니요 | 필수 | 앱 기능, 계정 관리, 개발자 커뮤니케이션, 광고 또는 마케팅(마케팅 수신에 동의한 경우의 광고 문자만) | `users.phone`, 광고 발송 기록 `marketing_sends` |
-| 금융 정보 | 사용자 결제 정보 | 예 | 아니요 | 선택 | 앱 기능 | 카드 번호는 저장하지 않아요. 결제대행사가 준 **자동결제 키(빌링키)** 와 카드 표시명 `payment_methods`, 현금영수증 번호(암호화) `cash_receipts.identity_enc` |
-| 금융 정보 | 구매 내역 | 예 | 아니요 | 필수 | 앱 기능, 사기 방지·보안·규정 준수 | `bookings`, `payments`, `checkouts`, 정기 청소 `subscriptions`, 팁 `booking_tips`, 쿠폰, 포인트 `points_ledger` |
-| 메시지 | 기타 인앱 메시지 | 예 | 아니요 | 선택 | 앱 기능 (고객 상담) | `chat_messages`. 상담은 운영팀과만 해요. AI 상담을 켠 경우 문장이 처리 수탁자 **Anthropic** 으로 전송돼요 (아래 4항) |
-| 사진 및 동영상 | 사진 | 예 (사용자가 올린 것만) | 예 (배정된 파트너, 후기 사진은 다른 이용자에게 공개) | 선택 | 앱 기능 | `uploads`, `reviews.photos`, 사고 접수 `cases.photos` |
-| 앱 활동 | 앱 상호작용 | 예 (**마케팅 동의를 켠 경우에만**) | 아니요 | 선택 | 분석 | `analytics_events`: 정해진 이벤트 8가지 이름, 화면 이름, 플랫폼. 사용자 ID·자유 입력 없음. 90일 뒤 삭제 (`analytics.rs`) |
-| 앱 활동 | 기타 사용자 생성 콘텐츠 | 예 | 예 (후기는 다른 이용자에게 공개, 방문 메모는 배정된 파트너) | 선택 | 앱 기능 | 후기 `reviews`, 후기 신고 `review_reports`, 방문 메모·출입 방법(출입 비밀번호는 암호화, 작업 종료 24시간 뒤 삭제), 사고 접수 `cases` |
-| 앱 정보 및 성능 | 비정상 종료 로그 | 예 | 아니요 | 필수 | 분석 | 앱이 직접 보내는 오류 보고(외부 SDK 없음, `error_reporter.dart` → `POST /v1/client-errors`): 오류 메시지·스택·앱 버전. 사용자 ID 없음, 이메일·전화번호·카드번호 형태는 앱과 서버가 모두 가림, 14일 뒤 삭제 (`client_errors.rs`) |
-| 기기 또는 기타 ID | 기기 또는 기타 ID | 예 | 아니요 | 선택 | 앱 기능 (알림), 분석, 광고 또는 마케팅(마케팅 동의 시 광고 푸시만) | 푸시 토큰 `push_tokens` (Firebase Cloud Messaging), 분석용 설치 ID (기기에서 만든 임의 값 32자리, `analytics.dart`) |
+| Personal info | Name | Yes | Yes (partly masked, to the assigned cleaning partner) | Optional | App functionality, account management | `users.name` |
+| Personal info | Email address | Yes (social sign-in, tax invoice requests) | No | Optional | Account management, app functionality | `users.email`, `user_identities.email`, `tax_invoice_requests.email` |
+| Personal info | User IDs | Yes | No | Required | App functionality, account management, fraud prevention, security and compliance | Internal ID `users.id`, social provider ID `user_identities`, hash of the identity-check CI `users.ci_hash` (the CI itself is not stored) |
+| Personal info | Address | Yes | Yes (the assigned partner) | Required | App functionality | `addresses` (street and unit address, floor area, home details: pets, parking, elevator) |
+| Personal info | Phone number | Yes | No | Required | App functionality, account management, developer communications, advertising or marketing (only advertising texts for customers who opted in to marketing) | `users.phone`, advertising send log `marketing_sends` |
+| Financial info | User payment info | Yes | No | Optional | App functionality | Card numbers are not stored. The **billing key** issued by the payment gateway and the card display name `payment_methods`, cash-receipt number (encrypted) `cash_receipts.identity_enc` |
+| Financial info | Purchase history | Yes | No | Required | App functionality, fraud prevention, security and compliance | `bookings`, `payments`, `checkouts`, regular cleaning `subscriptions`, tips `booking_tips`, coupons, points `points_ledger` |
+| Messages | Other in-app messages | Yes | No | Optional | App functionality (customer support) | `chat_messages`. Support chats are with the operations team only. When AI support is on, the text goes to the service provider **Anthropic** (section 4) |
+| Photos and videos | Photos | Yes (only what the user uploads) | Yes (the assigned partner; review photos are public to other users) | Optional | App functionality | `uploads`, `reviews.photos`, incident reports `cases.photos` |
+| App activity | App interactions | Yes (**only when the marketing consent is on**) | No | Optional | Analytics | `analytics_events`: eight fixed event names, screen name, platform. No user ID, no free text. Deleted after 90 days (`analytics.rs`) |
+| App activity | Other user-generated content | Yes | Yes (reviews are public to other users; visit notes go to the assigned partner) | Optional | App functionality | Reviews `reviews`, review reports `review_reports`, visit notes and entry instructions (the door code is encrypted and deleted 24 hours after the job ends), incident reports `cases` |
+| App info and performance | Crash logs | Yes | No | Required | Analytics | Error reports the app sends itself (no third-party SDK, `error_reporter.dart` → `POST /v1/client-errors`): error message, stack and app version. No user ID; anything shaped like an email, phone or card number is masked by both the app and the server. Deleted after 14 days (`client_errors.rs`) |
+| Device or other IDs | Device or other IDs | Yes | No | Optional | App functionality (notifications), analytics, advertising or marketing (advertising pushes only, with marketing consent) | Push token `push_tokens` (Firebase Cloud Messaging), analytics install ID (a random 32-character value made on the device, `analytics.dart`) |
 
-### 수집하지 않는 것 (모두 "아니요")
-- **위치 (대략적·정확한 위치)**: 수집하지 않아요. 고객 앱은 주소 입력 화면에서 [현재 위치로 찾기]를 누를 때만 위치 권한을 쓰고, 좌표는 휴대폰 운영체제의 주소 변환 기능에만 넘겨요. **다해 서버로는 좌표를 보내지 않고 저장하지도 않아요.** 저장되는 것은 사용자가 확인한 주소뿐이에요 (`app/apps/customer/lib/location.dart`).
-- 결제 카드 번호, 유효기간, CVC: 결제대행사(PortOne 또는 토스페이먼츠) 화면에서 입력하고 앱·서버는 받지 않아요.
-- 건강·피트니스, 인종·종교·성적 지향, 연락처(주소록), 캘린더, 오디오, 파일, 웹 방문 기록, 설치된 앱, 인앱 검색 기록, SMS/이메일 내용.
-- 광고 ID: 쓰지 않아요. 광고 SDK 가 없어요.
+### Not collected (all "No")
+- **Location (approximate and precise)**: not collected. The customer app uses the location permission only when the user taps **Use my current location** on the address screen, and passes the coordinates only to the phone operating system's geocoder. **The coordinates are never sent to the Dahae server or stored.** Only the address the user confirms is stored (`app/apps/customer/lib/location.dart`).
+- Card number, expiry date, CVC: entered on the payment gateway's screen (PortOne or Toss Payments); neither the app nor the server receives them.
+- Health and fitness, race, religion, sexual orientation, contacts, calendar, audio, files, web browsing history, installed apps, in-app search history, SMS or email content.
+- Advertising ID: not used. There is no ad SDK.
 
-## 3. 파트너 앱 (다해 파트너) — 데이터 유형별 답
+## 3. Partner app (Dahae Partner): answers by data type
 
-파트너 앱에는 분석 이벤트가 없어요 (`app/apps/partner/lib/main.dart` 에 분석 연결 없음). 위치 권한도 없어요.
+The partner app sends no analytics events (no analytics wiring in `app/apps/partner/lib/main.dart`) and has no location permission.
 
-| Google 분류 | 항목 | 수집 | 공유 | 필수? | 목적 | 근거 |
+| Google category | Data type | Collected | Shared | Required? | Purpose | Evidence |
 |---|---|---|---|---|---|---|
-| 개인 정보 | 이름 | 예 | 예 (예약한 고객에게 팀 이름·표시 이름) | 필수 | 앱 기능, 계정 관리 | `pros.name`, `pros.team_name`, `team_members.name` |
-| 개인 정보 | 이메일 주소 | 예 (소셜 로그인 시) | 아니요 | 선택 | 계정 관리 | `user_identities.email` |
-| 개인 정보 | 사용자 ID | 예 | 아니요 | 필수 | 앱 기능, 계정 관리 | `pros.id`, `user_identities` |
-| 개인 정보 | 전화번호 | 예 | 아니요 | 필수 | 앱 기능, 계정 관리 | `pros.phone`, `team_members.phone` |
-| 금융 정보 | 기타 금융 정보 | 예 | 아니요 | 필수 (정산을 받으려면) | 앱 기능 (정산), 사기 방지·보안·규정 준수 | 정산 계좌 (암호화 저장, 끝 4자리만 표시) `payout_accounts`, 정산·지급 내역 `settlements`, `payouts`, 세금 유형 `pros.tax_type` |
-| 메시지 | 기타 인앱 메시지 | 예 | 아니요 | 선택 | 앱 기능 | 운영팀과의 채팅 `chat_messages` |
-| 사진 및 동영상 | 사진 | 예 | 예 (해당 예약의 고객) | 필수 (완료 보고) | 앱 기능 | 작업 전후 사진 `completion_reports` |
-| 앱 활동 | 기타 사용자 생성 콘텐츠 | 예 | 예 (견적·완료 보고는 해당 고객) | 선택 | 앱 기능 | 견적, 완료 보고 메모, 교육 진행 `training_progress` |
-| 앱 정보 및 성능 | 비정상 종료 로그 | 예 | 아니요 | 필수 | 분석 | 고객 앱과 같음 |
-| 기기 또는 기타 ID | 기기 또는 기타 ID | 예 | 아니요 | 선택 | 앱 기능 (알림) | 푸시 토큰 `push_tokens` |
+| Personal info | Name | Yes | Yes (team name and display name, to the customer who booked) | Required | App functionality, account management | `pros.name`, `pros.team_name`, `team_members.name` |
+| Personal info | Email address | Yes (social sign-in) | No | Optional | Account management | `user_identities.email` |
+| Personal info | User IDs | Yes | No | Required | App functionality, account management | `pros.id`, `user_identities` |
+| Personal info | Phone number | Yes | No | Required | App functionality, account management | `pros.phone`, `team_members.phone` |
+| Financial info | Other financial info | Yes | No | Required (to receive payouts) | App functionality (payouts), fraud prevention, security and compliance | Payout account (stored encrypted, only the last 4 digits shown) `payout_accounts`, settlement and payout history `settlements`, `payouts`, tax type `pros.tax_type` |
+| Messages | Other in-app messages | Yes | No | Optional | App functionality | Chat with the operations team `chat_messages` |
+| Photos and videos | Photos | Yes | Yes (the customer of that booking) | Required (completion report) | App functionality | Before and after photos `completion_reports` |
+| App activity | Other user-generated content | Yes | Yes (quotes and completion reports go to that customer) | Optional | App functionality | Quotes, completion report notes, training progress `training_progress` |
+| App info and performance | Crash logs | Yes | No | Required | Analytics | Same as the customer app |
+| Device or other IDs | Device or other IDs | Yes | No | Optional | App functionality (notifications) | Push token `push_tokens` |
 
-파트너가 앱에서 **보는** 고객 정보(이름 일부, 주소, 방문 메모)는 파트너 본인의 데이터가 아니므로 파트너 앱 양식에는 적지 않아요. 고객 앱 양식의 "공유" 칸에 적혀 있어요.
+Customer details a partner **sees** in the app (part of the name, the address, visit notes) are not the partner's own data, so they are not declared on the partner app form. They are declared in the "Shared" column of the customer app form.
 
-## 4. 처리 수탁자 (Google 양식의 "공유"에는 해당하지 않지만 개인정보처리방침에는 적어야 하는 곳)
+## 4. Service providers (not "shared" on Google's form, but listed in the privacy policy)
 
-| 수탁자 | 무엇을 | 언제 |
+| Provider | What | When |
 |---|---|---|
-| PortOne 과 결제대행사 (토스페이먼츠 등), 또는 토스페이먼츠 직접 연동 | 결제 처리, 자동결제 키, PASS 본인확인, 현금영수증 | 결제·본인확인 시 |
-| Solapi | 문자·알림톡 발송 (전화번호, 문구) | 인증번호, 예약 알림, 동의한 광고 문자 |
-| Google (Firebase Cloud Messaging) | 푸시 발송 (푸시 토큰, 알림 제목·본문) | 알림 발송 시. 미국 이전 |
-| Anthropic | AI 상담 답변 생성 (고객이 쓴 상담 문장, 해당 예약 요약, 가게 요금·영업시간) | 운영자가 AI 상담을 켠 경우에만. 미국 이전. 끄면 전송 없음 (`backend/crates/api/src/ai.rs`) |
-| 저장소 사업자 (S3 호환) | 사진 파일, 암호화된 DB 백업 | 운영자가 설정한 위치 |
+| PortOne and its payment gateways (Toss Payments and others), or Toss Payments directly | Payment processing, billing keys, PASS identity check, cash receipts | On payment and identity check |
+| Solapi | SMS and AlimTalk sending (phone number, message text) | Verification codes, booking alerts, advertising texts the customer agreed to |
+| Google (Firebase Cloud Messaging) | Push sending (push token, notification title and body) | When a notification is sent. Transfer to the US |
+| Anthropic | Generating AI support answers (the customer's support message, a summary of that booking, the business's prices and opening hours) | Only when the operator turns AI support on. Transfer to the US. Nothing is sent when it is off (`backend/crates/api/src/ai.rs`) |
+| Storage provider (S3-compatible) | Photo files, encrypted database backups | At the location the operator configured |
 
-고객은 가입할 때 국외 이전(Google, Anthropic)에 동의하고, 앱 [더보기] → [계정] → [동의 관리]에서 확인·철회할 수 있어요 (`user_consents`, 종류 `overseas_transfer`). 철회하면 AI 상담과 푸시 알림(Google FCM)이 함께 멈추고, 개인정보 처리방침 문구가 바뀌면 다시 동의를 물어요 (v1.5.1).
+Customers agree to the overseas transfer (Google, Anthropic) at sign-up and can review or withdraw it in the app under **More** → **Account** → **Consents** (`user_consents`, kind `overseas_transfer`). Withdrawing stops AI support and push notifications (Google FCM) together, and the app asks again when the privacy policy text changes (v1.5.1).
 
-## 5. 판단이 필요한 항목 (제출 전에 사장님·개발자가 확인)
+## 5. Judgement calls (the owner and the developer confirm before submitting)
 
-1. **파트너에게 전달 = "공유"?** Google 은 사용자가 직접 시작한 전달은 공유로 적지 않아도 된다고 해요. 예약하면 주소가 파트너에게 가는 것이 여기에 해당할 수 있지만, 파트너는 회사 직원이 아닌 별도 사업자라서 이 문서는 **공유 "예"** 로 보수적으로 적었어요. 더 넓게 알리는 쪽이라 문제가 되지 않아요.
-2. **위치와 운영체제 주소 변환**: 좌표를 주소로 바꿀 때 휴대폰 운영체제(Android 는 Google, iPhone 은 Apple)의 주소 변환 서비스가 네트워크를 쓸 수 있어요. 다해와 수탁자는 좌표를 받지 않으므로 "수집 안 함"으로 적었어요. 나중에 좌표를 서버로 보내는 기능(예: 파트너 도착 확인)을 넣으면 위치를 **예**로 바꿔야 해요.
-3. **유입 경로(UTM)**: 웹에서 가입할 때 링크에 붙은 `utm_*`, `ref` 값을 가입 계정에 한 번 저장해요 (`users.acquisition`, `attribution.dart`). 모바일 앱은 이 값을 받는 경로가 없어서(`Uri.base` 는 웹에서만 값이 있음) 스토어 양식에는 넣지 않았어요. 앱 딥링크로 이 값을 받게 바꾸면 "앱 활동 > 기타 작업, 목적: 분석·광고 또는 마케팅"을 추가하세요.
-4. **분석과 마케팅 동의**: 분석 이벤트는 "마케팅 정보 수신" 동의 하나에 묶여 있어요 (`apps/customer/lib/state.dart`). 동의를 끄면 대기 중인 이벤트도 버려요. 그래서 "선택"이에요.
+1. **Is sending to a partner "sharing"?** Google says a transfer the user starts need not be declared as sharing, and a booking sending the address to a partner may count. Partners are separate businesses, not staff, so this document conservatively says **Shared: Yes**. Disclosing more is never a problem.
+2. **Location and the OS geocoder**: turning coordinates into an address may use the phone operating system's geocoding service over the network (Google on Android, Apple on iPhone). Neither Dahae nor its service providers receive the coordinates, so the answer is "not collected". If a feature ever sends coordinates to the server (for example a partner arrival check), change location to **Yes**.
+3. **Acquisition source (UTM)**: on a web sign-up, the `utm_*` and `ref` values in the link are stored once on the new account (`users.acquisition`, `attribution.dart`). The mobile apps have no path to receive them (`Uri.base` has a value only on the web), so they are not on the store forms. If an app deep link starts carrying them, add "App activity > Other actions, purpose: analytics, advertising or marketing".
+4. **Analytics and the marketing consent**: analytics events are tied to the single "receive marketing" consent (`apps/customer/lib/state.dart`). Turning it off also drops queued events, which is why the answer is "optional".
 
-## 6. 바뀌면 같이 고칠 곳
-- 새 테이블·컬럼에 개인정보가 들어가면 이 표, `app-privacy.md`, `website/privacy.html`, iOS `PrivacyInfo.xcprivacy` 를 같이 고쳐요.
-- 광고·분석·크래시 **외부 SDK** 를 붙이면 그 SDK 가 모으는 데이터도 여기에 적어야 해요 (Google 은 SDK 가 모으는 것도 앱의 수집으로 봐요).
+## 6. Change these together
+- When a new table or column holds personal data, update this table, `app-privacy.md`, `website/privacy.html` and iOS `PrivacyInfo.xcprivacy` together.
+- If a third-party **SDK** for ads, analytics or crashes is added, the data it collects must be declared here too (Google counts what an SDK collects as the app's collection).

@@ -8,9 +8,9 @@
 | `partner-universal.apk` | 파트너 범용 APK / Partner universal APK |
 | `signing/` | 업로드 키 (비공개) / Upload key (private) |
 | `listing-*.md` | 스토어 설명 문안 (ko, en, ja, vi, zh) / Store listing copy |
-| `data-safety.md` | 데이터 보안 답안 / Data safety answers |
+| `data-safety.md`, `data-safety.ko.md` | 데이터 보안 답안 영어판·한국어판 / Data safety answers, English and Korean |
 | `content-rating-draft.md` | 콘텐츠 등급 답안 초안 / Content rating draft |
-| `review-notes.md` | 심사팀 메모 (로그인, 계정 삭제, 권한) / Reviewer notes |
+| `review-notes.md`, `review-notes.ko.md` | 심사팀 메모 영어판·한국어판 (로그인, 계정 삭제, 권한) / Reviewer notes, English and Korean |
 | `screenshots/` | 스크린샷 (생성된 경우) / Screenshots, when generated |
 
 **제출 전 필수 / Before upload**

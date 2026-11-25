@@ -1,143 +1,145 @@
-# Google Play 앱 콘텐츠 신고 답안 (App content declarations)
+# Google Play App content declarations
 
-Play Console → 앱 → [정책] → [앱 콘텐츠] 화면의 항목을 위에서부터 채우는 답안이에요. 고객 앱과 파트너 앱에 **각각** 입력해요. 앱 ID 는 GitHub `store` 변수 `CUSTOMER_APP_ID`, `PARTNER_APP_ID` 이고, 비워 두면 `kr.co.dahae.customer`, `kr.co.dahae.partner` 예요 (DODA 의 우집사: `kr.co.uzipsa.customer`, `kr.co.uzipsa.partner`). 따로 적지 않은 줄은 두 앱의 답이 같아요.
+English · [한국어](play-declarations.ko.md)
 
-- 데이터 보안(Data safety) 표는 길어서 `data-safety.md` 에 따로 있어요.
-- 심사팀에 줄 로그인 정보와 메모는 `review-notes.md` 에 있어요.
-- v1.6.1 출시 빌드 기준이에요 (포인트, 탈퇴 시 소셜 연결 삭제 포함).
-- Play Console 의 질문 문구는 가끔 바뀌어요. 문구가 조금 달라도 뜻이 같은 답을 고르세요. 기준: https://support.google.com/googleplay/android-developer/answer/9859455 (2026-11 확인).
+Answers for the items in Play Console → app → **Policy** → **App content**, top to bottom. Enter them for the customer app and the partner app **each**. The app IDs are the GitHub `store` variables `CUSTOMER_APP_ID` and `PARTNER_APP_ID`; left empty they are `kr.co.dahae.customer` and `kr.co.dahae.partner` (an edition with its own store listing uses its own IDs). Where a row does not say otherwise, both apps give the same answer.
 
-## 한눈에 보기
+- The Data safety table is long, so it has its own file: `data-safety.md`.
+- The sign-in details and notes for the review team are in `review-notes.md`.
+- These answers match the v1.6.1 release build (points, and removal of social sign-in links on account deletion).
+- Play Console's question wording changes from time to time. If the wording differs a little, pick the answer with the same meaning. Reference: https://support.google.com/googleplay/android-developer/answer/9859455 (checked 2026-11).
 
-| # | 항목 | 답 |
+## At a glance
+
+| # | Item | Answer |
 |---|---|---|
-| 1 | 개인정보처리방침 | `https://도메인/privacy.html` |
-| 2 | 광고 | **아니요**, 광고 없음 |
-| 3 | 앱 액세스 (로그인 정보) | 일부 기능이 제한됨 → 심사용 번호와 인증번호 입력 |
-| 4 | 대상 연령 및 콘텐츠 | **만 18세 이상**만 선택 |
-| 5 | 콘텐츠 등급 (IARC 설문) | 아래 5항 답안 |
-| 6 | 뉴스 앱 | **아니요** |
-| 7 | 데이터 보안 | `data-safety.md` |
-| 8 | 정부 앱 | **아니요** |
-| 9 | 금융 기능 | 포인트가 없으면 **금융 기능 없음**. 포인트가 들어가면 9항 참고 |
-| 10 | 건강 앱 | **건강 기능 없음** |
-| 11 | 광고 ID | **아니요**, 사용 안 함 |
-| 12 | 권한 신고 양식 | 낼 양식 없음 (12항에서 이유 확인) |
-| 13 | 계정 삭제 | 앱 안 + `https://도메인/delete-account.html` |
+| 1 | Privacy policy | `https://<domain>/privacy.html` |
+| 2 | Ads | **No**, no ads |
+| 3 | App access (sign-in details) | Some functionality is restricted → enter the review phone number and code |
+| 4 | Target audience and content | **18 and over** only |
+| 5 | Content rating (IARC questionnaire) | Answers in section 5 |
+| 6 | News app | **No** |
+| 7 | Data safety | `data-safety.md` |
+| 8 | Government app | **No** |
+| 9 | Financial features | **No financial features** if there are no points. With points, see section 9 |
+| 10 | Health app | **No health features** |
+| 11 | Advertising ID | **No**, not used |
+| 12 | Permission declaration forms | None to submit (reasons in section 12) |
+| 13 | Account deletion | In the app + `https://<domain>/delete-account.html` |
 
-## 1. 개인정보처리방침
-- 주소: `https://도메인/privacy.html`. 로그인 없이 누구나 열 수 있는 웹 페이지여야 해요 (PDF 불가). 서버를 설치하면 자동으로 생겨요.
-- 앱 안에서도 고객 앱과 파트너 앱 모두 [더보기] → [개인정보처리방침], [이용약관]으로 열려요.
+## 1. Privacy policy
+- Address: `https://<domain>/privacy.html`. It must be a web page anyone can open without signing in (no PDF). It is created automatically when the server is installed.
+- Both apps also open it in the app under **More** → **Privacy policy** and **Terms of service**.
 
-## 2. 광고
-- **아니요.** 광고 SDK 가 없고 다른 회사 광고를 보여 주지 않아요 (`app/packages/core/pubspec.yaml`, `app/apps/*/pubspec.yaml` 에 광고 패키지 없음).
-- 앱 안의 자체 쿠폰·공지 배너, 마케팅에 동의한 고객에게 보내는 자체 푸시는 Google 이 말하는 "광고 포함"이 아니에요.
+## 2. Ads
+- **No.** There is no ad SDK and no other company's ads are shown (no ad package in `app/packages/core/pubspec.yaml` or `app/apps/*/pubspec.yaml`).
+- The app's own coupon and notice banners, and its own pushes to customers who agreed to marketing, are not "contains ads" in Google's sense.
 
-## 3. 앱 액세스
-- "앱의 전체 또는 일부 기능이 제한됨"을 고르고 안내를 추가해요.
-- 이름: `Review login`, 사용자 이름: 심사용 휴대폰 번호, 비밀번호: 심사용 인증번호.
-- 파트너 앱은 다르게 넣어요: 이름 `Review login (Google)`, 사용자 이름: 심사용 구글 계정 이메일, 비밀번호: 그 구글 계정 비밀번호. 고정 인증번호는 파트너 앱에서 거절돼요 (`review-notes.md` 1항).
-- 기타 안내 칸에 `review-notes.md` 2항(영어)을 붙여 넣어요. 실제 번호와 인증번호는 저장소에 적지 않고 제출할 때만 넣어요.
-- 심사 계정은 콘솔 [설정] → [스토어 심사용 데모 계정]에서 켜요 (기본 14일, 최대 30일 뒤 자동으로 꺼짐).
+## 3. App access
+- Choose "All or some functionality in my app is restricted" and add instructions.
+- Name: `Review login`; username: the review phone number; password: the review verification code.
+- The partner app is entered differently: name `Review login (Google)`, username: the review Google account email, password: that Google account's password. The partner app refuses the fixed verification code (`review-notes.md` section 1).
+- Paste `review-notes.md` section 2 into the other-instructions box. The real number and code are never written in the repository; enter them only when submitting.
+- Turn the review account on in the console under **Settings** → **Store review demo account** (it turns itself off after 14 days by default, 30 at most).
 
-## 4. 대상 연령 및 콘텐츠
-| 질문 | 답 |
+## 4. Target audience and content
+| Question | Answer |
 |---|---|
-| 대상 연령대 | **만 18세 이상** 하나만 선택 |
-| 어린이의 관심을 끌 수 있는 요소가 있나요? | 아니요 |
+| Target age groups | **18 and over** only |
+| Could the app unintentionally appeal to children? | No |
 
-이유: 청소 예약과 결제(고객), 일감과 정산(파트너)은 성인이 쓰는 서비스예요. 18세 미만 연령대를 하나라도 고르면 "가족 정책"이 적용돼 요구 사항이 크게 늘어나니 고르지 마세요.
+Reason: booking and paying for cleaning (customers) and taking jobs and payouts (partners) are services for adults. Choosing any age group under 18 brings in the Families policy and many more requirements, so do not.
 
-## 5. 콘텐츠 등급 (IARC 설문)
-Microsoft Store 도 같은 IARC 설문을 써요. 아래 답을 그대로 쓰세요.
+## 5. Content rating (IARC questionnaire)
+The Microsoft Store uses the same IARC questionnaire. Use these answers as they are.
 
-| 질문 | 답 | 이유 |
+| Question | Answer | Reason |
 |---|---|---|
-| 이메일 주소 | 사업자 연락용 이메일 | 등급 기관이 연락할 주소 |
-| 앱 카테고리 | **유틸리티, 생산성, 커뮤니케이션 또는 기타** (게임 아님) | |
-| 폭력, 공포 | 없음 | |
-| 성적 콘텐츠, 노출 | 없음 | |
-| 비속어, 저속한 유머 | 없음 | |
-| 약물·술·담배 | 없음 | |
-| 도박, 모의 도박 | 없음 | |
-| 사용자끼리 소통하거나 콘텐츠를 주고받나요? | **예** | 후기(글·사진)가 다른 이용자에게 보여요. 채팅은 운영팀과만 해요 |
-| → 사용자가 콘텐츠를 신고하거나 차단할 수 있나요? | **예** | 모든 후기에 신고 버튼, 신고가 모이면 자동 숨김 (`review-notes.md` 6항) |
-| 사용자의 현재 위치를 다른 사용자와 공유하나요? | **아니요** | 위치 좌표는 서버로 보내지 않아요 |
-| 디지털 상품을 살 수 있나요? | **아니요** | 방문 청소(실물 서비스)만 팔아요 |
-| 제한 없는 인터넷 접속(브라우저 기능)을 제공하나요? | 아니요 | 앱 안 웹 화면은 결제 페이지만 열어요 |
+| Email address | The business contact email | Where the rating authority writes |
+| App category | **Utility, productivity, communication or other** (not a game) | |
+| Violence, fear | None | |
+| Sexual content, nudity | None | |
+| Profanity, crude humour | None | |
+| Drugs, alcohol, tobacco | None | |
+| Gambling, simulated gambling | None | |
+| Do users interact or exchange content? | **Yes** | Reviews (text and photos) are shown to other users. Chat is with the operations team only |
+| → Can users report or block content? | **Yes** | Every review has a report button; enough reports hide it automatically (`review-notes.md` section 6) |
+| Does the app share the user's current location with other users? | **No** | Coordinates are never sent to the server |
+| Can users buy digital goods? | **No** | Only on-site cleaning (a physical service) is sold |
+| Does the app give unrestricted internet access (browser features)? | No | The in-app web view opens only the payment page |
 
-예상 결과: 전체 이용가 계열(IARC 3+, 한국 GRAC 전체이용가). "사용자 상호작용" 표시가 붙을 수 있어요. 앱 내용이 바뀌면 설문을 다시 하세요.
-Apple 의 연령 등급 설문은 질문이 달라서 `app-privacy.md` 2항에 있어요.
+Expected result: an all-ages rating (IARC 3+, GRAC All in Korea). A "Users interact" notice may be added. Redo the questionnaire when the app's content changes.
+Apple's age-rating questionnaire asks different questions; it is in `app-privacy.md` section 2.
 
-## 6. 뉴스 앱
-- **아니요.** 뉴스 앱이 아니에요.
+## 6. News app
+- **No.** This is not a news app.
 
-## 7. 데이터 보안
-- `data-safety.md` 의 표대로 입력해요.
+## 7. Data safety
+- Enter the table in `data-safety.md`.
 
-## 8. 정부 앱
-- **아니요.** 정부나 공공기관을 대신해 만든 앱이 아니에요. PASS 본인확인을 쓰지만 정부 서비스 앱은 아니에요.
+## 8. Government app
+- **No.** The app is not made by or for a government or public body. It uses the PASS identity check, but it is not a government service app.
 
-## 9. 금융 기능 (Financial features)
-모든 앱이 답해야 해요 (https://support.google.com/googleplay/android-developer/answer/13849271).
+## 9. Financial features
+Every app must answer (https://support.google.com/googleplay/android-developer/answer/13849271).
 
-| 상황 | 답 |
+| Situation | Answer |
 |---|---|
-| 고객 앱 (포인트 기능 있음) | 구매 계약 묶음의 **"리워드, 포인트, 항공 마일리지 및 기타 인센티브"** 하나만 선택 |
-| 파트너 앱 | **"내 앱은 금융 기능을 제공하지 않습니다"** |
+| Customer app (with points) | Under purchase agreements, select only **"Rewards, points, air miles and other incentives"** |
+| Partner app | **"My app doesn't provide any financial features"** |
 
-이유와 근거:
-- 다해는 자기 서비스(청소) 대금을 결제대행사로 받을 뿐이에요. 대출, 송금, 전자지갑, 선불 충전, 투자, 보험, 가상자산은 없어요. 그래서 "모바일 결제 및 전자지갑", "송금"은 고르지 않아요.
-- 포인트는 적립·가입·친구 초대로만 생기고 돈으로 사거나 현금으로 바꿀 수 없어요 (`points_ledger` 의 종류에 "구매"가 없음). 그래도 양식에 "포인트"라는 선택지가 그대로 있으므로, 포인트가 들어간 빌드는 그 칸을 고르는 것이 정확해요. **사장님 확인 필요**: 이 칸을 고르면 Google 이 추가 질문을 할 수 있어요. 그때는 "청소 요금 할인에만 쓰는 적립 포인트, 판매·환전 없음"이라고 답하세요.
-- 파트너 앱의 정산 계좌 입력은 일한 대가를 받기 위한 것이고 금융 상품이 아니에요.
+Reasons and evidence:
+- Dahae only collects payment for its own service (cleaning) through a payment gateway. There are no loans, money transfers, wallets, prepaid top-ups, investments, insurance or crypto assets, so "Mobile payments and digital wallets" and "Money transfer" are not selected.
+- Points are earned only by bookings, sign-up and referrals, and cannot be bought or cashed out (`points_ledger` has no "purchase" kind). The form still has a "points" option, so a build with points should select it. **Owner to confirm**: selecting it may bring follow-up questions from Google. Answer: "loyalty points used only as a discount on cleaning prices, never sold or exchanged for cash".
+- The partner app's payout account entry is for being paid for work, not a financial product.
 
-## 10. 건강 앱 (Health apps)
-- 모든 앱이 답해야 해요. **"내 앱은 건강 기능을 제공하지 않습니다"** 를 고르세요. 건강·의료 데이터를 다루지 않아요.
+## 10. Health apps
+- Every app must answer. Choose **"My app does not have any health features"**. No health or medical data is handled.
 
-## 11. 광고 ID
-- **아니요.** 광고 ID 를 쓰지 않아요. 앱의 `AndroidManifest.xml` 에 `com.google.android.gms.permission.AD_ID` 권한이 없어요.
-- 개발자 확인: 플러그인이 권한을 넣지 않았는지는 실제 빌드 파일로만 알 수 있어요. 빌드 뒤 `bundletool dump manifest --bundle <AAB 파일>` 로 최종 권한 목록을 보고, `AD_ID` 가 보이면 이 답을 다시 정해야 해요. (이 검사를 `check-native.py --aab` 에 넣는 작업 WP-C 는 병합 대기예요. 지금 `--aab` 는 16KB 페이지 정렬만 검사해요.)
+## 11. Advertising ID
+- **No.** The advertising ID is not used. The apps' `AndroidManifest.xml` has no `com.google.android.gms.permission.AD_ID` permission.
+- Developer check: only the real build shows whether a plugin added the permission. After building, list the final permissions with `bundletool dump manifest --bundle <AAB file>`; if `AD_ID` appears, decide this answer again. (Work package WP-C, which adds this check to `check-native.py --aab`, is waiting to merge. Today `--aab` checks only the 16 KB page alignment.)
 
-## 12. 권한과 신고 양식
-앱이 직접 선언한 권한은 아래가 전부예요 (`app/apps/*/android/app/src/main/AndroidManifest.xml`).
+## 12. Permissions and declaration forms
+These are all the permissions the apps declare themselves (`app/apps/*/android/app/src/main/AndroidManifest.xml`).
 
-| 권한 | 앱 | 쓰는 곳 | Play 신고 양식 |
+| Permission | App | Used for | Play declaration form |
 |---|---|---|---|
-| `INTERNET` | 고객, 파트너 | 서버 통신 | 필요 없음 |
-| `POST_NOTIFICATIONS` | 고객, 파트너 | 예약·작업 알림. 로그인 뒤 한 번 물어요 (`push_io.dart`) | 필요 없음 (실행 중 권한) |
-| `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION` | **고객만** | 주소 입력 화면의 [현재 위치로 찾기]를 누를 때만 | **필요 없음.** 신고 양식은 백그라운드 위치(`ACCESS_BACKGROUND_LOCATION`)에만 필요하고, 다해는 쓰지 않아요 |
+| `INTERNET` | Customer, partner | Talking to the server | Not needed |
+| `POST_NOTIFICATIONS` | Customer, partner | Booking and job alerts. Asked once after sign-in (`push_io.dart`) | Not needed (runtime permission) |
+| `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION` | **Customer only** | Only when **Use my current location** is tapped on the address screen | **Not needed.** The form is only for background location (`ACCESS_BACKGROUND_LOCATION`), which Dahae does not use |
 
-| 묻는 항목 | 답 |
+| Item asked | Answer |
 |---|---|
-| 사진·동영상 권한 (`READ_MEDIA_IMAGES`/`VIDEO`) | **쓰지 않아요.** 시스템 사진 선택기(`image_picker`)로 고르기 때문에 권한도, 신고도 필요 없어요. `check-native.py` 가 이 권한을 금지 목록으로 검사해요 |
-| 카메라 | 권한 선언 없음. 이 버전은 카메라를 열지 않고 보관함에서 사진을 골라요 (`ImageSource.gallery` 만 사용) |
-| 포그라운드 서비스 (`FOREGROUND_SERVICE_*`) | **없어요.** 신고할 서비스 유형이 없어요 |
-| 백그라운드 위치 | 없어요 |
-| SMS·통화 기록 | 없어요. 인증번호는 사용자가 직접 입력해요 |
-| 모든 파일 접근, 모든 앱 조회(`QUERY_ALL_PACKAGES`), 정확한 알람, 전체 화면 알림 | 없어요 |
+| Photo and video permissions (`READ_MEDIA_IMAGES`/`VIDEO`) | **Not used.** Photos are picked with the system photo picker (`image_picker`), so neither the permission nor the declaration is needed. `check-native.py` checks this permission against a deny list |
+| Camera | No permission declared. This version does not open the camera; photos are picked from the gallery (`ImageSource.gallery` only) |
+| Foreground service (`FOREGROUND_SERVICE_*`) | **None.** There is no service type to declare |
+| Background location | None |
+| SMS and call log | None. Users type the verification code themselves |
+| All files access, all apps query (`QUERY_ALL_PACKAGES`), exact alarms, full-screen intents | None |
 
-위치 사용 안내: 권한을 묻기 전에 앱이 위치기반서비스 이용약관 동의를 먼저 받아요 (`user_consents` 종류 `location`, `website/location-terms.html`). 좌표는 기기에서 주소 제안에만 쓰고 서버로 보내지 않아요.
+Location notice: before asking for the permission, the app first takes the customer's agreement to the location-based service terms (`user_consents` kind `location`, `website/location-terms.html`). Coordinates are used on the device only, to suggest an address, and never sent to the server.
 
-개발자 확인: 위 표는 앱이 직접 적은 권한이에요. 플러그인이 합쳐 넣는 권한은 실제 빌드의 최종 권한 목록(11항의 `bundletool` 명령)으로 한 번 더 확인해야 해요. 예상 밖의 권한이 나오면 이 문서와 `data-safety.md` 를 고치세요.
+Developer check: the table above lists the permissions the apps write themselves. Permissions that plugins merge in must be checked once more in the final permission list of the real build (the `bundletool` command in section 11). If an unexpected permission shows up, fix this document and `data-safety.md`.
 
-## 13. 계정 삭제
-| 질문 | 답 |
+## 13. Account deletion
+| Question | Answer |
 |---|---|
-| 앱에서 계정을 만들 수 있나요? | 예 |
-| 앱 안에서 삭제하는 길 | [더보기] → [계정] → [회원 탈퇴] (고객: `DELETE /v1/me`, 파트너: `DELETE /v1/partner/me`) |
-| 계정 삭제 URL | `https://도메인/delete-account.html` |
-| 삭제 후에도 남는 데이터 | 예약·결제 기록 5년, 분쟁 기록 3년 (전자상거래법), 동의 기록. 웹 페이지와 개인정보처리방침에 적혀 있어요 |
+| Can users create an account in the app? | Yes |
+| How to delete in the app | **More** → **Account** → **Delete account** (customer: `DELETE /v1/me`, partner: `DELETE /v1/partner/me`) |
+| Account deletion URL | `https://<domain>/delete-account.html` |
+| Data kept after deletion | Booking and payment records for 5 years, dispute records for 3 years (Korean E-Commerce Act), consent records. Stated on the web page and in the privacy policy |
 
-- Google 은 웹 페이지에서 앱을 다시 설치하지 않고도 삭제를 **요청**할 수 있어야 한다고 해요. `delete-account.html` 은 고객센터 전화·이메일로 요청하는 방법을 보여 줘요. 그 연락처는 콘솔 [설정 → 사업장 정보]에서 가져오므로 **고객센터 이메일을 꼭 채워 두세요** (비어 있으면 페이지에 요청 방법이 안 보여요).
-- 고객 탈퇴 시 소셜 로그인 연결(`user_identities`)도 지우고, Apple 로그인 토큰은 해지해요 (`privacy.rs`, `providers/apple.rs`).
+- Google requires that deletion can be **requested** from the web page without reinstalling the app. `delete-account.html` shows how to request it by support phone or email. Those contacts come from the console's **Settings → Business details**, so **be sure to fill in the support email** (when it is empty, the page shows no way to request).
+- Deleting a customer account also removes the social sign-in links (`user_identities`) and revokes the Apple sign-in token (`privacy.rs`, `providers/apple.rs`).
 
-## 14. 결제 방식 (참고)
-- 다해는 방문 청소(실물 서비스)만 팔아요. Play 결제 정책은 실물 상품·서비스에 Play 결제 시스템을 쓰지 않도록 하므로 결제대행사(PortOne)를 써요. 정기 청소(구독)와 팁도 같은 실물 서비스 결제예요. 자세한 설명은 `review-notes.md` 4항.
+## 14. Payment method (for reference)
+- Dahae sells only on-site cleaning (a physical service). Play's payments policy keeps Play Billing out of physical goods and services, so a payment gateway (PortOne) is used. Regular cleaning (subscriptions) and tips are payments for the same physical service. Details: `review-notes.md` section 4.
 
-## 제출 전 점검
-- [ ] Play Console 앱의 패키지 이름이 빌드의 앱 ID 와 같은지 확인 (DODA: `kr.co.uzipsa.customer`, `kr.co.uzipsa.partner`). 첫 업로드 뒤에는 바꿀 수 없어요
-- [ ] 도메인이 정해져 1·13항 주소가 실제로 열리는지 확인
-- [ ] 고객센터 이메일이 `delete-account.html` 에 보이는지 확인
-- [ ] 출시 빌드에 위치·포인트·오류 보고가 들어갔는지 확인하고 4·9·12항과 `data-safety.md` 답을 맞추기
-- [ ] 빌드 파일로 최종 권한 목록 확인 (11항의 `bundletool` 명령)
-- [ ] 심사용 계정 켜기, 3항에 번호와 인증번호 입력
+## Before submitting
+- [ ] The Play Console app's package name equals the build's app ID. It cannot change after the first upload
+- [ ] The domain is set and the addresses in sections 1 and 13 really open
+- [ ] The support email shows on `delete-account.html`
+- [ ] Confirm the release build includes location, points and error reports, and match sections 4, 9 and 12 and `data-safety.md` to it
+- [ ] Check the final permission list from the build file (the `bundletool` command in section 11)
+- [ ] Turn the review account on and enter the number and code in section 3

@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 # SPDX-License-Identifier: LicenseRef-Proprietary
 
-# Publishes the installer and Korean guides to the PUBLIC delivery repo. Never source code.
+# Publishes the installer and the guides (English, with Korean translations) to the PUBLIC delivery repo. Never source code.
 #   branch beta -> beta channel: every release (vX.Y.Z and vX.Y.Z-beta.N) lands here
 #   branch main -> stable channel: only releases without a prerelease suffix
 #   tag VER     -> annotated, immutable: the commit of this release's own channel branch (main for a
@@ -90,14 +90,17 @@ publish() { # publish 브랜치 채널
   if grep -rq 'raw.githubusercontent.com/[^ )]*/install\.sh' guide; then echo "::error::guide/ has a literal install.sh URL; use $URL_TOKEN" >&2; exit 1; fi
   if grep -rqF '[화면:' guide; then echo "::error::guide/ still has a [화면: …] placeholder; the owner would read it" >&2; exit 1; fi
   # shellcheck disable=SC2016 # the backticks are literal Markdown, not a command
-  [ "$branch" = "$tag_branch" ] || sed -i 's|(`dahae-install-page\.html`)||' guide/00-한번에-설치.md # the page ships only with the tag
+  [ "$branch" = "$tag_branch" ] || sed -i 's|(`dahae-install-page\.html`)||' guide/00-한번에-설치.md guide/00-install.md # the page ships only with the tag
   local guide_url="$RAW/$ref/install.sh" # beta copies follow beta; the tagged branch's copies follow the tag
   sed -i "s|$URL_TOKEN|$guide_url|g" guide/*.md
   if grep -rqF "$URL_TOKEN" guide; then echo "::error::unreplaced $URL_TOKEN in guide/" >&2; exit 1; fi
-  sed -e "s|INSTALL_URL|$RAW/$ref/install.sh|g" -e "s|SUMS_URL|$RAW/$ref/SHA256SUMS|g" \
-      -e "s|BRANCH_URL|$RAW/$branch/install.sh|g" \
-      "$src/docs/delivery-README.md" > README.md
-  [ "$branch" = "$tag_branch" ] || sed -i '/dahae-install-page\.html/d' README.md # only the tagged branch ships the page
+  local lang
+  for lang in "" .ko; do # README.md (English) and its Korean translation README.ko.md
+    sed -e "s|INSTALL_URL|$RAW/$ref/install.sh|g" -e "s|SUMS_URL|$RAW/$ref/SHA256SUMS|g" \
+        -e "s|BRANCH_URL|$RAW/$branch/install.sh|g" \
+        "$src/docs/delivery-README$lang.md" > "README$lang.md"
+    [ "$branch" = "$tag_branch" ] || sed -i '/dahae-install-page\.html/d' "README$lang.md" # only the tagged branch ships the page
+  done
   if [ "$branch" = "$tag_branch" ]; then # the page pins this install.sh by hash and names the tag's URL, so only the tagged branch gets one
     bash "$src/scripts/release/build-install-page.sh" install.sh "$RAW/$VER/install.sh" "$work/page"
     cp "$work/page/index.html" dahae-install-page.html
