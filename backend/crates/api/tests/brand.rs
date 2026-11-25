@@ -118,6 +118,37 @@ async fn every_response_carries_the_brand_version_and_it_changes_on_save(pool: P
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn fill_colour_is_optional_reaches_the_apps_and_moves_the_brand_version(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let (admin, _) = common::staff_token(&pool, Role::StaffAdmin).await;
+    let (st, b) = put_business(&app, &admin, json!({"name": "우집사", "primary_color": "#00838F"})).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert!(b.get("fill_color").is_none(), "unset: apps fill with the primary colour");
+    let (_, before) = call(&app, "GET", "/v1/brand", None, None).await;
+    // Light sky blue fails white text (2.3:1) but is still accepted: the apps pick a dark label for it.
+    let body = json!({"name": "우집사", "primary_color": "#00838F", "fill_color": "#00bcd4"});
+    let (st, b) = put_business(&app, &admin, body).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert_eq!(b["fill_color"], "#00BCD4");
+    let (_, brand) = call(&app, "GET", "/v1/brand", None, None).await;
+    assert_eq!(brand["fill_color"], "#00BCD4");
+    assert_eq!(brand["primary_color"], "#00838F", "links keep the primary colour");
+    assert_ne!(brand["version"], before["version"], "apps refetch the brand");
+    let (_, _, cfg) = raw(&app, "GET", "/v1/config", None, None).await;
+    let cfg: Value = serde_json::from_slice(&cfg).expect("json");
+    assert_eq!(cfg["brand_version"], brand["version"]);
+
+    let (_, setup) = call(&app, "GET", "/v1/admin/setup", Some(&admin), None).await;
+    assert_eq!(setup["business"]["fill_color"], "#00BCD4", "the console form loads it back");
+    let (st, b) = put_business(&app, &admin, json!({"name": "우집사", "fill_color": "sky"})).await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "{b}");
+    assert_eq!(b["error"]["code"], "invalid_color");
+    let (st, b) = put_business(&app, &admin, json!({"name": "우집사", "fill_color": null})).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert!(b.get("fill_color").is_none(), "null clears it back to the primary colour");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn current_brand_files_are_public_and_others_stay_signed(pool: PgPool) {
     let app = common::app(pool.clone());
     let (admin, _) = common::staff_token(&pool, Role::StaffAdmin).await;

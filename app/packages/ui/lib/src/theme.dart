@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'components/motion.dart';
+import 'contrast.dart';
 import 'tokens.dart';
 
 /// Extra semantic colors the Material scheme has no slot for.
@@ -28,6 +29,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.danger,
     required this.brandStart,
     required this.brandEnd,
+    required this.onFill,
     required this.isDark,
   });
 
@@ -50,9 +52,12 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color sunTint;
   final Color danger;
 
-  /// Brand gradient stops for primary CTAs (top-left to bottom-right).
+  /// Fill stops for primary CTAs (top-left to bottom-right). Light mode: both are the brand fill (flat).
   final Color brandStart;
   final Color brandEnd;
+
+  /// Label colour on [brandStart]/[brandEnd] fills and selected chips: white or dark ink, >= 4.5:1.
+  final Color onFill;
   final bool isDark;
 
   Color tintOf(ServiceHue h) => isDark ? h.darkTint : h.tint;
@@ -82,6 +87,7 @@ class AppColors extends ThemeExtension<AppColors> {
       danger: l(danger, other.danger),
       brandStart: l(brandStart, other.brandStart),
       brandEnd: l(brandEnd, other.brandEnd),
+      onFill: l(onFill, other.onFill),
       isDark: t < 0.5 ? isDark : other.isDark,
     );
   }
@@ -153,7 +159,10 @@ AppColors appColorsFor(BrandConfig brand, bool dark) => AppColors(
   ink: dark ? const Color(0xFFEEF4F7) : brand.ink,
   inkSoft: dark ? const Color(0xFFC3CFD6) : Neutral.c700,
   inkMuted: dark ? const Color(0xFF93A3AD) : Neutral.c500,
-  accent: dark ? const Color(0xFF5CC8DE) : brand.primary,
+  // Light: the owner's primary, darkened only as far as text on the tinted surfaces needs (4.5:1).
+  accent: dark
+      ? const Color(0xFF5CC8DE)
+      : textSafeOn(brand.primary, _lightTextGrounds),
   primaryTint: dark ? const Color(0xFF123642) : const Color(0xFFE3F4F8),
   fresh: dark ? const Color(0xFF5CC8DE) : brand.fresh,
   freshTint: dark ? const Color(0xFF123642) : const Color(0xFFE3F4F8),
@@ -161,11 +170,21 @@ AppColors appColorsFor(BrandConfig brand, bool dark) => AppColors(
   sunTint: dark ? const Color(0xFF3A3214) : const Color(0xFFFFF6D6),
   // Lighter red on dark surfaces so error text keeps WCAG AA contrast (4.5:1).
   danger: dark ? const Color(0xFFFF8A80) : Semantic.danger,
-  // Gradient behind white button labels: both stops stay >= 4.5:1 with white.
-  brandStart: brand.primary,
-  brandEnd: brand.primaryDeep,
+  // Dark: gradient behind white labels (both stops >= 4.5:1). Light: the owner's fill colour, flat, with
+  // whichever label reads on it.
+  brandStart: dark ? brand.primary : brand.fill,
+  brandEnd: dark ? brand.primaryDeep : brand.fill,
+  onFill: labelOnFill(dark ? brand.primary : brand.fill),
   isDark: dark,
 );
+
+/// Light surfaces that carry primary-coloured text: tint, canvas, surfaceHigh (surface is white).
+const _lightTextGrounds = [
+  Color(0xFFE3F4F8),
+  Neutral.c50,
+  Neutral.c100,
+  Colors.white,
+];
 
 /// Snackbar action: light teal, >= 4.5:1 on both snackbar fills (theme_contrast_test).
 const _snackAction = Color(0xFF5CC8DE);
@@ -178,7 +197,8 @@ ThemeData buildTheme(BrandConfig brand, Brightness brightness) {
         seedColor: brand.fresh,
         brightness: brightness,
       ).copyWith(
-        primary: dark ? colors.accent : brand.primary,
+        // Text and links: the text-safe primary, never the (possibly light) fill colour.
+        primary: colors.accent,
         // Dark primary is light teal 5CC8DE: its label is the dark canvas (9.68:1).
         onPrimary: dark ? colors.canvas : Colors.white,
         surface: colors.surface,
@@ -189,8 +209,9 @@ ThemeData buildTheme(BrandConfig brand, Brightness brightness) {
   final shape = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(Radii.input),
   );
-  // Filled buttons keep white labels on dark teal in both modes (4.98:1); light teal 5CC8DE fails with white.
-  final fill = dark ? brand.primary : scheme.primary;
+  // Filled controls: dark teal with white labels in dark mode (light teal 5CC8DE fails with white); the
+  // owner's fill colour in light mode, with its computed label.
+  final fill = colors.brandStart;
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
@@ -217,7 +238,7 @@ ThemeData buildTheme(BrandConfig brand, Brightness brightness) {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: fill,
-        foregroundColor: Colors.white,
+        foregroundColor: colors.onFill,
         minimumSize: const Size.fromHeight(56),
         shape: shape,
         textStyle: text.labelLarge,
@@ -315,9 +336,18 @@ ThemeData buildTheme(BrandConfig brand, Brightness brightness) {
         borderRadius: BorderRadius.circular(Radii.pill),
       ),
       side: BorderSide(color: colors.line),
-      labelStyle: text.labelMedium,
+      labelStyle: text.labelMedium?.copyWith(
+        color: dark
+            ? colors.ink
+            : WidgetStateColor.resolveWith(
+                (s) => s.contains(WidgetState.selected)
+                    ? colors.onFill
+                    : colors.ink,
+              ),
+      ),
       backgroundColor: colors.surface,
-      selectedColor: colors.primaryTint,
+      selectedColor: dark ? colors.primaryTint : fill,
+      checkmarkColor: dark ? null : colors.onFill,
     ),
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {

@@ -32,6 +32,7 @@ const _brandKeys = [
   'tagline',
   'tagline_en',
   'primary_color',
+  'fill_color',
   'logo_url',
   'version',
 ];
@@ -41,6 +42,8 @@ const brandCacheKey = 'brand';
 /// A colour that fails the white-label-text contrast check is ignored, so a bad choice never hides a button label.
 /// Files count as own files on [apiBase] or on [publicBase] (the server's canonical address, after a domain move).
 /// [accentOnly] (partner app): the fallback primary stays and the business colour becomes the accent.
+/// `fill_color` (buttons, selected chips) is taken even when white text fails on it: the theme picks the label.
+/// Unset, filled controls use the primary colour.
 BrandConfig brandFromProfile(
   Json profile, {
   required BrandConfig fallback,
@@ -49,6 +52,7 @@ BrandConfig brandFromProfile(
   bool accentOnly = false,
 }) {
   final colour = _brandColour(profile['primary_color']);
+  final fill = _hex(profile['fill_color']);
   final bases = [apiBase, ?publicBase];
   final assets = profile['assets'];
   final ownColour = colour != null && !accentOnly;
@@ -61,6 +65,9 @@ BrandConfig brandFromProfile(
     version: _text(profile['version']),
     primary: ownColour ? colour : fallback.primary,
     primaryDeep: ownColour ? _shade(colour, -0.12) : fallback.primaryDeep,
+    fill: accentOnly
+        ? fallback.fill
+        : fill ?? (ownColour ? colour : fallback.fill),
     fresh: colour == null
         ? fallback.fresh
         : accentOnly
@@ -96,10 +103,13 @@ String? _text(Object? v) {
   return t.isEmpty ? null : t;
 }
 
+Color? _hex(Object? v) => v is String && _hexColour.hasMatch(v)
+    ? Color(0xFF000000 | int.parse(v.substring(1), radix: 16))
+    : null;
+
 Color? _brandColour(Object? v) {
-  if (v is! String || !_hexColour.hasMatch(v)) return null;
-  final c = Color(0xFF000000 | int.parse(v.substring(1), radix: 16));
-  return whiteTextReadsOn(c) ? c : null;
+  final c = _hex(v);
+  return c != null && whiteTextReadsOn(c) ? c : null;
 }
 
 Color _shade(Color c, double lightnessDelta) {

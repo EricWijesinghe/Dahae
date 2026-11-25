@@ -11,7 +11,8 @@ import 'package:flutter/material.dart';
 ///   inline price emphasis use [primary] (dark teal, 4.98:1 on white).
 /// - [fresh] (brand teal #1E9EBA) is 3.16:1 on white: icons, borders, fills and
 ///   large text (>= 24px, or >= 19px bold) only, never body text.
-/// - Primary button: fill [primary], white label; pressed [primaryDeep].
+/// - Primary button (light mode): flat [fill], label from `labelOnFill` (white or dark ink); dark mode keeps
+///   the [primary] to [primaryDeep] gradient with a white label. Links and text never use [fill].
 /// - Accent CTA (welcome coupon, pay deposit): fill [sun], label [ink] (11.67:1).
 ///   [sun] is never text on a light surface (1.37:1).
 @immutable
@@ -23,13 +24,14 @@ class BrandConfig {
     required this.fresh,
     required this.sun,
     this.ink = const Color(0xFF17232C),
+    Color? fill,
     this.logoUrl,
     this.nameEn,
     this.shortName,
     this.tagline,
     this.taglineEn,
     this.version,
-  });
+  }) : fill = fill ?? primary;
 
   final String name;
 
@@ -59,6 +61,10 @@ class BrandConfig {
 
   /// Pressed state and gradient end.
   final Color primaryDeep;
+
+  /// Owner-set fill for buttons, selected chips and filled controls in light mode; [primary] when unset.
+  /// May be light: labels on it come from `labelOnFill`, so it is never used for text.
+  final Color fill;
 
   /// Brand teal: decorative fills, icons, large text, success wash.
   final Color fresh;

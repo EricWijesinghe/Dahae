@@ -7,6 +7,7 @@ import 'package:console/state.dart';
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ui/ui.dart' show fillInk;
 import 'package:test_support/test_support.dart';
 
 import 'support/console_host.dart';
@@ -50,6 +51,107 @@ void main() {
       await unmount(tester);
     },
   );
+
+  Future<FakeApi> pumpFill(WidgetTester tester, {String? fill}) async {
+    setViewport(tester, wideSize);
+    final fake = FakeApi()..reply('PUT', '/admin/setup/business', null);
+    final env = await TestEnv.create(fake: fake, role: 'staff_admin');
+    await pumpConsoleScreen(
+      tester,
+      env,
+      _scrolled(
+        BusinessCard(
+          initial: {
+            'name': '우집사',
+            'primary_color': '#00838F',
+            'fill_color': ?fill,
+            'logo_url': '/files/logo.png',
+            'brand_assets': const {'icon_512': '/files/a.png'},
+          },
+          onSaved: () {},
+        ),
+      ),
+    );
+    await settle(tester);
+    await tester.tap(find.text(koT.cSetupBusiness));
+    await settle(tester);
+    return fake;
+  }
+
+  Color sampleColour(WidgetTester tester) => tester
+      .widget<Text>(
+        find.descendant(
+          of: find.byKey(const ValueKey('fill_preview')),
+          matching: find.text(koT.cSetupFillSample),
+        ),
+      )
+      .style!
+      .color!;
+
+  Future<Json> save(WidgetTester tester, FakeApi fake) async {
+    await tester.ensureVisible(find.text(koT.cSetupSave));
+    await tester.tap(find.text(koT.cSetupSave));
+    await settle(tester);
+    return fake.lastCall('PUT', '/admin/setup/business')!.body as Json;
+  }
+
+  testWidgets('a light fill colour previews a dark label and is saved', (
+    tester,
+  ) async {
+    final fake = await pumpFill(tester);
+    // Empty: the brand colour fills, white reads on it.
+    expect(sampleColour(tester), Colors.white);
+    expect(find.text(koT.cSetupFillLabelWhite('4.5')), findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('fill_color')), '#00BCD4');
+    await settle(tester, duration: const Duration(milliseconds: 200));
+    expect(sampleColour(tester), fillInk, reason: 'white is 2.3:1 on sky blue');
+    expect(find.text(koT.cSetupFillLabelDark('8.2')), findsOneWidget);
+    expect(
+      find.text(koT.cSetupColorContrast),
+      findsNothing,
+      reason: 'a light fill is allowed, unlike a light brand colour',
+    );
+    final body = await save(tester, fake);
+    expect(body['fill_color'], '#00BCD4');
+    expect(body['primary_color'], '#00838F');
+    await tester.tap(find.text(koT.ok));
+    await unmount(tester);
+  });
+
+  testWidgets('a bare or lower-case hex is saved as #RRGGBB', (tester) async {
+    final fake = await pumpFill(tester);
+    await tester.enterText(find.byKey(const ValueKey('fill_color')), '00bcd4');
+    await settle(tester, duration: const Duration(milliseconds: 200));
+    expect(sampleColour(tester), fillInk);
+    final body = await save(tester, fake);
+    expect(
+      body['fill_color'],
+      '#00BCD4',
+      reason: 'the server rejects a bare hex',
+    );
+    await tester.tap(find.text(koT.ok));
+    await unmount(tester);
+  });
+
+  testWidgets('a saved fill colour loads, and emptying it sends null', (
+    tester,
+  ) async {
+    final fake = await pumpFill(tester, fill: '#00BCD4');
+    expect(sampleColour(tester), fillInk);
+    await tester.enterText(find.byKey(const ValueKey('fill_color')), ' ');
+    await settle(tester, duration: const Duration(milliseconds: 200));
+    expect(sampleColour(tester), Colors.white);
+    final body = await save(tester, fake);
+    expect(body.containsKey('fill_color'), isTrue);
+    expect(
+      body['fill_color'],
+      isNull,
+      reason: 'sent as null so the server clears it',
+    );
+    await tester.tap(find.text(koT.ok));
+    await unmount(tester);
+  });
 
   testWidgets(
     'the new profile fields load, save in one PUT and keep the saved images',

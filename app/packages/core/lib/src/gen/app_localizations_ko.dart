@@ -7049,6 +7049,29 @@ class TKo extends T {
   String get cSetupColor => '대표 색상';
 
   @override
+  String get cSetupFillColor => '채움 색상';
+
+  @override
+  String get cSetupFillColorHint =>
+      '버튼과 선택한 항목을 칠하는 색이에요. 비워 두면 대표 색상을 써요. 글자와 링크는 대표 색상이고, 배경 위에서 잘 읽히도록 필요하면 조금 더 진하게 보여요. 서비스 아이콘 그림의 색은 바뀌지 않아요.';
+
+  @override
+  String get cSetupFillSample => '예약하기';
+
+  @override
+  String get cSetupFillLinkSample => '링크와 글자는 대표 색상';
+
+  @override
+  String cSetupFillLabelWhite(String ratio) {
+    return '버튼 글자는 흰색으로 보여요. (대비 $ratio:1)';
+  }
+
+  @override
+  String cSetupFillLabelDark(String ratio) {
+    return '밝은 색이라 흰 글자가 잘 안 보여서, 버튼 글자는 자동으로 진한 색이 돼요. (대비 $ratio:1)';
+  }
+
+  @override
   String get cSetupLogo => '로고 올리기';
 
   @override

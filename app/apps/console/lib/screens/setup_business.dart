@@ -11,6 +11,7 @@ import 'package:ui/ui.dart';
 import '../brand_assets.dart';
 import '../state.dart';
 import 'brand_preview.dart';
+import 'setup_fill_colour.dart';
 import '../widgets/inline_button.dart';
 
 /// Brand colours offered as one-tap swatches; any #RRGGBB can still be typed. Each one carries white text
@@ -28,9 +29,15 @@ const brandSwatches = [
 
 Color? parseHex(String s) {
   final v = s.trim().replaceFirst('#', '');
-  if (v.length != 6) return null;
-  final n = int.tryParse(v, radix: 16);
-  return n == null ? null : Color(0xFF000000 | n);
+  if (!RegExp(r'^[0-9A-Fa-f]{6}$').hasMatch(v)) return null;
+  return Color(0xFF000000 | int.parse(v, radix: 16));
+}
+
+/// '#RRGGBB' as the server requires it, from what the owner typed ('00bcd4', ' #00BCD4 '). Text that is not a
+/// colour goes as typed, so the server's invalid_color error still reports it.
+String hexForSave(String s) {
+  final v = s.trim().replaceFirst('#', '');
+  return parseHex(v) == null ? s.trim() : '#${v.toUpperCase()}';
 }
 
 /// Business profile: name, support contact, logo, brand colour and the legal footer details.
@@ -84,6 +91,7 @@ class _BusinessCardState extends State<BusinessCard> {
 
   late final Map<String, TextEditingController> _c;
   late final TextEditingController _color;
+  late final TextEditingController _fill;
   String? _logo;
   // A picked file or a letter mark, not uploaded until Save.
   Uint8List? _logoBytes;
@@ -111,6 +119,9 @@ class _BusinessCardState extends State<BusinessCard> {
     _color = TextEditingController(
       text: widget.initial['primary_color'] as String? ?? brandSwatches.first,
     )..addListener(() => setState(() {}));
+    _fill = TextEditingController(
+      text: widget.initial['fill_color'] as String? ?? '',
+    )..addListener(() => setState(() {}));
     _logo = widget.initial['logo_url'] as String?;
     _c['name']!.addListener(() => setState(() {}));
   }
@@ -127,6 +138,7 @@ class _BusinessCardState extends State<BusinessCard> {
       c.dispose();
     }
     _color.dispose();
+    _fill.dispose();
     super.dispose();
   }
 
@@ -200,7 +212,9 @@ class _BusinessCardState extends State<BusinessCard> {
     for (final k in _top) k: _c[k]!.text,
     for (final k in _links) k: _c[k]!.text,
     for (final k in _seo) k: _c[k]!.text,
-    'primary_color': _color.text,
+    'primary_color': hexForSave(_color.text),
+    // Empty clears it: the apps then fill with the primary colour.
+    'fill_color': _fill.text.trim().isEmpty ? null : hexForSave(_fill.text),
     'logo_url': _logo,
     'brand_assets': _assets,
     'company': {for (final k in _company) k: _c['company.$k']!.text},
@@ -444,6 +458,8 @@ class _BusinessCardState extends State<BusinessCard> {
                   ),
                 ),
               ),
+            const SizedBox(height: Space.md),
+            FillColourField(controller: _fill, primary: brand),
             const SizedBox(height: Space.lg),
             KeepAllText(t.cSetupCompany, style: context.text.labelLarge),
             const SizedBox(height: Space.xs),
@@ -453,7 +469,10 @@ class _BusinessCardState extends State<BusinessCard> {
             const SizedBox(height: Space.xs),
             for (final k in _links) field(k),
             const SizedBox(height: Space.md),
-            KeepAllText('검색·문의 (Search & chat)', style: context.text.labelLarge),
+            KeepAllText(
+              '검색·문의 (Search & chat)',
+              style: context.text.labelLarge,
+            ),
             const SizedBox(height: Space.xs),
             for (final k in _seo) field(k),
             const SizedBox(height: Space.md),

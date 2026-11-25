@@ -13356,6 +13356,42 @@ abstract class T {
   /// **'대표 색상'**
   String get cSetupColor;
 
+  /// No description provided for @cSetupFillColor.
+  ///
+  /// In ko, this message translates to:
+  /// **'채움 색상'**
+  String get cSetupFillColor;
+
+  /// No description provided for @cSetupFillColorHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'버튼과 선택한 항목을 칠하는 색이에요. 비워 두면 대표 색상을 써요. 글자와 링크는 대표 색상이고, 배경 위에서 잘 읽히도록 필요하면 조금 더 진하게 보여요. 서비스 아이콘 그림의 색은 바뀌지 않아요.'**
+  String get cSetupFillColorHint;
+
+  /// No description provided for @cSetupFillSample.
+  ///
+  /// In ko, this message translates to:
+  /// **'예약하기'**
+  String get cSetupFillSample;
+
+  /// No description provided for @cSetupFillLinkSample.
+  ///
+  /// In ko, this message translates to:
+  /// **'링크와 글자는 대표 색상'**
+  String get cSetupFillLinkSample;
+
+  /// No description provided for @cSetupFillLabelWhite.
+  ///
+  /// In ko, this message translates to:
+  /// **'버튼 글자는 흰색으로 보여요. (대비 {ratio}:1)'**
+  String cSetupFillLabelWhite(String ratio);
+
+  /// No description provided for @cSetupFillLabelDark.
+  ///
+  /// In ko, this message translates to:
+  /// **'밝은 색이라 흰 글자가 잘 안 보여서, 버튼 글자는 자동으로 진한 색이 돼요. (대비 {ratio}:1)'**
+  String cSetupFillLabelDark(String ratio);
+
   /// No description provided for @cSetupLogo.
   ///
   /// In ko, this message translates to:

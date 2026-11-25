@@ -181,8 +181,8 @@ class CircleChoice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    // On the filled primary circle: white in light mode, the dark canvas on dark mode's light teal.
-    final onFill = Theme.of(context).colorScheme.onPrimary;
+    // The owner's fill colour with its computed label; the bold label below also marks selection.
+    final onFill = c.onFill;
     return Semantics(
       inMutuallyExclusiveGroup: true,
       checked: selected,
@@ -203,7 +203,7 @@ class CircleChoice extends StatelessWidget {
               trigger: selected,
               active: selected,
               builder: (context, t, child) =>
-                  ringRipple(t, size, context.primary, child!),
+                  ringRipple(t, size, c.brandStart, child!),
               child: AnimatedContainer(
                 duration: motionFor(context, Motion.standard),
                 curve: Motion.ease,
@@ -212,7 +212,7 @@ class CircleChoice extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: selected ? context.primary : c.surfaceHigh,
+                  color: selected ? c.brandStart : c.surfaceHigh,
                 ),
                 child: text != null
                     ? KeepAllText(

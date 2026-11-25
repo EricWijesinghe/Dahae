@@ -183,7 +183,7 @@ class _Bubble extends StatelessWidget {
       _ => Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: mine ? context.primary : c.surfaceHigh,
+          color: mine ? c.brandStart : c.surfaceHigh,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(18),
             topRight: const Radius.circular(18),
@@ -199,13 +199,13 @@ class _Bubble extends StatelessWidget {
               KeepAllText(
                 t.aiLabel,
                 style: context.text.labelSmall?.copyWith(
-                  color: mine ? Colors.white70 : c.ink.withValues(alpha: 0.6),
+                  color: mine ? c.onFill : c.ink.withValues(alpha: 0.6),
                 ),
               ),
             KeepAllText(
               m.body['text'] as String? ?? '',
               style: context.text.bodyMedium?.copyWith(
-                color: mine ? Colors.white : c.ink,
+                color: mine ? c.onFill : c.ink,
               ),
             ),
           ],

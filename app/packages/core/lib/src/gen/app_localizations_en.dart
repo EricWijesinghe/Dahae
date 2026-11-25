@@ -7267,6 +7267,29 @@ class TEn extends T {
   String get cSetupColor => 'Brand color';
 
   @override
+  String get cSetupFillColor => 'Fill color';
+
+  @override
+  String get cSetupFillColorHint =>
+      'Paints buttons and selected items. Leave it empty to use the brand color. Text and links keep the brand color, shown slightly darker where needed to stay readable. Service icon artwork keeps its own colors.';
+
+  @override
+  String get cSetupFillSample => 'Book now';
+
+  @override
+  String get cSetupFillLinkSample => 'Links and text use the brand color';
+
+  @override
+  String cSetupFillLabelWhite(String ratio) {
+    return 'Button text shows in white. (contrast $ratio:1)';
+  }
+
+  @override
+  String cSetupFillLabelDark(String ratio) {
+    return 'White text is hard to read on this light color, so button text turns dark automatically. (contrast $ratio:1)';
+  }
+
+  @override
   String get cSetupLogo => 'Upload logo';
 
   @override

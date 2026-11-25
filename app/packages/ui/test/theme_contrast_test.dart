@@ -111,6 +111,23 @@ void main() {
     expect(_ratio(b.sun, Colors.white), lessThan(3));
   });
 
+  test("DODA's #00838F primary reads as text on every light surface", () {
+    const doda = BrandConfig(
+      name: '우집사',
+      primary: Color(0xFF00838F),
+      primaryDeep: Color(0xFF006A74),
+      fresh: Color(0xFF1E9EBA),
+      sun: Color(0xFFFFD95A),
+      fill: Color(0xFF00BCD4),
+    );
+    final c = appColorsFor(doda, false);
+    final p = buildTheme(doda, Brightness.light).colorScheme.primary;
+    expect(p, c.accent);
+    for (final bg in [c.primaryTint, c.canvas, c.surfaceHigh, c.surface]) {
+      expect(_ratio(p, bg), greaterThanOrEqualTo(4.5), reason: '$bg');
+    }
+  });
+
   test('dark-mode primary pairs with its onPrimary label', () {
     for (final br in Brightness.values) {
       final s = buildTheme(BrandConfig.placeholder, br).colorScheme;

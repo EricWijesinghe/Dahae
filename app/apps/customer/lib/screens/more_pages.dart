@@ -473,7 +473,11 @@ Future<void> _deleteAccount(BuildContext context) async {
           KeepAllText(t.deleteAccountBody, style: ctx.text.bodyMedium),
           const SizedBox(height: Space.xl),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: ctx.colors.danger),
+            // The theme's label suits the owner's fill colour, not red.
+            style: FilledButton.styleFrom(
+              backgroundColor: ctx.colors.danger,
+              foregroundColor: labelOnFill(ctx.colors.danger),
+            ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: KeepAllText(t.deleteAccount),
           ),

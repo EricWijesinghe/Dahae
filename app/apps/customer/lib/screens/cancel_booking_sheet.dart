@@ -159,6 +159,8 @@ class _CancelSheetBodyState extends State<_CancelSheetBody> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: context.colors.danger,
+                    // The theme's label suits the owner's fill colour, not red.
+                    foregroundColor: labelOnFill(context.colors.danger),
                   ),
                   onPressed: p.canCancel
                       ? () => Navigator.of(

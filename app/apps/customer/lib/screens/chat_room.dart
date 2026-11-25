@@ -467,6 +467,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     tooltip: t.chatSend,
                     style: IconButton.styleFrom(
                       minimumSize: const Size.square(44),
+                      backgroundColor: c.brandStart,
+                      foregroundColor: c.onFill,
                     ),
                     onPressed: _sending
                         ? null

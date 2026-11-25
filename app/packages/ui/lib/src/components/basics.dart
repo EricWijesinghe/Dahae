@@ -248,7 +248,7 @@ class PrimaryButton extends StatelessWidget {
                     height: 22,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.4,
-                      color: color == null ? Colors.white : _labelOn(color!),
+                      color: color == null ? c.onFill : _labelOn(color!),
                     ),
                   )
                 : KeepAllText(label, key: const ValueKey('label')),
@@ -322,7 +322,7 @@ class StepProgress extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 color: i < current
-                    ? (color ?? context.primary)
+                    ? (color ?? context.colors.brandStart)
                     : context.colors.line,
                 borderRadius: BorderRadius.circular(2),
               ),
@@ -526,7 +526,9 @@ class _ErrorRetryState extends State<ErrorRetry> {
             ),
           ),
           const SizedBox(width: Space.sm),
-          Expanded(child: KeepAllText(widget.message, style: context.text.bodyMedium)),
+          Expanded(
+            child: KeepAllText(widget.message, style: context.text.bodyMedium),
+          ),
           TextButton.icon(
             onPressed: _busy ? null : _retry,
             icon: _retryIcon,

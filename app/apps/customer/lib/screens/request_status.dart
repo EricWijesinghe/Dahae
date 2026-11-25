@@ -395,7 +395,7 @@ class _Tracker extends StatelessWidget {
                 widthFactor: (labels.length - 1) / labels.length,
                 child: ProgressLine(
                   fraction: current / (labels.length - 1),
-                  color: context.primary,
+                  color: c.brandStart,
                   thickness: 3,
                 ),
               ),
@@ -414,15 +414,12 @@ class _Tracker extends StatelessWidget {
                           child: i == current
                               ? Pulse(
                                   child: _dot(
-                                    context.primary,
+                                    c.brandStart,
                                     22,
                                     ring: c.primaryTint,
                                   ),
                                 )
-                              : _dot(
-                                  i < current ? context.primary : c.line,
-                                  14,
-                                ),
+                              : _dot(i < current ? c.brandStart : c.line, 14),
                         ),
                       ),
                       const SizedBox(height: Space.xs),

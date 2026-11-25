@@ -346,6 +346,42 @@ void main() {
         expect(b.name, '새 가게');
       },
     );
+
+    test(
+      'fill_color is taken even when white fails on it; unset it is the primary',
+      () {
+        BrandConfig from(Json p, {bool accentOnly = false}) => brandFromProfile(
+          p,
+          fallback: BrandConfig.placeholder,
+          apiBase: _apiBase,
+          accentOnly: accentOnly,
+        );
+        final sky = from({'primary_color': '#00838F', 'fill_color': '#00BCD4'});
+        expect(
+          sky.primary,
+          const Color(0xFF00838F),
+          reason: 'text keeps the primary',
+        );
+        expect(sky.fill, const Color(0xFF00BCD4));
+        expect(
+          from({'primary_color': '#00838F'}).fill,
+          const Color(0xFF00838F),
+        );
+        expect(from({}).fill, BrandConfig.placeholder.primary);
+        for (final bad in ['sky', '#00BCD', 42, null]) {
+          expect(
+            from({'primary_color': '#00838F', 'fill_color': bad}).fill,
+            const Color(0xFF00838F),
+            reason: '$bad',
+          );
+        }
+        expect(
+          from({'fill_color': '#00BCD4'}, accentOnly: true).fill,
+          BrandConfig.placeholder.fill,
+          reason: 'the partner app keeps its own fill',
+        );
+      },
+    );
   });
 
   group('BrandController follows the server', () {

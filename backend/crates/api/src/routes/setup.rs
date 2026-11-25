@@ -486,11 +486,14 @@ pub fn clean_business(base: &str, input: &Value) -> Result<Value, ApiError> {
             out.insert(k.into(), json!(t));
         }
     }
-    if let Some(c) = clean_text(input, "primary_color")? {
-        if !is_hex_color(&c) {
-            return Err(ApiError::BadRequest("invalid_color"));
+    // fill_color (buttons, selected chips) may be light: the apps pick a readable label for it, so no contrast check.
+    for k in ["primary_color", "fill_color"] {
+        if let Some(c) = clean_text(input, k)? {
+            if !is_hex_color(&c) {
+                return Err(ApiError::BadRequest("invalid_color"));
+            }
+            out.insert(k.into(), json!(c.to_uppercase()));
         }
-        out.insert("primary_color".into(), json!(c.to_uppercase()));
     }
     if let Some(u) = clean_text(input, "logo_url")? {
         if !is_logo_url(base, &u) {
@@ -535,7 +538,7 @@ pub fn clean_business(base: &str, input: &Value) -> Result<Value, ApiError> {
 
 /// Rebrand fields an older console does not send (a sideloaded build, a tab open across `dahae update`). The current
 /// console sends every key, empty or null to clear one, so only an absent key keeps the stored value.
-const KEPT_WHEN_ABSENT: [&str; 5] = ["brand_assets", "name_en", "short_name", "tagline", "tagline_en"];
+const KEPT_WHEN_ABSENT: [&str; 6] = ["brand_assets", "fill_color", "name_en", "short_name", "tagline", "tagline_en"];
 
 fn keep_absent(stored: &Value, input: &Value, mut out: Value) -> Value {
     for k in KEPT_WHEN_ABSENT {
@@ -1191,17 +1194,18 @@ mod tests {
     #[test]
     fn an_older_console_save_keeps_the_rebrand_fields_it_does_not_know() {
         let stored = json!({"name": "a", "short_name": "s", "brand_assets": {"icon_512": "/files/x.png"},
-                            "company": {"ceo": "c", "privacy_email": "p@x.kr"}});
+                            "fill_color": "#00BCD4", "company": {"ceo": "c", "privacy_email": "p@x.kr"}});
         let old = json!({"name": "b", "company": {"ceo": "d"}});
         let out = keep_absent(&stored, &old, json!({"name": "b", "company": {"ceo": "d"}}));
         assert_eq!(out["short_name"], "s");
+        assert_eq!(out["fill_color"], "#00BCD4");
         assert_eq!(out["brand_assets"]["icon_512"], "/files/x.png");
         assert_eq!(out["company"], json!({"ceo": "d", "privacy_email": "p@x.kr"}));
         assert_eq!(out["name"], "b");
-        let new = json!({"name": "b", "short_name": "", "brand_assets": null, "company": {"privacy_email": ""}});
+        let new = json!({"name": "b", "short_name": "", "brand_assets": null, "fill_color": "", "company": {"privacy_email": ""}});
         let cleared = keep_absent(&stored, &new, json!({"name": "b", "company": {}}));
         assert!(
-            cleared.get("short_name").is_none() && cleared.get("brand_assets").is_none(),
+            cleared.get("short_name").is_none() && cleared.get("brand_assets").is_none() && cleared.get("fill_color").is_none(),
             "sent empty clears"
         );
         assert_eq!(cleared["company"], json!({}));
@@ -1287,6 +1291,7 @@ mod tests {
         .unwrap();
         assert_eq!(v["name"], "다해");
         assert_eq!(v["primary_color"], "#3B5BFD");
+        assert!(v.get("fill_color").is_none(), "unset: the apps fill with the primary colour");
         assert_eq!(v["company"]["ceo"], "홍길동");
         assert_eq!(v["company"]["hosting_provider"], "예시호스팅(주)");
         assert!(v["company"].get("unknown").is_none());
@@ -1298,6 +1303,8 @@ mod tests {
         let err = |v: Value| clean_business("http://127.0.0.1:8080", &v).unwrap_err().to_string();
         assert!(err(json!({})).contains("missing_field"));
         assert!(err(json!({"name": "a", "primary_color": "blue"})).contains("invalid_color"));
+        assert!(err(json!({"name": "a", "fill_color": "#00BCD"})).contains("invalid_color"));
+        assert!(err(json!({"name": "a", "fill_color": "red;}"})).contains("invalid_color"));
         assert!(err(json!({"name": "a", "logo_url": "javascript:alert(1)"})).contains("invalid_logo"));
         assert!(err(json!({"name": "a", "logo_url": "/files/../etc/passwd"})).contains("invalid_logo"));
         assert!(err(json!({"name": "x".repeat(201)})).contains("field_too_long"));

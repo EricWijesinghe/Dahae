@@ -444,6 +444,8 @@ class _BookingPanelState extends State<BookingPanel> with LiveReload {
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: ctx.colors.danger,
+              // The theme's label suits the owner's fill colour, not red.
+              foregroundColor: labelOnFill(ctx.colors.danger),
             ).merge(compactFilled),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: KeepAllText(t.cCancelRefund),
