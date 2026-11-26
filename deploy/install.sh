@@ -139,6 +139,17 @@ editions_offered() { # editions_offered 도메인 지금판 : 이 도메인을 �
     for (i = 5; i <= NF; i++) if ($i == d) { printf "%s%s", s, $1; s = ","; break } }'
 }
 
+# 판 표 한 줄의 칸마다 규칙을 확인해요: 서명된 표라도 .env 에 넣기 전에 (compose 가 읽는 $ 나 http:// 배포 주소를 막아요).
+# 둘째 인자가 file 이면 file:/// 배포 주소도 받아요: 서명 확인을 끈 테스트 설치(e2e)만 써요
+EDITION_RAW_RE='^https://raw\.githubusercontent\.com/[A-Za-z0-9-]+/[A-Za-z0-9._-]+$'
+edition_row_ok() { # edition_row_ok 줄 [file]
+  local cols d re="$EDITION_RAW_RE"; read -ra cols <<< "$1"
+  [ "${2:-}" != file ] || re="$re|^file:///[A-Za-z0-9._/-]+\$"
+  [ "${#cols[@]}" -ge 5 ] && printf '%s' "${cols[0]}" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' && printf '%s' "${cols[1]}" | grep -Eq '^[a-z0-9./-]+$' \
+    && printf '%s' "${cols[2]}" | grep -Eq '^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$' && printf '%s' "${cols[3]}" | grep -Eq "$re" || return 1
+  for d in "${cols[@]:4}"; do [ "$d" = '*' ] || { [ "${#d}" -le 253 ] && printf '%s' "$d" | grep -Eq "$DOMAIN_RE"; } || return 1; done
+}
+
 rand_hex() { openssl rand -hex "$1"; }
 setup_code() { # 0/O/1/I/L 을 뺀 12자리. 화면을 보고 손으로 입력하는 코드예요.
   local alphabet=23456789ABCDEFGHJKMNPQRSTUVWXYZ code=""
@@ -482,7 +493,8 @@ RC_TOOLS_STALE=5                     # 새(또는 되돌린) 버전은 정상인
 RC_NO_PREVIOUS=6                     # 되돌릴 이전 버전 기록이 없을 때의 종료 코드
 EDITIONS_FILE=host/editions          # 설치 프로그램이 둔 판 표 (서명된 배포본에 들어 있던 것)
 EDITION_JOURNAL=host/edition.prev    # 판을 바꾸는 동안의 이전 값. 끝나면 지워요. 남아 있으면 다음 명령이 먼저 정리해요
-EDITION_KEYS="EDITION IMAGE_REPO SIGNER_REPO DELIVERY_RAW VERSION API_IMAGE WEB_IMAGE PREV_API_IMAGE PREV_WEB_IMAGE"
+EDITION_KEYS="EDITION IMAGE_REPO SIGNER_REPO DELIVERY_RAW VERSION API_IMAGE WEB_IMAGE PREV_API_IMAGE PREV_WEB_IMAGE EDITIONS_OFFERED"
+EDITION_DONE="#complete"            # 기록의 마지막 줄: 이 줄이 없는 기록은 다 쓰기 전에 끊긴 것이라 .env 는 아직 그대로예요
 UPDATE_SPARE_KB=3145728              # 업데이트에 필요한 디스크: 사진 크기의 두 배(백업 묶음과 봉인 사본) + 3 GB (새 이미지·DB 덤프)
 USAGE='사용법: dahae <명령>
   status                      서비스 상태
@@ -902,8 +914,8 @@ tools_rotate() { keep_as_prev "$INSTALLER_KEEP" "$INSTALLER_PREV"; keep_as_prev 
 
 tools_apply() { # 새 버전이 정상이면 확인해 둔 설치 프로그램으로 관리 도구를 바꿔요
   [ "${TOOLS_READY:-0}" = 1 ] || return 0
-  install -m 600 "$TOOLS_NEXT/install.sh" "$INSTALLER_KEEP"
-  install -m 600 "$TOOLS_NEXT/agent.sh" "$AGENT_KEEP"
+  { install -m 600 "$TOOLS_NEXT/install.sh" "$INSTALLER_KEEP" && install -m 600 "$TOOLS_NEXT/agent.sh" "$AGENT_KEEP"; } \
+    || die_code "$RC_TOOLS_STALE" "새 버전은 정상이에요. 관리 도구(dahae 명령·작업 실행기)를 바꾸지 못했어요. 설치 명령을 한 번 다시 실행해 주세요 (안내서 10 C-5)."
   run_installer_tools "$INSTALLER_KEEP" "$AGENT_KEEP" \
     || die_code "$RC_TOOLS_STALE" "새 버전은 정상이에요. 관리 도구(dahae 명령·작업 실행기)를 바꾸지 못했어요. 설치 명령을 한 번 다시 실행해 주세요 (안내서 10 C-5)."
   ok "관리 도구도 새 버전으로 바꿨어요"
@@ -1007,6 +1019,7 @@ payouts_settled_for_rollback() { # 토스에서 결과를 기다리는 정산이
 
 cmd_rollback() {
   local prev_api prev_web cur_api cur_web repo
+  edition_recover # 끊긴 판 바꾸기가 남긴 값으로 전 버전 관리 도구를 돌리면 이미지·서명자·배포 주소가 서로 다른 판을 가리켜요
   prev_api=$(env_get PREV_API_IMAGE); prev_web=$(env_get PREV_WEB_IMAGE); repo=$(env_get IMAGE_REPO)
   if [ -z "$prev_api" ] || [ "$prev_api" = "$(env_get API_IMAGE)" ]; then
     die_code "$RC_NO_PREVIOUS" "되돌릴 이전 버전 기록이 없어요. 업데이트를 한 번 한 뒤에 쓸 수 있어요."
@@ -1041,6 +1054,21 @@ edition_row() { awk -v n="$1" '$1 == n && $1 !~ /^#/ && NF >= 5 { print; f = 1; 
 field() { printf '%s\n' "$1" | awk -v i="$2" '{ print $i }'; } # field 줄 번호 -> 그 칸
 edition_allows() { printf '%s\n' "$1" | awk -v d="$2" '{ for (i = 5; i <= NF; i++) if ($i == d || $i == "*") f = 1 } END { exit !f }'; } # edition_allows 줄 도메인
 edition_name() { local e; e=$(env_get EDITION); printf '%s' "${e:-dahae}"; } # EDITION 이 없으면 다해 판이에요
+# 판 표 한 줄의 칸마다 규칙을 확인해요 (설치 프로그램과 같은 규칙). 둘째 인자가 file 이면 file:/// 배포 주소도 받아요 (서명 확인을 끈 테스트 설치)
+edition_row_ok() { # edition_row_ok 줄 [file]
+  local cols d re='^https://raw\.githubusercontent\.com/[A-Za-z0-9-]+/[A-Za-z0-9._-]+$'; read -ra cols <<< "$1"
+  [ "${2:-}" != file ] || re="$re|^file:///[A-Za-z0-9._/-]+\$"
+  [ "${#cols[@]}" -ge 5 ] && printf '%s' "${cols[0]}" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' && printf '%s' "${cols[1]}" | grep -Eq '^[a-z0-9./-]+$' \
+    && valid_signer "${cols[2]}" && printf '%s' "${cols[3]}" | grep -Eq "$re" || return 1
+  for d in "${cols[@]:4}"; do [ "$d" = '*' ] || { [ "${#d}" -le 253 ] && printf '%s' "$d" | grep -Eq "$DOMAIN_RE"; } || return 1; done
+}
+journal_get() { sed -n "s/^$1=//p" "$EDITION_JOURNAL" | tail -n1; } # journal_get 키 -> 기록해 둔 이전 값
+api_runs() { local cid; cid=$(dc ps -q api 2>/dev/null | head -n1 || true); [ -n "$cid" ] && [ "$(docker inspect -f '{{.Config.Image}}' "$cid" 2>/dev/null)" = "$1" ]; } # api_runs 이미지
+edition_journal() { # 이전 값을 기록해요: 다 쓴 뒤 끝 표시를 붙이고 디스크에 내린 다음 제자리로 옮겨요 (그다음에야 .env 를 바꿔요)
+  local k t="$EDITION_JOURNAL.new"
+  { for k in $EDITION_KEYS; do grep -E "^$k=" .env | tail -n1 || true; done; printf '%s\n' "$EDITION_DONE"; } > "$t"
+  chmod 600 "$t"; sync "$t"; mv -f "$t" "$EDITION_JOURNAL"; sync "$(dirname "$EDITION_JOURNAL")"
+}
 edition_restore() { # 기록해 둔 이전 값으로 되돌리고 기록을 지워요. 기록에 없던 키는 지워요 (예전 .env 그대로)
   local k line
   for k in $EDITION_KEYS; do
@@ -1048,10 +1076,14 @@ edition_restore() { # 기록해 둔 이전 값으로 되돌리고 기록을 지�
     if [ -n "$line" ]; then env_set "$k" "${line#*=}"; else env_del "$k"; fi
   done
   rm -f "$ROLLBACK_HOLD" "$EDITION_JOURNAL"
+  # 앱이 새 판 값(EDITION)으로 떠 있었을 수 있어요: 되돌린 .env 로 다시 띄워요 (값이 같으면 compose 가 그대로 둬요)
+  dc up -d api >/dev/null 2>&1 || warn "앱을 되돌린 설정으로 다시 띄우지 못했어요. 'dahae status' 로 확인하세요."
 }
 edition_recover() { # 판 바꾸기가 끊겼으면(전원·강제 종료) 먼저 정리해요: 새 판 이미지가 이미 떠 있으면 새 판 그대로, 아니면 이전 판으로
   local old cur repo
+  rm -f "$EDITION_JOURNAL.new" # 옮기기 전에 끊긴 기록: .env 는 아직 그대로예요
   [ -f "$EDITION_JOURNAL" ] && [ -z "${EDITION_SWITCHING:-}" ] || return 0
+  if ! grep -qxF "$EDITION_DONE" "$EDITION_JOURNAL"; then rm -f "$EDITION_JOURNAL"; return 0; fi # 끝 표시가 없으면 .env 를 바꾸기 전이에요
   old=$(sed -n 's/^API_IMAGE=//p' "$EDITION_JOURNAL" | tail -n1); cur=$(env_get API_IMAGE); repo=$(env_get IMAGE_REPO)
   case "$cur" in
     "$old"|*:keep-*) ;; # 새 이미지를 띄우기 전이거나, 이전 이미지로 되돌린 뒤예요
@@ -1069,7 +1101,7 @@ cmd_edition() { # dahae edition <이름> : 판 표의 그 판으로 바꿔요. �
   edition_allows "$row" "$(env_get DOMAIN)" || die "이 서버의 도메인은 '$name' 판을 고를 수 없어요. 지금 판 그대로예요."
   cur=$(env_get EDITION); [ "$name" != "${cur:-dahae}" ] || die "이미 '$name' 판이에요."
   img=$(field "$row" 2); signer=$(field "$row" 3); raw=$(field "$row" 4)
-  valid_signer "$signer" || die "판 표의 서명자가 이상해요: '$signer'. 지금 판 그대로예요."
+  edition_row_ok "$row" "$( [ "$(env_get IMAGE_VERIFY)" != off ] || echo file)" || die "판 표의 '$name' 줄이 이상해요 (이미지·서명자·배포 주소·도메인). 지금 판 그대로예요."
   # 1) 미리 확인 (.env 를 바꾸기 전): 그 판 채널(베타 서버는 beta 가지)의 버전이 이 서버에 올렸던 가장 높은 버전보다 높고,
   #    그 판의 서명자가 정확히 그 태그에서 서명한 지문 파일이 있어야 해요. 아직 나오지 않은 판은 여기서 멈춰요
   ref=$(tools_ref "$(env_get CHANNEL)"); [ -n "$ref" ] || die "채널 설정이 이상해서 판을 바꾸지 않았어요."
@@ -1092,8 +1124,7 @@ cmd_edition() { # dahae edition <이름> : 판 표의 그 판으로 바꿔요. �
       || die "'$name' 판의 서명($signer, $tag)을 확인하지 못해서 바꾸지 않았어요. 지금 판 그대로예요."
   fi
   # 2) 이전 값을 기록(root 만 읽어요) 3) 세 값과 채널을 바꾸고 4) 평소 업데이트: 백업 → 새 서명자로 확인 → 바꾸기 → 응답 확인 → 관리 도구
-  for k in $EDITION_KEYS; do grep -E "^$k=" .env | tail -n1 || true; done > "$EDITION_JOURNAL"
-  chmod 600 "$EDITION_JOURNAL"
+  edition_journal
   printf '\n▶ %s 판으로 바꿉니다 (%s)\n' "$name" "$tag"
   env_set EDITION "$name"; env_set IMAGE_REPO "$img"; env_set SIGNER_REPO "$signer"; env_set DELIVERY_RAW "$raw"; env_set VERSION "$(env_get CHANNEL)"
   # 서브셸로 돌려요 (cmd_update 는 실패하면 exit 해요). || 로 붙이면 그 안의 set -e 가 꺼져서, set +e 뒤에 따로 받아요
@@ -1101,11 +1132,26 @@ cmd_edition() { # dahae edition <이름> : 판 표의 그 판으로 바꿔요. �
   ( set -e; EDITION_SWITCHING=1; trap 'rm -f -- ${SCRATCH[@]+"${SCRATCH[@]}"}' EXIT; cmd_update )
   rc=$?
   set -e
-  # 5) 0: 새 판 정상. 5: 새 판 정상, 관리 도구만 못 바꿨어요 (새 판 그대로). 그 밖: 이전 값으로 (3 이면 이미지는 이미 되돌아가 있어요)
+  # 5) 0: 새 판 정상. 5: 새 판 정상, 관리 도구만 못 바꿨어요 (새 판 그대로). 3: 이미지는 이미 이전 것으로 돌아가 있어요
   if [ "$rc" = 0 ] || [ "$rc" = "$RC_TOOLS_STALE" ]; then
     rm -f "$EDITION_JOURNAL"
     if [ "$rc" = 0 ]; then ok "$name 판으로 바꿨어요"; fi
     return "$rc"
+  fi
+  # 그 밖의 실패에 새 판 이미지가 이미 .env 에 있으면(응답 확인 뒤의 마무리 실패, 띄우다 멈춤): 떠서 응답하면 새 판 그대로(5),
+  # 아니면 이전 이미지로 되돌린 뒤 이전 값으로. 기록 없이 이전 값만 쓰면 .env 가 떠 있는 이미지를 모르게 돼요
+  if [ "$rc" != 3 ]; then
+    case "$(env_get API_IMAGE)" in "$img"/malkkeum-api[:@]*)
+      if api_runs "$(env_get API_IMAGE)" && wait_healthy; then
+        rm -f "$EDITION_JOURNAL"
+        die_code "$RC_TOOLS_STALE" "$name 판으로 바꿨고 정상이에요. 마무리를 끝내지 못했어요: 콘솔에서 '지금 업데이트' 를 한 번 눌러 주세요."
+      fi
+      warn "새 판 이미지가 응답하지 않아서 이전 이미지로 되돌려요"
+      if [ -n "$(journal_get API_IMAGE)" ]; then
+        { ( set_images "$(journal_get API_IMAGE)" "$(journal_get WEB_IMAGE)" ) && wait_healthy; } \
+          || warn "이전 이미지로도 응답하지 않아요. 'dahae logs' 화면을 개발자에게 전달해 주세요."
+      fi ;;
+    esac
   fi
   edition_restore
   die_code "$rc" "$name 판으로 바꾸지 못해서 이전 판(${cur:-dahae}) 그대로예요. 'dahae logs' 로 원인을 확인해 주세요."
@@ -1533,6 +1579,8 @@ main() {
   YES=${DAHAE_YES:-0}
   # 복원 중 풀린 평문 백업은 명령이 어떻게 끝나든 지워요 (실패하거나 취소해도 디스크에 남지 않아요).
   SCRATCH=(); trap 'rm -f -- ${SCRATCH[@]+"${SCRATCH[@]}"}' EXIT
+  # 상태를 바꾸는 명령은 먼저 끊긴 판 바꾸기를 정리해요 (반쯤 바뀐 .env 로 백업·되돌리기·도메인을 돌리지 않아요)
+  case "${1:-status}" in update|rollback|channel|edition|domain|restore|restore-offsite|auto-update) edition_recover ;; esac
   case "${1:-status}" in
     status) cmd_status ;;
     update) shift; cmd_update "$@" ;;
@@ -1848,6 +1896,7 @@ main() {
   EDITION=$(env_get EDITION); EDITION_RAW=""
   if [ -n "$EDITION" ] && [ "$EDITION" != dahae ]; then
     row=$(edition_row "$EDITION") || die "이 설치 프로그램의 판 표에 '$EDITION' 이 없어요. 아무것도 바꾸지 않고 멈춰요."
+    edition_row_ok "$row" "$( [ "$IMAGE_VERIFY" != off ] || echo file)" || die "판 표의 '$EDITION' 줄이 이상해요. 아무것도 바꾸지 않고 멈춰요."
     IMAGE_REPO=$(field "$row" 2); SIGNER_REPO=$(field "$row" 3); EDITION_RAW=$(field "$row" 4)
   fi
   case "$CHANNEL" in stable|beta) ;; *) die "채널은 stable 또는 beta 중 하나예요." ;; esac

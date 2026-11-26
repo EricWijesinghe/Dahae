@@ -6379,6 +6379,12 @@ abstract class T {
   /// **'서버 승인 코드를 넣지 않아서 판을 바꾸지 않았어요. 기다리던 작업은 10분 뒤에 저절로 취소돼요.'**
   String get ednCancelled;
 
+  /// No description provided for @ednToolsStale.
+  ///
+  /// In ko, this message translates to:
+  /// **'관리 도구는 아직 예전 것이에요. 위의 \'지금 업데이트\'를 한 번 눌러 주세요.'**
+  String get ednToolsStale;
+
   /// No description provided for @ednKind.
   ///
   /// In ko, this message translates to:

@@ -3411,6 +3411,10 @@ class TEn extends T {
       'No server approval code was entered, so the edition was not switched. The held job cancels itself after 10 minutes.';
 
   @override
+  String get ednToolsStale =>
+      'The server tools are still the old ones. Press \'Update now\' above once.';
+
+  @override
   String get ednKind => 'Edition switch';
 
   @override

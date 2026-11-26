@@ -1047,6 +1047,7 @@
  "ednFailed": "Could not switch the edition: {reason}",
  "ednNoSummary": "The server's summary was not an edition switch, so no approval code was sent. Check the recent jobs below.",
  "ednCancelled": "No server approval code was entered, so the edition was not switched. The held job cancels itself after 10 minutes.",
+ "ednToolsStale": "The server tools are still the old ones. Press 'Update now' above once.",
  "ednKind": "Edition switch",
  "err_price_changed": "The price changed. Review the new quote and try again.",
  "err_checkout_closed": "This payment is no longer open. Start again.",

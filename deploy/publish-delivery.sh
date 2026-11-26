@@ -73,6 +73,11 @@ publish() { # publish 브랜치 채널
   [ -f "$src/deploy/editions" ] || { echo "::error::deploy/editions is missing" >&2; exit 1; }
   if grep -qE "EDITIONS_EOF|'" "$src/deploy/editions"; then echo "::error::deploy/editions may not hold a quote or the heredoc end word" >&2; exit 1; fi
   cp "$src/deploy/editions" editions
+  # Every row is checked with the installer's own rule before it is baked and signed (name, images, signer, https raw, domains).
+  rows=$(grep -vE '^(#|[[:space:]]*$)' editions) || { echo "::error::deploy/editions has no rows" >&2; exit 1; }
+  while IFS= read -r row; do
+    (DAHAE_SELFTEST=1 . "$src/deploy/install.sh" && edition_row_ok "$row") || { echo "::error::deploy/editions: bad row: $row" >&2; exit 1; }
+  done <<< "$rows"
   [ "$(grep -c '^# @editions:' install.sh)" = 1 ] || { echo "::error::install.sh needs exactly one '# @editions:' marker line" >&2; exit 1; }
   sed -i '/^# @editions:/r editions' install.sh
   sed -i -e "s|^IMAGE_REPO_DEFAULT=.*|IMAGE_REPO_DEFAULT=$IMAGE_REPO|" \
@@ -85,7 +90,7 @@ publish() { # publish 브랜치 채널
   grep -q "^IMAGE_REPO_DEFAULT=$IMAGE_REPO\$" install.sh
   grep -q "^SIGNER_REPO_DEFAULT=$SIGNER_REPO\$" install.sh
   grep -q "^DEFAULT_CHANNEL=$channel\$" install.sh
-  grep -qxF "$(grep -v '^#' editions | head -n1)" install.sh # the table is baked
+  while IFS= read -r row; do grep -qxF "$row" install.sh; done <<< "$rows" # every row of the table is baked
   bash -n install.sh
   sha256sum install.sh agent.sh editions > SHA256SUMS
   if [ "${SIGN_RELEASE:-0}" = 1 ]; then sign_release "$branch"; fi

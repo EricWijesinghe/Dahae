@@ -407,8 +407,8 @@ impl Config {
             metrics_token: metrics_token()?,
             instance_backup: instance_backup()?,
             noshow_grace_minutes: number("NOSHOW_GRACE_MINUTES", 30, 1)?,
-            edition: opt("EDITION").unwrap_or_else(|| "dahae".into()),
-            editions_offered: list("EDITIONS_OFFERED").into_iter().filter(|e| valid_edition_name(e)).collect(),
+            edition: edition(env::var("EDITION").ok()),
+            editions_offered: editions_offered(env::var("EDITIONS_OFFERED").ok()),
         })
     }
 }
@@ -475,6 +475,17 @@ pub fn valid_edition_name(name: &str) -> bool {
     (2..=31).contains(&b.len()) && b[0].is_ascii_lowercase() && b.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-')
 }
 
+/// `EDITION` as the agent reads it for host.json: a valid edition name, else `dahae`.
+fn edition(raw: Option<String>) -> String {
+    raw.filter(|e| valid_edition_name(e)).unwrap_or_else(|| "dahae".into())
+}
+
+/// `EDITIONS_OFFERED` with the agent's exact rule (`case ",$offered," in *",$name,"*`): split on commas, no trimming,
+/// so the API never queues (and spends the owner code on) a job the agent would refuse.
+fn editions_offered(raw: Option<String>) -> Vec<String> {
+    raw.map(|v| v.split(',').filter(|e| valid_edition_name(e)).map(str::to_string).collect()).unwrap_or_default()
+}
+
 pub(crate) fn team_id(raw: Option<String>) -> Result<Option<String>, ConfigError> {
     match raw {
         Some(t) if t.len() == TEAM_ID_LEN && t.bytes().all(|b| b.is_ascii_alphanumeric()) => Ok(Some(t)),
@@ -513,6 +524,20 @@ mod tests {
         for bad in ["", "u", "Uzipsa", "1abc", "-ab", "a_b", "a b", "a,b", &"a".repeat(32)] {
             assert!(!valid_edition_name(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn edition_values_follow_the_agent_exactly() {
+        assert_eq!(edition(None), "dahae");
+        assert_eq!(edition(Some("uzipsa".into())), "uzipsa");
+        for bad in ["", " uzipsa", "Uzipsa", "a\"b"] {
+            assert_eq!(edition(Some(bad.into())), "dahae", "{bad}");
+        }
+        assert_eq!(editions_offered(None), Vec::<String>::new());
+        assert_eq!(editions_offered(Some("uzipsa".into())), vec!["uzipsa"]);
+        assert_eq!(editions_offered(Some("a1,kr-test".into())), vec!["a1", "kr-test"]);
+        assert_eq!(editions_offered(Some(" uzipsa".into())), Vec::<String>::new(), "the agent does not trim");
+        assert_eq!(editions_offered(Some("uzipsa ,x".into())), Vec::<String>::new());
     }
 
     #[test]

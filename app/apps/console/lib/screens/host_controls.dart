@@ -331,8 +331,12 @@ class _ApprovalEnrollCardState extends State<ApprovalEnrollCard> {
   }
 }
 
-/// The agent's own summary of a held edition switch (`agent.sh summary_for`, followed by the edition name).
-const _editionSummary = '업데이트 판을';
+/// The agent's own summary of a held switch to [name] (`agent.sh summary_for`): the approval goes only to a held job
+/// that names the edition the owner picked.
+String _editionSummary(String name) => '업데이트 판을 $name 로';
+
+/// The agent's reason for an edition job that switched but could not refresh the tools (`agent.sh fail_reason`, exit 5).
+const _editionToolsStale = '로 바꿨고 정상이에요';
 
 /// An edition name as shown to the owner: `uzipsa` reads Uzipsa.
 String editionLabel(String name) =>
@@ -391,7 +395,7 @@ class _EditionCardState extends State<EditionCard> {
         context,
         api,
         job,
-        mark: _editionSummary,
+        mark: _editionSummary(name),
         noSummary: t.ednNoSummary,
         cancelled: t.ednCancelled,
         say: _say,
@@ -405,6 +409,8 @@ class _EditionCardState extends State<EditionCard> {
           _say(t.ednRolledBack(editionLabel(widget.current)), bad: true);
         case 'running' || 'awaiting_approval':
           _say(t.srStillRunning);
+        case _ when why != null && why.contains(_editionToolsStale):
+          _say('${t.ednDone(label)} ${t.ednToolsStale}');
         default:
           _say(t.ednFailed(why ?? t.cRbDomainNoReason), bad: true);
       }
