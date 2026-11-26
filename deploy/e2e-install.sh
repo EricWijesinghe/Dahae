@@ -380,6 +380,8 @@ dahae auto-update > "$LOG/edition-crash.txt" 2>&1 || true
 expect "a switch killed mid-way is restored by the next auto-update" test "$(triple)" = "$SWITCHED"
 expect "...and its journal is gone" $SUDO test ! -e /opt/malkkeum/host/edition.prev
 # The same cut-off switch, then the owner presses rollback: the triple is settled before the previous tools run.
+# The first rollback swapped install.prev.sh away (e2e mode never keeps host/install.sh), so seed it again.
+seed_prev_installer
 cut_switch
 expect "a previous installer is there for the rollback" $SUDO test -s /opt/malkkeum/host/install.prev.sh
 $SUDO env MALKKEUM_SKIP_SIGNATURE=1 /usr/local/bin/dahae rollback > "$LOG/edition-crash-rollback.txt" 2>&1 \
