@@ -475,6 +475,7 @@ BACKUP_KEEP_DAYS=14
 # 올라갔을 때만 서버에는 3일치를 남겨요 (DB 덤프는 그대로 14일치). 외부 백업이 없거나 실패하면 14일치 그대로예요
 PHOTO_KEEP_DAYS_OFFSITE=3
 UPDATE_WAIT_SECS=${DAHAE_HEALTH_WAIT:-${MALKKEUM_HEALTH_WAIT:-180}}
+DB_READY_SECS=${DAHAE_DB_READY_WAIT:-180} # 첫 시작 DB 초기화가 끝날 때까지 기다리는 최대 시간
 HB_URL_RE='^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%/:@+=?-]*)?$'
 DOMAIN_RE='^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+([a-z]{2,63}|xn--[a-z0-9-]{1,59})$' # 설치 프로그램·작업 실행기와 같은 규칙
 DOMAIN_WAIT_SECS=${DAHAE_DOMAIN_WAIT:-300} # 새 도메인의 인증서 발급을 기다리는 시간
@@ -677,6 +678,12 @@ SQL
 }
 db_up() { # DB 컨테이너를 켜요 (이미 켜져 있으면 그대로예요). 백업·계정 준비·복원 전에 써요
   dc up -d --wait db >/dev/null || die "DB 를 시작하지 못했어요. 'dahae logs db' 로 확인하세요."
+  # 첫 시작 때 healthcheck 는 초기화용 서버(유닉스 소켓만)에서 DB 가 만들어지기 전에 통과해요. 최종 서버만 TCP 로 받아요
+  local end=$((SECONDS + DB_READY_SECS))
+  until dc exec -T db pg_isready -q -h 127.0.0.1 -U app -d cleaning >/dev/null 2>&1; do
+    [ "$SECONDS" -ge "$end" ] && die "DB 를 시작하지 못했어요. 'dahae logs db' 로 확인하세요."
+    sleep 2
+  done
 }
 db_roles() { # 앱 DB 계정 준비. 설치·업데이트·복원 전에 매번 실행해요 (이미 돼 있으면 바뀌는 게 없어요)
   local pw; db_up; pw=$(env_get API_DB_PASSWORD)
@@ -731,10 +738,11 @@ https_ok() {
   curl -fsSk --max-time 5 --resolve "$d:443:127.0.0.1" "https://$d/health" >/dev/null 2>&1
 }
 wait_healthy() {
-  local waited=0
+  # 벽시계 기준: 느린 서버에서 health_ok 자체가 오래 걸려도 UPDATE_WAIT_SECS 를 넘기지 않아요
+  local end=$((SECONDS + UPDATE_WAIT_SECS))
   until health_ok; do
-    [ "$waited" -ge "$UPDATE_WAIT_SECS" ] && return 1
-    sleep 5; waited=$((waited + 5))
+    [ "$SECONDS" -ge "$end" ] && return 1
+    sleep 5
   done
   return 0 # until 의 종료 상태는 마지막 실행 명령을 따라가서, 명시적으로 성공을 돌려줘요
 }
