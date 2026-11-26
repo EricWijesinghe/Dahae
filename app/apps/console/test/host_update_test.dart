@@ -266,4 +266,37 @@ void editionTests() {
     await settle(tester);
     expect(find.text(koT.ednRolledBack('Dahae')), findsOneWidget);
   });
+
+  testWidgets('a held switch to another edition than the one picked is never approved', (
+    tester,
+  ) async {
+    final fake = await _pumpEdition(
+      tester,
+      summary: '업데이트 판을 other 로 바꿔요 (먼저 백업해요. 데이터·키·도메인·앱은 그대로예요)',
+    );
+    await _startSwitch(tester);
+    await tester.pump(const Duration(seconds: 6));
+    await settle(tester);
+    expect(fake.callsTo('POST', '/admin/host/jobs/ed/approve'), isEmpty);
+    expect(find.text(koT.ednNoSummary), findsOneWidget);
+  });
+
+  testWidgets('a switch that kept the old tools (exit 5) says it switched and asks for Update now', (
+    tester,
+  ) async {
+    await _pumpEdition(
+      tester,
+      end: const {
+        'id': 'ed',
+        'state': 'failed',
+        'step': "uzipsa 로 바꿨고 정상이에요. 관리 도구는 '지금 업데이트' 를 한 번 눌러 주세요",
+      },
+    );
+    await _startSwitch(tester);
+    await _code(tester, '222222');
+    await tester.pump(const Duration(seconds: 1));
+    await settle(tester);
+    expect(find.text('${koT.ednDone('Uzipsa')} ${koT.ednToolsStale}'), findsOneWidget);
+    expect(find.textContaining(koT.ednFailed('')), findsNothing);
+  });
 }

@@ -351,7 +351,16 @@ dahae edition edtest > "$LOG/edition-good.txt" 2>&1 || { tail -n 40 "$LOG/editio
 expect "switched: the edtest triple is in .env" test "$(triple | tr '\n' ' ')" = "EDITION=edtest IMAGE_REPO=$REG/edtest SIGNER_REPO=e2e/Edtest DELIVERY_RAW=file://$ED_DIST VERSION=stable "
 expect "API healthy on the new stream" wait_until 180 api_healthy
 expect "running an image of the new stream" sh -c "$SUDO grep -q '^API_IMAGE=$REG/edtest/malkkeum-api' /opt/malkkeum/.env"
-dahae rollback > "$LOG/edition-rollback.txt" 2>&1 || { tail -n 40 "$LOG/edition-rollback.txt"; fail "rollback after the switch failed"; }
+# The rollback's tools run uses the previous release's installer. Seed a delivered-style one: the test table baked in
+# and RELEASE_RAW pointing at the Dahae delivery repo, so a tools run that took DELIVERY_RAW from RELEASE_RAW would show.
+seed_prev_installer() {
+  $SUDO sh -c "sed -e '/^# @editions:/r $LOG/editions' -e 's|^RELEASE_RAW=\$|RELEASE_RAW=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/v0.0.1|' deploy/install.sh > /opt/malkkeum/host/install.prev.sh \
+    && install -m 600 deploy/agent.sh /opt/malkkeum/host/agent.prev.sh && chmod 600 /opt/malkkeum/host/install.prev.sh"
+}
+seed_prev_installer
+expect "the seeded previous installer has the Dahae delivery baked" $SUDO grep -q '^RELEASE_RAW=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/' /opt/malkkeum/host/install.prev.sh
+$SUDO env MALKKEUM_SKIP_SIGNATURE=1 /usr/local/bin/dahae rollback > "$LOG/edition-rollback.txt" 2>&1 || { tail -n 40 "$LOG/edition-rollback.txt"; fail "rollback after the switch failed"; }
+expect "the rollback ran the previous installer's tools" grep -q '관리 도구도 전 버전으로 되돌렸어요' "$LOG/edition-rollback.txt"
 expect "rollback keeps the triple on the new edition" test "$(triple | head -n4 | tr '\n' ' ')" = "EDITION=edtest IMAGE_REPO=$REG/edtest SIGNER_REPO=e2e/Edtest DELIVERY_RAW=file://$ED_DIST "
 # What a rollback's tools run does: the bridge installer runs again. Even with MALKKEUM_IMAGES set it keeps the row's triple.
 install_editions > "$LOG/install-editions2.txt" 2>&1 || { tail -n 40 "$LOG/install-editions2.txt"; fail "installer re-run on the new edition failed"; }
@@ -359,12 +368,25 @@ expect "an installer re-run keeps the edition's triple" test "$(triple | head -n
 expect "...and offers no edition (the dahae row is never offered)" test "$(env_line EDITIONS_OFFERED)" = EDITIONS_OFFERED=
 # A switch killed after .env changed: the next auto-update puts the old triple back before anything else.
 SWITCHED=$(triple)
-$SUDO sh -c "grep -E '^(EDITION|IMAGE_REPO|SIGNER_REPO|DELIVERY_RAW|VERSION|API_IMAGE|WEB_IMAGE|PREV_API_IMAGE|PREV_WEB_IMAGE)=' /opt/malkkeum/.env > /opt/malkkeum/host/edition.prev"
-$SUDO sed -i -e 's/^EDITION=.*/EDITION=dahae/' -e "s|^IMAGE_REPO=.*|IMAGE_REPO=$REG|" -e 's|^SIGNER_REPO=.*|SIGNER_REPO=EricWijesinghe/Dahae|' /opt/malkkeum/.env
+# cut_switch: the journal a real switch writes (ending in its #complete line), then a .env half-way to the dahae row
+cut_switch() {
+  $SUDO sh -c "{ grep -E '^(EDITION|IMAGE_REPO|SIGNER_REPO|DELIVERY_RAW|VERSION|API_IMAGE|WEB_IMAGE|PREV_API_IMAGE|PREV_WEB_IMAGE|EDITIONS_OFFERED)=' /opt/malkkeum/.env; echo '#complete'; } > /opt/malkkeum/host/edition.prev"
+  $SUDO sed -i -e 's/^EDITION=.*/EDITION=dahae/' -e "s|^IMAGE_REPO=.*|IMAGE_REPO=$REG|" -e 's|^SIGNER_REPO=.*|SIGNER_REPO=EricWijesinghe/Dahae|' \
+    -e "s|^DELIVERY_RAW=.*|DELIVERY_RAW=file://$DAHAE_DIST|" /opt/malkkeum/.env
+}
+cut_switch
 $SUDO touch /opt/malkkeum/host/skip-next-update
 dahae auto-update > "$LOG/edition-crash.txt" 2>&1 || true
 expect "a switch killed mid-way is restored by the next auto-update" test "$(triple)" = "$SWITCHED"
 expect "...and its journal is gone" $SUDO test ! -e /opt/malkkeum/host/edition.prev
+# The same cut-off switch, then the owner presses rollback: the triple is settled before the previous tools run.
+cut_switch
+expect "a previous installer is there for the rollback" $SUDO test -s /opt/malkkeum/host/install.prev.sh
+$SUDO env MALKKEUM_SKIP_SIGNATURE=1 /usr/local/bin/dahae rollback > "$LOG/edition-crash-rollback.txt" 2>&1 \
+  || { tail -n 40 "$LOG/edition-crash-rollback.txt"; fail "rollback after a cut-off switch failed"; }
+expect "rollback after a cut-off switch keeps the edition's triple" test "$(triple | head -n4 | tr '\n' ' ')" = "EDITION=edtest IMAGE_REPO=$REG/edtest SIGNER_REPO=e2e/Edtest DELIVERY_RAW=file://$ED_DIST "
+expect "...and its journal is gone" $SUDO test ! -e /opt/malkkeum/host/edition.prev
+expect "API healthy after the rollback" wait_until 180 api_healthy
 docker tag "$REG/malkkeum-api:good" "$REG/malkkeum-api:stable"; publish "$REG/malkkeum-api:stable"
 docker tag "$REG/malkkeum-web:$TAG" "$REG/malkkeum-web:stable"; publish "$REG/malkkeum-web:stable"
 dahae edition dahae > "$LOG/edition-back.txt" 2>&1 || { tail -n 40 "$LOG/edition-back.txt"; fail "switching back to dahae failed"; }

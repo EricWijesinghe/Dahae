@@ -69,6 +69,20 @@ t  "offered: the current edition is left out"       eq "$(editions_offered uzips
 EDITIONS=$(printf 'a r1 o/a https://x/a d.co.kr\nb r2 o/b https://x/b d.co.kr e.co.kr\n')
 t  "offered: several, comma separated"              eq "$(editions_offered d.co.kr dahae)" a,b
 EDITIONS=$EDITIONS_SAVED
+# every row is checked before its values reach .env (the signature limits who writes it, not what it holds)
+while IFS= read -r l; do t "row check: the shipped ${l%% *} row passes" edition_row_ok "$l"; done < <(ed_rows)
+R=https://raw.githubusercontent.com/O/R-install
+nt "row check: plain http delivery"                 edition_row_ok "xx ghcr.io/a O/R http://raw.githubusercontent.com/O/R *"
+nt "row check: a delivery path beyond owner/repo"   edition_row_ok "xx ghcr.io/a O/R $R/../x *"
+# shellcheck disable=SC2016 # a literal $ on purpose
+nt "row check: a \$ in the image repo"              edition_row_ok 'xx ghcr.io/$a O/R https://raw.githubusercontent.com/O/R *'
+nt "row check: an upper-case image repo"            edition_row_ok "xx ghcr.io/A O/R $R *"
+nt "row check: a bad signer"                        edition_row_ok "xx ghcr.io/a O/R/x $R *"
+nt "row check: a bad name"                          edition_row_ok "Uz ghcr.io/a O/R $R *"
+nt "row check: a bad domain"                        edition_row_ok "xx ghcr.io/a O/R $R ok.co.kr bad_domain"
+nt "row check: no domain"                           edition_row_ok "xx ghcr.io/a O/R $R"
+nt "row check: file delivery with signatures on"    edition_row_ok "xx a O/R file:///tmp/d *"
+t  "row check: file delivery for a signature-off test install" edition_row_ok "xx a O/R file:///tmp/d *" file
 
 # ---- installer: DNS check. Any AAAA record is refused, even this server's (IPv6 visitors all show up as the
 # Docker gateway, so one of them could lock every IPv6 user out of sign-in) ----
@@ -1045,12 +1059,14 @@ t  "...and holds the channel's bad build"           eq "$(cat "$SB/host/rollback
 mkdir -p "$SB/relu"
 for v in v2.0.0 v2.0.0-beta.1; do mkrel "$v"; rm -rf "$SB/relu/$v"; mv "$SB/rel/$v" "$SB/relu/$v"; done
 mkdir -p "$SB/relu/main" "$SB/relu/beta"; echo 2.0.0 > "$SB/relu/main/VERSION"; echo 2.0.0-beta.1 > "$SB/relu/beta/VERSION"
+TRAW=https://raw.githubusercontent.com/T
 ed_env() { # ed_env [채널] : 다해 판 서버(EDITION 없음)와 판 표 (uzipsa 는 이 서버 도메인을 적었어요)
   printf 'DOMAIN=myshop.co.kr\nCHANNEL=%s\nDELIVERY_RAW=file://%s/rel\nSIGNER_REPO=EricWijesinghe/Dahae\nIMAGE_SOURCE=remote\nIMAGE_VERIFY=on\nIMAGE_REPO=repo\nAPI_IMAGE=old\nWEB_IMAGE=old\nVERSION=%s\n' \
     "${1:-stable}" "$SB" "${1:-stable}" > "$SB/.env"
   rm -rf "$SB/host"/*; rm -f "$SB/tools.log"
-  printf '# @editions: test\ndahae repo EricWijesinghe/Dahae file://%s/rel *\nuzipsa repo2 Owner/Uzipsa file://%s/relu myshop.co.kr\nother repo3 Owner/Other file://%s/relo other.co.kr\n' \
-    "$SB" "$SB" "$SB" > "$SB/host/editions"
+  # 배포 주소는 실제 규칙(https raw)대로 적고, ed 의 curl 이 T/ 를 이 샌드박스 폴더로 바꿔 읽어요
+  printf '# @editions: test\ndahae repo EricWijesinghe/Dahae %s/rel *\nuzipsa repo2 Owner/Uzipsa %s/relu myshop.co.kr\nother repo3 Owner/Other %s/relo other.co.kr\n' \
+    "$TRAW" "$TRAW" "$TRAW" > "$SB/host/editions"
   cp "$SB/.env" "$SB/env.before"
 }
 # ed 이름 [HEALTH] : upd 와 같은 가짜 백업·이미지로 cmd_edition 을 돌려요. 종료 코드를 돌려줘요
@@ -1058,17 +1074,23 @@ ed() {
   # shellcheck disable=SC2034 # SCRATCH is read by the sourced cmd_edition
   ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; H=${2:-ok}; SCRATCH=()
     log() { printf '%s\n' "$*" >> "$SB/tools.log"; }
-    db_roles() { :; }; cmd_backup() { log backup; }; prune_keep_tags() { :; }; record_version() { :; }
+    db_roles() { :; }; cmd_backup() { log backup; }; prune_keep_tags() { :; }
+    curl() { command curl "${@//"$TRAW"/file://$SB}"; }
     # shellcheck disable=SC2034 # read by the sourced cmd_update
-    pull_images() { log "pull $1 $2"; NEW_API=repo/api:new; NEW_WEB=repo/web:new; }
+    pull_images() { log "pull $1 $2"; NEW_API=$1/malkkeum-api:new; NEW_WEB=$1/malkkeum-web:new; }
     running_image() { echo "$2"; }; digest_ref() { echo "$1"; }
     docker() { echo "id-$*"; }
     df() { printf 'Filesystem 1024-blocks Used Available Capacity Mounted
 fs 1 1 999999999 1%% /
 '; }
-    dc() { [ "$1" != run ] || echo "0 /data/uploads"; }
-    set_images() { log "images $1"; }; wait_healthy() { [ "$H" = ok ] || [ "$(grep '^images' "$SB/tools.log" | tail -n1)" != "images repo/api:new" ]; }
+    dc() { [ "$1" != run ] || echo "0 /data/uploads"; [ "$1" != up ] || log "up $*"; }
+    api_runs() { [ -z "${API_DOWN:-}" ]; }
+    record_version() { [ -z "${AFTER_FAIL:-}" ]; } # 응답 확인 뒤의 마무리 단계가 실패해요 (set -e: 종료 코드 1)
+    # IMAGES_DIE: compose up fails after .env names the new images (set -e in the real set_images)
+    set_images() { log "images $1"; env_set API_IMAGE "$1"; env_set WEB_IMAGE "$2"; [ -z "${IMAGES_DIE:-}" ] || [ "$1" = old ] || exit 1; }
+    wait_healthy() { [ "$H" = ok ] || ! grep '^images' "$SB/tools.log" | tail -n1 | grep -q ':new$'; }
     run_installer_tools() { [ -z "${TOOLS_FAIL:-}" ] || return 1; log "tools $(bash "$1")"; }
+    install() { [ -z "${INSTALL_FAIL:-}" ] || return 1; command install "$@"; }
     cmd_edition "$1" ) >/dev/null 2>&1
 }
 env_same() { cmp -s "$SB/.env" "$SB/env.before"; }
@@ -1092,7 +1114,7 @@ t  "edition: a bad signature on the new stream is refused" eq "$rc:$(env_same &&
 ed_env; ed uzipsa; rc=$?
 t  "edition: the preflight checks the new signer at the channel's tag" grep -qF 'Owner/Uzipsa/\.github/workflows/release\.yml@refs/tags/v2\.0\.0$' "$SB/bin/blob-args"
 t  "edition: ok"                                     eq "$rc" 0
-t  "edition: the new triple and channel are in .env" eq "$(env_get EDITION) $(env_get IMAGE_REPO) $(env_get SIGNER_REPO) $(env_get DELIVERY_RAW) $(env_get VERSION)" "uzipsa repo2 Owner/Uzipsa file://$SB/relu stable"
+t  "edition: the new triple and channel are in .env" eq "$(env_get EDITION) $(env_get IMAGE_REPO) $(env_get SIGNER_REPO) $(env_get DELIVERY_RAW) $(env_get VERSION)" "uzipsa repo2 Owner/Uzipsa $TRAW/relu stable"
 t  "edition: the images come from the new stream"    grep -qxF 'pull repo2 stable' "$SB/tools.log"
 t  "edition: the new stream's tools are applied"     eq "$(tail -n1 "$SB/tools.log")" "tools tools v2.0.0"
 nt "edition: the journal is gone"                    test -e "$SB/host/edition.prev"
@@ -1104,20 +1126,49 @@ t  "edition: a new stream that does not answer exits 3" eq "$rc" 3
 t  "...and puts the old triple back, .env byte-equal" env_same
 nt "...and drops the journal"                        test -e "$SB/host/edition.prev"
 nt "...and holds nothing of the other stream"        test -e "$SB/host/rollback-hold"
+t  "...and recreates the api so it drops the new EDITION" grep -qxF 'up up -d api' "$SB/tools.log"
+ed_env; echo EDITIONS_OFFERED=uzipsa >> "$SB/.env"; cp "$SB/.env" "$SB/env.before"; ed uzipsa fail; rc=$?
+t  "edition: a refused switch keeps the offered list" eq "$rc:$(env_same && echo same)" 3:same
 ed_env; TOOLS_FAIL=1 ed uzipsa; rc=$?
 t  "edition: new stream fine but tools not exits 5 and keeps the new edition" eq "$rc:$(env_get EDITION)" 5:uzipsa
 nt "...with no journal left"                         test -e "$SB/host/edition.prev"
+ed_env; INSTALL_FAIL=1 ed uzipsa; rc=$?
+t  "edition: keeping the verified tools fails after the health check: exits 5, new edition kept" eq "$rc:$(env_get EDITION)" 5:uzipsa
+ed_env; AFTER_FAIL=1 ed uzipsa; rc=$?
+t  "edition: a finishing step fails after the new stream answered: exits 5, new edition and its image kept" eq "$rc:$(env_get EDITION) $(env_get SIGNER_REPO) $(env_get API_IMAGE)" "5:uzipsa Owner/Uzipsa repo2/malkkeum-api:new"
+nt "...with no journal left"                         test -e "$SB/host/edition.prev"
+ed_env; IMAGES_DIE=1 API_DOWN=1 ed uzipsa; rc=$?
+t  "edition: compose fails on the new images: the old images go back up" eq "$rc:$(grep '^images' "$SB/tools.log" | tail -n1)" "1:images old"
+t  "...and the old triple, .env byte-equal"          env_same
+nt "...with no journal left"                         test -e "$SB/host/edition.prev"
+ed_env; sed -i 's|^uzipsa repo2 |uzipsa repo2$x |' "$SB/host/editions"; ed uzipsa; rc=$?
+t  "edition: a row with a bad image repo is refused before anything" eq "$rc:$(env_same && echo same)" 1:same
+ed_env; sed -i "s|$TRAW/relu myshop|http://raw.githubusercontent.com/T/relu myshop|" "$SB/host/editions"; ed uzipsa; rc=$?
+t  "edition: a row with a plain http delivery is refused before anything" eq "$rc:$(env_same && echo same)" 1:same
 # a switch killed after .env changed: the next CLI entry (auto-update, update, edition, channel) puts it back first
-crash_env() { # crash_env API_IMAGE : uzipsa 값으로 바뀐 .env 와 이전 값 기록 (판 바꾸기 도중에 끊긴 서버)
-  ed_env
-  grep -E '^(IMAGE_REPO|SIGNER_REPO|DELIVERY_RAW|VERSION|API_IMAGE|WEB_IMAGE)=' "$SB/.env" > "$SB/host/edition.prev"
+crash_env() { # crash_env API_IMAGE [줄...] : 이전 .env(줄을 더한)의 기록과, uzipsa 값으로 바뀐 .env (판 바꾸기 도중에 끊긴 서버)
+  local api="$1"; shift
+  ed_env; [ "$#" = 0 ] || printf '%s\n' "$@" >> "$SB/.env"; cp "$SB/.env" "$SB/env.before"
+  { grep -E '^(EDITION|IMAGE_REPO|SIGNER_REPO|DELIVERY_RAW|VERSION|API_IMAGE|WEB_IMAGE|PREV_API_IMAGE|PREV_WEB_IMAGE|EDITIONS_OFFERED)=' "$SB/.env"; echo '#complete'; } > "$SB/host/edition.prev"
   ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"
-    env_set EDITION uzipsa; env_set IMAGE_REPO repo2; env_set SIGNER_REPO Owner/Uzipsa; env_set DELIVERY_RAW "file://$SB/relu"; env_set API_IMAGE "$1" )
+    env_set EDITION uzipsa; env_set IMAGE_REPO repo2; env_set SIGNER_REPO Owner/Uzipsa; env_set DELIVERY_RAW "file://$SB/relu"; env_set API_IMAGE "$api"
+    [ -z "$(env_get EDITIONS_OFFERED)" ] || env_set EDITIONS_OFFERED '' ) # 다시 실행한 설치 줄이 uzipsa 판으로 읽고 비워 둔 목록
 }
-auto_after_crash() { ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; : > "$DIR/host/skip-next-update"; cmd_auto_update ) >/dev/null 2>&1; }
+auto_after_crash() { ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; dc() { echo "dc $*" >> "$SB/tools.log"; }; : > "$DIR/host/skip-next-update"; cmd_auto_update ) >/dev/null 2>&1; }
 crash_env old; auto_after_crash
 t  "crash before the new images: auto-update restores the old triple first" env_same
 nt "...and drops the journal"                        test -e "$SB/host/edition.prev"
+t  "...and recreates the api with the restored .env" grep -qxF 'dc up -d api' "$SB/tools.log"
+crash_env old EDITIONS_OFFERED=uzipsa; auto_after_crash
+t  "crash, then the install line re-run: the offered list comes back with the old triple" eq "$(env_same && echo same) $(env_get EDITIONS_OFFERED)" "same uzipsa"
+crash_env old; : > "$SB/host/edition.prev"; cp "$SB/.env" "$SB/env.crash"; auto_after_crash
+t  "an empty journal (cut off before its end line) leaves .env as it is" cmp -s "$SB/.env" "$SB/env.crash"
+nt "...and goes"                                     test -e "$SB/host/edition.prev"
+crash_env old; sed -i '/^#complete$/d; 3,$d' "$SB/host/edition.prev"; cp "$SB/.env" "$SB/env.crash"; auto_after_crash
+t  "a truncated journal deletes no image or stream key" cmp -s "$SB/.env" "$SB/env.crash"
+ed_env; echo x > "$SB/host/edition.prev.new"; auto_after_crash
+nt "a journal never moved into place is dropped"     test -e "$SB/host/edition.prev.new"
+t  "...with .env byte-equal"                         env_same
 crash_env repo2/malkkeum-api:keep-0123456789ab; auto_after_crash
 t  "crash after the images went back: the old triple too" eq "$(env_get EDITION)$(env_get SIGNER_REPO)" EricWijesinghe/Dahae
 crash_env repo2/malkkeum-api@sha256:abc; auto_after_crash
@@ -1160,6 +1211,13 @@ nt "...and an unreadable registry leaves no hold"   test -e "$SB/host/rollback-h
 rm -f "$SB/tools.log"; env_set PREV_API_IMAGE ''; rb 0; rc=$?
 t  "rollback with no previous version exits 6"      eq "$rc" 6
 nt "...before any backup"                           test -e "$SB/tools.log"
+# a switch cut off (agent timeout, reboot), then the owner presses rollback: the old triple is back before the
+# previous release's tools run, so they never see a .env split between two editions
+crash_env old PREV_API_IMAGE=prev PREV_WEB_IMAGE=prevweb; rm -f "$SB/tools.log"
+printf '%s\n' 'echo "journal=$(test -e host/edition.prev && echo yes || echo no) $(grep -cE "^(EDITION=|IMAGE_REPO=repo2|SIGNER_REPO=Owner|DELIVERY_RAW=.*relu)" .env)"' > "$SB/host/install.prev.sh"
+rb 0; rc=$?
+t  "rollback after a cut-off switch: the old triple is back before the old tools run" eq "$rc:$(grep '^tools' "$SB/tools.log")" "0:tools journal=no 0 "
+t  "...and .env names the Dahae stream"             eq "$(env_get EDITION)|$(env_get IMAGE_REPO) $(env_get SIGNER_REPO) $(env_get DELIVERY_RAW)" "|repo EricWijesinghe/Dahae file://$SB/rel"
 # shellcheck disable=SC2016 # literal text on purpose
 t  "the CLI is written by rename (a running dahae update keeps its file)" grep -qF 'mv -f "$tmp" "$1"' "$ROOT/deploy/install.sh"
 # shellcheck disable=SC2016 # literal text on purpose
@@ -1207,7 +1265,7 @@ nt "tools mode on a server with no images refuses"  eq "$rc" 0
 nt "...before writing anything"                     grep -qs '^dc ' "$SB/main.log"
 # R22: a dahae server (no EDITION) keeps a byte-equal .env across a 1.6.6 tools run: custom signer and images,
 # a local-images install, a domain the table does not list. Only a listed domain gains EDITIONS_OFFERED.
-TABLE=$(printf '# @editions: x\ndahae ghcr.io/ericwijesinghe EricWijesinghe/Dahae https://raw.githubusercontent.com/EricWijesinghe/Dahae-install *\nuzipsa ghcr.io/o/uzipsa O/Uzipsa https://raw.example/O/Uzipsa-install uzipsa.co.kr\n')
+TABLE=$(printf '# @editions: x\ndahae ghcr.io/ericwijesinghe EricWijesinghe/Dahae https://raw.githubusercontent.com/EricWijesinghe/Dahae-install *\nuzipsa ghcr.io/o/uzipsa O/Uzipsa https://raw.githubusercontent.com/O/Uzipsa-install uzipsa.co.kr\n')
 dahae_env() { # dahae_env 도메인 이미지저장소 서명자 출처 [배포주소] : 1.6.5 가 남긴 그대로의 .env (모든 키가 설치 프로그램이 쓰는 모양)
   printf 'API_DB_PASSWORD=%s\nDATA_KEY=%s\nJWT_SECRET=%s\nDOMAIN=%s\nACME_EMAIL=o@x.co.kr\nIMAGE_REPO=%s\nTLS_MODE=\nCHANNEL=stable\nIMAGE_SOURCE=%s\nSIGNER_REPO=%s\nIMAGE_VERIFY=on\nVERSION=stable\nAPI_IMAGE=repo/api@sha256:aa\nWEB_IMAGE=repo/web@sha256:bb\n' \
     "$(printf 'd%.0s' $(seq 48))" "$(printf 'b%.0s' $(seq 64))" "$(printf 'c%.0s' $(seq 64))" "$1" "$2" "$4" "$3" > "$SB/srv/.env"
@@ -1229,12 +1287,12 @@ dahae_env uzipsa.co.kr ghcr.io/ericwijesinghe EricWijesinghe/Dahae remote https:
 TM_EDITIONS=$TABLE TM_RAW=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/v1.6.6 tools_main; rc=$?
 t  "a listed domain gains EDITIONS_OFFERED and nothing else" eq "$rc:$(diff "$SB/srv-env.before" "$SB/srv/.env" | grep '^[<>]' | tr '\n' ' ')" "0:> EDITIONS_OFFERED=uzipsa "
 # the :1789 fix: after a switch, the bridge installer (re-run by a rollback) keeps the triple of EDITION's row
-dahae_env uzipsa.co.kr ghcr.io/o/uzipsa O/Uzipsa remote https://raw.example/O/Uzipsa-install
+dahae_env uzipsa.co.kr ghcr.io/o/uzipsa O/Uzipsa remote https://raw.githubusercontent.com/O/Uzipsa-install
 printf 'EDITION=uzipsa\nEDITIONS_OFFERED=uzipsa\n' >> "$SB/srv/.env"
 TM_EDITIONS=$TABLE TM_RAW=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/v1.6.6 MALKKEUM_IMAGES=ghcr.io/x MALKKEUM_SIGNER=x/y tools_main; rc=$?
-t  "rollback onto the bridge: the triple stays on the edition's row" eq "$rc:$(grep -E '^(IMAGE_REPO|SIGNER_REPO|DELIVERY_RAW|EDITION)=' "$SB/srv/.env" | tr '\n' ' ')" "0:IMAGE_REPO=ghcr.io/o/uzipsa SIGNER_REPO=O/Uzipsa DELIVERY_RAW=https://raw.example/O/Uzipsa-install EDITION=uzipsa "
+t  "rollback onto the bridge: the triple stays on the edition's row" eq "$rc:$(grep -E '^(IMAGE_REPO|SIGNER_REPO|DELIVERY_RAW|EDITION)=' "$SB/srv/.env" | tr '\n' ' ')" "0:IMAGE_REPO=ghcr.io/o/uzipsa SIGNER_REPO=O/Uzipsa DELIVERY_RAW=https://raw.githubusercontent.com/O/Uzipsa-install EDITION=uzipsa "
 t  "...and the current edition is no longer offered" eq "$(grep '^EDITIONS_OFFERED=' "$SB/srv/.env")" "EDITIONS_OFFERED="
-dahae_env uzipsa.co.kr ghcr.io/o/uzipsa O/Uzipsa remote https://raw.example/O/Uzipsa-install
+dahae_env uzipsa.co.kr ghcr.io/o/uzipsa O/Uzipsa remote https://raw.githubusercontent.com/O/Uzipsa-install
 printf 'EDITION=gone\n' >> "$SB/srv/.env"; cp "$SB/srv/.env" "$SB/srv-env.before"; rm -f "$SB/main.log"
 TM_EDITIONS=$TABLE tools_main; rc=$?
 t  "an EDITION missing from the table stops the run" eq "$rc:$(srv_same && echo same)" 1:same
