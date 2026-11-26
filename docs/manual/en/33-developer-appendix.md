@@ -157,6 +157,7 @@ The **Server update** card on the console's **[System status]** page queues a `k
 | `host-approval-enroll` | Yes (**Server approval code** → **[Set up]**, chapter 28, 28.8.1) | Owner code. The server fills in the account id; only the requesting owner can read the authenticator link. Fails if one exists |
 | `rollback` | Yes (**Recovery** → **[Roll back to the previous version]**, chapter 26) | Owner code plus the server approval code; the approval shows the agent's own summary with the target version. Runs `dahae rollback`; the console shows the exit 4/5/6 reason |
 | `keys-backup`, `keys-confirm` | Yes (**Recovery** → **[Make and download]**, chapter 26) | Owner code. The sealed copy downloads once; `POST /admin/host/jobs/{id}/kept` queues `keys-confirm` (records `KEY_ESCROW_AT`) only after the owner confirms |
+| `edition` | Yes (**Update edition** card, only when the installer offered this server another edition) | Owner code plus the server approval code. The name must be in `EDITIONS_OFFERED`. Runs `dahae edition`, which checks the new stream's channel version and signature first; exit 3 means it went back and the old values were restored |
 | `update-tag` | No | Needs the server approval code (TOTP), like `rollback` and `domain-set`. Approve within 10 minutes; 5 wrong codes cancel the job; 10 wrong codes in an hour lock approvals |
 | `status-refresh`, `logs`, `offsite-list` | No | The agent accepts them, but the console does not send them today |
 

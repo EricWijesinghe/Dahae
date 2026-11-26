@@ -8,6 +8,20 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+## [1.6.6] - Unreleased
+
+### Added
+- Update editions: a signed edition table (`deploy/editions`, baked into the delivered installer and listed in `SHA256SUMS`) names the release streams a server may follow (image repository, signer, delivery repository) and the domains allowed to switch. `dahae edition <name>` checks the new stream first (its channel version must be newer than anything this server ran, and its `SHA256SUMS` must be signed by that stream's signer at that tag), keeps the old values in `host/edition.prev`, then runs the normal update. If the new version does not answer, the old values come back (exit 3). A switch cut off by a reboot is put back by the next update or auto-update.
+- Console › Server: an "Update edition" card, shown only when the installer offered this server another edition. The switch needs the owner code and then the server approval code, like a rollback.
+- `dahae version` and the agent's `host.json` show the edition (`edition: dahae` on every existing server).
+
+### Changed
+- A server that follows another edition keeps that edition's image repository, signer and delivery address when an older installer runs again (for example in a rollback), instead of falling back to this release's delivery address.
+- The job runner asks for CLI revision 3.
+
+### Upgrade notes
+- Nothing changes by itself: a server without `EDITION` in `.env` keeps its `.env` byte for byte (custom signer and image overrides and local-image installs included) and offers no edition. Only the domains listed in the table get `EDITIONS_OFFERED`.
+
 ## [1.6.5] - 2026-11-24
 
 ### Added

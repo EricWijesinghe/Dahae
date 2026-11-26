@@ -1,0 +1,7 @@
+# Editions: the signed release streams a server can follow. publish-delivery.sh bakes this table into the delivered
+# install.sh and lists it in SHA256SUMS, so the release signature covers it. One edition per line, fields split by spaces:
+#   name  image_repo (images are <image_repo>/malkkeum-api and -web)  signer_repo (owner/repo whose release.yml signs)
+#   delivery_raw (raw URL of the public delivery repo)  domains (the servers that may switch to it; * = any, never offered)
+# A server with no EDITION in .env follows the dahae row through its own .env values, exactly as before editions existed.
+dahae ghcr.io/ericwijesinghe EricWijesinghe/Dahae https://raw.githubusercontent.com/EricWijesinghe/Dahae-install *
+uzipsa ghcr.io/ericwijesinghe/uzipsa EricWijesinghe/Uzipsa https://raw.githubusercontent.com/EricWijesinghe/Uzipsa-install uzipsa.co.kr 15.165.87.232.sslip.io scratch.uzipsa.co.kr

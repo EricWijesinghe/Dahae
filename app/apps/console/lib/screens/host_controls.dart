@@ -10,6 +10,7 @@ import '../state.dart';
 import '../widgets/copy_row.dart';
 import '../widgets/owner_totp_dialog.dart';
 import 'confirm_action.dart';
+import 'server_recovery.dart';
 
 const _days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 final _hhmm = RegExp(r'^([01]\d|2[0-3]):[0-5]\d$');
@@ -325,6 +326,130 @@ class _ApprovalEnrollCardState extends State<ApprovalEnrollCard> {
             child: KeepAllText(_busy ? t.cRbEnrollWaiting : t.cRbEnrollStart),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// The agent's own summary of a held edition switch (`agent.sh summary_for`, followed by the edition name).
+const _editionSummary = '업데이트 판을';
+
+/// An edition name as shown to the owner: `uzipsa` reads Uzipsa.
+String editionLabel(String name) =>
+    name.isEmpty ? name : name[0].toUpperCase() + name.substring(1);
+
+/// Switches the release stream this server follows (`edition` job: owner code, then the server approval code; the
+/// server backs up, checks the new stream's signature and health, and goes back by itself if it does not answer).
+/// Shown only when the installer offered this server another edition, so other servers never see it.
+class EditionCard extends StatefulWidget {
+  const EditionCard({
+    super.key,
+    required this.current,
+    required this.offered,
+    required this.onQueued,
+  });
+  final String current;
+  final List<String> offered;
+  final Future<void> Function() onQueued;
+
+  @override
+  State<EditionCard> createState() => _EditionCardState();
+}
+
+class _EditionCardState extends State<EditionCard> {
+  bool _busy = false;
+  String? _note;
+  bool _noteBad = false;
+
+  void _say(String text, {bool bad = false}) => setState(() {
+    _note = text;
+    _noteBad = bad;
+  });
+
+  Future<void> _switch(String name) async {
+    final t = context.t, api = context.api, label = editionLabel(name);
+    if (!await confirmAction(
+      context,
+      t.ednSwitch(label),
+      message: t.ednConfirm(label),
+    )) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = true);
+    try {
+      final job = await runOwnerAction(
+        context,
+        (h) => queueHostJob(api, 'edition', name, h),
+        done: t.ednRunning,
+      );
+      if (job is! Json || !mounted) return;
+      await widget.onQueued();
+      if (!mounted) return;
+      _say(t.ednRunning);
+      final end = await approveHeldJob(
+        context,
+        api,
+        job,
+        mark: _editionSummary,
+        noSummary: t.ednNoSummary,
+        cancelled: t.ednCancelled,
+        say: _say,
+      );
+      if (end == null || !mounted) return;
+      final why = jobReason(end, t);
+      switch (end['state']) {
+        case 'ok':
+          _say(t.ednDone(label));
+        case 'rolled_back':
+          _say(t.ednRolledBack(editionLabel(widget.current)), bad: true);
+        case 'running' || 'awaiting_approval':
+          _say(t.srStillRunning);
+        default:
+          _say(t.ednFailed(why ?? t.cRbDomainNoReason), bad: true);
+      }
+      await widget.onQueued();
+    } catch (e) {
+      if (mounted) _say(t.error(e), bad: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        KeepAllText(t.ednTitle, style: context.text.labelLarge),
+        const SizedBox(height: Space.xs),
+        KeepAllText(
+          t.ednBody(editionLabel(widget.current)),
+          style: context.text.bodySmall,
+        ),
+        const SizedBox(height: Space.sm),
+        Wrap(
+          spacing: Space.sm,
+          runSpacing: Space.sm,
+          children: [
+            for (final name in widget.offered)
+              OutlinedButton(
+                onPressed: _busy ? null : () => _switch(name),
+                child: KeepAllText(t.ednSwitch(editionLabel(name))),
+              ),
+          ],
+        ),
+        if (_note case final note?)
+          Padding(
+            padding: const EdgeInsets.only(top: Space.xs),
+            child: KeepAllText(
+              note,
+              style: context.text.bodySmall?.copyWith(
+                color: _noteBad ? context.colors.danger : null,
+              ),
+            ),
+          ),
       ],
     );
   }

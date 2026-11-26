@@ -4,7 +4,7 @@
 //! Server jobs an owner queues from the console: the kinds the server agent runs, their argument rules,
 //! and the job file format `deploy/agent.sh` reads from the inbox. Nothing here touches the disk.
 
-use crate::entropy;
+use crate::{config::valid_edition_name, entropy};
 use uuid::Uuid;
 
 const DAYS: [&str; 7] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -29,6 +29,8 @@ pub enum Kind {
     /// Records that the owner keeps the sealed copy off the server. Queued by the server when the owner says so
     /// after the download (`kept`), never by a client.
     KeysConfirm,
+    /// Follow another signed release stream (`arg` = an edition the installer offered this domain, `dahae edition`).
+    Edition,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,6 +55,7 @@ impl Kind {
             "host-approval-enroll" => Self::HostApprovalEnroll,
             "rollback" => Self::Rollback,
             "keys-backup" => Self::KeysBackup,
+            "edition" => Self::Edition,
             _ => return None,
         })
     }
@@ -73,6 +76,7 @@ impl Kind {
             Self::Rollback => "rollback",
             Self::KeysBackup => "keys-backup",
             Self::KeysConfirm => "keys-confirm",
+            Self::Edition => "edition",
         }
     }
 
@@ -93,6 +97,7 @@ impl Kind {
             Self::Rollback => "이전 버전으로 되돌리기",
             Self::KeysBackup => "비밀 키 사본 내려받기",
             Self::KeysConfirm => "비밀 키 사본 보관 확인",
+            Self::Edition => "업데이트 판(에디션) 바꾸기",
         }
     }
 
@@ -104,7 +109,7 @@ impl Kind {
 
     /// The agent holds these until the server approval code arrives (`agent.sh::is_high_kind`).
     pub fn needs_approval(self) -> bool {
-        matches!(self, Self::DomainSet | Self::Rollback)
+        matches!(self, Self::DomainSet | Self::Rollback | Self::Edition)
     }
 
     /// The argument is a secret (the key copy's passphrase): it goes into the job file only, never the database.
@@ -114,6 +119,7 @@ impl Kind {
 }
 
 /// Checks a kind and its argument the way the agent does. Returns a stable error code for the response.
+/// An `edition` must also be one the installer offered this server ([`edition_offered`]).
 pub fn validate(kind: &str, arg: &str) -> Result<JobSpec, &'static str> {
     let kind = Kind::parse(kind).ok_or("unknown_job_kind")?;
     let ok = match kind {
@@ -126,12 +132,19 @@ pub fn validate(kind: &str, arg: &str) -> Result<JobSpec, &'static str> {
         Kind::Heartbeat => arg == "off" || valid_heartbeat_url(arg),
         // The server fills in the caller's staff id; a client never chooses whose code it is.
         Kind::HostApprovalEnroll => arg.is_empty(),
+        Kind::Edition => valid_edition_name(arg),
     };
     if ok {
         Ok(JobSpec { kind, arg: arg.to_string() })
     } else {
         Err("invalid_job_arg")
     }
+}
+
+/// The agent's `edition_offered`: only an edition in `EDITIONS_OFFERED`, which lists the editions whose table row
+/// names this domain. Every other server has an empty list, so the switch is never offered there.
+pub fn edition_offered(name: &str, offered: &[String]) -> bool {
+    offered.iter().any(|e| e == name)
 }
 
 /// The agent's `KEYS_PASS_HEX_RE`: 12 to 256 bytes of passphrase as lowercase hex.
@@ -308,6 +321,26 @@ mod tests {
         }
         assert_eq!(validate("keys-confirm", ""), Err("unknown_job_kind"), "only the server queues the confirmation");
         assert_eq!(Kind::KeysConfirm.name(), "keys-confirm");
+    }
+
+    #[test]
+    fn edition_is_an_owner_job_held_for_approval_and_takes_only_an_offered_name() {
+        assert_eq!(
+            validate("edition", "uzipsa"),
+            Ok(JobSpec {
+                kind: Kind::Edition,
+                arg: "uzipsa".into()
+            })
+        );
+        assert!(Kind::Edition.needs_owner() && Kind::Edition.needs_approval() && !Kind::Edition.secret_arg());
+        assert_eq!(Kind::parse(Kind::Edition.name()), Some(Kind::Edition));
+        for bad in ["", "U", "Uzipsa", "uzipsa;id", "a,b", "../x", &"a".repeat(32)] {
+            assert_eq!(validate("edition", bad), Err("invalid_job_arg"), "{bad}");
+        }
+        let offered = vec!["uzipsa".to_string()];
+        assert!(edition_offered("uzipsa", &offered));
+        assert!(!edition_offered("dahae", &offered), "not listed");
+        assert!(!edition_offered("uzipsa", &[]), "nothing offered on other servers");
     }
 
     #[test]

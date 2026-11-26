@@ -183,7 +183,7 @@ v1.6.0 이하로 설치한 서버는 이 기능이 없으니 설치 줄을 한 �
 ### 서버 작업 요청 (API)
 사장님 인증을 거친 요청은 `POST /v1/admin/host/jobs` 로 들어가 작업 파일이 되고, 작업 실행기가 root 로 실행해요.
 허용된 종류는 다음뿐이에요: `backup-now`, `update`, `update-skip`, `channel stable|beta`, `restart api|web|db|all`, `schedule`,
-`heartbeat <https 주소>|off`, `domain-check <도메인>`, `domain-set <도메인>`, `host-approval-enroll`, `rollback`, `keys-backup`
+`heartbeat <https 주소>|off`, `domain-check <도메인>`, `domain-set <도메인>`, `host-approval-enroll`, `rollback`, `keys-backup`, `edition <판>` (설치 프로그램이 이 도메인에 열어 둔 판만, `EDITIONS_OFFERED`)
 (근거: [backend/crates/api/src/host_jobs.rs](../backend/crates/api/src/host_jobs.rs), [deploy/agent.sh](../deploy/agent.sh) `job_args_ok`).
 상태 확인(`status-refresh`)과 DNS 확인(`domain-check`)을 빼면 모든 종류에 사장님의 TOTP 인증 코드가 필요해요 (`needs_owner`).
 `host-approval-enroll` 의 계정 번호는 서버가 요청한 사장님 번호로 채워요. 결과(DNS 확인 JSON, 인증 앱 주소)는
@@ -198,7 +198,7 @@ base64 로 `out/<토큰>` 에 남기고, 그 결과는 **요청한 사장님만,
 `POST /v1/admin/host/jobs/{id}/kept` (요청한 사장님만, `downloaded` → `kept` 한 번)가 `keys-confirm` 작업을 넣어 `KEY_ESCROW_AT` 을 기록해요
 (클라이언트는 이 종류를 직접 넣을 수 없어요). 콘솔 **시스템 상태 > 서버 업데이트 > 복구** 카드가 두 작업을 버튼으로 보여 줘요.
 
-버전을 올리거나 되돌리는 작업(`update-tag`, `rollback`)과 도메인 바꾸기(`domain-set`)는 서버 승인 코드가 있어야 실행돼요.
+버전을 올리거나 되돌리는 작업(`update-tag`, `rollback`), 도메인 바꾸기(`domain-set`)와 판 바꾸기(`edition`)는 서버 승인 코드가 있어야 실행돼요.
 콘솔은 코드를 `POST /v1/admin/host/jobs/{id}/approve` 로 보내고, 작업 실행기가 확인해요. 승인은 10분 안에 해야 하고,
 한 시간 안에 10번 틀리면 승인이 잠겨요 (`APPROVAL_TTL_SEC`, `APPROVAL_FAIL_MAX`, root 작업 실행 스크립트 (`deploy/` 폴더)).
 `update-tag` 는 설치 기록보다 낮은 버전을 거부해요 (`tag_newer`). 승인 칸에 두지 못한 작업은 이유(승인 코드 없음,
@@ -483,7 +483,7 @@ Cron-only commands: `auto-update`, `write-cron`; installer-only: `prepare`.
 - Automatic update: Monday 04:00 Korea time by default. It skips when a skip marker exists or a job is waiting, and on the stable channel it waits 24 hours after first seeing a new image (`stable_seasoned`, `cmd_auto_update`).
 - Images are accepted only with a valid cosign keyless signature from the release workflow of the signer repository (`verify_image`). Images loaded from a tar (`dahae load`) skip this check.
 - Host tools follow the version: `dahae update [tag]` first downloads that release's `install.sh`, `SHA256SUMS` and `SHA256SUMS.bundle` from the delivery repo (`DELIVERY_RAW`; the tag, or `main` for stable, `beta` for beta), verifies the SHA256SUMS cosign bundle with the same identity rule as the images and the install.sh hash against it, and stops before the backup on any mismatch (no fallback). Once the new images answer, it keeps that installer as `host/install.sh` (the previous one as `host/install.prev.sh`) and runs it with `MALKKEUM_HOST_UPDATE=tools`: CLI, agent, systemd units, cron and compose are rewritten; `.env`, data, packages, firewall and SSH settings are untouched. Dev installs without `DELIVERY_RAW`, tar images and unsigned test registries keep their tools. Servers installed with v1.6.0 or older re-run the install line once.
-- Owner-authenticated server jobs (`POST /v1/admin/host/jobs`; the console System status screen sends them): `backup-now`, `update`, `update-skip`, `channel`, `restart api|web|db|all`, `schedule`, `heartbeat`, `domain-check`, `domain-set`, `host-approval-enroll`, `rollback`, `keys-backup` (passphrase hex, kept out of `host_jobs` and the audit log; the replay record keeps only a DATA_KEY HMAC of the body; the sealed copy is read once by the requesting owner, and `POST …/{id}/kept` records it as kept off the server). Every kind except status refresh needs the owner's TOTP code ([backend/crates/api/src/host_jobs.rs](../backend/crates/api/src/host_jobs.rs)).
+- Owner-authenticated server jobs (`POST /v1/admin/host/jobs`; the console System status screen sends them): `backup-now`, `update`, `update-skip`, `channel`, `restart api|web|db|all`, `schedule`, `heartbeat`, `domain-check`, `domain-set`, `host-approval-enroll`, `rollback`, `edition` (only a name in `EDITIONS_OFFERED`; owner code plus the server approval code), `keys-backup` (passphrase hex, kept out of `host_jobs` and the audit log; the replay record keeps only a DATA_KEY HMAC of the body; the sealed copy is read once by the requesting owner, and `POST …/{id}/kept` records it as kept off the server). Every kind except status refresh needs the owner's TOTP code ([backend/crates/api/src/host_jobs.rs](../backend/crates/api/src/host_jobs.rs)).
 - Version-raising and rollback jobs in the server job runner (root job script in the `deploy/` folder) need the server approval code, valid for 10 minutes; 10 wrong codes in an hour lock approvals.
 - Schema changes are additive (expand, then contract later), because a rollback runs the previous release on the migrated schema ([docs/DEPLOY.md](DEPLOY.md) §2).
 

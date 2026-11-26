@@ -6,7 +6,7 @@
 # 작업 파일은 API 컨테이너가 써요. 이 파일은 정해진 명령만 실행하고, 파일 내용을 셸로 해석하지 않아요.
 #   사용법: agent.sh run   (dahae-agent.service 가 불러요)
 # 작업 파일 형식: id=<UUIDv7>, kind=<종류>, arg=<값>, token=<32자리 16진수, 선택> 줄만 허용해요. 그 밖의 줄·키·중복은 거부해요.
-# 승인이 필요한 작업(update-tag, rollback, domain-set)은 승인 칸(host/awaiting.job)에 하나만 두고, 서버 승인 코드(<id>.approve)가 맞을 때만 실행해요.
+# 승인이 필요한 작업(update-tag, rollback, domain-set, edition)은 승인 칸(host/awaiting.job)에 하나만 두고, 서버 승인 코드(<id>.approve)가 맞을 때만 실행해요.
 set -euo pipefail
 
 JOBS=${DAHAE_JOBS:-/opt/malkkeum/jobs}
@@ -33,7 +33,7 @@ OUT_KEEP_MIN=10                     # 결과 파일(out/)도 10분만 남아요
 STATUS_KEEP_DAYS=30                 # 상태·단계 기록은 30일 보관해요
 LEDGER_KEEP_MIN=1440                # 작업 번호 기록은 하루 보관해요 (15분 창 밖이라 안전해요)
 RC_ROLLED_BACK=3                    # dahae update 가 이전 버전으로 되돌렸을 때의 종료 코드
-MIN_CLI_REV=2                       # host.json 에 적는, 이 실행기가 요구하는 관리 명령의 최소 판
+MIN_CLI_REV=3                       # host.json 에 적는, 이 실행기가 요구하는 관리 명령의 최소 판
 SCHEDULE_RE='^(off|(mon|tue|wed|thu|fri|sat|sun)@([01][0-9]|2[0-3]):[0-5][0-9])$'
 HB_URL_RE='^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%/:@+=?-]*)?$'   # install.sh 와 같은 규칙
 DOMAIN_RE='^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+([a-z]{2,63}|xn--[a-z0-9-]{1,59})$'
@@ -127,7 +127,7 @@ env_val() { # env_val 키 : .env 의 값을 읽어요 (source 하지 않아요).
   { grep -E "^$1=" "$DIR/.env" 2>/dev/null || true; } | tail -n1 | cut -d= -f2-
 }
 
-is_high_kind() { case "$1" in update-tag|rollback|domain-set) return 0 ;; *) return 1 ;; esac; } # 서버 승인이 필요한 종류
+is_high_kind() { case "$1" in update-tag|rollback|domain-set|edition) return 0 ;; *) return 1 ;; esac; } # 서버 승인이 필요한 종류
 
 tag_ok() { # 정식 채널은 vX.Y.Z 만 받아요. 베타 채널만 -접미사를 받아요
   printf '%s' "$1" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' && return 0
@@ -183,7 +183,7 @@ log_arg_ok() { # 로그 값은 서비스:줄 수 (api|web|db, 50~2000 줄)
 
 job_args_ok() { # 종류와 값의 짝이 맞아야 해요. 목록에 없는 종류는 이 실행기에서 돌리지 않아요
   case "$JOB_KIND" in
-    logs|offsite-list|domain-check|domain-set|update-tag|rollback|host-approval-enroll|keys-backup) [ -n "$JOB_TOKEN" ] || return 1 ;; # 결과·요약을 공개 파일로 남기려면 토큰이 있어야 해요
+    logs|offsite-list|domain-check|domain-set|update-tag|rollback|host-approval-enroll|keys-backup|edition) [ -n "$JOB_TOKEN" ] || return 1 ;; # 결과·요약을 공개 파일로 남기려면 토큰이 있어야 해요
   esac
   case "$JOB_KIND" in
     status-refresh|backup-now|update|update-skip|offsite-list|rollback|keys-confirm) [ -z "$JOB_ARG" ] ;;
@@ -194,10 +194,16 @@ job_args_ok() { # 종류와 값의 짝이 맞아야 해요. 목록에 없는 종
     heartbeat) [ "$JOB_ARG" = off ] || heartbeat_url_ok "$JOB_ARG" ;;
     host-approval-enroll) printf '%s' "$JOB_ARG" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' ;;
     channel) case "$JOB_ARG" in stable|beta) ;; *) return 1 ;; esac ;;
+    edition) edition_offered "$JOB_ARG" ;;
     restart) case "$JOB_ARG" in api|web|db|all) ;; *) return 1 ;; esac ;;
     schedule) printf '%s' "$JOB_ARG" | grep -Eq "$SCHEDULE_RE" ;;
     *) return 1 ;;
   esac
+}
+
+edition_offered() { # edition_offered 이름 : 설치 프로그램이 이 도메인에 열어 둔 판(.env EDITIONS_OFFERED, 쉼표 목록)에 있어야 해요
+  printf '%s' "$1" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' || return 1
+  case ",$(env_val EDITIONS_OFFERED)," in *",$1,"*) return 0 ;; *) return 1 ;; esac
 }
 
 token_ok() { # 공개 토큰은 없거나, 32자리 16진수여야 해요 (파일 이름으로 쓰여요)
@@ -285,6 +291,7 @@ summary_for() { # 서버가 직접 쓰는 요약 (값은 이미 검사를 통과
     update-tag) printf '업데이트: %s 버전으로 바꿔요 (먼저 백업해요)' "$2" ;;
     rollback) printf '이전 버전으로 되돌려요: %s (데이터는 그대로예요)' "$(prev_version)" ;;
     domain-set) printf '도메인을 %s 로 바꿔요 (예전 주소도 계속 응답해요)' "$2" ;;
+    edition) printf '업데이트 판을 %s 로 바꿔요 (먼저 백업해요. 데이터·키·도메인·앱은 그대로예요)' "$2" ;;
   esac
 }
 
@@ -381,7 +388,7 @@ approval_enroll() { # 승인 코드를 처음 한 번만 만들어요 (이미 �
 # ---- 실행 (고정 명령만) ----
 run_cli() { # run_cli 인자... : 관리 명령을 --yes 로, 입력 없이, 시간 제한을 걸어 실행해요 (종료 코드를 그대로 돌려줘요)
   local pre=() limit="$RUN_TIMEOUT"
-  case "$1" in update|channel|rollback|backup) limit="$UPDATE_RUN_TIMEOUT" ;; esac # 먼저 백업하는 명령: 중간에 끊기면 실패로 남아요
+  case "$1" in update|channel|rollback|backup|edition) limit="$UPDATE_RUN_TIMEOUT" ;; esac # 먼저 백업하는 명령: 중간에 끊기면 실패로 남아요
   # setsid 는 리눅스 서버에 있어요. 없는 환경(개발 PC 테스트)에서는 생략해요.
   command -v setsid >/dev/null && pre=(setsid)
   DAHAE_YES=1 "${pre[@]}" timeout "$limit" "$CLI" "$@" </dev/null >/dev/null 2>&1
@@ -474,6 +481,8 @@ keys_backup_job() { # 비밀번호(16진수)로 잠근 비밀 키 사본을 만�
   base64 -w0 -- "$f" | out_publish "$JOB_TOKEN"
 }
 
+edition_name() { local e; e=$(env_val EDITION); printf '%s' "${e:-dahae}"; } # EDITION 이 없으면 다해 판이에요
+
 word_or_unknown() { # 값이 글자·숫자·.-_ 만 아니면 unknown 으로 바꿔요 (host.json 에 그대로 들어가요)
   case "$1" in ''|*[!A-Za-z0-9._-]*) printf 'unknown' ;; *) printf '%s' "$1" ;; esac
 }
@@ -514,8 +523,8 @@ host_refresh() { # 호스트 정보 파일(host.json): 확인 시각, 채널, �
   read -r failed banned <<< "$(ssh_counts)"
   ssh_alert "$banned"
   case "$(env_val VERSION)" in stable|beta|'') pinned=false ;; esac # 고정: 'dahae update 태그' 뒤로 채널 대신 그 태그예요 (자동 업데이트가 채널로 되돌려요)
-  write_file "$HOST_DIR/host.json" "$(printf '{"checked":"%s","channel":"%s","version":"%s","pinned":%s,"min_cli":%s,"next_update":%s,"ssh_failed":%s,"ssh_banned":%s}' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(word_or_unknown "$(env_val CHANNEL)")" "$(word_or_unknown "$(env_val VERSION)")" "$pinned" \
+  write_file "$HOST_DIR/host.json" "$(printf '{"checked":"%s","edition":"%s","channel":"%s","version":"%s","pinned":%s,"min_cli":%s,"next_update":%s,"ssh_failed":%s,"ssh_banned":%s}' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(word_or_unknown "$(edition_name)")" "$(word_or_unknown "$(env_val CHANNEL)")" "$(word_or_unknown "$(env_val VERSION)")" "$pinned" \
     "$MIN_CLI_REV" "$(next_update)" "$failed" "$banned")"
 }
 
@@ -529,6 +538,7 @@ dispatch() { # 종류에 맞는 명령 하나만 실행해요. 종료 코드를 
     # 건너뛰기 표시는 예약 업데이트(dahae auto-update)가 읽고 지워요
     update-skip) : > "$HOST_DIR/skip-next-update" ;;
     channel) run_cli channel "$JOB_ARG" ;;
+    edition) run_cli edition "$JOB_ARG" ;; # 관리 명령이 판 표·도메인·채널 버전·서명을 다시 확인하고, 실패하면 이전 판 그대로예요
     schedule) run_cli update-schedule "$JOB_ARG" ;;
     restart)
       if [ "$JOB_ARG" = all ]; then run_compose restart; else run_compose restart "$JOB_ARG"; fi ;;
@@ -548,6 +558,10 @@ fail_reason() { # fail_reason 종료코드 : 도메인 바꾸기가 끝나지 �
     domain-set:"$RC_ROLLED_BACK") echo "새 주소가 5분 안에 응답하지 않아 예전 도메인으로 되돌렸어요 (DNS·방화벽 80/443 확인)" ;;
     rollback:"$RC_PAYOUTS_IN_DOUBT") echo "토스 결과를 기다리는 정산이 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요" ;;
     update:"$RC_TOOLS_STALE"|update-tag:"$RC_TOOLS_STALE"|channel:"$RC_TOOLS_STALE") echo "새 버전으로 바꿨고 정상이에요. 관리 도구만 바꾸지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" ;;
+    edition:"$RC_ROLLED_BACK") echo "새 판이 응답하지 않아 되돌렸어요. 지금 판 그대로예요 (데이터도 그대로예요)" ;;
+    # 셸 없이 고쳐요: '지금 업데이트' 는 같은 이미지에서 관리 도구만 다시 받아요 (update:5 의 '설치 줄 다시 실행' 이 아니에요)
+    edition:"$RC_TOOLS_STALE") printf "%s 로 바꿨고 정상이에요. 관리 도구는 '지금 업데이트' 를 한 번 눌러 주세요\n" "$JOB_ARG" ;;
+    edition:*) echo "판을 바꾸지 못했어요. 지금 판 그대로예요. 새 판이 아직 나오지 않았거나 서명을 확인하지 못했을 수 있어요: 'dahae logs' 를 개발자에게 보여 주세요" ;;
     rollback:"$RC_TOOLS_STALE") echo "이전 버전으로 되돌렸고 정상이에요. 관리 도구만 되돌리지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" ;;
     rollback:"$RC_NO_PREVIOUS") echo "되돌릴 이전 버전이 없어요 (업데이트를 한 번 한 뒤에 쓸 수 있어요). 지금 버전 그대로예요" ;;
     rollback:*) echo "되돌리지 못했어요. 시스템 상태를 확인하고 'dahae logs' 를 개발자에게 보여 주세요" ;;

@@ -80,6 +80,9 @@ async fn enqueue(
 ) -> ApiResult<impl IntoResponse> {
     let key = idempotency_key(&headers)?;
     let mut spec = host_jobs::validate(&body.kind, &body.arg).map_err(ApiError::BadRequest)?;
+    if spec.kind == Kind::Edition && !host_jobs::edition_offered(&spec.arg, &s.config.editions_offered) {
+        return Err(ApiError::BadRequest("edition_not_offered"));
+    }
     if spec.kind == Kind::HostApprovalEnroll {
         spec.arg = a.id.hyphenated().to_string();
     }
@@ -183,7 +186,10 @@ async fn list(State(s): State<AppState>, Admin(_): Admin) -> ApiResult<Json<Valu
         .fetch_all(&s.db)
         .await?;
     let jobs: Vec<Value> = rows.iter().map(|r| job_json(&dir_status(&s, r.id), r)).collect();
-    Ok(Json(json!({ "jobs": jobs })))
+    // The console's edition card: shown only when the installer offered this server another edition.
+    Ok(Json(
+        json!({ "jobs": jobs, "edition": s.config.edition, "editions_offered": s.config.editions_offered }),
+    ))
 }
 
 async fn detail(State(s): State<AppState>, Admin(_): Admin, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {

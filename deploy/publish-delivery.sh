@@ -69,6 +69,12 @@ publish() { # publish 브랜치 채널
   cp "$src/deploy/agent.sh" agent.sh
   agent_sha=$(sha256sum agent.sh | cut -d' ' -f1) # install.sh pins this hash, so the agent is checked without trusting the download
   cp "$src/deploy/install.sh" install.sh
+  # The editions table rides in the installer (baked after its marker line) and beside it, listed in SHA256SUMS.
+  [ -f "$src/deploy/editions" ] || { echo "::error::deploy/editions is missing" >&2; exit 1; }
+  if grep -qE "EDITIONS_EOF|'" "$src/deploy/editions"; then echo "::error::deploy/editions may not hold a quote or the heredoc end word" >&2; exit 1; fi
+  cp "$src/deploy/editions" editions
+  [ "$(grep -c '^# @editions:' install.sh)" = 1 ] || { echo "::error::install.sh needs exactly one '# @editions:' marker line" >&2; exit 1; }
+  sed -i '/^# @editions:/r editions' install.sh
   sed -i -e "s|^IMAGE_REPO_DEFAULT=.*|IMAGE_REPO_DEFAULT=$IMAGE_REPO|" \
          -e "s|^SIGNER_REPO_DEFAULT=.*|SIGNER_REPO_DEFAULT=$SIGNER_REPO|" \
          -e "s|^DEFAULT_CHANNEL=stable\$|DEFAULT_CHANNEL=$channel|" \
@@ -79,8 +85,9 @@ publish() { # publish 브랜치 채널
   grep -q "^IMAGE_REPO_DEFAULT=$IMAGE_REPO\$" install.sh
   grep -q "^SIGNER_REPO_DEFAULT=$SIGNER_REPO\$" install.sh
   grep -q "^DEFAULT_CHANNEL=$channel\$" install.sh
+  grep -qxF "$(grep -v '^#' editions | head -n1)" install.sh # the table is baked
   bash -n install.sh
-  sha256sum install.sh agent.sh > SHA256SUMS
+  sha256sum install.sh agent.sh editions > SHA256SUMS
   if [ "${SIGN_RELEASE:-0}" = 1 ]; then sign_release "$branch"; fi
 
   cp -r "$src/docs/guide" "$src/docs/store" .

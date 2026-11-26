@@ -80,6 +80,11 @@ pub struct Config {
     pub instance_backup: Option<S3Config>,
     /// Minutes after the arrival window starts before an unchecked-in partner counts as a no-show.
     pub noshow_grace_minutes: u32,
+    /// The release stream this server follows (`EDITION`, written by `dahae edition`). Unset: `dahae`.
+    pub edition: String,
+    /// Editions the installer opened for this domain (`EDITIONS_OFFERED`, comma list). Empty on every other server:
+    /// the console shows no edition card and the `edition` job is refused.
+    pub editions_offered: Vec<String>,
 }
 
 /// Solapi REST API v4 credentials and AlimTalk routing.
@@ -402,6 +407,8 @@ impl Config {
             metrics_token: metrics_token()?,
             instance_backup: instance_backup()?,
             noshow_grace_minutes: number("NOSHOW_GRACE_MINUTES", 30, 1)?,
+            edition: opt("EDITION").unwrap_or_else(|| "dahae".into()),
+            editions_offered: list("EDITIONS_OFFERED").into_iter().filter(|e| valid_edition_name(e)).collect(),
         })
     }
 }
@@ -462,6 +469,12 @@ pub(crate) fn cert_fingerprints(key: &'static str, values: Vec<String>) -> Resul
         .collect()
 }
 
+/// An edition name as the server agent takes it: `^[a-z][a-z0-9-]{1,30}$`.
+pub fn valid_edition_name(name: &str) -> bool {
+    let b = name.as_bytes();
+    (2..=31).contains(&b.len()) && b[0].is_ascii_lowercase() && b.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-')
+}
+
 pub(crate) fn team_id(raw: Option<String>) -> Result<Option<String>, ConfigError> {
     match raw {
         Some(t) if t.len() == TEAM_ID_LEN && t.bytes().all(|b| b.is_ascii_alphanumeric()) => Ok(Some(t)),
@@ -490,6 +503,16 @@ mod tests {
         assert!(Config::staff_mfa_required_from(Some("0"), true).is_ok_and(|v| !v), "dev kit");
         assert!(Config::staff_mfa_required_from(Some("0"), false).is_err(), "production refuses");
         assert!(Config::staff_mfa_required_from(Some("false"), false).is_err(), "production refuses");
+    }
+
+    #[test]
+    fn edition_names_follow_the_agent_rule() {
+        for good in ["uzipsa", "dahae", "a1", "kr-test"] {
+            assert!(valid_edition_name(good), "{good}");
+        }
+        for bad in ["", "u", "Uzipsa", "1abc", "-ab", "a_b", "a b", "a,b", &"a".repeat(32)] {
+            assert!(!valid_edition_name(bad), "{bad}");
+        }
     }
 
     #[test]

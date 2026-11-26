@@ -3366,6 +3366,54 @@ class TEn extends T {
   String get themeTip => 'Change theme';
 
   @override
+  String get ednTitle => 'Update edition';
+
+  @override
+  String ednBody(String current) {
+    return 'Current edition: $current. Switching makes this server take its updates from another release. Needs your owner code and the server approval code.';
+  }
+
+  @override
+  String ednSwitch(String name) {
+    return 'Switch to $name';
+  }
+
+  @override
+  String ednConfirm(String name) {
+    return 'It backs up first. From then on the server follows $name\'s releases. Data, keys, domain and store apps stay as they are. \'Roll back to the previous version\' stays available. The service restarts for a few minutes.';
+  }
+
+  @override
+  String get ednRunning =>
+      'Switching: backup, check, switch, health check. It keeps going on the server even if you close this screen.';
+
+  @override
+  String ednDone(String name) {
+    return 'Switched to $name.';
+  }
+
+  @override
+  String ednRolledBack(String current) {
+    return 'The new edition did not answer, so it went back. Still on $current.';
+  }
+
+  @override
+  String ednFailed(String reason) {
+    return 'Could not switch the edition: $reason';
+  }
+
+  @override
+  String get ednNoSummary =>
+      'The server\'s summary was not an edition switch, so no approval code was sent. Check the recent jobs below.';
+
+  @override
+  String get ednCancelled =>
+      'No server approval code was entered, so the edition was not switched. The held job cancels itself after 10 minutes.';
+
+  @override
+  String get ednKind => 'Edition switch';
+
+  @override
   String get err_price_changed =>
       'The price changed. Review the new quote and try again.';
 

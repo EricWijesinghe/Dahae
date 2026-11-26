@@ -6319,6 +6319,72 @@ abstract class T {
   /// **'테마 바꾸기'**
   String get themeTip;
 
+  /// No description provided for @ednTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'업데이트 판 (Edition)'**
+  String get ednTitle;
+
+  /// No description provided for @ednBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 판: {current}. 판을 바꾸면 이 서버가 다른 릴리스의 업데이트를 받아요. 사장님 코드와 서버 승인 코드가 필요해요.'**
+  String ednBody(String current);
+
+  /// No description provided for @ednSwitch.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name}(으)로 바꾸기'**
+  String ednSwitch(String name);
+
+  /// No description provided for @ednConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'먼저 백업해요. 그다음부터 서버가 {name}의 릴리스를 따라가요. 데이터, 키, 도메인, 스토어 앱은 그대로예요. \'이전 버전으로 되돌리기\'는 계속 쓸 수 있어요. 몇 분 동안 서비스가 다시 시작돼요.'**
+  String ednConfirm(String name);
+
+  /// No description provided for @ednRunning.
+  ///
+  /// In ko, this message translates to:
+  /// **'판을 바꾸고 있어요: 백업, 확인, 바꾸기, 응답 확인 순서예요. 이 화면을 닫아도 서버에서 계속돼요.'**
+  String get ednRunning;
+
+  /// No description provided for @ednDone.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name}(으)로 바꿨어요.'**
+  String ednDone(String name);
+
+  /// No description provided for @ednRolledBack.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 판이 응답하지 않아 되돌렸어요. 그대로 {current}이에요.'**
+  String ednRolledBack(String current);
+
+  /// No description provided for @ednFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'판을 바꾸지 못했어요: {reason}'**
+  String ednFailed(String reason);
+
+  /// No description provided for @ednNoSummary.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버가 보낸 요약이 판 바꾸기가 아니어서 승인 코드를 보내지 않았어요. 아래 최근 작업을 확인해 주세요.'**
+  String get ednNoSummary;
+
+  /// No description provided for @ednCancelled.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버 승인 코드를 넣지 않아서 판을 바꾸지 않았어요. 기다리던 작업은 10분 뒤에 저절로 취소돼요.'**
+  String get ednCancelled;
+
+  /// No description provided for @ednKind.
+  ///
+  /// In ko, this message translates to:
+  /// **'업데이트 판 바꾸기'**
+  String get ednKind;
+
   /// No description provided for @err_price_changed.
   ///
   /// In ko, this message translates to:

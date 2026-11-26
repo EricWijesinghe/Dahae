@@ -79,6 +79,8 @@ pub fn test_config() -> Config {
         db: Default::default(),
         metrics_token: None,
         noshow_grace_minutes: 30,
+        edition: "dahae".into(),
+        editions_offered: Vec::new(),
     }
 }
 

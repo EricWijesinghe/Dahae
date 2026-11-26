@@ -35,8 +35,12 @@ class _HostUpdateCardState extends State<HostUpdateCard> {
     builder: (context, data, reload) {
       final t = context.t;
       final isOwner = (data['me'] as Json)['is_owner'] == true;
-      final jobs = ((data['jobs'] as Json)['jobs'] as List? ?? const [])
-          .cast<Json>();
+      final host = data['jobs'] as Json;
+      final jobs = (host['jobs'] as List? ?? const []).cast<Json>();
+      // Only a server the installer offered another edition shows the edition card.
+      final offered = (host['editions_offered'] as List? ?? const [])
+          .whereType<String>()
+          .toList();
       final busy = jobs.any(
         (j) =>
             j['kind'] == 'update' &&
@@ -59,6 +63,14 @@ class _HostUpdateCardState extends State<HostUpdateCard> {
               ),
               const SizedBox(height: Space.lg),
               HostControls(onQueued: reload),
+              if (offered.isNotEmpty) ...[
+                const SizedBox(height: Space.lg),
+                EditionCard(
+                  current: host['edition'] as String? ?? 'dahae',
+                  offered: offered,
+                  onQueued: reload,
+                ),
+              ],
               const SizedBox(height: Space.lg),
               const ApprovalEnrollCard(),
               const SizedBox(height: Space.lg),
@@ -123,6 +135,7 @@ String _kind(T t, String kind) => switch (kind) {
   'rollback' => t.srKindRollback,
   'keys-backup' => t.srKindKeysBackup,
   'keys-confirm' => t.srKindKeysConfirm,
+  'edition' => t.ednKind,
   _ => kind,
 };
 

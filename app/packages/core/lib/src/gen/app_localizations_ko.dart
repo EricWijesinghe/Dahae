@@ -3296,6 +3296,54 @@ class TKo extends T {
   String get themeTip => '테마 바꾸기';
 
   @override
+  String get ednTitle => '업데이트 판 (Edition)';
+
+  @override
+  String ednBody(String current) {
+    return '지금 판: $current. 판을 바꾸면 이 서버가 다른 릴리스의 업데이트를 받아요. 사장님 코드와 서버 승인 코드가 필요해요.';
+  }
+
+  @override
+  String ednSwitch(String name) {
+    return '$name(으)로 바꾸기';
+  }
+
+  @override
+  String ednConfirm(String name) {
+    return '먼저 백업해요. 그다음부터 서버가 $name의 릴리스를 따라가요. 데이터, 키, 도메인, 스토어 앱은 그대로예요. \'이전 버전으로 되돌리기\'는 계속 쓸 수 있어요. 몇 분 동안 서비스가 다시 시작돼요.';
+  }
+
+  @override
+  String get ednRunning =>
+      '판을 바꾸고 있어요: 백업, 확인, 바꾸기, 응답 확인 순서예요. 이 화면을 닫아도 서버에서 계속돼요.';
+
+  @override
+  String ednDone(String name) {
+    return '$name(으)로 바꿨어요.';
+  }
+
+  @override
+  String ednRolledBack(String current) {
+    return '새 판이 응답하지 않아 되돌렸어요. 그대로 $current이에요.';
+  }
+
+  @override
+  String ednFailed(String reason) {
+    return '판을 바꾸지 못했어요: $reason';
+  }
+
+  @override
+  String get ednNoSummary =>
+      '서버가 보낸 요약이 판 바꾸기가 아니어서 승인 코드를 보내지 않았어요. 아래 최근 작업을 확인해 주세요.';
+
+  @override
+  String get ednCancelled =>
+      '서버 승인 코드를 넣지 않아서 판을 바꾸지 않았어요. 기다리던 작업은 10분 뒤에 저절로 취소돼요.';
+
+  @override
+  String get ednKind => '업데이트 판 바꾸기';
+
+  @override
   String get err_price_changed => '가격이 바뀌었어요. 새 견적을 확인하고 다시 시도해 주세요.';
 
   @override

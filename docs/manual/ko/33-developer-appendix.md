@@ -157,6 +157,7 @@ sudo dahae restore-offsite db-20261110-033000.sql.gz.enc
 | `host-approval-enroll` | 있음 (**서버 승인 코드** → **[등록하기]**, 28장 28.8.1) | 소유자 코드. 계정 번호는 서버가 채워요. 인증 앱 주소는 요청한 소유자만 읽어요. 이미 있으면 실패 |
 | `rollback` | 있음 (**복구** → **[이전 버전으로 되돌리기]**, 26장) | 소유자 코드 + 서버 승인 코드. 승인 창에 실행기가 직접 쓴 요약과 돌아갈 버전이 보여요. `dahae rollback` 실행, 종료 코드 4/5/6 의 이유를 콘솔이 보여 줘요 |
 | `keys-backup`, `keys-confirm` | 있음 (**복구** → **[만들고 내려받기]**, 26장) | 소유자 코드. 봉인된 사본은 한 번만 내려받아요. 사장님이 확인한 뒤에만 `POST /admin/host/jobs/{id}/kept` 가 `keys-confirm` 을 넣어요 (`KEY_ESCROW_AT` 기록) |
+| `edition` | 있음 (**업데이트 판** 카드, 설치 프로그램이 이 서버에 다른 판을 열어 둔 경우만) | 소유자 코드 + 서버 승인 코드. 이름이 `EDITIONS_OFFERED` 에 있어야 해요. `dahae edition` 실행: 새 판의 채널 버전과 서명을 먼저 확인하고, 종료 코드 3 이면 되돌아가 이전 값을 그대로 둬요 |
 | `update-tag` | 없음 | `rollback`, `domain-set` 처럼 서버 승인 코드(TOTP)가 필요한 작업. 승인 칸에서 10분 안에 승인, 5번 틀리면 취소, 1시간에 10번 틀리면 잠김 |
 | `status-refresh`, `logs`, `offsite-list` | 없음 | 에이전트는 받지만 지금 콘솔에서는 보내지 않아요 |
 

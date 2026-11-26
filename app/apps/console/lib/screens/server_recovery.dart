@@ -106,65 +106,19 @@ class _ServerRecoveryCardState extends State<ServerRecoveryCard> {
       await widget.onQueued();
       if (!mounted) return;
       _say(t.srRunning);
-      final end = await _approveAndWait(api, job);
+      final end = await approveHeldJob(
+        context,
+        api,
+        job,
+        mark: _rollbackSummary,
+        noSummary: t.srApprovalNoSummary,
+        cancelled: t.srApprovalCancelled,
+        say: _say,
+      );
       if (end == null || !mounted) return;
       _sayEnd(end, t.srRollbackDone, t.srFailed);
       await widget.onQueued();
     });
-  }
-
-  /// Waits for the agent's hold, asks for the server approval code while the agent's own summary says this is
-  /// a rollback, then waits for the end. Null (with the note set) when the owner stopped or the summary was not a rollback.
-  Future<Json?> _approveAndWait(ApiClient api, Json job) async {
-    final id = job['id'] as String;
-    var j = await waitHostJob(api, id, until: {'awaiting_approval'});
-    while (j['state'] == 'awaiting_approval') {
-      final summary = await _serverSummary(api, j);
-      if (!mounted) return null;
-      final t = context.t;
-      if (summary == null) {
-        _say(t.srApprovalNoSummary, bad: true);
-        return null;
-      }
-      final code = await askOwnerTotp(
-        context,
-        title: t.cRbApprovalTitle,
-        body: '${t.cRbApprovalBody}\n\n$summary',
-      );
-      if (code == null) {
-        if (mounted) _say(context.t.srApprovalCancelled);
-        return null;
-      }
-      await api.post('/admin/host/jobs/$id/approve', {'code': code});
-      // Still on hold after the agent's next look means a wrong code: ask again until the agent cancels.
-      j = await waitHostJob(
-        api,
-        id,
-        until: {'running'},
-        limit: const Duration(seconds: 60),
-      );
-    }
-    // A rollback backs up first (the agent allows it hours); after 30 minutes the job list keeps the result.
-    if (j['state'] == 'running') {
-      j = await waitHostJob(api, id, limit: const Duration(minutes: 30));
-    }
-    return j;
-  }
-
-  /// The root agent's summary of the held job, served by Caddy from the agent's public folder (the API cannot
-  /// write it). Null unless it is the rollback summary.
-  Future<String?> _serverSummary(ApiClient api, Json job) async {
-    final token = job['progress_token'];
-    if (token is! String) return null;
-    for (var i = 0; i < 5; i++) {
-      final p = await api.getServerFile('/ops-progress/$token');
-      final s = p is Map ? p['summary'] : null;
-      if (p is Map && p['state'] == 'awaiting_approval' && s is String) {
-        return s.contains(_rollbackSummary) ? s : null;
-      }
-      await Future<void>.delayed(const Duration(seconds: 1));
-    }
-    return null;
   }
 
   Future<void> _keys() async {
@@ -279,4 +233,67 @@ String hex(List<int> bytes) =>
 String _stamp(DateTime d) {
   String two(int n) => n.toString().padLeft(2, '0');
   return '${d.year}${two(d.month)}${two(d.day)}-${two(d.hour)}${two(d.minute)}${two(d.second)}';
+}
+
+/// Waits for the agent's hold of [job], asks for the server approval code while the agent's own summary contains
+/// [mark], then waits for the end. Null (after [say] with [noSummary] or [cancelled]) when the summary is not the
+/// expected one or the owner stopped. Used by the rollback and the edition switch, which both back up first.
+Future<Json?> approveHeldJob(
+  BuildContext context,
+  ApiClient api,
+  Json job, {
+  required String mark,
+  required String noSummary,
+  required String cancelled,
+  required void Function(String text, {bool bad}) say,
+}) async {
+  final id = job['id'] as String;
+  var j = await waitHostJob(api, id, until: {'awaiting_approval'});
+  while (j['state'] == 'awaiting_approval') {
+    final summary = await _serverSummary(api, j, mark);
+    if (!context.mounted) return null;
+    final t = context.t;
+    if (summary == null) {
+      say(noSummary, bad: true);
+      return null;
+    }
+    final code = await askOwnerTotp(
+      context,
+      title: t.cRbApprovalTitle,
+      body: '${t.cRbApprovalBody}\n\n$summary',
+    );
+    if (code == null) {
+      if (context.mounted) say(cancelled);
+      return null;
+    }
+    await api.post('/admin/host/jobs/$id/approve', {'code': code});
+    // Still on hold after the agent's next look means a wrong code: ask again until the agent cancels.
+    j = await waitHostJob(
+      api,
+      id,
+      until: {'running'},
+      limit: const Duration(seconds: 60),
+    );
+  }
+  // The job backs up first (the agent allows it hours); after 30 minutes the job list keeps the result.
+  if (j['state'] == 'running') {
+    j = await waitHostJob(api, id, limit: const Duration(minutes: 30));
+  }
+  return j;
+}
+
+/// The root agent's summary of the held job, served by Caddy from the agent's public folder (the API cannot
+/// write it). Null unless it contains [mark].
+Future<String?> _serverSummary(ApiClient api, Json job, String mark) async {
+  final token = job['progress_token'];
+  if (token is! String) return null;
+  for (var i = 0; i < 5; i++) {
+    final p = await api.getServerFile('/ops-progress/$token');
+    final s = p is Map ? p['summary'] : null;
+    if (p is Map && p['state'] == 'awaiting_approval' && s is String) {
+      return s.contains(mark) ? s : null;
+    }
+    await Future<void>.delayed(const Duration(seconds: 1));
+  }
+  return null;
 }

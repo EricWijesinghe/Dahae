@@ -44,6 +44,12 @@ DNS_MAX_TRIES=30
 HB_URL_RE='^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%/:@+=?-]*)?$'
 # 서버 이미지는 이 저장소의 .github/workflows/release.yml 이 v 태그에서 cosign(키 없는 서명)으로 서명해요.
 SIGNER_REPO_DEFAULT=EricWijesinghe/Dahae
+# 판(edition) 표: 서버가 따르는 릴리스 흐름(이미지 저장소·서명자·배포 주소)과 그 판을 고를 수 있는 도메인.
+# publish-delivery.sh 가 deploy/editions 를 아래 표시 줄 다음에 넣어요 (서명된 SHA256SUMS 에도 들어가요). 비어 있으면 판 바꾸기가 없어요.
+EDITIONS=$(cat <<'EDITIONS_EOF'
+# @editions: name image_repo signer_repo delivery_raw domains...
+EDITIONS_EOF
+)
 # 이 버전의 배포 주소(agent.sh 가 있는 곳). publish-delivery.sh 가 채워 넣어요. 비어 있으면 MALKKEUM_AGENT_FILE 이 필요해요.
 RELEASE_RAW=
 # 작업 실행기(agent.sh)의 SHA-256. publish-delivery.sh 가 이 배포본에 맞춰 채워 넣어요. 받은 agent.sh 가 이 지문과 다르면 설치를 멈춰요.
@@ -126,6 +132,12 @@ only_ipv6() { grep -E '^[0-9A-Fa-f:]+$' | grep ':' || true; }
 sha256_is() { [ "$(sha256sum "$1" | cut -d' ' -f1)" = "$2" ]; } # sha256_is 파일 지문
 cosign_sha256() { case "$1" in x86_64|amd64) echo "$COSIGN_SHA256_AMD64" ;; aarch64|arm64) echo "$COSIGN_SHA256_ARM64" ;; *) return 1 ;; esac; }
 lock_env() { chmod 600 .env; } # .env 에는 모든 비밀 키가 있어요: 실행할 때마다 root 만 읽게 맞춰요
+edition_row() { printf '%s\n' "$EDITIONS" | awk -v n="$1" '$1 == n && $1 !~ /^#/ && NF >= 5 { print; f = 1; exit } END { exit !f }'; } # edition_row 이름 -> 표의 그 줄
+field() { printf '%s\n' "$1" | awk -v i="$2" '{ print $i }'; } # field 줄 번호 -> 그 칸
+editions_offered() { # editions_offered 도메인 지금판 : 이 도메인을 직접 적은 판들(쉼표로). * 줄과 지금 판은 빼요 (다른 설치에는 아무것도 안 보여요)
+  printf '%s\n' "$EDITIONS" | awk -v d="$1" -v cur="$2" '$1 !~ /^#/ && NF >= 5 && $1 != cur {
+    for (i = 5; i <= NF; i++) if ($i == d) { printf "%s%s", s, $1; s = ","; break } }'
+}
 
 rand_hex() { openssl rand -hex "$1"; }
 setup_code() { # 0/O/1/I/L 을 뺀 12자리. 화면을 보고 손으로 입력하는 코드예요.
@@ -392,6 +404,9 @@ services:
       ANDROID_CERT_SHA256: "${ANDROID_CERT_SHA256:-}"
       APPLE_TEAM_ID: "${APPLE_TEAM_ID:-}"
       LOG_FORMAT: json
+      # Which signed release stream this server follows (install.sh editions table) and the ones the console may offer.
+      EDITION: ${EDITION:-dahae}
+      EDITIONS_OFFERED: ${EDITIONS_OFFERED:-}
     # Job spool for the root agent (install.sh install_agent): the API writes jobs to inbox, reads status and out.
     volumes: [uploads:/data/uploads, /opt/malkkeum/jobs/inbox:/jobs/inbox, /opt/malkkeum/jobs/status:/jobs/status:ro, /opt/malkkeum/jobs/out:/jobs/out:ro]
     healthcheck: { test: ["CMD", "api", "--ready"], interval: 15s, retries: 10, start_period: 20s }
@@ -465,12 +480,16 @@ ROLLBACK_HOLD=host/rollback-hold     # 되돌린 뒤 자동 업데이트가 같�
 RC_PAYOUTS_IN_DOUBT=4                # 되돌리기를 정산 확인 때문에 멈췄을 때의 종료 코드 (작업 실행기가 이유를 보여 줘요)
 RC_TOOLS_STALE=5                     # 새(또는 되돌린) 버전은 정상인데 관리 도구만 바꾸지 못했을 때의 종료 코드
 RC_NO_PREVIOUS=6                     # 되돌릴 이전 버전 기록이 없을 때의 종료 코드
+EDITIONS_FILE=host/editions          # 설치 프로그램이 둔 판 표 (서명된 배포본에 들어 있던 것)
+EDITION_JOURNAL=host/edition.prev    # 판을 바꾸는 동안의 이전 값. 끝나면 지워요. 남아 있으면 다음 명령이 먼저 정리해요
+EDITION_KEYS="EDITION IMAGE_REPO SIGNER_REPO DELIVERY_RAW VERSION API_IMAGE WEB_IMAGE PREV_API_IMAGE PREV_WEB_IMAGE"
 UPDATE_SPARE_KB=3145728              # 업데이트에 필요한 디스크: 사진 크기의 두 배(백업 묶음과 봉인 사본) + 3 GB (새 이미지·DB 덤프)
 USAGE='사용법: dahae <명령>
   status                      서비스 상태
   update [태그]               백업 → 새 버전 → 응답 없으면 자동으로 되돌리기
   rollback                    바로 전 버전으로 되돌리기
   channel stable|beta         업데이트 채널 바꾸기
+  edition <이름>              업데이트 판 바꾸기 (판 표에 이 도메인이 있을 때만. 백업 → 새 판 → 응답 없으면 되돌리기)
   version                     지금 버전
   backup                      지금 바로 백업
   restore 파일 [--yes]        백업으로 되돌리기 (DB + 사진 파일)
@@ -921,6 +940,7 @@ update_disk_check() { # 백업·새 이미지가 들어갈 자리가 없으면 �
 cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔요 (로컬 이미지면 먼저 dahae load). 관리 도구도 같은 버전으로 바꿔요
   local repo ver cur_api cur_web new_api rotate=0
   printf '\n▶ 업데이트를 시작합니다 (먼저 백업해요)\n'
+  edition_recover # 끊긴 판 바꾸기가 남긴 값으로 자동 업데이트가 판을 마저 바꾸지 않게 먼저 정리해요
   update_disk_check
   repo=$(env_get IMAGE_REPO); ver=${1:-$(env_get VERSION)}
   rm -f "$ROLLBACK_HOLD" # 사람이(또는 새 버전을 찾은 자동 업데이트가) 고른 업데이트: 되돌린 버전 지키기는 끝나요
@@ -1009,9 +1029,86 @@ cmd_channel() {
     stable|beta) ;;
     *) die "사용법: dahae channel stable | beta" ;;
   esac
+  edition_recover
   env_set CHANNEL "$ch"; env_set VERSION "$ch"
   printf '\n▶ %s 채널로 바꾸고 업데이트합니다\n' "$ch"
   cmd_update
+}
+
+# ---- 업데이트 판(edition): 서버가 따르는 릴리스 흐름(이미지 저장소·서명자·배포 주소)을 판 표의 다른 줄로 바꿔요 ----
+env_del() { local tmp; tmp=$(mktemp); K="$1" awk 'index($0, ENVIRON["K"] "=") != 1' .env > "$tmp"; cat "$tmp" > .env; rm -f "$tmp"; } # env_del 키
+edition_row() { awk -v n="$1" '$1 == n && $1 !~ /^#/ && NF >= 5 { print; f = 1; exit } END { exit !f }' "$EDITIONS_FILE" 2>/dev/null; } # edition_row 이름 -> 판 표의 그 줄
+field() { printf '%s\n' "$1" | awk -v i="$2" '{ print $i }'; } # field 줄 번호 -> 그 칸
+edition_allows() { printf '%s\n' "$1" | awk -v d="$2" '{ for (i = 5; i <= NF; i++) if ($i == d || $i == "*") f = 1 } END { exit !f }'; } # edition_allows 줄 도메인
+edition_name() { local e; e=$(env_get EDITION); printf '%s' "${e:-dahae}"; } # EDITION 이 없으면 다해 판이에요
+edition_restore() { # 기록해 둔 이전 값으로 되돌리고 기록을 지워요. 기록에 없던 키는 지워요 (예전 .env 그대로)
+  local k line
+  for k in $EDITION_KEYS; do
+    line=$(grep -E "^$k=" "$EDITION_JOURNAL" | tail -n1 || true)
+    if [ -n "$line" ]; then env_set "$k" "${line#*=}"; else env_del "$k"; fi
+  done
+  rm -f "$ROLLBACK_HOLD" "$EDITION_JOURNAL"
+}
+edition_recover() { # 판 바꾸기가 끊겼으면(전원·강제 종료) 먼저 정리해요: 새 판 이미지가 이미 떠 있으면 새 판 그대로, 아니면 이전 판으로
+  local old cur repo
+  [ -f "$EDITION_JOURNAL" ] && [ -z "${EDITION_SWITCHING:-}" ] || return 0
+  old=$(sed -n 's/^API_IMAGE=//p' "$EDITION_JOURNAL" | tail -n1); cur=$(env_get API_IMAGE); repo=$(env_get IMAGE_REPO)
+  case "$cur" in
+    "$old"|*:keep-*) ;; # 새 이미지를 띄우기 전이거나, 이전 이미지로 되돌린 뒤예요
+    "$repo"/malkkeum-api[:@]*) rm -f "$EDITION_JOURNAL"; warn "판 바꾸기가 끊겼지만 새 판이 이미 떠 있어서 새 판 그대로 둬요"; return 0 ;;
+  esac
+  edition_restore
+  warn "판 바꾸기가 끝나지 않아서 이전 판으로 되돌려 두었어요"
+}
+
+cmd_edition() { # dahae edition <이름> : 판 표의 그 판으로 바꿔요. 먼저 그 판의 채널과 서명을 확인하고, 실패하면 이전 판 그대로예요
+  local name="${1:-}" row cur img signer raw ref v tag newest k rc pre="$TOOLS_NEXT.edition" cosign="$DIR/bin/cosign"
+  printf '%s' "$name" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' || die "사용법: dahae edition <판 이름>"
+  edition_recover
+  row=$(edition_row "$name") || die "판 표에 없는 판이에요: $name. 지금 판 그대로예요."
+  edition_allows "$row" "$(env_get DOMAIN)" || die "이 서버의 도메인은 '$name' 판을 고를 수 없어요. 지금 판 그대로예요."
+  cur=$(env_get EDITION); [ "$name" != "${cur:-dahae}" ] || die "이미 '$name' 판이에요."
+  img=$(field "$row" 2); signer=$(field "$row" 3); raw=$(field "$row" 4)
+  valid_signer "$signer" || die "판 표의 서명자가 이상해요: '$signer'. 지금 판 그대로예요."
+  # 1) 미리 확인 (.env 를 바꾸기 전): 그 판 채널(베타 서버는 beta 가지)의 버전이 이 서버에 올렸던 가장 높은 버전보다 높고,
+  #    그 판의 서명자가 정확히 그 태그에서 서명한 지문 파일이 있어야 해요. 아직 나오지 않은 판은 여기서 멈춰요
+  ref=$(tools_ref "$(env_get CHANNEL)"); [ -n "$ref" ] || die "채널 설정이 이상해서 판을 바꾸지 않았어요."
+  v=$(curl -fsSL --retry 3 --max-time 30 "$raw/$ref/VERSION" | tr -d '[:space:]') \
+    || die "'$name' 판 채널($ref)의 버전 기록을 받지 못했어요. 그 판이 아직 나오지 않았을 수 있어요. 지금 판 그대로예요."
+  tag=$(tools_ref "${v#v}"); [ -n "$tag" ] || die "'$name' 판 채널의 버전 기록이 이상해요: '$v'. 지금 판 그대로예요."
+  newest=$(newest_installed || true) # 기록 파일이 없으면 sed 가 실패해요 (set -e)
+  if [ -n "$newest" ] && ! ver_older "$newest" "$tag"; then
+    die "'$name' 판의 버전($tag)이 이 서버에 올렸던 버전($newest)보다 높지 않아서 바꾸지 않았어요. 지금 판 그대로예요."
+  fi
+  if [ "$(env_get IMAGE_SOURCE)" != local ] && [ "$(env_get IMAGE_VERIFY)" != off ]; then
+    [ -x "$cosign" ] || die "서명 확인 도구($cosign)가 없어서 판을 바꾸지 않았어요. 지금 판 그대로예요."
+    mkdir -p "$pre"
+    for k in SHA256SUMS SHA256SUMS.bundle; do
+      SCRATCH+=("$pre/$k")
+      curl -fsSL --retry 3 --max-time 120 -o "$pre/$k" "$raw/$tag/$k" || die "'$name' 판의 지문 파일($k)을 받지 못했어요. 지금 판 그대로예요."
+    done
+    TUF_ROOT="$DIR/.sigstore" "$cosign" verify-blob --bundle "$pre/SHA256SUMS.bundle" --certificate-identity-regexp "$(signer_re "$signer" "$tag")" \
+        --certificate-oidc-issuer "$SIGN_ISSUER" "$pre/SHA256SUMS" >/dev/null 2>&1 \
+      || die "'$name' 판의 서명($signer, $tag)을 확인하지 못해서 바꾸지 않았어요. 지금 판 그대로예요."
+  fi
+  # 2) 이전 값을 기록(root 만 읽어요) 3) 세 값과 채널을 바꾸고 4) 평소 업데이트: 백업 → 새 서명자로 확인 → 바꾸기 → 응답 확인 → 관리 도구
+  for k in $EDITION_KEYS; do grep -E "^$k=" .env | tail -n1 || true; done > "$EDITION_JOURNAL"
+  chmod 600 "$EDITION_JOURNAL"
+  printf '\n▶ %s 판으로 바꿉니다 (%s)\n' "$name" "$tag"
+  env_set EDITION "$name"; env_set IMAGE_REPO "$img"; env_set SIGNER_REPO "$signer"; env_set DELIVERY_RAW "$raw"; env_set VERSION "$(env_get CHANNEL)"
+  # 서브셸로 돌려요 (cmd_update 는 실패하면 exit 해요). || 로 붙이면 그 안의 set -e 가 꺼져서, set +e 뒤에 따로 받아요
+  set +e
+  ( set -e; EDITION_SWITCHING=1; trap 'rm -f -- ${SCRATCH[@]+"${SCRATCH[@]}"}' EXIT; cmd_update )
+  rc=$?
+  set -e
+  # 5) 0: 새 판 정상. 5: 새 판 정상, 관리 도구만 못 바꿨어요 (새 판 그대로). 그 밖: 이전 값으로 (3 이면 이미지는 이미 되돌아가 있어요)
+  if [ "$rc" = 0 ] || [ "$rc" = "$RC_TOOLS_STALE" ]; then
+    rm -f "$EDITION_JOURNAL"
+    if [ "$rc" = 0 ]; then ok "$name 판으로 바꿨어요"; fi
+    return "$rc"
+  fi
+  edition_restore
+  die_code "$rc" "$name 판으로 바꾸지 못해서 이전 판(${cur:-dahae}) 그대로예요. 'dahae logs' 로 원인을 확인해 주세요."
 }
 
 cmd_version() {
@@ -1021,6 +1118,7 @@ cmd_version() {
   if [ -z "$running" ] || [ "$running" = "<no value>" ]; then
     running=$(curl -fsSk --max-time 5 --resolve "$(env_get DOMAIN):443:127.0.0.1" "https://$(env_get DOMAIN)/health" 2>/dev/null | grep -o '"version":"[^"]*"' | cut -d'"' -f4 || true)
   fi
+  echo "edition: $(edition_name)"
   echo "채널: $(env_get CHANNEL)  (이미지 태그: $(env_get VERSION))"
   echo "실행 중인 버전: ${running:-알 수 없음}"
 }
@@ -1389,6 +1487,7 @@ rejoin_channel() { # 'dahae update 태그' 로 고정된 서버를 채널로 되
 
 cmd_auto_update() { # dahae auto-update : 예약 업데이트. 건너뛰기 표시, 기다리는 작업, 되돌린 버전 지키기, 안정 채널 24시간 대기를 먼저 확인해요
   local queued key rc=0
+  edition_recover
   if [ -e "$DIR/host/skip-next-update" ]; then
     rm -f "$DIR/host/skip-next-update"; echo "건너뛰기 표시가 있어 이번 자동 업데이트를 건너뛰었어요"; return 0
   fi
@@ -1441,6 +1540,7 @@ main() {
     prepare) shift; cmd_prepare "$@" ;; # 설치 프로그램 전용
     rollback) cmd_rollback ;;
     channel) shift; cmd_channel "$@" ;;
+    edition) shift; cmd_edition "$@" ;;
     version) cmd_version ;;
     backup) cmd_backup; [ "$BACKUP_WARN" = 0 ] ;;
     restore) shift; cmd_restore "$@" ;;
@@ -1694,7 +1794,7 @@ SETUP_CODE_AT=$(date +%s)
 EOF
 }
 main() {
-  local k a m
+  local k a m row offered
   for k in DOMAIN EMAIL IMAGES IMAGES_TAR CHANNEL VERSION TLS SKIP_DNS_CHECK HEALTH_WAIT HEARTBEAT_URL NOTIFY_URL SETUP_CODE SIGNER SKIP_SIGNATURE BACKUP_S3_BUCKET BACKUP_S3_REGION; do
     a=DAHAE_$k; m=MALKKEUM_$k
     if [ -n "${!a:-}" ] && [ -z "${!m:-}" ]; then export "$m=${!a}"; fi
@@ -1739,6 +1839,17 @@ main() {
   fi
   SIGNER_REPO=${MALKKEUM_SIGNER:-$(env_get SIGNER_REPO)}; SIGNER_REPO=${SIGNER_REPO:-$SIGNER_REPO_DEFAULT}
   IMAGE_VERIFY=on; [ -z "${MALKKEUM_SKIP_SIGNATURE:-}" ] || IMAGE_VERIFY=off
+  if [ -n "${DAHAE_EDITIONS_FILE:-}" ]; then # e2e-install.sh 전용: 서명 확인을 끈 테스트 설치에서만 판 표를 바꿔 써요
+    [ "$IMAGE_VERIFY" = off ] || die "DAHAE_EDITIONS_FILE 은 서명 확인을 끈 테스트 설치(MALKKEUM_SKIP_SIGNATURE)에서만 써요."
+    EDITIONS=$(cat "$DAHAE_EDITIONS_FILE") || die "판 표 파일을 읽지 못했어요: $DAHAE_EDITIONS_FILE"
+  fi
+  # 다른 판을 따르는 서버는 세 값(이미지·서명자·배포 주소)을 그 판의 줄에서 가져와요: 되돌리기로 이 설치 프로그램이 다시 돌아도
+  # 그 판을 계속 따라가요. EDITION 이 없거나 dahae 면 아래 줄들은 예전 그대로예요 (직접 정한 서명자·이미지도 그대로)
+  EDITION=$(env_get EDITION); EDITION_RAW=""
+  if [ -n "$EDITION" ] && [ "$EDITION" != dahae ]; then
+    row=$(edition_row "$EDITION") || die "이 설치 프로그램의 판 표에 '$EDITION' 이 없어요. 아무것도 바꾸지 않고 멈춰요."
+    IMAGE_REPO=$(field "$row" 2); SIGNER_REPO=$(field "$row" 3); EDITION_RAW=$(field "$row" 4)
+  fi
   case "$CHANNEL" in stable|beta) ;; *) die "채널은 stable 또는 beta 중 하나예요." ;; esac
   printf '%s' "$SIGNER_REPO" | grep -Eq '^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$' || die "MALKKEUM_SIGNER 는 owner/repo 형식이에요: $SIGNER_REPO"
   case "$TLS_MODE" in ""|internal) ;; *) die "MALKKEUM_TLS 는 internal 만 쓸 수 있어요." ;; esac
@@ -1786,7 +1897,11 @@ main() {
   env_set IMAGE_VERIFY "$IMAGE_VERIFY"
   if [ -n "${MALKKEUM_HEARTBEAT_URL:-}" ]; then env_set HEARTBEAT_URL "$MALKKEUM_HEARTBEAT_URL"; fi
   # 배포 저장소 주소(…/Dahae-install): dahae update 가 새 버전의 관리 도구를 여기서 받아요
-  if [ -n "$RELEASE_RAW" ]; then env_set DELIVERY_RAW "${RELEASE_RAW%/*}"; fi
+  if [ -n "$EDITION_RAW" ]; then env_set DELIVERY_RAW "$EDITION_RAW"
+  elif [ -n "$RELEASE_RAW" ]; then env_set DELIVERY_RAW "${RELEASE_RAW%/*}"; fi
+  # 콘솔의 판 바꾸기 카드: 이 도메인을 직접 적은 판만. 목록에 없는 서버의 .env 는 한 글자도 바뀌지 않아요
+  offered=$(editions_offered "$DOMAIN" "${EDITION:-dahae}")
+  if [ -n "$offered" ] || [ -n "$(env_get EDITIONS_OFFERED)" ]; then env_set EDITIONS_OFFERED "$offered"; fi
   apply_backup_s3_env
 
   # 관리 도구만 바꿀 때는 작업 실행기부터 받아 확인해요: 받지 못하면 아무것도 바꾸지 않고 멈춰요
@@ -1798,6 +1913,9 @@ main() {
   ok "관리 명령 dahae 를 설치했어요 (예전 이름 malkkeum 도 그대로 돼요)"
   write_schedules
   install_agent   # 새 설치와 업데이트 모두: 작업 실행기는 dahae update 가 쓰는 작업 폴더를 쓰므로 compose 를 띄우기 전에 둬요
+  # dahae edition 이 읽는 판 표: 이 (서명된) 설치 프로그램의 것
+  { mkdir -p "$DIR/host" && printf '%s\n' "$EDITIONS" > "$DIR/host/editions.new" && mv -f "$DIR/host/editions.new" "$DIR/host/editions"; } \
+    || die "판 표(host/editions)를 쓰지 못했어요."
 
   [ "$TOOLS_ONLY" = 1 ] || harden_host
 
