@@ -33,7 +33,7 @@ pub const CONSENTS: [(&str, bool); 5] = [
 ];
 
 /// Kinds a sign-up must grant. Overseas transfer is required to sign up but withdrawable afterwards.
-const SIGNUP_REQUIRED: [&str; 3] = ["terms", "privacy", "overseas_transfer"];
+pub const SIGNUP_REQUIRED: [&str; 3] = ["terms", "privacy", "overseas_transfer"];
 
 /// 위치기반서비스 이용약관 (위치정보법): asked in the app before the first "use my current location".
 pub const LOCATION: &str = "location";

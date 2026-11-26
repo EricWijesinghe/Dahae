@@ -9,7 +9,7 @@ use std::ops::{Add, Sub};
 #[serde(transparent)]
 pub struct Won(pub i64);
 
-const ROUNDING_UNIT: i64 = 100;
+pub const ROUNDING_UNIT: i64 = 100;
 const BASIS_POINTS: i64 = 10_000;
 
 impl Won {

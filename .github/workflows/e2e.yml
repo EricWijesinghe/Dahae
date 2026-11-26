@@ -12,6 +12,7 @@ on:
       - deploy/**
       - backend/crates/**
       - backend/migrations/**
+      - backend/packs/**
       - backend/Dockerfile
       - backend/.dockerignore
       - backend/Cargo.lock

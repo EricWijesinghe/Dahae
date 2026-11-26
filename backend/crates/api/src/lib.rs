@@ -38,6 +38,7 @@ pub mod openapi;
 pub mod ops;
 pub mod ops_alerts;
 pub mod owner;
+pub mod pack;
 pub mod payout;
 pub mod payout_sync;
 pub mod points;
@@ -68,9 +69,18 @@ use sqlx::PgPool;
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::task::JoinHandle;
 
+#[derive(Debug, thiserror::Error)]
+pub enum StateError {
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+    #[error(transparent)]
+    Pack(#[from] pack::PackError),
+}
+
 /// Shared application state over a pool and config. Used by `serve` and the integration tests.
-pub fn build_state(db: PgPool, config: Config) -> Result<AppState, reqwest::Error> {
+pub fn build_state(db: PgPool, config: Config) -> Result<AppState, StateError> {
     Ok(AppState {
+        pack: Arc::new(pack::load(pack::ACTIVE)?),
         providers: Arc::new(Providers::new(config.clone(), db.clone())?),
         hub: Hub::new(db.clone()),
         lockout: Arc::new(lockout::Lockout::new(db.clone())),
@@ -91,6 +101,8 @@ pub async fn migrate(db: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
 /// Reads config, connects, migrates, seeds and serves until SIGTERM or Ctrl+C, then drains.
 pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     crate::ops::mark_started();
+    // An invalid country pack stops the boot before anything touches the database.
+    pack::load_all()?;
     let mut config = Config::from_env()?;
     // Migrations get their own single connection without the statement timeout (index builds can be slow).
     let migrate_db = db::connect(&config.database_url, &config.db.for_migrations()).await?;
@@ -107,6 +119,7 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
         tracing::warn!(sealed, "saved-card billing keys moved into encrypted storage");
     }
     routes::setup::ensure_setup_code(&db, config.setup_code.as_deref(), config.setup_code_at).await?;
+    routes::setup::install::first_boot(&db, &pack::load(pack::ACTIVE)?).await?;
     tokio::fs::create_dir_all(&config.upload_dir).await?;
     if config.dev_mode {
         tracing::warn!("DEV_MODE on: fake SMS, payments and push");

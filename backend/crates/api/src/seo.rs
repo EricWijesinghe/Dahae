@@ -73,7 +73,7 @@ pub const SEOUL_DISTRICTS: [(&str, &str, &str); 25] = [
     ("11320", "도봉구", "Dobong-gu"),
     ("11350", "노원구", "Nowon-gu"),
 ];
-const COMPANY_LABELS: [(&str, &str); 6] = [
+pub const COMPANY_LABELS: [(&str, &str); 6] = [
     ("legal_name", "상호"),
     ("ceo", "대표자"),
     ("registration_no", "사업자등록번호"),

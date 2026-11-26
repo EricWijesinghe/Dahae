@@ -1,0 +1,21 @@
+[
+  {"code": "002", "aliases": ["산업", "KDB"]},
+  {"code": "003", "aliases": ["기업", "IBK"]},
+  {"code": "004", "aliases": ["국민", "KB"]},
+  {"code": "007", "aliases": ["수협"]},
+  {"code": "011", "aliases": ["농협", "NH"]},
+  {"code": "020", "aliases": ["우리"]},
+  {"code": "023", "aliases": ["SC", "제일"]},
+  {"code": "031", "aliases": ["대구"]},
+  {"code": "032", "aliases": ["부산"]},
+  {"code": "034", "aliases": ["광주"]},
+  {"code": "035", "aliases": ["제주"]},
+  {"code": "037", "aliases": ["전북"]},
+  {"code": "039", "aliases": ["경남"]},
+  {"code": "071", "aliases": ["우체국"]},
+  {"code": "081", "aliases": ["하나"]},
+  {"code": "088", "aliases": ["신한"]},
+  {"code": "089", "aliases": ["케이뱅크", "K뱅크"]},
+  {"code": "090", "aliases": ["카카오뱅크", "카카오"]},
+  {"code": "092", "aliases": ["토스뱅크"]}
+]

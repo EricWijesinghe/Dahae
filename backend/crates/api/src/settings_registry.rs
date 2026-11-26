@@ -40,12 +40,15 @@ pub enum Tighten {
     Up,
 }
 
-/// What a key holds. Integers carry bounds, text carries a length cap.
+/// What a key holds. Integers carry bounds, text carries a length cap. A choice is one of `options`, or with
+/// `many` an ordered list of distinct options (the first is the default); it has no default and stays unset
+/// until written.
 #[derive(Clone, Copy, Debug)]
 pub enum Kind {
     Int { min: i64, max: i64, default: i64 },
     Bool { default: bool },
     Text { max_chars: usize, default: &'static str },
+    Choice { options: &'static [&'static str], many: bool },
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -84,6 +87,13 @@ const fn text(key: &'static str, group: &'static str, max_chars: usize, default:
     }
 }
 
+const fn choice(key: &'static str, options: &'static [&'static str], many: bool) -> Spec {
+    Spec {
+        kind: Kind::Choice { options, many },
+        ..int(key, INSTALL_GROUP, 0, 0, 0)
+    }
+}
+
 const fn tightened(s: Spec, tighten: Tighten) -> Spec {
     Spec { tighten: Some(tighten), ..s }
 }
@@ -95,6 +105,7 @@ impl Spec {
             Kind::Int { default, .. } => json!(default),
             Kind::Bool { default } => json!(default),
             Kind::Text { default, .. } => json!(default),
+            Kind::Choice { .. } => Value::Null,
         }
     }
 }
@@ -104,10 +115,19 @@ fn type_name(kind: Kind) -> &'static str {
         Kind::Int { .. } => "int",
         Kind::Bool { .. } => "bool",
         Kind::Text { .. } => "text",
+        Kind::Choice { .. } => "choice",
     }
 }
 
-pub const GROUPS: &[&str] = &["business", "marketing", "points", "quality", "ops"];
+/// Install facts (country, currency, time zone, locales, pack version, lock). Written by the server at first boot
+/// and later by the country flow, never through the generic settings save. Options must cover every shipped pack.
+pub const INSTALL_GROUP: &str = "install";
+pub const COUNTRIES: &[&str] = &["KR"];
+pub const CURRENCIES: &[&str] = &["KRW"];
+pub const ZONES: &[&str] = &["Asia/Seoul"];
+pub const LOCALES: &[&str] = &["ko", "en"];
+
+pub const GROUPS: &[&str] = &["business", "marketing", "points", "quality", "ops", INSTALL_GROUP];
 
 pub const SPECS: &[Spec] = &[
     int("upload_daily_quota", "business", 1, 10_000, 100),
@@ -140,6 +160,14 @@ pub const SPECS: &[Spec] = &[
     tightened(int("tax_deadline_remind_days", "ops", 1, 14, 7), Tighten::Up),
     boolean("maintenance_on", "ops", false),
     text("maintenance_message", "ops", 200, ""),
+    choice("install.country", COUNTRIES, false),
+    choice("install.currency", CURRENCIES, false),
+    choice("install.tz", ZONES, false),
+    choice("install.locales", LOCALES, true),
+    choice("install.console_locale", LOCALES, false),
+    text("install.pack_version_applied", INSTALL_GROUP, 32, ""),
+    // RFC 3339 time of the first live payment; the country can no longer change after it.
+    text("install.locked_at", INSTALL_GROUP, 40, ""),
 ];
 
 /// Pairs whose order drives the alert levels: the first must stay below the second.
@@ -174,7 +202,22 @@ pub fn validate(spec: &Spec, raw: &Value) -> ApiResult<Value> {
         Kind::Int { min, max, default } => validate_int(spec.tighten, raw, min, max, default),
         Kind::Bool { .. } => raw.as_bool().map(|b| json!(b)).ok_or(ApiError::BadRequest("invalid_input")),
         Kind::Text { max_chars, .. } => validate_text(raw, max_chars),
+        Kind::Choice { options, many } => validate_choice(raw, options, many),
     }
+}
+
+fn validate_choice(raw: &Value, options: &[&str], many: bool) -> ApiResult<Value> {
+    let pick = |v: &Value| v.as_str().filter(|s| options.contains(s)).map(str::to_string);
+    if !many {
+        return pick(raw).map(|s| json!(s)).ok_or(ApiError::BadRequest("invalid_input"));
+    }
+    let items = raw.as_array().filter(|a| !a.is_empty()).ok_or(ApiError::BadRequest("invalid_input"))?;
+    let picked: Vec<String> = items.iter().map(pick).collect::<Option<_>>().ok_or(ApiError::BadRequest("invalid_input"))?;
+    let distinct: std::collections::HashSet<&String> = picked.iter().collect();
+    if distinct.len() != picked.len() {
+        return Err(ApiError::BadRequest("invalid_input"));
+    }
+    Ok(json!(picked))
 }
 
 fn validate_int(tighten: Option<Tighten>, raw: &Value, min: i64, max: i64, default: i64) -> ApiResult<Value> {
@@ -220,7 +263,7 @@ fn resolve(spec: &Spec, stored: Option<&Value>, seed: Option<i64>) -> (Value, So
     }
 }
 
-fn storage_key(key: &str) -> String {
+pub(crate) fn storage_key(key: &str) -> String {
     format!("{STORAGE_PREFIX}{key}")
 }
 
@@ -263,6 +306,7 @@ fn bounds(kind: Kind) -> Value {
         Kind::Int { min, max, .. } => json!({ "min": min, "max": max }),
         Kind::Text { max_chars, .. } => json!({ "max_length": max_chars }),
         Kind::Bool { .. } => json!({}),
+        Kind::Choice { options, many } => json!({ "options": options, "many": many }),
     }
 }
 
@@ -348,6 +392,9 @@ fn check_order(after: &HashMap<&'static str, Value>) -> ApiResult<()> {
 /// Applies one group's changes. `null` resets a key to its env seed or default. Nothing is written unless
 /// every entry passes and the group's order rules hold.
 pub async fn save_group(db: &PgPool, cfg: &Config, group: &str, actor: Uuid, values: &Map<String, Value>) -> ApiResult<Value> {
+    if group == INSTALL_GROUP {
+        return Err(ApiError::BadRequest("read_only_setting"));
+    }
     let specs = group_specs(group)?;
     let plan = plan_changes(&specs, values)?;
     check_order(&effective_after(db, cfg, &specs, &plan).await?)?;
@@ -492,6 +539,24 @@ mod tests {
         assert_eq!(validate(msg, &json!("  곧 돌아와요  ")).ok(), Some(json!("곧 돌아와요")));
         assert!(validate(msg, &json!("가".repeat(201))).is_err());
         assert!(validate(msg, &json!(5)).is_err());
+    }
+
+    #[test]
+    fn install_choices_accept_only_listed_values_and_start_unset() {
+        let country = by_key("install.country");
+        assert_eq!(country.default_value(), Value::Null);
+        assert_eq!(resolve(country, None, None), (Value::Null, Source::Default));
+        assert_eq!(validate(country, &json!("KR")).ok(), Some(json!("KR")));
+        assert!(validate(country, &json!("XX")).is_err());
+        assert!(validate(country, &json!(["KR"])).is_err());
+        let locales = by_key("install.locales");
+        assert_eq!(validate(locales, &json!(["ko", "en"])).ok(), Some(json!(["ko", "en"])));
+        assert!(validate(locales, &json!([])).is_err());
+        assert!(validate(locales, &json!(["ko", "ko"])).is_err());
+        assert!(validate(locales, &json!(["ko", "xx"])).is_err());
+        assert!(validate(locales, &json!("ko")).is_err());
+        // A value a newer release wrote is ignored after a rollback, not trusted.
+        assert_eq!(resolve(country, Some(&json!("GB")), None), (Value::Null, Source::Default));
     }
 
     #[test]

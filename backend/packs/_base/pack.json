@@ -1,0 +1,18 @@
+{
+  "id": "_base",
+  "version": "2026.11.0",
+  "maturity": { "level": "draft" },
+  "week_start": "mon",
+  "locales": ["en"],
+  "tax": { "price_display": "gross", "rounding": "half_up", "rates": [], "reports": [] },
+  "business_fields": [],
+  "identifiers": [],
+  "payments": { "recommended": [], "marketplace_models": ["merchant_of_record"], "requires_split_for": [] },
+  "payouts": { "recommended": ["manual"] },
+  "messaging": { "channel_order": ["sms"], "recommended": [] },
+  "login": { "recommended": [], "oidc_issuers": [] },
+  "privacy": { "consent_model": "opt_in", "signup_required": ["terms", "privacy"] },
+  "consumer": { "withdrawal_days": null },
+  "legal": [],
+  "checklist": []
+}

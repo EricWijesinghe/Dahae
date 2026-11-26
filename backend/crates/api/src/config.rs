@@ -483,7 +483,8 @@ fn edition(raw: Option<String>) -> String {
 /// `EDITIONS_OFFERED` with the agent's exact rule (`case ",$offered," in *",$name,"*`): split on commas, no trimming,
 /// so the API never queues (and spends the owner code on) a job the agent would refuse.
 fn editions_offered(raw: Option<String>) -> Vec<String> {
-    raw.map(|v| v.split(',').filter(|e| valid_edition_name(e)).map(str::to_string).collect()).unwrap_or_default()
+    raw.map(|v| v.split(',').filter(|e| valid_edition_name(e)).map(str::to_string).collect())
+        .unwrap_or_default()
 }
 
 pub(crate) fn team_id(raw: Option<String>) -> Result<Option<String>, ConfigError> {

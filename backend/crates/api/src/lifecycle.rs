@@ -86,15 +86,36 @@ pub async fn live() -> Json<Value> {
 }
 
 /// Readiness: the database answers and every shipped migration is applied. Failing it takes the node
-/// out of rotation; it does not restart it.
+/// out of rotation; it does not restart it. `pack_ok` is a warning only: false after a rollback to a binary
+/// whose country pack is older than the one the install applied. The install keeps running on this binary's pack.
 pub async fn ready(State(s): State<AppState>) -> Response {
     let db_ok = tokio::time::timeout(PROBE_TIMEOUT, sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&s.db))
         .await
         .is_ok_and(|r| r.is_ok());
     let migrated = db_ok && migrations_applied(&s.db).await;
     let ready = db_ok && migrated;
+    let pack_ok = !db_ok || applied_pack_ok(&s).await;
     let status = if ready { StatusCode::OK } else { StatusCode::SERVICE_UNAVAILABLE };
-    (status, Json(json!({ "ready": ready, "db": db_ok, "migrations": migrated }))).into_response()
+    (status, Json(json!({ "ready": ready, "db": db_ok, "migrations": migrated, "pack_ok": pack_ok }))).into_response()
+}
+
+/// Whether the pack version this install applied is no newer than this binary's pack. Unset counts as fine.
+pub fn pack_ok(applied: &str, binary: &str) -> bool {
+    applied.is_empty() || crate::pack::version_key(applied) <= crate::pack::version_key(binary)
+}
+
+async fn applied_pack_ok(s: &AppState) -> bool {
+    match crate::settings_registry::get_text(&s.db, &s.config, "install.pack_version_applied").await {
+        Ok(applied) if pack_ok(&applied, &s.pack.version) => true,
+        Ok(applied) => {
+            tracing::warn!(applied, binary = %s.pack.version, "install applied a newer country pack than this binary carries");
+            false
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "pack version check failed");
+            true
+        }
+    }
 }
 
 /// True when the database has applied every migration this binary knows about.
@@ -112,6 +133,15 @@ pub async fn migrations_applied(db: &PgPool) -> bool {
 #[cfg(test)]
 mod tests {
     use super::MIGRATOR;
+
+    #[test]
+    fn pack_ok_warns_only_when_the_applied_pack_is_newer() {
+        assert!(super::pack_ok("", "2026.11.0"));
+        assert!(super::pack_ok("2026.11.0", "2026.11.0"));
+        assert!(super::pack_ok("2026.10.3", "2026.11.0"));
+        assert!(!super::pack_ok("2026.11.1", "2026.11.0"));
+        assert!(!super::pack_ok("2027.1.0", "2026.12.9"));
+    }
 
     #[test]
     fn migrator_embeds_the_shipped_migrations() {

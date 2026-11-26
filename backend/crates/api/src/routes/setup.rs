@@ -33,6 +33,7 @@ use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
 pub mod brand;
+pub mod install;
 mod operator;
 
 const MAX_FIELD_CHARS: usize = 200;

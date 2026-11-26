@@ -1,0 +1,66 @@
+{
+  "id": "KR",
+  "extends": "_base",
+  "version": "2026.11.0",
+  "name": "대한민국",
+  "maturity": { "level": "reviewed", "by": "Dahae", "date": "2026-11-26" },
+  "currency": { "code": "KRW", "minor_units": 0, "display_unit": 100, "cash_unit": 1 },
+  "zones": ["Asia/Seoul"],
+  "locales": ["ko", "en"],
+  "tax": {
+    "price_display": "gross",
+    "rounding": "floor",
+    "rates": [{ "category": "service", "rate_bps": 1000, "from": "1977-07-01" }],
+    "withholding": { "rate_bps": 300, "local_surtax_bps": 1000, "tax_unit": 1, "surtax_unit": 10, "base": "gross" },
+    "reports": ["kr_vat_quarter", "kr_tax_invoice", "kr_withholding", "kr_payroll"],
+    "cash_receipt_threshold": 100000
+  },
+  "business_fields": [
+    { "key": "legal_name", "required": true, "shown_in": "footer" },
+    { "key": "ceo", "required": true, "shown_in": "footer" },
+    { "key": "registration_no", "validator": "kr_brn", "required": true, "shown_in": "footer" },
+    { "key": "mail_order_no", "required": false, "shown_in": "footer" },
+    { "key": "address", "required": true, "shown_in": "footer" },
+    { "key": "hosting_provider", "required": false, "shown_in": "footer" }
+  ],
+  "identifiers": [
+    { "id": "kr.rrn", "legacy": "rrn", "validator": "kr_rrn" },
+    { "id": "kr.brn", "legacy": "business", "validator": "kr_brn" }
+  ],
+  "payments": {
+    "recommended": ["portone", "tosspayments"],
+    "marketplace_models": ["merchant_of_record", "split_by_psp"],
+    "requires_split_for": ["pros_sell"]
+  },
+  "payouts": { "recommended": ["manual", "toss"], "banks": "KR/banks.json" },
+  "messaging": { "channel_order": ["alimtalk", "sms"], "recommended": ["solapi"], "quiet_hours": ["21:00", "08:00"] },
+  "login": { "recommended": ["kakao", "naver", "google", "apple"], "oidc_issuers": [] },
+  "address": { "adapter": "juso", "postcode_first": false, "areas": "KR/areas.json" },
+  "privacy": {
+    "law": "PIPA",
+    "consent_model": "opt_in",
+    "consent_version": "2026-11-17",
+    "consent_kinds": [
+      { "kind": "terms", "required": true },
+      { "kind": "privacy", "required": true },
+      { "kind": "overseas_transfer", "required": false },
+      { "kind": "marketing", "required": false },
+      { "kind": "location", "required": false }
+    ],
+    "signup_required": ["terms", "privacy", "overseas_transfer"]
+  },
+  "consumer": {
+    "withdrawal_days": null,
+    "cancel_default": {
+      "tiers": [
+        { "min_days": 2, "percent": 0 },
+        { "min_days": 1, "percent": null },
+        { "min_days": 0, "percent": null }
+      ],
+      "min_fee": 0,
+      "reschedule_min_days": 2
+    }
+  },
+  "legal": ["terms", "privacy", "location_terms"],
+  "checklist": [{ "id": "kr_mail_order_report", "blocks_live": false }]
+}

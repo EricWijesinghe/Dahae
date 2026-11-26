@@ -10,7 +10,7 @@ use chrono::NaiveDate;
 use std::collections::BTreeMap;
 
 /// 사업소득 원천징수 세율 3% (소득세법 제129조 일대; ACCOUNTANT: confirm article and rate).
-const BUSINESS_INCOME_TAX_BPS: i64 = 300;
+pub const BUSINESS_INCOME_TAX_BPS: i64 = 300;
 
 /// Withholding split for one payout to a sole-proprietor / freelancer partner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
