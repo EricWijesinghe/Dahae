@@ -8,7 +8,7 @@
 # Two image sources:
 #   registry (default)       images pushed to a local registry on :5000 (.github/workflows/e2e.yml)
 #   E2E_IMAGES_TAR=<f.tar>   `docker save` of api + web (+ postgres:17), installed offline (scripts/e2e/wsl-e2e.sh)
-# Other knobs: E2E_LOG_DIR (default: a temp dir), E2E_DOMAIN (default dahae.test), E2E_NEW_DOMAIN (the domain-move
+# Step 8b switches to a test edition and back (deploy/editions mechanism). Other knobs: E2E_LOG_DIR (default: a temp dir), E2E_DOMAIN (default dahae.test), E2E_NEW_DOMAIN (the domain-move
 # target, default dahae2.test; written to /etc/hosts for the run and removed at the end).
 # Needs Docker (or lets install.sh install it), root or sudo, python3 and curl. Leaves nothing behind: the last
 # step runs `dahae uninstall --purge`.
@@ -312,6 +312,65 @@ expect "dahae applinks" dahae applinks --android-sha256 "$FINGERPRINT" --apple-t
 expect "assetlinks.json lists the signing cert" sh -c "curl -sk --resolve '$DOMAIN:443:127.0.0.1' https://$DOMAIN/.well-known/assetlinks.json | grep -q '$FINGERPRINT'"
 expect "apple-app-site-association names the team" sh -c "curl -sk --resolve '$DOMAIN:443:127.0.0.1' https://$DOMAIN/.well-known/apple-app-site-association | grep -q '$TEAM_ID'"
 expect "bad fingerprint refused" sh -c "! $SUDO /usr/local/bin/dahae applinks --android-sha256 nope"
+
+step "8b. edition switch: a broken stream goes back with exit 3 and the old triple, a good one switches, and back again"
+# A test table (DAHAE_EDITIONS_FILE, honoured only with signatures off): edtest lists this domain, so it is offered.
+# Images of the edtest stream sit under $REG/edtest; each stream's channel version is a file:// delivery folder.
+ED_DIST=$LOG/edtest-dist DAHAE_DIST=$LOG/dahae-dist
+mkdir -p "$ED_DIST/main" "$DAHAE_DIST/main"; echo 9.9.9 > "$ED_DIST/main/VERSION"; echo 9.9.10 > "$DAHAE_DIST/main/VERSION"
+printf 'dahae %s EricWijesinghe/Dahae file://%s *\nedtest %s/edtest e2e/Edtest file://%s %s\n' \
+  "$REG" "$DAHAE_DIST" "$REG" "$ED_DIST" "$DOMAIN" > "$LOG/editions"
+env_line() { $SUDO grep -E "^$1=" /opt/malkkeum/.env | tail -n1; }
+triple() { for k in EDITION IMAGE_REPO SIGNER_REPO DELIVERY_RAW VERSION; do env_line "$k"; done; }
+edtag() { # edtag 이미지 태그... : edtest 흐름에 api(받은 이미지)와 web 을 그 태그로 올려요
+  local img="$1" t; shift
+  for t in "$@"; do
+    docker tag "$img" "$REG/edtest/malkkeum-api:$t"; publish "$REG/edtest/malkkeum-api:$t"
+    docker tag "$REG/malkkeum-web:$TAG" "$REG/edtest/malkkeum-web:$t"; publish "$REG/edtest/malkkeum-web:$t"
+  done
+}
+install_editions() { $SUDO env "${ENVS[@]}" MALKKEUM_SKIP_SIGNATURE=1 DAHAE_EDITIONS_FILE="$LOG/editions" bash deploy/install.sh; }
+install_editions > "$LOG/install-editions.txt" 2>&1 || { tail -n 40 "$LOG/install-editions.txt"; fail "installer run with the test editions failed"; }
+expect "the listed domain is offered the test edition" test "$(env_line EDITIONS_OFFERED)" = EDITIONS_OFFERED=edtest
+expect "a server without EDITION shows edition dahae" sh -c "$SUDO /usr/local/bin/dahae version | grep -qx 'edition: dahae'"
+expect "the CLI has the table" $SUDO grep -q '^edtest ' /opt/malkkeum/host/editions
+BEFORE=$(triple)
+printf 'FROM %s/malkkeum-api:%s\nCMD ["sh", "-c", "echo broken release; exit 1"]\n' "$REG" "$TAG" \
+  | docker build -q -f - -t "$REG/malkkeum-api:broken" "$LOG/broken" >/dev/null
+edtag "$REG/malkkeum-api:broken" stable e2e
+set +e
+$SUDO env MALKKEUM_HEALTH_WAIT=60 /usr/local/bin/dahae edition edtest > "$LOG/edition-broken.txt" 2>&1
+rc=$?
+set -e
+expect "a stream that does not answer exits 3" test "$rc" -eq 3
+expect "...and the old triple is back" test "$(triple)" = "$BEFORE"
+expect "...with no journal left" $SUDO test ! -e /opt/malkkeum/host/edition.prev
+expect "API healthy after the refused switch" wait_until 120 api_healthy
+edtag "$REG/malkkeum-api:good" stable e2e
+dahae edition edtest > "$LOG/edition-good.txt" 2>&1 || { tail -n 40 "$LOG/edition-good.txt"; fail "dahae edition edtest failed"; }
+expect "switched: the edtest triple is in .env" test "$(triple | tr '\n' ' ')" = "EDITION=edtest IMAGE_REPO=$REG/edtest SIGNER_REPO=e2e/Edtest DELIVERY_RAW=file://$ED_DIST VERSION=stable "
+expect "API healthy on the new stream" wait_until 180 api_healthy
+expect "running an image of the new stream" sh -c "$SUDO grep -q '^API_IMAGE=$REG/edtest/malkkeum-api' /opt/malkkeum/.env"
+dahae rollback > "$LOG/edition-rollback.txt" 2>&1 || { tail -n 40 "$LOG/edition-rollback.txt"; fail "rollback after the switch failed"; }
+expect "rollback keeps the triple on the new edition" test "$(triple | head -n4 | tr '\n' ' ')" = "EDITION=edtest IMAGE_REPO=$REG/edtest SIGNER_REPO=e2e/Edtest DELIVERY_RAW=file://$ED_DIST "
+# What a rollback's tools run does: the bridge installer runs again. Even with MALKKEUM_IMAGES set it keeps the row's triple.
+install_editions > "$LOG/install-editions2.txt" 2>&1 || { tail -n 40 "$LOG/install-editions2.txt"; fail "installer re-run on the new edition failed"; }
+expect "an installer re-run keeps the edition's triple" test "$(triple | head -n4 | tr '\n' ' ')" = "EDITION=edtest IMAGE_REPO=$REG/edtest SIGNER_REPO=e2e/Edtest DELIVERY_RAW=file://$ED_DIST "
+expect "...and offers no edition (the dahae row is never offered)" test "$(env_line EDITIONS_OFFERED)" = EDITIONS_OFFERED=
+# A switch killed after .env changed: the next auto-update puts the old triple back before anything else.
+SWITCHED=$(triple)
+$SUDO sh -c "grep -E '^(EDITION|IMAGE_REPO|SIGNER_REPO|DELIVERY_RAW|VERSION|API_IMAGE|WEB_IMAGE|PREV_API_IMAGE|PREV_WEB_IMAGE)=' /opt/malkkeum/.env > /opt/malkkeum/host/edition.prev"
+$SUDO sed -i -e 's/^EDITION=.*/EDITION=dahae/' -e "s|^IMAGE_REPO=.*|IMAGE_REPO=$REG|" -e 's|^SIGNER_REPO=.*|SIGNER_REPO=EricWijesinghe/Dahae|' /opt/malkkeum/.env
+$SUDO touch /opt/malkkeum/host/skip-next-update
+dahae auto-update > "$LOG/edition-crash.txt" 2>&1 || true
+expect "a switch killed mid-way is restored by the next auto-update" test "$(triple)" = "$SWITCHED"
+expect "...and its journal is gone" $SUDO test ! -e /opt/malkkeum/host/edition.prev
+docker tag "$REG/malkkeum-api:good" "$REG/malkkeum-api:stable"; publish "$REG/malkkeum-api:stable"
+docker tag "$REG/malkkeum-web:$TAG" "$REG/malkkeum-web:stable"; publish "$REG/malkkeum-web:stable"
+dahae edition dahae > "$LOG/edition-back.txt" 2>&1 || { tail -n 40 "$LOG/edition-back.txt"; fail "switching back to dahae failed"; }
+expect "back on the dahae stream" test "$(triple | head -n3 | tr '\n' ' ')" = "EDITION=dahae IMAGE_REPO=$REG SIGNER_REPO=EricWijesinghe/Dahae "
+expect "API healthy back on dahae" wait_until 180 api_healthy
+expect "data survived the edition switches" staff_count_is 1
 
 step "9. scripts/smoke.py against the installed stack (temporary dev override)"
 $SUDO cp scripts/e2e/override.dev.yml /opt/malkkeum/docker-compose.override.yml

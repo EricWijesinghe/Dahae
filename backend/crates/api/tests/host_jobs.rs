@@ -32,11 +32,17 @@ struct Host {
 }
 
 fn host(db: PgPool) -> Host {
+    host_offering(db, &[])
+}
+
+/// Like [`host`], on a server whose installer offered these editions (`EDITIONS_OFFERED`).
+fn host_offering(db: PgPool, editions: &[&str]) -> Host {
     let dir = std::env::temp_dir().join(format!("dahae-host-jobs-{}", Uuid::now_v7().simple()));
     std::fs::create_dir_all(dir.join("inbox")).expect("inbox");
     std::fs::create_dir_all(dir.join("status")).expect("status");
     let mut cfg = test_config();
     cfg.host_jobs_dir = dir.clone();
+    cfg.editions_offered = editions.iter().map(|e| e.to_string()).collect();
     let state = api::build_state(db, cfg).expect("state");
     Host {
         app: routes::router(state),
@@ -522,4 +528,68 @@ async fn key_copy_passphrase_stays_out_of_the_database_and_the_copy_is_taken_onc
     )
     .await;
     assert_eq!(st, StatusCode::BAD_REQUEST, "a client cannot queue the confirmation");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn edition_is_refused_on_a_server_that_was_not_offered_one(db: PgPool) {
+    let h = host(db.clone());
+    let admin = enrolled_admin(&db).await;
+    let (st, body) = send(&h.app, "GET", "/v1/admin/host/jobs", &admin, None, None, None).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(body["editions_offered"], json!([]), "no edition card on other servers");
+    assert_eq!(body["edition"], "dahae");
+    let (st, body) = send(
+        &h.app,
+        "POST",
+        "/v1/admin/host/jobs",
+        &admin,
+        Some(&code_now()),
+        Some(KEY),
+        Some(json!({ "kind": "edition", "arg": "uzipsa" })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "{body}");
+    assert!(body.to_string().contains("edition_not_offered"), "{body}");
+    assert!(job_files(&h.dir).is_empty(), "nothing queued");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_offered_edition_is_an_owner_job_that_waits_for_the_server_approval_code(db: PgPool) {
+    let h = host_offering(db.clone(), &["uzipsa"]);
+    let admin = enrolled_admin(&db).await;
+    let (_, body) = send(&h.app, "GET", "/v1/admin/host/jobs", &admin, None, None, None).await;
+    assert_eq!(body["editions_offered"], json!(["uzipsa"]));
+
+    let edition = Some(json!({ "kind": "edition", "arg": "uzipsa" }));
+    let (st, _) = send(&h.app, "POST", "/v1/admin/host/jobs", &admin, None, Some(KEY), edition.clone()).await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "owner code needed");
+    let (st, _) = send(
+        &h.app,
+        "POST",
+        "/v1/admin/host/jobs",
+        &admin,
+        Some(&code_now()),
+        Some("1f6c2d9e-7a51-4c3b-9d2e-5b8a1c4e7f10"),
+        Some(json!({ "kind": "edition", "arg": "dahae" })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::BAD_REQUEST, "an edition the installer did not offer");
+    assert!(job_files(&h.dir).is_empty());
+
+    let job = queue_job(&h, &admin, json!({ "kind": "edition", "arg": "uzipsa" })).await;
+    let id = job["id"].as_str().expect("id").to_string();
+    let text = std::fs::read_to_string(&job_files(&h.dir)[0]).expect("job file");
+    assert!(text.contains("\nkind=edition\narg=uzipsa\ntoken="), "{text}");
+    write_status(&h, &id, "awaiting_approval");
+    let (st, _) = send(
+        &h.app,
+        "POST",
+        &format!("/v1/admin/host/jobs/{id}/approve"),
+        &admin,
+        None,
+        None,
+        Some(json!({ "code": "123456" })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::ACCEPTED, "held for the server approval code");
 }

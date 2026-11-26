@@ -251,7 +251,11 @@ t  "40-day-old step log removed" test ! -e "$DAHAE_JOBS/status/$id.log"
 # ---- host.json: channel, version, required CLI revision, next automatic update ----
 host_refresh
 t  "host.json has channel"        grep -q '"channel":"stable"' "$DAHAE_HOST_DIR/host.json"
-t  "host.json has min_cli"        grep -q '"min_cli":2' "$DAHAE_HOST_DIR/host.json"
+t  "host.json has min_cli"        grep -q '"min_cli":3' "$DAHAE_HOST_DIR/host.json"
+t  "host.json: no EDITION is the dahae edition" grep -q '"edition":"dahae"' "$DAHAE_HOST_DIR/host.json"
+cp "$DAHAE_DIR/.env" "$SB/env.keep"; printf 'EDITION=uzipsa\n' >> "$DAHAE_DIR/.env"; host_refresh
+t  "host.json shows the edition"  grep -q '"edition":"uzipsa"' "$DAHAE_HOST_DIR/host.json"
+mv -f "$SB/env.keep" "$DAHAE_DIR/.env"
 t  "host.json next update set"    grep -q '"next_update":"20' "$DAHAE_HOST_DIR/host.json"
 t  "host.json: a channel host is not pinned" grep -q '"pinned":false' "$DAHAE_HOST_DIR/host.json"
 cp "$DAHAE_DIR/.env" "$SB/env.keep"; sed -i 's/^VERSION=.*/VERSION=v1.6.4/' "$DAHAE_DIR/.env"; host_refresh
@@ -572,6 +576,7 @@ t  "...and both end ok"                   eq "$(state "$a")$(state "$b")" okok
 # ---- time limits: every job that backs up the photos first gets the long limit (last: update-tag writes history) ----
 # shellcheck disable=SC2034 # JOB_ARG is read by dispatch in the sourced agent
 limit_of() { JOB_KIND=$1; JOB_ARG=${2:-}; dispatch >/dev/null 2>&1; tail -n1 "$SB/timeout.log"; }
+t  "edition gets the long limit"          eq "$(limit_of edition uzipsa)" "$UPDATE_RUN_TIMEOUT"
 for k in update backup-now rollback; do t "$k gets the long limit" eq "$(limit_of "$k")" "$UPDATE_RUN_TIMEOUT"; done
 t  "channel gets the long limit"          eq "$(limit_of channel beta)" "$UPDATE_RUN_TIMEOUT"
 t  "update-tag gets the long limit"       eq "$(limit_of update-tag v9.9.9)" "$UPDATE_RUN_TIMEOUT"
@@ -669,6 +674,36 @@ t  "rollback whose tools stayed says to re-run the install line" sh -c 'case "$1
 t  "any other rollback failure points at the logs" sh -c 'case "$1" in failed*"dahae logs"*) ;; *) exit 1 ;; esac' _ "$(ends_with rollback 1)"
 # shellcheck disable=SC2016 # literal text on purpose
 t  "update whose tools stayed says the new version is fine" sh -c 'case "$1" in failed*"새 버전으로 바꿨고 정상이에요"*) ;; *) exit 1 ;; esac' _ "$(ends_with update 5)"
+
+# ---- edition: only an edition the installer offered this domain, held for the server approval code ----
+TOK6=ffffffffffffffffffffffffffffffff
+printf '0\n' > "$HOST_DIR/approval.last-step"; rm -f "$HOST_DIR/awaiting.job" "$HOST_DIR/awaiting.meta" "$HOST_DIR/approval.fails"
+printf 'DOMAIN=myshop.co.kr\nCHANNEL=stable\nVERSION=stable\n' > "$DAHAE_DIR/.env"
+id=$(uuid7); t  "edition refused when nothing is offered (every other server)" refuse "$id" "id=$id\nkind=edition\narg=uzipsa\ntoken=$TOK6\n"
+printf 'DOMAIN=uzipsa.co.kr\nCHANNEL=stable\nVERSION=stable\nEDITIONS_OFFERED=uzipsa\n' > "$DAHAE_DIR/.env"
+id=$(uuid7); t  "edition off the offered list refused" refuse "$id" "id=$id\nkind=edition\narg=other\ntoken=$TOK6\n"
+id=$(uuid7); t  "edition with a near-miss name refused" refuse "$id" "id=$id\nkind=edition\narg=uzipsa2\ntoken=$TOK6\n"
+id=$(uuid7); t  "edition without token refused"        refuse "$id" "id=$id\nkind=edition\narg=uzipsa\n"
+id=$(uuid7); t  "edition with an odd name refused"     refuse "$id" "id=$id\nkind=edition\narg=Uzipsa\ntoken=$TOK6\n"
+id=$(uuid7); t  "edition without a name refused"       refuse "$id" "id=$id\nkind=edition\ntoken=$TOK6\n"
+idE=$(uuid7); before=$(argv_lines)
+submit "$idE" "id=$idE\nkind=edition\narg=uzipsa\ntoken=$TOK6\n"
+t  "edition waits for approval"            eq "$(state "$idE")" awaiting_approval
+t  "edition summary names the edition"     grep -q '"summary":"업데이트 판을 uzipsa 로 바꿔요' "$DAHAE_JOBS/public/$TOK6.json"
+t  "nothing ran while the edition waits"   eq "$(argv_lines)" "$before"
+ap "$idE" "$(totp_at "$SECRET" "$(date +%s)")"
+t  "approved edition runs dahae edition with the name" argv_has "edition uzipsa YES=1"
+t  "approved edition ends ok"              eq "$(state "$idE")" ok
+# shellcheck disable=SC2034 # read by run_job in the sourced agent
+ed_end() { printf '%s\n' "$1" > "$SB/rc-next"; JOB_ID=$(uuid7) JOB_KIND=edition JOB_ARG=uzipsa JOB_TOKEN=""; run_job; printf '%s %s' "$(state "$JOB_ID")" "$(cat "$DAHAE_JOBS/status/$JOB_ID.json")"; }
+# shellcheck disable=SC2016 # literal text on purpose
+t  "edition that rolled back says the server stayed" sh -c 'case "$1" in rolled_back*"되돌렸어요"*"그대로"*) ;; *) exit 1 ;; esac' _ "$(ed_end 3)"
+out=$(ed_end 5)
+# shellcheck disable=SC2016 # literal text on purpose
+t  "edition whose tools stayed asks for 'update now', no shell" sh -c 'case "$1" in failed*"uzipsa 로 바꿨고 정상이에요"*"지금 업데이트"*) ;; *) exit 1 ;; esac' _ "$out"
+nt "...not the install line text"          grep -qF '설치 줄' <<< "$out"
+# shellcheck disable=SC2016 # literal text on purpose
+t  "any other edition failure says nothing changed" sh -c 'case "$1" in failed*"지금 판 그대로"*) ;; *) exit 1 ;; esac' _ "$(ed_end 1)"
 
 echo "agent self-test: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ]

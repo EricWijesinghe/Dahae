@@ -43,6 +43,33 @@ nt "heartbeat ampersand"   valid_hb_url 'https://x.io/a?b=1&c=2'
 # shellcheck disable=SC2016 # literal $(id) on purpose
 nt "heartbeat subshell"    valid_hb_url 'https://x.io/$(id)'
 
+# ---- editions: the shipped table, the installer's row lookup and what the console may offer ----
+ed_rows() { grep -v '^#' "$ROOT/deploy/editions" | grep -v '^[[:space:]]*$'; }
+t  "editions: every row has name, images, signer, delivery and domains" eq "$(ed_rows | awk 'NF < 5' | wc -l)" 0
+t  "editions: names follow the agent rule" eq "$(ed_rows | awk '{ print $1 }' | grep -cvE '^[a-z][a-z0-9-]{1,30}$')" 0
+t  "editions: signers are owner/repo" eq "$(ed_rows | awk '{ print $3 }' | grep -cvE '^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$')" 0
+t  "editions: delivery is https raw" eq "$(ed_rows | awk '{ print $4 }' | grep -cv '^https://raw\.githubusercontent\.com/')" 0
+t  "editions: dahae keeps today's stream, any domain" eq "$(ed_rows | awk '$1 == "dahae"')" "dahae ghcr.io/ericwijesinghe EricWijesinghe/Dahae https://raw.githubusercontent.com/EricWijesinghe/Dahae-install *"
+t  "editions: uzipsa is one line with its three domains" eq "$(ed_rows | awk '$1 == "uzipsa" { $1 = $2 = $3 = $4 = ""; print }' | xargs)" "uzipsa.co.kr 15.165.87.232.sslip.io scratch.uzipsa.co.kr"
+t  "editions: uzipsa follows its own signer and images" eq "$(ed_rows | awk '$1 == "uzipsa" { print $2, $3, $4 }')" "ghcr.io/ericwijesinghe/uzipsa EricWijesinghe/Uzipsa https://raw.githubusercontent.com/EricWijesinghe/Uzipsa-install"
+nt "editions: no quote or heredoc end word" grep -qE "EDITIONS_EOF|'" "$ROOT/deploy/editions"
+t  "editions: the source installer has one marker line" eq "$(grep -c '^# @editions:' "$ROOT/deploy/install.sh")" 1
+t  "editions: the source installer offers nothing" eq "$(editions_offered uzipsa.co.kr dahae)" ""
+EDITIONS_SAVED=$EDITIONS
+EDITIONS=$(cat "$ROOT/deploy/editions")
+t  "edition_row finds a row"                        eq "$(field "$(edition_row uzipsa)" 3)" EricWijesinghe/Uzipsa
+nt "edition_row: no such edition"                    edition_row nope
+nt "edition_row: a comment is no row"               edition_row '#'
+t  "offered: the live domain gets uzipsa"           eq "$(editions_offered uzipsa.co.kr dahae)" uzipsa
+t  "offered: the demo domain gets uzipsa"           eq "$(editions_offered 15.165.87.232.sslip.io dahae)" uzipsa
+t  "offered: the scratch domain gets uzipsa"        eq "$(editions_offered scratch.uzipsa.co.kr dahae)" uzipsa
+t  "offered: any other domain gets nothing (the * row is never offered)" eq "$(editions_offered myshop.co.kr dahae)" ""
+t  "offered: a near miss gets nothing"              eq "$(editions_offered x.uzipsa.co.kr dahae)" ""
+t  "offered: the current edition is left out"       eq "$(editions_offered uzipsa.co.kr uzipsa)" ""
+EDITIONS=$(printf 'a r1 o/a https://x/a d.co.kr\nb r2 o/b https://x/b d.co.kr e.co.kr\n')
+t  "offered: several, comma separated"              eq "$(editions_offered d.co.kr dahae)" a,b
+EDITIONS=$EDITIONS_SAVED
+
 # ---- installer: DNS check. Any AAAA record is refused, even this server's (IPv6 visitors all show up as the
 # Docker gateway, so one of them could lock every IPv6 user out of sign-in) ----
 # dns_out [AAAA 주소] : 가짜 dig·ip 로 dns_check 를 한 번 돌려요. 출력 끝에 DNS_OK 를 붙여요
@@ -353,6 +380,11 @@ norm_compose() { sed -E -e '/^[[:space:]]*#/d' -e 's/[[:space:]]+#[[:space:]].*$
 mkdir -p "$SB/compose" && (cd "$SB/compose" && write_compose)
 t  "embedded compose = deploy/docker-compose.yml" diff <(norm_compose "$ROOT/deploy/docker-compose.yml") <(norm_compose "$SB/compose/docker-compose.yml")
 # shellcheck disable=SC2016 # literal ${...} on purpose
+# shellcheck disable=SC2016 # literal ${...} on purpose
+t  "compose hands the edition to the api" grep -qF 'EDITION: ${EDITION:-dahae}' "$ROOT/deploy/docker-compose.yml"
+# shellcheck disable=SC2016 # literal ${...} on purpose
+t  "compose hands the offered editions to the api" grep -qF 'EDITIONS_OFFERED: ${EDITIONS_OFFERED:-}' "$ROOT/deploy/docker-compose.yml"
+# shellcheck disable=SC2016 # literal ${...} on purpose
 t  "embedded compose pins images from .env" eq "$(grep -c 'image: ${\(API\|WEB\)_IMAGE:?set by install.sh}' "$SB/compose/docker-compose.yml")" 2
 t  "every service hardened" eq "$(grep -c '<<: \*hardened' "$ROOT/deploy/docker-compose.yml")" 4
 for k in 'no-new-privileges:true' 'cap_drop: \[ALL\]' 'read_only: true'; do
@@ -442,6 +474,12 @@ t  "tag = main commit"     eq "$(g rev-parse 'v1.0.0^{commit}')" "$(g rev-parse 
 t  "tag installer is stable" has v1.0.0:install.sh DEFAULT_CHANNEL=stable
 t  "tag installer names the signer" has v1.0.0:install.sh SIGNER_REPO_DEFAULT=o/src
 t  "tag SHA256SUMS matches" sums_ok v1.0.0
+t  "tag installer carries the editions table" has v1.0.0:install.sh "$(grep '^uzipsa ' "$ROOT/deploy/editions")"
+t  "tag ships the editions table"             eq "$(g show v1.0.0:editions)" "$(cat "$ROOT/deploy/editions")"
+t  "tag SHA256SUMS lists the editions table"  eq "$(g show v1.0.0:SHA256SUMS | awk '$2 == "editions" { print $1 }')" "$(sha256sum "$ROOT/deploy/editions" | cut -d' ' -f1)"
+g show v1.0.0:install.sh > "$SB/baked-install.sh"
+t  "the baked installer still parses"        bash -n "$SB/baked-install.sh"
+t  "the baked installer offers uzipsa to the live domain only" eq "$( (DAHAE_SELFTEST=1 . "$SB/baked-install.sh"; editions_offered uzipsa.co.kr dahae; echo "/$(editions_offered myshop.co.kr dahae)") 2>/dev/null)" "uzipsa/"
 t  "tag guide uses the tag URL" has "v1.0.0:guide/01-서버-설치.md" "raw.githubusercontent.com/$DIST/v1.0.0/install.sh"
 t  "tag README uses the tag URL" has v1.0.0:README.md "raw.githubusercontent.com/$DIST/v1.0.0/SHA256SUMS"
 t  "beta guide follows the beta channel"  has "beta:guide/01-서버-설치.md" "raw.githubusercontent.com/$DIST/beta/install.sh"
@@ -1003,6 +1041,91 @@ t  "update: twice the photos + 3 GB free runs"      eq "$rc:$(grep -c '^images' 
 tools_env; env_set DELIVERY_RAW ''; upd '' fail; rc=$?
 t  "auto-rollback exits 3"                          eq "$rc" 3
 t  "...and holds the channel's bad build"           eq "$(cat "$SB/host/rollback-hold" 2>/dev/null)" "$( ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; docker() { echo "id-$*"; }; manifest_key stable ) )"
+# ---- dahae edition: preflight before .env changes, journal, switch through cmd_update, restore unless 0 or 5 ----
+mkdir -p "$SB/relu"
+for v in v2.0.0 v2.0.0-beta.1; do mkrel "$v"; rm -rf "$SB/relu/$v"; mv "$SB/rel/$v" "$SB/relu/$v"; done
+mkdir -p "$SB/relu/main" "$SB/relu/beta"; echo 2.0.0 > "$SB/relu/main/VERSION"; echo 2.0.0-beta.1 > "$SB/relu/beta/VERSION"
+ed_env() { # ed_env [채널] : 다해 판 서버(EDITION 없음)와 판 표 (uzipsa 는 이 서버 도메인을 적었어요)
+  printf 'DOMAIN=myshop.co.kr\nCHANNEL=%s\nDELIVERY_RAW=file://%s/rel\nSIGNER_REPO=EricWijesinghe/Dahae\nIMAGE_SOURCE=remote\nIMAGE_VERIFY=on\nIMAGE_REPO=repo\nAPI_IMAGE=old\nWEB_IMAGE=old\nVERSION=%s\n' \
+    "${1:-stable}" "$SB" "${1:-stable}" > "$SB/.env"
+  rm -rf "$SB/host"/*; rm -f "$SB/tools.log"
+  printf '# @editions: test\ndahae repo EricWijesinghe/Dahae file://%s/rel *\nuzipsa repo2 Owner/Uzipsa file://%s/relu myshop.co.kr\nother repo3 Owner/Other file://%s/relo other.co.kr\n' \
+    "$SB" "$SB" "$SB" > "$SB/host/editions"
+  cp "$SB/.env" "$SB/env.before"
+}
+# ed 이름 [HEALTH] : upd 와 같은 가짜 백업·이미지로 cmd_edition 을 돌려요. 종료 코드를 돌려줘요
+ed() {
+  # shellcheck disable=SC2034 # SCRATCH is read by the sourced cmd_edition
+  ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; H=${2:-ok}; SCRATCH=()
+    log() { printf '%s\n' "$*" >> "$SB/tools.log"; }
+    db_roles() { :; }; cmd_backup() { log backup; }; prune_keep_tags() { :; }; record_version() { :; }
+    # shellcheck disable=SC2034 # read by the sourced cmd_update
+    pull_images() { log "pull $1 $2"; NEW_API=repo/api:new; NEW_WEB=repo/web:new; }
+    running_image() { echo "$2"; }; digest_ref() { echo "$1"; }
+    docker() { echo "id-$*"; }
+    df() { printf 'Filesystem 1024-blocks Used Available Capacity Mounted
+fs 1 1 999999999 1%% /
+'; }
+    dc() { [ "$1" != run ] || echo "0 /data/uploads"; }
+    set_images() { log "images $1"; }; wait_healthy() { [ "$H" = ok ] || [ "$(grep '^images' "$SB/tools.log" | tail -n1)" != "images repo/api:new" ]; }
+    run_installer_tools() { [ -z "${TOOLS_FAIL:-}" ] || return 1; log "tools $(bash "$1")"; }
+    cmd_edition "$1" ) >/dev/null 2>&1
+}
+env_same() { cmp -s "$SB/.env" "$SB/env.before"; }
+ed_env; ed nope; rc=$?
+t  "edition: a name not in the table is refused" eq "$rc" 1
+t  "...with .env byte-equal" env_same
+ed_env; ed other; rc=$?
+t  "edition: a row that does not list this domain is refused" eq "$rc:$(env_same && echo same)" 1:same
+ed_env; ed dahae; rc=$?
+t  "edition: switching to the edition it is on is refused" eq "$rc:$(env_same && echo same)" 1:same
+ed_env; ed 'Uz;id'; rc=$?
+t  "edition: an odd name is refused" eq "$rc:$(env_same && echo same)" 1:same
+ed_env; rm -f "$SB/relu/main/VERSION"; ed uzipsa; rc=$?
+t  "edition: a stream with no channel version yet is refused before anything" eq "$rc:$(env_same && echo same)" 1:same
+nt "...no backup, no images"                         test -e "$SB/tools.log"
+echo 2.0.0 > "$SB/relu/main/VERSION"
+ed_env; printf 'v2.0.0\n' > "$SB/host/version-history"; ed uzipsa; rc=$?
+t  "edition: a stream not above this server's newest version is refused" eq "$rc:$(env_same && echo same)" 1:same
+ed_env; FAKE_BLOB=bad ed uzipsa; rc=$?
+t  "edition: a bad signature on the new stream is refused" eq "$rc:$(env_same && echo same)" 1:same
+ed_env; ed uzipsa; rc=$?
+t  "edition: the preflight checks the new signer at the channel's tag" grep -qF 'Owner/Uzipsa/\.github/workflows/release\.yml@refs/tags/v2\.0\.0$' "$SB/bin/blob-args"
+t  "edition: ok"                                     eq "$rc" 0
+t  "edition: the new triple and channel are in .env" eq "$(env_get EDITION) $(env_get IMAGE_REPO) $(env_get SIGNER_REPO) $(env_get DELIVERY_RAW) $(env_get VERSION)" "uzipsa repo2 Owner/Uzipsa file://$SB/relu stable"
+t  "edition: the images come from the new stream"    grep -qxF 'pull repo2 stable' "$SB/tools.log"
+t  "edition: the new stream's tools are applied"     eq "$(tail -n1 "$SB/tools.log")" "tools tools v2.0.0"
+nt "edition: the journal is gone"                    test -e "$SB/host/edition.prev"
+ed_env beta; ed uzipsa; rc=$?
+t  "edition on a beta server reads the beta channel" eq "$rc:$(tail -n1 "$SB/tools.log")" "0:tools tools v2.0.0-beta.1"
+t  "...signed at the beta tag" grep -qF 'release\.yml@refs/tags/v2\.0\.0-beta\.1$' "$SB/bin/blob-args"
+ed_env; printf 'x\n' > "$SB/host/rollback-hold"; ed uzipsa fail; rc=$?
+t  "edition: a new stream that does not answer exits 3" eq "$rc" 3
+t  "...and puts the old triple back, .env byte-equal" env_same
+nt "...and drops the journal"                        test -e "$SB/host/edition.prev"
+nt "...and holds nothing of the other stream"        test -e "$SB/host/rollback-hold"
+ed_env; TOOLS_FAIL=1 ed uzipsa; rc=$?
+t  "edition: new stream fine but tools not exits 5 and keeps the new edition" eq "$rc:$(env_get EDITION)" 5:uzipsa
+nt "...with no journal left"                         test -e "$SB/host/edition.prev"
+# a switch killed after .env changed: the next CLI entry (auto-update, update, edition, channel) puts it back first
+crash_env() { # crash_env API_IMAGE : uzipsa 값으로 바뀐 .env 와 이전 값 기록 (판 바꾸기 도중에 끊긴 서버)
+  ed_env
+  grep -E '^(IMAGE_REPO|SIGNER_REPO|DELIVERY_RAW|VERSION|API_IMAGE|WEB_IMAGE)=' "$SB/.env" > "$SB/host/edition.prev"
+  ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"
+    env_set EDITION uzipsa; env_set IMAGE_REPO repo2; env_set SIGNER_REPO Owner/Uzipsa; env_set DELIVERY_RAW "file://$SB/relu"; env_set API_IMAGE "$1" )
+}
+auto_after_crash() { ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; : > "$DIR/host/skip-next-update"; cmd_auto_update ) >/dev/null 2>&1; }
+crash_env old; auto_after_crash
+t  "crash before the new images: auto-update restores the old triple first" env_same
+nt "...and drops the journal"                        test -e "$SB/host/edition.prev"
+crash_env repo2/malkkeum-api:keep-0123456789ab; auto_after_crash
+t  "crash after the images went back: the old triple too" eq "$(env_get EDITION)$(env_get SIGNER_REPO)" EricWijesinghe/Dahae
+crash_env repo2/malkkeum-api@sha256:abc; auto_after_crash
+t  "crash with the new images up: the new edition stays" eq "$(env_get EDITION) $(env_get SIGNER_REPO)" "uzipsa Owner/Uzipsa"
+nt "...and the journal goes"                         test -e "$SB/host/edition.prev"
+t  "dahae version shows edition dahae on a server without EDITION" grep -qx 'edition: dahae' <<< "$( (DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; sed -i '/^EDITION=/d' .env; dc() { :; }; curl() { :; }; cmd_version) 2>/dev/null)"
+ed_env
+
 # rb [GATE] : 가짜 정산 확인(GATE=0 이면 통과)으로 cmd_rollback 을 돌려요
 rb() {
   ( DAHAE_SELFTEST=1 . "$SB/dahae"; cd "$SB"; GATE=${1:-0}
@@ -1060,6 +1183,9 @@ tools_main() { # tools_main : 설치된 서버(가짜)에서 MALKKEUM_HOST_UPDAT
     install_cosign() { log cosign; }; write_schedules() { log schedules; }; install_agent() { log "install_agent ready=${AGENT_READY:-0}"; }
     dc() { log "dc $*"; return 0; }
     PATH="$SB/fakebin:$PATH" # a dahae update or prepare would reach docker: the fake one logs it
+    # TM_EDITIONS / TM_RAW: the table and release address a delivered (baked) installer carries
+    if [ -n "${TM_EDITIONS+x}" ]; then EDITIONS=$TM_EDITIONS; fi
+    if [ -n "${TM_RAW:-}" ]; then RELEASE_RAW=$TM_RAW; fi
     MALKKEUM_HOST_UPDATE=tools MALKKEUM_AGENT_FILE=$SB/agent-src.sh main ) >/dev/null 2>&1
 }
 mkdir -p "$SB/srv" "$SB/fakebin"; rm -f "$SB/main.log"
@@ -1078,8 +1204,46 @@ t  "tools mode: the CLI is rewritten"               test -x "$SB/srv/bin/dahae"
 t  "tools mode: keys and images unchanged"          eq "$(grep -E '^(DATA_KEY|JWT_SECRET|API_IMAGE)=' "$SB/srv/.env")" "$before"
 sed -i '/^API_IMAGE=/d' "$SB/srv/.env"; rm -f "$SB/main.log"; tools_main; rc=$?
 nt "tools mode on a server with no images refuses"  eq "$rc" 0
-nt "...before writing anything"                     grep -q '^dc ' "$SB/main.log"
-rm -rf "$SB/srv" "$SB/fakebin" "$SB/main.log" "$SB/agent-src.sh"
+nt "...before writing anything"                     grep -qs '^dc ' "$SB/main.log"
+# R22: a dahae server (no EDITION) keeps a byte-equal .env across a 1.6.6 tools run: custom signer and images,
+# a local-images install, a domain the table does not list. Only a listed domain gains EDITIONS_OFFERED.
+TABLE=$(printf '# @editions: x\ndahae ghcr.io/ericwijesinghe EricWijesinghe/Dahae https://raw.githubusercontent.com/EricWijesinghe/Dahae-install *\nuzipsa ghcr.io/o/uzipsa O/Uzipsa https://raw.example/O/Uzipsa-install uzipsa.co.kr\n')
+dahae_env() { # dahae_env 도메인 이미지저장소 서명자 출처 [배포주소] : 1.6.5 가 남긴 그대로의 .env (모든 키가 설치 프로그램이 쓰는 모양)
+  printf 'API_DB_PASSWORD=%s\nDATA_KEY=%s\nJWT_SECRET=%s\nDOMAIN=%s\nACME_EMAIL=o@x.co.kr\nIMAGE_REPO=%s\nTLS_MODE=\nCHANNEL=stable\nIMAGE_SOURCE=%s\nSIGNER_REPO=%s\nIMAGE_VERIFY=on\nVERSION=stable\nAPI_IMAGE=repo/api@sha256:aa\nWEB_IMAGE=repo/web@sha256:bb\n' \
+    "$(printf 'd%.0s' $(seq 48))" "$(printf 'b%.0s' $(seq 64))" "$(printf 'c%.0s' $(seq 64))" "$1" "$2" "$4" "$3" > "$SB/srv/.env"
+  if [ -n "${5:-}" ]; then printf 'DELIVERY_RAW=%s\n' "$5" >> "$SB/srv/.env"; fi
+  cp "$SB/srv/.env" "$SB/srv-env.before"
+}
+srv_same() { cmp -s "$SB/srv/.env" "$SB/srv-env.before"; }
+dahae_env myshop.co.kr ghcr.io/me me/fork remote https://raw.githubusercontent.com/me/Dahae-install
+TM_EDITIONS=$TABLE TM_RAW=https://raw.githubusercontent.com/me/Dahae-install/v1.6.6 MALKKEUM_SIGNER=me/fork MALKKEUM_IMAGES=ghcr.io/me tools_main; rc=$?
+t  "R22: custom signer and images, .env byte-equal after a tools run" eq "$rc:$(srv_same && echo same)" 0:same
+t  "...and the table is left for dahae edition"     grep -qF 'uzipsa ghcr.io/o/uzipsa O/Uzipsa' "$SB/srv/host/editions"
+dahae_env myshop.co.kr ghcr.io/me me/fork remote https://raw.githubusercontent.com/me/Dahae-install
+TM_EDITIONS=$TABLE TM_RAW=https://raw.githubusercontent.com/me/Dahae-install/v1.6.6 tools_main; rc=$?
+t  "R22: the same without the override variables (agent's tools run)" eq "$rc:$(srv_same && echo same)" 0:same
+dahae_env myshop.co.kr ghcr.io/ericwijesinghe EricWijesinghe/Dahae local
+TM_EDITIONS=$TABLE tools_main; rc=$?
+t  "R22: a local-images install keeps a byte-equal .env" eq "$rc:$(srv_same && echo same)" 0:same
+dahae_env uzipsa.co.kr ghcr.io/ericwijesinghe EricWijesinghe/Dahae remote https://raw.githubusercontent.com/EricWijesinghe/Dahae-install
+TM_EDITIONS=$TABLE TM_RAW=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/v1.6.6 tools_main; rc=$?
+t  "a listed domain gains EDITIONS_OFFERED and nothing else" eq "$rc:$(diff "$SB/srv-env.before" "$SB/srv/.env" | grep '^[<>]' | tr '\n' ' ')" "0:> EDITIONS_OFFERED=uzipsa "
+# the :1789 fix: after a switch, the bridge installer (re-run by a rollback) keeps the triple of EDITION's row
+dahae_env uzipsa.co.kr ghcr.io/o/uzipsa O/Uzipsa remote https://raw.example/O/Uzipsa-install
+printf 'EDITION=uzipsa\nEDITIONS_OFFERED=uzipsa\n' >> "$SB/srv/.env"
+TM_EDITIONS=$TABLE TM_RAW=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install/v1.6.6 MALKKEUM_IMAGES=ghcr.io/x MALKKEUM_SIGNER=x/y tools_main; rc=$?
+t  "rollback onto the bridge: the triple stays on the edition's row" eq "$rc:$(grep -E '^(IMAGE_REPO|SIGNER_REPO|DELIVERY_RAW|EDITION)=' "$SB/srv/.env" | tr '\n' ' ')" "0:IMAGE_REPO=ghcr.io/o/uzipsa SIGNER_REPO=O/Uzipsa DELIVERY_RAW=https://raw.example/O/Uzipsa-install EDITION=uzipsa "
+t  "...and the current edition is no longer offered" eq "$(grep '^EDITIONS_OFFERED=' "$SB/srv/.env")" "EDITIONS_OFFERED="
+dahae_env uzipsa.co.kr ghcr.io/o/uzipsa O/Uzipsa remote https://raw.example/O/Uzipsa-install
+printf 'EDITION=gone\n' >> "$SB/srv/.env"; cp "$SB/srv/.env" "$SB/srv-env.before"; rm -f "$SB/main.log"
+TM_EDITIONS=$TABLE tools_main; rc=$?
+t  "an EDITION missing from the table stops the run" eq "$rc:$(srv_same && echo same)" 1:same
+nt "...before writing anything"                     grep -qs '^dc ' "$SB/main.log"
+dahae_env myshop.co.kr ghcr.io/ericwijesinghe EricWijesinghe/Dahae remote
+printf 'dahae x y z *\n' > "$SB/editions-file"
+DAHAE_EDITIONS_FILE=$SB/editions-file tools_main; rc=$?
+t  "DAHAE_EDITIONS_FILE is refused while signatures are checked" eq "$rc:$(srv_same && echo same)" 1:same
+rm -rf "$SB/srv" "$SB/fakebin" "$SB/main.log" "$SB/agent-src.sh" "$SB/srv-env.before" "$SB/editions-file"
 
 # ---- AWS backup bucket from the template: checked, then written to .env for the app ----
 s3env() { ( MALKKEUM_BACKUP_S3_BUCKET=$1 MALKKEUM_BACKUP_S3_REGION=$2; check_backup_s3_env ) >/dev/null 2>&1; }
