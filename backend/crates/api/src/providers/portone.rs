@@ -332,7 +332,15 @@ pub async fn delete_at(http: &reqwest::Client, base: &str, auth_header: &str, ke
 /// error, 409 AlreadyPaidError or a 200 without `payment.paidAt` is `Upstream` (outcome unknown: the caller looks the payment up).
 /// Source: PortOne openapi, POST /payments/{paymentId}/billing-key (PayWithBillingKeyError), error body `{type, message}`.
 /// shortcut: only the spec's error `type` names are known. Real card-decline codes need one test-store charge before live billing.
-pub async fn charge_billing(p: &Providers, key: &str, payment_id: &str, amount: i64, order: &str, customer: Uuid) -> Result<String, ProviderError> {
+pub async fn charge_billing(
+    p: &Providers,
+    key: &str,
+    payment_id: &str,
+    amount: i64,
+    currency: &str,
+    order: &str,
+    customer: Uuid,
+) -> Result<String, ProviderError> {
     check_id(key)?;
     check_id(payment_id)?;
     let body = json!({
@@ -340,7 +348,7 @@ pub async fn charge_billing(p: &Providers, key: &str, payment_id: &str, amount: 
         "orderName": order,
         "customer": { "id": customer.to_string() },
         "amount": { "total": amount },
-        "currency": "KRW",
+        "currency": currency,
     });
     charge_at(p.http(), p.portone_api(), &auth(p)?, payment_id, body).await
 }

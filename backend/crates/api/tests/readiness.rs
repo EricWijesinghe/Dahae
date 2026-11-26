@@ -47,6 +47,22 @@ async fn todays_adapters_are_ready(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn a_legacy_pg_payment_stays_ready(pool: PgPool) {
+    payment(&pool, "pg", "paid").await;
+    let (st, doc) = call(&common::app(pool), "GET", "/ready", None, None).await;
+    assert_eq!((st, doc["adapters_ok"].clone()), (StatusCode::OK, json!(true)), "{doc}");
+}
+
+/// Every code any release wrote to payments.provider, payment_methods.gateway, refund_queue.provider or
+/// payouts.provider (git history of their insert sites). Removing one would fail /ready on an install holding it.
+#[test]
+fn the_known_adapters_cover_every_code_ever_written() {
+    let mut known = api::lifecycle::KNOWN_ADAPTERS.to_vec();
+    known.sort_unstable();
+    assert_eq!(known, ["manual", "pg", "portone", "toss", "tosspayments", "tosspayments_billing"]);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn a_refundable_payment_on_an_unknown_adapter_fails_readiness(pool: PgPool) {
     payment(&pool, "stripe", "paid").await;
     let (st, doc) = call(&common::app(pool), "GET", "/ready", None, None).await;

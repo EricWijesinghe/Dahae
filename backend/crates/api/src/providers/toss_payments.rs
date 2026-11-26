@@ -341,6 +341,7 @@ pub async fn charge_billing(
     customer_key: &str,
     order_id: &str,
     amount: i64,
+    currency: &str,
     order_name: &str,
 ) -> Result<String, ProviderError> {
     check_id(order_id)?;
@@ -355,7 +356,8 @@ pub async fn charge_billing(
         .json(&json!({ "customerKey": customer_key, "amount": amount, "orderId": order_id, "orderName": order_name }));
     let (s, v) = call(p, rb).await?;
     if s.is_success() {
-        let done = v["status"].as_str() == Some("DONE") && v["totalAmount"].as_i64() == Some(amount);
+        // Toss charges a billing key in the MID's currency; one other than the stamped currency is not taken as paid.
+        let done = v["status"].as_str() == Some("DONE") && v["totalAmount"].as_i64() == Some(amount) && v["currency"].as_str() == Some(currency);
         return if done {
             Ok(order_id.to_string())
         } else {

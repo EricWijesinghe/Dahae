@@ -90,9 +90,10 @@ pub async fn live() -> Json<Value> {
 }
 
 /// Every adapter code a live row may name: `payments.provider`, `payment_methods.gateway`, `refund_queue.provider`
-/// (the payment gateways) and `payouts.provider`. Codes are never removed (D12).
-/// shortcut: static list of today's codes, replaced by the adapter registry when it lands (R2).
-pub const KNOWN_ADAPTERS: [&str; 5] = ["portone", TOSS, TOSS_BILLING, "toss", "manual"];
+/// (the payment gateways) and `payouts.provider`. Codes are never removed (D12): this is every code any release ever
+/// wrote there, including `pg`, the pre-release fake gateway's `payments.provider` (still in long-lived dev databases).
+/// shortcut: static list, replaced by the adapter registry when it lands (R2).
+pub const KNOWN_ADAPTERS: [&str; 6] = ["portone", TOSS, TOSS_BILLING, "toss", "manual", "pg"];
 
 /// Readiness: the database answers, every shipped migration is applied, and this binary knows every adapter a
 /// live row still needs (`adapters_ok`: refundable payments, saved cards, queued refunds, open payouts). After an

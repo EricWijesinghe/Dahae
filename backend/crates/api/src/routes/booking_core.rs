@@ -325,9 +325,9 @@ pub async fn record_payment(
     .bind(tx_id)
     .bind(idem)
     .bind(currency)
-    .execute(conn)
+    .execute(&mut *conn)
     .await?;
-    Ok(())
+    super::setup::install::lock_on_payment(conn).await
 }
 
 /// The quote card the customer tapped to pay its deposit: all three fields, or none (apps before v1.4).

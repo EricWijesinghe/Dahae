@@ -314,8 +314,17 @@ impl Providers {
     }
 
     /// Charges a saved card once (subscription visits, booking payments, tips) through the gateway it was saved on.
-    /// Opens the sealed key first. Dev mode fakes it; `FAKE_DECLINE_KEY` declines.
-    pub async fn charge_billing(&self, card: &SavedCard, amount: i64, payment_id: &str, order: &str, customer: Uuid) -> Result<String, ProviderError> {
+    /// Opens the sealed key first. `currency` is the one the payment is stamped with (ISO 4217). Dev mode fakes it;
+    /// `FAKE_DECLINE_KEY` declines.
+    pub async fn charge_billing(
+        &self,
+        card: &SavedCard,
+        amount: i64,
+        currency: &str,
+        payment_id: &str,
+        order: &str,
+        customer: Uuid,
+    ) -> Result<String, ProviderError> {
         let Some(billing_key) = crypto::open_billing_key(&self.cfg.data_key, &card.sealed_key) else {
             tracing::error!(%customer, payment_id, "saved-card billing key cannot be opened: charge refused");
             return Err(ProviderError::Declined("billing_key_unreadable".into()));
@@ -323,13 +332,13 @@ impl Providers {
         if !self.dev() {
             return match card.gateway {
                 Gateway::Portone => {
-                    let charged = portone::charge_billing(self, &billing_key, payment_id, amount, order, customer).await;
+                    let charged = portone::charge_billing(self, &billing_key, payment_id, amount, currency, order, customer).await;
                     self.observe("portone", outcome(&charged)).await;
                     charged
                 }
                 Gateway::TossPayments => {
                     let customer_key = card.customer_key.as_deref().ok_or(ProviderError::Declined("billing_key_not_bound".into()))?;
-                    let charged = toss_payments::charge_billing(self, &billing_key, customer_key, payment_id, amount, order).await;
+                    let charged = toss_payments::charge_billing(self, &billing_key, customer_key, payment_id, amount, currency, order).await;
                     self.observe(TOSS, outcome(&charged)).await;
                     charged
                 }

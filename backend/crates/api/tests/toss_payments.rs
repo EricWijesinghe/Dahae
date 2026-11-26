@@ -620,6 +620,14 @@ async fn webhooks_settle_and_flag_console_cancels_once(pool: PgPool) {
     assert_eq!(webhook(&w.env.app, &unknown, None).await, StatusCode::OK);
     let ignored = json!({ "eventType": "BILLING_DELETED", "data": { "billingKey": "k" } });
     assert_eq!(webhook(&w.env.app, &ignored, None).await, StatusCode::OK);
+    let ledger: i64 = sqlx::query_scalar("SELECT count(*) FROM webhook_events")
+        .fetch_one(&pool)
+        .await
+        .expect("ledger");
+    assert_eq!(
+        ledger, 0,
+        "unsigned hints never enter the ledger, so strangers cannot fill it or pre-record a body"
+    );
 }
 
 fn owner_code(seed: &[u8]) -> String {

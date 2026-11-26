@@ -179,13 +179,14 @@ pub async fn charge(
     // A fresh id per attempt, so a declined id is never sent again; `idem` keeps one payment per booking and kind.
     let pid = format!("{kind}-{}", Uuid::now_v7().simple());
     let order = order_name(&super::setup::brand::short_brand(&s.db).await, kind);
-    match s.providers.charge_billing(&card, amount.0, &pid, &order, user).await {
+    let currency = s.pack.currency.code.as_str();
+    match s.providers.charge_billing(&card, amount.0, currency, &pid, &order, user).await {
         Ok(_) => {}
-        Err(ProviderError::Upstream(cause)) => confirm_charge(s, provider, &pid, amount.0, &cause).await?,
+        Err(ProviderError::Upstream(cause)) => confirm_charge(s, provider, &pid, amount.0, currency, &cause).await?,
         Err(e @ ProviderError::Declined(_)) => return Err(ApiError::PaymentFailed(e.to_string())),
         Err(e) => return Err(e.into()),
     }
-    if let Err(e) = record_payment(conn, booking, amount.0, kind, provider, &s.pack.currency.code, &pid, &idem).await {
+    if let Err(e) = record_payment(conn, booking, amount.0, kind, provider, currency, &pid, &idem).await {
         refund_or_alert(s, provider, &pid, amount.0).await;
         return Err(e);
     }
@@ -205,9 +206,10 @@ fn order_name(short: &str, kind: &str) -> String {
 
 /// The charge answer was lost or unclear: ask the gateway. An unknown outcome is cancelled so nobody pays for nothing.
 /// A Toss billing charge can still land after our timeout, so Toss not knowing the order yet is unknown, not failed.
-async fn confirm_charge(s: &AppState, provider: &str, pid: &str, amount: i64, cause: &str) -> ApiResult<()> {
+/// A charge in another currency than the stamp is cancelled like an unknown one.
+async fn confirm_charge(s: &AppState, provider: &str, pid: &str, amount: i64, currency: &str, cause: &str) -> ApiResult<()> {
     match s.providers.payment(provider, pid, amount).await {
-        Ok(i) if i.status == "PAID" && i.total == amount => Ok(()),
+        Ok(i) if i.status == "PAID" && i.total == amount && i.currency == currency => Ok(()),
         Ok(i) if i.status == "FAILED" => Err(ApiError::PaymentFailed("charge_failed".into())),
         Err(ProviderError::NotFound) if provider != TOSS_BILLING => Err(ApiError::PaymentFailed("charge_failed".into())),
         other => {

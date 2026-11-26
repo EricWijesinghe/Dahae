@@ -25,6 +25,7 @@ use sqlx::PgPool;
 use std::{
     net::SocketAddr,
     sync::{Arc, atomic::Ordering},
+    time::Duration,
 };
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -197,6 +198,11 @@ fn prod_app(db: PgPool, base: &str) -> Router {
 
 /// PortOne stand-in: every payment read answers a payment of `TOTAL` with `cancelled` taken back.
 async fn portone_stand_in(cancelled: i64) -> String {
+    slow_stand_in(cancelled, Duration::ZERO, StatusCode::OK).await
+}
+
+/// `portone_stand_in` that answers after `delay` with `status`.
+async fn slow_stand_in(cancelled: i64, delay: Duration, status_code: StatusCode) -> String {
     let status = if cancelled == TOTAL { "CANCELLED" } else { "PARTIAL_CANCELLED" };
     let body = json!({
         "id": CANCEL_PAYMENT,
@@ -207,7 +213,10 @@ async fn portone_stand_in(cancelled: i64) -> String {
     });
     let app = Router::new().fallback(move || {
         let body = body.clone();
-        async move { Json(body) }
+        async move {
+            tokio::time::sleep(delay).await;
+            (status_code, Json(body))
+        }
     });
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind");
     let addr = listener.local_addr().expect("addr");
@@ -442,4 +451,104 @@ async fn the_ledger_keeps_thirty_days(pool: PgPool) {
     assert_eq!(report.webhook_events, 1);
     let left: Vec<String> = sqlx::query_scalar("SELECT event_id FROM webhook_events").fetch_all(&pool).await.expect("left");
     assert_eq!(left, ["recent"]);
+}
+
+/// Whether the ledger row of `event` is marked done (None: no row).
+async fn done(db: &PgPool, event: &str) -> Option<bool> {
+    sqlx::query_scalar("SELECT done_at IS NOT NULL FROM webhook_events WHERE adapter_id = 'portone' AND event_id = $1")
+        .bind(event)
+        .fetch_optional(db)
+        .await
+        .expect("ledger row")
+}
+
+/// Waits until a delivery of `event` has claimed its ledger row and is still working.
+async fn claimed(db: &PgPool, event: &str) {
+    for _ in 0..1200 {
+        if done(db, event).await == Some(false) {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    panic!("{event} was never claimed");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_delivery_cut_off_mid_work_is_handled_on_its_retry(pool: PgPool) {
+    let (booking, payment) = paid_booking(&pool, CANCEL_PAYMENT, 0).await;
+    let slow = prod_app(pool.clone(), &slow_stand_in(30_000, Duration::from_secs(8), StatusCode::OK).await);
+    let body = cancel_event("Transaction.PartialCancelled", CANCEL_PAYMENT, "tx_cut");
+    let headers = signed_headers(KEY, "msg_cut_1", &body);
+    // The provider gives up on a slow answer: the request future is dropped after the claim, before the work ends.
+    tokio::select! {
+        st = post(&slow, "/v1/webhooks/portone", &headers, body.clone()) => panic!("the delivery finished before the cut: {st}"),
+        () = claimed(&pool, "msg_cut_1") => {}
+    }
+    assert_eq!(done(&pool, "msg_cut_1").await, Some(false), "an unfinished claim, not a handled event");
+
+    let fixed = prod_app(pool.clone(), &portone_stand_in(30_000).await);
+    let early = signed_headers(KEY, "msg_cut_1", &body);
+    assert_eq!(
+        post(&fixed, "/v1/webhooks/portone", &early, body.clone()).await,
+        StatusCode::SERVICE_UNAVAILABLE,
+        "a retry inside the request timeout is asked to come back, never acknowledged"
+    );
+    assert_eq!(payment_state(&pool, payment).await, (0, "paid".into()));
+
+    // Past the request timeout the claim is stale: the retry takes it and does the work.
+    sqlx::query("UPDATE webhook_events SET received_at = now() - interval '1 minute'")
+        .execute(&pool)
+        .await
+        .expect("age the claim");
+    let late = signed_headers(KEY, "msg_cut_1", &body);
+    assert_eq!(post(&fixed, "/v1/webhooks/portone", &late, body.clone()).await, StatusCode::OK);
+    assert_eq!(
+        payment_state(&pool, payment).await,
+        (30_000, "partially_refunded".into()),
+        "the cancel is recorded"
+    );
+    assert_eq!(flags(&pool, booking).await, (1, 1));
+    assert_eq!(done(&pool, "msg_cut_1").await, Some(true));
+
+    let again = signed_headers(KEY, "msg_cut_1", &body);
+    assert_eq!(
+        post(&fixed, "/v1/webhooks/portone", &again, body).await,
+        StatusCode::OK,
+        "a finished event is a repeat"
+    );
+    assert_eq!(flags(&pool, booking).await, (1, 1));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_retry_while_the_first_attempt_runs_is_not_acknowledged(pool: PgPool) {
+    let (booking, payment) = paid_booking(&pool, CANCEL_PAYMENT, 0).await;
+    let failing = prod_app(
+        pool.clone(),
+        &slow_stand_in(30_000, Duration::from_secs(5), StatusCode::INTERNAL_SERVER_ERROR).await,
+    );
+    let body = cancel_event("Transaction.PartialCancelled", CANCEL_PAYMENT, "tx_overlap");
+    let headers = signed_headers(KEY, "msg_overlap_1", &body);
+    let first = {
+        let (app, body) = (failing.clone(), body.clone());
+        tokio::spawn(async move { post(&app, "/v1/webhooks/portone", &headers, body).await })
+    };
+    claimed(&pool, "msg_overlap_1").await;
+    let second = signed_headers(KEY, "msg_overlap_1", &body);
+    assert_eq!(
+        post(&failing, "/v1/webhooks/portone", &second, body.clone()).await,
+        StatusCode::SERVICE_UNAVAILABLE,
+        "the first attempt may still fail, so the overlap is not acknowledged"
+    );
+    assert!(first.await.expect("first attempt").is_server_error(), "the first attempt fails");
+    assert_eq!(ledger(&pool, "portone").await, 0, "its claim is released");
+
+    let fixed = prod_app(pool.clone(), &portone_stand_in(30_000).await);
+    let retry = signed_headers(KEY, "msg_overlap_1", &body);
+    assert_eq!(post(&fixed, "/v1/webhooks/portone", &retry, body).await, StatusCode::OK);
+    assert_eq!(
+        payment_state(&pool, payment).await,
+        (30_000, "partially_refunded".into()),
+        "the cancel is recorded"
+    );
+    assert_eq!(flags(&pool, booking).await, (1, 1));
 }

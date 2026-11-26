@@ -146,3 +146,26 @@ async fn a_newer_applied_pack_warns_but_stays_ready(pool: PgPool) {
     assert_eq!(st, StatusCode::OK, "{doc}");
     assert_eq!((doc["ready"].clone(), doc["pack_ok"].clone()), (json!(true), json!(false)), "{doc}");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_install_with_no_payment_at_first_boot_locks_at_its_first_payment(pool: PgPool) {
+    staff_token(&pool, Role::StaffAdmin).await;
+    common::seed_catalog(&pool).await;
+    let kr = pack::load("KR").expect("pack");
+    assert!(first_boot(&pool, &kr).await.expect("first boot"));
+    assert_eq!(stored(&pool, "install.locked_at").await, None, "no payment yet");
+
+    let app = common::app(pool.clone());
+    let c = common::customer(&app, &pool, "010-7000-0099").await;
+    common::book(&app, &c, 3, None).await;
+    let locked = stored(&pool, "install.locked_at").await.expect("locked at the first payment");
+    assert!(locked.as_str().is_some_and(|at| at.ends_with('Z')), "{locked}");
+
+    common::book(&app, &c, 4, None).await;
+    assert!(!first_boot(&pool, &kr).await.expect("reboot"));
+    assert_eq!(
+        stored(&pool, "install.locked_at").await,
+        Some(locked),
+        "never moved by a later payment or a reboot"
+    );
+}

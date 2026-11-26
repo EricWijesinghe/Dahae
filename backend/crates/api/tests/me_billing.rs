@@ -70,13 +70,13 @@ async fn charge_opens_the_stored_key_before_the_gateway_check(pool: PgPool) {
     };
     let (declined, _) = seal_billing_key(&key, FAKE_DECLINE_KEY);
     assert!(matches!(
-        state.providers.charge_billing(&card(&declined), 1000, "pid-decline", "order", user).await,
+        state.providers.charge_billing(&card(&declined), 1000, "KRW", "pid-decline", "order", user).await,
         Err(ProviderError::Declined(ref m)) if m == "card_declined"
     ));
     let (ok, _) = seal_billing_key(&key, "bk_live_ok");
-    assert!(state.providers.charge_billing(&card(&ok), 1000, "pid-ok", "order", user).await.is_ok());
+    assert!(state.providers.charge_billing(&card(&ok), 1000, "KRW", "pid-ok", "order", user).await.is_ok());
     assert!(matches!(
-        state.providers.charge_billing(&card("bk_plaintext"), 1000, "pid-plain", "order", user).await,
+        state.providers.charge_billing(&card("bk_plaintext"), 1000, "KRW", "pid-plain", "order", user).await,
         Err(ProviderError::Declined(ref m)) if m == "billing_key_unreadable"
     ));
 }

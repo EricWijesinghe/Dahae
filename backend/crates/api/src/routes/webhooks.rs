@@ -4,7 +4,8 @@
 //! Provider callbacks. The Standard Webhooks signature is the gate. Without a configured
 //! secret only dev mode accepts unsigned events (smoke tests); production refuses them.
 //! Events never move money on their own: the payment is re-read from the provider.
-//! Every accepted delivery is recorded in `webhook_events` before it is handled, so a redelivery does nothing.
+//! Every accepted delivery is claimed in `webhook_events` before it is handled and marked done after, so a
+//! redelivery of a finished event does nothing. Unsigned Toss Payments hints skip the ledger (see `toss_payments`).
 
 use super::bookings::Actor;
 use super::cases::{self, NewCase};
@@ -85,7 +86,8 @@ async fn toss_payments(State(s): State<AppState>, headers: HeaderMap, body: Byte
     let integ = s.providers.integ();
     let key = integ.toss_payments.as_ref().and_then(|t| t.security_key.clone());
     let signature = header(&headers, toss_webhook::SIGNATURE_HEADER);
-    match toss_gate(s.config.dev_mode, integ.toss_payments.is_some(), key.is_some(), !signature.is_empty()) {
+    let gate = toss_gate(s.config.dev_mode, integ.toss_payments.is_some(), key.is_some(), !signature.is_empty());
+    match gate {
         TossGate::Verify => {
             let time = header(&headers, toss_webhook::TRANSMISSION_TIME_HEADER);
             if !toss_webhook::verify(key.as_deref().unwrap_or_default(), time, signature, &body) {
@@ -98,6 +100,7 @@ async fn toss_payments(State(s): State<AppState>, headers: HeaderMap, body: Byte
         TossGate::Hint => {}
         TossGate::Unavailable => return Err(ApiError::Unavailable("provider_not_configured")),
     }
+    let signed = gate == TossGate::Verify;
     let event: Value = serde_json::from_slice(&body).map_err(|_| ApiError::BadRequest("invalid_event"))?;
     let work = async {
         match toss_event(&event) {
@@ -106,7 +109,13 @@ async fn toss_payments(State(s): State<AppState>, headers: HeaderMap, body: Byte
             None => Ok(()),
         }
     };
-    once(&s, TOSS, &event_id("", &body), work).await?;
+    // An unsigned hint never enters the ledger: anyone could post one, so recording it would let a stranger fill the
+    // table or pre-record a genuine body and suppress the real event. The handlers re-read Toss and are idempotent.
+    if signed {
+        once(&s, TOSS, &event_id("", &body), work).await?;
+    } else {
+        work.await?;
+    }
     Ok(Json(json!({ "ok": true })))
 }
 
@@ -232,32 +241,54 @@ pub fn event_id(provider_id: &str, body: &[u8]) -> String {
     }
 }
 
-/// Runs `work` for the first delivery of `event` from `adapter` only; a repeat is acknowledged and does nothing.
-/// The ledger row goes in before the work. If the work fails, the row is removed again, so the provider's retry
-/// (it re-sends on a 5xx) is handled instead of being taken for a repeat.
+/// Runs `work` until one delivery of `event` from `adapter` has finished it; a repeat of a finished event is
+/// acknowledged and does nothing. A delivery claims the ledger row before the work and marks it done after. A
+/// repeat that finds an unfinished claim gets a 503, so the provider sends it again: the first attempt may still
+/// fail. A claim older than the request timeout was cut off (its future dropped or the process gone), so it is
+/// taken again. If the work fails, the row is removed, so the provider's retry is handled.
 async fn once(s: &AppState, adapter: &str, event: &str, work: impl Future<Output = ApiResult<()>>) -> ApiResult<()> {
-    let first = sqlx::query("INSERT INTO webhook_events (adapter_id, event_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
-        .bind(adapter)
-        .bind(event)
-        .execute(&s.db)
-        .await?
-        .rows_affected()
+    let claimed = sqlx::query(
+        "INSERT INTO webhook_events (adapter_id, event_id) VALUES ($1, $2)
+         ON CONFLICT (adapter_id, event_id) DO UPDATE SET received_at = now()
+         WHERE webhook_events.done_at IS NULL AND webhook_events.received_at < now() - make_interval(secs => $3)",
+    )
+    .bind(adapter)
+    .bind(event)
+    .bind(super::REQUEST_TIMEOUT.as_secs_f64())
+    .execute(&s.db)
+    .await?
+    .rows_affected()
         == 1;
-    if !first {
-        tracing::info!(adapter, event, "webhook redelivery ignored");
-        return Ok(());
+    if !claimed {
+        let done: Option<bool> = sqlx::query_scalar("SELECT done_at IS NOT NULL FROM webhook_events WHERE adapter_id = $1 AND event_id = $2")
+            .bind(adapter)
+            .bind(event)
+            .fetch_optional(&s.db)
+            .await?;
+        if done == Some(true) {
+            tracing::info!(adapter, event, "webhook redelivery ignored");
+            return Ok(());
+        }
+        tracing::info!(adapter, event, "webhook redelivery while the first is in progress: asked to retry");
+        return Err(ApiError::Unavailable("webhook_in_progress"));
     }
-    let done = work.await;
-    if done.is_err()
-        && let Err(e) = sqlx::query("DELETE FROM webhook_events WHERE adapter_id = $1 AND event_id = $2")
+    if let Err(e) = work.await {
+        if let Err(del) = sqlx::query("DELETE FROM webhook_events WHERE adapter_id = $1 AND event_id = $2")
             .bind(adapter)
             .bind(event)
             .execute(&s.db)
             .await
-    {
-        tracing::error!(error = %e, adapter, event, "failed webhook kept in the ledger: its retry will be ignored");
+        {
+            tracing::error!(error = %del, adapter, event, "failed webhook claim kept: its retry runs once the claim is stale");
+        }
+        return Err(e);
     }
-    done
+    sqlx::query("UPDATE webhook_events SET done_at = now() WHERE adapter_id = $1 AND event_id = $2")
+        .bind(adapter)
+        .bind(event)
+        .execute(&s.db)
+        .await?;
+    Ok(())
 }
 
 /// Hands a verified event to the handler that owns it. Unrelated events are acknowledged and ignored.

@@ -13,7 +13,7 @@ use crate::{
     settings_registry::{self, storage_key},
 };
 use serde_json::{Value, json};
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{PgConnection, PgPool, Postgres, Transaction};
 
 /// Written once, in the same transaction as the facts; its presence means first boot already ran.
 pub const MARKER_KEY: &str = "install.first_boot";
@@ -67,6 +67,20 @@ pub async fn first_boot(db: &PgPool, pack: &Pack) -> ApiResult<bool> {
         tracing::info!(country = %pack.id, locked = locked_at.is_some(), "existing install: country facts recorded");
     }
     Ok(existing)
+}
+
+/// Locks the install at its first live payment: writes `install.locked_at` (the first non-demo payment's time) when
+/// it is unset. Runs in the payment's transaction, so an install whose first boot found no payment still locks.
+/// The NOT EXISTS is a one-time filter, so once the lock exists the payments scan is skipped.
+pub async fn lock_on_payment(conn: &mut PgConnection) -> ApiResult<()> {
+    sqlx::query(&format!(
+        "INSERT INTO settings (key, value) SELECT $1, to_jsonb(f.at) FROM ({FIRST_PAYMENT_AT}) f(at) \
+         WHERE f.at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM settings WHERE key = $1) ON CONFLICT (key) DO NOTHING"
+    ))
+    .bind(storage_key("install.locked_at"))
+    .execute(conn)
+    .await?;
+    Ok(())
 }
 
 /// One registry value, checked against the registry first so a pack value outside its options stops the boot.

@@ -475,6 +475,11 @@ async fn persist_ref(s: &AppState, visit: Uuid, pid: &str, provider: &str) -> Ap
 async fn reconcile(s: &AppState, c: &Charge<'_>, pid: &str, sent_to: &str) -> ApiResult<Attempt> {
     let total = c.price.total.0;
     match s.providers.payment(sent_to, pid, total).await {
+        // Captured in another currency than the stamp: refunded, like a wrong amount.
+        Ok(info) if info.status == "PAID" && info.currency != s.pack.currency.code => {
+            refund_or_alert(s, sent_to, pid, info.total).await;
+            Ok(Attempt::Failed(Failure::Repriced))
+        }
         Ok(info) => match verdict(&info.status, info.total, total) {
             Verdict::Book => finalize(s, c, sent_to, Some((pid, pid))).await,
             // Captured at another price: give the money back, then the next try charges today's price under a new id.
@@ -512,7 +517,10 @@ async fn reconcile(s: &AppState, c: &Charge<'_>, pid: &str, sent_to: &str) -> Ap
 }
 
 async fn charge_once(s: &AppState, c: &Charge<'_>, pid: &str) -> ApiResult<Attempt> {
-    let r = s.providers.charge_billing(c.card, c.price.total.0, pid, "정기 청소", c.d.user_id).await;
+    let r = s
+        .providers
+        .charge_billing(c.card, c.price.total.0, &s.pack.currency.code, pid, "정기 청소", c.d.user_id)
+        .await;
     match settle(r) {
         Settled::Paid(tx) => finalize(s, c, c.provider(), Some((pid, &tx))).await,
         Settled::Declined(code) => Ok(Attempt::Failed(Failure::Declined(code))),
