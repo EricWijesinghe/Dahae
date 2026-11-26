@@ -1141,7 +1141,9 @@ cmd_edition() { # dahae edition <이름> : 판 표의 그 판으로 바꿔요. �
   # 그 밖의 실패에 새 판 이미지가 이미 .env 에 있으면(응답 확인 뒤의 마무리 실패, 띄우다 멈춤): 떠서 응답하면 새 판 그대로(5),
   # 아니면 이전 이미지로 되돌린 뒤 이전 값으로. 기록 없이 이전 값만 쓰면 .env 가 떠 있는 이미지를 모르게 돼요
   if [ "$rc" != 3 ]; then
-    case "$(env_get API_IMAGE)" in "$img"/malkkeum-api[:@]*)
+    case "$(env_get API_IMAGE)" in
+      *:keep-*) ;; # cmd_update 가 이전 이미지로 되돌렸어요 (새 저장소 이름의 keep 태그): 새 판이 아니에요
+      "$img"/malkkeum-api[:@]*)
       if api_runs "$(env_get API_IMAGE)" && wait_healthy; then
         rm -f "$EDITION_JOURNAL"
         die_code "$RC_TOOLS_STALE" "$name 판으로 바꿨고 정상이에요. 마무리를 끝내지 못했어요: 콘솔에서 '지금 업데이트' 를 한 번 눌러 주세요."

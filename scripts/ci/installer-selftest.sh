@@ -1078,7 +1078,8 @@ ed() {
     curl() { command curl "${@//"$TRAW"/file://$SB}"; }
     # shellcheck disable=SC2034 # read by the sourced cmd_update
     pull_images() { log "pull $1 $2"; NEW_API=$1/malkkeum-api:new; NEW_WEB=$1/malkkeum-web:new; }
-    running_image() { echo "$2"; }; digest_ref() { echo "$1"; }
+    # KEEP: the old images come back as keep tags under the new repo name, as the real digest_ref makes them
+    running_image() { echo "$2"; }; digest_ref() { if [ -n "${KEEP:-}" ]; then echo "$2:keep-0123456789ab"; else echo "$1"; fi; }
     docker() { echo "id-$*"; }
     df() { printf 'Filesystem 1024-blocks Used Available Capacity Mounted
 fs 1 1 999999999 1%% /
@@ -1088,7 +1089,11 @@ fs 1 1 999999999 1%% /
     record_version() { [ -z "${AFTER_FAIL:-}" ]; } # 응답 확인 뒤의 마무리 단계가 실패해요 (set -e: 종료 코드 1)
     # IMAGES_DIE: compose up fails after .env names the new images (set -e in the real set_images)
     set_images() { log "images $1"; env_set API_IMAGE "$1"; env_set WEB_IMAGE "$2"; [ -z "${IMAGES_DIE:-}" ] || [ "$1" = old ] || exit 1; }
-    wait_healthy() { [ "$H" = ok ] || ! grep '^images' "$SB/tools.log" | tail -n1 | grep -q ':new$'; }
+    # H=slow: the old images answer only on the second check (after cmd_update gave up on them)
+    wait_healthy() {
+      if grep '^images' "$SB/tools.log" | tail -n1 | grep -q ':new$'; then [ "$H" = ok ]
+      else [ "$H" != slow ] || [ -e "$SB/slow" ] || { : > "$SB/slow"; return 1; }; fi
+    }
     run_installer_tools() { [ -z "${TOOLS_FAIL:-}" ] || return 1; log "tools $(bash "$1")"; }
     install() { [ -z "${INSTALL_FAIL:-}" ] || return 1; command install "$@"; }
     cmd_edition "$1" ) >/dev/null 2>&1
@@ -1139,6 +1144,10 @@ t  "edition: a finishing step fails after the new stream answered: exits 5, new 
 nt "...with no journal left"                         test -e "$SB/host/edition.prev"
 ed_env; IMAGES_DIE=1 API_DOWN=1 ed uzipsa; rc=$?
 t  "edition: compose fails on the new images: the old images go back up" eq "$rc:$(grep '^images' "$SB/tools.log" | tail -n1)" "1:images old"
+t  "...and the old triple, .env byte-equal"          env_same
+nt "...with no journal left"                         test -e "$SB/host/edition.prev"
+ed_env; rm -f "$SB/slow"; KEEP=1 ed uzipsa slow; rc=$?
+t  "edition: new images fail, the old ones (keep tags under the new repo) answer late: exits 1, not kept" eq "$rc:$(grep '^images' "$SB/tools.log" | tail -n1)" "1:images repo2/malkkeum-api:keep-0123456789ab"
 t  "...and the old triple, .env byte-equal"          env_same
 nt "...with no journal left"                         test -e "$SB/host/edition.prev"
 ed_env; sed -i 's|^uzipsa repo2 |uzipsa repo2$x |' "$SB/host/editions"; ed uzipsa; rc=$?
