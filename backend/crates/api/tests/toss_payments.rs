@@ -207,6 +207,21 @@ async fn toss_intent_names_the_gateway_and_its_client_key(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn toss_confirm_refuses_a_checkout_in_another_currency_before_toss(pool: PgPool) {
+    let w = world(&pool, "010-7600-0031", true).await;
+    let (id, amount, _) = checkout(&w, "card").await;
+    sqlx::query("UPDATE checkouts SET currency = 'USD' WHERE id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .expect("currency");
+    let (st, out) = toss_confirm(&w, id, "pk_currency", amount).await;
+    assert_eq!((st, out["error"]["code"].as_str()), (StatusCode::BAD_REQUEST, Some("amount_mismatch")), "{out}");
+    assert!(w.toss.lock().expect("fake").calls.is_empty(), "the payment is never captured");
+    assert_eq!(checkout_state(&pool, id).await.0, "pending");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn toss_confirm_captures_with_the_stored_amount_once(pool: PgPool) {
     let w = world(&pool, "010-7600-0002", true).await;
     let (id, amount, _) = checkout(&w, "card").await;

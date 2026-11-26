@@ -51,7 +51,7 @@ const CHECKOUT_TTL_MIN: i64 = 30;
 /// A Toss paymentKey is opaque, at most 200 characters.
 const TOSS_KEY_MAX: usize = 200;
 pub(super) const CHECKOUT_COLS: &str =
-    "id, user_id, kind, booking_id, draft, amount, points, status, provider_payment_id, result_booking_id, expires_at, gateway";
+    "id, user_id, kind, booking_id, draft, amount, points, status, provider_payment_id, result_booking_id, expires_at, gateway, currency";
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -161,6 +161,8 @@ pub struct CheckoutRow {
     pub expires_at: DateTime<Utc>,
     /// `portone` or `tosspayments`: confirm, webhooks, reconciliation and refunds always use this one.
     pub gateway: String,
+    /// ISO 4217 code stamped at create: the install's currency then.
+    pub currency: String,
 }
 
 impl CheckoutRow {
@@ -207,9 +209,10 @@ pub(super) fn virtual_account_view(method: &Value, amount: i64) -> Value {
     })
 }
 
-/// Pure gate: PAID, in KRW, for exactly the checkout amount.
-pub fn amount_matches(expected: i64, info: &PaymentInfo) -> bool {
-    info.status == "PAID" && info.currency == "KRW" && info.total == expected
+/// Pure gate: PAID, for exactly the checkout amount, in the checkout's currency, which is still the install's
+/// (`install`). Anything else fails closed: the payment never settles the checkout.
+pub fn amount_matches(ck: &CheckoutRow, install: &str, info: &PaymentInfo) -> bool {
+    info.status == "PAID" && info.currency == ck.currency && ck.currency == install && info.total == ck.charge()
 }
 
 /// The quote card stored with a deposit checkout at create (none for checkouts made before v1.4).
@@ -296,7 +299,7 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         Gateway::Portone => channel_key_for(&integ.portone.channel_keys, method)?,
     };
     let id = Uuid::now_v7();
-    sqlx::query("INSERT INTO checkouts (id, user_id, kind, booking_id, draft, method, amount, points, status, expires_at, gateway) VALUES ($1,$2,$3,$4,$5,$6,$7,$9,'pending',$8,$10)")
+    sqlx::query("INSERT INTO checkouts (id, user_id, kind, booking_id, draft, method, amount, points, status, expires_at, gateway, currency) VALUES ($1,$2,$3,$4,$5,$6,$7,$9,'pending',$8,$10,$11)")
         .bind(id)
         .bind(a.id)
         .bind(intent.kind)
@@ -307,6 +310,7 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
         .bind(Utc::now() + Duration::minutes(CHECKOUT_TTL_MIN))
         .bind(points)
         .bind(gw.code())
+        .bind(&s.pack.currency.code)
         .execute(&s.db)
         .await?;
     let portone = &integ.portone;
@@ -392,8 +396,8 @@ async fn toss_confirm(State(s): State<AppState>, Path(id): Path<Uuid>, Json(r): 
     if ck.gateway != Gateway::TossPayments.code() {
         return Err(ApiError::BadRequest("payment_not_for_checkout"));
     }
-    // Before any Toss call: a tampered amount is never confirmed.
-    if r.amount != ck.charge() {
+    // Before any Toss call: a tampered amount, or a checkout in another currency than the install's, is never confirmed.
+    if r.amount != ck.charge() || ck.currency != s.pack.currency.code {
         return Err(ApiError::BadRequest("amount_mismatch"));
     }
     if ck.kind == "booking" && ck.result_booking_id.is_none() && super::config::maintenance_on(&s.db, &s.config).await? {
@@ -470,7 +474,7 @@ pub(super) async fn apply(s: &AppState, ck: &CheckoutRow, payment_id: &str, info
         status: &ck.status,
         expired: ck.expires_at < Utc::now(),
         provider_status: info.map(|i| i.status.as_str()),
-        amount_ok: info.is_some_and(|i| amount_matches(ck.charge(), i)),
+        amount_ok: info.is_some_and(|i| amount_matches(ck, &s.pack.currency.code, i)),
         paid_by_this: ck.provider_payment_id.as_deref() == Some(payment_id),
     });
     let provider_status = info.map_or("NOT_FOUND", |i| i.status.as_str());
@@ -763,6 +767,7 @@ async fn fulfil(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResult<U
         ck.charge(),
         db_kind,
         &ck.gateway,
+        &ck.currency,
         payment_id,
         &format!("checkout:{}", ck.id),
     )
@@ -881,16 +886,45 @@ mod tests {
         ));
     }
 
+    /// An open checkout of `amount` (no points) stamped `currency`.
+    fn checkout(amount: i64, currency: &str) -> CheckoutRow {
+        CheckoutRow {
+            id: Uuid::nil(),
+            user_id: Uuid::nil(),
+            kind: "booking".into(),
+            booking_id: None,
+            draft: None,
+            amount,
+            points: 0,
+            status: "pending".into(),
+            provider_payment_id: None,
+            result_booking_id: None,
+            expires_at: Utc::now(),
+            gateway: "portone".into(),
+            currency: currency.into(),
+        }
+    }
+
     #[test]
     fn exact_krw_payment_settles() {
-        assert!(amount_matches(52_000, &paid(52_000, "KRW")));
+        assert!(amount_matches(&checkout(52_000, "KRW"), "KRW", &paid(52_000, "KRW")));
     }
 
     #[test]
     fn wrong_amount_or_currency_never_settles() {
-        assert!(!amount_matches(52_000, &paid(47_000, "KRW")));
-        assert!(!amount_matches(52_000, &paid(52_000, "USD")));
-        assert!(!amount_matches(52_000, &paid(-1, "KRW")));
+        let ck = checkout(52_000, "KRW");
+        assert!(!amount_matches(&ck, "KRW", &paid(47_000, "KRW")));
+        assert!(!amount_matches(&ck, "KRW", &paid(52_000, "USD")));
+        assert!(!amount_matches(&ck, "KRW", &paid(-1, "KRW")));
+        assert!(!amount_matches(&ck, "KRW", &paid(52_000, "")), "a missing provider currency fails closed");
+    }
+
+    #[test]
+    fn a_checkout_in_another_currency_than_the_install_never_settles() {
+        // An older release stamps KRW by default; on a USD install even a matching KRW payment is refused.
+        assert!(!amount_matches(&checkout(52_000, "KRW"), "USD", &paid(52_000, "KRW")));
+        assert!(!amount_matches(&checkout(52_000, "USD"), "KRW", &paid(52_000, "USD")));
+        assert!(amount_matches(&checkout(52_000, "USD"), "USD", &paid(52_000, "USD")));
     }
 
     #[test]
@@ -900,7 +934,7 @@ mod tests {
                 status: status.into(),
                 ..paid(52_000, "KRW")
             };
-            assert!(!amount_matches(52_000, &info), "{status} must not settle");
+            assert!(!amount_matches(&checkout(52_000, "KRW"), "KRW", &info), "{status} must not settle");
         }
     }
 

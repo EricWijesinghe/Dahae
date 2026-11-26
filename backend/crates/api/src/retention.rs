@@ -35,6 +35,7 @@ pub struct Report {
     pub analytics_events: u64,
     pub checkout_snapshots: u64,
     pub closed_bookings: u64,
+    pub webhook_events: u64,
 }
 
 pub fn spawn(state: AppState) -> JoinHandle<()> {
@@ -104,6 +105,11 @@ pub async fn purge(db: &PgPool, cfg: &Config) -> Result<Report, Box<dyn std::err
     .execute(db)
     .await?
     .rows_affected();
+    // Provider retries come within days; a month of delivery ids is plenty to recognise a repeat.
+    let webhook_events = sqlx::query("DELETE FROM webhook_events WHERE received_at < now() - interval '30 days'")
+        .execute(db)
+        .await?
+        .rows_affected();
     // A deleted customer's booking that was still open at deletion loses its personal fields once it is completed or cancelled.
     let closed_bookings = crate::privacy::pseudonymise_closed_bookings(db, None).await?;
     Ok(Report {
@@ -115,6 +121,7 @@ pub async fn purge(db: &PgPool, cfg: &Config) -> Result<Report, Box<dyn std::err
         entry_codes,
         analytics_events,
         checkout_snapshots,
+        webhook_events,
     })
 }
 

@@ -185,7 +185,7 @@ pub async fn charge(
         Err(e @ ProviderError::Declined(_)) => return Err(ApiError::PaymentFailed(e.to_string())),
         Err(e) => return Err(e.into()),
     }
-    if let Err(e) = record_payment(conn, booking, amount.0, kind, provider, &pid, &idem).await {
+    if let Err(e) = record_payment(conn, booking, amount.0, kind, provider, &s.pack.currency.code, &pid, &idem).await {
         refund_or_alert(s, provider, &pid, amount.0).await;
         return Err(e);
     }

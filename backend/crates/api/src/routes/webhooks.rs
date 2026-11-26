@@ -4,6 +4,7 @@
 //! Provider callbacks. The Standard Webhooks signature is the gate. Without a configured
 //! secret only dev mode accepts unsigned events (smoke tests); production refuses them.
 //! Events never move money on their own: the payment is re-read from the provider.
+//! Every accepted delivery is recorded in `webhook_events` before it is handled, so a redelivery does nothing.
 
 use super::bookings::Actor;
 use super::cases::{self, NewCase};
@@ -22,6 +23,7 @@ use axum::{Json, Router, body::Bytes, extract::State, http::HeaderMap, routing::
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use std::future::Future;
 use uuid::Uuid;
 
 const PAYMENT_EVENTS: [&str; 2] = ["Transaction.Paid", "Transaction.VirtualAccountIssued"];
@@ -97,11 +99,14 @@ async fn toss_payments(State(s): State<AppState>, headers: HeaderMap, body: Byte
         TossGate::Unavailable => return Err(ApiError::Unavailable("provider_not_configured")),
     }
     let event: Value = serde_json::from_slice(&body).map_err(|_| ApiError::BadRequest("invalid_event"))?;
-    match toss_event(&event) {
-        Some((order, Some(kind))) => sync_cancellation(&s, &[TOSS, TOSS_BILLING], &order, kind).await?,
-        Some((order, None)) => handle_payment(&s, &order, false).await?,
-        None => {}
-    }
+    let work = async {
+        match toss_event(&event) {
+            Some((order, Some(kind))) => sync_cancellation(&s, &[TOSS, TOSS_BILLING], &order, kind).await,
+            Some((order, None)) => handle_payment(&s, &order, false).await,
+            None => Ok(()),
+        }
+    };
+    once(&s, TOSS, &event_id("", &body), work).await?;
     Ok(Json(json!({ "ok": true })))
 }
 
@@ -127,7 +132,11 @@ async fn toss(State(s): State<AppState>, headers: HeaderMap, body: Bytes) -> Api
         (None, true) => tracing::warn!("unsigned toss webhook accepted: DEV_MODE without a payout security key"),
         (None, false) => return Err(ApiError::Unavailable("provider_not_configured")),
     }
-    crate::payout_sync::kick(s);
+    once(&s, "toss", &event_id("", &body), async {
+        crate::payout_sync::kick(s.clone());
+        Ok(())
+    })
+    .await?;
     Ok(axum::http::StatusCode::OK)
 }
 
@@ -208,8 +217,47 @@ async fn portone(State(s): State<AppState>, headers: HeaderMap, body: Bytes) -> 
         _ => return Err(ApiError::Unavailable("provider_not_configured")),
     }
     let event: Event = serde_json::from_slice(&body).map_err(|_| ApiError::BadRequest("invalid_event"))?;
-    dispatch(&s, &event).await?;
+    once(&s, "portone", &event_id(header(&headers, "webhook-id"), &body), dispatch(&s, &event)).await?;
     Ok(Json(json!({ "ok": true })))
+}
+
+/// The ledger key of a delivery: the provider's own message id (PortOne's Standard Webhooks `webhook-id`, the same
+/// on every retry), else a hash of the body. Toss sends no id; a retry carries the same body, and a real state change
+/// always changes the body (status, timestamps), so a new event is never taken for a repeat.
+pub fn event_id(provider_id: &str, body: &[u8]) -> String {
+    if provider_id.is_empty() {
+        format!("sha256:{}", crate::auth::sha256_hex(body))
+    } else {
+        provider_id.to_string()
+    }
+}
+
+/// Runs `work` for the first delivery of `event` from `adapter` only; a repeat is acknowledged and does nothing.
+/// The ledger row goes in before the work. If the work fails, the row is removed again, so the provider's retry
+/// (it re-sends on a 5xx) is handled instead of being taken for a repeat.
+async fn once(s: &AppState, adapter: &str, event: &str, work: impl Future<Output = ApiResult<()>>) -> ApiResult<()> {
+    let first = sqlx::query("INSERT INTO webhook_events (adapter_id, event_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
+        .bind(adapter)
+        .bind(event)
+        .execute(&s.db)
+        .await?
+        .rows_affected()
+        == 1;
+    if !first {
+        tracing::info!(adapter, event, "webhook redelivery ignored");
+        return Ok(());
+    }
+    let done = work.await;
+    if done.is_err()
+        && let Err(e) = sqlx::query("DELETE FROM webhook_events WHERE adapter_id = $1 AND event_id = $2")
+            .bind(adapter)
+            .bind(event)
+            .execute(&s.db)
+            .await
+    {
+        tracing::error!(error = %e, adapter, event, "failed webhook kept in the ledger: its retry will be ignored");
+    }
+    done
 }
 
 /// Hands a verified event to the handler that owns it. Unrelated events are acknowledged and ignored.
@@ -437,6 +485,14 @@ async fn locate(s: &AppState, payment_id: &str) -> ApiResult<Option<CheckoutRow>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_event_id_is_the_provider_id_or_a_body_hash() {
+        assert_eq!(event_id("msg_1", b"{}"), "msg_1");
+        assert_eq!(event_id("", b"{}"), event_id("", b"{}"));
+        assert_ne!(event_id("", br#"{"status":"DONE"}"#), event_id("", br#"{"status":"CANCELED"}"#));
+        assert!(event_id("", b"{}").starts_with("sha256:"));
+    }
 
     #[test]
     fn signature_gate_truth_table() {

@@ -8,7 +8,11 @@
 //! in-flight requests finish (each is bounded by the request timeout); then the background jobs stop
 //! after their current pass, joined under a deadline.
 
-use crate::{routes::APP_VERSION, state::AppState};
+use crate::{
+    providers::{TOSS, TOSS_BILLING},
+    routes::APP_VERSION,
+    state::AppState,
+};
 use axum::{
     Json,
     extract::State,
@@ -85,7 +89,14 @@ pub async fn live() -> Json<Value> {
     Json(json!({ "ok": true, "version": APP_VERSION }))
 }
 
-/// Readiness: the database answers and every shipped migration is applied. Failing it takes the node
+/// Every adapter code a live row may name: `payments.provider`, `payment_methods.gateway`, `refund_queue.provider`
+/// (the payment gateways) and `payouts.provider`. Codes are never removed (D12).
+/// shortcut: static list of today's codes, replaced by the adapter registry when it lands (R2).
+pub const KNOWN_ADAPTERS: [&str; 5] = ["portone", TOSS, TOSS_BILLING, "toss", "manual"];
+
+/// Readiness: the database answers, every shipped migration is applied, and this binary knows every adapter a
+/// live row still needs (`adapters_ok`: refundable payments, saved cards, queued refunds, open payouts). After an
+/// update to a binary that lacks one, the failed probe makes the installer roll back. Failing it takes the node
 /// out of rotation; it does not restart it. `pack_ok` is a warning only: false after a rollback to a binary
 /// whose country pack is older than the one the install applied. The install keeps running on this binary's pack.
 pub async fn ready(State(s): State<AppState>) -> Response {
@@ -93,10 +104,41 @@ pub async fn ready(State(s): State<AppState>) -> Response {
         .await
         .is_ok_and(|r| r.is_ok());
     let migrated = db_ok && migrations_applied(&s.db).await;
-    let ready = db_ok && migrated;
+    let adapters_ok = migrated && adapters_known(&s.db).await;
+    let ready = db_ok && migrated && adapters_ok;
     let pack_ok = !db_ok || applied_pack_ok(&s).await;
     let status = if ready { StatusCode::OK } else { StatusCode::SERVICE_UNAVAILABLE };
-    (status, Json(json!({ "ready": ready, "db": db_ok, "migrations": migrated, "pack_ok": pack_ok }))).into_response()
+    let body = json!({ "ready": ready, "db": db_ok, "migrations": migrated, "adapters_ok": adapters_ok, "pack_ok": pack_ok });
+    (status, Json(body)).into_response()
+}
+
+/// False when a live row names an adapter code outside `KNOWN_ADAPTERS`, or when the check cannot run in time.
+async fn adapters_known(db: &PgPool) -> bool {
+    let unknown = sqlx::query_scalar::<_, String>(
+        "SELECT code FROM (
+            SELECT provider AS code FROM payments WHERE status IN ('paid', 'partially_refunded') AND refunded_amount < amount
+            UNION SELECT gateway FROM payment_methods WHERE deleted_at IS NULL AND billing_key <> ''
+            UNION SELECT provider FROM refund_queue WHERE done_at IS NULL
+            UNION SELECT provider FROM payouts WHERE state <> 'paid'
+         ) live WHERE code <> ALL($1)",
+    )
+    .bind(&KNOWN_ADAPTERS[..])
+    .fetch_all(db);
+    match tokio::time::timeout(PROBE_TIMEOUT, unknown).await {
+        Ok(Ok(codes)) if codes.is_empty() => true,
+        Ok(Ok(codes)) => {
+            tracing::error!(?codes, "live rows name adapters this binary does not know");
+            false
+        }
+        Ok(Err(e)) => {
+            tracing::warn!(error = %e, "adapter check failed");
+            false
+        }
+        Err(_) => {
+            tracing::warn!("adapter check timed out");
+            false
+        }
+    }
 }
 
 /// Whether the pack version this install applied is no newer than this binary's pack. Unset counts as fine.

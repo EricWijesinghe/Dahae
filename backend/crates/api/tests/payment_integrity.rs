@@ -301,3 +301,46 @@ async fn a_compensating_refund_that_lands_is_refunded_at_once(pool: PgPool) {
     assert_eq!(st, StatusCode::CONFLICT);
     assert_eq!(refunds(&pool).await, 1);
 }
+
+/// The currency stamp: a checkout and the payment it settles carry the install's currency.
+#[sqlx::test(migrations = "../../migrations")]
+async fn checkouts_and_their_payments_carry_the_install_currency(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = app_with_channels(pool.clone(), &["card"]);
+    let c = customer(&app, &pool, "010-7100-0031").await;
+    let (a, booking) = paid_checkout(&app, &pool, &c).await;
+    let checkout: String = sqlx::query_scalar("SELECT currency FROM checkouts WHERE id = $1")
+        .bind(a)
+        .fetch_one(&pool)
+        .await
+        .expect("checkout");
+    let payment: String = sqlx::query_scalar("SELECT currency FROM payments WHERE booking_id = $1")
+        .bind(booking)
+        .fetch_one(&pool)
+        .await
+        .expect("payment");
+    assert_eq!((checkout.as_str(), payment.as_str()), ("KRW", "KRW"));
+}
+
+/// A checkout stamped with another currency than the install's never settles, even when the provider reports the
+/// exact amount: the payment is given back and nothing is booked.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_currency_mismatch_fails_closed(pool: PgPool) {
+    seed_catalog(&pool).await;
+    let app = app_with_channels(pool.clone(), &["card"]);
+    let c = customer(&app, &pool, "010-7100-0032").await;
+    let a = new_checkout(&app, &c, 10).await;
+    sqlx::query("UPDATE checkouts SET currency = 'USD' WHERE id = $1")
+        .bind(a)
+        .execute(&pool)
+        .await
+        .expect("currency");
+    let (st, body) = confirm(&app, &c, a, &a.to_string()).await;
+    assert_eq!((st, code(&body)), (StatusCode::BAD_REQUEST, "amount_mismatch"), "{body}");
+    assert_ne!(checkout_status(&pool, a).await, "paid");
+    let (bookings, payments): (i64, i64) = sqlx::query_as("SELECT (SELECT count(*) FROM bookings), (SELECT count(*) FROM payments)")
+        .fetch_one(&pool)
+        .await
+        .expect("counts");
+    assert_eq!((bookings, payments), (0, 0), "nothing booked or recorded as paid");
+}

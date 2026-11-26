@@ -366,3 +366,80 @@ async fn portone_full_cancel_from_the_console_cancels_the_queued_tax_invoice_req
         .expect("state");
     assert_eq!(state, "cancelled", "a full refund from the console cancels the open request");
 }
+
+/// Delivery rows in the ledger for `adapter`.
+async fn ledger(db: &PgPool, adapter: &str) -> i64 {
+    sqlx::query_scalar("SELECT count(*) FROM webhook_events WHERE adapter_id = $1")
+        .bind(adapter)
+        .fetch_one(db)
+        .await
+        .expect("ledger")
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_redelivered_portone_event_does_nothing_even_when_the_provider_moved_on(pool: PgPool) {
+    let (booking, payment) = paid_booking(&pool, CANCEL_PAYMENT, 0).await;
+    let first = prod_app(pool.clone(), &portone_stand_in(30_000).await);
+    let body = cancel_event("Transaction.PartialCancelled", CANCEL_PAYMENT, "tx_ledger");
+    let headers = signed_headers(KEY, "msg_ledger_1", &body);
+    assert_eq!(post(&first, "/v1/webhooks/portone", &headers, body.clone()).await, StatusCode::OK);
+    assert_eq!(flags(&pool, booking).await, (1, 1));
+    // Without the ledger this delivery would re-read PortOne and record a second console refund.
+    let second = prod_app(pool.clone(), &portone_stand_in(40_000).await);
+    let again = signed_headers(KEY, "msg_ledger_1", &body);
+    assert_eq!(post(&second, "/v1/webhooks/portone", &again, body).await, StatusCode::OK);
+    assert_eq!(
+        payment_state(&pool, payment).await,
+        (30_000, "partially_refunded".into()),
+        "the repeat changes nothing"
+    );
+    assert_eq!(flags(&pool, booking).await, (1, 1), "the repeat opens nothing");
+    assert_eq!(ledger(&pool, "portone").await, 1);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_portone_delivery_that_failed_is_handled_on_its_retry(pool: PgPool) {
+    let (booking, payment) = paid_booking(&pool, CANCEL_PAYMENT, 0).await;
+    // PortOne reports more cancelled than the payment holds: refused with a 5xx so PortOne re-sends.
+    let broken = prod_app(pool.clone(), &portone_stand_in(TOTAL + 1).await);
+    let body = cancel_event("Transaction.PartialCancelled", CANCEL_PAYMENT, "tx_retry");
+    let headers = signed_headers(KEY, "msg_retry_1", &body);
+    assert!(post(&broken, "/v1/webhooks/portone", &headers, body.clone()).await.is_server_error());
+    assert_eq!(ledger(&pool, "portone").await, 0, "a failed delivery leaves no ledger row");
+    let fixed = prod_app(pool.clone(), &portone_stand_in(30_000).await);
+    let retry = signed_headers(KEY, "msg_retry_1", &body);
+    assert_eq!(post(&fixed, "/v1/webhooks/portone", &retry, body).await, StatusCode::OK);
+    assert_eq!(
+        payment_state(&pool, payment).await,
+        (30_000, "partially_refunded".into()),
+        "the retry is handled"
+    );
+    assert_eq!(flags(&pool, booking).await, (1, 1));
+    assert_eq!(ledger(&pool, "portone").await, 1);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_redelivered_toss_event_kicks_no_second_pass(pool: PgPool) {
+    let app = app(pool.clone());
+    let before = payout_sync::KICK_CALLS.load(Ordering::SeqCst);
+    let body = br#"{"eventType":"payout.changed","data":{"refPayoutId":"p-ledger"}}"#.to_vec();
+    assert_eq!(post(&app, "/v1/webhooks/toss", &[], body.clone()).await, StatusCode::OK);
+    assert_eq!(post(&app, "/v1/webhooks/toss", &[], body).await, StatusCode::OK);
+    assert_eq!(payout_sync::KICK_CALLS.load(Ordering::SeqCst) - before, 1, "the repeat is acknowledged only");
+    assert_eq!(ledger(&pool, "toss").await, 1);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn the_ledger_keeps_thirty_days(pool: PgPool) {
+    sqlx::query(
+        "INSERT INTO webhook_events (adapter_id, event_id, received_at) VALUES
+            ('portone', 'old', now() - interval '31 days'), ('portone', 'recent', now() - interval '29 days')",
+    )
+    .execute(&pool)
+    .await
+    .expect("ledger rows");
+    let report = api::retention::purge(&pool, &common::test_config()).await.expect("purge");
+    assert_eq!(report.webhook_events, 1);
+    let left: Vec<String> = sqlx::query_scalar("SELECT event_id FROM webhook_events").fetch_all(&pool).await.expect("left");
+    assert_eq!(left, ["recent"]);
+}

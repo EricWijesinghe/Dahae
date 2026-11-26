@@ -56,6 +56,7 @@ JSON: profile, consent history, addresses, payment method labels (no keys), coup
 | AI-assisted chat messages (threads with an `ai_usage` row) | older than N days | `AI_CHAT_RETENTION_DAYS`, default 180 |
 | Uploads not referenced by bookings, chat, pros, users, cases, completion reports, reviews, pro profiles, content or settings | older than N days; file removed, then row | `UPLOAD_ORPHAN_DAYS`, default 30 |
 | Deleted customers' unpaid checkout snapshots | older than 30 days | fixed |
+| `webhook_events` (provider delivery ids, no user data) | older than 30 days | fixed |
 | Bookings of deleted customers that are completed or cancelled and still hold an address, answers, visit notes, household or team memo | cleared (see Deletion) | fixed (`privacy::pseudonymise_closed_bookings`) |
 | Pending partner deletions (Apple `account-delete`) | retried until no open job or payout | fixed |
 | `apple_notifications` (seen JWS ids, no user data) | never purged (replay guard) | fixed |

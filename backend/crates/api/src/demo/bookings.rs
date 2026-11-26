@@ -327,8 +327,8 @@ async fn payment(c: &mut Ctx<'_>, booking: Uuid, user: Uuid, p: &Pay, draft: &Va
     let pid = c.id();
     let tx_id = format!("demo_pay_{}", c.hex(12));
     sqlx::query(
-        "INSERT INTO payments (id, booking_id, amount, kind, status, refunded_amount, provider, provider_tx_id, idempotency_key, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,'portone',$7,$8,$9)",
+        "INSERT INTO payments (id, booking_id, amount, kind, status, refunded_amount, provider, provider_tx_id, idempotency_key, created_at, currency)
+         VALUES ($1,$2,$3,$4,$5,$6,'portone',$7,$8,$9,'KRW')",
     )
     .bind(pid)
     .bind(booking)
@@ -382,8 +382,8 @@ async fn checkout(
     let id = c.id();
     sqlx::query(
         "INSERT INTO checkouts (id, user_id, kind, booking_id, draft, method, amount, status, provider_payment_id, result_booking_id,
-            refund_reason, expires_at, created_at)
-         VALUES ($1,$2,$3,$4,$5,'card',$6,$7,$8,$9,$10,$11,$12)",
+            refund_reason, expires_at, created_at, currency)
+         VALUES ($1,$2,$3,$4,$5,'card',$6,$7,$8,$9,$10,$11,$12,'KRW')",
     )
     .bind(id)
     .bind(user)

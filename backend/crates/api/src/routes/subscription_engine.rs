@@ -563,7 +563,7 @@ async fn book_visit(s: &AppState, c: &Charge<'_>, provider: &str, paid: Option<(
     }
     let number = insert_paid(&mut tx, &s.config.data_key, id, c.d.user_id, c.prep, c.body, c.price).await?;
     if let Some((pid, tx_id)) = paid {
-        record_payment(&mut tx, id, c.price.total.0, "full", provider, tx_id, pid).await?;
+        record_payment(&mut tx, id, c.price.total.0, "full", provider, &s.pack.currency.code, tx_id, pid).await?;
     }
     commit_booking(tx, id, c.d, c.sub).await?;
     after_booking_created(s, id, &number).await;

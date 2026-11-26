@@ -303,17 +303,30 @@ pub fn counts_from_row(stored: Option<Vec<i16>>) -> Vec<u8> {
     stored.unwrap_or_default().into_iter().map(|c| u8::try_from(c).unwrap_or(u8::MAX)).collect()
 }
 
-/// Records a successful charge or payment. `idem` must be unique per payment.
-pub async fn record_payment(conn: &mut PgConnection, booking: Uuid, amount: i64, kind: &str, provider: &str, tx_id: &str, idem: &str) -> ApiResult<()> {
-    sqlx::query("INSERT INTO payments (booking_id, amount, kind, status, provider, provider_tx_id, idempotency_key) VALUES ($1,$2,$3,'paid',$4,$5,$6)")
-        .bind(booking)
-        .bind(amount)
-        .bind(kind)
-        .bind(provider)
-        .bind(tx_id)
-        .bind(idem)
-        .execute(conn)
-        .await?;
+/// Records a successful charge or payment in `currency` (ISO 4217). `idem` must be unique per payment.
+#[allow(clippy::too_many_arguments)]
+pub async fn record_payment(
+    conn: &mut PgConnection,
+    booking: Uuid,
+    amount: i64,
+    kind: &str,
+    provider: &str,
+    currency: &str,
+    tx_id: &str,
+    idem: &str,
+) -> ApiResult<()> {
+    sqlx::query(
+        "INSERT INTO payments (booking_id, amount, kind, status, provider, provider_tx_id, idempotency_key, currency) VALUES ($1,$2,$3,'paid',$4,$5,$6,$7)",
+    )
+    .bind(booking)
+    .bind(amount)
+    .bind(kind)
+    .bind(provider)
+    .bind(tx_id)
+    .bind(idem)
+    .bind(currency)
+    .execute(conn)
+    .await?;
     Ok(())
 }
 
