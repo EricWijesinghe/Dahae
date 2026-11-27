@@ -428,3 +428,55 @@ async fn settlements_export_uses_kst_month_bounds_and_totals_match_rows(pool: Pg
     .expect("sums");
     assert_eq!((gross, fee), (60_000, 12_000), "database sums agree with the sheet total");
 }
+
+/// The KR pack with VAT at 10% until 2026-03-15 and 20% from then: one March holds both rates.
+fn two_rate_app(pool: PgPool) -> axum::Router {
+    common::app_with_pack(pool, |kr| {
+        kr["tax"]["rates"] = json!([
+            {"category": "service", "rate_bps": 1000, "from": "1977-07-01", "until": "2026-03-15"},
+            {"category": "service", "rate_bps": 2000, "from": "2026-03-15"}
+        ]);
+    })
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn vat_follows_the_rate_on_each_fee_day_and_totals_equal_their_parts(pool: PgPool) {
+    seed_march(&pool).await;
+    let app = two_rate_app(pool.clone());
+    let token = admin_token(&pool).await;
+    // Fees: 20,000 on 03-06 at 10% and 40,000 on 03-21 at 20%.
+    let want = 2_000 + 8_000;
+    let (status, s) = call(&app, "GET", PERIOD, Some(&token), None).await;
+    assert_eq!(status, StatusCode::OK, "{s}");
+    assert_eq!(s["vat_estimate"], want);
+    assert_eq!(s["vat_basis"], "platform_fee_10_20pct_estimate");
+
+    let (_, svc) = call(
+        &app,
+        "GET",
+        "/v1/admin/finance/services?period=custom&from=2026-03-01&to=2026-03-31",
+        Some(&token),
+        None,
+    )
+    .await;
+    let by_service: i64 = svc.as_array().expect("rows").iter().map(|r| r["vat_estimate"].as_i64().expect("vat")).sum();
+    assert_eq!(by_service, want, "{svc}");
+
+    let (_, series) = call(&app, "GET", "/v1/admin/finance/series?grain=month", Some(&token), None).await;
+    let march = series
+        .as_array()
+        .expect("points")
+        .iter()
+        .find(|p| p["key"] == "2026-03-01")
+        .expect("march point");
+    assert_eq!(march["vat_estimate"], want, "the month's series point agrees with its summary");
+
+    let monthly = fetch_csv(&app, "/v1/admin/finance/export/monthly?period=custom&from=2026-03-01&to=2026-03-31", &token).await;
+    let lines: Vec<&str> = monthly.trim_start_matches('\u{feff}').lines().collect();
+    assert!(lines[0].contains("부가세추정(수수료의10/20%)"), "{}", lines[0]);
+    assert_eq!(lines[1], "2026-03,3,1,340000,50000,290000,60000,10000,80000,160000,0");
+    assert_eq!(lines[2], "합계,3,1,340000,50000,290000,60000,10000,80000,160000,0");
+
+    let vat = fetch_csv(&app, "/v1/admin/finance/export/vat?year=2026&quarter=1", &token).await;
+    assert!(vat.contains("부가세 추정(수수료의 10/20%),0,10000"), "{vat}");
+}

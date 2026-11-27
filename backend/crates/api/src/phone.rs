@@ -95,12 +95,27 @@ pub async fn backfill(db: &PgPool, region: &str, batch: i64) -> Result<u64, sqlx
     Ok(filled)
 }
 
+/// The backfill's page query for one column: `$1` is the batch size and, when `after` is set, `$2` the last key
+/// of the previous page. It sorts by the key itself (not its text form, where "10" < "2") and has no
+/// parameter-dependent OR, so the primary key index serves both the order and the range, also in a generic plan.
+fn page_sql(c: &Column, after: bool) -> String {
+    let (t, k, kt, p) = (c.table, c.key, c.key_type, c.phone);
+    let bound = if after { format!("AND {t}.{k} > $2::{kt}") } else { String::new() };
+    format!(
+        "SELECT {t}.{k}::text AS key, {p} FROM {t} WHERE {p}_e164 IS NULL AND {p} <> '' AND {p} NOT LIKE '%:%'
+           {bound} ORDER BY {t}.{k} LIMIT $1"
+    )
+}
+
+/// The page query `backfill` runs for `table`.`phone`, for plan checks in tests.
+#[doc(hidden)]
+pub fn backfill_page_sql(table: &str, phone: &str, after: bool) -> Option<String> {
+    COLUMNS.iter().find(|c| c.table == table && c.phone == phone).map(|c| page_sql(c, after))
+}
+
 async fn fill_column(db: &PgPool, region: &str, c: &Column, batch: i64) -> Result<u64, sqlx::Error> {
     let (t, k, kt, p) = (c.table, c.key, c.key_type, c.phone);
-    let select = format!(
-        "SELECT {k}::text, {p} FROM {t} WHERE {p}_e164 IS NULL AND {p} <> '' AND {p} NOT LIKE '%:%'
-           AND ($1::text IS NULL OR {k} > $1::{kt}) ORDER BY {k} LIMIT $2"
-    );
+    let (first, next) = (page_sql(c, false), page_sql(c, true));
     let update = format!(
         "UPDATE {t} SET {p}_e164 = v.e FROM unnest($1::text[], $2::text[], $3::text[]) AS v(k, p, e)
          WHERE {t}.{k} = v.k::{kt} AND {t}.{p} = v.p AND {t}.{p}_e164 IS NULL"
@@ -108,7 +123,10 @@ async fn fill_column(db: &PgPool, region: &str, c: &Column, batch: i64) -> Resul
     let mut after: Option<String> = None;
     let mut filled = 0;
     loop {
-        let rows: Vec<(String, String)> = sqlx::query_as(&select).bind(&after).bind(batch).fetch_all(db).await?;
+        let rows: Vec<(String, String)> = match &after {
+            None => sqlx::query_as(&first).bind(batch).fetch_all(db).await?,
+            Some(a) => sqlx::query_as(&next).bind(batch).bind(a).fetch_all(db).await?,
+        };
         let full = rows.len() as i64 == batch;
         let Some((last, _)) = rows.last() else { break };
         after = Some(last.clone());

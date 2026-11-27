@@ -90,6 +90,21 @@ pub fn app(db: PgPool) -> Router {
     routes::router(state)
 }
 
+/// The API router with the KR pack changed by `edit` (its `KR/pack.json`), for rules KR does not have yet.
+pub fn app_with_pack(db: PgPool, edit: impl FnOnce(&mut Value)) -> Router {
+    use api::pack::{self, EMBEDDED};
+    let mut kr: Value = serde_json::from_str(EMBEDDED.iter().find(|(p, _)| *p == "KR/pack.json").expect("KR").1).expect("json");
+    edit(&mut kr);
+    let body = kr.to_string();
+    let files: Vec<(&str, &str)> = EMBEDDED
+        .iter()
+        .map(|(p, b)| if *p == "KR/pack.json" { (*p, body.as_str()) } else { (*p, *b) })
+        .collect();
+    let mut state = build_state(db, test_config()).expect("http client");
+    state.pack = Arc::new(pack::load_from("KR", &files).expect("edited pack validates"));
+    routes::router(state)
+}
+
 /// The API router with PortOne channel keys set for `channels`: a payment method is offered only when its key is here.
 pub fn app_with_channels(db: PgPool, channels: &[&str]) -> Router {
     let mut cfg = test_config();

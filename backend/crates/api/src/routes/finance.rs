@@ -128,18 +128,56 @@ struct Agg {
     svc: Option<String>,
     kind: String,
     v: i64,
+    /// First day of the VAT rate piece the events fall in (see `Pack::vat_pieces`).
+    piece: NaiveDate,
+    /// The pack's VAT rate on `piece`, so on every event day in the row.
+    #[sqlx(skip)]
+    vat_bps: Option<i64>,
 }
 
-/// Sums the events in `[from, to]`, grouped by `unit` (a `date_trunc` unit; "year" folds the whole range).
-async fn aggregate(db: &mut PgConnection, from: NaiveDate, to: NaiveDate, unit: &str) -> ApiResult<Vec<Agg>> {
+/// Sums the events in `[from, to]`, grouped by `unit` (a `date_trunc` unit; "year" folds the whole range) and by
+/// VAT rate piece, so each fee is taxed at the rate in force on its own day.
+async fn aggregate(db: &mut PgConnection, pack: &Pack, from: NaiveDate, to: NaiveDate, unit: &str) -> ApiResult<Vec<Agg>> {
     let sql = format!(
-        "{EVENTS_SQL} SELECT date_trunc($3, ev.d::timestamp)::date AS key, ev.pro, ev.svc, ev.kind, SUM(ev.v)::bigint AS v FROM ev GROUP BY 1, 2, 3, 4"
+        "{EVENTS_SQL} SELECT date_trunc($3, ev.d::timestamp)::date AS key, ev.pro, ev.svc, ev.kind, SUM(ev.v)::bigint AS v,
+           pc.piece FROM ev CROSS JOIN LATERAL (SELECT COALESCE(max(p), $1::date) AS piece FROM unnest($4::date[]) p WHERE p <= ev.d) pc
+         GROUP BY 1, 2, 3, 4, 6"
     );
-    Ok(sqlx::query_as::<_, Agg>(&sql).bind(from).bind(to).bind(unit).fetch_all(db).await?)
+    let mut rows = sqlx::query_as::<_, Agg>(&sql)
+        .bind(from)
+        .bind(to)
+        .bind(unit)
+        .bind(pack.vat_pieces(from, to))
+        .fetch_all(db)
+        .await?;
+    for r in &mut rows {
+        r.vat_bps = pack.vat_bps(r.piece);
+    }
+    Ok(rows)
+}
+
+/// The VAT rates in force over `[from, to]` as a percent label ("10", or "10/8" across a change).
+fn vat_rate_label(pack: &Pack, from: NaiveDate, to: NaiveDate) -> String {
+    let mut bps: Vec<i64> = Vec::new();
+    for b in pack.vat_pieces(from, to).into_iter().filter_map(|d| pack.vat_bps(d)) {
+        if !bps.contains(&b) {
+            bps.push(b);
+        }
+    }
+    tax::percent_label(&bps)
+}
+
+/// The summary's `vat_basis`: `platform_fee_10pct_estimate` at 10%.
+fn vat_basis(pack: &Pack, from: NaiveDate, to: NaiveDate) -> String {
+    let label = vat_rate_label(pack, from, to);
+    if label == tax::NO_RATE {
+        return "platform_fee_no_rate_in_force".to_string();
+    }
+    format!("platform_fee_{}pct_estimate", label.replace('/', "_"))
 }
 
 /// Totals by kind for one group. Filled from `Agg` rows; `Metrics` derives the reported figures.
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone)]
 struct Totals {
     bookings: i64,
     cancelled: i64,
@@ -153,10 +191,16 @@ struct Totals {
     paid: i64,
     pending: i64,
     held: i64,
+    /// `fee` split by the VAT rate in force on each fee's day (None: no rate).
+    fee_by_vat: BTreeMap<Option<i64>, i64>,
 }
 
 impl Totals {
-    fn add(&mut self, kind: &str, v: i64) {
+    fn add(&mut self, r: &Agg) {
+        let (kind, v) = (r.kind.as_str(), r.v);
+        if kind == "fee" {
+            *self.fee_by_vat.entry(r.vat_bps).or_default() += v;
+        }
         let slot = match kind {
             "booking" => &mut self.bookings,
             "cancelled" => &mut self.cancelled,
@@ -181,7 +225,7 @@ fn fold_by<K: Ord>(rows: &[Agg], key: impl Fn(&Agg) -> Option<K>) -> BTreeMap<K,
     let mut out: BTreeMap<K, Totals> = BTreeMap::new();
     for r in rows {
         if let Some(k) = key(r) {
-            out.entry(k).or_default().add(&r.kind, r.v);
+            out.entry(k).or_default().add(r);
         }
     }
     out
@@ -190,7 +234,7 @@ fn fold_by<K: Ord>(rows: &[Agg], key: impl Fn(&Agg) -> Option<K>) -> BTreeMap<K,
 fn total_of(rows: &[Agg]) -> Totals {
     let mut t = Totals::default();
     for r in rows {
-        t.add(&r.kind, r.v);
+        t.add(r);
     }
     t
 }
@@ -213,14 +257,14 @@ struct Metrics {
     refunds: i64,
     net_revenue: i64,
     platform_fee: i64,
-    /// Estimate: 10% of the platform fee. Confirm with the accountant before filing.
-    vat_estimate: i64,
+    /// Estimate: the pack's VAT rate on each fee's day (10% in KR), summed per rate. None when no rate is in force
+    /// on some day with a fee. Confirm with the accountant before filing.
+    vat_estimate: Option<i64>,
     payouts: Payouts,
 }
 
 impl Metrics {
-    /// `vat_bps` is the pack's VAT rate in force for the period.
-    fn new(t: Totals, vat_bps: i64) -> Self {
+    fn new(t: Totals) -> Self {
         let active = t.bookings - t.cancelled;
         Metrics {
             bookings: t.bookings,
@@ -232,7 +276,7 @@ impl Metrics {
             refunds: t.refunds,
             net_revenue: t.gross - t.refunds,
             platform_fee: t.fee,
-            vat_estimate: finance::vat_estimate_at(Won(t.fee), vat_bps).0,
+            vat_estimate: vat_estimate(&t.fee_by_vat),
             payouts: Payouts {
                 paid: t.paid,
                 pending: t.pending,
@@ -240,6 +284,16 @@ impl Metrics {
             },
         }
     }
+}
+
+/// VAT on fees grouped by rate: each group is taxed at its own rate, then added. One rate gives the same figure as
+/// taxing the whole fee at it.
+fn vat_estimate(fee_by_vat: &BTreeMap<Option<i64>, i64>) -> Option<i64> {
+    fee_by_vat.iter().try_fold(0, |sum, (bps, fee)| match bps {
+        Some(bps) => Some(sum + finance::vat_estimate_at(Won(*fee), *bps).0),
+        None if *fee == 0 => Some(sum),
+        None => None,
+    })
 }
 
 #[derive(Serialize, FromRow)]
@@ -270,7 +324,7 @@ struct Summary {
     payment_methods: Vec<MethodRow>,
     /// MRR, churn and prorated recurring revenue for the period (see `subscriptions::recurring_metrics`).
     recurring: serde_json::Value,
-    vat_basis: &'static str,
+    vat_basis: String,
 }
 
 /// Net revenue (gross minus refunds) over the last 30 local days including today. The console dashboard tile uses
@@ -280,22 +334,22 @@ pub(super) async fn net_revenue_30d(s: &AppState) -> ApiResult<i64> {
     let from = to - chrono::Duration::days(29);
     let rows = {
         let mut conn = s.db.acquire().await?;
-        aggregate(&mut conn, from, to, "year").await?
+        aggregate(&mut conn, &s.pack, from, to, "year").await?
     };
-    Ok(Metrics::new(total_of(&rows), s.pack.vat_bps(to)).net_revenue)
+    Ok(Metrics::new(total_of(&rows)).net_revenue)
 }
 
 async fn summary(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Summary>> {
     let (from, to) = resolve(&q)?;
     let mut conn = s.db.acquire().await?;
-    let rows = aggregate(&mut conn, from, to, "year").await?;
+    let rows = aggregate(&mut conn, &s.pack, from, to, "year").await?;
     Ok(Json(Summary {
         from,
         to,
-        metrics: Metrics::new(total_of(&rows), s.pack.vat_bps(to)),
+        metrics: Metrics::new(total_of(&rows)),
         payment_methods: payment_methods(&mut conn, from, to).await?,
         recurring: super::subscriptions::recurring_metrics(&s.db, from, to).await?,
-        vat_basis: "platform_fee_10pct_estimate",
+        vat_basis: vat_basis(&s.pack, from, to),
     }))
 }
 
@@ -308,13 +362,13 @@ struct Point {
 
 /// One point per bucket, zero-filled, oldest first.
 async fn series_points(db: &mut PgConnection, pack: &Pack, grain: Grain, from: NaiveDate, to: NaiveDate) -> ApiResult<Vec<Point>> {
-    let rows = aggregate(db, from, to, grain.trunc_unit()).await?;
-    let by_key = fold_by(&rows, |r| Some(r.key));
+    let rows = aggregate(db, pack, from, to, grain.trunc_unit()).await?;
+    let mut by_key = fold_by(&rows, |r| Some(r.key));
     Ok(finance::buckets(grain, from, to)
         .into_iter()
         .map(|key| Point {
             key,
-            m: Metrics::new(by_key.get(&key).copied().unwrap_or_default(), pack.vat_bps(key)),
+            m: Metrics::new(by_key.remove(&key).unwrap_or_default()),
         })
         .collect())
 }
@@ -365,7 +419,7 @@ async fn partners(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQu
     let (from, to) = resolve(&q)?;
     let rows = {
         let mut conn = s.db.acquire().await?;
-        aggregate(&mut conn, from, to, "year").await?
+        aggregate(&mut conn, &s.pack, from, to, "year").await?
     };
     let by_pro = fold_by(&rows, |r| r.pro);
     let ids: Vec<Uuid> = by_pro.keys().copied().collect();
@@ -406,14 +460,14 @@ async fn services(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQu
     let (from, to) = resolve(&q)?;
     let rows = {
         let mut conn = s.db.acquire().await?;
-        aggregate(&mut conn, from, to, "year").await?
+        aggregate(&mut conn, &s.pack, from, to, "year").await?
     };
     let by_svc = fold_by(&rows, |r| r.svc.clone());
     let mut out: Vec<ServiceRow> = by_svc
         .into_iter()
         .map(|(service_code, t)| ServiceRow {
             service_code,
-            m: Metrics::new(t, s.pack.vat_bps(to)),
+            m: Metrics::new(t),
         })
         .collect();
     out.sort_by_key(|r| std::cmp::Reverse(r.m.gross));
@@ -515,7 +569,7 @@ async fn partner_earnings(State(s): State<AppState>, Pro(a): Pro, Query(q): Quer
         .bind(a.id)
         .fetch_one(&s.db)
         .await?;
-    let estimate = tax::payout_withholding(&tax_type, Won(pending_total));
+    let estimate = tax::payout_withholding_under(s.pack.tax.withholding.as_ref(), &tax_type, Won(pending_total));
     Ok(Json(Earnings {
         next_payout,
         pending_total,
@@ -708,7 +762,7 @@ fn metric_cells(m: &Metrics) -> Vec<Cell> {
         Cell::Number(m.refunds),
         Cell::Number(m.net_revenue),
         Cell::Number(m.platform_fee),
-        Cell::Number(m.vat_estimate),
+        m.vat_estimate.map_or_else(|| text(tax::NO_RATE), Cell::Number),
         Cell::Number(m.payouts.paid),
         Cell::Number(m.payouts.pending),
         Cell::Number(m.payouts.held),
@@ -722,7 +776,7 @@ async fn export_monthly(State(s): State<AppState>, Admin(a): Admin, Query(q): Qu
     let (from, to) = resolve(&q)?;
     let mut tx = s.db.begin().await?;
     let points = series_points(&mut tx, &s.pack, Grain::Month, from, to).await?;
-    let total = Metrics::new(total_of(&aggregate(&mut tx, from, to, "year").await?), s.pack.vat_bps(to));
+    let total = Metrics::new(total_of(&aggregate(&mut tx, &s.pack, from, to, "year").await?));
     let mut doc = vec![vec![
         text("월"),
         text("예약건수"),
@@ -731,7 +785,7 @@ async fn export_monthly(State(s): State<AppState>, Admin(a): Admin, Query(q): Qu
         text("환불액"),
         text("순매출"),
         text("플랫폼수수료"),
-        text("부가세추정(수수료의10%)"),
+        text(format!("부가세추정(수수료의{}%)", vat_rate_label(&s.pack, from, to))),
         text("파트너지급(완료)"),
         text("지급예정"),
         text("보류"),
@@ -766,7 +820,7 @@ async fn export_vat(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<
     let (from, to) = tax::quarter_range(q.year, q.quarter)?;
     let mut tx = s.db.begin().await?;
     let methods = payment_methods(&mut tx, from, to).await?;
-    let totals = total_of(&aggregate(&mut tx, from, to, "year").await?);
+    let totals = total_of(&aggregate(&mut tx, &s.pack, from, to, "year").await?);
     let input = VatInput {
         methods: methods
             .into_iter()
@@ -779,18 +833,29 @@ async fn export_vat(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<
         platform_fee: Won(totals.fee),
         refunds: Won(totals.refunds),
     };
+    let vat = Metrics::new(totals).vat_estimate.map(Won);
     audit(&mut *tx, "staff", Some(a.id), "finance.export", "vat", json!({ "from": from, "to": to })).await?;
     tx.commit().await?;
     csv_response(
         &export_name("vat", from, to),
-        finance::csv_document(&tax::vat_document_at(&input, s.pack.vat_bps(to))),
+        finance::csv_document(&tax::vat_document_with(&input, vat, &vat_rate_label(&s.pack, from, to))),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::export_name;
+    use super::{export_name, vat_estimate};
     use chrono::NaiveDate;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn vat_is_taxed_per_rate_and_missing_rates_are_not_zero() {
+        let fees = |v: &[(Option<i64>, i64)]| v.iter().copied().collect::<BTreeMap<_, _>>();
+        assert_eq!(vat_estimate(&fees(&[])), Some(0));
+        assert_eq!(vat_estimate(&fees(&[(Some(2000), 1_000_000), (Some(1900), 1_000_000)])), Some(390_000));
+        assert_eq!(vat_estimate(&fees(&[(None, 0), (Some(1000), 60_000)])), Some(6_000));
+        assert_eq!(vat_estimate(&fees(&[(None, 5), (Some(1000), 60_000)])), None, "a fee with no rate in force");
+    }
 
     #[test]
     fn export_files_carry_the_brand_prefix() {

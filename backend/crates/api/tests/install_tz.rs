@@ -144,3 +144,30 @@ async fn the_cancel_window_counts_london_days(pool: PgPool) {
         assert_eq!(preview["can_cancel"], json!(days >= 2), "visit in {days} London days: {preview}");
     }
 }
+
+/// Slots in a daylight-saving gap or overlap: Rust (cancel window, peak, quotes) and SQL (no-show, on-time grace)
+/// must turn the same slot into the same instant.
+#[sqlx::test(migrations = "../../migrations")]
+async fn rust_and_sql_agree_on_slots_in_daylight_saving_changes(pool: PgPool) {
+    let pool = london(&pool).await;
+    let new_york = zone::get("America/New_York").expect("zone");
+    for (tz, zone_sql, date, hour) in [
+        (london_tz(), "dahae_tz()", "2026-10-25", 1), // 01:00-02:00 happens twice
+        (london_tz(), "dahae_tz()", "2026-03-29", 1), // 01:00-02:00 does not exist
+        (new_york.clone(), "'America/New_York'", "2026-11-01", 1),
+        (new_york, "'America/New_York'", "2026-03-08", 2),
+    ] {
+        let rust = peak::slot_to_utc(&tz, day(date), hour).expect("slot");
+        // The two expressions noshow.rs and quality.rs use.
+        let (noshow, quality): (DateTime<Utc>, DateTime<Utc>) = sqlx::query_as(&format!(
+            "SELECT ($1::date + make_interval(hours => $2::int)) AT TIME ZONE {zone_sql},
+                    ($1::date + $2::int * interval '1 hour') AT TIME ZONE {zone_sql}"
+        ))
+        .bind(day(date))
+        .bind(hour as i32)
+        .fetch_one(&pool)
+        .await
+        .expect("sql slot");
+        assert_eq!((noshow, quality), (rust, rust), "{date} {hour}:00 in {}", zone::name(&tz));
+    }
+}

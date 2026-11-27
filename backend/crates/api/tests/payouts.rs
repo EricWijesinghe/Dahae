@@ -240,3 +240,35 @@ async fn payout_account_is_not_released_when_its_audit_row_fails(pool: PgPool) {
     assert_ne!(code, StatusCode::OK, "{body}");
     assert!(body.get("account").is_none(), "no account is released: {body}");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn payout_withholding_follows_the_pack(pool: PgPool) {
+    seed(&pool).await;
+    let kr = app(pool.clone());
+    let none = common::app_with_pack(pool.clone(), |p| {
+        p["tax"].as_object_mut().expect("tax").remove("withholding");
+    });
+    let token = admin_token(&pool).await;
+    let (code, rows) = request_payouts(&kr, &token).await;
+    assert_eq!(code, StatusCode::OK, "{rows}");
+    let id = rows[0]["id"].as_str().expect("id").to_string();
+    let reveal = format!("/v1/admin/settlements/payouts/{id}/account");
+
+    // KR: 3% of 80,000 and 10% of that, on an unclassified partner.
+    let (_, r) = call(&kr, "GET", &reveal, Some(&token), None).await;
+    assert_eq!(
+        (r["amount"].as_i64(), r["income_tax"].as_i64(), r["local_tax"].as_i64()),
+        (Some(77_360), Some(2_400), Some(240)),
+        "{r}"
+    );
+    // A pack with no withholding transfers the whole payout.
+    let (_, r) = call(&none, "GET", &reveal, Some(&token), None).await;
+    assert_eq!(
+        (r["amount"].as_i64(), r["income_tax"].as_i64(), r["local_tax"].as_i64()),
+        (Some(80_000), Some(0), Some(0)),
+        "{r}"
+    );
+    let (_, list) = call(&none, "GET", "/v1/admin/settlements/payouts", Some(&token), None).await;
+    let p = &list[0];
+    assert_eq!((p["net"].as_i64(), p["income_tax"].as_i64()), (Some(80_000), Some(0)), "{list}");
+}

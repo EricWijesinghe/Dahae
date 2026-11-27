@@ -96,8 +96,12 @@ fn kr_pack_feeds_the_generic_money_and_tax_rules() {
     assert_eq!(p.tax.withholding, Some(tax::KR_BUSINESS_WITHHOLDING));
     assert_eq!(p.tax.rates, [tax::kr_vat()]);
     let today = chrono::NaiveDate::from_ymd_opt(2026, 11, 27).expect("date");
-    assert_eq!(p.vat_bps(today), finance::VAT_BPS);
-    assert_eq!(p.vat_bps(chrono::NaiveDate::from_ymd_opt(1977, 6, 30).expect("date")), 0, "before KR VAT began");
+    assert_eq!(p.vat_bps(today), Some(finance::VAT_BPS));
+    assert_eq!(
+        p.vat_bps(chrono::NaiveDate::from_ymd_opt(1977, 6, 30).expect("date")),
+        None,
+        "before KR VAT began"
+    );
 }
 
 #[test]
@@ -182,6 +186,8 @@ fn overlapping_or_malformed_values_are_refused() {
     );
     assert!(ok.is_ok(), "{ok:?}");
     refused(|v| v["tax"]["rates"][0]["rate_bps"] = json!(10_001), "malformed");
+    refused(|v| v["tax"]["rates"][0]["category"] = json!("services"), "need a service rate");
+    refused(|v| v["tax"]["rates"] = json!([]), "need a service rate");
     refused(|v| v["privacy"]["signup_required"] = json!(["terms", "ghost"]), "unknown consent kind ghost");
     refused(|v| v["consumer"]["cancel_default"]["tiers"] = json!([]), "cancel_default");
     refused(|v| v["version"] = json!("1.0"), "version");

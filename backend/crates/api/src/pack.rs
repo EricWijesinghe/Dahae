@@ -327,9 +327,27 @@ fn merged(id: &str, files: &[(&str, &str)]) -> Result<Value, PackError> {
 pub const VAT_CATEGORY: &str = "service";
 
 impl Pack {
-    /// VAT in basis points in force on `day`; 0 when the pack has no VAT rate for that day.
-    pub fn vat_bps(&self, day: NaiveDate) -> i64 {
-        domain::tax::rate_on(&self.tax.rates, VAT_CATEGORY, day).map_or(0, |r| i64::from(r.rate_bps))
+    /// VAT in basis points in force on `day`; None when the pack has no VAT rate for that day.
+    pub fn vat_bps(&self, day: NaiveDate) -> Option<i64> {
+        domain::tax::rate_on(&self.tax.rates, VAT_CATEGORY, day).map(|r| i64::from(r.rate_bps))
+    }
+
+    /// The first day of each VAT rate piece of `[from, to]`: `from`, then every day inside where a rate starts or
+    /// ends. One rate applies to every day of a piece.
+    pub fn vat_pieces(&self, from: NaiveDate, to: NaiveDate) -> Vec<NaiveDate> {
+        let mut starts: Vec<NaiveDate> = self
+            .tax
+            .rates
+            .iter()
+            .filter(|r| r.category == VAT_CATEGORY)
+            .flat_map(|r| [Some(r.from), r.until])
+            .flatten()
+            .filter(|d| from < *d && *d <= to)
+            .chain([from])
+            .collect();
+        starts.sort();
+        starts.dedup();
+        starts
     }
 }
 
@@ -473,7 +491,8 @@ pub fn hhmm(s: &str) -> Option<(u32, u32)> {
     (s.len() == 5 && h < 24 && m < 60).then_some((h, m))
 }
 
-/// Each category's periods are well formed and never overlap, so a day maps to at most one rate.
+/// Each category's periods are well formed and never overlap, so a day maps to at most one rate, and the
+/// VAT category is present.
 fn check_rates(id: &str, rates: &[TaxRate]) -> Result<(), PackError> {
     let mut by_cat: BTreeMap<&str, Vec<&TaxRate>> = BTreeMap::new();
     for r in rates {
@@ -481,6 +500,9 @@ fn check_rates(id: &str, rates: &[TaxRate]) -> Result<(), PackError> {
             return Err(err(id, format!("tax rate {} is malformed", r.category)));
         }
         by_cat.entry(r.category.as_str()).or_default().push(r);
+    }
+    if !by_cat.contains_key(VAT_CATEGORY) {
+        return Err(err(id, format!("tax rates need a {VAT_CATEGORY} rate (the VAT estimate's rate)")));
     }
     for (cat, mut list) in by_cat {
         list.sort_by_key(|r| r.from);

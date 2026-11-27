@@ -166,13 +166,17 @@ pub async fn list_payouts(AxState(s): AxState<AppState>, _a: Admin, axum::extrac
         Value::Array(items) => items,
         _ => Vec::new(),
     };
-    items.iter_mut().for_each(add_split);
+    items.iter_mut().for_each(|p| add_split(&s.pack, p));
     Ok(paged(items, limit, |r| json_row_cursor(r, "created_at", "id")))
 }
 
 /// Adds gross / withholding / net to a payout row. `amount` is the gross settlement total.
-fn add_split(p: &mut Value) {
-    let split = domain::tax::payout_withholding(p["tax_type"].as_str().unwrap_or("untracked"), domain::Won(p["amount"].as_i64().unwrap_or(0)));
+fn add_split(pack: &crate::pack::Pack, p: &mut Value) {
+    let split = domain::tax::payout_withholding_under(
+        pack.tax.withholding.as_ref(),
+        p["tax_type"].as_str().unwrap_or("untracked"),
+        domain::Won(p["amount"].as_i64().unwrap_or(0)),
+    );
     p["income_tax"] = json!(split.income_tax.0);
     p["local_tax"] = json!(split.local_tax.0);
     p["net"] = json!(split.net.0);
@@ -244,7 +248,7 @@ pub async fn reveal_account(AxState(s): AxState<AppState>, Admin(a): Admin, Path
     audit(&mut *tx, "staff", Some(a.id), "payout.reveal", &id.to_string(), json!({})).await?;
     tx.commit().await?;
     // `amount` is what to transfer (net of withholding); `gross` and the taxes are shown for the record.
-    let split = domain::tax::payout_withholding(&tax_type, domain::Won(gross));
+    let split = domain::tax::payout_withholding_under(s.pack.tax.withholding.as_ref(), &tax_type, domain::Won(gross));
     let body = Json(json!({
         "bank": bank,
         "holder": holder,
@@ -422,8 +426,10 @@ pub async fn register_seller(AxState(s): AxState<AppState>, Admin(a): Admin, Pat
 }
 
 /// What actually moves: the gross settlement total less the withholding snapshotted on the payout.
-fn transfer_amount(row: &Row) -> i64 {
-    domain::tax::payout_withholding(&row.tax_type, domain::Won(row.amount)).net.0
+fn transfer_amount(pack: &crate::pack::Pack, row: &Row) -> i64 {
+    domain::tax::payout_withholding_under(pack.tax.withholding.as_ref(), &row.tax_type, domain::Won(row.amount))
+        .net
+        .0
 }
 
 async fn lock(tx: &mut Transaction<'_, Postgres>, id: Uuid) -> ApiResult<Row> {
@@ -550,7 +556,7 @@ async fn send(s: &AppState, id: Uuid) -> ApiResult<State> {
         .execute(&mut *tx)
         .await?;
     let transfer = adapter::Transfer {
-        amount: transfer_amount(&row),
+        amount: transfer_amount(&s.pack, &row),
         bank_code,
         account,
         holder: row.holder.clone(),

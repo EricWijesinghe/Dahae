@@ -28,7 +28,7 @@ fn demo_failure(e: DemoError) -> ApiError {
 }
 
 async fn load(State(s): State<AppState>, Admin(a): Admin) -> ApiResult<Json<Value>> {
-    let report = demo::load(&s.db, &s.config, false).await.map_err(demo_failure)?;
+    let report = demo::load(&s.db, &s.config, &s.pack.id, false).await.map_err(demo_failure)?;
     audit(&s.db, "staff", Some(a.id), "demo.load", "demo", json!(report)).await?;
     Ok(Json(json!({ "ok": true, "tables": report })))
 }

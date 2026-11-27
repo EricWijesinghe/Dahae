@@ -65,11 +65,12 @@ fn to_civil(local: NaiveDateTime) -> Option<civil::DateTime> {
     .ok()
 }
 
-/// UTC instant of a wall-clock time in `tz`. In a daylight-saving overlap the earlier instant wins; a time skipped
-/// by a daylight-saving gap moves forward by the gap (jiff's "compatible" rule, as in RFC 5545).
+/// UTC instant of a wall-clock time in `tz`. In a daylight-saving overlap the later instant wins; a time skipped
+/// by a daylight-saving gap moves forward by the gap (read with the offset before it). This is Postgres's
+/// `timestamp AT TIME ZONE` rule, so a slot turned into an instant here and in SQL is the same instant.
 pub fn to_utc(tz: &Tz, local: NaiveDateTime) -> DateTime<Utc> {
     to_civil(local)
-        .and_then(|c| tz.to_ambiguous_timestamp(c).compatible().ok())
+        .and_then(|c| tz.to_ambiguous_timestamp(c).later().ok())
         .and_then(|ts| DateTime::from_timestamp(ts.as_second(), u32::try_from(ts.subsec_nanosecond()).ok()?))
         // shortcut: a wall-clock time outside jiff's range (years beyond +-9999) is read as UTC; none is reachable.
         .unwrap_or_else(|| local.and_utc())
@@ -121,8 +122,8 @@ mod tests {
         assert_eq!(to_utc(&tz, wall("2026-07-15 10:00")), utc("2026-07-15T09:00:00Z"));
         // 2026-03-29 01:30 does not exist (clocks go 01:00 -> 02:00): it lands at 02:30 BST.
         assert_eq!(to_utc(&tz, wall("2026-03-29 01:30")), utc("2026-03-29T01:30:00Z"));
-        // 2026-10-25 01:30 happens twice: the first (BST) one.
-        assert_eq!(to_utc(&tz, wall("2026-10-25 01:30")), utc("2026-10-25T00:30:00Z"));
+        // 2026-10-25 01:30 happens twice: the second (GMT) one, as Postgres picks.
+        assert_eq!(to_utc(&tz, wall("2026-10-25 01:30")), utc("2026-10-25T01:30:00Z"));
         let (start, end) = day_bounds(&tz, NaiveDate::from_ymd_opt(2026, 3, 29).expect("date"));
         assert_eq!((start, end - start), (utc("2026-03-29T00:00:00Z"), Duration::hours(23)));
     }

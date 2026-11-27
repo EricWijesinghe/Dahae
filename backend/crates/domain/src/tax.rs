@@ -169,6 +169,12 @@ pub fn vat_document(input: &VatInput) -> Vec<Vec<Cell>> {
 
 /// [`vat_document`] at the VAT rate (basis points) the install's pack has in force for the period.
 pub fn vat_document_at(input: &VatInput, vat_bps: i64) -> Vec<Vec<Cell>> {
+    vat_document_with(input, Some(finance::vat_estimate_at(input.platform_fee, vat_bps)), &percent_label(&[vat_bps]))
+}
+
+/// [`vat_document`] with the VAT estimate already worked out (None: no rate in force for part of the period) and
+/// the rate label it was worked out at ("10" for 10%, "10/8" across a rate change).
+pub fn vat_document_with(input: &VatInput, vat: Option<Won>, rate_label: &str) -> Vec<Vec<Cell>> {
     let text = |s: &str| Cell::Text(s.to_string());
     let mut doc = vec![vec![text("결제수단"), text("건수"), text("결제액")]];
     let mut count = 0;
@@ -182,11 +188,31 @@ pub fn vat_document_at(input: &VatInput, vat_bps: i64) -> Vec<Vec<Cell>> {
     doc.push(vec![text("환불액"), Cell::Number(0), Cell::Number(input.refunds.0)]);
     doc.push(vec![text("플랫폼수수료(과세표준 추정)"), Cell::Number(0), Cell::Number(input.platform_fee.0)]);
     doc.push(vec![
-        text("부가세 추정(수수료의 10%)"),
+        text(&format!("부가세 추정(수수료의 {rate_label}%)")),
         Cell::Number(0),
-        Cell::Number(finance::vat_estimate_at(input.platform_fee, vat_bps).0),
+        vat.map_or_else(|| text(NO_RATE), |v| Cell::Number(v.0)),
     ]);
     doc
+}
+
+/// Shown where a VAT figure would be when no rate is in force for (part of) the period.
+pub const NO_RATE: &str = "no rate in force";
+
+/// Basis points as a percent label: 1000 -> "10", 770 -> "7.7", 825 -> "8.25"; several rates joined by "/".
+/// No rates gives [`NO_RATE`].
+pub fn percent_label(bps: &[i64]) -> String {
+    if bps.is_empty() {
+        return NO_RATE.to_string();
+    }
+    let one = |b: i64| {
+        let (whole, frac) = (b / 100, (b % 100).abs());
+        match frac {
+            0 => whole.to_string(),
+            f if f % 10 == 0 => format!("{whole}.{}", f / 10),
+            f => format!("{whole}.{f:02}"),
+        }
+    };
+    bps.iter().map(|b| one(*b)).collect::<Vec<_>>().join("/")
 }
 
 /// Splits a VAT-inclusive amount into (공급가액, 세액). VAT is 1/11 of the total, floored; supply is the rest.
@@ -266,8 +292,16 @@ pub fn tax_invoice_document(rows: &[InvoiceRow]) -> Vec<Vec<Cell>> {
 /// `freelancer` and `unset` (not yet classified; withheld as the conservative default) get the 사업소득 split.
 /// `business` (issues invoices) and `untracked` (paid before this rule existed) get none.
 pub fn payout_withholding(tax_type: &str, gross: Won) -> Withholding {
-    match tax_type {
-        "freelancer" | "unset" => business_withholding(gross),
+    payout_withholding_under(Some(&KR_BUSINESS_WITHHOLDING), tax_type, gross)
+}
+
+/// [`payout_withholding`] under the install pack's rule (`Pack::tax.withholding`): None, a pack with no
+/// withholding, leaves every payout whole; Some withholds on `freelancer` and `unset` payouts by that rule.
+/// shortcut: the base is the payout amount (the partners' settlement total) whatever `rule.base` says, as KR has
+/// always withheld; a pack whose base differs needs the payout's fees carried to here first.
+pub fn payout_withholding_under(rule: Option<&WithholdingRule>, tax_type: &str, gross: Won) -> Withholding {
+    match (rule, tax_type) {
+        (Some(rule), "freelancer" | "unset") => withhold(gross, rule),
         _ => Withholding {
             gross,
             income_tax: Won::ZERO,
@@ -383,6 +417,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn percent_labels_read_like_the_rate() {
+        assert_eq!(percent_label(&[1000]), "10");
+        assert_eq!(percent_label(&[770]), "7.7");
+        assert_eq!(percent_label(&[825]), "8.25");
+        assert_eq!(percent_label(&[1000, 2000]), "10/20");
+        assert_eq!(percent_label(&[]), NO_RATE);
+        let input = VatInput {
+            methods: vec![],
+            platform_fee: Won(1000),
+            refunds: Won(0),
+        };
+        assert_eq!(
+            vat_document_at(&input, 1000).last().expect("vat")[0],
+            Cell::Text("부가세 추정(수수료의 10%)".into())
+        );
+        assert_eq!(vat_document_with(&input, None, "10").last().expect("vat")[2], Cell::Text(NO_RATE.into()));
+    }
+
+    #[test]
     fn withholding_floors_income_tax_and_local_tax() {
         let w = business_withholding(Won(123_456));
         assert_eq!(w.income_tax, Won(3_703)); // 3% = 3703.68
@@ -452,6 +505,24 @@ mod tests {
         assert_eq!(quarter_range(2026, 4).unwrap().1, NaiveDate::from_ymd_opt(2026, 12, 31).unwrap());
         assert!(quarter_range(2026, 0).is_err());
         assert!(quarter_range(2026, 5).is_err());
+    }
+
+    #[test]
+    fn payout_withholding_follows_the_pack_rule() {
+        let half = WithholdingRule {
+            rate_bps: 5_000,
+            local_surtax_bps: 0,
+            tax_unit: 1,
+            surtax_unit: 1,
+            base: WithholdingBase::Gross,
+        };
+        assert_eq!(payout_withholding_under(None, "freelancer", Won(100_000)).net, Won(100_000), "no pack rule");
+        assert_eq!(payout_withholding_under(Some(&half), "freelancer", Won(100_000)).net, Won(50_000));
+        assert_eq!(payout_withholding_under(Some(&half), "business", Won(100_000)).net, Won(100_000));
+        for t in ["freelancer", "unset", "business", "untracked"] {
+            let kr = Some(&KR_BUSINESS_WITHHOLDING);
+            assert_eq!(payout_withholding_under(kr, t, Won(123_456)), payout_withholding(t, Won(123_456)), "{t}");
+        }
     }
 
     #[test]

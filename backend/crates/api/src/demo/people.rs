@@ -133,8 +133,8 @@ fn customer_phone(i: usize) -> String {
 }
 
 /// The demo world is Korean whatever the pack, so its phones parse as KR.
-fn demo_e164(phone: &str) -> Option<String> {
-    crate::phone::e164(phone, "KR")
+fn demo_e164(c: &Ctx<'_>, phone: &str) -> Option<String> {
+    crate::phone::e164(phone, &c.region)
 }
 
 async fn customers(c: &mut Ctx<'_>) -> Result<Vec<Customer>, DemoError> {
@@ -162,7 +162,7 @@ async fn customers(c: &mut Ctx<'_>) -> Result<Vec<Customer>, DemoError> {
         .bind(locale)
         .bind(created)
         .bind(verified_at)
-        .bind(demo_e164(&customer_phone(i)))
+        .bind(demo_e164(c, &customer_phone(i)))
         .execute(&mut *c.tx)
         .await?;
         c.reg("users", id).await?;
@@ -366,7 +366,7 @@ async fn pros(c: &mut Ctx<'_>) -> Result<Vec<Pro>, DemoError> {
         .bind(*fee_bps as i32)
         .bind(created)
         .bind(deleted_at)
-        .bind(phone.as_deref().and_then(demo_e164))
+        .bind(phone.as_deref().and_then(|p| demo_e164(c, p)))
         .execute(&mut *c.tx)
         .await?;
         c.reg("pros", id).await?;
@@ -380,7 +380,7 @@ async fn pros(c: &mut Ctx<'_>) -> Result<Vec<Pro>, DemoError> {
         .bind(name)
         .bind(phone.clone().unwrap_or_default())
         .bind(created)
-        .bind(phone.as_deref().and_then(demo_e164))
+        .bind(phone.as_deref().and_then(|p| demo_e164(c, p)))
         .execute(&mut *c.tx)
         .await?;
         c.reg("team_members", owner).await?;
@@ -402,7 +402,7 @@ async fn pros(c: &mut Ctx<'_>) -> Result<Vec<Pro>, DemoError> {
                 .bind(invite)
                 .bind(created + Duration::days(2))
                 .bind(last_login)
-                .bind(demo_e164(&mphone))
+                .bind(demo_e164(c, &mphone))
                 .execute(&mut *c.tx)
                 .await?;
                 c.reg("team_members", mid).await?;
@@ -536,7 +536,7 @@ async fn sign_in_records(c: &mut Ctx<'_>, customers: &[Customer], pros: &[Pro]) 
             .bind(attempts)
             .bind(created + Duration::minutes(3))
             .bind(created)
-            .bind(demo_e164(&customer_phone(i)))
+            .bind(demo_e164(c, &customer_phone(i)))
             .execute(&mut *c.tx)
             .await?;
         c.reg("otp_codes", id).await?;

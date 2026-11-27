@@ -7,7 +7,10 @@
 
 mod common;
 
-use api::demo::{self, DemoError};
+use api::{
+    demo::{self, DemoError},
+    pack,
+};
 use common::{app, book, customer, seed_catalog, test_config};
 use sqlx::PgPool;
 
@@ -70,7 +73,7 @@ async fn load_fills_every_touched_table_and_clear_restores_counts(pool: PgPool) 
     let config = config();
     let before = counts(&pool).await;
 
-    let report = demo::load(&pool, &config, false).await.expect("demo load");
+    let report = demo::load(&pool, &config, pack::ACTIVE, false).await.expect("demo load");
     assert!(!report.is_empty());
     for (table, n) in counts(&pool).await {
         assert!(n > 0, "{table} is empty after demo load");
@@ -91,7 +94,7 @@ async fn load_fills_every_touched_table_and_clear_restores_counts(pool: PgPool) 
     );
 
     // A second load is refused while demo data is in place.
-    assert!(matches!(demo::load(&pool, &config, true).await, Err(DemoError::AlreadyLoaded)));
+    assert!(matches!(demo::load(&pool, &config, pack::ACTIVE, true).await, Err(DemoError::AlreadyLoaded)));
 
     let removed = demo::clear(&pool, &config).await.expect("demo clear");
     assert!(!removed.is_empty());
@@ -111,7 +114,7 @@ async fn load_refuses_over_real_bookings_unless_forced(pool: PgPool) {
     book(&api, &c, 10, None).await;
     let config = config();
 
-    let err = demo::load(&pool, &config, false).await.expect_err("refused over a real booking");
+    let err = demo::load(&pool, &config, pack::ACTIVE, false).await.expect_err("refused over a real booking");
     assert!(matches!(err, DemoError::RealData { bookings: 1, .. }), "{err}");
     assert_eq!(demo_registry_rows(&pool).await, 0, "nothing written when refused");
 }
@@ -129,7 +132,7 @@ async fn real_rows_survive_load_and_clear(pool: PgPool) {
         .await
         .expect("count");
 
-    demo::load(&pool, &config, false).await.expect("demo load over real customer");
+    demo::load(&pool, &config, pack::ACTIVE, false).await.expect("demo load over real customer");
     demo::clear(&pool, &config).await.expect("demo clear");
 
     let still_there: i64 = sqlx::query_scalar("SELECT count(*) FROM users WHERE id = $1 AND name = ''")
@@ -158,7 +161,7 @@ async fn load_adds_a_fake_business_profile_and_clear_removes_only_that(pool: PgP
     seed_catalog(&pool).await;
     let config = config();
 
-    demo::load(&pool, &config, false).await.expect("demo load");
+    demo::load(&pool, &config, pack::ACTIVE, false).await.expect("demo load");
     let b = business(&pool).await.expect("demo profile written");
     assert_eq!(b["name"], "다해");
     assert_eq!(b["company"]["registration_no"], "000-00-00000", "fake registration number");
@@ -173,7 +176,7 @@ async fn load_adds_a_fake_business_profile_and_clear_removes_only_that(pool: PgP
         .execute(&pool)
         .await
         .expect("owner profile");
-    demo::load(&pool, &config, false).await.expect("demo load");
+    demo::load(&pool, &config, pack::ACTIVE, false).await.expect("demo load");
     demo::clear(&pool, &config).await.expect("demo clear");
     assert_eq!(business(&pool).await.expect("owner profile kept")["name"], "우리집청소");
 }
@@ -181,7 +184,7 @@ async fn load_adds_a_fake_business_profile_and_clear_removes_only_that(pool: PgP
 #[sqlx::test(migrations = "../../migrations")]
 async fn demo_deposit_messages_carry_the_paid_amount(pool: PgPool) {
     seed_catalog(&pool).await;
-    demo::load(&pool, &config(), false).await.expect("demo load");
+    demo::load(&pool, &config(), pack::ACTIVE, false).await.expect("demo load");
     let amounts: Vec<Option<i64>> =
         sqlx::query_scalar("SELECT (body->'params'->>'amount')::bigint FROM chat_messages WHERE kind = 'system' AND body->>'code' = 'deposit_paid'")
             .fetch_all(&pool)
@@ -195,7 +198,7 @@ async fn demo_deposit_messages_carry_the_paid_amount(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn demo_sign_in_customer_has_a_usable_coupon_and_home_content(pool: PgPool) {
     seed_catalog(&pool).await;
-    demo::load(&pool, &config(), false).await.expect("demo load");
+    demo::load(&pool, &config(), pack::ACTIVE, false).await.expect("demo load");
     // Checkout's coupon step needs one that is unused and has not expired.
     let usable: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM coupons k JOIN users u ON u.id = k.user_id
@@ -233,7 +236,7 @@ async fn demo_hides_the_seed_welcome_banner_and_clear_brings_it_back(pool: PgPoo
     seed_catalog(&pool).await;
     assert_eq!(active_banners(&pool).await, 1, "a real install has the seed welcome banner");
     let config = config();
-    demo::load(&pool, &config, false).await.expect("demo load");
+    demo::load(&pool, &config, pack::ACTIVE, false).await.expect("demo load");
     let welcome: i64 =
         sqlx::query_scalar("SELECT count(*) FROM content_items WHERE kind = 'banner' AND active AND (link = 'coupons' OR body->>'link' = 'coupons')")
             .fetch_one(&pool)
@@ -247,4 +250,29 @@ async fn demo_hides_the_seed_welcome_banner_and_clear_brings_it_back(pool: PgPoo
         .await
         .expect("flag");
     assert_eq!(flagged, 0);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn demo_phone_copies_follow_the_install_pack(pool: PgPool) {
+    seed_catalog(&pool).await;
+    demo::load(&pool, &config(), "GB", false).await.expect("demo load");
+    let mut rows: Vec<(String, Option<String>)> = Vec::new();
+    for table in ["users", "pros", "team_members", "otp_codes"] {
+        rows.extend(
+            sqlx::query_as::<_, (String, Option<String>)>(&format!(
+                "SELECT phone, phone_e164 FROM {table} WHERE phone IS NOT NULL AND phone <> '' AND phone NOT LIKE '%:%'"
+            ))
+            .fetch_all(&pool)
+            .await
+            .expect("phones"),
+        );
+    }
+    assert!(!rows.is_empty());
+    for (phone, copy) in rows {
+        assert_eq!(
+            copy,
+            api::phone::e164(&phone, "GB"),
+            "{phone}: parsed in the pack's region, as the backfill would"
+        );
+    }
 }

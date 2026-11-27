@@ -48,7 +48,7 @@ pub(super) async fn export_withholding(State(s): State<AppState>, Admin(a): Admi
             day,
             payee,
             team,
-            split: tax::payout_withholding(&tax_type, Won(gross)),
+            split: tax::payout_withholding_under(s.pack.tax.withholding.as_ref(), &tax_type, Won(gross)),
         })
         .collect();
     audit(
@@ -83,20 +83,20 @@ pub async fn export_payroll(State(s): State<AppState>, Admin(a): Admin, Query(q)
     .bind(to)
     .fetch_all(&mut *tx)
     .await?;
-    let lines = payroll_lines(rows);
+    let lines = payroll_lines(s.pack.tax.withholding.as_ref(), rows);
     audit(&mut *tx, "staff", Some(a.id), "finance.export", "payroll", json!({ "from": from, "to": to })).await?;
     tx.commit().await?;
     csv_response(&export_name("payroll", from, to), finance::csv_document(&tax::payroll_document(&lines)))
 }
 
-fn payroll_lines(rows: Vec<PaidRow>) -> Vec<PayrollLine> {
+fn payroll_lines(rule: Option<&tax::WithholdingRule>, rows: Vec<PaidRow>) -> Vec<PayrollLine> {
     rows.into_iter()
         .map(|(pro_id, name, team, employment, gross, tax_type)| PayrollLine {
             pro_id,
             name,
             team,
             employment,
-            split: tax::payout_withholding(&tax_type, Won(gross)),
+            split: tax::payout_withholding_under(rule, &tax_type, Won(gross)),
         })
         .collect()
 }

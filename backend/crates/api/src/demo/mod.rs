@@ -112,6 +112,8 @@ pub(crate) struct Ctx<'t> {
     /// The install's zone: visit days and hours are local wall-clock times in it.
     pub tz: Tz,
     pub data_key: [u8; 32],
+    /// The install's pack id: the region demo phones' E.164 copies are parsed in, as every live writer does.
+    pub region: String,
     pub counts: BTreeMap<&'static str, u64>,
 }
 
@@ -173,8 +175,8 @@ async fn set_append_only_guards(tx: &mut Transaction<'_, Postgres>, on: bool) ->
 }
 
 /// Writes the demo dataset in one transaction. Refuses to run over real bookings or payments
-/// unless `force` is set, and never twice.
-pub async fn load(db: &PgPool, config: &Config, force: bool) -> Result<Report, DemoError> {
+/// unless `force` is set, and never twice. `region` is the install's pack id.
+pub async fn load(db: &PgPool, config: &Config, region: &str, force: bool) -> Result<Report, DemoError> {
     let mut tx = db.begin().await?;
     lock(&mut tx).await?;
     let loaded: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM demo_rows)").fetch_one(&mut *tx).await?;
@@ -193,6 +195,7 @@ pub async fn load(db: &PgPool, config: &Config, force: bool) -> Result<Report, D
         now: Utc::now(),
         tz: crate::util::install_tz(),
         data_key: config.data_key,
+        region: region.to_owned(),
         counts: BTreeMap::new(),
     };
     let mut world = people::run(&mut c).await?;
@@ -312,7 +315,7 @@ pub async fn cli(args: &[String]) -> i32 {
         return fail(&format!("seed: {e}"));
     }
     let result = match args.first().map(String::as_str) {
-        Some("load") => load(&db, &config, args.iter().any(|a| a == "--force")).await,
+        Some("load") => load(&db, &config, crate::pack::ACTIVE, args.iter().any(|a| a == "--force")).await,
         Some("clear") => clear(&db, &config).await,
         _ => return fail("usage: api demo load [--force] | api demo clear"),
     };

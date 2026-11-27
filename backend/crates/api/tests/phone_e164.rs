@@ -466,3 +466,55 @@ fn every_phone_writer_in_the_source_writes_the_copy() {
     assert!(missing.is_empty(), "{missing:#?}");
     assert!(writers >= 20, "the scan found the known writers ({writers})");
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn one_backfill_fills_bigint_keys_whose_text_order_differs(db: PgPool) {
+    // Ids 1..12 sort "1" < "10" < "11" < "12" < "2" as text: paging must follow the number order.
+    for i in 1..=12 {
+        sqlx::query(
+            "INSERT INTO notification_outbox (kind, title, body, data, channel, phone, next_attempt_at)
+             VALUES ('t', 't', 'b', '{}', 'sms', $1, now())",
+        )
+        .bind(format!("010444400{i:02}"))
+        .execute(&db)
+        .await
+        .expect("text");
+    }
+    assert_eq!(phone::backfill(&db, "KR", 3).await.expect("backfill"), 12, "one pass fills every page");
+    let empty: Vec<i64> = sqlx::query_scalar("SELECT id FROM notification_outbox WHERE phone_e164 IS NULL ORDER BY id")
+        .fetch_all(&db)
+        .await
+        .expect("left");
+    assert!(empty.is_empty(), "rows left without a copy: {empty:?}");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn backfill_pages_use_the_primary_key_in_a_generic_plan(db: PgPool) {
+    let mut tx = db.begin().await.expect("tx");
+    // Generic plans are what a cached statement switches to; seq scans and sorts off show whether the index can
+    // serve both the range and the order at all.
+    for set in [
+        "SET LOCAL plan_cache_mode = force_generic_plan",
+        "SET LOCAL enable_seqscan = off",
+        "SET LOCAL enable_sort = off",
+    ] {
+        sqlx::query(set).execute(&mut *tx).await.expect("set");
+    }
+    for (table, column, key, last) in [
+        ("notification_outbox", "phone", "id", "5"),
+        ("users", "phone", "id", "00000000-0000-0000-0000-000000000005"),
+        ("referrals", "referred_phone", "referred_user_id", "00000000-0000-0000-0000-000000000005"),
+    ] {
+        let sql = phone::backfill_page_sql(table, column, true).expect("known column");
+        sqlx::query(&format!("PREPARE page AS {sql}")).execute(&mut *tx).await.expect("prepare");
+        let plan: Vec<String> = sqlx::query_scalar(&format!("EXPLAIN EXECUTE page(1000, '{last}')"))
+            .fetch_all(&mut *tx)
+            .await
+            .expect("explain");
+        let plan = plan.join("\n");
+        assert!(plan.contains(&format!("Index Scan using {table}_pkey")), "{table}: {plan}");
+        assert!(plan.contains(&format!("Index Cond: ({key} > ")), "{table}: {plan}");
+        assert!(!plan.contains("Sort"), "{table}: {plan}");
+        sqlx::query("DEALLOCATE page").execute(&mut *tx).await.expect("deallocate");
+    }
+}

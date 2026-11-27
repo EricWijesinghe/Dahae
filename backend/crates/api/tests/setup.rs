@@ -160,7 +160,7 @@ async fn demo_staff_alone_do_not_close_setup(pool: PgPool) {
     let mut config = common::test_config();
     config.upload_dir = std::env::temp_dir().join(format!("setup-demo-{}", rand::random::<u64>()));
     common::seed_catalog(&pool).await;
-    api::demo::load(&pool, &config, false).await.expect("demo load");
+    api::demo::load(&pool, &config, api::pack::ACTIVE, false).await.expect("demo load");
     let demo_staff: i64 = sqlx::query_scalar("SELECT count(*) FROM staff").fetch_one(&pool).await.unwrap();
     assert!(demo_staff > 0, "demo load adds staff rows");
 
