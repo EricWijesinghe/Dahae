@@ -76,7 +76,7 @@ publish() { # publish 브랜치 채널
   # Every row is checked with the installer's own rule before it is baked and signed (name, images, signer, https raw, domains).
   rows=$(grep -vE '^(#|[[:space:]]*$)' editions) || { echo "::error::deploy/editions has no rows" >&2; exit 1; }
   while IFS= read -r row; do
-    (DAHAE_SELFTEST=1 . "$src/deploy/install.sh" && edition_row_ok "$row") || { echo "::error::deploy/editions: bad row: $row" >&2; exit 1; }
+    DAHAE_SELFTEST=1 bash -c '. "$1/deploy/install.sh" && edition_row_ok "$2"' _ "$src" "$row" || { echo "::error::deploy/editions: bad row: $row" >&2; exit 1; }
   done <<< "$rows"
   [ "$(grep -c '^# @editions:' install.sh)" = 1 ] || { echo "::error::install.sh needs exactly one '# @editions:' marker line" >&2; exit 1; }
   sed -i '/^# @editions:/r editions' install.sh

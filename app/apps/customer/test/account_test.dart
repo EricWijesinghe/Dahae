@@ -24,7 +24,7 @@ void main() {
             id: 'c1',
             name: 'welcome',
             amount: 5000,
-            expiresAt: DateTime(2026, 11, 26, 12),
+            expiresAt: DateTime(DateTime.now().year + 1, 11, 26, 12),
           ),
           couponJson(
             id: 'c2',

@@ -342,6 +342,7 @@ set +e
 $SUDO env MALKKEUM_HEALTH_WAIT=60 /usr/local/bin/dahae edition edtest > "$LOG/edition-broken.txt" 2>&1
 rc=$?
 set -e
+[ "$rc" -eq 3 ] || { echo "rc=$rc"; tail -n 40 "$LOG/edition-broken.txt"; }
 expect "a stream that does not answer exits 3" test "$rc" -eq 3
 expect "...and the old triple is back" test "$(triple)" = "$BEFORE"
 expect "...with no journal left" $SUDO test ! -e /opt/malkkeum/host/edition.prev

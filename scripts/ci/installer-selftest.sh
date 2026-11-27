@@ -1150,7 +1150,7 @@ ed_env; rm -f "$SB/slow"; KEEP=1 ed uzipsa slow; rc=$?
 t  "edition: new images fail, the old ones (keep tags under the new repo) answer late: exits 1, not kept" eq "$rc:$(grep '^images' "$SB/tools.log" | tail -n1)" "1:images repo2/malkkeum-api:keep-0123456789ab"
 t  "...and the old triple, .env byte-equal"          env_same
 nt "...with no journal left"                         test -e "$SB/host/edition.prev"
-ed_env; sed -i 's|^uzipsa repo2 |uzipsa repo2$x |' "$SB/host/editions"; ed uzipsa; rc=$?
+ed_env; sed -i "s|^uzipsa repo2 |uzipsa repo2\$x |" "$SB/host/editions"; ed uzipsa; rc=$?
 t  "edition: a row with a bad image repo is refused before anything" eq "$rc:$(env_same && echo same)" 1:same
 ed_env; sed -i "s|$TRAW/relu myshop|http://raw.githubusercontent.com/T/relu myshop|" "$SB/host/editions"; ed uzipsa; rc=$?
 t  "edition: a row with a plain http delivery is refused before anything" eq "$rc:$(env_same && echo same)" 1:same
@@ -1223,6 +1223,7 @@ nt "...before any backup"                           test -e "$SB/tools.log"
 # a switch cut off (agent timeout, reboot), then the owner presses rollback: the old triple is back before the
 # previous release's tools run, so they never see a .env split between two editions
 crash_env old PREV_API_IMAGE=prev PREV_WEB_IMAGE=prevweb; rm -f "$SB/tools.log"
+# shellcheck disable=SC2016 # written for the fake installer to expand later
 printf '%s\n' 'echo "journal=$(test -e host/edition.prev && echo yes || echo no) $(grep -cE "^(EDITION=|IMAGE_REPO=repo2|SIGNER_REPO=Owner|DELIVERY_RAW=.*relu)" .env)"' > "$SB/host/install.prev.sh"
 rb 0; rc=$?
 t  "rollback after a cut-off switch: the old triple is back before the old tools run" eq "$rc:$(grep '^tools' "$SB/tools.log")" "0:tools journal=no 0 "
