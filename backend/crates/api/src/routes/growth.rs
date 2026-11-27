@@ -171,12 +171,14 @@ async fn claim_referral(State(s): State<AppState>, Customer(a): Customer, Json(c
         return Err(ApiError::Conflict("already_referred"));
     }
     // One row per friend and per phone (see migration 0010); a second claim changes nothing.
-    let inserted = sqlx::query("INSERT INTO referrals (referred_user_id, referrer_id, referred_phone) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING")
-        .bind(a.id)
-        .bind(referrer)
-        .bind(&friend_phone)
-        .execute(&s.db)
-        .await?;
+    let inserted =
+        sqlx::query("INSERT INTO referrals (referred_user_id, referrer_id, referred_phone, referred_phone_e164) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING")
+            .bind(a.id)
+            .bind(referrer)
+            .bind(&friend_phone)
+            .bind(crate::phone::e164(&friend_phone, &s.pack.id))
+            .execute(&s.db)
+            .await?;
     if inserted.rows_affected() == 0 {
         return Err(ApiError::Conflict("already_referred"));
     }

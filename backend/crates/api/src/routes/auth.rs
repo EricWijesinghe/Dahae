@@ -124,10 +124,11 @@ async fn request_otp(
     let review = super::setup::review_code_for_request(&s.db, &phone).await?;
     let code = auth::otp_code();
     let code_hash = review.clone().unwrap_or_else(|| auth::otp_hash(s.config.otp_key(), &phone, &code));
-    sqlx::query("INSERT INTO otp_codes (phone, code_hash, expires_at) VALUES ($1, $2, $3)")
+    sqlx::query("INSERT INTO otp_codes (phone, code_hash, expires_at, phone_e164) VALUES ($1, $2, $3, $4)")
         .bind(&phone)
         .bind(code_hash)
         .bind(Utc::now() + Duration::seconds(OTP_TTL_SECS))
+        .bind(crate::phone::e164(&phone, &s.pack.id))
         .execute(&s.db)
         .await?;
     if review.is_none() {
@@ -238,29 +239,37 @@ async fn verify_otp(
 /// Finds or creates the account for a verified phone. A new account and its first records are written in
 /// one transaction, so a signup refused for missing consents leaves no account behind.
 async fn open_account(s: &AppState, role: Role, phone: &str, req: &VerifyRequest) -> ApiResult<(Uuid, bool)> {
+    let e164 = crate::phone::e164(phone, &s.pack.id);
     let mut tx = s.db.begin().await?;
-    // Upsert keeps sign-up and login a single step; xmax = 0 means the row was inserted.
+    // Upsert keeps sign-up and login a single step; xmax = 0 means the row was inserted. A login also fills an
+    // E.164 copy an older release left empty.
     let (id, is_new): (Uuid, bool) = match role {
         Role::Customer => {
             sqlx::query_as(
-                "INSERT INTO users (phone, acquisition) VALUES ($1, $2) ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone RETURNING id, (xmax = 0)",
+                "INSERT INTO users (phone, acquisition, phone_e164) VALUES ($1, $2, $3)
+                 ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone, phone_e164 = EXCLUDED.phone_e164 RETURNING id, (xmax = 0)",
             )
             .bind(phone)
             .bind(crate::acquisition::clean(req.attribution.as_ref()).map(sqlx::types::Json))
+            .bind(&e164)
             .fetch_one(&mut *tx)
             .await?
         }
         _ => {
-            sqlx::query_as("INSERT INTO pros (phone) VALUES ($1) ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone RETURNING id, (xmax = 0)")
-                .bind(phone)
-                .fetch_one(&mut *tx)
-                .await?
+            sqlx::query_as(
+                "INSERT INTO pros (phone, phone_e164) VALUES ($1, $2)
+                 ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone, phone_e164 = EXCLUDED.phone_e164 RETURNING id, (xmax = 0)",
+            )
+            .bind(phone)
+            .bind(&e164)
+            .fetch_one(&mut *tx)
+            .await?
         }
     };
     if is_new {
         match role {
             Role::Customer => privacy::record_signup(&mut tx, id, &req.consents).await?,
-            _ => seed_pro(&mut tx, id, phone).await?,
+            _ => seed_pro(&mut tx, id, phone, e164.as_deref()).await?,
         }
     }
     tx.commit().await?;
@@ -268,14 +277,15 @@ async fn open_account(s: &AppState, role: Role, phone: &str, req: &VerifyRequest
 }
 
 /// First rows of a new partner account: default preferences and the owner as its only team member.
-async fn seed_pro(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: Uuid, phone: &str) -> ApiResult<()> {
+async fn seed_pro(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: Uuid, phone: &str, e164: Option<&str>) -> ApiResult<()> {
     sqlx::query("INSERT INTO partner_prefs (pro_id) VALUES ($1) ON CONFLICT DO NOTHING")
         .bind(id)
         .execute(&mut **tx)
         .await?;
-    sqlx::query("INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1, '', $2, 'owner', 'active')")
+    sqlx::query("INSERT INTO team_members (pro_id, name, phone, phone_e164, role, invite_status) VALUES ($1, '', $2, $3, 'owner', 'active')")
         .bind(id)
         .bind(phone)
+        .bind(e164)
         .execute(&mut **tx)
         .await?;
     Ok(())
@@ -742,7 +752,7 @@ async fn find_or_create_identity(
             .execute(&mut *tx)
             .await?;
         // Phone is unknown until verified; the owner row takes it when /partner/me/phone succeeds.
-        sqlx::query("INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1, '', '', 'owner', 'active')")
+        sqlx::query("INSERT INTO team_members (pro_id, name, phone, phone_e164, role, invite_status) VALUES ($1, '', '', NULL, 'owner', 'active')")
             .bind(id)
             .execute(&mut *tx)
             .await?;

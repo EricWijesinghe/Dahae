@@ -99,8 +99,8 @@ pub async fn enqueue(state: &AppState, owner: Option<Uuid>, phone: &str, kind: &
     };
     let (channel, title, body, data) = stored(msg, template_ready);
     let id: i64 = sqlx::query_scalar(
-        "INSERT INTO notification_outbox (owner_role, owner_id, kind, title, body, data, channel, phone, next_attempt_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now()) RETURNING id",
+        "INSERT INTO notification_outbox (owner_role, owner_id, kind, title, body, data, channel, phone, phone_e164, next_attempt_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now()) RETURNING id",
     )
     .bind(owner.map(|_| "customer"))
     .bind(owner)
@@ -110,6 +110,7 @@ pub async fn enqueue(state: &AppState, owner: Option<Uuid>, phone: &str, kind: &
     .bind(data)
     .bind(channel)
     .bind(phone)
+    .bind(crate::phone::e164(phone, &state.pack.id))
     .fetch_one(&state.db)
     .await?;
     Ok(id)

@@ -126,6 +126,11 @@ async fn invite_creates_an_inactive_staff_who_activates_by_redeeming(db: PgPool)
     .await;
     assert_eq!(st, StatusCode::OK, "{b}");
     assert_eq!(b["expires_in"], json!(24 * 60 * 60));
+    let copy: Option<String> = sqlx::query_scalar("SELECT phone_e164 FROM staff WHERE email = 'new.hire@test.local'")
+        .fetch_one(&db)
+        .await
+        .expect("copy");
+    assert_eq!(copy.as_deref(), Some("+821012345678"), "an invite stores the E.164 copy");
     let code = code_of(&b);
     assert_eq!(
         login(&app, "new.hire@test.local", "").await.0,
@@ -297,7 +302,7 @@ async fn reset_needs_a_phone_and_saves_the_one_given(db: PgPool) {
     let target = insert(&db, "consultant-nophone@test.local", "consultant", None).await;
     enrolled(&db, target).await;
     let admin = insert(&db, "admin-nophone@test.local", "admin", None).await;
-    let app = common::app(db);
+    let app = common::app(db.clone());
     let tok = admin_token(admin);
     let uri = format!("/v1/admin/staff/{target}/password-reset");
 
@@ -307,6 +312,12 @@ async fn reset_needs_a_phone_and_saves_the_one_given(db: PgPool) {
 
     let (st, b) = call(&app, "POST", &uri, Some(&tok), Some(json!({ "channel": "copy", "phone": PHONE }))).await;
     assert_eq!(st, StatusCode::OK, "{b}");
+    let copy: Option<String> = sqlx::query_scalar("SELECT phone_e164 FROM staff WHERE id = $1")
+        .bind(target)
+        .fetch_one(&db)
+        .await
+        .expect("copy");
+    assert_eq!(copy.as_deref(), Some("+821012345678"), "the saved phone carries its E.164 copy");
     let (st, b) = redeem(&app, PHONE, &code_of(&b), NEW).await;
     assert_eq!(st, StatusCode::OK, "{b}");
 }

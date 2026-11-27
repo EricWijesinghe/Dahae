@@ -399,6 +399,11 @@ async fn review_samples_seed_two_bookings_once_and_only_while_active(pool: PgPoo
     let body = json!({"phone": "010-9999-0001", "code": "123456"});
     let (st, b) = put_review(&app, &pool, &t, &secret, body.clone()).await;
     assert_eq!((st, b["samples"].as_i64()), (StatusCode::OK, Some(2)), "{b}");
+    let copy: Option<String> = sqlx::query_scalar("SELECT phone_e164 FROM users WHERE phone = '01099990001'")
+        .fetch_one(&pool)
+        .await
+        .expect("review account");
+    assert_eq!(copy.as_deref(), Some("+821099990001"), "the review account stores the E.164 copy");
     let (st, b) = put_review(&app, &pool, &t, &secret, body).await;
     assert_eq!((st, b["samples"].as_i64()), (StatusCode::OK, Some(0)), "saving again adds no samples: {b}");
     let n: i64 = sqlx::query_scalar("SELECT count(*) FROM bookings").fetch_one(&pool).await.expect("count");

@@ -132,6 +132,11 @@ fn customer_phone(i: usize) -> String {
     format!("0100000{:04}", i + 1)
 }
 
+/// The demo world is Korean whatever the pack, so its phones parse as KR.
+fn demo_e164(phone: &str) -> Option<String> {
+    crate::phone::e164(phone, "KR")
+}
+
 async fn customers(c: &mut Ctx<'_>) -> Result<Vec<Customer>, DemoError> {
     let mut out = Vec::with_capacity(CUSTOMER_COUNT);
     for i in 0..CUSTOMER_COUNT {
@@ -147,8 +152,8 @@ async fn customers(c: &mut Ctx<'_>) -> Result<Vec<Customer>, DemoError> {
         let email = c.chance(0.7).then(|| format!("user{:03}@demo.invalid", i + 1));
         let verified_at = c.chance(0.6).then(|| created + Duration::days(1));
         sqlx::query(
-            "INSERT INTO users (id, phone, name, email, locale, welcome_issued, created_at, identity_verified_at)
-             VALUES ($1,$2,$3,$4,$5,TRUE,$6,$7)",
+            "INSERT INTO users (id, phone, name, email, locale, welcome_issued, created_at, identity_verified_at, phone_e164)
+             VALUES ($1,$2,$3,$4,$5,TRUE,$6,$7,$8)",
         )
         .bind(id)
         .bind(customer_phone(i))
@@ -157,6 +162,7 @@ async fn customers(c: &mut Ctx<'_>) -> Result<Vec<Customer>, DemoError> {
         .bind(locale)
         .bind(created)
         .bind(verified_at)
+        .bind(demo_e164(&customer_phone(i)))
         .execute(&mut *c.tx)
         .await?;
         c.reg("users", id).await?;
@@ -349,8 +355,8 @@ async fn pros(c: &mut Ctx<'_>) -> Result<Vec<Pro>, DemoError> {
         let (name, team_name) = if *deleted { ("", "") } else { (*leader, *team) };
         let deleted_at = deleted.then(|| c.now - Duration::days(9));
         sqlx::query(
-            "INSERT INTO pros (id, phone, name, team_name, status, fee_bps, locale, created_at, deleted_at)
-             VALUES ($1,$2,$3,$4,$5,$6,'ko',$7,$8)",
+            "INSERT INTO pros (id, phone, name, team_name, status, fee_bps, locale, created_at, deleted_at, phone_e164)
+             VALUES ($1,$2,$3,$4,$5,$6,'ko',$7,$8,$9)",
         )
         .bind(id)
         .bind(&phone)
@@ -360,19 +366,23 @@ async fn pros(c: &mut Ctx<'_>) -> Result<Vec<Pro>, DemoError> {
         .bind(*fee_bps as i32)
         .bind(created)
         .bind(deleted_at)
+        .bind(phone.as_deref().and_then(demo_e164))
         .execute(&mut *c.tx)
         .await?;
         c.reg("pros", id).await?;
 
         let owner = c.id();
-        sqlx::query("INSERT INTO team_members (id, pro_id, name, phone, role, invite_status, created_at) VALUES ($1,$2,$3,$4,'owner','active',$5)")
-            .bind(owner)
-            .bind(id)
-            .bind(name)
-            .bind(phone.clone().unwrap_or_default())
-            .bind(created)
-            .execute(&mut *c.tx)
-            .await?;
+        sqlx::query(
+            "INSERT INTO team_members (id, pro_id, name, phone, role, invite_status, created_at, phone_e164) VALUES ($1,$2,$3,$4,'owner','active',$5,$6)",
+        )
+        .bind(owner)
+        .bind(id)
+        .bind(name)
+        .bind(phone.clone().unwrap_or_default())
+        .bind(created)
+        .bind(phone.as_deref().and_then(demo_e164))
+        .execute(&mut *c.tx)
+        .await?;
         c.reg("team_members", owner).await?;
         let mut assignees = vec![owner];
         if TEAMS.contains(&i) {
@@ -382,7 +392,8 @@ async fn pros(c: &mut Ctx<'_>) -> Result<Vec<Pro>, DemoError> {
                 let invite = if n == 0 { "active" } else { "pending_approval" };
                 let last_login = (n == 0).then(|| c.now - Duration::days(3));
                 sqlx::query(
-                    "INSERT INTO team_members (id, pro_id, name, phone, role, invite_status, created_at, last_login_at) VALUES ($1,$2,$3,$4,'member',$5,$6,$7)",
+                    "INSERT INTO team_members (id, pro_id, name, phone, role, invite_status, created_at, last_login_at, phone_e164)
+                     VALUES ($1,$2,$3,$4,'member',$5,$6,$7,$8)",
                 )
                 .bind(mid)
                 .bind(id)
@@ -391,6 +402,7 @@ async fn pros(c: &mut Ctx<'_>) -> Result<Vec<Pro>, DemoError> {
                 .bind(invite)
                 .bind(created + Duration::days(2))
                 .bind(last_login)
+                .bind(demo_e164(&mphone))
                 .execute(&mut *c.tx)
                 .await?;
                 c.reg("team_members", mid).await?;
@@ -516,13 +528,14 @@ async fn sign_in_records(c: &mut Ctx<'_>, customers: &[Customer], pros: &[Pro]) 
         let created = c.now - Duration::days(2 + i as i64);
         let code_hash = c.hex(32);
         let attempts = c.range(0, 3) as i32;
-        sqlx::query("INSERT INTO otp_codes (id, phone, code_hash, attempts, expires_at, created_at) VALUES ($1,$2,$3,$4,$5,$6)")
+        sqlx::query("INSERT INTO otp_codes (id, phone, code_hash, attempts, expires_at, created_at, phone_e164) VALUES ($1,$2,$3,$4,$5,$6,$7)")
             .bind(id)
             .bind(customer_phone(i))
             .bind(&code_hash)
             .bind(attempts)
             .bind(created + Duration::minutes(3))
             .bind(created)
+            .bind(demo_e164(&customer_phone(i)))
             .execute(&mut *c.tx)
             .await?;
         c.reg("otp_codes", id).await?;

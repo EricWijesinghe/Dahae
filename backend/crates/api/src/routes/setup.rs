@@ -247,14 +247,17 @@ pub async fn is_review_code(db: &PgPool, phone: &str, stored: &str) -> Result<bo
 
 /// Sample bookings for the review account, so reviewers see a history without paying. Two rows
 /// (one upcoming, one completed), written only while the account has none. Returns rows written.
-async fn seed_review_samples(db: &PgPool, phone: &str) -> ApiResult<usize> {
+async fn seed_review_samples(db: &PgPool, phone: &str, region: &str) -> ApiResult<usize> {
     let mut tx = db.begin().await?;
-    let user: Uuid =
-        sqlx::query_scalar("INSERT INTO users (phone, name) VALUES ($1, $2) ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone RETURNING id")
-            .bind(phone)
-            .bind(REVIEW_NAME)
-            .fetch_one(&mut *tx)
-            .await?;
+    let user: Uuid = sqlx::query_scalar(
+        "INSERT INTO users (phone, name, phone_e164) VALUES ($1, $2, $3)
+             ON CONFLICT (phone) DO UPDATE SET phone = EXCLUDED.phone, phone_e164 = EXCLUDED.phone_e164 RETURNING id",
+    )
+    .bind(phone)
+    .bind(REVIEW_NAME)
+    .bind(crate::phone::e164(phone, region))
+    .fetch_one(&mut *tx)
+    .await?;
     let has: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM bookings WHERE user_id = $1)")
         .bind(user)
         .fetch_one(&mut *tx)
@@ -351,7 +354,7 @@ async fn put_review(
     owner::burn_totp(&s, a.id, owner::client_ip(&s, Some(peer.ip()), &headers), step).await?;
     let days = r.days.unwrap_or(14).clamp(1, REVIEW_MAX_DAYS);
     let expires_at = Utc::now() + chrono::Duration::days(days);
-    let samples = seed_review_samples(&s.db, &phone).await?;
+    let samples = seed_review_samples(&s.db, &phone, &s.pack.id).await?;
     let value = json!({
         "phone": phone,
         "code_hash": crate::auth::otp_hash(s.config.otp_key(), &phone, code),

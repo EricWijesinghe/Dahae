@@ -75,6 +75,16 @@ async fn load_fills_every_touched_table_and_clear_restores_counts(pool: PgPool) 
     for (table, n) in counts(&pool).await {
         assert!(n > 0, "{table} is empty after demo load");
     }
+    let uncopied: i64 = sqlx::query_scalar(
+        "SELECT (SELECT count(*) FROM users WHERE phone_e164 IS NULL AND phone LIKE '010%')
+              + (SELECT count(*) FROM pros WHERE phone_e164 IS NULL AND phone IS NOT NULL)
+              + (SELECT count(*) FROM team_members WHERE phone_e164 IS NULL AND phone <> '')
+              + (SELECT count(*) FROM otp_codes WHERE phone_e164 IS NULL)",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("copies");
+    assert_eq!(uncopied, 0, "every demo phone carries its E.164 copy");
     assert!(
         config.upload_dir.join("de30de30de30de30de30de30de30de30.png").exists(),
         "placeholder photo written"

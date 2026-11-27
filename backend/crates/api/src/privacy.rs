@@ -343,7 +343,7 @@ async fn anonymise_user_row(tx: &mut Transaction<'_, Postgres>, user: Uuid) -> A
         .execute(&mut **tx)
         .await?;
     let anonymised = sqlx::query(
-        "UPDATE users SET deleted_at = now(), name = '', email = NULL, phone = 'deleted:' || id::text, ci_hash = NULL,
+        "UPDATE users SET deleted_at = now(), name = '', email = NULL, phone = 'deleted:' || id::text, phone_e164 = NULL, ci_hash = NULL,
          identity_verified_at = NULL, referral_code = NULL, acquisition = NULL WHERE id = $1 AND deleted_at IS NULL",
     )
     .bind(user)
@@ -360,7 +360,7 @@ async fn pseudonymise_referral_phone(tx: &mut Transaction<'_, Postgres>, s: &App
             .fetch_optional(&mut **tx)
             .await?;
     if let Some(phone) = referral_phone {
-        sqlx::query("UPDATE referrals SET referred_phone = $2 WHERE referred_user_id = $1")
+        sqlx::query("UPDATE referrals SET referred_phone = $2, referred_phone_e164 = NULL WHERE referred_user_id = $1")
             .bind(user)
             .bind(crate::crypto::phone_digest(&s.config.data_key, &phone))
             .execute(&mut **tx)

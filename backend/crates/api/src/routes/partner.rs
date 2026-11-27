@@ -86,7 +86,7 @@ pub(crate) async fn delete_pro(s: &AppState, id: Uuid) -> ApiResult<()> {
     }
     // Read before the identities are deleted below; the provider calls run after commit (no lock held over HTTP).
     let links = crate::providers::social::links(&mut tx, &s.config.data_key, "pro", id).await?;
-    sqlx::query("UPDATE pros SET deleted_at = now(), status = 'suspended', name = '', team_name = '', phone = NULL WHERE id = $1")
+    sqlx::query("UPDATE pros SET deleted_at = now(), status = 'suspended', name = '', team_name = '', phone = NULL, phone_e164 = NULL WHERE id = $1")
         .bind(id)
         .execute(&mut *tx)
         .await?;
@@ -125,7 +125,7 @@ pub(crate) async fn delete_pro(s: &AppState, id: Uuid) -> ApiResult<()> {
         .bind(id)
         .execute(&mut *tx)
         .await?;
-    sqlx::query("UPDATE team_members SET invite_status = 'removed', name = '', phone = '' WHERE pro_id = $1")
+    sqlx::query("UPDATE team_members SET invite_status = 'removed', name = '', phone = '', phone_e164 = NULL WHERE pro_id = $1")
         .bind(id)
         .execute(&mut *tx)
         .await?;
@@ -154,16 +154,19 @@ async fn profile(State(s): State<AppState>, Pro(a): Pro) -> ApiResult<Json<Value
 async fn bind_phone(State(s): State<AppState>, Pro(a): Pro, Json(b): Json<PhoneBind>) -> ApiResult<Json<Value>> {
     let phone = normalize_phone(&b.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
     consume_otp(&s, &phone, &b.code).await?;
+    let e164 = crate::phone::e164(&phone, &s.pack.id);
     let mut tx = s.db.begin().await?;
-    sqlx::query("UPDATE pros SET phone = $2 WHERE id = $1")
+    sqlx::query("UPDATE pros SET phone = $2, phone_e164 = $3 WHERE id = $1")
         .bind(a.id)
         .bind(&phone)
+        .bind(&e164)
         .execute(&mut *tx)
         .await
         .map_err(|e| conflict_on_unique(e, "phone_taken"))?;
-    sqlx::query("UPDATE team_members SET phone = $2 WHERE pro_id = $1 AND role = 'owner'")
+    sqlx::query("UPDATE team_members SET phone = $2, phone_e164 = $3 WHERE pro_id = $1 AND role = 'owner'")
         .bind(a.id)
         .bind(&phone)
+        .bind(&e164)
         .execute(&mut *tx)
         .await
         .map_err(|e| conflict_on_unique(e, "phone_taken"))?;
@@ -268,14 +271,15 @@ async fn invite(State(s): State<AppState>, Pro(a): Pro, Json(i): Json<Invite>) -
     }
     // A new or revived invite waits for the platform owner; an already approved member keeps their approval.
     let id: Uuid = sqlx::query_scalar(
-        "INSERT INTO team_members (pro_id, name, phone, role, invite_status) VALUES ($1,$2,$3,'member','pending_approval')
-         ON CONFLICT (pro_id, phone) DO UPDATE SET name = $2,
+        "INSERT INTO team_members (pro_id, name, phone, phone_e164, role, invite_status) VALUES ($1,$2,$3,$4,'member','pending_approval')
+         ON CONFLICT (pro_id, phone) DO UPDATE SET name = $2, phone_e164 = EXCLUDED.phone_e164,
            invite_status = CASE WHEN team_members.invite_status = 'active' THEN 'active' ELSE 'pending_approval' END
          RETURNING id",
     )
     .bind(a.id)
     .bind(i.name.trim())
     .bind(&phone)
+    .bind(crate::phone::e164(&phone, &s.pack.id))
     .fetch_one(&s.db)
     .await?;
     let locale = crate::i18n::locale_of(&s.db, crate::realtime::Recipient::Pro(a.id)).await;

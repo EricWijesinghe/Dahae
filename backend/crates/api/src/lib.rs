@@ -41,6 +41,7 @@ pub mod owner;
 pub mod pack;
 pub mod payout;
 pub mod payout_sync;
+pub mod phone;
 pub mod points;
 pub mod privacy;
 pub mod providers;
@@ -119,7 +120,9 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
         tracing::warn!(sealed, "saved-card billing keys moved into encrypted storage");
     }
     routes::setup::ensure_setup_code(&db, config.setup_code.as_deref(), config.setup_code_at).await?;
-    routes::setup::install::first_boot(&db, &pack::load(pack::ACTIVE)?).await?;
+    let active_pack = pack::load(pack::ACTIVE)?;
+    routes::setup::install::first_boot(&db, &active_pack).await?;
+    spawn_phone_backfill(db.clone(), active_pack.id);
     tokio::fs::create_dir_all(&config.upload_dir).await?;
     if config.dev_mode {
         tracing::warn!("DEV_MODE on: fake SMS, payments and push");
@@ -160,6 +163,18 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     lifecycle::join_jobs(jobs).await;
     tracing::info!("stopped");
     Ok(())
+}
+
+/// Fills the E.164 phone copies in the background: a first upgrade touches every stored phone, which must not
+/// hold up readiness. A failed run is logged and the next start resumes it.
+fn spawn_phone_backfill(db: PgPool, region: String) {
+    tokio::spawn(async move {
+        match phone::backfill(&db, &region, phone::BACKFILL_BATCH).await {
+            Ok(0) => {}
+            Ok(filled) => tracing::info!(filled, "phone numbers copied into E.164"),
+            Err(e) => tracing::warn!(error = %e, "E.164 phone backfill stopped; the next start resumes it"),
+        }
+    });
 }
 
 /// Other replicas pick up keys saved in the setup wizard within this period.

@@ -104,14 +104,17 @@ async fn invite(
     }
     let phone = auth::normalize_phone(&n.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
     let mut tx = s.db.begin().await?;
-    let id: Uuid = sqlx::query_scalar("INSERT INTO staff (email, name, role, phone, password_hash, active) VALUES ($1, $2, $3, $4, '', FALSE) RETURNING id")
-        .bind(n.email.trim().to_lowercase())
-        .bind(n.name.trim())
-        .bind(role)
-        .bind(&phone)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(staff_conflict)?;
+    let id: Uuid = sqlx::query_scalar(
+        "INSERT INTO staff (email, name, role, phone, phone_e164, password_hash, active) VALUES ($1, $2, $3, $4, $5, '', FALSE) RETURNING id",
+    )
+    .bind(n.email.trim().to_lowercase())
+    .bind(n.name.trim())
+    .bind(role)
+    .bind(&phone)
+    .bind(crate::phone::e164(&phone, &s.pack.id))
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(staff_conflict)?;
     let shown = issue_and_deliver(&s, &mut tx, id, &phone, "invite", n.channel).await?;
     tx.commit().await?;
     audit(
@@ -168,7 +171,7 @@ async fn issue_reset(
     if admin_sees_code && !pending && !enrolled {
         return Err(ApiError::BadRequest("sms_required"));
     }
-    let phone = resolve_phone(&mut tx, id, stored, req.phone.as_deref()).await?;
+    let phone = resolve_phone(&mut tx, id, stored, req.phone.as_deref(), &s.pack.id).await?;
     let purpose = if pending { "invite" } else { "reset" };
     let shown = issue_and_deliver(&s, &mut tx, id, &phone, purpose, req.channel).await?;
     tx.commit().await?;
@@ -186,14 +189,15 @@ async fn issue_reset(
 }
 
 /// The phone on file, or the one the admin supplies when the staff member has none yet (then it is saved).
-async fn resolve_phone(tx: &mut Transaction<'_, Postgres>, id: Uuid, stored: Option<String>, given: Option<&str>) -> ApiResult<String> {
+async fn resolve_phone(tx: &mut Transaction<'_, Postgres>, id: Uuid, stored: Option<String>, given: Option<&str>, region: &str) -> ApiResult<String> {
     if let Some(phone) = stored {
         return Ok(phone);
     }
     let phone = auth::normalize_phone(given.ok_or(ApiError::BadRequest("no_phone"))?).ok_or(ApiError::BadRequest("invalid_phone"))?;
-    sqlx::query("UPDATE staff SET phone = $2 WHERE id = $1")
+    sqlx::query("UPDATE staff SET phone = $2, phone_e164 = $3 WHERE id = $1")
         .bind(id)
         .bind(&phone)
+        .bind(crate::phone::e164(&phone, region))
         .execute(&mut **tx)
         .await
         .map_err(staff_conflict)?;

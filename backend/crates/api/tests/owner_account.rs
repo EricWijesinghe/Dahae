@@ -446,6 +446,11 @@ async fn alert_phone_is_validated_masked_and_told_to_the_old_number(db: PgPool) 
     let (st, account) = call(&app, "GET", "/v1/admin/me/account", Some(owner.token.as_str()), None).await;
     assert_eq!(st, StatusCode::OK);
     assert_eq!(account["alert_phone_masked"], json!("010-****-0000"));
+    let alert_copy: Option<String> = sqlx::query_scalar("SELECT alert_phone_e164 FROM staff WHERE email = 'phone@test.local'")
+        .fetch_one(&db)
+        .await
+        .expect("alert copy");
+    assert_eq!(alert_copy.as_deref(), Some("+821099990000"), "the E.164 copy follows the alert number");
     assert_eq!(account["is_owner"], json!(true));
     assert_eq!(account["two_factor_enrolled"], json!(true));
 }

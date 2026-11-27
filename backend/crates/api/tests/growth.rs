@@ -226,6 +226,11 @@ async fn referral_pays_both_sides_once_after_the_friend_pays_and_completes(pool:
     )
     .await;
     assert_eq!(st, StatusCode::OK, "{b}");
+    let copy: Option<String> = sqlx::query_scalar("SELECT referred_phone_e164 FROM referrals")
+        .fetch_one(&pool)
+        .await
+        .expect("referral copy");
+    assert_eq!(copy.as_deref(), Some("+821052000002"), "the referral stores the friend's E.164 copy");
     let (st, b) = call(
         &app,
         "POST",

@@ -79,9 +79,10 @@ async fn profile(State(s): State<AppState>, Customer(a): Customer) -> ApiResult<
 async fn bind_phone(State(s): State<AppState>, Customer(a): Customer, Json(b): Json<PhoneBind>) -> ApiResult<Json<Profile>> {
     let phone = normalize_phone(&b.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
     consume_otp(&s, &phone, &b.code).await?;
-    sqlx::query("UPDATE users SET phone = $2 WHERE id = $1 AND deleted_at IS NULL")
+    sqlx::query("UPDATE users SET phone = $2, phone_e164 = $3 WHERE id = $1 AND deleted_at IS NULL")
         .bind(a.id)
         .bind(&phone)
+        .bind(crate::phone::e164(&phone, &s.pack.id))
         .execute(&s.db)
         .await
         .map_err(|e| conflict_on_unique(e, "phone_taken"))?;

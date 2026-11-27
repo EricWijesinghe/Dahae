@@ -223,9 +223,10 @@ async fn set_alert_phone(
         Some(old) => notify_old_number(&s, old, &phone).await,
         None => false,
     };
-    sqlx::query("UPDATE staff SET alert_phone = $2 WHERE id = $1")
+    sqlx::query("UPDATE staff SET alert_phone = $2, alert_phone_e164 = $3 WHERE id = $1")
         .bind(a.id)
         .bind(&phone)
+        .bind(crate::phone::e164(&phone, &s.pack.id))
         .execute(&s.db)
         .await?;
     let detail = json!({ "had_previous": old.is_some(), "old_notified": old_notified });
