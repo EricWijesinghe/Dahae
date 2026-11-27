@@ -145,7 +145,7 @@ EDITION_RAW_RE='^https://raw\.githubusercontent\.com/[A-Za-z0-9-]+/[A-Za-z0-9._-
 edition_row_ok() { # edition_row_ok 줄 [file]
   local cols d re="$EDITION_RAW_RE"; read -ra cols <<< "$1"
   [ "${2:-}" != file ] || re="$re|^file:///[A-Za-z0-9._/-]+\$"
-  [ "${#cols[@]}" -ge 5 ] && printf '%s' "${cols[0]}" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' && printf '%s' "${cols[1]}" | grep -Eq '^[a-z0-9./-]+$|^[a-z0-9.-]+:[0-9]{1,5}/[a-z0-9./-]+$' \
+  [ "${#cols[@]}" -ge 5 ] && printf '%s' "${cols[0]}" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' && printf '%s' "${cols[1]}" | grep -Eq '^[a-z0-9./-]+$|^[a-z0-9.-]+:[0-9]{1,5}(/[a-z0-9./-]+)?$' \
     && printf '%s' "${cols[2]}" | grep -Eq '^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$' && printf '%s' "${cols[3]}" | grep -Eq "$re" || return 1
   for d in "${cols[@]:4}"; do [ "$d" = '*' ] || { [ "${#d}" -le 253 ] && printf '%s' "$d" | grep -Eq "$DOMAIN_RE"; } || return 1; done
 }
@@ -1066,7 +1066,7 @@ edition_name() { local e; e=$(env_get EDITION); printf '%s' "${e:-dahae}"; } # E
 edition_row_ok() { # edition_row_ok 줄 [file]
   local cols d re='^https://raw\.githubusercontent\.com/[A-Za-z0-9-]+/[A-Za-z0-9._-]+$'; read -ra cols <<< "$1"
   [ "${2:-}" != file ] || re="$re|^file:///[A-Za-z0-9._/-]+\$"
-  [ "${#cols[@]}" -ge 5 ] && printf '%s' "${cols[0]}" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' && printf '%s' "${cols[1]}" | grep -Eq '^[a-z0-9./-]+$|^[a-z0-9.-]+:[0-9]{1,5}/[a-z0-9./-]+$' \
+  [ "${#cols[@]}" -ge 5 ] && printf '%s' "${cols[0]}" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' && printf '%s' "${cols[1]}" | grep -Eq '^[a-z0-9./-]+$|^[a-z0-9.-]+:[0-9]{1,5}(/[a-z0-9./-]+)?$' \
     && valid_signer "${cols[2]}" && printf '%s' "${cols[3]}" | grep -Eq "$re" || return 1
   for d in "${cols[@]:4}"; do [ "$d" = '*' ] || { [ "${#d}" -le 253 ] && printf '%s' "$d" | grep -Eq "$DOMAIN_RE"; } || return 1; done
 }

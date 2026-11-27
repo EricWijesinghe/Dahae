@@ -85,7 +85,8 @@ nt "row check: file delivery with signatures on"    edition_row_ok "xx a O/R fil
 t  "row check: file delivery for a signature-off test install" edition_row_ok "xx a O/R file:///tmp/d *" file
 t  "row check: a registry with a port (test registry)"  edition_row_ok "xx localhost:5000/edtest O/R $R *"
 nt "row check: a port that is not a number"          edition_row_ok "xx localhost:abc/edtest O/R $R *"
-nt "row check: a port with no repository after it"   edition_row_ok "xx localhost:5000 O/R $R *"
+t  "row check: a bare registry with a port"          edition_row_ok "xx localhost:5000 O/R $R *"
+nt "row check: two ports"                            edition_row_ok "xx localhost:5000:1 O/R $R *"
 
 # ---- installer: DNS check. Any AAAA record is refused, even this server's (IPv6 visitors all show up as the
 # Docker gateway, so one of them could lock every IPv6 user out of sign-in) ----
