@@ -524,7 +524,7 @@ async fn a_retry_while_the_first_attempt_runs_is_not_acknowledged(pool: PgPool) 
     let (booking, payment) = paid_booking(&pool, CANCEL_PAYMENT, 0).await;
     let failing = prod_app(
         pool.clone(),
-        &slow_stand_in(30_000, Duration::from_secs(5), StatusCode::INTERNAL_SERVER_ERROR).await,
+        &slow_stand_in(30_000, Duration::from_secs(2), StatusCode::INTERNAL_SERVER_ERROR).await,
     );
     let body = cancel_event("Transaction.PartialCancelled", CANCEL_PAYMENT, "tx_overlap");
     let headers = signed_headers(KEY, "msg_overlap_1", &body);
