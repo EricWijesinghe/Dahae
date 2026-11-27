@@ -78,7 +78,7 @@ mod tests {
         let Ok(url) = std::env::var("DATABASE_URL") else { return };
         let settings = DbSettings {
             max_connections: 2,
-            statement_timeout_ms: 1234,
+            statement_timeout_ms: 12345,
             idle_tx_timeout_ms: 5678,
             slow_query_ms: 1,
         };
@@ -88,6 +88,6 @@ mod tests {
                 .fetch_one(&pool)
                 .await
                 .expect("settings readable");
-        assert_eq!((stmt.as_str(), idle.as_str()), ("1234ms", "5678ms"));
+        assert_eq!((stmt.as_str(), idle.as_str()), ("12345ms", "5678ms"));
     }
 }
