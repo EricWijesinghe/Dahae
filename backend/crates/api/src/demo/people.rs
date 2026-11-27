@@ -446,7 +446,8 @@ async fn prefs(c: &mut Ctx<'_>, pro: Uuid, services: &[&str], districts: &[&str]
     let weekdays: Vec<i16> = if c.chance(0.5) { vec![0, 1, 2, 3, 4] } else { vec![0, 1, 2, 3, 4, 5, 6] };
     let day_parts = vec!["morning".to_string(), "afternoon".to_string()];
     let days_off: Vec<chrono::NaiveDate> = if c.chance(0.5) {
-        vec![(c.now + Duration::days(c.range(2, 13))).with_timezone(&c.kst).date_naive()]
+        let off = c.now + Duration::days(c.range(2, 13));
+        vec![domain::zone::today(&c.tz, off)]
     } else {
         vec![]
     };

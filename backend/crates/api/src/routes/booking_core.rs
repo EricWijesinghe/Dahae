@@ -21,7 +21,7 @@ use crate::{
     safety::take_entry,
     schedule::{lock_schedule, schedule_clash},
     state::AppState,
-    util::{KST_TODAY, best_effort, lock_and_count_slot, own_uploads, sanitize_notes, today_kst},
+    util::{LOCAL_TODAY, best_effort, local_today, local_today_at, lock_and_count_slot, own_uploads, sanitize_notes},
 };
 use axum::{Json, extract::State};
 use chrono::{DateTime, NaiveDate, Utc};
@@ -100,7 +100,7 @@ pub async fn prepare(db: &PgPool, user: Uuid, b: &BookingBody) -> ApiResult<Prep
     .await?
     .ok_or(ApiError::BadRequest("address_required"))?;
     service.check_address_size(addr.size_pyeong as u16)?;
-    check_date(today_kst(), b.visit_date)?;
+    check_date(local_today(), b.visit_date)?;
     check_slot(service.is_quote(), b.start_hour)?;
     let snapshot = json!({ "kind": addr.kind, "label": addr.label, "road_address": addr.road_address, "detail": addr.detail, "district_code": addr.district_code, "size_pyeong": addr.size_pyeong });
     let notes = if b.visit_notes.is_null() {
@@ -142,15 +142,15 @@ pub async fn load_coupon(conn: &mut PgConnection, user: Uuid, id: Uuid, lock: bo
     })
 }
 
-/// Peak surcharge rate for a fixed or subscription visit at `date` and `start_hour` (KST).
+/// Peak surcharge rate for a fixed or subscription visit at `date` and `start_hour` (in the install's time zone).
 /// Zero when the owner has turned peak off for these visits; quotes apply peak on their own path.
 pub async fn fixed_peak_bps(db: impl sqlx::PgExecutor<'_>, date: NaiveDate, start_hour: u8) -> ApiResult<i64> {
     let config = load_peak_config(db).await?;
     if !config.apply_to_fixed {
         return Ok(0);
     }
-    let start = domain::peak::kst_to_utc(date, u32::from(start_hour)).ok_or(ApiError::BadRequest("invalid_slot"))?;
-    Ok(domain::peak::peak_surcharge(&config, start).bps)
+    let start = domain::peak::slot_to_utc(&crate::util::install_tz(), date, u32::from(start_hour)).ok_or(ApiError::BadRequest("invalid_slot"))?;
+    Ok(domain::peak::peak_surcharge_in(&config, start, &crate::util::install_tz()).bps)
 }
 
 /// Server-side price for the chosen unit, optional coupon, and the first-booking welcome offer.
@@ -231,7 +231,7 @@ pub async fn lock_slot(conn: &mut PgConnection, date: NaiveDate, hour: u8, excep
 
 pub async fn next_number(conn: &mut PgConnection) -> ApiResult<String> {
     let number: String = sqlx::query_scalar(&format!(
-        "SELECT 'BK' || to_char({KST_TODAY}, 'YYMM') || '-' || lpad(nextval('booking_number_seq')::text, 5, '0')"
+        "SELECT 'BK' || to_char({LOCAL_TODAY}, 'YYMM') || '-' || lpad(nextval('booking_number_seq')::text, 5, '0')"
     ))
     .fetch_one(&mut *conn)
     .await?;
@@ -488,10 +488,10 @@ pub async fn take_balance(conn: &mut PgConnection, b: &BookingRow, balance: i64)
     }
     growth::reward_on_paid_completion(&mut *conn, b.id).await?;
     crate::points::on_completed(&mut *conn, b.id).await?;
-    let completed = b.completed_at.map(|c| (c + chrono::Duration::hours(9)).date_naive()).unwrap_or_else(today_kst);
+    let completed = b.completed_at.map(local_today_at).unwrap_or_else(local_today);
     sqlx::query("UPDATE settlements SET state = 'pending', payout_date = $2 WHERE booking_id = $1 AND state = 'waiting_balance'")
         .bind(b.id)
-        .bind(payout_date(today_kst().max(completed)))
+        .bind(payout_date(local_today().max(completed)))
         .execute(&mut *conn)
         .await?;
     Ok(())
@@ -609,7 +609,7 @@ pub async fn complete_job(s: &AppState, b: &BookingRow, pro: Uuid, member: Optio
     if let Some((net, payout_date)) = partner_jobs::settled_once(&s.db, b.id, pro).await? {
         return Ok(Completed { net, payout_date });
     }
-    let today = today_kst();
+    let today = local_today();
     // A job can't be completed (and paid) before it has happened.
     if b.visit_date > today {
         return Err(ApiError::Conflict("job_not_started"));

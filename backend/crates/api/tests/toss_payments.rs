@@ -131,7 +131,7 @@ async fn world(pool: &PgPool, phone: &str, active: bool) -> World {
 
 /// A booking checkout for a studio clean five days out. Returns (checkout id, amount to charge, intent).
 async fn checkout(w: &World, method: &str) -> (Uuid, i64, Value) {
-    let visit = api::util::today_kst() + chrono::Duration::days(5);
+    let visit = api::util::local_today() + chrono::Duration::days(5);
     let body = json!({ "kind": "booking", "method": method,
         "booking": { "service_code": "studio", "address_id": w.c.address, "visit_date": visit, "start_hour": 9, "visit_notes": {} } });
     let (st, intent) = call(&w.env.app, "POST", "/v1/checkouts", Some(w.c.token.as_str()), Some(body)).await;

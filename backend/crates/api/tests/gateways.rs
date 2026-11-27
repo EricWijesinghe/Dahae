@@ -41,7 +41,7 @@ async fn env(pool: &PgPool, phone: &str, po: PortOne, toss_card: Option<serde_js
 }
 
 async fn checkout(env: &TossEnv, c: &Customer, method: &str) -> (StatusCode, Value) {
-    let visit = api::util::today_kst() + chrono::Duration::days(5);
+    let visit = api::util::local_today() + chrono::Duration::days(5);
     let body = json!({ "kind": "booking", "method": method,
         "booking": { "service_code": "studio", "address_id": c.address, "visit_date": visit, "start_hour": 9, "visit_notes": {} } });
     call(&env.app, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(body)).await

@@ -19,9 +19,9 @@ pub fn take_entry(notes: &mut Value) -> Option<String> {
     code.as_str().map(str::trim).filter(|s| !s.is_empty()).map(str::to_string)
 }
 
-/// The code is revealed only on the visit day (KST), to the assigned partner or to staff.
-pub fn reveal_allowed(visit: NaiveDate, today_kst: NaiveDate) -> bool {
-    visit == today_kst
+/// The code is revealed only on the visit day (in the install's time zone), to the assigned partner or to staff.
+pub fn reveal_allowed(visit: NaiveDate, local_today: NaiveDate) -> bool {
+    visit == local_today
 }
 
 /// Legal case moves: open -> investigating -> resolved | rejected; open may also be rejected directly.

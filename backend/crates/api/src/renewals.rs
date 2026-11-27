@@ -27,7 +27,6 @@ const KEYS_TEST_NAME: &str = "비밀 키 사본 시험 업로드 (연 1회)";
 const KEYS_TEST_DAYS: i64 = 365;
 const NAME_MAX_CHARS: usize = 80;
 const YEAR_RANGE: std::ops::RangeInclusive<i32> = 2000..=2100;
-const KST_OFFSET_SECS: i64 = 9 * 3600;
 const PASS_EVERY: StdDuration = StdDuration::from_secs(3600);
 
 /// One item on the calendar. `id` is a renewal row id, or `KEYS_TEST_ID` for the derived keys test.
@@ -66,9 +65,9 @@ pub fn parse_input(v: &Value) -> Result<Input, &'static str> {
     })
 }
 
-/// Calendar date in KST, the date the owner reads.
+/// Calendar date in the install's zone, the date the owner reads ([`util::local_today_at`] under its older name).
 pub fn kst_today(now: DateTime<Utc>) -> NaiveDate {
-    (now + Duration::seconds(KST_OFFSET_SECS)).date_naive()
+    crate::util::local_today_at(now)
 }
 
 /// Whole days from `today` to `due`. Negative once the date has passed.
@@ -81,9 +80,9 @@ pub fn threshold_due(left: i64, sent: &[i64]) -> Option<i64> {
     THRESHOLDS.iter().copied().find(|t| left <= *t && !sent.contains(t))
 }
 
-/// The keys test is due one year after the last successful upload test, counted in KST days.
+/// The keys test is due one year after the last successful upload test, counted in calendar days of the install's zone.
 pub fn keys_test_due(verified_at: DateTime<Utc>) -> NaiveDate {
-    kst_today(verified_at) + Duration::days(KEYS_TEST_DAYS)
+    crate::util::local_today_at(verified_at) + Duration::days(KEYS_TEST_DAYS)
 }
 
 /// Every item that is on the calendar now: the renewal rows and, once a test has passed, the keys test.
@@ -159,7 +158,7 @@ pub async fn run_once(s: &AppState) -> ApiResult<usize> {
     let Some(phone) = owner_phone(&s.db).await? else {
         return Ok(0);
     };
-    let today = kst_today(Utc::now());
+    let today = crate::util::local_today();
     let mut queued = 0;
     for item in due_items(&s.db).await? {
         match remind(s, &phone, &item, today).await {
@@ -239,8 +238,8 @@ mod tests {
     }
 
     #[test]
-    fn keys_test_is_one_kst_year_after_the_upload() {
-        // 2026-11-14 16:00 UTC is 2026-11-15 01:00 KST, so the year counts from the 15th.
+    fn keys_test_is_one_local_year_after_the_upload() {
+        // 2026-11-14 16:00 UTC is 2026-11-15 01:00 in the default zone, so the year counts from the 15th.
         let at = Utc.with_ymd_and_hms(2026, 11, 14, 16, 0, 0).single().expect("instant");
         assert_eq!(keys_test_due(at), day(2027, 11, 15));
         assert_eq!(days_left(keys_test_due(at), kst_today(at)), 365);

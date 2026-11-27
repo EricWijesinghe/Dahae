@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
 //! Regular cleaning subscriptions: visit schedule, per-visit price, charge retry policy, MRR and churn.
-//! Pure and deterministic. Money is integer won; dates are KST calendar dates chosen by the caller.
+//! Pure and deterministic. Money is integer won; dates are calendar dates in the install's time zone, chosen by the caller.
 
 use crate::DomainError;
 use chrono::{Datelike, Duration, NaiveDate, Weekday};

@@ -507,24 +507,24 @@ pub async fn median_hours_to_assign(db: &PgPool) -> Result<Option<f64>, sqlx::Er
     .await
 }
 
-/// Confirmed bookings with no pro and no team that were created at least `hours` ago and visit today (Seoul) or later.
+/// Confirmed bookings with no pro and no team that were created at least `hours` ago and visit today (install time zone) or later.
 /// Past visits are left out: an abandoned booking whose day has gone must not keep the owner alert firing.
 pub async fn unassigned_older_than(db: &PgPool, hours: i64) -> Result<i64, sqlx::Error> {
     sqlx::query_scalar(
         "SELECT count(*) FROM bookings
          WHERE status = 1 AND pro_id IS NULL AND team_name IS NULL AND created_at < now() - make_interval(hours => $1::int)
-           AND visit_date >= (now() AT TIME ZONE 'Asia/Seoul')::date",
+           AND visit_date >= (now() AT TIME ZONE dahae_tz())::date",
     )
     .bind(hours as i32)
     .fetch_one(db)
     .await
 }
 
-/// Today's bookings (Seoul date) as (cancelled on the visit day, all bookings for today).
+/// Today's bookings (date in the install's time zone) as (cancelled on the visit day, all bookings for today).
 pub async fn same_day_cancels(db: &PgPool) -> Result<(i64, i64), sqlx::Error> {
     sqlx::query_as(
-        "SELECT count(*) FILTER (WHERE status = -1 AND (cancelled_at AT TIME ZONE 'Asia/Seoul')::date = visit_date), count(*)
-         FROM bookings WHERE visit_date = (now() AT TIME ZONE 'Asia/Seoul')::date",
+        "SELECT count(*) FILTER (WHERE status = -1 AND (cancelled_at AT TIME ZONE dahae_tz())::date = visit_date), count(*)
+         FROM bookings WHERE visit_date = (now() AT TIME ZONE dahae_tz())::date",
     )
     .fetch_one(db)
     .await

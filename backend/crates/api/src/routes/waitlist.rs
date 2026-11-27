@@ -172,7 +172,7 @@ async fn accept(State(s): State<AppState>, Customer(a): Customer, Path(id): Path
     }
 }
 
-/// Offers a freed seat in `hour` (KST, one-hour window) on `date` to the first waiting entry, if the
+/// Offers a freed seat in `hour` (local time, one-hour window) on `date` to the first waiting entry, if the
 /// slot has room once live holds are counted. One offer per call.
 pub async fn offer_for_slot(s: &AppState, date: NaiveDate, hour: u8) -> ApiResult<()> {
     let mut tx = s.db.begin().await?;

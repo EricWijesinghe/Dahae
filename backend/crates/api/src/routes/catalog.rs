@@ -83,14 +83,14 @@ pub async fn load_peak_config(db: impl sqlx::PgExecutor<'_>) -> ApiResult<PeakCo
     Ok(config)
 }
 
-/// Peak rate (bps) of a KST visit slot under the owner's config, the same rate a booking is priced with.
+/// Peak rate (bps) of a local visit slot under the owner's config, the same rate a booking is priced with.
 /// shortcut: uses the current peak config, so a booking made before a config change re-prices its breakdown; store peak_bps on bookings to make it exact.
 pub async fn slot_peak_bps(db: &sqlx::PgPool, visit_date: NaiveDate, start_hour: i16) -> ApiResult<i64> {
     let start = u32::try_from(start_hour)
         .ok()
-        .and_then(|h| domain::peak::kst_to_utc(visit_date, h))
+        .and_then(|h| domain::peak::slot_to_utc(&crate::util::install_tz(), visit_date, h))
         .ok_or(crate::error::ApiError::BadRequest("invalid_slot"))?;
-    Ok(domain::peak::peak_surcharge(&load_peak_config(db).await?, start).bps)
+    Ok(domain::peak::peak_surcharge_in(&load_peak_config(db).await?, start, &crate::util::install_tz()).bps)
 }
 
 async fn list_services(State(s): State<AppState>) -> ApiResult<Json<Vec<ServiceDto>>> {

@@ -6,7 +6,7 @@
 //! The ranking lives in `domain::feed`; this file only gathers facts.
 
 use crate::privacy;
-use crate::{auth::Customer, error::ApiResult, state::AppState, util::today_kst};
+use crate::{auth::Customer, error::ApiResult, state::AppState, util::local_today};
 use axum::{
     Json, Router,
     extract::{Query, State},
@@ -44,9 +44,9 @@ fn code_or_none(raw: Option<String>) -> Option<String> {
         .filter(|s| !s.is_empty() && s.len() <= 32 && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_'))
 }
 
-/// The last complete KST week as [from, to) dates.
-fn previous_week_kst() -> (NaiveDate, NaiveDate) {
-    let today = today_kst();
+/// The last complete local week as [from, to) dates.
+fn previous_local_week() -> (NaiveDate, NaiveDate) {
+    let today = local_today();
     let monday = today - Duration::days(i64::from(today.weekday().num_days_from_monday()));
     (monday - Duration::days(7), monday)
 }
@@ -56,17 +56,17 @@ fn district_cache() -> &'static Mutex<HashMap<(String, NaiveDate), i64>> {
     CACHE.get_or_init(Mutex::default)
 }
 
-/// Distinct customers who booked in a district during the last complete KST week. The domain buckets the number.
+/// Distinct customers who booked in a district during the last complete local week. The domain buckets the number.
 /// Cached per district and week: the proof moves slowly and a scan per page view is not worth it.
 async fn district_bookings(db: &PgPool, code: &str) -> ApiResult<i64> {
-    let (from, to) = previous_week_kst();
+    let (from, to) = previous_local_week();
     let key = (code.to_owned(), from);
     if let Some(n) = district_cache().lock().unwrap_or_else(|p| p.into_inner()).get(&key).copied() {
         return Ok(n);
     }
     let homes: i64 = sqlx::query_scalar(
         "SELECT count(DISTINCT user_id) FROM bookings WHERE district_code = $1 AND status >= 0
-           AND created_at >= ($2::date::timestamp AT TIME ZONE 'Asia/Seoul') AND created_at < ($3::date::timestamp AT TIME ZONE 'Asia/Seoul')",
+           AND created_at >= ($2::date::timestamp AT TIME ZONE dahae_tz()) AND created_at < ($3::date::timestamp AT TIME ZONE dahae_tz())",
     )
     .bind(code)
     .bind(from)
@@ -84,7 +84,7 @@ async fn district_bookings(db: &PgPool, code: &str) -> ApiResult<i64> {
 async fn guest_feed(State(s): State<AppState>, Query(q): Query<FeedQuery>) -> ApiResult<Json<Value>> {
     let district = code_or_none(q.district.clone());
     let mut facts = FeedFacts {
-        today: Some(today_kst()),
+        today: Some(local_today()),
         draft_service: code_or_none(q.draft),
         ..Default::default()
     };
@@ -96,9 +96,9 @@ async fn guest_feed(State(s): State<AppState>, Query(q): Query<FeedQuery>) -> Ap
 
 async fn my_feed(State(s): State<AppState>, Customer(a): Customer, Query(q): Query<FeedQuery>) -> ApiResult<Json<Value>> {
     let db = &s.db;
-    let today = today_kst();
+    let today = local_today();
     let last: Vec<(String, NaiveDate, Option<Uuid>, Option<i16>)> = sqlx::query_as(
-        "SELECT DISTINCT ON (b.service_code) b.service_code, (b.completed_at AT TIME ZONE 'Asia/Seoul')::date, b.pro_id, r.rating
+        "SELECT DISTINCT ON (b.service_code) b.service_code, (b.completed_at AT TIME ZONE dahae_tz())::date, b.pro_id, r.rating
          FROM bookings b LEFT JOIN reviews r ON r.booking_id = b.id
          WHERE b.user_id = $1 AND b.status = 3 AND b.completed_at IS NOT NULL
          ORDER BY b.service_code, b.completed_at DESC",

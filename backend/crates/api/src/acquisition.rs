@@ -53,7 +53,7 @@ pub struct Row {
     pub bookings: i64,
 }
 
-/// Signups created in `[from, to]` (Seoul days, both inclusive) grouped by first-touch source. Bookings are
+/// Signups created in `[from, to]` (days in the install's time zone, both inclusive) grouped by first-touch source. Bookings are
 /// counted only when not cancelled. Direct traffic (no UTM, no ref) is grouped as `direct`.
 async fn table(State(s): State<AppState>, Admin(_): Admin, Query(q): Query<Range>) -> ApiResult<Json<Value>> {
     let today = Utc::now().date_naive();
@@ -68,8 +68,8 @@ async fn table(State(s): State<AppState>, Admin(_): Admin, Query(q): Query<Range
                   COALESCE(u.acquisition->>'utm_medium', '') AS medium,
                   COALESCE(u.acquisition->>'utm_campaign', '') AS campaign
            FROM users u
-           WHERE u.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul')
-             AND u.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+           WHERE u.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz())
+             AND u.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
          )
          SELECT s.source, s.medium, s.campaign,
                 count(DISTINCT s.id) AS signups,

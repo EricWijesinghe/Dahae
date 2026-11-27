@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use sqlx::PgPool;
 
 async fn book_counts(app: &axum::Router, c: &common::Customer, service: &str, counts: Value) -> (StatusCode, Value) {
-    let visit = api::util::today_kst() + chrono::Duration::days(10);
+    let visit = api::util::local_today() + chrono::Duration::days(10);
     call(
         app,
         "POST",
@@ -82,7 +82,7 @@ async fn legacy_mattress_unit_index_books_one_mattress(pool: PgPool) {
     seed_catalog(&pool).await;
     let app = common::app(pool.clone());
     let c = customer(&app, &pool, "010-5100-0005").await;
-    let visit = api::util::today_kst() + chrono::Duration::days(10);
+    let visit = api::util::local_today() + chrono::Duration::days(10);
     let (st, b) = call(
         &app,
         "POST",

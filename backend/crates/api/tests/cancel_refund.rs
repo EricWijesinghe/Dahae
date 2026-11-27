@@ -425,7 +425,7 @@ async fn deactivated_or_demoted_staff_cannot_move_money(pool: PgPool) {
         .execute(&pool)
         .await
         .expect("demote");
-    let today = api::util::today_kst();
+    let today = api::util::local_today();
     let (st, _) = call(
         &w.prod,
         "POST",
@@ -483,7 +483,7 @@ async fn waitlist_accept_charges_the_saved_card_through_portone(pool: PgPool) {
         .expect("capacity");
     let (first, _) = book(&w.prod, &w.c, 20, None).await;
     let second = customer(&common::app(pool.clone()), &pool, "010-7100-0107").await;
-    let visit = api::util::today_kst() + chrono::Duration::days(20);
+    let visit = api::util::local_today() + chrono::Duration::days(20);
     let join = json!({ "service_code": "studio", "address_id": second.address, "visit_date": visit, "start_hour": 9, "visit_notes": {}, "payment_method_id": second.card });
     let (st, joined) = call(&w.prod, "POST", "/v1/waitlist", Some(second.token.as_str()), Some(join)).await;
     assert_eq!(st, StatusCode::OK, "{joined}");

@@ -274,7 +274,7 @@ async fn seed_review_samples(db: &PgPool, phone: &str, region: &str) -> ApiResul
         .fetch_optional(&mut *tx)
         .await?;
     let (pro_id, team) = pro.map_or((None, None), |(id, team)| (Some(id), Some(team)));
-    let today = (Utc::now() + chrono::Duration::hours(9)).date_naive();
+    let today = crate::util::local_today();
     let address = json!({ "kind": "home", "label": "샘플 집", "road_address": "서울특별시 강남구 테헤란로 1", "detail": "101동 101호", "size_pyeong": 20 });
     // (days from today, status): upcoming confirmed visit, then a completed one.
     for (offset, status) in [(3_i64, 1_i16), (-7, 3)] {

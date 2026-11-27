@@ -29,7 +29,7 @@ async fn staff_admin_token(pool: &PgPool) -> String {
 
 /// The next Saturday in KST, so the slot falls in the weekend peak.
 fn next_saturday() -> chrono::NaiveDate {
-    let mut day = api::util::today_kst() + Duration::days(1);
+    let mut day = api::util::local_today() + Duration::days(1);
     while day.weekday() != Weekday::Sat {
         day += Duration::days(1);
     }

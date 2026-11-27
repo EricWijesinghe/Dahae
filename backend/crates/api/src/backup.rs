@@ -870,9 +870,16 @@ fn convert_to(key: &[u8; 32], input: &Path, output: &Path, seal: bool) -> Result
 
 /// `api backup-list`: object names, newest last.
 async fn list_cmd(config: &Config) -> i32 {
-    let Ok((_db, integ)) = open(config).await else {
+    let Ok((db, integ)) = open(config).await else {
         eprintln!("database unavailable");
         return 1;
+    };
+    let tz = match crate::util::load_install_tz(&db).await {
+        Ok(tz) => tz,
+        Err(e) => {
+            eprintln!("database unavailable: {e}");
+            return 1;
+        }
     };
     let Some(cfg) = integ.backup.as_ref() else {
         eprintln!("offsite backup is not set up");
@@ -885,8 +892,7 @@ async fn list_cmd(config: &Config) -> i32 {
                 println!(
                     "{}  {}",
                     key.trim_start_matches(PREFIX_OBJECT),
-                    at.with_timezone(&chrono::FixedOffset::east_opt(9 * 3600).expect("KST offset"))
-                        .format("%Y-%m-%d %H:%M")
+                    domain::zone::local(&tz, at).format("%Y-%m-%d %H:%M")
                 );
             }
             0

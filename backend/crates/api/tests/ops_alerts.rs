@@ -15,7 +15,7 @@ use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-const KST_TODAY: &str = "(now() AT TIME ZONE 'Asia/Seoul')::date";
+const LOCAL_TODAY: &str = "(now() AT TIME ZONE 'Asia/Seoul')::date";
 
 async fn user(db: &PgPool, phone: &str) -> Uuid {
     sqlx::query_scalar("INSERT INTO users (phone, name) VALUES ($1, 'kpi') RETURNING id")
@@ -28,7 +28,7 @@ async fn user(db: &PgPool, phone: &str) -> Uuid {
 /// A booking on today's Seoul date (`visit_today`) or an earlier one. `status` -1 is cancelled, and a
 /// cancelled booking is stamped as cancelled now.
 async fn booking(db: &PgPool, user: Uuid, number: &str, status: i16, visit_today: bool) -> Uuid {
-    let visit = if visit_today { KST_TODAY.to_string() } else { "'2026-03-15'".to_string() };
+    let visit = if visit_today { LOCAL_TODAY.to_string() } else { "'2026-03-15'".to_string() };
     let sql = format!(
         "INSERT INTO bookings (number, user_id, service_code, address, district_code, visit_date, start_hour, status, final_price, list_price, discount, cancelled_at)
          VALUES ($1, $2, 'studio', '{{}}'::jsonb, '11680', {visit}, 10, $3, 50000, 50000, 0,

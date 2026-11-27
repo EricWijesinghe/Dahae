@@ -318,7 +318,7 @@ impl QuoteFormula {
         self.estimate_with_addons(a, peak_bps, &[])
     }
 
-    /// `peak_bps` comes from `peak::peak_surcharge(..).bps` for the requested start time.
+    /// `peak_bps` comes from `peak::peak_surcharge_in(..).bps` for the requested start time.
     /// `addon_lines` is `resolve_ac_addons(aircon, &a.ac_addons)`, one line per add-on, so a
     /// caller that forgot to price them gets an error instead of a silently lower total.
     /// shortcut: peak amount is rounded separately, so the displayed lines can differ from `total` by up to 100 won.

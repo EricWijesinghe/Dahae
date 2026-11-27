@@ -3,14 +3,22 @@
 
 //! Cancellation and reschedule fee policy. Owner-configurable; the built-in default keeps the
 //! original rule (free until 2 calendar days before the visit, later cancels go to staff).
-//! Days are KST calendar days between today and the visit date, so the default matches the old rule exactly.
+//! Days are calendar days in the install's time zone between today and the visit date ([`days_before`]), so on the
+//! default zone the default matches the old rule exactly.
 
+use crate::zone::{self, Tz};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Built-in default. Also read by `scripts/build_legal.py` so the terms page uses the same numbers.
 pub const DEFAULT_JSON: &str = include_str!("cancel_policy_default.json");
 
 pub const MAX_TIERS: usize = 10;
+
+/// Whole calendar days in `tz` from `now` to the visit; the policy's unit. Negative once the visit day has passed.
+pub fn days_before(visit: NaiveDate, now: DateTime<Utc>, tz: &Tz) -> i64 {
+    (visit - zone::today(tz, now)).num_days()
+}
 /// Rank of "closed" (no self-serve cancel): the most severe outcome, above any percent.
 const CLOSED_RANK: u16 = 101;
 
@@ -122,6 +130,17 @@ mod tests {
             min_fee,
             reschedule_min_days: 2,
         }
+    }
+
+    #[test]
+    fn days_before_counts_calendar_days_in_the_install_zone() {
+        let visit = NaiveDate::from_ymd_opt(2026, 11, 17).expect("date");
+        // 2026-11-15 15:30 UTC: already the 16th in the default zone, still the 15th in London.
+        let now = DateTime::parse_from_rfc3339("2026-11-15T15:30:00Z").expect("rfc3339").with_timezone(&Utc);
+        assert_eq!(days_before(visit, now, &zone::default_tz()), 1);
+        assert_eq!(days_before(visit, now, &zone::get("Europe/London").expect("zone")), 2);
+        let p = CancelPolicy::default();
+        assert_eq!((p.outcome(1), p.outcome(2)), (Outcome::Closed, Outcome::Free), "the window closes between them");
     }
 
     /// Small deterministic generator so the sweeps below need no extra crate.

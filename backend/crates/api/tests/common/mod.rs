@@ -379,7 +379,7 @@ pub async fn customer(app: &Router, db: &PgPool, phone: &str) -> Customer {
 
 /// Books a studio clean `days` from now, paid with the customer's card. Returns (booking id, response body).
 pub async fn book(app: &Router, c: &Customer, days: i64, coupon: Option<Uuid>) -> (Uuid, Value) {
-    let visit = api::util::today_kst() + Duration::days(days);
+    let visit = api::util::local_today() + Duration::days(days);
     let (st, b) = call(
         app,
         "POST",

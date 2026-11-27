@@ -166,7 +166,7 @@ async fn list(State(s): State<AppState>, Admin(_): Admin, Query(q): Query<Period
     let (from, to) = resolve(&q)?;
     let rows: Vec<InvoiceView> = sqlx::query_as(&format!(
         "SELECT {VIEW_COLUMNS} FROM tax_invoice_requests
-         WHERE state IN ('requested', 'issued') AND (created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+         WHERE state IN ('requested', 'issued') AND (created_at AT TIME ZONE dahae_tz())::date BETWEEN $1 AND $2
          ORDER BY created_at DESC LIMIT 500"
     ))
     .bind(from)
@@ -205,10 +205,10 @@ async fn queued_rows(db: impl PgExecutor<'_>, from: NaiveDate, to: NaiveDate, qu
         Queue::Exported => ("AND t.exported_at IS NOT NULL", ""),
     };
     let sql = format!(
-        "SELECT t.id, (t.created_at AT TIME ZONE 'Asia/Seoul')::date AS day, t.business_number, t.company_name, t.representative,
+        "SELECT t.id, (t.created_at AT TIME ZONE dahae_tz())::date AS day, t.business_number, t.company_name, t.representative,
            t.business_type, t.business_item, t.address, t.email, p.amount
          FROM tax_invoice_requests t JOIN payments p ON p.id = t.payment_id
-         WHERE t.state = 'requested' {fresh} AND (t.created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+         WHERE t.state = 'requested' {fresh} AND (t.created_at AT TIME ZONE dahae_tz())::date BETWEEN $1 AND $2
          ORDER BY t.created_at, t.id {lock}"
     );
     Ok(sqlx::query_as(&sql).bind(from).bind(to).fetch_all(db).await?)

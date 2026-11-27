@@ -9,7 +9,7 @@ use super::{
     people::{Customer, Pro, World},
     photo_url,
 };
-use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use domain::{
     Won,
     catalog::{Pricing, Service, default_catalog},
@@ -89,7 +89,7 @@ fn data_err<E: std::fmt::Debug>(e: E) -> DemoError {
 pub async fn run(c: &mut Ctx<'_>, world: &mut World) -> Result<Vec<BookingRec>, DemoError> {
     let catalog = default_catalog();
     let formula = QuoteFormula::default();
-    let today = c.now.with_timezone(&c.kst).date_naive();
+    let today = domain::zone::today(&c.tz, c.now);
     let mut out = Vec::with_capacity(PAST_BOOKINGS + FUTURE_BOOKINGS);
     for seq in 1..=PAST_BOOKINGS + FUTURE_BOOKINGS {
         let offset = if seq <= PAST_BOOKINGS { -c.range(1, 90) } else { c.range(0, 14) };
@@ -149,7 +149,7 @@ async fn one(
         (false, None) => None,
     };
     let deposit = final_price.map(|f| formula.deposit(Won(f)).0);
-    let completed = (status == 3).then(|| kst_at(c, visit, start_hour) + Duration::hours(2));
+    let completed = (status == 3).then(|| local_at(c, visit, start_hour) + Duration::hours(2));
     let cancelled = (status == -1).then(|| (created + Duration::days(c.range(1, 3))).min(c.now - Duration::hours(1)));
     let pays = payments_for(c, status, is_quote, final_price, deposit, created, completed);
     let paid: i64 = pays.iter().map(|p| p.amount).sum();
@@ -157,7 +157,7 @@ async fn one(
     let balance_paid = pays.iter().any(|p| p.kind == "balance");
 
     let id = c.id();
-    let number = format!("BK{}-{:05}", created.with_timezone(&c.kst).format("%y%m"), seq);
+    let number = format!("BK{}-{:05}", domain::zone::local(&c.tz, created).format("%y%m"), seq);
     let pro_row = pro.map(|i| world.pros[i].clone());
     let assignee = pro_row.as_ref().map(|p| *c.pick(&p.assignees));
     let accepted = pro.map(|_| created + Duration::hours(2));
@@ -493,17 +493,17 @@ fn pick_pro(c: &mut Ctx<'_>, world: &World, service: &str, district: &str) -> Op
 /// Never before the customer signed up, never in the future.
 fn created_at(c: &mut Ctx<'_>, visit: NaiveDate, past: bool, since: DateTime<Utc>) -> DateTime<Utc> {
     let base = if past {
-        kst_at(c, visit, 9) - Duration::days(c.range(1, 10)) + Duration::hours(c.range(0, 10))
+        local_at(c, visit, 9) - Duration::days(c.range(1, 10)) + Duration::hours(c.range(0, 10))
     } else {
         c.now - Duration::days(c.range(0, 4)) - Duration::hours(c.range(1, 5))
     };
     base.max(since + Duration::hours(1)).min(c.now - Duration::hours(1))
 }
 
-/// UTC instant of a KST wall-clock time on `date`.
-pub(crate) fn kst_at(c: &Ctx<'_>, date: NaiveDate, hour: i16) -> DateTime<Utc> {
+/// UTC instant of a wall-clock time on `date` in the install's zone.
+pub(crate) fn local_at(c: &Ctx<'_>, date: NaiveDate, hour: i16) -> DateTime<Utc> {
     let local = date.and_hms_opt(hour as u32, 0, 0).expect("valid hour");
-    c.kst.from_local_datetime(&local).single().expect("fixed offset").with_timezone(&Utc)
+    domain::zone::to_utc(&c.tz, local)
 }
 
 /// Uses one matching, unused coupon for about a third of fixed-price bookings.
@@ -630,13 +630,13 @@ async fn completion(
 
     let fee = p.fee_bps;
     let split = payout(Won(gross), fee);
-    let done_day = done.with_timezone(&c.kst).date_naive();
+    let done_day = domain::zone::today(&c.tz, done);
     let due = payout_date(done_day);
-    let today = c.now.with_timezone(&c.kst).date_naive();
+    let today = domain::zone::today(&c.tz, c.now);
     let (state, date, paid_at): (&str, Option<NaiveDate>, Option<DateTime<Utc>>) = if is_quote && !balance_paid {
         ("waiting_balance", None, None)
     } else if due <= today {
-        ("paid", Some(due), Some(kst_at(c, due, 14).min(c.now)))
+        ("paid", Some(due), Some(local_at(c, due, 14).min(c.now)))
     } else {
         ("pending", Some(due), None)
     };

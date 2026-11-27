@@ -16,13 +16,13 @@ use crate::{
         toss_payments::{self, Mid},
     },
     state::AppState,
-    util::{QueuedRefund, REFUND_COLS, REFUND_LEASE_MINS, Refund, retry_refund},
+    util::{self, QueuedRefund, REFUND_COLS, REFUND_LEASE_MINS, Refund, retry_refund},
 };
 use axum::{
     extract::{Query, State},
     response::Response,
 };
-use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Timelike, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::PgPool;
@@ -44,8 +44,8 @@ const DIFF_PAGE: u32 = 100;
 /// Caps the daily pull at 20k payments a day. Hitting it fails the pass instead of diffing half a day.
 const DIFF_MAX_PAGES: u32 = 200;
 const DIFF_STATE_KEY: &str = "payment_diff";
-/// The diff waits until this KST hour so webhooks and deposits for the closed day have landed.
-const DIFF_SETTLE_HOUR_KST: u32 = 3;
+/// The diff waits until this local hour (install time zone) so webhooks and deposits for the closed day have landed.
+const DIFF_SETTLE_HOUR: u32 = 3;
 /// Both sides of the diff window are widened by this much, so a payment created just before
 /// midnight and listed just after it (or the reverse) is matched on both sides.
 const DIFF_GRACE_MINS: i64 = 60;
@@ -221,21 +221,19 @@ pub fn diff_payments(provider: &[ProviderPayment], local: &[LocalPayment]) -> Ve
     out
 }
 
-/// The UTC range `[start, end)` of one KST calendar day.
-pub fn kst_day_bounds(day: NaiveDate) -> (DateTime<Utc>, DateTime<Utc>) {
-    // KST is UTC+9 with no daylight time, so the day starts at 09:00 UTC of the day before.
-    let start = day.and_time(NaiveTime::MIN).and_utc() - Duration::hours(9);
-    (start, start + Duration::days(1))
+/// The UTC range `[start, end)` of one calendar day in the install's zone.
+pub fn local_day_bounds(day: NaiveDate) -> (DateTime<Utc>, DateTime<Utc>) {
+    domain::zone::day_bounds(&util::install_tz(), day)
 }
 
-/// The KST day the daily pass reconciles at `now`: always the day before today in KST.
-fn previous_kst_day(now: DateTime<Utc>) -> NaiveDate {
-    (now + Duration::hours(9)).date_naive() - Duration::days(1)
+/// The day the daily pass reconciles at `now`: always the day before today in the install's zone.
+fn previous_local_day(now: DateTime<Utc>) -> NaiveDate {
+    util::local_today_at(now) - Duration::days(1)
 }
 
-/// The window both sides are read over: the KST day widened by `DIFF_GRACE_MINS` at each end.
+/// The window both sides are read over: the local day widened by `DIFF_GRACE_MINS` at each end.
 pub fn diff_window(day: NaiveDate) -> (DateTime<Utc>, DateTime<Utc>) {
-    let (from, until) = kst_day_bounds(day);
+    let (from, until) = local_day_bounds(day);
     let grace = Duration::minutes(DIFF_GRACE_MINS);
     (from - grace, until + grace)
 }
@@ -243,8 +241,7 @@ pub fn diff_window(day: NaiveDate) -> (DateTime<Utc>, DateTime<Utc>) {
 /// True when the day's pass should run at `now`: past the settle hour, not already done, and not
 /// attempted within `interval`.
 fn diff_due(now: DateTime<Utc>, day: NaiveDate, st: &DiffState, interval: Duration) -> bool {
-    let kst = now + Duration::hours(9);
-    kst.hour() >= DIFF_SETTLE_HOUR_KST && st.done_day != Some(day) && !st.attempted_at.is_some_and(|t| now - t < interval)
+    domain::zone::local(&util::install_tz(), now).hour() >= DIFF_SETTLE_HOUR && st.done_day != Some(day) && !st.attempted_at.is_some_and(|t| now - t < interval)
 }
 
 /// Lists every PortOne payment created in the window, following the pages to the end.
@@ -262,10 +259,10 @@ async fn fetch_provider_day(s: &AppState, from: DateTime<Utc>, until: DateTime<U
     Err(ApiError::Internal("payment list exceeds the page cap".into()))
 }
 
-/// Lists every transaction of one Toss MID in the window (as KST wall time, which Toss takes), one row per order.
+/// Lists every transaction of one Toss MID in the window (as Toss's wall-clock time), one row per order.
 async fn fetch_toss_day(s: &AppState, mid: Mid, from: DateTime<Utc>, until: DateTime<Utc>) -> ApiResult<Vec<ProviderPayment>> {
-    let kst = |t: DateTime<Utc>| (t + Duration::hours(9)).naive_utc().format("%Y-%m-%dT%H:%M:%S").to_string();
-    Ok(toss_payments::transactions(&s.providers, mid, &kst(from), &kst(until)).await?)
+    let (from, until) = (toss_payments::wire_time(from), toss_payments::wire_time(until));
+    Ok(toss_payments::transactions(&s.providers, mid, &from, &until).await?)
 }
 
 /// Local records for the window on one gateway leg: checkouts of `checkout_gateway` with a provider payment id,
@@ -353,7 +350,7 @@ fn diff_leg(day: NaiveDate, leg: &str, provider: &[ProviderPayment], local: &[Lo
     found
 }
 
-/// Pass state in `settings`: the last KST day fully reconciled, and when an attempt last started
+/// Pass state in `settings`: the last local day fully reconciled, and when an attempt last started
 /// (so a failing day retries after the interval, not every tick).
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct DiffState {
@@ -383,9 +380,9 @@ async fn save_diff_state(db: &PgPool, st: &DiffState) -> ApiResult<()> {
     Ok(())
 }
 
-/// Daily PortOne pull: diffs the previous KST day against local payments and checkouts. Each
+/// Daily PortOne pull: diffs the previous local day (install time zone) against local payments and checkouts. Each
 /// mismatch is logged as a `payment_mismatch` failure, which the owner's alert rule counts.
-/// Runs at most once per day after `DIFF_SETTLE_HOUR_KST`, retries after `payment_diff_interval_secs`
+/// Runs at most once per day after `DIFF_SETTLE_HOUR`, retries after `payment_diff_interval_secs`
 /// when a pass fails, and returns how many mismatches it found (0 when nothing was due).
 pub async fn payment_diff_pass(s: &AppState) -> ApiResult<usize> {
     payment_diff_at(s, Utc::now()).await
@@ -393,7 +390,7 @@ pub async fn payment_diff_pass(s: &AppState) -> ApiResult<usize> {
 
 /// `payment_diff_pass` as of `now`, so the schedule can be tested without the wall clock.
 pub async fn payment_diff_at(s: &AppState, now: DateTime<Utc>) -> ApiResult<usize> {
-    let day = previous_kst_day(now);
+    let day = previous_local_day(now);
     let mut st = load_diff_state(&s.db).await?;
     let interval = Duration::seconds(i64::try_from(s.config.payment_diff_interval_secs).unwrap_or(i64::MAX));
     if !diff_due(now, day, &st, interval) {
@@ -606,10 +603,15 @@ mod tests {
     }
 
     #[test]
-    fn kst_day_bounds_run_from_kst_midnight_to_midnight() {
+    fn local_day_bounds_run_from_local_midnight_to_midnight() {
         let now = chrono::NaiveDate::from_ymd_opt(2026, 11, 16).expect("date");
-        assert_eq!(kst_day_bounds(now).0.to_rfc3339(), "2026-11-15T15:00:00+00:00");
-        assert_eq!(kst_day_bounds(now).1.to_rfc3339(), "2026-11-16T15:00:00+00:00");
+        assert_eq!(local_day_bounds(now).0.to_rfc3339(), "2026-11-15T15:00:00+00:00");
+        assert_eq!(local_day_bounds(now).1.to_rfc3339(), "2026-11-16T15:00:00+00:00");
+    }
+
+    #[test]
+    fn toss_wire_time_is_korean_wall_clock_whatever_the_install_zone() {
+        assert_eq!(toss_payments::wire_time(utc("2026-11-15T15:00:00Z")), "2026-11-16T00:00:00");
     }
 
     fn utc(s: &str) -> DateTime<Utc> {
@@ -625,8 +627,8 @@ mod tests {
     }
 
     #[test]
-    fn payment_just_before_kst_midnight_is_in_both_windows() {
-        // Created 23:59 KST on the 15th, listed 00:01 KST on the 16th: the 15th's padded window
+    fn payment_just_before_local_midnight_is_in_both_windows() {
+        // Created 23:59 local time on the 15th, listed 00:01 on the 16th: the 15th's padded window
         // covers both timestamps, so the two sides agree.
         let day = NaiveDate::from_ymd_opt(2026, 11, 15).expect("date");
         let (_, until) = diff_window(day);
@@ -636,12 +638,12 @@ mod tests {
     }
 
     #[test]
-    fn diff_waits_for_the_settle_hour_kst() {
+    fn diff_waits_for_the_settle_hour() {
         let day = NaiveDate::from_ymd_opt(2026, 11, 15).expect("date");
         let fresh = DiffState::default();
         let hour = Duration::hours(1);
-        assert!(!diff_due(utc("2026-11-16T17:59:00Z"), day, &fresh, hour), "02:59 KST is too early");
-        assert!(diff_due(utc("2026-11-16T18:00:00Z"), day, &fresh, hour), "03:00 KST runs");
+        assert!(!diff_due(utc("2026-11-16T17:59:00Z"), day, &fresh, hour), "02:59 local is too early");
+        assert!(diff_due(utc("2026-11-16T18:00:00Z"), day, &fresh, hour), "03:00 local runs");
     }
 
     #[test]
@@ -662,13 +664,13 @@ mod tests {
     }
 
     #[test]
-    fn previous_day_is_the_closed_kst_day() {
+    fn previous_day_is_the_closed_local_day() {
         assert_eq!(
-            previous_kst_day(utc("2026-11-16T18:00:00Z")),
+            previous_local_day(utc("2026-11-16T18:00:00Z")),
             NaiveDate::from_ymd_opt(2026, 11, 16).expect("date")
         );
         assert_eq!(
-            previous_kst_day(utc("2026-11-16T14:59:00Z")),
+            previous_local_day(utc("2026-11-16T14:59:00Z")),
             NaiveDate::from_ymd_opt(2026, 11, 15).expect("date")
         );
     }

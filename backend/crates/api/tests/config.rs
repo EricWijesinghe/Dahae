@@ -184,7 +184,7 @@ async fn maintenance_refuses_booking_checkouts_confirmations_and_subscriptions(p
     seed_catalog(&pool).await;
     let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-7300-0001").await;
-    let visit = api::util::today_kst() + chrono::Duration::days(12);
+    let visit = api::util::local_today() + chrono::Duration::days(12);
     let checkout = json!({
         "kind": "booking", "method": "card",
         "booking": { "service_code": "studio", "address_id": c.address, "visit_date": visit, "start_hour": 9, "visit_notes": {} }

@@ -204,7 +204,7 @@ async fn a_chooser_quote_keeps_its_home_type_and_is_never_filed_as_other(pool: P
         "/v1/bookings",
         Some(c.token.as_str()),
         Some(json!({
-            "service_code": "move_out", "address_id": c.address, "visit_date": api::util::today_kst() + Duration::days(3),
+            "service_code": "move_out", "address_id": c.address, "visit_date": api::util::local_today() + Duration::days(3),
             "start_hour": 8, "answers": answers, "visit_notes": {}
         })),
     )

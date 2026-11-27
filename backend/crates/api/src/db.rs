@@ -4,6 +4,8 @@
 //! Postgres connection pool with server-side guards on every connection: a statement timeout, an
 //! idle-in-transaction timeout, and a slow-statement log. Sizes come from `DB_*` env vars (see `config.rs`).
 
+use crate::util;
+use domain::zone::{self, Tz};
 use log::LevelFilter;
 use sqlx::{
     ConnectOptions, PgPool,
@@ -47,9 +49,10 @@ impl DbSettings {
     }
 }
 
-/// Opens a pool. The settings travel as startup parameters, so every connection the pool creates gets them.
+/// Opens a pool. The settings travel as startup parameters, so every connection the pool creates gets them,
+/// together with the install's time zone ([`util::install_tz`]) as `dahae.tz`.
 pub async fn connect(url: &str, settings: &DbSettings) -> Result<PgPool, sqlx::Error> {
-    let options = PgConnectOptions::from_str(url)?
+    let options = with_install_tz(PgConnectOptions::from_str(url)?, &util::install_tz())
         .options([
             ("statement_timeout", settings.statement_timeout_ms.to_string()),
             ("idle_in_transaction_session_timeout", settings.idle_tx_timeout_ms.to_string()),
@@ -60,6 +63,11 @@ pub async fn connect(url: &str, settings: &DbSettings) -> Result<PgPool, sqlx::E
         .acquire_timeout(ACQUIRE_TIMEOUT)
         .connect_with(options)
         .await
+}
+
+/// Adds the `dahae.tz` startup option that SQL date math reads through `dahae_tz()` (migration 0511).
+pub fn with_install_tz(options: PgConnectOptions, tz: &Tz) -> PgConnectOptions {
+    options.options([("dahae.tz", zone::name(tz))])
 }
 
 #[cfg(test)]
@@ -89,5 +97,10 @@ mod tests {
                 .await
                 .expect("settings readable");
         assert_eq!((stmt.as_str(), idle.as_str()), ("12345ms", "5678ms"));
+        let tz: String = sqlx::query_scalar("SELECT current_setting('dahae.tz')")
+            .fetch_one(&pool)
+            .await
+            .expect("zone readable");
+        assert_eq!(tz, zone::name(&util::install_tz()));
     }
 }

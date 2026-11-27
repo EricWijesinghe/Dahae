@@ -293,7 +293,7 @@ async fn proof(State(s): State<AppState>) -> ApiResult<Json<Value>> {
     let completed = BookingStatus::Completed.as_i16();
     let (homes, rated, avg): (i64, i64, Option<f64>) = sqlx::query_as(&format!(
         "SELECT
-           (SELECT count(*) FROM bookings WHERE status = {completed} AND completed_at >= date_trunc('month', now() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul'),
+           (SELECT count(*) FROM bookings WHERE status = {completed} AND completed_at >= date_trunc('month', now() AT TIME ZONE dahae_tz()) AT TIME ZONE dahae_tz()),
            (SELECT count(*) FROM reviews WHERE NOT hidden),
            (SELECT avg(rating)::float8 FROM reviews WHERE NOT hidden)"
     ))

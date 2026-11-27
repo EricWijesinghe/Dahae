@@ -27,7 +27,7 @@ async fn set_setting(pool: &PgPool, key: &str, value: Value) {
 
 /// The first Saturday at least two days out (KST), so the booking clears the lead-time check.
 fn next_saturday() -> NaiveDate {
-    let mut d = api::util::today_kst() + Duration::days(2);
+    let mut d = api::util::local_today() + Duration::days(2);
     while d.weekday() != Weekday::Sat {
         d += Duration::days(1);
     }
@@ -35,7 +35,7 @@ fn next_saturday() -> NaiveDate {
 }
 
 fn weekday_in(days: i64) -> NaiveDate {
-    let mut d = api::util::today_kst() + Duration::days(days);
+    let mut d = api::util::local_today() + Duration::days(days);
     while matches!(d.weekday(), Weekday::Sat | Weekday::Sun) {
         d += Duration::days(1);
     }

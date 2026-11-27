@@ -391,7 +391,17 @@ pub async fn delete_billing_key(p: &Providers, billing_key: &str) -> Result<(), 
     }
 }
 
-/// Every transaction in `[start, end]` (KST, `yyyy-MM-ddTHH:mm:ss`) on one MID, folded to one row per orderId.
+/// Toss reads and writes wall-clock times in Korea's zone (UTC+9, no daylight saving), whatever zone the install runs in.
+const WIRE_OFFSET_SECS: i64 = 9 * 3600;
+
+/// `t` as a Toss wall-clock time (`yyyy-MM-ddTHH:mm:ss`, Korean time).
+pub fn wire_time(t: chrono::DateTime<chrono::Utc>) -> String {
+    (t.naive_utc() + chrono::Duration::seconds(WIRE_OFFSET_SECS))
+        .format("%Y-%m-%dT%H:%M:%S")
+        .to_string()
+}
+
+/// Every transaction in `[start, end]` ([`wire_time`]s) on one MID, folded to one row per orderId.
 pub async fn transactions(p: &Providers, mid: Mid, start: &str, end: &str) -> Result<Vec<ProviderPayment>, ProviderError> {
     let auth_header = auth(&secret(p, mid)?);
     let limit = TX_PAGE.to_string();

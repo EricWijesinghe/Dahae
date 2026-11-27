@@ -62,7 +62,7 @@ const MOVE_ANSWERS: &str = r#"{"cleaning_type":"standard","luggage":"empty","bui
 
 /// A move-out consultation `days` out. Returns (booking id, estimate).
 async fn quote_booking(app: &Router, c: &Customer, days: i64) -> (String, i64) {
-    let visit = api::util::today_kst() + Duration::days(days);
+    let visit = api::util::local_today() + Duration::days(days);
     let answers: Value = serde_json::from_str(MOVE_ANSWERS).expect("answers");
     let (st, b) = call(
         app,
@@ -102,7 +102,7 @@ async fn quote_card_carries_the_booking_and_the_deposit_is_paid_once_then_refund
     let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-5400-0001").await;
     let (id, estimate) = quote_booking(&app, &c, 10).await;
-    let visit = api::util::today_kst() + Duration::days(10);
+    let visit = api::util::local_today() + Duration::days(10);
 
     let desk = consultant(&pool).await;
     let (st, msg) = send_quote(&app, &desk, &id, json!({ "final_price": 350_000 })).await;
@@ -352,7 +352,7 @@ async fn send_quote_ignores_card_fields_in_the_request(pool: PgPool) {
     let app = app_with_channels(pool.clone(), &["card"]);
     let c = customer(&app, &pool, "010-5400-0005").await;
     let (id, estimate) = quote_booking(&app, &c, 12).await;
-    let visit = api::util::today_kst() + Duration::days(12);
+    let visit = api::util::local_today() + Duration::days(12);
     let desk = consultant(&pool).await;
     let price = (estimate / 100) * 100 + 49;
     let (st, msg) = send_quote(

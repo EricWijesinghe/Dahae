@@ -308,7 +308,7 @@ pub async fn ops_status(db: &PgPool, enabled: bool) -> Result<Value, sqlx::Error
 async fn list(State(s): State<AppState>, Admin(_): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Vec<ReceiptView>>> {
     let (from, to) = resolve(&q)?;
     let rows: Vec<ReceiptView> = sqlx::query_as(&format!(
-        "SELECT {VIEW_COLUMNS} FROM cash_receipts WHERE (created_at AT TIME ZONE 'Asia/Seoul')::date BETWEEN $1 AND $2
+        "SELECT {VIEW_COLUMNS} FROM cash_receipts WHERE (created_at AT TIME ZONE dahae_tz())::date BETWEEN $1 AND $2
          ORDER BY created_at DESC LIMIT 500"
     ))
     .bind(from)

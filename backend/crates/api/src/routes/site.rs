@@ -12,7 +12,7 @@ use crate::{
     realtime::{Recipient, notify},
     safety,
     state::AppState,
-    util::{best_effort, today_kst},
+    util::{best_effort, local_today},
 };
 use axum::{
     Json, Router,
@@ -43,12 +43,12 @@ async fn own_active_job(s: &AppState, pro: Uuid, id: Uuid) -> ApiResult<super::b
     Ok(b)
 }
 
-/// Arrival and departure only on an assigned job, on its visit day (KST).
+/// Arrival and departure only on an assigned job, on its visit day (in the install's time zone).
 fn ensure_on_site_today(b: &super::bookings::BookingRow) -> ApiResult<()> {
     if b.status()? != BookingStatus::TeamAssigned {
         return Err(ApiError::Conflict("booking_closed"));
     }
-    if b.visit_date != today_kst() {
+    if b.visit_date != local_today() {
         return Err(ApiError::Conflict("not_visit_day"));
     }
     Ok(())
@@ -131,10 +131,10 @@ async fn stored_code(s: &AppState, id: Uuid) -> ApiResult<Option<String>> {
     Ok(enc.and_then(|e| crypto::decrypt(&s.config.data_key, crypto::aad::ACCESS_CODE, &e)))
 }
 
-/// Assigned partner only, and only on the visit day (KST) while the job is active.
+/// Assigned partner only, and only on the visit day (in the install's time zone) while the job is active.
 async fn partner_entry_code(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
     let b = own_active_job(&s, a.id, id).await?;
-    if !matches!(b.status()?, BookingStatus::TeamAssigned | BookingStatus::Completed) || !safety::reveal_allowed(b.visit_date, today_kst()) {
+    if !matches!(b.status()?, BookingStatus::TeamAssigned | BookingStatus::Completed) || !safety::reveal_allowed(b.visit_date, local_today()) {
         return Err(ApiError::Conflict("entry_code_not_today"));
     }
     audit(&s.db, "pro", Some(a.id), "entry_code.reveal", &id.to_string(), json!({})).await?;

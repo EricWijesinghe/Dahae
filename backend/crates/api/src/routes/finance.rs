@@ -11,7 +11,7 @@ use crate::{
     error::{ApiError, ApiResult},
     pack::Pack,
     state::AppState,
-    util::today_kst,
+    util::local_today,
 };
 use axum::{
     Json, Router,
@@ -32,55 +32,55 @@ use sqlx::{FromRow, PgConnection};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
-/// Every owner event, one row per (day, partner, service, kind). `$1`..`$2` is the inclusive KST date range.
+/// Every owner event, one row per (day, partner, service, kind). `$1`..`$2` is the inclusive local date range.
 /// Kinds: booking, cancelled, booking_value, discount (bookings by creation day); gross, refund (payments);
 /// job, settled_gross, fee (settlements by creation day, held excluded); paid (by payout day);
 /// pending, held (settlements by creation day).
 const EVENTS_SQL: &str = r#"
 WITH ev AS (
-  SELECT (b.created_at AT TIME ZONE 'Asia/Seoul')::date AS d, NULL::uuid AS pro, b.service_code AS svc, 'booking' AS kind, 1::bigint AS v
-    FROM bookings b WHERE b.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+  SELECT (b.created_at AT TIME ZONE dahae_tz())::date AS d, NULL::uuid AS pro, b.service_code AS svc, 'booking' AS kind, 1::bigint AS v
+    FROM bookings b WHERE b.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (b.created_at AT TIME ZONE 'Asia/Seoul')::date, NULL::uuid, b.service_code, 'cancelled', 1::bigint
-    FROM bookings b WHERE b.status = -1 AND b.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+  SELECT (b.created_at AT TIME ZONE dahae_tz())::date, NULL::uuid, b.service_code, 'cancelled', 1::bigint
+    FROM bookings b WHERE b.status = -1 AND b.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (b.created_at AT TIME ZONE 'Asia/Seoul')::date, NULL::uuid, b.service_code, 'booking_value', COALESCE(b.final_price, b.list_price, 0)
-    FROM bookings b WHERE b.status <> -1 AND b.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+  SELECT (b.created_at AT TIME ZONE dahae_tz())::date, NULL::uuid, b.service_code, 'booking_value', COALESCE(b.final_price, b.list_price, 0)
+    FROM bookings b WHERE b.status <> -1 AND b.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (b.created_at AT TIME ZONE 'Asia/Seoul')::date, NULL::uuid, b.service_code, 'discount', b.discount
-    FROM bookings b WHERE b.status <> -1 AND b.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+  SELECT (b.created_at AT TIME ZONE dahae_tz())::date, NULL::uuid, b.service_code, 'discount', b.discount
+    FROM bookings b WHERE b.status <> -1 AND b.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND b.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (p.created_at AT TIME ZONE 'Asia/Seoul')::date, NULL::uuid, b.service_code, 'gross', p.amount
+  SELECT (p.created_at AT TIME ZONE dahae_tz())::date, NULL::uuid, b.service_code, 'gross', p.amount
     FROM payments p JOIN bookings b ON b.id = p.booking_id
-    WHERE p.status IN ('paid','partially_refunded','refunded') AND p.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND p.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+    WHERE p.status IN ('paid','partially_refunded','refunded') AND p.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND p.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (COALESCE(b.cancelled_at, p.created_at) AT TIME ZONE 'Asia/Seoul')::date, NULL::uuid, b.service_code, 'refund', p.refunded_amount
+  SELECT (COALESCE(b.cancelled_at, p.created_at) AT TIME ZONE dahae_tz())::date, NULL::uuid, b.service_code, 'refund', p.refunded_amount
     FROM payments p JOIN bookings b ON b.id = p.booking_id
-    WHERE p.refunded_amount > 0 AND COALESCE(b.cancelled_at, p.created_at) >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND COALESCE(b.cancelled_at, p.created_at) < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+    WHERE p.refunded_amount > 0 AND COALESCE(b.cancelled_at, p.created_at) >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND COALESCE(b.cancelled_at, p.created_at) < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (st.created_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'job', 1::bigint
+  SELECT (st.created_at AT TIME ZONE dahae_tz())::date, st.pro_id, b.service_code, 'job', 1::bigint
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state <> 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+    WHERE st.state <> 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (st.created_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'settled_gross', st.gross
+  SELECT (st.created_at AT TIME ZONE dahae_tz())::date, st.pro_id, b.service_code, 'settled_gross', st.gross
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state <> 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+    WHERE st.state <> 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (st.created_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'fee', st.fee
+  SELECT (st.created_at AT TIME ZONE dahae_tz())::date, st.pro_id, b.service_code, 'fee', st.fee
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state <> 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+    WHERE st.state <> 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (st.paid_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'paid', st.net
+  SELECT (st.paid_at AT TIME ZONE dahae_tz())::date, st.pro_id, b.service_code, 'paid', st.net
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state = 'paid' AND st.paid_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.paid_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+    WHERE st.state = 'paid' AND st.paid_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND st.paid_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (st.created_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'pending', st.net
+  SELECT (st.created_at AT TIME ZONE dahae_tz())::date, st.pro_id, b.service_code, 'pending', st.net
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state IN ('pending','waiting_balance') AND st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+    WHERE st.state IN ('pending','waiting_balance') AND st.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
   UNION ALL
-  SELECT (st.created_at AT TIME ZONE 'Asia/Seoul')::date, st.pro_id, b.service_code, 'held', st.net
+  SELECT (st.created_at AT TIME ZONE dahae_tz())::date, st.pro_id, b.service_code, 'held', st.net
     FROM settlements st JOIN bookings b ON b.id = st.booking_id
-    WHERE st.state = 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+    WHERE st.state = 'held' AND st.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
 )
 "#;
 
@@ -106,7 +106,7 @@ pub fn partner_routes() -> Router<AppState> {
 pub(super) struct PeriodQuery {
     /// day | week | month | custom (default month)
     pub(super) period: Option<String>,
-    /// Any date inside the wanted day, week or month (default today, KST).
+    /// Any date inside the wanted day, week or month (default: today in the install's time zone).
     pub(super) anchor: Option<NaiveDate>,
     pub(super) from: Option<NaiveDate>,
     pub(super) to: Option<NaiveDate>,
@@ -115,7 +115,7 @@ pub(super) struct PeriodQuery {
 pub(super) fn resolve(q: &PeriodQuery) -> ApiResult<(NaiveDate, NaiveDate)> {
     Ok(finance::period(
         q.period.as_deref().unwrap_or("month"),
-        q.anchor.unwrap_or_else(today_kst),
+        q.anchor.unwrap_or_else(local_today),
         q.from,
         q.to,
     )?)
@@ -252,7 +252,7 @@ struct MethodRow {
 async fn payment_methods(db: &mut PgConnection, from: NaiveDate, to: NaiveDate) -> ApiResult<Vec<MethodRow>> {
     Ok(sqlx::query_as(
         "SELECT method, count(*)::bigint AS count, COALESCE(SUM(amount), 0)::bigint AS amount FROM checkouts
-         WHERE status = 'paid' AND created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul')
+         WHERE status = 'paid' AND created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz())
          GROUP BY method ORDER BY amount DESC",
     )
     .bind(from)
@@ -273,10 +273,10 @@ struct Summary {
     vat_basis: &'static str,
 }
 
-/// Net revenue (gross minus refunds) over the last 30 KST days including today. The console dashboard tile uses
+/// Net revenue (gross minus refunds) over the last 30 local days including today. The console dashboard tile uses
 /// this so it agrees with the finance summary.
 pub(super) async fn net_revenue_30d(s: &AppState) -> ApiResult<i64> {
-    let to = today_kst();
+    let to = local_today();
     let from = to - chrono::Duration::days(29);
     let rows = {
         let mut conn = s.db.acquire().await?;
@@ -335,7 +335,7 @@ async fn series(State(s): State<AppState>, _a: Admin, Query(q): Query<SeriesQuer
         Grain::Day => q.days.unwrap_or(30).clamp(7, 90),
         Grain::Week | Grain::Month => 12,
     };
-    let (from, to) = finance::series_range(grain, today_kst(), count);
+    let (from, to) = finance::series_range(grain, local_today(), count);
     let mut conn = s.db.acquire().await?;
     Ok(Json(series_points(&mut conn, &s.pack, grain, from, to).await?))
 }
@@ -461,11 +461,11 @@ async fn partner_earnings(State(s): State<AppState>, Pro(a): Pro, Query(q): Quer
         Some(g) => Grain::parse(g).filter(|g| *g != Grain::Day).ok_or(ApiError::BadRequest("invalid_grain"))?,
         None => Grain::Week,
     };
-    let (from, _) = finance::series_range(grain, today_kst(), 12);
+    let (from, _) = finance::series_range(grain, local_today(), 12);
     let rows: Vec<EarnRow> = sqlx::query_as(
-        "SELECT date_trunc($2, st.created_at AT TIME ZONE 'Asia/Seoul')::date AS key, COUNT(*)::bigint AS jobs,
+        "SELECT date_trunc($2, st.created_at AT TIME ZONE dahae_tz())::date AS key, COUNT(*)::bigint AS jobs,
            COALESCE(SUM(st.gross), 0)::bigint AS gross, COALESCE(SUM(st.fee), 0)::bigint AS fee, COALESCE(SUM(st.net), 0)::bigint AS net
-         FROM settlements st WHERE st.pro_id = $1 AND st.state <> 'held' AND (st.created_at AT TIME ZONE 'Asia/Seoul')::date >= $3
+         FROM settlements st WHERE st.pro_id = $1 AND st.state <> 'held' AND (st.created_at AT TIME ZONE dahae_tz())::date >= $3
          GROUP BY 1",
     )
     .bind(a.id)
@@ -474,7 +474,7 @@ async fn partner_earnings(State(s): State<AppState>, Pro(a): Pro, Query(q): Quer
     .fetch_all(&s.db)
     .await?;
     let by_key: BTreeMap<NaiveDate, EarnRow> = rows.into_iter().map(|r| (r.key, r)).collect();
-    let series = finance::buckets(grain, from, today_kst())
+    let series = finance::buckets(grain, from, local_today())
         .into_iter()
         .map(|key| match by_key.get(&key) {
             Some(r) => EarnRow {
@@ -567,10 +567,10 @@ async fn export_ledger(State(s): State<AppState>, Admin(a): Admin, Query(q): Que
     let (from, to) = resolve(&q)?;
     let mut tx = s.db.begin().await?;
     let rows: Vec<LedgerRow> = sqlx::query_as(
-        "SELECT (p.created_at AT TIME ZONE 'Asia/Seoul')::date AS day, p.id AS payment_id, b.number, b.service_code, p.kind,
+        "SELECT (p.created_at AT TIME ZONE dahae_tz())::date AS day, p.id AS payment_id, b.number, b.service_code, p.kind,
            p.provider, p.provider_tx_id, p.amount, p.refunded_amount, p.status
          FROM payments p JOIN bookings b ON b.id = p.booking_id
-         WHERE p.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND p.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul') ORDER BY p.created_at, p.id",
+         WHERE p.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND p.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz()) ORDER BY p.created_at, p.id",
     )
     .bind(from)
     .bind(to)
@@ -664,7 +664,7 @@ fn settlement_cells(r: SettlementRow) -> Vec<Cell> {
     ]
 }
 
-/// Settlements in the KST range, one row each, then a 합계 row summing gross, fee and net of those rows.
+/// Settlements in the local range, one row each, then a 합계 row summing gross, fee and net of those rows.
 async fn export_settlements(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Response> {
     crate::auth::live_admin(&s, a.id).await?;
     super::staff_mfa::require_recent_stepup(&s, a.id).await?;
@@ -672,10 +672,10 @@ async fn export_settlements(State(s): State<AppState>, Admin(a): Admin, Query(q)
     let mut tx = s.db.begin().await?;
     let rows: Vec<SettlementRow> = sqlx::query_as(
         "SELECT st.id, b.number, b.service_code, b.visit_date, p.name AS pro_name, p.team_name, st.gross, st.fee, st.net,
-           st.payout_date, st.state, (st.paid_at AT TIME ZONE 'Asia/Seoul')::date AS paid_day,
-           (st.created_at AT TIME ZONE 'Asia/Seoul')::date AS created_day
+           st.payout_date, st.state, (st.paid_at AT TIME ZONE dahae_tz())::date AS paid_day,
+           (st.created_at AT TIME ZONE dahae_tz())::date AS created_day
          FROM settlements st JOIN bookings b ON b.id = st.booking_id JOIN pros p ON p.id = st.pro_id
-         WHERE st.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Seoul') AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul') ORDER BY st.created_at, st.id",
+         WHERE st.created_at >= ($1::date::timestamp AT TIME ZONE dahae_tz()) AND st.created_at < (($2::date + 1)::timestamp AT TIME ZONE dahae_tz()) ORDER BY st.created_at, st.id",
     )
     .bind(from)
     .bind(to)

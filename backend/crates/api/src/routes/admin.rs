@@ -67,7 +67,7 @@ struct Dashboard {
 async fn dashboard(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Dashboard>> {
     let row: (i64, i64, i64, i64, i64) = sqlx::query_as(
         "SELECT
-           (SELECT count(*) FROM bookings WHERE visit_date = (now() AT TIME ZONE 'Asia/Seoul')::date AND status BETWEEN 1 AND 3),
+           (SELECT count(*) FROM bookings WHERE visit_date = (now() AT TIME ZONE dahae_tz())::date AND status BETWEEN 1 AND 3),
            (SELECT count(*) FROM bookings WHERE status = 0),
            (SELECT count(*) FROM bookings WHERE status = 1 AND pro_id IS NULL AND team_name IS NULL),
            (SELECT count(*) FROM chat_threads WHERE unread_staff > 0),

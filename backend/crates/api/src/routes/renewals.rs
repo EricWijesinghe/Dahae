@@ -16,7 +16,6 @@ use axum::{
     extract::{Path, State},
     routing::{get, put},
 };
-use chrono::Utc;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -28,7 +27,7 @@ pub fn admin_routes() -> Router<AppState> {
 }
 
 async fn list(State(s): State<AppState>, Admin(_): Admin) -> ApiResult<Json<Value>> {
-    let today = renewals::kst_today(Utc::now());
+    let today = crate::util::local_today();
     let items: Vec<Value> = renewals::due_items(&s.db)
         .await?
         .into_iter()

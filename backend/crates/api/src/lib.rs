@@ -108,6 +108,8 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     // Migrations get their own single connection without the statement timeout (index builds can be slow).
     let migrate_db = db::connect(&config.database_url, &config.db.for_migrations()).await?;
     migrate(&migrate_db).await?;
+    // The zone is fixed for the life of the process; the main pool below carries it on every connection.
+    util::set_install_tz(util::load_install_tz(&migrate_db).await?);
     migrate_db.close().await;
     let db = db::connect(&config.database_url, &config.db).await?;
     seed::run(&db, &config).await?;

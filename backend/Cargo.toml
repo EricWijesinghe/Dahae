@@ -13,6 +13,8 @@ authors = ["Eric Wijesinghe <EricWijesinghe@hotmail.com>"]
 
 [workspace.dependencies]
 chrono = { version = "0.4", default-features = false, features = ["std", "clock", "serde"] }
+# Time zones (install.tz) with bundled IANA rules, so every image reads the same ones. New tz data arrives with jiff-tzdb.
+jiff = { version = "=0.2.43", default-features = false, features = ["std", "tzdb-bundle-always"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

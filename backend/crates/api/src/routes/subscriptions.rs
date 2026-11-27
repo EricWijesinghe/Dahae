@@ -17,7 +17,7 @@ use crate::{
     auth::{Admin, Customer, Pro},
     error::{ApiError, ApiResult},
     state::AppState,
-    util::{KST_TODAY, lock_and_count_slot, today_kst},
+    util::{LOCAL_TODAY, local_today, lock_and_count_slot},
 };
 use axum::{
     Json, Router,
@@ -138,7 +138,7 @@ async fn view(db: &PgPool, id: Uuid) -> ApiResult<Value> {
     let sub = fetch(db, id).await?;
     let visits: Vec<VisitView> = sqlx::query_as(&format!(
         "SELECT id, visit_date, start_hour, state, booking_id, charge_attempts FROM subscription_visits
-         WHERE subscription_id = $1 AND visit_date >= {KST_TODAY} - 7 ORDER BY visit_date LIMIT 40"
+         WHERE subscription_id = $1 AND visit_date >= {LOCAL_TODAY} - 7 ORDER BY visit_date LIMIT 40"
     ))
     .bind(id)
     .fetch_all(db)
@@ -146,9 +146,9 @@ async fn view(db: &PgPool, id: Uuid) -> ApiResult<Value> {
     Ok(json!({ "subscription": sub, "visits": visits }))
 }
 
-/// A visit is charged the day before it (KST), so anything up to tomorrow is out of reach for the customer.
+/// A visit is charged the day before it (in the install's time zone), so anything up to tomorrow is out of reach for the customer.
 fn charge_due(date: NaiveDate) -> bool {
-    date <= today_kst() + Duration::days(1)
+    date <= local_today() + Duration::days(1)
 }
 
 async fn check_card(db: &PgPool, user: Uuid, method: Uuid) -> ApiResult<()> {
@@ -196,7 +196,7 @@ struct CreateSub {
 async fn create(State(s): State<AppState>, Customer(a): Customer, Json(req): Json<CreateSub>) -> ApiResult<Json<Value>> {
     let cadence = Cadence::from_weeks(req.cadence_weeks)?;
     let weekday = weekday_from_index(req.weekday)?;
-    let first = first_visit(today_kst() + Duration::days(1), weekday);
+    let first = first_visit(local_today() + Duration::days(1), weekday);
     let body = BookingBody {
         service_code: req.service_code.clone(),
         unit_index: req.unit_index,
@@ -336,7 +336,7 @@ async fn cancel(State(s): State<AppState>, Customer(a): Customer, Path(id): Path
     tx.commit().await?;
     let booked: Vec<Option<Uuid>> = sqlx::query_scalar(&format!(
         "SELECT v.booking_id FROM subscription_visits v JOIN bookings b ON b.id = v.booking_id
-         WHERE v.subscription_id = $1 AND v.state = 'booked' AND b.status >= 0 AND v.visit_date >= {KST_TODAY} ORDER BY v.visit_date"
+         WHERE v.subscription_id = $1 AND v.state = 'booked' AND b.status >= 0 AND v.visit_date >= {LOCAL_TODAY} ORDER BY v.visit_date"
     ))
     .bind(id)
     .fetch_all(&s.db)
@@ -426,7 +426,7 @@ async fn reschedule_visit(
     if charge_due(v.visit_date) || charge_due(m.visit_date) {
         return Err(ApiError::Conflict("visit_charge_due"));
     }
-    check_date(today_kst(), m.visit_date)?;
+    check_date(local_today(), m.visit_date)?;
     check_slot(false, m.start_hour)?;
     let mut tx = s.db.begin().await?;
     let (used, cap) = lock_and_count_slot(&mut tx, m.visit_date, m.start_hour, Some(visit)).await?;
@@ -467,7 +467,7 @@ async fn partner_list(State(s): State<AppState>, Pro(a): Pro) -> ApiResult<Json<
     let rows: Vec<PartnerRow> = sqlx::query_as(&format!(
         "SELECT s.id, s.service_code, s.cadence_weeks, s.weekday, s.start_hour, s.status, ad.district_code,
            (SELECT min(v.visit_date) FROM subscription_visits v
-             WHERE v.subscription_id = s.id AND v.state IN ('planned', 'booked') AND v.visit_date >= {KST_TODAY}) AS next_visit_date
+             WHERE v.subscription_id = s.id AND v.state IN ('planned', 'booked') AND v.visit_date >= {LOCAL_TODAY}) AS next_visit_date
          FROM subscriptions s JOIN addresses ad ON ad.id = s.address_id
          WHERE s.status <> 'cancelled'
            AND (s.preferred_pro_id = $1 OR EXISTS (SELECT 1 FROM bookings b WHERE b.subscription_id = s.id AND b.pro_id = $1))
@@ -533,7 +533,7 @@ async fn admin_edit(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<U
     let anchor = if i16::from(weekday_index) == before.weekday {
         before.anchor_date
     } else {
-        first_visit(today_kst() + Duration::days(1), weekday)
+        first_visit(local_today() + Duration::days(1), weekday)
     };
     let mut tx = s.db.begin().await?;
     sqlx::query(
@@ -550,7 +550,7 @@ async fn admin_edit(State(s): State<AppState>, Admin(a): Admin, Path(id): Path<U
     .execute(&mut *tx)
     .await?;
     sqlx::query(&format!(
-        "DELETE FROM subscription_visits WHERE subscription_id = $1 AND state = 'planned' AND visit_date > {KST_TODAY} + 1"
+        "DELETE FROM subscription_visits WHERE subscription_id = $1 AND state = 'planned' AND visit_date > {LOCAL_TODAY} + 1"
     ))
     .bind(id)
     .execute(&mut *tx)
@@ -601,7 +601,7 @@ struct MetricsQuery {
 }
 
 async fn admin_metrics(State(s): State<AppState>, Admin(_): Admin, Query(q): Query<MetricsQuery>) -> ApiResult<Json<Value>> {
-    let to = q.to.unwrap_or_else(today_kst);
+    let to = q.to.unwrap_or_else(local_today);
     let from = q.from.unwrap_or(to - Duration::days(29));
     if from > to {
         return Err(ApiError::BadRequest("invalid_period"));
@@ -609,7 +609,7 @@ async fn admin_metrics(State(s): State<AppState>, Admin(_): Admin, Query(q): Que
     Ok(Json(recurring_metrics(&s.db, from, to).await?))
 }
 
-/// Recurring revenue over `[from, to]` (KST dates). MRR and `active` are as of now (active subscriptions only).
+/// Recurring revenue over `[from, to]` (local dates). MRR and `active` are as of now (active subscriptions only).
 /// `started` and `cancelled` count events in the period; `churn_bps` is cancellations over the base active at `from`.
 /// `recognized` is each subscription's monthly amount prorated to its live days in the period; it is exact when the
 /// period is one calendar month. Prices are today's list prices less each subscription's discount snapshot.
@@ -627,10 +627,10 @@ pub async fn recurring_metrics(db: &PgPool, from: NaiveDate, to: NaiveDate) -> A
     }
     let rows: Vec<Row> = sqlx::query_as(
         "SELECT s.status, s.service_code, s.unit_index, s.unit_counts, s.cadence_weeks, s.discount_percent,
-           (s.created_at AT TIME ZONE 'Asia/Seoul')::date AS started,
-           (s.cancelled_at AT TIME ZONE 'Asia/Seoul')::date AS ended
+           (s.created_at AT TIME ZONE dahae_tz())::date AS started,
+           (s.cancelled_at AT TIME ZONE dahae_tz())::date AS ended
          FROM subscriptions s
-         WHERE s.status <> 'cancelled' OR (s.cancelled_at AT TIME ZONE 'Asia/Seoul')::date >= $1",
+         WHERE s.status <> 'cancelled' OR (s.cancelled_at AT TIME ZONE dahae_tz())::date >= $1",
     )
     .bind(from)
     .fetch_all(db)

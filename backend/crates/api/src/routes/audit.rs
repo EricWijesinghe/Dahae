@@ -41,7 +41,7 @@ struct AuditQuery {
     /// Exact action or a prefix such as `case.`.
     action: Option<String>,
     target: Option<String>,
-    /// Seoul calendar days, both inclusive.
+    /// Calendar days in the install's time zone, both inclusive.
     from: Option<NaiveDate>,
     to: Option<NaiveDate>,
 }
@@ -126,8 +126,8 @@ async fn list(State(s): State<AppState>, Admin(_): Admin, Query(q): Query<AuditQ
            AND ($2::uuid IS NULL OR a.actor_id = $2)
            AND ($3::text IS NULL OR left(a.action, char_length($3::text)) = $3::text)
            AND ($4::text IS NULL OR a.target = $4)
-           AND ($5::date IS NULL OR a.created_at >= ($5::date::timestamp AT TIME ZONE 'Asia/Seoul'))
-           AND ($6::date IS NULL OR a.created_at < (($6::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul'))
+           AND ($5::date IS NULL OR a.created_at >= ($5::date::timestamp AT TIME ZONE dahae_tz()))
+           AND ($6::date IS NULL OR a.created_at < (($6::date + 1)::timestamp AT TIME ZONE dahae_tz()))
            AND ($7::timestamptz IS NULL OR (a.created_at, a.id) < ($7::timestamptz, $8::bigint))
          ORDER BY a.created_at DESC, a.id DESC
          LIMIT $9",

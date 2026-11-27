@@ -75,7 +75,7 @@ struct Thread {
 }
 
 pub async fn run(c: &mut Ctx<'_>, world: &World, booked: &[BookingRec]) -> Result<(), DemoError> {
-    let today = c.now.with_timezone(&c.kst).date_naive();
+    let today = domain::zone::today(&c.tz, c.now);
     for b in booked {
         let closed = b.status == 3 && (today - b.visit).num_days() > 7;
         if c.chance(0.8) {

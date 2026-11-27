@@ -17,9 +17,9 @@ use crate::{
     realtime::{Recipient, notify},
     schedule::{clash, lock_schedule},
     state::AppState,
-    util::{KST_TODAY, best_effort, lock_and_count_slot, refund_or_alert, today_kst},
+    util::{LOCAL_TODAY, best_effort, local_today, lock_and_count_slot, refund_or_alert},
 };
-use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use domain::{
     DomainError, Won,
     pricing::{PriceBreakdown, price_booking_with},
@@ -177,7 +177,7 @@ pub async fn plan_subscription(s: &AppState, sub: Uuid) -> ApiResult<usize> {
         return Ok(0);
     };
     let cadence = Cadence::from_weeks(i64::from(weeks))?;
-    let (from, until) = (today_kst() + Duration::days(1), today_kst() + Duration::days(HORIZON_DAYS));
+    let (from, until) = (local_today() + Duration::days(1), local_today() + Duration::days(HORIZON_DAYS));
     let mut added = 0;
     for date in visit_dates(anchor, cadence, from, until) {
         if plan_visit(s, sub, user, date, hour as u8).await? {
@@ -256,12 +256,12 @@ async fn free_hour(conn: &mut PgConnection, date: NaiveDate, preferred: u8) -> A
     Ok(None)
 }
 
-/// Charges every planned visit due tomorrow (KST) whose retry time has come. Returns (booked, failed).
+/// Charges every planned visit due tomorrow (in the install's time zone) whose retry time has come. Returns (booked, failed).
 async fn charge_due(s: &AppState, now: DateTime<Utc>) -> ApiResult<(usize, usize)> {
     let due: Vec<Due> = sqlx::query_as(&format!(
         "SELECT v.id AS visit_id, s.id AS sub_id, s.user_id, v.visit_date, v.start_hour
          FROM subscription_visits v JOIN subscriptions s ON s.id = v.subscription_id
-         WHERE v.state = 'planned' AND s.status = 'active' AND v.visit_date = {KST_TODAY} + 1
+         WHERE v.state = 'planned' AND s.status = 'active' AND v.visit_date = {LOCAL_TODAY} + 1
            AND (v.retry_at IS NULL OR v.retry_at <= now())
          ORDER BY v.start_hour, v.id LIMIT $1"
     ))
@@ -359,10 +359,10 @@ fn verdict(status: &str, paid: i64, expected: i64) -> Verdict {
     }
 }
 
-/// When to retry a visit's charge, or `None` when no pass is left to do it. Charges go out the day before the visit (KST),
-/// so the window closes at KST midnight of the visit. A retry is held one pass interval earlier so the last pass still sees it due.
+/// When to retry a visit's charge, or `None` when no pass is left to do it. Charges go out the day before the visit,
+/// so the window closes at midnight starting the visit day in the install's zone. A retry is held one pass interval earlier so the last pass still sees it due.
 fn next_try(now: DateTime<Utc>, hours: i64, visit: NaiveDate) -> Option<DateTime<Utc>> {
-    let last = visit.and_time(NaiveTime::MIN).and_utc() - Duration::hours(9) - Duration::minutes(PASS_MINUTES);
+    let last = domain::zone::day_bounds(&crate::util::install_tz(), visit).0 - Duration::minutes(PASS_MINUTES);
     let at = (now + Duration::hours(hours)).min(last);
     (at > now).then_some(at)
 }
@@ -733,7 +733,7 @@ async fn expire(s: &AppState) -> ApiResult<usize> {
     settle_open_charges(s).await?;
     let missed: Vec<(Uuid,)> = sqlx::query_as(&format!(
         "UPDATE subscription_visits v SET state = 'missed', updated_at = now() FROM subscriptions s
-         WHERE s.id = v.subscription_id AND v.state = 'planned' AND v.visit_date <= {KST_TODAY} AND v.payment_ref IS NULL
+         WHERE s.id = v.subscription_id AND v.state = 'planned' AND v.visit_date <= {LOCAL_TODAY} AND v.payment_ref IS NULL
          RETURNING s.user_id"
     ))
     .fetch_all(&s.db)
@@ -750,7 +750,7 @@ async fn settle_open_charges(s: &AppState) -> ApiResult<()> {
     // Asked where the charge was sent (NULL: before Toss, so PortOne), not where the card is now.
     let open: Vec<(Uuid, String, String)> = sqlx::query_as(&format!(
         "SELECT v.id, v.payment_ref, COALESCE(v.payment_provider, 'portone') FROM subscription_visits v
-         WHERE v.payment_ref IS NOT NULL AND v.state <> 'booked' AND (v.state <> 'planned' OR v.visit_date <= {KST_TODAY})"
+         WHERE v.payment_ref IS NOT NULL AND v.state <> 'booked' AND (v.state <> 'planned' OR v.visit_date <= {LOCAL_TODAY})"
     ))
     .fetch_all(&s.db)
     .await?;
@@ -809,7 +809,7 @@ mod tests {
 
     #[test]
     fn a_retry_never_falls_after_the_charge_window_closes() {
-        // Declined 19:00 KST on 11-19 for a 11-20 visit: the window closes at KST midnight, 15:00 UTC.
+        // Declined 19:00 local (default zone, UTC+9) on 11-19 for a 11-20 visit: the window closes at local midnight, 15:00 UTC.
         let visit = NaiveDate::from_ymd_opt(2026, 11, 20).expect("date");
         let declined = Utc.with_ymd_and_hms(2026, 11, 19, 10, 0, 0).single().expect("time");
         let retry = next_try(declined, 6, visit);
@@ -822,7 +822,7 @@ mod tests {
 
     #[test]
     fn a_decline_in_the_last_minutes_before_midnight_has_no_retry_in_the_past() {
-        // Declined 23:57 KST on 11-19 for a 11-20 visit: no pass before midnight is left for a retry.
+        // Declined 23:57 local on 11-19 for a 11-20 visit: no pass before midnight is left for a retry.
         let visit = NaiveDate::from_ymd_opt(2026, 11, 20).expect("date");
         let late = Utc.with_ymd_and_hms(2026, 11, 19, 14, 57, 0).single().expect("time");
         assert_eq!(next_try(late, 6, visit), None, "a retry time already past is never charged");

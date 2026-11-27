@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
 //! Peak pricing: weekend, Korean public holiday, Seollal/Chuseok period and evening-hour surcharges.
-//! Pure: callers pass the UTC start instant; all calendar math happens in KST (UTC+9).
+//! Pure: callers pass the UTC start instant and the install's time zone; all calendar math happens in that zone.
+//! The `kst_*`/zone-less forms read the default zone ([`zone::default_tz`]) and are kept for existing callers.
 
-use crate::{DomainError, Won};
-use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, Timelike, Utc, Weekday};
+use crate::{
+    DomainError, Won,
+    zone::{self, Tz},
+};
+use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc, Weekday};
 use serde::{Deserialize, Serialize};
 
 const FULL_BPS: i64 = 10_000;
-const KST_OFFSET_SECS: i32 = 9 * 3600;
 const MAX_HOUR: u32 = 24;
-
-fn kst_offset() -> FixedOffset {
-    FixedOffset::east_opt(KST_OFFSET_SECS).expect("KST offset is a valid constant")
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -25,7 +24,7 @@ pub enum DayKind {
     LunarPeriod,
 }
 
-/// Korean public holidays and lunar-holiday blocks, KST calendar dates.
+/// Korean public holidays and lunar-holiday blocks, as calendar dates in the install's zone.
 ///
 /// Source: 대한민국 공휴일 (행정안전부 「관공서의 공휴일에 관한 규정」, 대체공휴일 적용 대상 포함),
 /// 음력 기반 날짜(설날·부처님오신날·추석)는 한국천문연구원 음력 달력 기준.
@@ -92,7 +91,7 @@ const KR_HOLIDAYS: &[(i32, u32, u32, DayKind)] = &[
     (2028, 12, 25, DayKind::Public),
 ];
 
-/// Looks up the holiday kind for a KST calendar date, if any.
+/// Looks up the holiday kind for a calendar date, if any.
 pub fn holiday_kind(date: NaiveDate) -> Option<DayKind> {
     KR_HOLIDAYS
         .iter()
@@ -106,7 +105,7 @@ pub struct PeakConfig {
     pub public_holiday_bps: i64,
     pub lunar_period_bps: i64,
     pub evening_bps: i64,
-    /// KST hour, inclusive. Evening window is `[evening_start_hour, evening_end_hour)`.
+    /// Hour in the install's zone, inclusive. Evening window is `[evening_start_hour, evening_end_hour)`.
     pub evening_start_hour: u32,
     pub evening_end_hour: u32,
     /// Hard cap on the total surcharge.
@@ -169,20 +168,27 @@ impl PeakSurcharge {
     }
 }
 
-/// UTC instant of a KST visit date and start hour (hour 0-23).
+/// UTC instant of a visit date and start hour (hour 0-23) in `tz`. See [`zone::to_utc`] for daylight-saving changes.
+pub fn slot_to_utc(tz: &Tz, date: NaiveDate, hour: u32) -> Option<DateTime<Utc>> {
+    Some(zone::to_utc(tz, date.and_hms_opt(hour, 0, 0)?))
+}
+
+/// [`slot_to_utc`] in the default zone.
 pub fn kst_to_utc(date: NaiveDate, hour: u32) -> Option<DateTime<Utc>> {
-    date.and_hms_opt(hour, 0, 0)?
-        .and_local_timezone(kst_offset())
-        .single()
-        .map(|d| d.with_timezone(&Utc))
+    slot_to_utc(&zone::default_tz(), date, hour)
 }
 
 /// Surcharge for a booking starting at `start` (UTC instant).
 /// Rules: day-type = max(weekend, public holiday, lunar period); evening is added on top;
 /// the total is capped at `max_bps`.
 pub fn peak_surcharge(config: &PeakConfig, start: DateTime<Utc>) -> PeakSurcharge {
-    let local = start.with_timezone(&kst_offset());
-    let date = local.date_naive();
+    peak_surcharge_in(config, start, &zone::default_tz())
+}
+
+/// [`peak_surcharge`] with the calendar read in `tz`.
+pub fn peak_surcharge_in(config: &PeakConfig, start: DateTime<Utc>, tz: &Tz) -> PeakSurcharge {
+    let local = zone::local(tz, start);
+    let date = local.date();
     let is_weekend = matches!(date.weekday(), Weekday::Sat | Weekday::Sun);
     let day_kind = holiday_kind(date);
     let weekend_bps = if is_weekend { config.weekend_bps } else { 0 };
@@ -209,15 +215,15 @@ mod tests {
     use super::*;
     use chrono::TimeZone;
 
-    fn kst(y: i32, m: u32, d: u32, h: u32) -> DateTime<Utc> {
-        // KST is UTC+9: subtract 9 hours to get the UTC instant.
+    /// Wall-clock time in the default zone (UTC+9, no daylight saving): subtract 9 hours to get the UTC instant.
+    fn local(y: i32, m: u32, d: u32, h: u32) -> DateTime<Utc> {
         Utc.with_ymd_and_hms(y, m, d, h, 0, 0).unwrap() - chrono::Duration::hours(9)
     }
 
     #[test]
     fn weekday_daytime_has_no_surcharge() {
-        // 2026-11-11 is a Wednesday, 10:00 KST.
-        let s = peak_surcharge(&PeakConfig::default(), kst(2026, 11, 11, 10));
+        // 2026-11-11 is a Wednesday, 10:00 local.
+        let s = peak_surcharge(&PeakConfig::default(), local(2026, 11, 11, 10));
         assert_eq!((s.bps, s.day_bps, s.evening_bps, s.is_weekend), (0, 0, 0, false));
         assert_eq!(s.day_kind, None);
     }
@@ -225,44 +231,44 @@ mod tests {
     #[test]
     fn saturday_is_weekend_surcharge() {
         // 2026-11-14 is a Saturday.
-        let s = peak_surcharge(&PeakConfig::default(), kst(2026, 11, 14, 10));
+        let s = peak_surcharge(&PeakConfig::default(), local(2026, 11, 14, 10));
         assert_eq!((s.bps, s.day_bps, s.is_weekend), (1_000, 1_000, true));
     }
 
     #[test]
     fn sunday_evening_stacks_day_and_evening() {
-        // 2026-11-15 is a Sunday, 19:00 KST: weekend 10% + evening 10%.
-        let s = peak_surcharge(&PeakConfig::default(), kst(2026, 11, 15, 19));
+        // 2026-11-15 is a Sunday, 19:00 local: weekend 10% + evening 10%.
+        let s = peak_surcharge(&PeakConfig::default(), local(2026, 11, 15, 19));
         assert_eq!((s.day_bps, s.evening_bps, s.bps), (1_000, 1_000, 2_000));
     }
 
     #[test]
     fn evening_window_end_is_exclusive() {
         let c = PeakConfig::default();
-        assert_eq!(peak_surcharge(&c, kst(2026, 11, 11, 17)).evening_bps, 0);
-        assert_eq!(peak_surcharge(&c, kst(2026, 11, 11, 18)).evening_bps, 1_000);
-        assert_eq!(peak_surcharge(&c, kst(2026, 11, 11, 21)).evening_bps, 1_000);
-        assert_eq!(peak_surcharge(&c, kst(2026, 11, 11, 22)).evening_bps, 0);
+        assert_eq!(peak_surcharge(&c, local(2026, 11, 11, 17)).evening_bps, 0);
+        assert_eq!(peak_surcharge(&c, local(2026, 11, 11, 18)).evening_bps, 1_000);
+        assert_eq!(peak_surcharge(&c, local(2026, 11, 11, 21)).evening_bps, 1_000);
+        assert_eq!(peak_surcharge(&c, local(2026, 11, 11, 22)).evening_bps, 0);
     }
 
     #[test]
     fn public_holiday_on_weekday_uses_holiday_rate() {
         // 2026-10-09 (한글날) is a Friday.
-        let s = peak_surcharge(&PeakConfig::default(), kst(2026, 10, 9, 10));
+        let s = peak_surcharge(&PeakConfig::default(), local(2026, 10, 9, 10));
         assert_eq!((s.day_kind, s.day_bps, s.bps), (Some(DayKind::Public), 2_000, 2_000));
     }
 
     #[test]
     fn chuseok_period_uses_lunar_rate_not_sum_with_weekend() {
         // 2026-09-26 is a Saturday inside the 추석 block: max(weekend 10%, lunar 30%) = 30%, not 40%.
-        let s = peak_surcharge(&PeakConfig::default(), kst(2026, 9, 26, 10));
+        let s = peak_surcharge(&PeakConfig::default(), local(2026, 9, 26, 10));
         assert_eq!((s.day_kind, s.day_bps, s.bps), (Some(DayKind::LunarPeriod), 3_000, 3_000));
     }
 
     #[test]
     fn substitute_holiday_counts_as_public() {
         // 2026-03-02 is the substitute for 삼일절 (Sunday 3/1).
-        let s = peak_surcharge(&PeakConfig::default(), kst(2026, 3, 2, 10));
+        let s = peak_surcharge(&PeakConfig::default(), local(2026, 3, 2, 10));
         assert_eq!(s.day_kind, Some(DayKind::Public));
     }
 
@@ -273,13 +279,13 @@ mod tests {
             ..PeakConfig::default()
         };
         // Chuseok Saturday evening would be 30% + 10% = 40%, capped to 25%.
-        let s = peak_surcharge(&c, kst(2026, 9, 26, 19));
+        let s = peak_surcharge(&c, local(2026, 9, 26, 19));
         assert_eq!(s.bps, 2_500);
     }
 
     #[test]
-    fn kst_date_boundary_is_used_not_utc() {
-        // 2026-11-14 23:30 UTC is already 2026-11-15 08:30 KST (Sunday).
+    fn local_date_boundary_is_used_not_utc() {
+        // 2026-11-14 23:30 UTC is already 2026-11-15 08:30 local (Sunday).
         let utc = Utc.with_ymd_and_hms(2026, 11, 14, 23, 30, 0).unwrap();
         let s = peak_surcharge(&PeakConfig::default(), utc);
         assert!(s.is_weekend);
@@ -303,6 +309,23 @@ mod tests {
         let d = NaiveDate::from_ymd_opt(2026, 11, 11).unwrap();
         assert_eq!(kst_to_utc(d, 10), Some(Utc.with_ymd_and_hms(2026, 11, 11, 1, 0, 0).unwrap()));
         assert_eq!(kst_to_utc(d, 24), None);
+    }
+
+    #[test]
+    fn calendar_and_evening_follow_the_install_zone() {
+        let london = zone::get("Europe/London").expect("zone");
+        // Friday 2026-11-13 23:30 UTC: Saturday morning in the default zone, Friday evening in London.
+        let at = Utc.with_ymd_and_hms(2026, 11, 13, 23, 30, 0).unwrap();
+        let c = PeakConfig {
+            evening_end_hour: 24,
+            ..PeakConfig::default()
+        };
+        assert!(peak_surcharge(&c, at).is_weekend);
+        let uk = peak_surcharge_in(&c, at, &london);
+        assert!(!uk.is_weekend && uk.evening_bps > 0);
+        let d = NaiveDate::from_ymd_opt(2026, 7, 1).unwrap();
+        assert_eq!(slot_to_utc(&london, d, 10), Some(Utc.with_ymd_and_hms(2026, 7, 1, 9, 0, 0).unwrap()));
+        assert_eq!(slot_to_utc(&london, d, 24), None);
     }
 
     #[test]

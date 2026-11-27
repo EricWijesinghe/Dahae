@@ -18,7 +18,7 @@ const MOVE_ANSWERS: &str = r#"{"cleaning_type":"standard","luggage":"empty","bui
 
 /// The first Saturday at least three days out, so the slot is bookable and carries the weekend rate.
 fn next_saturday() -> chrono::NaiveDate {
-    let mut day = api::util::today_kst() + Duration::days(3);
+    let mut day = api::util::local_today() + Duration::days(3);
     while day.weekday() != Weekday::Sat {
         day += Duration::days(1);
     }

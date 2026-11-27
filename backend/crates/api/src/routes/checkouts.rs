@@ -29,7 +29,7 @@ use crate::{
     },
     realtime::{Recipient, notify},
     state::AppState,
-    util::{Refund, best_effort, refund_durably, today_kst},
+    util::{Refund, best_effort, local_today, refund_durably},
 };
 use axum::{
     Json, Router,
@@ -806,7 +806,7 @@ async fn fulfil(s: &AppState, ck: &CheckoutRow, payment_id: &str) -> ApiResult<U
 
 /// Re-runs the slot, date and coupon rules inside the transaction and inserts the booking.
 async fn book(tx: &mut Transaction<'_, Postgres>, key: &[u8; 32], user: Uuid, prep: &Prepared, body: &BookingBody, amount: i64) -> ApiResult<(Uuid, String)> {
-    check_date(today_kst(), body.visit_date)?;
+    check_date(local_today(), body.visit_date)?;
     check_slot(prep.service.is_quote(), body.start_hour)?;
     lock_slot(tx, body.visit_date, body.start_hour, None).await?;
     let price = price_for(tx, user, prep, body, true).await?;

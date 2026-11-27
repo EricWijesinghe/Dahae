@@ -10,27 +10,77 @@ use crate::{
     state::AppState,
 };
 use chrono::{DateTime, NaiveDate, Utc};
+use domain::zone::{self, Tz};
 use serde_json::{Value, json};
-use sqlx::PgConnection;
+use sqlx::{PgConnection, PgPool};
 use std::{
     collections::BTreeMap,
     future::Future,
-    sync::{Mutex, OnceLock},
+    sync::{Mutex, OnceLock, PoisonError, RwLock},
 };
 use uuid::Uuid;
 
-/// Business dates are Korean dates, whatever timezone the server or DB runs in.
+/// The install's time zone (`install.tz`), fixed at boot by [`set_install_tz`]; the default zone until then.
+/// Every pool connection carries the same zone as `dahae.tz` (`db::connect`), which SQL reads through `dahae_tz()`.
+static INSTALL_TZ: RwLock<Option<Tz>> = RwLock::new(None);
+
+/// The zone business dates and wall-clock hours are read in.
+pub fn install_tz() -> Tz {
+    INSTALL_TZ
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone()
+        .unwrap_or_else(zone::default_tz)
+}
+
+/// Sets the process zone. Call it before opening the pool: connections opened earlier keep the zone they started with.
+pub fn set_install_tz(tz: Tz) {
+    *INSTALL_TZ.write().unwrap_or_else(PoisonError::into_inner) = Some(tz);
+}
+
+/// Reads `install.tz`. Unset (a fresh install, or one from before time zones) is the default zone, so nothing changes;
+/// a value that is not a known zone is logged and also read as the default rather than stopping the boot.
+pub async fn load_install_tz(db: &PgPool) -> Result<Tz, sqlx::Error> {
+    let stored: Option<String> = sqlx::query_scalar("SELECT value #>> '{}' FROM settings WHERE key = $1")
+        .bind(crate::settings_registry::storage_key("install.tz"))
+        .fetch_optional(db)
+        .await?
+        .flatten();
+    Ok(match stored.as_deref().filter(|z| !z.is_empty()) {
+        None => zone::default_tz(),
+        Some(name) => zone::get(name).unwrap_or_else(|| {
+            tracing::error!(zone = name, "install.tz is not a known time zone; using the default zone");
+            zone::default_tz()
+        }),
+    })
+}
+
+/// Business dates are dates in the install's zone, whatever timezone the server or DB runs in.
+pub fn local_today() -> NaiveDate {
+    local_today_at(Utc::now())
+}
+
+/// [`local_today`] at a given instant.
+pub fn local_today_at(now: DateTime<Utc>) -> NaiveDate {
+    zone::today(&install_tz(), now)
+}
+
+/// SQL equivalent of [`local_today`]; never use bare `current_date` (it follows the DB timezone).
+/// `dahae_tz()` (migration 0511) is `current_setting('dahae.tz')`, or the default zone on a connection without it.
+pub const LOCAL_TODAY: &str = "(now() AT TIME ZONE dahae_tz())::date";
+
+/// [`local_today`] under its name from before install time zones.
 pub fn today_kst() -> NaiveDate {
-    today_kst_at(Utc::now())
+    local_today()
 }
 
-/// [`today_kst`] at a given instant.
+/// [`local_today_at`] under its name from before install time zones.
 pub fn today_kst_at(now: DateTime<Utc>) -> NaiveDate {
-    (now + chrono::Duration::hours(9)).date_naive()
+    local_today_at(now)
 }
 
-/// SQL equivalent of [`today_kst`]; never use bare `current_date` (it follows the DB timezone).
-pub const KST_TODAY: &str = "(now() AT TIME ZONE 'Asia/Seoul')::date";
+/// [`LOCAL_TODAY`] under its name from before install time zones.
+pub const KST_TODAY: &str = LOCAL_TODAY;
 
 /// Notifications and chat fan-out run after the money is committed: a push or
 /// socket hiccup must not turn a successful booking into an error (and a retry).

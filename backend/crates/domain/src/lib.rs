@@ -31,6 +31,7 @@ pub mod tax;
 pub mod tip;
 pub mod training;
 pub mod waitlist;
+pub mod zone;
 
 pub use error::DomainError;
 pub use money::{Money, Won};

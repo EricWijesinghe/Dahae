@@ -29,7 +29,7 @@ async fn retry_with_a_refreshed_token_replays_the_booking_instead_of_charging_ag
     seed_catalog(&pool).await;
     let app = common::app(pool.clone());
     let c = customer(&app, &pool, "010-5000-0950").await;
-    let visit = api::util::today_kst() + chrono::Duration::days(3);
+    let visit = api::util::local_today() + chrono::Duration::days(3);
     let body = json!({
         "service_code": "studio",
         "address_id": c.address,

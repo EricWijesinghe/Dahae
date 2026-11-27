@@ -322,7 +322,7 @@ async fn slot_shows_seats_left_only_when_two_or_fewer_remain(pool: PgPool) {
         .await
         .expect("capacity");
     let app = common::app(pool.clone());
-    let date = api::util::today_kst() + Duration::days(10);
+    let date = api::util::local_today() + Duration::days(10);
     let uri = format!("/v1/slots?date={date}");
     let hour9 = |v: &Value| v.as_array().and_then(|a| a.iter().find(|s| s["start_hour"] == 9)).cloned().expect("hour 9");
 

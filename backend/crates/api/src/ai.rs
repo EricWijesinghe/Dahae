@@ -13,8 +13,9 @@ use crate::{
     state::AppState,
     util::best_effort,
 };
-use chrono::{DateTime, Datelike, FixedOffset, NaiveTime, Utc};
+use chrono::{DateTime, Datelike, NaiveTime, Utc};
 use domain::growth::{redact_contacts, ungrounded_claim};
+use domain::zone::Tz;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -45,7 +46,6 @@ pub const DEFAULT_DAILY_CAP: u32 = 1000;
 pub const THREAD_HOURLY_RANGE: RangeInclusive<u32> = 1..=60;
 pub const MEMBER_DAILY_RANGE: RangeInclusive<u32> = 1..=500;
 pub const DAILY_RANGE: RangeInclusive<u32> = 1..=10_000;
-const KST_OFFSET_SECS: i32 = 9 * 3600;
 
 /// Who answers when a customer writes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -126,17 +126,17 @@ pub fn should_answer(mode: Mode, f: Facts) -> bool {
     }
 }
 
-/// True when `now` (KST) is on a listed weekday and inside open..close.
+/// True when `now`, read in `tz`, is on a listed weekday and inside open..close.
 /// Shape: `{"weekdays":[0,1,2,3,4] (0 = Monday), "open":"09:00", "close":"18:00"}`.
-pub fn open_at(hours: &Value, now: DateTime<Utc>) -> bool {
-    let kst = now.with_timezone(&FixedOffset::east_opt(KST_OFFSET_SECS).expect("KST offset is valid"));
-    let weekday = i64::from(kst.weekday().num_days_from_monday());
+pub fn open_at(hours: &Value, now: DateTime<Utc>, tz: &Tz) -> bool {
+    let local = domain::zone::local(tz, now);
+    let weekday = i64::from(local.weekday().num_days_from_monday());
     let on_day = hours["weekdays"]
         .as_array()
         .is_some_and(|days| days.iter().any(|d| d.as_i64() == Some(weekday)));
     let clock = |key: &str| hours[key].as_str().and_then(|s| NaiveTime::parse_from_str(s, "%H:%M").ok());
     match (clock("open"), clock("close")) {
-        (Some(open), Some(close)) => on_day && (open..close).contains(&kst.time()),
+        (Some(open), Some(close)) => on_day && (open..close).contains(&local.time()),
         _ => false,
     }
 }
@@ -548,7 +548,7 @@ pub async fn answer(s: &AppState, thread: Uuid) -> ApiResult<()> {
         paused: t.ai_paused,
         staff_recent: staff_recent(&s.db, thread).await?,
         staff_online: s.hub.staff_connected() > 0,
-        open_hours: open_at(&hours, Utc::now()),
+        open_hours: open_at(&hours, Utc::now(), &crate::util::install_tz()),
     };
     if !should_answer(cfg.mode, facts) || !within_caps(&s.db, thread, cfg.caps).await? {
         return Ok(());
@@ -584,7 +584,7 @@ pub async fn answer(s: &AppState, thread: Uuid) -> ApiResult<()> {
     chat::broadcast_message(s, &msg).await
 }
 
-/// Month-to-date usage for the owner's inbox line (KST month).
+/// Month-to-date usage for the owner's inbox line (calendar month in the install's zone).
 pub async fn monthly_usage(db: &PgPool) -> Result<Value, sqlx::Error> {
     // `errors_last_hour` drives the console's outage banner; failed calls are counted, never billed to caps.
     let (calls, answered, errors, errors_last_hour, input, output, cache_read, cache_write): (i64, i64, i64, i64, i64, i64, i64, i64) = sqlx::query_as(
@@ -593,7 +593,7 @@ pub async fn monthly_usage(db: &PgPool) -> Result<Value, sqlx::Error> {
                 count(*) FILTER (WHERE outcome = 'error' AND created_at > now() - interval '1 hour'),
                 COALESCE(sum(input_tokens), 0)::bigint, COALESCE(sum(output_tokens), 0)::bigint,
                 COALESCE(sum(cache_read_tokens), 0)::bigint, COALESCE(sum(cache_write_tokens), 0)::bigint
-         FROM ai_usage WHERE created_at >= date_trunc('month', now() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul'",
+         FROM ai_usage WHERE created_at >= date_trunc('month', now() AT TIME ZONE dahae_tz()) AT TIME ZONE dahae_tz()",
     )
     .fetch_one(db)
     .await?;
@@ -653,17 +653,20 @@ mod tests {
     }
 
     #[test]
-    fn business_hours_are_read_in_kst() {
+    fn business_hours_are_read_in_the_install_zone() {
         let hours = json!({ "weekdays": [0, 1, 2, 3, 4], "open": "09:00", "close": "18:00" });
-        // 2026-11-11 is a Wednesday. 10:00 KST = 01:00 UTC.
+        let tz = &domain::zone::default_tz();
+        // 2026-11-11 is a Wednesday. 10:00 in the default zone (UTC+9) = 01:00 UTC.
         let utc = |h: u32, m: u32| Utc.with_ymd_and_hms(2026, 11, 11, h, m, 0).unwrap();
-        assert!(open_at(&hours, utc(1, 0)), "10:00 KST is open");
-        assert!(open_at(&hours, utc(0, 30)), "09:30 KST is open");
-        assert!(!open_at(&hours, utc(9, 30)), "18:30 KST is closed");
-        assert!(!open_at(&hours, utc(23, 30)), "08:30 KST next day is before opening");
-        // Saturday 2026-11-14 10:00 KST.
-        assert!(!open_at(&hours, Utc.with_ymd_and_hms(2026, 11, 14, 1, 0, 0).unwrap()));
-        assert!(!open_at(&Value::Null, utc(1, 0)), "no hours saved means closed");
+        assert!(open_at(&hours, utc(1, 0), tz), "10:00 local is open");
+        assert!(open_at(&hours, utc(0, 30), tz), "09:30 local is open");
+        assert!(!open_at(&hours, utc(9, 30), tz), "18:30 local is closed");
+        assert!(!open_at(&hours, utc(23, 30), tz), "08:30 local next day is before opening");
+        // Saturday 2026-11-14 10:00 local.
+        assert!(!open_at(&hours, Utc.with_ymd_and_hms(2026, 11, 14, 1, 0, 0).unwrap(), tz));
+        assert!(!open_at(&Value::Null, utc(1, 0), tz), "no hours saved means closed");
+        // 09:30 UTC is 18:30 in the default zone but 09:30 in London (GMT in November): open there.
+        assert!(open_at(&hours, utc(9, 30), &domain::zone::get("Europe/London").expect("zone")));
     }
 
     fn row(sender: &str, kind: &str, body: Value) -> HistoryRow {

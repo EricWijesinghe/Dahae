@@ -19,7 +19,8 @@ mod people;
 mod social;
 
 use crate::config::Config;
-use chrono::{DateTime, Duration, FixedOffset, Utc};
+use chrono::{DateTime, Duration, Utc};
+use domain::zone::Tz;
 use rand::{Rng, RngExt, SeedableRng, rngs::StdRng, seq::IndexedRandom};
 use sqlx::{PgPool, Postgres, Transaction};
 use std::{collections::BTreeMap, fmt, path::PathBuf};
@@ -32,7 +33,6 @@ const DEMO_LOCK: i64 = 0x6D61_6C6B;
 /// Placeholder photo: one 1x1 PNG, named with a fixed 32-hex stem so `own_upload` accepts it.
 const PLACEHOLDER_FILE: &str = "de30de30de30de30de30de30de30de30.png";
 const PLACEHOLDER_PNG: &str = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
-const KST_OFFSET_SECS: i32 = 9 * 3600;
 
 /// Every table load can write, with its primary-key column, children before parents.
 /// Clear walks this list; a registry entry for a table missing here aborts the clear.
@@ -109,7 +109,8 @@ pub(crate) struct Ctx<'t> {
     pub tx: Transaction<'t, Postgres>,
     pub rng: StdRng,
     pub now: DateTime<Utc>,
-    pub kst: FixedOffset,
+    /// The install's zone: visit days and hours are local wall-clock times in it.
+    pub tz: Tz,
     pub data_key: [u8; 32],
     pub counts: BTreeMap<&'static str, u64>,
 }
@@ -137,7 +138,7 @@ impl Ctx<'_> {
         self.rng.random_bool(p)
     }
 
-    /// `now` minus a random number of days in `lo..=hi`, at a random KST-independent hour.
+    /// `now` minus a random number of days in `lo..=hi`, at a random zone-independent hour.
     pub fn ago_days(&mut self, lo: i64, hi: i64) -> DateTime<Utc> {
         let days = self.range(lo, hi);
         let hours = self.range(0, 23);
@@ -186,12 +187,11 @@ pub async fn load(db: &PgPool, config: &Config, force: bool) -> Result<Report, D
     if (bookings > 0 || payments > 0) && !force {
         return Err(DemoError::RealData { bookings, payments });
     }
-    let kst = FixedOffset::east_opt(KST_OFFSET_SECS).expect("KST offset");
     let mut c = Ctx {
         tx,
         rng: StdRng::seed_from_u64(DEMO_SEED),
         now: Utc::now(),
-        kst,
+        tz: crate::util::install_tz(),
         data_key: config.data_key,
         counts: BTreeMap::new(),
     };
@@ -301,6 +301,10 @@ pub async fn cli(args: &[String]) -> i32 {
     };
     if let Err(e) = crate::migrate(&db).await {
         return fail(&format!("migrate: {e}"));
+    }
+    match crate::util::load_install_tz(&db).await {
+        Ok(tz) => crate::util::set_install_tz(tz),
+        Err(e) => return fail(&format!("database: {e}")),
     }
     // Same idempotent first-run data the server writes on start (catalogue, settings), so a load
     // works even before the API has ever started against this database.

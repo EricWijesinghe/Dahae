@@ -122,7 +122,7 @@ async fn member_sees_only_the_assigned_job_and_can_complete_it(pool: PgPool) {
     let (st, me) = call(&app, "GET", "/v1/member/me", Some(m.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{me}");
 
-    let from = api::util::today_kst();
+    let from = api::util::local_today();
     let to = from + Duration::days(30);
     let (st, list) = call(&app, "GET", &format!("/v1/member/jobs?from={from}&to={to}"), Some(m.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{list}");
@@ -262,7 +262,7 @@ async fn quote_booking_stores_the_addon_estimate_and_rejects_hourly_slots(pool: 
     seed_catalog(&pool).await;
     let app = common::app(pool.clone());
     let c = customer(&app, &pool, "010-5000-0401").await;
-    let visit = api::util::today_kst() + Duration::days(10);
+    let visit = api::util::local_today() + Duration::days(10);
     let answers = move_answers(json!([{"unit": "stand", "count": 1}]));
     let body = |hour: u8| {
         json!({
@@ -301,7 +301,7 @@ async fn estimate_preview_adds_the_weekend_surcharge_of_the_chosen_slot(pool: Pg
     let app = common::app(pool.clone());
     let answers = move_answers(json!([]));
     let (_, plain) = call(&app, "POST", "/v1/quote/estimate", None, Some(answers.clone())).await;
-    let mut saturday = api::util::today_kst() + Duration::days(10);
+    let mut saturday = api::util::local_today() + Duration::days(10);
     while saturday.weekday() != Weekday::Sat {
         saturday += Duration::days(1);
     }
@@ -331,7 +331,7 @@ async fn studio_at_eleven_pyeong_is_refused_by_the_server(pool: PgPool) {
     )
     .await;
     assert_eq!(st, StatusCode::OK, "{addr}");
-    let visit = api::util::today_kst() + Duration::days(10);
+    let visit = api::util::local_today() + Duration::days(10);
     let (st, b) = call(
         &app,
         "POST",
@@ -428,7 +428,7 @@ async fn new_member_waits_for_owner_approval_before_assignment(pool: PgPool) {
     let (st, me) = call(&app, "GET", "/v1/member/me", Some(m.as_str()), None).await;
     assert_eq!(st, StatusCode::OK, "{me}");
     assert_eq!(me["approved"], false);
-    let from = api::util::today_kst();
+    let from = api::util::local_today();
     let (st, list) = call(
         &app,
         "GET",
@@ -484,7 +484,7 @@ async fn reinvited_member_loses_access_to_assigned_jobs_until_reapproved(pool: P
     let (m, _) = login(&app, "010-5000-0313", "partner").await;
     let (st, detail) = call(&app, "GET", &format!("/v1/member/jobs/{job}"), Some(m.as_str()), None).await;
     assert_eq!(st, StatusCode::FORBIDDEN, "{detail}");
-    let from = api::util::today_kst();
+    let from = api::util::local_today();
     let (st, list) = call(
         &app,
         "GET",

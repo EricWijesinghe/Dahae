@@ -3,7 +3,7 @@
 
 //! Marketing under 정보통신망법 (광고성 정보): campaigns from the console and lifecycle nudges.
 //! Every advertising send passes one gate, in this order: marketing consent (privacy.rs), quiet
-//! hours (21:00-08:00 KST, 제50조), and the weekly frequency cap. SMS ads carry the `(광고)` prefix
+//! hours (21:00-08:00 in the install's time zone, 제50조), and the weekly frequency cap. SMS ads carry the `(광고)` prefix
 //! and a 무료수신거부 line. The day-before reminder is transactional, so it skips this gate.
 //! Channel note: AlimTalk 친구톡 ended on 2025-12-31 (Solapi notice), so campaigns use push and SMS only.
 
@@ -32,24 +32,23 @@ use std::time::Duration as StdDuration;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-/// 정보통신망법 제50조: advertising is blocked 21:00-08:00 KST.
+/// 정보통신망법 제50조: advertising is blocked 21:00-08:00, read in the install's time zone.
 pub const QUIET_START_HOUR: u32 = 21;
 pub const QUIET_END_HOUR: u32 = 8;
 pub const CHANNELS: [&str; 2] = ["push", "sms"];
 const PASS_EVERY: StdDuration = StdDuration::from_secs(300);
-const KST_OFFSET_HOURS: i64 = 9;
 const NUDGE_BATCH: i64 = 500;
 /// Test texts per admin per hour; each one costs a real SMS.
 const TEST_SEND_PER_HOUR: i64 = 5;
 const CAMPAIGN_COLS: &str = "id, name, channel, title, body, audience, optout_number, status, scheduled_at, sent_at, created_at";
 
-fn kst(t: DateTime<Utc>) -> chrono::NaiveDateTime {
-    t.naive_utc() + Duration::hours(KST_OFFSET_HOURS)
+fn local(t: DateTime<Utc>) -> chrono::NaiveDateTime {
+    domain::zone::local(&crate::util::install_tz(), t)
 }
 
-/// True inside the 21:00-08:00 KST window, when advertising is not allowed.
+/// True inside the 21:00-08:00 local window, when advertising is not allowed.
 pub fn quiet_hours(t: DateTime<Utc>) -> bool {
-    let h = kst(t).hour();
+    let h = local(t).hour();
     !(QUIET_END_HOUR..QUIET_START_HOUR).contains(&h)
 }
 
@@ -58,19 +57,19 @@ pub fn ad_suppressed(kind: &str, now: DateTime<Utc>) -> bool {
     privacy::is_marketing(kind) && quiet_hours(now)
 }
 
-/// `t` itself outside quiet hours, otherwise the next 08:00 KST.
+/// `t` itself outside quiet hours, otherwise the next 08:00 local time.
 pub fn next_send_time(t: DateTime<Utc>) -> DateTime<Utc> {
     if !quiet_hours(t) {
         return t;
     }
-    let local = kst(t);
-    let day = if local.hour() >= QUIET_START_HOUR {
-        local.date().succ_opt().expect("date in range")
+    let now = local(t);
+    let day = if now.hour() >= QUIET_START_HOUR {
+        now.date().succ_opt().expect("date in range")
     } else {
-        local.date()
+        now.date()
     };
     let morning = day.and_time(NaiveTime::from_hms_opt(QUIET_END_HOUR, 0, 0).expect("valid time"));
-    morning.and_utc() - Duration::hours(KST_OFFSET_HOURS)
+    domain::zone::to_utc(&crate::util::install_tz(), morning)
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -141,7 +140,9 @@ fn push_audience(qb: &mut QueryBuilder<'_, Postgres>, segments: &[Segment]) {
         qb.push(" AND ");
         match seg {
             Segment::LastBookingOlderThan { days } => {
-                qb.push("(SELECT max(b.visit_date) FROM bookings b WHERE b.user_id = u.id AND b.status BETWEEN 1 AND 3) < (now() AT TIME ZONE 'Asia/Seoul')::date - ");
+                qb.push(
+                    "(SELECT max(b.visit_date) FROM bookings b WHERE b.user_id = u.id AND b.status BETWEEN 1 AND 3) < (now() AT TIME ZONE dahae_tz())::date - ",
+                );
                 qb.push_bind(*days as i32);
             }
             Segment::NeverBooked => {
@@ -333,7 +334,7 @@ async fn reopen(db: &PgPool, id: Uuid, at: DateTime<Utc>) -> sqlx::Result<u64> {
         .rows_affected())
 }
 
-/// Picks up due campaigns. A campaign that hits quiet hours goes back to `scheduled` for 08:00 KST and resumes
+/// Picks up due campaigns. A campaign that hits quiet hours goes back to `scheduled` for 08:00 local time and resumes
 /// there, skipping customers already recorded.
 pub async fn dispatch_due(s: &AppState) -> ApiResult<usize> {
     dispatch_seam(s, None).await
@@ -409,7 +410,7 @@ async fn run_nudges_seam(s: &AppState, seam: Option<DateTime<Utc>>) -> ApiResult
     let rebook_days = settings_registry::get(&s.db, &s.config, "nudge_rebook_days").await?;
     let rebook: Vec<(Uuid, Uuid, String, String)> = sqlx::query_as(
         "SELECT b.id, u.id, u.phone, u.locale FROM bookings b JOIN users u ON u.id = b.user_id
-         WHERE b.status = 3 AND b.visit_date = (now() AT TIME ZONE 'Asia/Seoul')::date - $1::int
+         WHERE b.status = 3 AND b.visit_date = (now() AT TIME ZONE dahae_tz())::date - $1::int
            AND u.deleted_at IS NULL AND u.phone NOT LIKE 'deleted:%'
            AND NOT EXISTS (SELECT 1 FROM bookings n WHERE n.user_id = b.user_id AND n.status BETWEEN 0 AND 3 AND n.created_at > b.created_at)
          LIMIT $2",
@@ -462,7 +463,7 @@ async fn run_nudges_seam(s: &AppState, seam: Option<DateTime<Utc>>) -> ApiResult
 pub async fn send_reminders(s: &AppState) -> ApiResult<usize> {
     let rows: Vec<(Uuid, String, String, String, Uuid)> = sqlx::query_as(
         "SELECT b.id, b.number, u.phone, u.locale, b.user_id FROM bookings b JOIN users u ON u.id = b.user_id
-         WHERE b.status IN (1, 2) AND b.visit_date = (now() AT TIME ZONE 'Asia/Seoul')::date + 1
+         WHERE b.status IN (1, 2) AND b.visit_date = (now() AT TIME ZONE dahae_tz())::date + 1
            AND u.deleted_at IS NULL AND u.phone NOT LIKE 'deleted:%'
            AND NOT EXISTS (SELECT 1 FROM alert_sends a WHERE a.dedupe_key = 'reminder:' || b.id::text)
          ORDER BY b.visit_date, b.start_hour
@@ -728,45 +729,45 @@ mod tests {
     use super::*;
     use chrono::TimeZone;
 
-    fn kst_at(h: u32, m: u32) -> DateTime<Utc> {
-        // 2026-11-11 HH:MM KST = previous day 15:00+m UTC offset arithmetic.
-        Utc.with_ymd_and_hms(2026, 11, 11, h, m, 0).single().expect("valid") - Duration::hours(KST_OFFSET_HOURS)
+    /// 2026-11-11 HH:MM in the default zone (UTC+9), which tests run in.
+    fn local_at(h: u32, m: u32) -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2026, 11, 11, h, m, 0).single().expect("valid") - Duration::hours(9)
     }
 
     #[test]
-    fn quiet_hours_are_21_to_08_kst_and_nothing_else() {
-        assert!(!quiet_hours(kst_at(20, 59)));
-        assert!(quiet_hours(kst_at(21, 0)));
-        assert!(quiet_hours(kst_at(23, 30)));
-        assert!(quiet_hours(kst_at(0, 0)));
-        assert!(quiet_hours(kst_at(7, 59)));
-        assert!(!quiet_hours(kst_at(8, 0)));
-        assert!(!quiet_hours(kst_at(12, 0)));
+    fn quiet_hours_are_21_to_08_local_and_nothing_else() {
+        assert!(!quiet_hours(local_at(20, 59)));
+        assert!(quiet_hours(local_at(21, 0)));
+        assert!(quiet_hours(local_at(23, 30)));
+        assert!(quiet_hours(local_at(0, 0)));
+        assert!(quiet_hours(local_at(7, 59)));
+        assert!(!quiet_hours(local_at(8, 0)));
+        assert!(!quiet_hours(local_at(12, 0)));
     }
 
     #[test]
     fn marketing_is_suppressed_in_quiet_hours_and_transactional_is_not() {
-        assert!(ad_suppressed("marketing.campaign", kst_at(22, 0)));
-        assert!(!ad_suppressed("marketing.campaign", kst_at(12, 0)));
-        assert!(!ad_suppressed("booking.confirmed", kst_at(22, 0)));
+        assert!(ad_suppressed("marketing.campaign", local_at(22, 0)));
+        assert!(!ad_suppressed("marketing.campaign", local_at(12, 0)));
+        assert!(!ad_suppressed("booking.confirmed", local_at(22, 0)));
     }
 
     #[test]
-    fn deferred_sends_wait_for_0800_kst_the_same_or_next_morning() {
-        assert_eq!(next_send_time(kst_at(12, 0)), kst_at(12, 0));
+    fn deferred_sends_wait_for_0800_local_the_same_or_next_morning() {
+        assert_eq!(next_send_time(local_at(12, 0)), local_at(12, 0));
         assert_eq!(
-            next_send_time(kst_at(23, 0)),
+            next_send_time(local_at(23, 0)),
             Utc.with_ymd_and_hms(2026, 11, 12, 8, 0, 0).single().expect("v") - Duration::hours(9)
         );
-        assert_eq!(next_send_time(kst_at(3, 0)), kst_at(8, 0));
+        assert_eq!(next_send_time(local_at(3, 0)), local_at(8, 0));
     }
 
     #[test]
     fn gate_checks_consent_then_quiet_hours_then_frequency_cap() {
-        let day = kst_at(12, 0);
+        let day = local_at(12, 0);
         assert_eq!(gate(false, 0, day, 2), Gate::NoConsent);
-        assert_eq!(gate(false, 99, kst_at(23, 0), 2), Gate::NoConsent, "consent is checked before quiet hours");
-        assert_eq!(gate(true, 0, kst_at(23, 0), 2), Gate::Defer(next_send_time(kst_at(23, 0))));
+        assert_eq!(gate(false, 99, local_at(23, 0), 2), Gate::NoConsent, "consent is checked before quiet hours");
+        assert_eq!(gate(true, 0, local_at(23, 0), 2), Gate::Defer(next_send_time(local_at(23, 0))));
         assert_eq!(gate(true, 1, day, 2), Gate::Send);
         assert_eq!(gate(true, 2, day, 2), Gate::Capped);
         assert_eq!(gate(true, 2, day, 3), Gate::Send, "the cap is a parameter from the registry");

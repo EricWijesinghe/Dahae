@@ -39,7 +39,7 @@ async fn admin_entry(app: &Router, token: &str, code: &str) -> Value {
 }
 
 fn checkout_body(c: &Customer, method: &str) -> Value {
-    let visit = api::util::today_kst() + chrono::Duration::days(10);
+    let visit = api::util::local_today() + chrono::Duration::days(10);
     json!({ "kind": "booking", "method": method,
             "booking": { "service_code": "studio", "address_id": c.address, "visit_date": visit, "start_hour": 9, "visit_notes": {} } })
 }

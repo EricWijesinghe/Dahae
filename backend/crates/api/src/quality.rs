@@ -32,7 +32,7 @@ SELECT p.id,
   (SELECT count(*) FROM bookings b WHERE b.pro_id = p.id AND b.visit_date >= $2 AND b.status = 3),
   (SELECT count(*) FROM bookings b WHERE b.pro_id = p.id AND b.visit_date >= $2 AND b.checked_in_at IS NOT NULL),
   (SELECT count(*) FROM bookings b WHERE b.pro_id = p.id AND b.visit_date >= $2 AND b.checked_in_at IS NOT NULL
-     AND b.checked_in_at <= ((b.visit_date + b.start_hour * interval '1 hour') AT TIME ZONE 'Asia/Seoul') + make_interval(mins => $3)),
+     AND b.checked_in_at <= ((b.visit_date + b.start_hour * interval '1 hour') AT TIME ZONE dahae_tz()) + make_interval(mins => $3)),
   (SELECT count(*) FROM cases c JOIN bookings b ON b.id = c.booking_id WHERE b.pro_id = p.id AND c.kind = 'no_show' AND c.created_at >= $1),
   (SELECT count(*) FROM cases c JOIN bookings b ON b.id = c.booking_id WHERE b.pro_id = p.id AND c.kind = 'complaint' AND c.created_at >= $1)
 FROM pros p";

@@ -10,7 +10,7 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 pub const OFFER_HOLD_MINUTES: i64 = 15;
 const MAX_HOUR: u32 = 24;
 
-/// A date plus a half-open hour window `[start_hour, end_hour)` in KST.
+/// A date plus a half-open hour window `[start_hour, end_hour)` in the install's time zone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SlotRange {
     pub date: NaiveDate,

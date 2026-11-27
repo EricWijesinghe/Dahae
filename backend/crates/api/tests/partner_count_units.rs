@@ -12,7 +12,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 async fn book_counts(app: &Router, c: &Customer, code: &str, counts: Value) -> (Uuid, Value) {
-    let visit = api::util::today_kst() + chrono::Duration::days(10);
+    let visit = api::util::local_today() + chrono::Duration::days(10);
     let (st, b) = call(
         app,
         "POST",

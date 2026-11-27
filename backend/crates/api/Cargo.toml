@@ -16,6 +16,7 @@ argon2 = { version = "0.5", features = ["std"] }
 axum = { version = "0.8", features = ["ws", "multipart", "macros"] }
 base64 = "0.22"
 chrono.workspace = true
+jiff.workspace = true
 futures-util = "0.3"
 hmac = "0.13"
 sha1 = "0.11"

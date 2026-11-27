@@ -176,7 +176,7 @@ async fn keyed_prod(pool: &PgPool, phone: &str) -> (Router, common::Customer, Sh
 
 /// A booking checkout `days` out; returns (id, amount).
 async fn new_checkout(prod: &Router, pool: &PgPool, c: &common::Customer, days: i64) -> (Uuid, i64) {
-    let visit = api::util::today_kst() + chrono::Duration::days(days);
+    let visit = api::util::local_today() + chrono::Duration::days(days);
     let body = json!({ "kind": "booking", "method": "card",
         "booking": { "service_code": "studio", "address_id": c.address, "visit_date": visit, "start_hour": 9, "visit_notes": {} } });
     let (st, intent) = call(prod, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(body)).await;

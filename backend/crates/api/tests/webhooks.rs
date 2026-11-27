@@ -133,7 +133,7 @@ async fn portone_replayed_event_settles_a_checkout_once(pool: PgPool) {
     seed_catalog(&pool).await;
     let app = app(pool.clone());
     let c = customer(&app, &pool, "010-7100-0009").await;
-    let visit = api::util::today_kst() + chrono::Duration::days(10);
+    let visit = api::util::local_today() + chrono::Duration::days(10);
     let intent_body = json!({ "kind": "booking", "method": "card",
         "booking": { "service_code": "studio", "address_id": c.address, "visit_date": visit, "start_hour": 9, "visit_notes": {} } });
     let (st, intent) = call(&app, "POST", "/v1/checkouts", Some(c.token.as_str()), Some(intent_body)).await;

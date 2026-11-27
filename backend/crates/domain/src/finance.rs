@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
 //! Owner finance rules: reporting periods, chart buckets, VAT estimate and CSV escaping.
-//! Pure: callers pass the anchor date (KST) and get inclusive date ranges back.
+//! Pure: callers pass the anchor date (in the install's time zone) and get inclusive date ranges back.
 
 use crate::{DomainError, Won};
 use chrono::{Datelike, Duration, NaiveDate};

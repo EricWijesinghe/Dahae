@@ -17,7 +17,7 @@ use crate::{
     providers::{ProviderError, payout as adapter},
     realtime::{Recipient, notify},
     state::AppState,
-    util::today_kst,
+    util::local_today,
 };
 use axum::{
     Json,
@@ -206,7 +206,7 @@ pub async fn set_tax_type(AxState(s): AxState<AppState>, Admin(a): Admin, Path(p
 pub async fn run_payouts(AxState(s): AxState<AppState>, Admin(a): Admin, Json(r): Json<RunPayouts>) -> ApiResult<Json<Value>> {
     live_admin(&s, a.id).await?;
     require_recent_stepup(&s, a.id).await?;
-    if r.date > today_kst() {
+    if r.date > local_today() {
         return Err(ApiError::BadRequest("future_date"));
     }
     let mut tx = s.db.begin().await?;
@@ -669,8 +669,8 @@ async fn ask_provider(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uuid
 /// unchanged. Absence is never taken as "not sent": the list's date filter and Toss's refPayoutId rules are
 /// unverified, and a wrong guess pays twice. The owner settles it after checking the Toss dashboard.
 async fn find_ambiguous(s: &AppState, tx: &mut Transaction<'_, Postgres>, id: Uuid, row: &Row) -> ApiResult<Option<adapter::TransferStatus>> {
-    // From the day before creation in KST, so a send near midnight is still in the list.
-    let since: NaiveDate = sqlx::query_scalar("SELECT (created_at AT TIME ZONE 'Asia/Seoul')::date - 1 FROM payouts WHERE id = $1")
+    // From the day before creation in local time, so a send near midnight is still in the list.
+    let since: NaiveDate = sqlx::query_scalar("SELECT (created_at AT TIME ZONE dahae_tz())::date - 1 FROM payouts WHERE id = $1")
         .bind(id)
         .fetch_one(&mut **tx)
         .await?;

@@ -15,7 +15,7 @@ use crate::{
     realtime::{Recipient, deliver, enqueue, notify},
     schedule::{clash, lock_schedule, schedule_clash},
     state::AppState,
-    util::{KST_TODAY, best_effort, lock_and_count_slot, today_kst},
+    util::{LOCAL_TODAY, best_effort, local_today, lock_and_count_slot},
 };
 use axum::{
     Json, Router,
@@ -107,10 +107,10 @@ async fn feed(State(s): State<AppState>, Pro(a): Pro, Query(q): Query<FeedQuery>
     let kind_filter = match q.kind.as_str() {
         "direct" => {
             format!(
-                "b.answers IS NULL AND (b.status = {confirmed} AND b.pro_id IS NULL AND b.team_name IS NULL OR $2 AND b.status >= {confirmed} AND b.visit_date >= {KST_TODAY})"
+                "b.answers IS NULL AND (b.status = {confirmed} AND b.pro_id IS NULL AND b.team_name IS NULL OR $2 AND b.status >= {confirmed} AND b.visit_date >= {LOCAL_TODAY})"
             )
         }
-        "quote" => format!("b.answers IS NOT NULL AND (b.status = {consultation} OR $2 AND b.visit_date >= {KST_TODAY})"),
+        "quote" => format!("b.answers IS NOT NULL AND (b.status = {consultation} OR $2 AND b.visit_date >= {LOCAL_TODAY})"),
         _ => return Err(ApiError::BadRequest("invalid_kind")),
     };
     let order = match q.sort.as_deref() {
@@ -125,7 +125,7 @@ async fn feed(State(s): State<AppState>, Pro(a): Pro, Query(q): Query<FeedQuery>
            (SELECT amount FROM quotes q WHERE q.booking_id = b.id AND q.pro_id = p.id AND q.state <> 'withdrawn') AS my_quote,
            (b.pro_id IS NULL AND b.status IN ({consultation}, {confirmed})) AS is_open, b.created_at
          FROM bookings b, pros p JOIN partner_prefs pp ON pp.pro_id = p.id
-         WHERE p.id = $1 AND b.visit_date > {KST_TODAY} AND {VISIBLE} AND ({kind_filter})
+         WHERE p.id = $1 AND b.visit_date > {LOCAL_TODAY} AND {VISIBLE} AND ({kind_filter})
          ORDER BY {order} LIMIT $3"
     ))
     .bind(a.id)
@@ -197,7 +197,7 @@ async fn job(State(s): State<AppState>, Pro(a): Pro, Path(id): Path<Uuid>) -> Ap
         );
     }
     // Masked-number calls allowed until 3 days after the visit (provider wiring: decision #4).
-    let can_call = committed && (today_kst() - b.visit_date).num_days() <= 3 && b.status >= 2;
+    let can_call = committed && (local_today() - b.visit_date).num_days() <= 3 && b.status >= 2;
     Ok(Json(JobDetail {
         booking: view,
         committed,
@@ -376,7 +376,7 @@ const STALE_QUOTE_PASS_EVERY: Duration = Duration::from_secs(300);
 pub async fn close_stale_quotes(db: &PgPool) -> sqlx::Result<u64> {
     let cancelled = BookingStatus::Cancelled.as_i16();
     let closed = sqlx::query(&format!(
-        "UPDATE quotes q SET state = 'closed' FROM bookings b WHERE q.booking_id = b.id AND q.state = 'waiting' AND (b.visit_date <= {KST_TODAY} OR b.status = {cancelled})"
+        "UPDATE quotes q SET state = 'closed' FROM bookings b WHERE q.booking_id = b.id AND q.state = 'waiting' AND (b.visit_date <= {LOCAL_TODAY} OR b.status = {cancelled})"
     ))
     .execute(db)
     .await?;
@@ -628,7 +628,7 @@ async fn confirm_reschedule(s: &AppState, b: &BookingRow, pro: Uuid, seen: &Valu
         return Err(ApiError::Conflict("reschedule_changed"));
     }
     if let Some((date, _)) = slot {
-        domain::schedule::check_date(today_kst(), date).map_err(|_| ApiError::Conflict("reschedule_expired"))?;
+        domain::schedule::check_date(local_today(), date).map_err(|_| ApiError::Conflict("reschedule_expired"))?;
     }
     // Counted under the slot lock, which is still held, so the count stands for the request just matched.
     if let Some((used, cap)) = count {

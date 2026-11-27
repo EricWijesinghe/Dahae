@@ -14,7 +14,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 fn checkout_body(c: &Customer, days: i64) -> Value {
-    let visit = api::util::today_kst() + chrono::Duration::days(days);
+    let visit = api::util::local_today() + chrono::Duration::days(days);
     json!({ "kind": "booking", "method": "card",
             "booking": { "service_code": "studio", "address_id": c.address, "visit_date": visit, "start_hour": 9, "visit_notes": {} } })
 }

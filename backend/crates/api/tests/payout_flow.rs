@@ -307,7 +307,7 @@ async fn run_refuses_future_dates_and_skips_pros_already_in_a_batch(pool: PgPool
     let (_settlement, pro) = seed(&pool).await;
     let app = app(pool.clone());
     let token = admin_token(&pool).await;
-    let future = (api::util::today_kst() + Duration::days(2)).to_string();
+    let future = (api::util::local_today() + Duration::days(2)).to_string();
     let (code, _) = call(&app, "POST", "/v1/admin/settlements/run-payouts", Some(&token), Some(json!({ "date": future }))).await;
     assert_eq!(code, StatusCode::BAD_REQUEST, "future payout dates are refused");
 

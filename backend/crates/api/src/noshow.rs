@@ -17,7 +17,7 @@ use crate::{
     schedule::{clash, lock_schedule},
     settings_registry,
     state::AppState,
-    util::{KST_TODAY, best_effort, today_kst},
+    util::{LOCAL_TODAY, best_effort, local_today},
 };
 use domain::{booking::BookingStatus, coupon::COUPON_LIFETIME_DAYS};
 use serde_json::json;
@@ -35,8 +35,8 @@ pub async fn scan(s: &AppState) -> ApiResult<usize> {
     let assigned = BookingStatus::TeamAssigned.as_i16();
     let due: Vec<(Uuid, String)> = sqlx::query_as(&format!(
         "SELECT b.id, b.number FROM bookings b
-         WHERE b.status = {assigned} AND b.pro_id IS NOT NULL AND b.checked_in_at IS NULL AND b.visit_date <= {KST_TODAY}
-           AND ((b.visit_date + make_interval(hours => b.start_hour::int)) AT TIME ZONE 'Asia/Seoul')
+         WHERE b.status = {assigned} AND b.pro_id IS NOT NULL AND b.checked_in_at IS NULL AND b.visit_date <= {LOCAL_TODAY}
+           AND ((b.visit_date + make_interval(hours => b.start_hour::int)) AT TIME ZONE dahae_tz())
                + make_interval(mins => $1) <= now()
            AND NOT EXISTS (SELECT 1 FROM cases c WHERE c.booking_id = b.id AND c.kind = 'no_show')"
     ))
@@ -119,7 +119,7 @@ pub fn spawn(state: AppState) -> JoinHandle<()> {
 /// apology coupon amount (0 for none). Returns the new partner.
 pub async fn reassign(s: &AppState, booking: Uuid, coupon: i64) -> ApiResult<Uuid> {
     let b = load_booking(&s.db, booking).await?;
-    if b.status()? != BookingStatus::TeamAssigned || b.checked_in_at.is_some() || b.visit_date < today_kst() {
+    if b.status()? != BookingStatus::TeamAssigned || b.checked_in_at.is_some() || b.visit_date < local_today() {
         return Err(ApiError::Conflict("reassign_closed"));
     }
     let assigned = BookingStatus::TeamAssigned.as_i16();

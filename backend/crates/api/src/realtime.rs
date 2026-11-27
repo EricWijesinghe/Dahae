@@ -558,7 +558,7 @@ async fn store(state: &AppState, q: &mut Queued, now: DateTime<Utc>) -> bool {
         return true;
     }
     if crate::marketing::ad_suppressed(&q.kind, now) {
-        // 정보통신망법 제50조: advertising waits in the outbox until 08:00 KST.
+        // 정보통신망법 제50조: advertising waits in the outbox until 08:00 local time.
         return hold(state, q, crate::marketing::next_send_time(now)).await;
     }
     match try_store(state, q, role, owner).await {

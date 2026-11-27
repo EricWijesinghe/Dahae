@@ -24,7 +24,7 @@ use crate::{
     schedule::slot_clash,
     settings_registry,
     state::AppState,
-    util::{best_effort, lock_and_count_slot, refund_or_alert, today_kst},
+    util::{best_effort, local_today, lock_and_count_slot, refund_or_alert},
 };
 use axum::{
     Json, Router,
@@ -264,8 +264,8 @@ async fn create_quote(s: &AppState, user: Uuid, b: &BookingBody, prep: &Prepared
     lock_slot(&mut tx, b.visit_date, b.start_hour, None).await?;
     let id = Uuid::now_v7();
     let number = next_number(&mut tx).await?;
-    let start = domain::peak::kst_to_utc(b.visit_date, u32::from(b.start_hour)).ok_or(ApiError::BadRequest("invalid_slot"))?;
-    let peak = domain::peak::peak_surcharge(&load_peak_config(&s.db).await?, start);
+    let start = domain::peak::slot_to_utc(&crate::util::install_tz(), b.visit_date, u32::from(b.start_hour)).ok_or(ApiError::BadRequest("invalid_slot"))?;
+    let peak = domain::peak::peak_surcharge_in(&load_peak_config(&s.db).await?, start, &crate::util::install_tz());
     let est = formula.estimate_with_addons(&answers, peak.bps, &addons)?;
     sqlx::query(
         "INSERT INTO bookings (id, number, user_id, service_code, address, district_code, visit_date, start_hour, status, answers, estimate, visit_notes, household, peak_surcharge)
@@ -565,9 +565,9 @@ pub async fn load_cancel_policy(db: &PgPool) -> ApiResult<(CancelPolicy, bool)> 
     }
 }
 
-/// Whole KST calendar days from today to the visit; the policy's unit.
+/// Whole calendar days in the install's zone from today to the visit; the policy's unit.
 fn days_before(b: &BookingRow) -> i64 {
-    (b.visit_date - today_kst()).num_days()
+    domain::cancel_policy::days_before(b.visit_date, chrono::Utc::now(), &crate::util::install_tz())
 }
 
 pub fn public_routes() -> Router<AppState> {
@@ -787,7 +787,7 @@ async fn reschedule(State(s): State<AppState>, Customer(a): Customer, Path(id): 
     if status.is_terminal() || !self_serve {
         return Err(ApiError::Conflict("reschedule_closed"));
     }
-    check_date(today_kst(), r.visit_date)?;
+    check_date(local_today(), r.visit_date)?;
     check_slot(b.answers.is_some(), r.start_hour)?;
     let mut tx = s.db.begin().await?;
     // The booking's own current slot does not count against the new one.

@@ -4,11 +4,11 @@
 //! Owner alerts. A pass every few minutes checks a handful of rules over the ops failure log, the
 //! backup status and free disk. A firing rule goes to the console inbox, to the owner's phone (SMS)
 //! and to staff push devices, then sits out a cooldown so one incident sends one message per cooldown.
-//! Quiet hours (KST) hold everything until they end; the condition is still there then.
+//! Quiet hours (in the install's time zone) hold everything until they end; the condition is still there then.
 
 use crate::{
     config::Config,
-    error::{ApiError, ApiResult},
+    error::ApiResult,
     integrations::Section,
     lifecycle::next_tick,
     metrics::job_pass,
@@ -16,8 +16,9 @@ use crate::{
     realtime::{Recipient, notify},
     settings_registry,
     state::AppState,
+    util::{self, local_today},
 };
-use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate, Timelike, Utc};
+use chrono::{DateTime, Datelike, Duration, NaiveDate, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -81,7 +82,6 @@ const SOCIAL_PROVIDERS: [&str; 4] = ["kakao", "naver", "google", "apple"];
 /// Lockouts, refresh-token reuse and MFA lockouts across the window before the owner hears about it.
 const AUTH_WINDOW_MIN: i64 = 60;
 const AUTH_EVENTS: i64 = 5;
-const KST_OFFSET_SECS: i32 = 9 * 3600;
 /// A same-day cancel rate needs this many bookings for the day before it can alert.
 const CANCEL_MIN_BOOKINGS: i64 = 5;
 /// Quarterly VAT filing months; the filing day is the 25th of each.
@@ -373,7 +373,7 @@ pub async fn business_findings(db: &PgPool, cfg: &Config) -> ApiResult<Vec<Findi
         });
     }
     let days = settings_registry::get(db, cfg, "tax_deadline_remind_days").await?;
-    if vat_deadline_due(today_kst(), days) {
+    if vat_deadline_due(local_today(), days) {
         out.push(Finding {
             rule: "tax_deadline",
             title: "부가가치세 신고 기한이 다가와요",
@@ -381,10 +381,6 @@ pub async fn business_findings(db: &PgPool, cfg: &Config) -> ApiResult<Vec<Findi
         });
     }
     Ok(out)
-}
-
-fn today_kst() -> NaiveDate {
-    (Utc::now() + Duration::seconds(i64::from(KST_OFFSET_SECS))).date_naive()
 }
 
 /// Same-day cancels above the threshold percent, once the day has enough bookings for a rate to mean something.
@@ -526,8 +522,7 @@ async fn deliver(s: &AppState, phone: Option<&str>, f: &Finding) {
 pub async fn run_once(s: &AppState) -> ApiResult<usize> {
     let now = Utc::now();
     let prefs = load_prefs(&s.db).await?;
-    let kst = FixedOffset::east_opt(KST_OFFSET_SECS).ok_or(ApiError::Internal("kst offset".into()))?;
-    let quiet = in_quiet_hours(now.with_timezone(&kst).hour(), prefs.quiet_start, prefs.quiet_end);
+    let quiet = in_quiet_hours(domain::zone::local(&util::install_tz(), now).hour(), prefs.quiet_start, prefs.quiet_end);
     if quiet {
         return Ok(0);
     }
