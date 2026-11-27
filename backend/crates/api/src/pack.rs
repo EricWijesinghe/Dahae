@@ -122,7 +122,7 @@ pub struct Tax {
     pub rounding: Rounding,
     pub rates: Vec<TaxRate>,
     #[serde(default)]
-    pub withholding: Option<Withholding>,
+    pub withholding: Option<WithholdingRule>,
     pub reports: Vec<String>,
     #[serde(default)]
     pub cash_receipt_threshold: Option<i64>,
@@ -135,40 +135,8 @@ pub enum PriceDisplay {
     Net,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Rounding {
-    Floor,
-    HalfUp,
-    HalfEven,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct TaxRate {
-    pub category: String,
-    pub rate_bps: u32,
-    pub from: NaiveDate,
-    #[serde(default)]
-    pub until: Option<NaiveDate>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Withholding {
-    pub rate_bps: u32,
-    pub local_surtax_bps: u32,
-    pub tax_unit: i64,
-    pub surtax_unit: i64,
-    pub base: WithholdingBase,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum WithholdingBase {
-    Gross,
-    NetOfFee,
-}
+/// The tax rule types are the domain's, so pack values feed `tax::rate_on`, `split_inclusive` and `withhold` as is.
+pub use domain::tax::{Rounding, TaxRate, WithholdingBase, WithholdingRule};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -355,6 +323,16 @@ fn merged(id: &str, files: &[(&str, &str)]) -> Result<Value, PackError> {
 }
 
 /// Loads, merges and validates one embedded pack.
+/// The rate category that VAT on services is filed under.
+pub const VAT_CATEGORY: &str = "service";
+
+impl Pack {
+    /// VAT in basis points in force on `day`; 0 when the pack has no VAT rate for that day.
+    pub fn vat_bps(&self, day: NaiveDate) -> i64 {
+        domain::tax::rate_on(&self.tax.rates, VAT_CATEGORY, day).map_or(0, |r| i64::from(r.rate_bps))
+    }
+}
+
 pub fn load(id: &str) -> Result<Pack, PackError> {
     load_from(id, EMBEDDED)
 }

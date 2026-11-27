@@ -1,16 +1,118 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
-//! Korean tax rules for owner compliance exports. Pure: amounts and dates in, numbers out.
+//! Tax rules for owner compliance exports. Pure: amounts and dates in, numbers out. The generic rules
+//! ([`split_inclusive`], [`withhold`]) take a country pack's rates; the Korean functions are thin wrappers over them.
 //! Rules marked `ACCOUNTANT` are not verified against a statute text and must be confirmed (see docs/finance-tax.md).
 
 use crate::finance::{self, Cell};
-use crate::{DomainError, Won};
+use crate::{DomainError, Money, Won};
 use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// 사업소득 원천징수 세율 3% (소득세법 제129조 일대; ACCOUNTANT: confirm article and rate).
 pub const BUSINESS_INCOME_TAX_BPS: i64 = 300;
+
+const BPS: i128 = 10_000;
+
+/// How a tax amount is rounded to the minor unit. Applied to the magnitude, so the tax on a refund mirrors the tax on
+/// the sale: `Floor` drops the fraction (toward zero), `HalfUp` rounds a half away from zero, `HalfEven` to even.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Rounding {
+    Floor,
+    HalfUp,
+    HalfEven,
+}
+
+/// One tax rate for a category, in force from `from` until the day before `until`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TaxRate {
+    pub category: String,
+    pub rate_bps: u32,
+    pub from: NaiveDate,
+    #[serde(default)]
+    pub until: Option<NaiveDate>,
+}
+
+/// The rate for `category` in force on `day`, if any.
+pub fn rate_on<'a>(rates: &'a [TaxRate], category: &str, day: NaiveDate) -> Option<&'a TaxRate> {
+    rates
+        .iter()
+        .find(|r| r.category == category && r.from <= day && r.until.is_none_or(|u| day < u))
+}
+
+/// `n / d` rounded by `r` on the magnitude. `d` must be positive.
+fn div_round(n: i128, d: i128, r: Rounding) -> i128 {
+    let (q, rem) = (n.abs() / d, n.abs() % d);
+    let up = match r {
+        Rounding::Floor => false,
+        Rounding::HalfUp => 2 * rem >= d,
+        Rounding::HalfEven => 2 * rem > d || (2 * rem == d && q % 2 == 1),
+    };
+    n.signum() * (q + i128::from(up))
+}
+
+/// Splits a tax-inclusive `total` into (net, tax): tax = total * rate / (100% + rate), rounded by `r`; net is the
+/// rest. KR VAT (1000 bps, `Floor`) is `total / 11`.
+pub fn split_inclusive(total: Money, rate: &TaxRate, r: Rounding) -> (Money, Money) {
+    let rate = i128::from(rate.rate_bps);
+    // |tax| <= |total|, so the narrowing cannot truncate.
+    let tax = div_round(i128::from(total.0) * rate, BPS + rate, r) as i64;
+    (Money(total.0 - tax), Money(tax))
+}
+
+/// Which amount a withholding rule is applied to. The caller passes that amount to [`withhold`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WithholdingBase {
+    Gross,
+    NetOfFee,
+}
+
+/// A withholding tax on payouts: tax = base * `rate_bps`, floored to `tax_unit`; a local surtax = tax *
+/// `local_surtax_bps`, floored to `surtax_unit`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WithholdingRule {
+    pub rate_bps: u32,
+    pub local_surtax_bps: u32,
+    pub tax_unit: i64,
+    pub surtax_unit: i64,
+    pub base: WithholdingBase,
+}
+
+/// 사업소득 원천징수: 3% income tax floored to won, local income tax 10% of it floored to 10 won.
+pub const KR_BUSINESS_WITHHOLDING: WithholdingRule = WithholdingRule {
+    rate_bps: BUSINESS_INCOME_TAX_BPS as u32,
+    local_surtax_bps: 1_000,
+    tax_unit: 1,
+    surtax_unit: 10,
+    base: WithholdingBase::Gross,
+};
+
+/// `bps` of a non-negative `amount`, floored to a multiple of `unit` (at least 1).
+fn floor_part(amount: i128, bps: u32, unit: i64) -> i128 {
+    let unit = i128::from(unit.max(1));
+    amount * i128::from(bps) / BPS / unit * unit
+}
+
+/// Withholding split for one payout. A negative base withholds nothing. Each part is at most the base when the
+/// rates are at most 100% (the pack validator's bound), so every part fits in `i64`.
+pub fn withhold(base: Money, rule: &WithholdingRule) -> Withholding {
+    let gross = base.0.max(0);
+    let income_tax = floor_part(i128::from(gross), rule.rate_bps, rule.tax_unit);
+    let local_tax = floor_part(income_tax, rule.local_surtax_bps, rule.surtax_unit);
+    let (income_tax, local_tax) = (income_tax as i64, local_tax as i64);
+    Withholding {
+        gross: Money(gross),
+        income_tax: Money(income_tax),
+        local_tax: Money(local_tax),
+        net: Money(gross - income_tax - local_tax),
+    }
+}
 
 /// Withholding split for one payout to a sole-proprietor / freelancer partner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,15 +126,7 @@ pub struct Withholding {
 /// 사업소득 원천징수: income tax = 3% of gross, floored to won. Local income tax = 10% of the income tax,
 /// floored to 10 won. ACCOUNTANT: confirm base amount (gross vs net-of-fee) and both rounding units.
 pub fn business_withholding(gross: Won) -> Withholding {
-    let gross = gross.0.max(0);
-    let income_tax = gross * BUSINESS_INCOME_TAX_BPS / 10_000;
-    let local_tax = income_tax / 100 * 10;
-    Withholding {
-        gross: Won(gross),
-        income_tax: Won(income_tax),
-        local_tax: Won(local_tax),
-        net: Won(gross - income_tax - local_tax),
-    }
+    withhold(gross, &KR_BUSINESS_WITHHOLDING)
 }
 
 /// Inclusive date range of a Korean calendar quarter (1..=4).
@@ -70,6 +164,11 @@ pub struct VatInput {
 /// Quarterly VAT summary: sales by payment method, then the fee-based VAT estimate.
 /// Cash receipt / tax invoice split is added with those features.
 pub fn vat_document(input: &VatInput) -> Vec<Vec<Cell>> {
+    vat_document_at(input, finance::VAT_BPS)
+}
+
+/// [`vat_document`] at the VAT rate (basis points) the install's pack has in force for the period.
+pub fn vat_document_at(input: &VatInput, vat_bps: i64) -> Vec<Vec<Cell>> {
     let text = |s: &str| Cell::Text(s.to_string());
     let mut doc = vec![vec![text("결제수단"), text("건수"), text("결제액")]];
     let mut count = 0;
@@ -85,7 +184,7 @@ pub fn vat_document(input: &VatInput) -> Vec<Vec<Cell>> {
     doc.push(vec![
         text("부가세 추정(수수료의 10%)"),
         Cell::Number(0),
-        Cell::Number(finance::vat_estimate(input.platform_fee).0),
+        Cell::Number(finance::vat_estimate_at(input.platform_fee, vat_bps).0),
     ]);
     doc
 }
@@ -93,8 +192,18 @@ pub fn vat_document(input: &VatInput) -> Vec<Vec<Cell>> {
 /// Splits a VAT-inclusive amount into (공급가액, 세액). VAT is 1/11 of the total, floored; supply is the rest.
 /// ACCOUNTANT: confirm the rounding rule for 세금계산서 against the invoice rules.
 pub fn split_vat_inclusive(total: i64) -> (i64, i64) {
-    let vat = total / 11;
-    (total - vat, vat)
+    let (supply, vat) = split_inclusive(Money(total), &kr_vat(), Rounding::Floor);
+    (supply.0, vat.0)
+}
+
+/// KR VAT: 10% on services since 1977-07-01, as the KR pack states it.
+pub fn kr_vat() -> TaxRate {
+    TaxRate {
+        category: "service".to_string(),
+        rate_bps: finance::VAT_BPS as u32,
+        from: NaiveDate::from_ymd_opt(1977, 7, 1).expect("valid date"),
+        until: None,
+    }
 }
 
 /// One 세금계산서 line, one per settled checkout that the customer asked to be invoiced.

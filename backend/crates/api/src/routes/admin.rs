@@ -86,7 +86,7 @@ async fn dashboard(State(s): State<AppState>, _st: Staff) -> ApiResult<Json<Dash
         open_quotes: row.1,
         unassigned: row.2,
         unread_threads: row.3,
-        revenue_30d: finance::net_revenue_30d(&s.db).await?,
+        revenue_30d: finance::net_revenue_30d(&s).await?,
         bookings_30d: row.4,
         by_service,
         average_rating: growth.average_rating,

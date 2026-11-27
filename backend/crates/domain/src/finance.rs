@@ -104,7 +104,12 @@ pub fn buckets(grain: Grain, from: NaiveDate, to: NaiveDate) -> Vec<NaiveDate> {
 
 /// Estimated VAT owed on the platform fee (fee is VAT-inclusive, so this is an estimate only).
 pub fn vat_estimate(fee: Won) -> Won {
-    fee.times_bps(VAT_BPS)
+    vat_estimate_at(fee, VAT_BPS)
+}
+
+/// [`vat_estimate`] at a VAT rate in basis points; callers read the rate from the install's country pack.
+pub fn vat_estimate_at(fee: Won, vat_bps: i64) -> Won {
+    fee.times_bps(vat_bps)
 }
 
 /// One CSV cell. Text is guarded against spreadsheet formula injection; numbers stay numeric.

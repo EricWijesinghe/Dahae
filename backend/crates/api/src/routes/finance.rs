@@ -9,6 +9,7 @@ use super::audit;
 use crate::{
     auth::{Admin, Pro},
     error::{ApiError, ApiResult},
+    pack::Pack,
     state::AppState,
     util::today_kst,
 };
@@ -27,7 +28,7 @@ use domain::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::{FromRow, PgConnection, PgPool};
+use sqlx::{FromRow, PgConnection};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
@@ -217,8 +218,9 @@ struct Metrics {
     payouts: Payouts,
 }
 
-impl From<Totals> for Metrics {
-    fn from(t: Totals) -> Self {
+impl Metrics {
+    /// `vat_bps` is the pack's VAT rate in force for the period.
+    fn new(t: Totals, vat_bps: i64) -> Self {
         let active = t.bookings - t.cancelled;
         Metrics {
             bookings: t.bookings,
@@ -230,7 +232,7 @@ impl From<Totals> for Metrics {
             refunds: t.refunds,
             net_revenue: t.gross - t.refunds,
             platform_fee: t.fee,
-            vat_estimate: finance::vat_estimate(Won(t.fee)).0,
+            vat_estimate: finance::vat_estimate_at(Won(t.fee), vat_bps).0,
             payouts: Payouts {
                 paid: t.paid,
                 pending: t.pending,
@@ -273,14 +275,14 @@ struct Summary {
 
 /// Net revenue (gross minus refunds) over the last 30 KST days including today. The console dashboard tile uses
 /// this so it agrees with the finance summary.
-pub(super) async fn net_revenue_30d(db: &PgPool) -> ApiResult<i64> {
+pub(super) async fn net_revenue_30d(s: &AppState) -> ApiResult<i64> {
     let to = today_kst();
     let from = to - chrono::Duration::days(29);
     let rows = {
-        let mut conn = db.acquire().await?;
+        let mut conn = s.db.acquire().await?;
         aggregate(&mut conn, from, to, "year").await?
     };
-    Ok(Metrics::from(total_of(&rows)).net_revenue)
+    Ok(Metrics::new(total_of(&rows), s.pack.vat_bps(to)).net_revenue)
 }
 
 async fn summary(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQuery>) -> ApiResult<Json<Summary>> {
@@ -290,7 +292,7 @@ async fn summary(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQue
     Ok(Json(Summary {
         from,
         to,
-        metrics: total_of(&rows).into(),
+        metrics: Metrics::new(total_of(&rows), s.pack.vat_bps(to)),
         payment_methods: payment_methods(&mut conn, from, to).await?,
         recurring: super::subscriptions::recurring_metrics(&s.db, from, to).await?,
         vat_basis: "platform_fee_10pct_estimate",
@@ -305,14 +307,14 @@ struct Point {
 }
 
 /// One point per bucket, zero-filled, oldest first.
-async fn series_points(db: &mut PgConnection, grain: Grain, from: NaiveDate, to: NaiveDate) -> ApiResult<Vec<Point>> {
+async fn series_points(db: &mut PgConnection, pack: &Pack, grain: Grain, from: NaiveDate, to: NaiveDate) -> ApiResult<Vec<Point>> {
     let rows = aggregate(db, from, to, grain.trunc_unit()).await?;
     let by_key = fold_by(&rows, |r| Some(r.key));
     Ok(finance::buckets(grain, from, to)
         .into_iter()
         .map(|key| Point {
             key,
-            m: by_key.get(&key).copied().unwrap_or_default().into(),
+            m: Metrics::new(by_key.get(&key).copied().unwrap_or_default(), pack.vat_bps(key)),
         })
         .collect())
 }
@@ -335,7 +337,7 @@ async fn series(State(s): State<AppState>, _a: Admin, Query(q): Query<SeriesQuer
     };
     let (from, to) = finance::series_range(grain, today_kst(), count);
     let mut conn = s.db.acquire().await?;
-    Ok(Json(series_points(&mut conn, grain, from, to).await?))
+    Ok(Json(series_points(&mut conn, &s.pack, grain, from, to).await?))
 }
 
 #[derive(Serialize)]
@@ -407,7 +409,13 @@ async fn services(State(s): State<AppState>, _a: Admin, Query(q): Query<PeriodQu
         aggregate(&mut conn, from, to, "year").await?
     };
     let by_svc = fold_by(&rows, |r| r.svc.clone());
-    let mut out: Vec<ServiceRow> = by_svc.into_iter().map(|(service_code, t)| ServiceRow { service_code, m: t.into() }).collect();
+    let mut out: Vec<ServiceRow> = by_svc
+        .into_iter()
+        .map(|(service_code, t)| ServiceRow {
+            service_code,
+            m: Metrics::new(t, s.pack.vat_bps(to)),
+        })
+        .collect();
     out.sort_by_key(|r| std::cmp::Reverse(r.m.gross));
     Ok(Json(out))
 }
@@ -713,8 +721,8 @@ async fn export_monthly(State(s): State<AppState>, Admin(a): Admin, Query(q): Qu
     super::staff_mfa::require_recent_stepup(&s, a.id).await?;
     let (from, to) = resolve(&q)?;
     let mut tx = s.db.begin().await?;
-    let points = series_points(&mut tx, Grain::Month, from, to).await?;
-    let total: Metrics = total_of(&aggregate(&mut tx, from, to, "year").await?).into();
+    let points = series_points(&mut tx, &s.pack, Grain::Month, from, to).await?;
+    let total = Metrics::new(total_of(&aggregate(&mut tx, from, to, "year").await?), s.pack.vat_bps(to));
     let mut doc = vec![vec![
         text("월"),
         text("예약건수"),
@@ -773,7 +781,10 @@ async fn export_vat(State(s): State<AppState>, Admin(a): Admin, Query(q): Query<
     };
     audit(&mut *tx, "staff", Some(a.id), "finance.export", "vat", json!({ "from": from, "to": to })).await?;
     tx.commit().await?;
-    csv_response(&export_name("vat", from, to), finance::csv_document(&tax::vat_document(&input)))
+    csv_response(
+        &export_name("vat", from, to),
+        finance::csv_document(&tax::vat_document_at(&input, s.pack.vat_bps(to))),
+    )
 }
 
 #[cfg(test)]

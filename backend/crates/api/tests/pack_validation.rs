@@ -13,7 +13,7 @@ use api::{
     seo,
     settings_registry::{COUNTRIES, CURRENCIES, LOCALES, ZONES},
 };
-use domain::{cancel_policy, cash_receipt, finance, money, tax};
+use domain::{cancel_policy, cash_receipt, currency, finance, money, tax};
 use serde_json::{Value, json};
 
 fn kr() -> Pack {
@@ -82,6 +82,22 @@ fn kr_mirrors_money_and_tax_constants() {
         assert_eq!((out.income_tax.0, out.local_tax.0), (income, local), "gross {gross}");
     }
     assert_eq!(p.tax.cash_receipt_threshold, Some(cash_receipt::MANDATORY_ISSUE_MIN.0));
+}
+
+#[test]
+fn kr_pack_feeds_the_generic_money_and_tax_rules() {
+    let p = kr();
+    let c = &p.currency;
+    let k = currency::KRW;
+    assert_eq!(
+        (c.code.as_str(), c.minor_units, c.display_unit, c.cash_unit),
+        (k.code, k.minor_units, k.display_unit, k.cash_unit)
+    );
+    assert_eq!(p.tax.withholding, Some(tax::KR_BUSINESS_WITHHOLDING));
+    assert_eq!(p.tax.rates, [tax::kr_vat()]);
+    let today = chrono::NaiveDate::from_ymd_opt(2026, 11, 27).expect("date");
+    assert_eq!(p.vat_bps(today), finance::VAT_BPS);
+    assert_eq!(p.vat_bps(chrono::NaiveDate::from_ymd_opt(1977, 6, 30).expect("date")), 0, "before KR VAT began");
 }
 
 #[test]

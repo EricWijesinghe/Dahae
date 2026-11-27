@@ -9,6 +9,7 @@ pub mod cancel_policy;
 pub mod cash_receipt;
 pub mod catalog;
 pub mod coupon;
+pub mod currency;
 pub mod error;
 pub mod feed;
 pub mod finance;
@@ -32,4 +33,4 @@ pub mod training;
 pub mod waitlist;
 
 pub use error::DomainError;
-pub use money::Won;
+pub use money::{Money, Won};
