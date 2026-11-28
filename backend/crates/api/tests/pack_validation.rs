@@ -305,4 +305,7 @@ fn a_template_past_the_agreed_version_keeps_the_agreed_text() {
         today.iter().all(|t| t.version == privacy::CONSENT_VERSION),
         "today every template is the agreed text"
     );
+    let older = terms.replace("version: 2026-11-17", "version: 2026-11-01");
+    let e = with_file("KR/legal/terms.ko.md", Some(&older)).expect_err("an older text is refused");
+    assert!(e.to_string().contains("older than privacy.consent_version"), "{e}");
 }

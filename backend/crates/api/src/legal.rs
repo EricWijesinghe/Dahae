@@ -159,9 +159,16 @@ pub fn agreed_templates(p: &Pack, files: &[(&str, &str)]) -> Result<Vec<Template
     let scopes = pack::scopes(&p.id, files)?;
     let mut out = Vec::new();
     for t in templates(p, files)? {
-        if version_key(&t.version).is_some_and(|k| k <= agreed) {
-            out.push(t);
-            continue;
+        match version_key(&t.version) {
+            // An agreed text carries exactly consent_version, so the shown text and the recorded consent version match.
+            Some(k) if k == agreed => {
+                out.push(t);
+                continue;
+            }
+            Some(k) if k < agreed => {
+                return Err(pack::err(&p.id, format!("{}.{} is older than privacy.consent_version", t.doc, t.lang)));
+            }
+            _ => {}
         }
         let name = format!("{}.{}.{consent}.md", t.doc, t.lang);
         let (path, text) = scopes
