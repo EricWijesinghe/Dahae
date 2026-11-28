@@ -17,7 +17,7 @@ source "$ROOT/scripts/env.sh"
 LANGS="${SHOT_LANGS:-ko,en}"
 DEVICES="${SHOT_DEVICES:-ios-6.9,ios-6.5,ipad-13,android}"
 mkdir -p "$ROOT/app/build/store_shots/raw"
-RAW="$(cd "$ROOT/app/build/store_shots/raw" && pwd -W 2>/dev/null || pwd)"
+RAW="$(cd "$ROOT/app/build/store_shots/raw" && (pwd -W 2>/dev/null || pwd))"
 
 for app in customer partner; do
   (

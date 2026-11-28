@@ -231,7 +231,7 @@ mod tests {
         assert_eq!(info("CANCELLED", 2, 0, none()).pay_status(), PayStatus::Cancelled);
         assert_eq!(info("FAILED", 1, 0, none()).pay_status(), PayStatus::Failed);
         assert_eq!(info("MYSTERY", 1, 0, none()).pay_status(), PayStatus::Unknown("MYSTERY".into()));
-        let va = info("VIRTUAL_ACCOUNT_ISSUED", 1, 0, json!({ "expiredAt": "2026-11-30T23:59:59+09:00" }));
+        let va = info("VIRTUAL_ACCOUNT_ISSUED", 1, 0, json!({ "expiredAt": "2026-11-30T23:59:59+09:00" })); // tz-ok: PortOne wire fixture
         let due = DateTime::parse_from_rfc3339("2026-11-30T14:59:59Z").map(|t| t.with_timezone(&Utc)).ok();
         assert_eq!(va.pay_status(), PayStatus::PendingOffline { expires_at: due });
     }

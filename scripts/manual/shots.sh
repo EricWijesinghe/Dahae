@@ -14,7 +14,8 @@ source "$ROOT/scripts/env.sh"
 FLUTTER="${FLUTTER:-flutter}"
 OUT="$(cd "$ROOT/docs/manual" && mkdir -p img && cd img && (pwd -W 2>/dev/null || pwd))"
 
-for app in ${*:-console customer partner}; do
+[ $# -gt 0 ] || set -- console customer partner
+for app in "$@"; do
   (
     cd "$ROOT/app/apps/$app"
     "$ROOT/scripts/build-slot.sh" "$FLUTTER" test test/manual_screenshots \

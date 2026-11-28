@@ -36,7 +36,9 @@ upgrade() {
   expect "old install runs the API as the superuser" test "$(dbq "select count(*) from pg_roles where rolname = 'dahae_api'")" = 0
   dbq "insert into users (phone, name) values ('01099990001', 'e2e upgrade customer')" >/dev/null
   /usr/local/bin/dahae backup
-  local backup; backup=$(ls -t /opt/malkkeum/backups/db-*.sql.gz | head -n1)
+  local backup
+  # shellcheck disable=SC2012 # newest by time; backup names are fixed db-<stamp>.sql.gz
+  backup=$(ls -t /opt/malkkeum/backups/db-*.sql.gz | head -n1)
   chmod 644 /opt/malkkeum/.env # an old server whose .env got wider permissions
   env "${INSTALL_ENV[@]}" bash deploy/install.sh > "$LOGS/upgrade-new.txt" 2>&1 || { tail -n 40 "$LOGS/upgrade-new.txt"; fail "new installer failed"; }
   expect "re-run took the upgrade path" grep -q '기존 설치를 찾았어요' "$LOGS/upgrade-new.txt"
