@@ -129,7 +129,7 @@ app_role_ok() { # the API signs in as dahae_api, which is not a superuser
 }
 purge_needs_domain() { ! $SUDO setsid -w env DAHAE_YES=1 /usr/local/bin/dahae uninstall --purge --yes </dev/null >/dev/null 2>&1; } # no terminal
 mode_is() { [ "$($SUDO stat -c %a "$1")" = "$2" ]; }
-version_shown() { dahae version | grep -q "$TAG"; }
+version_shown() { dahae version | grep "$TAG" >/dev/null; } # grep -q would close the pipe while dahae still writes
 backups_count() { $SUDO sh -c 'ls /opt/malkkeum/backups/db-*.sql.gz.enc 2>/dev/null | wc -l'; }
 plaintext_dumps_count() { $SUDO sh -c 'ls /opt/malkkeum/backups/db-*.sql.gz 2>/dev/null | wc -l'; }
 create_owner() {
