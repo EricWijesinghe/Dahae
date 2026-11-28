@@ -137,13 +137,27 @@ def ko_date(iso):
     return f"{year}년 {month}월 {day}일"
 
 
-def legal_body(doc):
-    """A pack legal template's body with every slot filled for the website."""
+def version_key(version):
+    """A document version (YYYY-MM-DD or YYYY-MM-DD.N) as (date, counter), ordered as the API orders it."""
+    date, _, counter = version.partition(".")
+    return date, int(counter or 0)
+
+
+def front_matter(path):
     # Front matter between the first two "---" lines (key: value), then the body exactly as the page carries it.
-    text = (PACKS / PACK / "legal" / f"{doc}.ko.md").read_text(encoding="utf-8")
-    _, head, body = text.split("---\n", 2)
-    meta = dict(line.split(": ", 1) for line in head.splitlines())
+    _, head, body = path.read_text(encoding="utf-8").split("---\n", 2)
+    return dict(line.split(": ", 1) for line in head.splitlines()), body
+
+
+def legal_body(doc):
+    """The text customers agree to while nothing is published (the API's legal::agreed_templates), every slot filled
+    for the website: the pack template, or the agreed body kept beside it once the template moved past
+    privacy.consent_version, so a newer template reaches customers only through the owner's Publish."""
     pack = pack_json(PACK)
+    agreed = pack["privacy"]["consent_version"]
+    meta, body = front_matter(PACKS / PACK / "legal" / f"{doc}.ko.md")
+    if version_key(meta["version"]) > version_key(agreed):
+        meta, body = front_matter(PACKS / PACK / "legal" / f"{doc}.ko.{agreed}.md")
 
     def slot(match):
         space, _, key = match.group(1).partition(".")
@@ -178,6 +192,7 @@ def page_html(name, title, description, body):
 
 
 def self_test():
+    assert version_key("2026-12-01.10") > version_key("2026-12-01.9") > version_key("2026-12-01"), "not as text"
     page = page_html("terms.html", "t", "d", published("legal_terms", TERMS))
     for field in ("legal_name", "ceo", "registration_no", "mail_order_no", "address", "hosting_provider", "support_phone",
                   "support_email", "name", "base_url", "og_image", "favicon", "apple_icon", "primary_color", "logo_img",

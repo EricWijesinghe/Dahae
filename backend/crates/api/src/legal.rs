@@ -108,7 +108,8 @@ pub fn slug(doc: &str) -> String {
 /// The published text the website and the app show in place of the pack's built-in body: the newest text of `doc`
 /// in force, as it was published, so customers always read the text their consents name. Company fields or
 /// processors changed since reach customers only through the next Publish (the inbox shows it pending). None while
-/// nothing is published (the page keeps its built-in body, filled live).
+/// nothing is published: the page keeps its built-in body, filled live, which is the agreed text
+/// ([`agreed_templates`], what consents then record), never a newer template waiting in the inbox.
 pub async fn published_text(s: &AppState, doc: &str) -> ApiResult<Option<String>> {
     let rows: Vec<(String, String)> = sqlx::query_as(&format!(
         "SELECT version, body_html FROM legal_documents
@@ -142,6 +143,45 @@ pub fn templates(p: &Pack, files: &[(&str, &str)]) -> Result<Vec<Template>, Pack
             check_slots(p, &t).map_err(|e| pack::err(&p.id, format!("{path}: {e}")))?;
             out.push(t);
         }
+    }
+    Ok(out)
+}
+
+/// The text customers agree to while nothing of a document is published, for each of [`templates`]: the template itself
+/// while its version is not past the pack's `privacy.consent_version`, else the agreed body the pack keeps beside it as
+/// `<scope>/legal/<doc>.<lang>.<consent_version>.md` once the template moved on. The baseline import records it and the
+/// website (so the app) shows it until the owner publishes: a newer template reaches customers only through Publish
+/// (D9), on a fresh install too, whose first Publish records the template's own version. Refuses a pack whose
+/// `consent_version` is malformed or that lacks an agreed body.
+pub fn agreed_templates(p: &Pack, files: &[(&str, &str)]) -> Result<Vec<Template>, PackError> {
+    let consent = &p.privacy.consent_version;
+    let agreed = version_key(consent).ok_or_else(|| pack::err(&p.id, "privacy.consent_version must be YYYY-MM-DD or YYYY-MM-DD.N"))?;
+    let scopes = pack::scopes(&p.id, files)?;
+    let mut out = Vec::new();
+    for t in templates(p, files)? {
+        if version_key(&t.version).is_some_and(|k| k <= agreed) {
+            out.push(t);
+            continue;
+        }
+        let name = format!("{}.{}.{consent}.md", t.doc, t.lang);
+        let (path, text) = scopes
+            .iter()
+            .find_map(|scope| {
+                let path = format!("{scope}/legal/{name}");
+                files.iter().find(|(f, _)| *f == path).map(|(_, text)| (path, *text))
+            })
+            .ok_or_else(|| {
+                pack::err(
+                    &p.id,
+                    format!("{}.{} is past privacy.consent_version: keep the agreed text as legal/{name}", t.doc, t.lang),
+                )
+            })?;
+        let a = parse(&t.doc, &t.lang, text).map_err(|e| pack::err(&p.id, format!("{path}: {e}")))?;
+        if a.version != *consent {
+            return Err(pack::err(&p.id, format!("{path}: version must be privacy.consent_version")));
+        }
+        check_slots(p, &a).map_err(|e| pack::err(&p.id, format!("{path}: {e}")))?;
+        out.push(a);
     }
     Ok(out)
 }
@@ -243,6 +283,11 @@ pub async fn render_live(s: &AppState, t: &Template) -> ApiResult<(String, Vec<(
 /// The active pack's templates (validated at boot, so this only fails on a build that never booted).
 pub fn active_templates(p: &Pack) -> ApiResult<Vec<Template>> {
     templates(p, pack::EMBEDDED).map_err(|e| ApiError::Internal(e.to_string()))
+}
+
+/// The active pack's [`agreed_templates`].
+pub fn active_agreed(p: &Pack) -> ApiResult<Vec<Template>> {
+    agreed_templates(p, pack::EMBEDDED).map_err(|e| ApiError::Internal(e.to_string()))
 }
 
 #[cfg(test)]

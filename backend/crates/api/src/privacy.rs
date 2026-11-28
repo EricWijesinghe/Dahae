@@ -19,9 +19,11 @@ use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 /// Version of the texts customers agreed to before published texts existed (the KR pack's `privacy.consent_version`,
-/// which a test keeps equal): what releases before per-document versions send and check. The consent rules read the
-/// pack and the published texts ([`consent_versions`]), never this constant, so neither a change here nor a new pack
-/// template version moves what a kind needs.
+/// which a test keeps equal): what releases before per-document versions send and check. Frozen, like the pack value
+/// (a test pins both): while a document has nothing published every kind needs this version, and the baseline import
+/// records the texts agreed at it, so changing it would refuse signups from older apps and turn agreed consents stale
+/// or count a newer text as agreed. A new text moves consents only through the owner's Publish; a new pack template
+/// keeps its agreed text beside it (`legal::agreed_templates`).
 pub const CONSENT_VERSION: &str = "2026-11-17";
 
 /// The legal document behind each consent kind (the pack's `privacy.consent_kinds[].doc`).

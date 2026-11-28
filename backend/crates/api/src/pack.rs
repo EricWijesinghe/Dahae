@@ -484,7 +484,7 @@ fn validate(p: &Pack, files: &[(&str, &str)]) -> Result<(), PackError> {
         ensure(hhmm(from).is_some() && hhmm(to).is_some(), "quiet hours must be HH:MM")?;
     }
     check_consents(p)?;
-    crate::legal::templates(p, files)?;
+    crate::legal::agreed_templates(p, files)?;
     let policy: domain::cancel_policy::CancelPolicy =
         serde_json::from_value(p.consumer.cancel_default.clone()).map_err(|e| err(id, format!("cancel_default: {e}")))?;
     policy.validate().map_err(|e| err(id, format!("cancel_default: {e}")))?;

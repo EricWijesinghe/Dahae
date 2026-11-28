@@ -104,6 +104,16 @@ fn kr_pack_feeds_the_generic_money_and_tax_rules() {
     );
 }
 
+/// Frozen: older apps send this version and every existing customer agreed to it, so neither the constant nor the
+/// pack value may ever change; new texts move consents through the owner's Publish.
+#[test]
+fn the_agreed_consent_version_is_frozen() {
+    assert_eq!(privacy::CONSENT_VERSION, "2026-11-17");
+    assert_eq!(kr().privacy.consent_version, "2026-11-17");
+    refused(|v| v["privacy"]["consent_version"] = json!("v1"), "privacy.consent_version must be");
+    refused(|v| v["privacy"]["consent_version"] = json!("2026-11-31"), "privacy.consent_version must be");
+}
+
 #[test]
 fn kr_mirrors_consent_constants() {
     let p = kr();
@@ -262,4 +272,37 @@ fn broken_legal_templates_are_refused() {
     check(Some(&terms.replace("doc: terms", "doc: privacy")), "does not match");
     let install = terms.replace("{seller.ceo}", "{install.currency}");
     assert!(with_file("KR/legal/terms.ko.md", Some(&install)).is_ok(), "install facts are slots");
+}
+
+/// A template past `privacy.consent_version` keeps the agreed text beside it (what the baseline records and the website
+/// shows until the owner publishes); a pack without it, or with it at another version, is refused.
+#[test]
+fn a_template_past_the_agreed_version_keeps_the_agreed_text() {
+    let terms = kr_text("KR/legal/terms.ko.md");
+    let newer = format!(
+        "{}<p>개정</p>
+",
+        terms.replace("version: 2026-11-17", "version: 2026-12-01")
+    );
+    let e = with_file("KR/legal/terms.ko.md", Some(&newer)).expect_err("needs the agreed text");
+    assert!(e.to_string().contains("legal/terms.ko.2026-11-17.md"), "{e}");
+    let load = |agreed: &str| {
+        let mut files: Vec<(&str, &str)> = EMBEDDED
+            .iter()
+            .map(|(p, b)| (*p, if *p == "KR/legal/terms.ko.md" { newer.as_str() } else { *b }))
+            .collect();
+        files.push(("KR/legal/terms.ko.2026-11-17.md", agreed));
+        pack::load_from("KR", &files).and_then(|p| api::legal::agreed_templates(&p, &files))
+    };
+    let agreed = load(terms).expect("with the agreed text");
+    let t = agreed.iter().find(|t| t.doc == "terms").expect("terms");
+    let original = api::legal::parse("terms", "ko", terms).expect("terms");
+    assert_eq!((t.version.as_str(), &t.body), ("2026-11-17", &original.body));
+    let e = load(&newer).expect_err("the agreed text names the agreed version");
+    assert!(e.to_string().contains("version must be privacy.consent_version"), "{e}");
+    let today = api::legal::agreed_templates(&kr(), EMBEDDED).expect("agreed");
+    assert!(
+        today.iter().all(|t| t.version == privacy::CONSENT_VERSION),
+        "today every template is the agreed text"
+    );
 }

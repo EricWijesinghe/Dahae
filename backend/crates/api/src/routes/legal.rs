@@ -116,18 +116,18 @@ async fn custom_text(s: &AppState, t: &Template) -> ApiResult<Option<String>> {
     Ok(legal_override(&s.db, &legal::slug(&t.doc)).await?)
 }
 
-/// Once per database, over the pack's templates ([`import_baseline_from`]).
+/// Once per database, over the pack's agreed texts ([`import_baseline_from`]).
 pub async fn import_baseline(s: &AppState) -> ApiResult<usize> {
-    import_baseline_from(s, legal::active_templates(&s.pack)?).await
+    import_baseline_from(s, legal::active_agreed(&s.pack)?).await
 }
 
 /// Once per database: an install that was already running (it has real staff) records the texts its customers agreed
-/// to (the pack's `privacy.consent_version` or older), dated as each text is, as a first published text that asks
-/// nobody again. A newer pack template (an install that skipped a release) is not recorded: nothing publishes without
-/// the owner's click (D9), so it waits in the inbox as a pending draft and consents keep needing the agreed version
-/// ([`privacy::Versions`]). A page the owner replaced is recorded as that text, marked custom, since it is what
-/// customers read. A fresh install imports nothing and its owner publishes from the inbox. Returns how many rows were
-/// written.
+/// to (`templates` are [`legal::agreed_templates`]: the pack's `privacy.consent_version` or older), dated as each text
+/// is, as a first published text that asks nobody again; it is the text the website showed them. A newer pack template
+/// (an install that skipped a release) is not recorded: nothing publishes without the owner's click (D9), so it waits
+/// in the inbox as a pending draft and consents keep needing the agreed version ([`privacy::Versions`]). A page the
+/// owner replaced is recorded as that text, marked custom, since it is what customers read. A fresh install imports
+/// nothing: it shows the agreed texts until its owner publishes from the inbox. Returns how many rows were written.
 pub async fn import_baseline_from(s: &AppState, templates: Vec<Template>) -> ApiResult<usize> {
     let mut tx = s.db.begin().await?;
     sqlx::query(LOCK).execute(&mut *tx).await?;
@@ -152,7 +152,9 @@ pub async fn import_baseline_from(s: &AppState, templates: Vec<Template>) -> Api
         }
         let (html, values, custom) = match custom_text(s, t).await? {
             Some(html) => (html, Vec::new(), true),
-            None if version_key(&t.version) > agreed => continue,
+            None if version_key(&t.version) > agreed => {
+                return Err(ApiError::Internal(format!("legal baseline {}: not the agreed text", t.doc)));
+            }
             None => {
                 let (html, values) = legal::render_live(s, t).await?;
                 (html, values, false)
@@ -415,5 +417,48 @@ mod tests {
         assert!(!processors_changed(&before, &values("미사용", "B")), "a company field alone does not");
         assert!(processors_changed(&before, &values("사용", "A")), "a new recipient of customer data does");
         assert!(processors_changed(&Value::Null, &values("미사용", "A")), "nothing recorded to compare with");
+    }
+
+    /// A skipped release's baseline records the agreed text; the release's newer template then waits for Publish.
+    #[test]
+    fn a_newer_template_waits_over_the_agreed_baseline() {
+        let t = |v: &str| {
+            let head = format!(
+                "doc: privacy
+title: T
+version: {v}
+effective_from: 2026-11-17
+requires_reconsent: true"
+            );
+            legal::parse(
+                "privacy",
+                "ko",
+                &format!(
+                    "---
+{head}
+law_refs: A
+reviewed_by: X
+---
+body"
+                ),
+            )
+            .expect("template")
+        };
+        let baseline = VersionRow {
+            id: 1,
+            doc: "privacy".into(),
+            lang: "ko".into(),
+            version: privacy::CONSENT_VERSION.into(),
+            template_version: Some(privacy::CONSENT_VERSION.into()),
+            requires_reconsent: false,
+            custom: false,
+            body_sha256: "s".into(),
+            effective_at: NaiveDate::from_ymd_opt(2026, 11, 17).expect("date"),
+            published_at: Utc::now(),
+            published_by: None,
+            slots_json: Value::Null,
+        };
+        assert!(is_pending(&t("2026-11-24"), &[&baseline], "s"), "the newer template");
+        assert!(!is_pending(&t(privacy::CONSENT_VERSION), &[&baseline], "s"), "the agreed text itself");
     }
 }

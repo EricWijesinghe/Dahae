@@ -35,12 +35,13 @@ fn kr_templates() -> Vec<legal::Template> {
 }
 
 /// Rust's renderer, given the Caddy include as each seller value, yields exactly the body build_legal.py put in the
-/// website page (inside its published-text switch), so the website and the inbox show one text.
+/// website page (inside its published-text switch): the agreed text, which the baseline records and consents name while
+/// nothing is published, so the website and the inbox show one text.
 #[test]
 fn kr_templates_render_the_website_pages_byte_for_byte() {
     let kr = pack::load("KR").expect("KR");
     let site = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../website");
-    for t in kr_templates() {
+    for t in legal::agreed_templates(&kr, pack::EMBEDDED).expect("agreed") {
         let values: Vec<(String, String)> = legal::slots(&t.body)
             .expect("slots")
             .into_iter()
@@ -456,38 +457,59 @@ async fn the_previous_release_runs_on_the_new_schema(pool: PgPool) {
     assert!(n1);
 }
 
-/// An install that skipped a release boots one whose privacy text is newer (`reconsent` as its template says): the
-/// baseline records only the texts customers agreed to, the newer one waits in the inbox for the owner's Publish, and
-/// every grant (marketing, overseas transfer for push and the AI chat) keeps holding meanwhile.
+/// An install that skipped a release boots one whose privacy and location texts are newer (`reconsent` as their
+/// templates say), each with the agreed text kept beside it: the baseline records the agreed texts, which the website
+/// keeps showing, the newer ones wait in the inbox for the owner's Publish, and every grant (marketing, overseas
+/// transfer for push and the AI chat) keeps holding meanwhile.
 async fn baseline_with_a_newer_privacy_text(pool: &PgPool, reconsent: bool) -> (Router, common::Customer) {
-    let (app, token, _) = configured(pool).await;
+    let (app, _, _) = configured(pool).await;
     let c = common::customer(&app, pool, "010-8200-0041").await;
     let marketing = json!({ "consents": [{ "kind": "marketing", "granted": true, "version": privacy::CONSENT_VERSION }] });
     let (st, _) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(marketing)).await;
     assert_eq!(st, StatusCode::OK);
     let state = build_state(pool.clone(), test_config()).expect("state");
-    let templates: Vec<legal::Template> = kr_templates()
-        .into_iter()
-        .map(|mut t| {
-            if t.doc == "privacy" {
-                t.version = BUMP.into();
-                t.requires_reconsent = reconsent;
-            }
-            t
+    let newer = |text: &str| {
+        let text = text.replace(&format!("version: {}", privacy::CONSENT_VERSION), &format!("version: {BUMP}"));
+        format!(
+            "{}<p>NEWER</p>
+",
+            text.replace("requires_reconsent: true", &format!("requires_reconsent: {reconsent}"))
+        )
+    };
+    let bumped = ["privacy", "location_terms"].map(|d| (format!("KR/legal/{d}.ko.md"), format!("KR/legal/{d}.ko.{}.md", privacy::CONSENT_VERSION)));
+    let texts: Vec<(String, String)> = pack::EMBEDDED
+        .iter()
+        .flat_map(|(p, b)| match bumped.iter().find(|(cur, _)| cur == p) {
+            Some((_, agreed)) => vec![(p.to_string(), newer(b)), (agreed.clone(), b.to_string())],
+            None => vec![(p.to_string(), b.to_string())],
         })
         .collect();
-    assert_eq!(import_baseline_from(&state, templates).await.expect("import"), 2);
+    let files: Vec<(&str, &str)> = texts.iter().map(|(p, b)| (p.as_str(), b.as_str())).collect();
+    let kr = pack::load_from("KR", &files).expect("a pack keeping the agreed texts");
+    assert!(
+        legal::templates(&kr, &files)
+            .expect("templates")
+            .iter()
+            .all(|t| t.doc == "terms" || t.version == BUMP)
+    );
+    let templates = legal::agreed_templates(&kr, &files).expect("agreed");
+    assert_eq!(import_baseline_from(&state, templates).await.expect("import"), 3);
     let recorded: Vec<(String, String, bool)> = sqlx::query_as("SELECT doc, version, requires_reconsent FROM legal_documents ORDER BY id")
         .fetch_all(pool)
         .await
         .expect("rows");
-    let want = ["terms", "location_terms"].map(|d| (d.to_string(), privacy::CONSENT_VERSION.to_string(), false));
+    let want = ["terms", "privacy", "location_terms"].map(|d| (d.to_string(), privacy::CONSENT_VERSION.to_string(), false));
     assert_eq!(recorded, want, "the agreed texts, asking nobody again");
-    let (_, inbox) = call(&app, "GET", "/v1/admin/legal", Some(&token), None).await;
-    assert_eq!(
-        (doc(&inbox, "privacy")["pending"].clone(), doc(&inbox, "terms")["pending"].clone()),
-        (json!(true), json!(false))
-    );
+    for (doc, field) in [("privacy", "legal_privacy"), ("location_terms", "legal_location")] {
+        let html: String = sqlx::query_scalar("SELECT body_html FROM legal_documents WHERE doc = $1")
+            .bind(doc)
+            .fetch_one(pool)
+            .await
+            .expect("recorded");
+        let shown = fragment(&app, field).await;
+        assert_eq!(shown, html, "the recorded text is the one shown");
+        assert!(!shown.contains("NEWER") && shown.contains("<h1>"), "the newer {doc} waits for Publish");
+    }
     assert_grants_hold(&app, pool, &c).await;
     (app, c)
 }
