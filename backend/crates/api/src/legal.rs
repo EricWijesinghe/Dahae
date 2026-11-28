@@ -16,10 +16,12 @@ use crate::{
     error::{ApiError, ApiResult},
     i18n,
     pack::{self, Pack, PackError},
+    privacy,
     routes::seller,
     seo::escape_html,
     settings_registry,
     state::AppState,
+    util::LOCAL_TODAY,
 };
 use chrono::{Datelike, NaiveDate};
 use serde::Serialize;
@@ -79,10 +81,48 @@ pub fn parse(doc: &str, lang: &str, text: &str) -> Result<Template, String> {
     })
 }
 
-/// Document versions sort as text, which is their date order.
 fn valid_version(v: &str) -> bool {
+    version_key(v).is_some()
+}
+
+/// A document version as (date, counter) for ordering: as text `2026-12-01.10` would sort before `2026-12-01.9`.
+/// None for a malformed version, which sorts before every real one.
+pub fn version_key(v: &str) -> Option<(NaiveDate, u32)> {
     let (date, n) = v.split_once('.').map_or((v, None), |(d, n)| (d, Some(n)));
-    date.len() == 10 && NaiveDate::parse_from_str(date, "%Y-%m-%d").is_ok() && n.is_none_or(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+    let n = match n {
+        None => 0,
+        Some(n) if !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) => n.parse().ok()?,
+        Some(_) => return None,
+    };
+    (date.len() == 10)
+        .then(|| NaiveDate::parse_from_str(date, "%Y-%m-%d").ok())
+        .flatten()
+        .map(|d| (d, n))
+}
+
+/// The `admin_content` slug (and website page name) of a document: `location_terms` is `location-terms`.
+pub fn slug(doc: &str) -> String {
+    doc.replace('_', "-")
+}
+
+/// The published text the website and the app must show instead of this release's pack text: the newest text of
+/// `doc` in force when it is not the pack's current template (the release is ahead of the owner's Publish, or behind
+/// it after a rollback), so customers always read the text their consents name. None while the pack text is the
+/// published one (the page keeps its built-in body, filled live) or nothing is published yet.
+pub async fn published_in_place_of_pack(s: &AppState, doc: &str) -> ApiResult<Option<String>> {
+    let Some(t) = active_templates(&s.pack)?.into_iter().find(|t| t.doc == doc && t.lang == privacy::LEGAL_LANG) else {
+        return Ok(None);
+    };
+    let rows: Vec<(String, Option<String>, String)> = sqlx::query_as(&format!(
+        "SELECT version, template_version, body_html FROM legal_documents
+         WHERE doc = $1 AND lang = $2 AND NOT custom AND effective_at <= {LOCAL_TODAY}"
+    ))
+    .bind(doc)
+    .bind(privacy::LEGAL_LANG)
+    .fetch_all(&s.db)
+    .await?;
+    let newest = rows.into_iter().max_by_key(|(v, _, _)| version_key(v));
+    Ok(newest.filter(|(_, tv, _)| tv.as_deref() != Some(t.version.as_str())).map(|(_, _, html)| html))
 }
 
 /// Every template of the pack's documents, each in every pack locale that has a text along the pack's scopes, all
@@ -237,6 +277,16 @@ mod tests {
     fn versions_are_dates_with_an_optional_counter() {
         assert!(valid_version("2026-11-17") && valid_version("2026-11-17.2"));
         assert!(!valid_version("2026-11-17.") && !valid_version("2026-13-01") && !valid_version("2026.11.0"));
+        assert!(!valid_version("2026-11-17.1.2") && !valid_version("2026-11-17.-1"));
+    }
+
+    #[test]
+    fn versions_order_by_date_then_counter() {
+        assert!(version_key("2026-12-01.10") > version_key("2026-12-01.9"), "not as text");
+        assert!(version_key("2026-12-01") < version_key("2026-12-01.1"));
+        assert!(version_key("2026-12-02") > version_key("2026-12-01.99"));
+        assert!(version_key("junk") < version_key("2000-01-01"));
+        assert_eq!(slug("location_terms"), "location-terms");
     }
 
     #[test]

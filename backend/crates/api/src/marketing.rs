@@ -169,11 +169,11 @@ fn push_audience(qb: &mut QueryBuilder<'_, Postgres>, segments: &[Segment]) {
     }
 }
 
-/// Latest marketing consent row is a grant for `version`, the version marketing needs now (`privacy::consent_versions`).
-fn push_consented(qb: &mut QueryBuilder<'_, Postgres>, version: String) {
-    qb.push("EXISTS (SELECT 1 FROM (SELECT DISTINCT ON (kind) kind, granted, version FROM user_consents WHERE user_id = u.id ORDER BY kind, created_at DESC, id DESC) c WHERE c.kind = 'marketing' AND c.granted AND c.version = ");
-    qb.push_bind(version);
-    qb.push(")");
+/// Latest marketing consent row is a grant for one of `versions`, those that hold now (`privacy::Versions::accepted`).
+fn push_consented(qb: &mut QueryBuilder<'_, Postgres>, versions: Vec<String>) {
+    qb.push("EXISTS (SELECT 1 FROM (SELECT DISTINCT ON (kind) kind, granted, version FROM user_consents WHERE user_id = u.id ORDER BY kind, created_at DESC, id DESC) c WHERE c.kind = 'marketing' AND c.granted AND c.version = ANY(");
+    qb.push_bind(versions);
+    qb.push("))");
 }
 
 #[derive(sqlx::FromRow)]
@@ -673,9 +673,9 @@ async fn preview(State(s): State<AppState>, _st: Admin, Json(b): Json<PreviewBod
     if !b.audience.iter().all(segment_ok) {
         return Err(ApiError::BadRequest("audience"));
     }
-    let version = privacy::consent_versions(&s.db).await?.of("marketing").to_string();
+    let versions = privacy::consent_versions(&s.db).await?.accepted("marketing");
     let mut qb = QueryBuilder::new("SELECT count(*), count(*) FILTER (WHERE ");
-    push_consented(&mut qb, version);
+    push_consented(&mut qb, versions);
 
     qb.push(") FROM (");
     push_audience(&mut qb, &b.audience);

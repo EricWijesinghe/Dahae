@@ -7,14 +7,26 @@
 
 mod common;
 
-use api::{auth::Role, build_state, legal, pack, privacy, routes::legal::import_baseline};
-use axum::{Router, http::StatusCode};
-use common::{call, golden, test_config};
+use api::{
+    auth::Role,
+    build_state, legal, pack, privacy,
+    routes::legal::{import_baseline, import_baseline_from},
+};
+use axum::{
+    Router,
+    body::Body,
+    extract::ConnectInfo,
+    http::{Request, StatusCode},
+};
+use common::{call, call_owner, golden, test_config};
 use serde_json::{Value, json};
 use sqlx::PgPool;
+use std::net::SocketAddr;
+use tower::ServiceExt;
 use uuid::Uuid;
 
 const NEW: &str = "2026-12-01";
+const SEED: &[u8] = b"legal-test-owner-seed-0123456789";
 
 fn kr_templates() -> Vec<legal::Template> {
     legal::templates(&pack::load("KR").expect("KR"), pack::EMBEDDED).expect("templates")
@@ -130,18 +142,61 @@ async fn a_fresh_install_imports_nothing_even_after_it_creates_staff(pool: PgPoo
     assert_eq!(n, 0);
 }
 
-/// A release's newer text of `doc`, as the inbox's publish stores it.
+/// A release's newer text of `doc` (body `<p>{version}</p>`), as the inbox's publish stores it, in force since yesterday.
 async fn publish_version(pool: &PgPool, doc: &str, version: &str, reconsent: bool) {
+    publish_effective(pool, doc, version, reconsent, -1).await;
+}
+
+/// `publish_version` taking effect `days` from today.
+async fn publish_effective(pool: &PgPool, doc: &str, version: &str, reconsent: bool, days: i32) {
     sqlx::query(
         "INSERT INTO legal_documents (doc, lang, version, template_version, requires_reconsent, body_md, body_html, body_sha256, effective_at)
-         VALUES ($1, 'ko', $2, $2, $3, 'md', '<p>new</p>', repeat('a', 64), $2::date)",
+         VALUES ($1, 'ko', $2, $2, $3, 'md', '<p>' || $2 || '</p>', repeat('a', 64), CURRENT_DATE + $4)",
     )
     .bind(doc)
     .bind(version)
     .bind(reconsent)
+    .bind(days)
     .execute(pool)
     .await
     .expect("publish");
+}
+
+/// Publishes with a fresh owner code (each code is spent once, so the last step is cleared first).
+async fn owner_publish(app: &Router, pool: &PgPool, token: &str, body: Value) -> (StatusCode, Value) {
+    sqlx::query("UPDATE staff SET totp_last_step = NULL WHERE is_owner")
+        .execute(pool)
+        .await
+        .expect("reset step");
+    let code = format!(
+        "{:06}",
+        api::totp::code_at(SEED, (chrono::Utc::now().timestamp() / api::totp::STEP_SECS) as u64)
+    );
+    call_owner(app, "POST", "/v1/admin/legal/publish", token, Some(&code), body).await
+}
+
+/// A website fragment as the page includes it.
+async fn fragment(app: &Router, field: &str) -> String {
+    let mut req = Request::builder()
+        .uri(format!("/v1/public/seller-info?field={field}"))
+        .body(Body::empty())
+        .expect("request");
+    req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40_000))));
+    let resp = app.clone().oneshot(req).await.expect("router");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.expect("body");
+    String::from_utf8(bytes.to_vec()).expect("utf-8")
+}
+
+/// Signs a customer up with the three required kinds at `version`.
+async fn signup(app: &Router, phone: &str, version: &str) -> (StatusCode, Value) {
+    let (_, sent) = call(app, "POST", "/v1/auth/otp", None, Some(json!({ "phone": phone }))).await;
+    let consents: Vec<Value> = ["terms", "privacy", "overseas_transfer"]
+        .iter()
+        .map(|k| json!({ "kind": k, "granted": true, "version": version }))
+        .collect();
+    let body = json!({ "phone": phone, "code": sent["dev_code"], "audience": "customer", "consents": consents });
+    call(app, "POST", "/v1/auth/verify", None, Some(body)).await
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -153,6 +208,7 @@ async fn consent_versions_follow_the_published_documents(pool: PgPool) {
         privacy::CONSENT_VERSION,
         "a correction that does not ask again changes nothing"
     );
+    assert_eq!((v.current("privacy"), v.bundle()), ("2026-11-20", "2026-11-20"), "but it is the text shown");
     publish_version(&pool, "privacy", NEW, true).await;
     let v = privacy::consent_versions(&pool).await.expect("versions");
     for (kind, want) in [
@@ -302,18 +358,36 @@ async fn the_legal_inbox_lists_previews_and_publishes(pool: PgPool) {
     let body = json!({ "doc": "terms", "lang": "ko" });
     let (st, _) = call(&app, "POST", "/v1/admin/legal/publish", Some(&consultant), Some(body.clone())).await;
     assert_eq!(st, StatusCode::FORBIDDEN);
-    let (st, _) = call(
-        &app,
-        "POST",
-        "/v1/admin/legal/publish",
-        Some(&token),
-        Some(json!({ "doc": "terms", "lang": "en" })),
-    )
-    .await;
+    let (st, _) = owner_publish(&app, &pool, &token, body.clone()).await;
+    assert_eq!(st, StatusCode::FORBIDDEN, "an admin who is not the owner");
+    common::enrol_owner(&pool, staff, SEED).await;
+    let (st, b) = call_owner(&app, "POST", "/v1/admin/legal/publish", &token, None, body.clone()).await;
+    assert_eq!((st, b["error"]["code"].clone()), (StatusCode::BAD_REQUEST, json!("totp_required")), "{b}");
+    let (st, _) = owner_publish(&app, &pool, &token, json!({ "doc": "terms", "lang": "en" })).await;
     assert_eq!(st, StatusCode::NOT_FOUND, "no English KR text");
-    let (st, published) = call(&app, "POST", "/v1/admin/legal/publish", Some(&token), Some(body)).await;
+    let (st, b) = owner_publish(&app, &pool, &token, body.clone()).await;
+    assert_eq!(
+        (st, b["error"]["code"].clone()),
+        (StatusCode::CONFLICT, json!("legal_already_published")),
+        "one version is one text: {b}"
+    );
+
+    // A company field changes the rendered text: the inbox offers it again, under the next counter, without re-consent.
+    let mut business = kr_business();
+    business["company"]["legal_name"] = json!("주식회사 다해클린서비스");
+    let (st, b) = call(&app, "PUT", "/v1/admin/setup/business", Some(&token), Some(business)).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let (_, changed) = call(&app, "GET", "/v1/admin/legal", Some(&token), None).await;
+    assert_eq!(doc(&changed, "terms")["pending"], true, "{}", doc(&changed, "terms"));
+    let (st, published) = owner_publish(&app, &pool, &token, body.clone()).await;
     assert_eq!(st, StatusCode::OK, "{published}");
-    assert_eq!(published["version"], privacy::CONSENT_VERSION);
+    let counter = format!("{}.1", privacy::CONSENT_VERSION);
+    assert_eq!(
+        (published["version"].clone(), published["requires_reconsent"].clone()),
+        (json!(counter), json!(false))
+    );
+    let (st, _) = owner_publish(&app, &pool, &token, body).await;
+    assert_eq!(st, StatusCode::CONFLICT, "nothing new to publish");
     let id = published["id"].as_i64().expect("id");
     let by: Option<Uuid> = sqlx::query_scalar("SELECT published_by FROM legal_documents WHERE id = $1")
         .bind(id)
@@ -321,15 +395,16 @@ async fn the_legal_inbox_lists_previews_and_publishes(pool: PgPool) {
         .await
         .expect("row");
     assert_eq!(by, Some(staff));
-    let audited: i64 = sqlx::query_scalar("SELECT count(*) FROM audit_log WHERE action = 'legal.publish' AND target = 'terms'")
-        .fetch_one(&pool)
+    let audited: Vec<Value> = sqlx::query_scalar("SELECT data FROM audit_log WHERE action = 'legal.publish' AND target = 'terms'")
+        .fetch_all(&pool)
         .await
         .expect("audit");
-    assert_eq!(audited, 1);
+    assert_eq!(audited.len(), 1);
+    assert!(audited[0]["body_sha256"].as_str().is_some_and(|h| h.len() == 64), "{}", audited[0]);
 
     let (st, v) = call(&app, "GET", &format!("/v1/admin/legal/versions/{id}"), Some(&token), None).await;
     assert_eq!(st, StatusCode::OK, "{v}");
-    assert_eq!(v["body_html"], doc(&inbox, "terms")["draft_html"]);
+    assert_eq!(v["body_html"], doc(&changed, "terms")["draft_html"]);
     let (_, inbox) = call(&app, "GET", "/v1/admin/legal", Some(&token), None).await;
     assert_eq!(doc(&inbox, "terms")["versions"].as_array().map(Vec::len), Some(2), "newest first, both kept");
     let (st, _) = call(&app, "GET", "/v1/admin/legal/versions/999999", Some(&token), None).await;
@@ -377,4 +452,164 @@ async fn the_previous_release_runs_on_the_new_schema(pool: PgPool) {
         .await
         .expect("n-1 read");
     assert!(n1);
+}
+
+/// An install that skipped this release boots one whose privacy text is newer: only the texts at the version its
+/// customers agreed to are recorded, the newer one waits for the owner, and nobody is asked again.
+#[sqlx::test(migrations = "../../migrations")]
+async fn baseline_skips_a_template_customers_never_agreed_to(pool: PgPool) {
+    let _ = configured(&pool).await;
+    let state = build_state(pool.clone(), test_config()).expect("state");
+    let templates: Vec<legal::Template> = kr_templates()
+        .into_iter()
+        .map(|mut t| {
+            if t.doc == "privacy" {
+                t.version = NEW.into();
+                t.requires_reconsent = true;
+            }
+            t
+        })
+        .collect();
+    assert_eq!(import_baseline_from(&state, templates).await.expect("import"), 2);
+    let privacy_rows: i64 = sqlx::query_scalar("SELECT count(*) FROM legal_documents WHERE doc = 'privacy'")
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+    assert_eq!(privacy_rows, 0, "not published without the owner");
+    let v = privacy::consent_versions(&pool).await.expect("versions");
+    assert!(
+        privacy::CONSENTS
+            .iter()
+            .all(|(k, _)| v.of(k) == privacy::CONSENT_VERSION && v.current(k) == privacy::CONSENT_VERSION)
+    );
+}
+
+/// A page the owner replaced is what customers read: the baseline records that text (custom), the inbox offers no
+/// pack text for it, and Publish is refused while the replacement is live.
+#[sqlx::test(migrations = "../../migrations")]
+async fn an_owner_replaced_page_is_the_baseline_and_blocks_publish(pool: PgPool) {
+    let (app, token, staff) = configured(&pool).await;
+    common::enrol_owner(&pool, staff, SEED).await;
+    let item = json!({"kind": "legal", "slug": "privacy", "title": {"ko": "개인정보처리방침"}, "body": {"text": {"ko": "우리 회사의 방침"}},
+                      "image_url": null, "link": null, "sort_order": 0, "starts_at": null, "ends_at": null, "active": true});
+    let (st, b) = call(&app, "POST", "/v1/admin/content", Some(&token), Some(item)).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let state = build_state(pool.clone(), test_config()).expect("state");
+    assert_eq!(import_baseline(&state).await.expect("import"), 3);
+    let (custom, template, html): (bool, Option<String>, String) =
+        sqlx::query_as("SELECT custom, template_version, body_html FROM legal_documents WHERE doc = 'privacy'")
+            .fetch_one(&pool)
+            .await
+            .expect("row");
+    assert!(custom && template.is_none(), "recorded as the replaced text");
+    assert!(html.contains("우리 회사의 방침"), "{html}");
+    assert_eq!(fragment(&app, "legal_privacy").await, html, "the inbox and the website show one text");
+    let (_, inbox) = call(&app, "GET", "/v1/admin/legal", Some(&token), None).await;
+    assert_eq!(
+        (doc(&inbox, "privacy")["custom"].clone(), doc(&inbox, "privacy")["pending"].clone()),
+        (json!(true), json!(false))
+    );
+    assert_eq!(doc(&inbox, "terms")["custom"], false);
+    let (st, b) = owner_publish(&app, &pool, &token, json!({ "doc": "privacy", "lang": "ko" })).await;
+    assert_eq!((st, b["error"]["code"].clone()), (StatusCode::CONFLICT, json!("legal_custom_text")), "{b}");
+}
+
+/// The website (and the app, which opens it) shows the newest published text whenever it is not this release's pack
+/// text, so the version a customer accepts is the text they could read.
+#[sqlx::test(migrations = "../../migrations")]
+async fn customers_read_the_text_their_consent_names(pool: PgPool) {
+    let (app, _, _) = configured(&pool).await;
+    let state = build_state(pool.clone(), test_config()).expect("state");
+    import_baseline(&state).await.expect("import");
+    assert_eq!(
+        legal::published_in_place_of_pack(&state, "privacy").await.expect("lookup"),
+        None,
+        "the pack text is the published one: the page keeps its built-in body"
+    );
+    let c = common::customer(&app, &pool, "010-8200-0011").await;
+    publish_version(&pool, "privacy", NEW, true).await;
+    assert_eq!(
+        fragment(&app, "legal_privacy").await,
+        format!("<p>{NEW}</p>"),
+        "the website shows the published text"
+    );
+    assert_eq!(fragment(&app, "legal_terms").await, "", "terms keep the pack text");
+    let (_, me) = call(&app, "GET", "/v1/me", Some(c.token.as_str()), None).await;
+    let shown = me["pending_consents"][0]["version"].clone();
+    assert_eq!(shown, json!(NEW));
+    let accept = json!({ "consents": [{ "kind": "privacy", "version": shown }] });
+    let (st, b) = call(&app, "POST", "/v1/me/consents/accept", Some(c.token.as_str()), Some(accept)).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    let recorded: String = sqlx::query_scalar("SELECT version FROM user_consents WHERE user_id = $1 AND kind = 'privacy' ORDER BY id DESC LIMIT 1")
+        .bind(c.user)
+        .fetch_one(&pool)
+        .await
+        .expect("row");
+    assert_eq!(format!("<p>{recorded}</p>"), fragment(&app, "legal_privacy").await);
+}
+
+/// A correction (no re-consent) is the text shown: signing up, updating and accepting with its version all work, and
+/// nobody is asked again.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_correction_changes_nothing_for_customers(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let fix = "2026-11-20";
+    publish_version(&pool, "privacy", fix, false).await;
+    // An app sending the single version GET /me/consents reports signs up on it; terms record their own version.
+    let (st, tokens) = signup(&app, "010-8200-0021", fix).await;
+    assert_eq!(st, StatusCode::OK, "{tokens}");
+    let (_, me) = call(&app, "GET", "/v1/me", tokens["access_token"].as_str(), None).await;
+    assert!(pending_kinds(&me).is_empty(), "{me}");
+    let rows: Vec<(String, String)> = sqlx::query_as("SELECT kind, version FROM user_consents WHERE user_id = $1::uuid ORDER BY kind")
+        .bind(tokens["subject"].as_str().expect("subject"))
+        .fetch_all(&pool)
+        .await
+        .expect("rows");
+    let want = [("overseas_transfer", fix), ("privacy", fix), ("terms", privacy::CONSENT_VERSION)];
+    assert_eq!(rows, want.map(|(k, v)| (k.to_string(), v.to_string())));
+    let c = common::customer(&app, &pool, "010-8200-0022").await;
+    let (_, s) = call(&app, "GET", "/v1/me/consents", Some(c.token.as_str()), None).await;
+    assert_eq!((s["version"].clone(), s["reconsent_required"].clone()), (json!(fix), json!(false)), "{s}");
+    let put = json!({ "consents": [{ "kind": "privacy", "granted": true, "version": fix }, { "kind": "marketing", "granted": true, "version": fix }] });
+    let (st, s) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(put)).await;
+    assert_eq!(st, StatusCode::OK, "{s}");
+    let accept = json!({ "consents": [{ "kind": "overseas_transfer", "version": fix }] });
+    let (st, b) = call(&app, "POST", "/v1/me/consents/accept", Some(c.token.as_str()), Some(accept)).await;
+    assert_eq!(st, StatusCode::OK, "{b}");
+    assert!(pending_kinds(&b).is_empty(), "{b}");
+    assert!(privacy::marketing_allowed(&pool, c.user).await.expect("marketing"));
+}
+
+/// After a rollback the older release never offers its older text as new, and refuses to publish it over the newer one.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_rolled_back_release_never_publishes_an_older_text(pool: PgPool) {
+    let (app, token, staff) = configured(&pool).await;
+    common::enrol_owner(&pool, staff, SEED).await;
+    let state = build_state(pool.clone(), test_config()).expect("state");
+    import_baseline(&state).await.expect("import");
+    publish_version(&pool, "privacy", NEW, true).await;
+    let (_, inbox) = call(&app, "GET", "/v1/admin/legal", Some(&token), None).await;
+    assert_eq!(doc(&inbox, "privacy")["pending"], false, "{}", doc(&inbox, "privacy"));
+    let (st, b) = owner_publish(&app, &pool, &token, json!({ "doc": "privacy", "lang": "ko" })).await;
+    assert_eq!((st, b["error"]["code"].clone()), (StatusCode::CONFLICT, json!("legal_version_older")), "{b}");
+    assert_eq!(privacy::consent_versions(&pool).await.expect("versions").of("privacy"), NEW);
+    assert_eq!(
+        fragment(&app, "legal_privacy").await,
+        format!("<p>{NEW}</p>"),
+        "the newer text stays the one shown"
+    );
+}
+
+/// A text published to take effect later moves nothing until its day: old grants keep holding meanwhile.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_text_announced_for_later_asks_nothing_until_it_takes_effect(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let c = common::customer(&app, &pool, "010-8200-0031").await;
+    publish_effective(&pool, "privacy", NEW, true, 10).await;
+    let v = privacy::consent_versions(&pool).await.expect("versions");
+    assert_eq!((v.of("privacy"), v.current("privacy")), (privacy::CONSENT_VERSION, privacy::CONSENT_VERSION));
+    let (_, me) = call(&app, "GET", "/v1/me", Some(c.token.as_str()), None).await;
+    assert!(pending_kinds(&me).is_empty(), "{me}");
+    assert!(privacy::overseas_allowed(&pool, c.user).await.expect("overseas"));
+    assert_eq!(fragment(&app, "legal_privacy").await, "", "the website keeps the text in force");
 }

@@ -8,6 +8,7 @@ import 'package:ui/ui.dart';
 import '../state.dart';
 import '../widgets/inline_button.dart';
 import 'confirm_action.dart';
+import 'setup_owner_code.dart';
 
 /// Legal inbox (`/admin/legal`): each document of the country pack in each language, its published versions and
 /// the pack's current text. Nothing applies until the owner presses Publish. A Korean install sees its texts
@@ -43,17 +44,27 @@ class _LegalInboxCardState extends State<LegalInboxCard> {
           : ask,
     );
     if (!ok || !mounted) return;
+    // Publishing is the owner's, with the owner's code (the server refuses anyone else).
+    final code = await askOwnerCode(context);
+    if (code == null || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await context.api.post('/admin/legal/publish', {
-        'doc': doc['doc'],
-        'lang': doc['lang'],
-      });
+      await context.api.post(
+        '/admin/legal/publish',
+        {'doc': doc['doc'], 'lang': doc['lang']},
+        null,
+        {ownerTotpHeader: code},
+      );
       messenger.showSnackBar(
         SnackBar(content: KeepAllText(t.lgiPublishedDone)),
       );
     } on ApiException catch (e) {
-      messenger.showSnackBar(SnackBar(content: KeepAllText(t.error(e))));
+      final text = switch (e) {
+        _ when e.code == 'totp_invalid' => t.cOwnerCodeWrong,
+        _ when e.status == 429 => t.cOwnerCodeLocked,
+        _ => t.error(e),
+      };
+      messenger.showSnackBar(SnackBar(content: KeepAllText(text)));
     }
     if (mounted) {
       setState(() {

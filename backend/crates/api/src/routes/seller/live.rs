@@ -165,16 +165,26 @@ pub fn legal_html(title: &Value, body: &Value) -> String {
     format!("\n    <h1>{}</h1>\n    {}\n", escape_html(&ko(title)), paras.join("\n    "))
 }
 
-async fn legal(s: &AppState, slug: &str) -> ApiResult<String> {
+/// The owner's replacement text of a legal page (`admin_content` kind `legal`) while one is live.
+pub async fn legal_override(db: &sqlx::PgPool, slug: &str) -> sqlx::Result<Option<String>> {
     let row: Option<(Value, Value)> = sqlx::query_as(
         "SELECT title, body FROM content_items
          WHERE kind = 'legal' AND slug = $1 AND active AND (starts_at IS NULL OR starts_at <= now()) AND (ends_at IS NULL OR ends_at > now())
          ORDER BY sort_order, created_at DESC LIMIT 1",
     )
     .bind(slug)
-    .fetch_optional(&s.db)
+    .fetch_optional(db)
     .await?;
-    Ok(row.map(|(t, b)| legal_html(&t, &b)).unwrap_or_default())
+    Ok(row.map(|(t, b)| legal_html(&t, &b)).filter(|h| !h.is_empty()))
+}
+
+/// What a legal page shows in place of its built-in body: the owner's replacement, else a published text that is not
+/// this release's pack text; empty keeps the built-in body.
+async fn legal(s: &AppState, doc: &str) -> ApiResult<String> {
+    if let Some(html) = legal_override(&s.db, &crate::legal::slug(doc)).await? {
+        return Ok(html);
+    }
+    Ok(crate::legal::published_in_place_of_pack(s, doc).await?.unwrap_or_default())
 }
 
 fn used(s: &AppState, sec: Section) -> String {
@@ -214,7 +224,7 @@ async fn from_db(s: &AppState, field: &str) -> ApiResult<String> {
         "cancel_policy" => cancel_rows(&super::super::bookings::load_cancel_policy(&s.db).await?.0),
         "legal_terms" => legal(s, "terms").await?,
         "legal_privacy" => legal(s, "privacy").await?,
-        "legal_location" => legal(s, "location-terms").await?,
+        "legal_location" => legal(s, "location_terms").await?,
         _ => settings_registry::get(&s.db, &s.config, field).await?.to_string(),
     };
     remember_fragment(&db, field, &html);

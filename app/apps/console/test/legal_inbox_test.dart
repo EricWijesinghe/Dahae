@@ -184,10 +184,21 @@ void main() {
       await settle(tester);
       await tester.tap(find.widgetWithText(FilledButton, koT.lgiPublish).last);
       await settle(tester);
-      expect(api.lastCall('POST', '/admin/legal/publish')!.json, {
-        'doc': 'privacy',
-        'lang': 'ko',
-      });
+      expect(
+        api.callsTo('POST', '/admin/legal/publish'),
+        isEmpty,
+        reason: 'nothing before the owner code',
+      );
+      expect(find.text(koT.cOwnerCodeTitle), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, '654321');
+      await settle(tester);
+      await tester.tap(
+        find.widgetWithText(FilledButton, koT.cOwnerCodeConfirm),
+      );
+      await settle(tester);
+      final sent = api.lastCall('POST', '/admin/legal/publish')!;
+      expect(sent.json, {'doc': 'privacy', 'lang': 'ko'});
+      expect(sent.headers['x-owner-totp'], '654321');
       expect(
         find.text(koT.lgiPending),
         findsNothing,

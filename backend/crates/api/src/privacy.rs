@@ -20,7 +20,8 @@ use uuid::Uuid;
 
 /// Version of the built-in policy texts (privacy, terms, overseas transfer notice, marketing, location terms): what every
 /// consent kind needs while no text of its document is published (`legal_documents`), and the version of the KR texts
-/// imported as the first published rows. After that a kind needs its document's published version ([`consent_versions`]).
+/// imported as the first published rows (the baseline import records only templates at this version, the one existing
+/// consents name). After that a kind needs its document's published version ([`consent_versions`]).
 pub const CONSENT_VERSION: &str = "2026-11-17";
 
 /// The legal document behind each consent kind (the pack's `privacy.consent_kinds[].doc`).
@@ -73,47 +74,112 @@ async fn latest(db: &PgPool, user: Uuid) -> sqlx::Result<Vec<Latest>> {
         .await
 }
 
-/// The version each consent kind needs now.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Versions(Vec<(&'static str, String)>);
+/// One published text in force (in [`LEGAL_LANG`]), as the consent rules read it.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct Published {
+    doc: String,
+    version: String,
+    requires_reconsent: bool,
+    published_at: DateTime<Utc>,
+}
+
+/// How long after a re-consent text is published a signup may still name the text it replaced (an app opened before
+/// the publish); the customer is then asked again at once. After that only the texts in force are accepted.
+pub const SIGNUP_GRACE_DAYS: i64 = 30;
+
+fn key(v: &str) -> Option<(chrono::NaiveDate, u32)> {
+    crate::legal::version_key(v)
+}
+
+/// The published texts in force, from which each kind's versions follow.
+#[derive(Debug, Clone, Default)]
+pub struct Versions(Vec<Published>);
 
 impl Versions {
-    /// What a kind needs; an unknown kind needs a version nobody holds.
-    pub fn of(&self, kind: &str) -> &str {
-        self.0.iter().find(|(k, _)| *k == kind).map_or("", |(_, v)| v.as_str())
+    fn texts<'a>(&'a self, kind: &str) -> impl Iterator<Item = &'a Published> + 'a {
+        let doc = CONSENT_DOCS.iter().find(|(k, _)| *k == kind).map(|(_, d)| *d);
+        self.0.iter().filter(move |p| Some(p.doc.as_str()) == doc)
     }
 
-    /// The newest version of any kind. Apps before per-document versions send one version for every kind (the one
+    /// What a kind needs: the newest text of its document in force that asked for re-consent, else
+    /// [`CONSENT_VERSION`]; an unknown kind needs a version nobody holds.
+    pub fn of(&self, kind: &str) -> &str {
+        if !CONSENT_DOCS.iter().any(|(k, _)| *k == kind) {
+            return "";
+        }
+        self.texts(kind)
+            .filter(|p| p.requires_reconsent)
+            .map(|p| p.version.as_str())
+            .max_by_key(|v| key(v))
+            .unwrap_or(CONSENT_VERSION)
+    }
+
+    /// The newest text in force of a kind's document: what the website and the apps show, and what a consent to "the
+    /// text shown now" records. Never older than what the kind needs.
+    pub fn current(&self, kind: &str) -> &str {
+        let need = self.of(kind);
+        self.texts(kind)
+            .map(|p| p.version.as_str())
+            .filter(|v| key(v) >= key(need))
+            .max_by_key(|v| key(v))
+            .unwrap_or(need)
+    }
+
+    /// Whether a grant naming `version` holds: the text the kind needs, or a later published text of the same document
+    /// that did not ask again (a correction).
+    pub fn holds(&self, kind: &str, version: &str) -> bool {
+        let need = self.of(kind);
+        !need.is_empty() && (version == need || self.texts(kind).any(|p| p.version == version && key(version) >= key(need)))
+    }
+
+    /// Every version a grant of `kind` may name and still hold.
+    pub fn accepted(&self, kind: &str) -> Vec<String> {
+        let mut out = vec![self.of(kind).to_string()];
+        out.extend(self.texts(kind).filter(|p| self.holds(kind, &p.version)).map(|p| p.version.clone()));
+        out.sort();
+        out.dedup();
+        out
+    }
+
+    /// The newest text shown of any kind. Apps before per-document versions send one version for every kind (the one
     /// `GET /me/consents` reports), so it stands for "the texts shown now" for each kind.
     pub fn bundle(&self) -> &str {
-        self.0.iter().map(|(_, v)| v.as_str()).max().unwrap_or(CONSENT_VERSION)
+        CONSENT_DOCS
+            .iter()
+            .map(|(k, _)| self.current(k))
+            .max_by_key(|v| key(v))
+            .unwrap_or(CONSENT_VERSION)
+    }
+
+    /// A signup naming an older text of the kind's document (one published, or the built-in one) is recorded while the
+    /// re-consent text that replaced it is younger than [`SIGNUP_GRACE_DAYS`].
+    fn replaced_lately(&self, kind: &str, version: &str, now: DateTime<Utc>) -> bool {
+        let known = version == CONSENT_VERSION || self.texts(kind).any(|p| p.version == version);
+        let replaced_by = self
+            .texts(kind)
+            .filter(|p| p.requires_reconsent && key(&p.version) > key(version))
+            .min_by_key(|p| key(&p.version));
+        known && key(version).is_some() && replaced_by.is_some_and(|p| now - p.published_at < chrono::Duration::days(SIGNUP_GRACE_DAYS))
     }
 }
 
-/// The version each kind needs: the newest published version of its document (in [`LEGAL_LANG`]) that asked for
-/// re-consent, else [`CONSENT_VERSION`]. A publish without `requires_reconsent` leaves consents as they are.
+/// The versions each kind needs and records, from the texts in force in [`LEGAL_LANG`]: a text published with a later
+/// `effective_at` changes nothing until that day (install time zone), so customers are not asked to accept it early.
 pub async fn consent_versions<'e>(db: impl sqlx::PgExecutor<'e>) -> sqlx::Result<Versions> {
-    let rows: Vec<(String, String)> = sqlx::query_as(
-        "SELECT DISTINCT ON (doc) doc, version FROM legal_documents WHERE lang = $1 AND requires_reconsent
-         ORDER BY doc, published_at DESC, id DESC",
-    )
+    let rows: Vec<Published> = sqlx::query_as(&format!(
+        "SELECT doc, version, requires_reconsent, published_at FROM legal_documents
+         WHERE lang = $1 AND effective_at <= {}",
+        crate::util::LOCAL_TODAY
+    ))
     .bind(LEGAL_LANG)
     .fetch_all(db)
     .await?;
-    Ok(Versions(
-        CONSENT_DOCS
-            .iter()
-            .map(|&(kind, doc)| {
-                let v = rows.iter().find(|(d, _)| d == doc).map_or(CONSENT_VERSION, |(_, v)| v.as_str());
-                (kind, v.to_string())
-            })
-            .collect(),
-    ))
+    Ok(Versions(rows))
 }
 
-/// A consent counts only if it was given for the version its kind needs now.
+/// A consent counts only if it was given for the version its kind needs now or a later correction of it.
 fn effective(rows: &[Latest], versions: &Versions, kind: &str) -> bool {
-    rows.iter().any(|r| r.kind == kind && r.granted && r.version == versions.of(kind))
+    rows.iter().any(|r| r.kind == kind && r.granted && versions.holds(kind, &r.version))
 }
 
 /// Whether the customer's latest choice for `kind` is a grant for the version it needs now.
@@ -163,7 +229,7 @@ fn state_of(rows: &[Latest], versions: &Versions) -> ConsentState {
     // otherwise push and the AI chat would switch off without the customer ever being told.
     let stale_overseas = rows
         .iter()
-        .any(|r| r.kind == "overseas_transfer" && r.granted && r.version != versions.of("overseas_transfer"));
+        .any(|r| r.kind == "overseas_transfer" && r.granted && !versions.holds("overseas_transfer", &r.version));
     let reconsent_required = stale_overseas || items.iter().any(|i| i.required && !i.granted);
     ConsentState {
         version: versions.bundle().to_string(),
@@ -178,7 +244,8 @@ pub async fn consent_state(db: &PgPool, user: Uuid) -> ApiResult<ConsentState> {
 }
 
 /// A consent the customer is asked to give again: a required kind not held at its current version, or an optional
-/// kind granted for an older version of its document (it counts as withdrawn until accepted again).
+/// kind granted for an older version of its document (it counts as withdrawn until accepted again). `version` is the
+/// text shown now, which is what accepting records.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct Pending {
     pub kind: &'static str,
@@ -192,13 +259,13 @@ fn pending_of(rows: &[Latest], versions: &Versions) -> Vec<Pending> {
         .iter()
         .zip(CONSENT_DOCS)
         .filter(|&(&(kind, required), _)| {
-            let stale_grant = rows.iter().any(|r| r.kind == kind && r.granted && r.version != versions.of(kind));
+            let stale_grant = rows.iter().any(|r| r.kind == kind && r.granted && !versions.holds(kind, &r.version));
             stale_grant || (required && !effective(rows, versions, kind))
         })
         .map(|(&(kind, required), (_, doc))| Pending {
             kind,
             doc,
-            version: versions.of(kind).to_string(),
+            version: versions.current(kind).to_string(),
             required,
         })
         .collect()
@@ -229,7 +296,7 @@ pub async fn update_consents(db: &PgPool, user: Uuid, update: ConsentUpdate) -> 
         return Err(ApiError::BadRequest("invalid_consents"));
     }
     let versions = consent_versions(db).await?;
-    let changes = current_changes(&update.consents, &versions, &[])?;
+    let changes = current_changes(&update.consents, &versions, None)?;
     let mut rows = latest(db, user).await?;
     for c in &changes {
         rows.retain(|r| r.kind != c.kind);
@@ -252,17 +319,18 @@ pub async fn update_consents(db: &PgPool, user: Uuid, update: ConsentUpdate) -> 
 }
 
 /// Checks each change (a known kind, at most once each) and returns it with the version to record. A change naming
-/// its kind's current version or [`Versions::bundle`] records the kind's current version; one naming a version in
-/// `older` (an earlier published version of its document) is recorded as sent; anything else is stale.
-fn current_changes(consents: &[ConsentChange], versions: &Versions, older: &[(String, String)]) -> ApiResult<Vec<ConsentChange>> {
+/// [`Versions::bundle`] records the kind's text shown now; one naming a text of its document that holds (the one it
+/// needs or a later correction) is recorded as sent. At signup (`signup_at` given) an older text replaced lately is
+/// recorded as sent too, and asked again at once; anything else is stale.
+fn current_changes(consents: &[ConsentChange], versions: &Versions, signup_at: Option<DateTime<Utc>>) -> ApiResult<Vec<ConsentChange>> {
     let mut out = Vec::with_capacity(consents.len());
     for (i, c) in consents.iter().enumerate() {
-        let Some(&(kind, doc)) = CONSENT_DOCS.iter().find(|(k, _)| *k == c.kind) else {
+        let Some(&(kind, _)) = CONSENT_DOCS.iter().find(|(k, _)| *k == c.kind) else {
             return Err(ApiError::BadRequest("invalid_consent_kind"));
         };
-        let version = if c.version == versions.of(kind) || c.version == versions.bundle() {
-            versions.of(kind).to_string()
-        } else if older.iter().any(|(d, v)| d == doc && *v == c.version) {
+        let version = if c.version == versions.bundle() {
+            versions.current(kind).to_string()
+        } else if versions.holds(kind, &c.version) || signup_at.is_some_and(|now| versions.replaced_lately(kind, &c.version, now)) {
             c.version.clone()
         } else {
             return Err(ApiError::BadRequest("stale_consent_version"));
@@ -280,22 +348,18 @@ fn current_changes(consents: &[ConsentChange], versions: &Versions, older: &[(St
 }
 
 /// Records a new customer's consents inside the signup transaction, so a refused signup leaves no account. Signup
-/// must grant every required kind; optional ones may be unticked. An app that still shows an earlier published text
-/// (or the built-in one) can sign up: its version is recorded as sent, and the customer is asked again at once.
+/// must grant every required kind; optional ones may be unticked. An app that still shows the text a re-consent publish
+/// replaced in the last [`SIGNUP_GRACE_DAYS`] can sign up: its version is recorded as sent, and the customer is asked
+/// again at once.
 pub async fn record_signup(tx: &mut Transaction<'_, Postgres>, user: Uuid, consents: &[ConsentChange]) -> ApiResult<()> {
     let versions = consent_versions(&mut **tx).await?;
-    let mut older: Vec<(String, String)> = sqlx::query_as("SELECT DISTINCT doc, version FROM legal_documents WHERE lang = $1")
-        .bind(LEGAL_LANG)
-        .fetch_all(&mut **tx)
-        .await?;
-    older.extend(CONSENT_DOCS.iter().map(|(_, doc)| (doc.to_string(), CONSENT_VERSION.to_string())));
-    let changes = check_signup_consents(consents, &versions, &older)?;
+    let changes = check_signup_consents(consents, &versions, Utc::now())?;
     insert_rows(tx, user, &changes).await
 }
 
 /// A signup's changes with the versions to record; every required kind must be granted.
-fn check_signup_consents(consents: &[ConsentChange], versions: &Versions, older: &[(String, String)]) -> ApiResult<Vec<ConsentChange>> {
-    let changes = current_changes(consents, versions, older)?;
+fn check_signup_consents(consents: &[ConsentChange], versions: &Versions, now: DateTime<Utc>) -> ApiResult<Vec<ConsentChange>> {
+    let changes = current_changes(consents, versions, Some(now))?;
     if SIGNUP_REQUIRED.iter().any(|k| !changes.iter().any(|c| c.kind == *k && c.granted)) {
         return Err(ApiError::BadRequest("required_consent"));
     }
@@ -332,7 +396,7 @@ pub async fn accept_consents(
             version: c.version,
         })
         .collect();
-    let changes = current_changes(&grants, &consent_versions(&s.db).await?, &[])?;
+    let changes = current_changes(&grants, &consent_versions(&s.db).await?, None)?;
     let mut tx = s.db.begin().await?;
     insert_rows(&mut tx, a.id, &changes).await?;
     tx.commit().await?;
@@ -778,18 +842,23 @@ mod tests {
         }
     }
 
-    /// Every kind at `CONSENT_VERSION` except those named.
-    fn versions(bumped: &[(&'static str, &str)]) -> Versions {
-        Versions(
-            CONSENT_DOCS
-                .iter()
-                .map(|&(kind, _)| (kind, bumped.iter().find(|(k, _)| *k == kind).map_or(CONSENT_VERSION, |(_, v)| v).to_string()))
-                .collect(),
-        )
+    /// A published text of `doc` in force, published `days_ago`.
+    fn text(doc: &str, version: &str, reconsent: bool, days_ago: i64) -> Published {
+        Published {
+            doc: doc.into(),
+            version: version.into(),
+            requires_reconsent: reconsent,
+            published_at: Utc::now() - chrono::Duration::days(days_ago),
+        }
+    }
+
+    /// A new privacy text that asks again, published today.
+    fn new_privacy() -> Versions {
+        Versions(vec![text("privacy", "2026-12-01", true, 0)])
     }
 
     fn signup(set: &[ConsentChange]) -> ApiResult<Vec<ConsentChange>> {
-        check_signup_consents(set, &versions(&[]), &[])
+        check_signup_consents(set, &Versions::default(), Utc::now())
     }
 
     fn row(kind: &str, granted: bool, version: &str) -> Latest {
@@ -804,7 +873,7 @@ mod tests {
     #[test]
     fn overseas_grant_for_an_older_policy_text_asks_again() {
         let current = |overseas: Latest| vec![row("terms", true, CONSENT_VERSION), row("privacy", true, CONSENT_VERSION), overseas];
-        let v = versions(&[]);
+        let v = Versions::default();
         let state_of = |rows: &[Latest]| state_of(rows, &v);
         let stale = state_of(&current(row("overseas_transfer", true, "2000-01-01")));
         assert!(stale.reconsent_required, "push and AI must not switch off silently after a policy change");
@@ -827,7 +896,7 @@ mod tests {
     /// terms or location.
     #[test]
     fn a_new_privacy_version_asks_again_for_the_kinds_behind_it() {
-        let v = versions(&[("privacy", "2026-12-01"), ("overseas_transfer", "2026-12-01"), ("marketing", "2026-12-01")]);
+        let v = new_privacy();
         assert_eq!(v.bundle(), "2026-12-01");
         let rows = [
             row("terms", true, CONSENT_VERSION),
@@ -851,12 +920,12 @@ mod tests {
             ],
             "a withdrawn location consent is not asked"
         );
-        assert!(pending_of(&rows, &versions(&[])).is_empty(), "nothing pending on the built-in versions");
+        assert!(pending_of(&rows, &Versions::default()).is_empty(), "nothing pending on the built-in versions");
     }
 
     #[test]
     fn a_single_version_from_an_older_app_records_each_kinds_own_version() {
-        let v = versions(&[("privacy", "2026-12-01")]);
+        let v = new_privacy();
         let sent = vec![
             ConsentChange {
                 kind: "terms".into(),
@@ -869,24 +938,99 @@ mod tests {
                 version: "2026-12-01".into(),
             },
         ];
-        let out = current_changes(&sent, &v, &[]).expect("bundle version accepted");
+        let out = current_changes(&sent, &v, None).expect("bundle version accepted");
         let recorded: Vec<(&str, &str)> = out.iter().map(|c| (c.kind.as_str(), c.version.as_str())).collect();
         assert_eq!(recorded, [("terms", CONSENT_VERSION), ("privacy", "2026-12-01")]);
-        assert_eq!(refusal(current_changes(&[change("privacy", true)], &v, &[])), Some("stale_consent_version"));
+        assert_eq!(refusal(current_changes(&[change("privacy", true)], &v, None)), Some("stale_consent_version"));
     }
 
     #[test]
     fn signup_from_an_app_on_an_earlier_published_text_is_recorded_as_sent() {
-        let v = versions(&[("privacy", "2026-12-01"), ("overseas_transfer", "2026-12-01")]);
-        let older = [
-            ("privacy".to_string(), CONSENT_VERSION.to_string()),
-            ("terms".to_string(), CONSENT_VERSION.to_string()),
-        ];
-        let out = check_signup_consents(&required_set(), &v, &older).expect("older published text accepted");
+        let v = new_privacy();
+        let out = check_signup_consents(&required_set(), &v, Utc::now()).expect("older text replaced today accepted");
         assert!(out.iter().all(|c| c.version == CONSENT_VERSION), "recorded as the customer saw it");
         let mut bogus = required_set();
         bogus[1].version = "2020-01-01".into();
-        assert_eq!(refusal(check_signup_consents(&bogus, &v, &older)), Some("stale_consent_version"));
+        assert_eq!(refusal(check_signup_consents(&bogus, &v, Utc::now())), Some("stale_consent_version"));
+    }
+
+    /// Years after a re-consent publish, a signup naming only the replaced text is refused: the account would otherwise
+    /// be processed under a policy its customer never agreed to.
+    #[test]
+    fn signup_names_a_replaced_text_only_within_the_grace_period() {
+        let late = Versions(vec![text("privacy", "2026-12-01", true, SIGNUP_GRACE_DAYS + 1)]);
+        assert_eq!(
+            refusal(check_signup_consents(&required_set(), &late, Utc::now())),
+            Some("stale_consent_version")
+        );
+        let twice = Versions(vec![text("privacy", "2026-12-01", true, 400), text("privacy", "2027-06-01", true, 1)]);
+        let mut set = required_set();
+        set[1].version = "2026-12-01".into();
+        set[2].version = "2026-12-01".into();
+        assert!(check_signup_consents(&set, &twice, Utc::now()).is_ok(), "the text replaced yesterday");
+        set[1].version = CONSENT_VERSION.into();
+        assert_eq!(
+            refusal(check_signup_consents(&set, &twice, Utc::now())),
+            Some("stale_consent_version"),
+            "a text replaced long ago, even with a newer publish since"
+        );
+    }
+
+    /// A publish without re-consent (a correction) is the text shown: signup, update and accept naming it record it,
+    /// and it holds, so nothing is pending; grants on the text it corrects still hold too.
+    #[test]
+    fn a_correction_is_recorded_and_holds_without_asking_again() {
+        let v = Versions(vec![text("privacy", CONSENT_VERSION, true, 10), text("privacy", "2026-11-20", false, 1)]);
+        assert_eq!(
+            (v.of("privacy"), v.current("privacy"), v.bundle()),
+            (CONSENT_VERSION, "2026-11-20", "2026-11-20")
+        );
+        assert_eq!((v.of("terms"), v.current("terms")), (CONSENT_VERSION, CONSENT_VERSION));
+        let mut set = required_set();
+        set[1].version = "2026-11-20".into();
+        set[2].version = "2026-11-20".into();
+        let out = check_signup_consents(&set, &v, Utc::now()).expect("the text shown");
+        let recorded: Vec<&str> = out.iter().map(|c| c.version.as_str()).collect();
+        assert_eq!(recorded, [CONSENT_VERSION, "2026-11-20", "2026-11-20"]);
+        assert!(current_changes(&set[1..], &v, None).is_ok(), "update and accept take it too");
+        let rows = [
+            row("terms", true, CONSENT_VERSION),
+            row("privacy", true, "2026-11-20"),
+            row("overseas_transfer", true, CONSENT_VERSION),
+            row("marketing", true, "2026-11-20"),
+        ];
+        assert!(pending_of(&rows, &v).is_empty());
+        assert!(!state_of(&rows, &v).reconsent_required);
+        assert_eq!(v.accepted("marketing"), [CONSENT_VERSION, "2026-11-20"]);
+        assert!(!v.holds("privacy", "2026-11-19"), "a text never published");
+    }
+
+    /// Pending names the text shown now (a correction after the re-consent text), which accepting records.
+    #[test]
+    fn pending_names_the_newest_text_shown() {
+        let v = Versions(vec![text("privacy", "2026-12-01", true, 2), text("privacy", "2026-12-03", false, 1)]);
+        let rows = [row("terms", true, CONSENT_VERSION), row("privacy", true, CONSENT_VERSION)];
+        let pending = pending_of(&rows, &v);
+        assert_eq!(
+            pending[0],
+            Pending {
+                kind: "privacy",
+                doc: "privacy",
+                version: "2026-12-03".into(),
+                required: true
+            }
+        );
+        assert!(v.holds("privacy", "2026-12-01") && v.holds("privacy", "2026-12-03"));
+    }
+
+    #[test]
+    fn versions_compare_by_date_then_counter_not_as_text() {
+        let v = Versions(vec![text("privacy", "2026-12-01.9", true, 2), text("terms", "2026-12-01.10", true, 1)]);
+        assert_eq!(v.bundle(), "2026-12-01.10");
+        let v = Versions(vec![text("privacy", "2026-12-01.10", true, 2), text("privacy", "2026-12-01.9", false, 1)]);
+        assert_eq!(v.of("privacy"), "2026-12-01.10");
+        assert_eq!(v.current("privacy"), "2026-12-01.10", ".9 is older");
+        assert!(!v.holds("privacy", "2026-12-01.9"));
     }
 
     #[test]
