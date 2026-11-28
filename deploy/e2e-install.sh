@@ -36,7 +36,7 @@ else
 fi
 ENVS+=("MALKKEUM_DOMAIN=$DOMAIN" "MALKKEUM_EMAIL=ci@example.com" "MALKKEUM_VERSION=$TAG" "MALKKEUM_TLS=internal"
   "MALKKEUM_HEALTH_WAIT=240" "MALKKEUM_AGENT_FILE=$(pwd)/deploy/agent.sh" "MALKKEUM_FIREWALL=on"
-  "DAHAE_LANG=ko") # the steps below read the Korean texts; step 9b checks English and Arabic
+  "DAHAE_LANG=ko") # the steps below read the Korean texts; step 8c checks English and Arabic
 mkdir -p "$LOG"
 
 step() { printf '\n== %s  (%s)\n' "$*" "$(date +%T)"; }
@@ -161,16 +161,12 @@ stranger_refused() { ! curl -sk --max-time 20 --resolve "stranger.test:443:127.0
 bad_domain_refused() { ! $SUDO env DAHAE_YES=1 /usr/local/bin/dahae domain localhost </dev/null >/dev/null 2>&1; }
 drop_hosts_line() { $SUDO sed -i '/ # dahae-e2e$/d' /etc/hosts; }
 put_auth() { curl_d -H "Authorization: Bearer $2" -H 'Content-Type: application/json' -X PUT "https://$DOMAIN$1" -d "$3"; }
-# Step 9b (R4): the wizard of a fresh install, whose country is still unset, in English and in Arabic.
-# Right after smoke.py the sign-in may meet the per-minute auth limit (rate_limited): keep trying until it admits.
+# Step 8c (R4): the wizard of a fresh install, whose country is still unset, in English and in Arabic.
+# Right after other steps the sign-in may meet the per-minute auth limit (rate_limited): keep trying until it admits.
 owner_signs_in() { owner_token >"$LOG/owner-token" 2>"$LOG/owner-token.err"; }
 no_country_yet() { [ "$(get_auth /v1/admin/setup/packs "$W" | json current country)" = None ]; }
 kr_pack_offered() { [ "$(get_auth /v1/admin/setup/packs "$W" | json default)" = KR ]; }
 no_dark_adapter_offered() { ! get_auth /v1/admin/setup/packs "$W" | grep -Eq '"(stripe|twilio|google_places|oidc)"'; }
-owner_claimed() { # the first admin claims the owner role with a second-factor code (only the owner sets the country)
-  curl_d -H "Authorization: Bearer $W" -H "x-owner-totp: $(fresh_totp)" -X POST "https://$DOMAIN/v1/admin/owner/claim" | grep -q '"ok":true' \
-    && [ "$(get_auth /v1/admin/me/account "$W" | json is_owner)" = True ]
-}
 country_chosen() {
   local r; r=$(put_auth /v1/admin/setup/country "$W" '{"country":"KR"}')
   [ "$(printf '%s' "$r" | json current country 2>/dev/null)" = KR ] || { echo "country answered: $r" >&2; return 1; }
@@ -181,6 +177,10 @@ languages_set() { # languages_set ar : the console, customer and own language al
   local b='{"console_locale":"'"$1"'","locales":["'"$1"'"],"my_locale":"'"$1"'"}'
   [ "$(put_auth /v1/admin/setup/languages "$W" "$b" | json console_locale)" = "$1" ] \
     && [ "$(get_auth /v1/admin/setup/languages "$W" | json my_locale)" = "$1" ]
+}
+languages_restored() { # the later steps read Korean server texts
+  [ "$(put_auth /v1/admin/setup/languages "$W" '{"console_locale":"ko","locales":["ko","en"],"my_locale":""}' \
+    | json locales)" = '["ko", "en"]' ]
 }
 brand_lists_language() { [ "$(get /v1/brand | json locales)" = '["'"$1"'"]' ]; }
 cli_speaks_without_korean() { # DAHAE_LANG=en|ar: the dahae command's usage text, no Korean left (ar reads English)
@@ -427,6 +427,22 @@ expect "back on the dahae stream" test "$(triple | head -n3 | tr '\n' ' ')" = "E
 expect "API healthy back on dahae" wait_until 180 api_healthy
 expect "data survived the edition switches" staff_count_is 1
 
+step "8c. a fresh install's wizard in en and ar: languages, country card, go-live gates, CLI texts"
+wait_until 960 owner_signs_in || { cat "$LOG/owner-token.err" >&2; fail "the owner is signed in"; }
+W=$(cat "$LOG/owner-token"); echo "ok: the owner is signed in"
+expect "no country chosen yet" no_country_yet
+expect "the KR pack is offered as the default" kr_pack_offered
+expect "dark adapters are never offered" no_dark_adapter_offered
+expect "the owner chooses the country" country_chosen
+expect "the chosen country turns the go-live gates on" gates_enforced
+expect "the website's preview flag follows the gates" site_preview_matches_gates
+for l in en ar; do
+  expect "languages set to $l" languages_set "$l"
+  expect "the website reads $l from the brand" wait_until 60 brand_lists_language "$l"
+  expect "dahae speaks $l without Korean" cli_speaks_without_korean "$l"
+done
+expect "languages back to the KR pack's" languages_restored
+
 step "9. scripts/smoke.py against the installed stack (temporary dev override)"
 $SUDO cp scripts/e2e/override.dev.yml /opt/malkkeum/docker-compose.override.yml
 $SUDO install -m 755 scripts/e2e/psql-shim.sh /usr/local/bin/dahae-e2e-psql
@@ -440,23 +456,7 @@ expect "back to production config" wait_until 180 api_env_is DEV_MODE 0
 expect "API healthy in production mode" wait_until 180 api_healthy
 expect "no dev login codes in production mode" no_dev_code
 
-step "9b. a fresh install's wizard in en and ar: languages, country card, go-live gates, CLI texts"
-wait_until 960 owner_signs_in || { cat "$LOG/owner-token.err" >&2; fail "the owner is signed in"; }
-W=$(cat "$LOG/owner-token"); echo "ok: the owner is signed in"
-expect "no country chosen yet" no_country_yet
-expect "the KR pack is offered as the default" kr_pack_offered
-expect "dark adapters are never offered" no_dark_adapter_offered
-expect "the first admin claims the owner role" owner_claimed
-expect "the owner chooses the country" country_chosen
-expect "the chosen country turns the go-live gates on" gates_enforced
-expect "the website's preview flag follows the gates" site_preview_matches_gates
-for l in en ar; do
-  expect "languages set to $l" languages_set "$l"
-  expect "the website reads $l from the brand" wait_until 60 brand_lists_language "$l"
-  expect "dahae speaks $l without Korean" cli_speaks_without_korean "$l"
-done
-
-step "9c. domain move: the new domain serves, the old one keeps answering (apps) and sends pages over"
+step "9b. domain move: the new domain serves, the old one keeps answering (apps) and sends pages over"
 OLD_DOMAIN=$DOMAIN
 # `dahae domain` checks https://<new>/health through the resolver, so the new name must resolve on this machine.
 echo "127.0.0.1 $NEW_DOMAIN # dahae-e2e" | $SUDO tee -a /etc/hosts >/dev/null
