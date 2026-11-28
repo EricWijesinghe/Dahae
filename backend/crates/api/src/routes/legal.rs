@@ -121,13 +121,13 @@ pub async fn import_baseline(s: &AppState) -> ApiResult<usize> {
     import_baseline_from(s, legal::active_templates(&s.pack)?).await
 }
 
-/// Once per database: an install that was already running (it has real staff) shows its customers the pack texts of
-/// this release, so each is recorded at its own version as the first published text, dated as the text is. A text at
-/// the version its customers agreed to (the pack's `privacy.consent_version`) keeps every consent; one a release
-/// changed (an install that skipped the release before) asks again only when its template says so, and a correction
-/// keeps the consents to the text it corrects ([`privacy::Versions`]). A page the owner replaced is recorded as that
-/// text, marked custom, since it is what customers read. A fresh install imports nothing and its owner publishes from
-/// the inbox. Returns how many rows were written.
+/// Once per database: an install that was already running (it has real staff) records the texts its customers agreed
+/// to (the pack's `privacy.consent_version` or older), dated as each text is, as a first published text that asks
+/// nobody again. A newer pack template (an install that skipped a release) is not recorded: nothing publishes without
+/// the owner's click (D9), so it waits in the inbox as a pending draft and consents keep needing the agreed version
+/// ([`privacy::Versions`]). A page the owner replaced is recorded as that text, marked custom, since it is what
+/// customers read. A fresh install imports nothing and its owner publishes from the inbox. Returns how many rows were
+/// written.
 pub async fn import_baseline_from(s: &AppState, templates: Vec<Template>) -> ApiResult<usize> {
     let mut tx = s.db.begin().await?;
     sqlx::query(LOCK).execute(&mut *tx).await?;
@@ -139,6 +139,7 @@ pub async fn import_baseline_from(s: &AppState, templates: Vec<Template>) -> Api
         tx.commit().await?;
         return Ok(0);
     }
+    let agreed = version_key(&s.pack.privacy.consent_version);
     let mut written = 0;
     for t in &templates {
         let exists: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM legal_documents WHERE doc = $1 AND lang = $2)")
@@ -151,6 +152,7 @@ pub async fn import_baseline_from(s: &AppState, templates: Vec<Template>) -> Api
         }
         let (html, values, custom) = match custom_text(s, t).await? {
             Some(html) => (html, Vec::new(), true),
+            None if version_key(&t.version) > agreed => continue,
             None => {
                 let (html, values) = legal::render_live(s, t).await?;
                 (html, values, false)
@@ -160,7 +162,7 @@ pub async fn import_baseline_from(s: &AppState, templates: Vec<Template>) -> Api
             t,
             version: &t.version,
             template_version: (!custom).then_some(t.version.as_str()),
-            reconsent: t.requires_reconsent && !custom,
+            reconsent: false,
             body_md: if custom { &html } else { &t.body },
             html: &html,
             values: &values,

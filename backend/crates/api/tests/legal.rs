@@ -121,7 +121,7 @@ async fn baseline_import_records_todays_texts_once_on_an_existing_install(pool: 
     let day = chrono::NaiveDate::from_ymd_opt(2026, 11, 17).expect("date");
     assert_eq!(
         rows,
-        ["terms", "privacy", "location_terms"].map(|d| (d.to_string(), "ko".to_string(), privacy::CONSENT_VERSION.to_string(), true, day, None))
+        ["terms", "privacy", "location_terms"].map(|d| (d.to_string(), "ko".to_string(), privacy::CONSENT_VERSION.to_string(), false, day, None))
     );
     assert_eq!(import_baseline(&state).await.expect("again"), 0, "runs once");
     let versions = privacy::consent_versions(&pool).await.expect("versions");
@@ -457,10 +457,14 @@ async fn the_previous_release_runs_on_the_new_schema(pool: PgPool) {
 }
 
 /// An install that skipped a release boots one whose privacy text is newer (`reconsent` as its template says): the
-/// baseline records the text the website shows at its own version, so customers read and accept the version recorded.
+/// baseline records only the texts customers agreed to, the newer one waits in the inbox for the owner's Publish, and
+/// every grant (marketing, overseas transfer for push and the AI chat) keeps holding meanwhile.
 async fn baseline_with_a_newer_privacy_text(pool: &PgPool, reconsent: bool) -> (Router, common::Customer) {
-    let (app, _, _) = configured(pool).await;
+    let (app, token, _) = configured(pool).await;
     let c = common::customer(&app, pool, "010-8200-0041").await;
+    let marketing = json!({ "consents": [{ "kind": "marketing", "granted": true, "version": privacy::CONSENT_VERSION }] });
+    let (st, _) = call(&app, "PUT", "/v1/me/consents", Some(c.token.as_str()), Some(marketing)).await;
+    assert_eq!(st, StatusCode::OK);
     let state = build_state(pool.clone(), test_config()).expect("state");
     let templates: Vec<legal::Template> = kr_templates()
         .into_iter()
@@ -472,44 +476,52 @@ async fn baseline_with_a_newer_privacy_text(pool: &PgPool, reconsent: bool) -> (
             t
         })
         .collect();
-    assert_eq!(import_baseline_from(&state, templates).await.expect("import"), 3);
-    let recorded: Vec<(String, String)> = sqlx::query_as("SELECT doc, version FROM legal_documents ORDER BY id")
+    assert_eq!(import_baseline_from(&state, templates).await.expect("import"), 2);
+    let recorded: Vec<(String, String, bool)> = sqlx::query_as("SELECT doc, version, requires_reconsent FROM legal_documents ORDER BY id")
         .fetch_all(pool)
         .await
         .expect("rows");
-    let want = [
-        ("terms", privacy::CONSENT_VERSION),
-        ("privacy", BUMP),
-        ("location_terms", privacy::CONSENT_VERSION),
-    ];
+    let want = ["terms", "location_terms"].map(|d| (d.to_string(), privacy::CONSENT_VERSION.to_string(), false));
+    assert_eq!(recorded, want, "the agreed texts, asking nobody again");
+    let (_, inbox) = call(&app, "GET", "/v1/admin/legal", Some(&token), None).await;
     assert_eq!(
-        recorded,
-        want.map(|(d, v)| (d.to_string(), v.to_string())),
-        "the version in force, not a constant"
+        (doc(&inbox, "privacy")["pending"].clone(), doc(&inbox, "terms")["pending"].clone()),
+        (json!(true), json!(false))
     );
+    assert_grants_hold(&app, pool, &c).await;
     (app, c)
 }
 
-/// A newer text that asks again moves the consents behind it; the others keep holding.
-#[sqlx::test(migrations = "../../migrations")]
-async fn baseline_records_a_newer_template_that_asks_again(pool: PgPool) {
-    let (app, c) = baseline_with_a_newer_privacy_text(&pool, true).await;
-    let v = privacy::consent_versions(&pool).await.expect("versions");
-    assert_eq!((v.of("privacy"), v.of("terms")), (BUMP, privacy::CONSENT_VERSION));
-    let (_, me) = call(&app, "GET", "/v1/me", Some(c.token.as_str()), None).await;
-    assert_eq!(pending_kinds(&me), ["privacy", "overseas_transfer"], "{me}");
-    assert_eq!(me["pending_consents"][0]["version"], BUMP, "the text shown");
+async fn assert_grants_hold(app: &Router, pool: &PgPool, c: &common::Customer) {
+    let v = privacy::consent_versions(pool).await.expect("versions");
+    assert!(privacy::CONSENTS.iter().all(|(k, _)| v.of(k) == privacy::CONSENT_VERSION), "{v:?}");
+    let (_, me) = call(app, "GET", "/v1/me", Some(c.token.as_str()), None).await;
+    assert!(pending_kinds(&me).is_empty(), "{me}");
+    assert!(privacy::overseas_allowed(pool, c.user).await.expect("overseas"), "push and AI keep running");
+    assert!(privacy::marketing_allowed(pool, c.user).await.expect("marketing"));
 }
 
-/// A newer text that is a correction asks nobody again, and is what new consents record.
+/// A newer template that asks again changes nothing until the owner publishes it (and a text published for a later
+/// day nothing before that day); then the consents behind it are asked again.
 #[sqlx::test(migrations = "../../migrations")]
-async fn baseline_records_a_newer_correction_without_asking_again(pool: PgPool) {
-    let (app, c) = baseline_with_a_newer_privacy_text(&pool, false).await;
-    let v = privacy::consent_versions(&pool).await.expect("versions");
-    assert_eq!((v.of("privacy"), v.current("privacy")), (privacy::CONSENT_VERSION, BUMP));
+async fn a_skipped_release_asks_again_only_after_the_owner_publishes(pool: PgPool) {
+    let (app, c) = baseline_with_a_newer_privacy_text(&pool, true).await;
+    publish_effective(&pool, "privacy", NEW, true, 10).await;
+    assert_grants_hold(&app, &pool, &c).await;
+    publish_version(&pool, "privacy", BUMP, true).await;
     let (_, me) = call(&app, "GET", "/v1/me", Some(c.token.as_str()), None).await;
-    assert!(pending_kinds(&me).is_empty(), "{me}");
-    assert!(fragment(&app, "legal_privacy").await.contains("개인정보"), "the recorded text is the one shown");
+    assert_eq!(pending_kinds(&me), ["privacy", "overseas_transfer", "marketing"], "{me}");
+    assert_eq!(me["pending_consents"][0]["version"], BUMP);
+    assert!(!privacy::overseas_allowed(&pool, c.user).await.expect("overseas"));
+}
+
+/// A newer correction asks nobody again, before or after the owner publishes it, and is then what new consents record.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_skipped_release_correction_keeps_every_grant(pool: PgPool) {
+    let (app, c) = baseline_with_a_newer_privacy_text(&pool, false).await;
+    publish_version(&pool, "privacy", BUMP, false).await;
+    assert_grants_hold(&app, &pool, &c).await;
+    assert_eq!(privacy::consent_versions(&pool).await.expect("versions").current("privacy"), BUMP);
 }
 
 /// A replacement the owner stored before the Legal inbox existed.
