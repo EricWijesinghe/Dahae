@@ -42,7 +42,7 @@ class _SetupCountryCardState extends State<SetupCountryCard> {
   Json? get _pack => _packs.where((p) => p['id'] == _picked).firstOrNull;
 
   Future<void> _load() async {
-    setState(() => _error = null);
+    if (_error != null) setState(() => _error = null);
     try {
       final data = await context.api.get('/admin/setup/packs') as Json;
       if (!mounted) return;
@@ -55,7 +55,10 @@ class _SetupCountryCardState extends State<SetupCountryCard> {
             : null;
       });
     } on ApiException catch (e) {
-      if (mounted && e.status != 404) setState(() => _error = e);
+      // 404: a server without the list; 403: a staff role the server keeps the country from.
+      if (mounted && e.status != 404 && e.status != 403) {
+        setState(() => _error = e);
+      }
     }
   }
 
