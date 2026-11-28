@@ -7270,7 +7270,7 @@
         },
         "responses": {
           "200": {
-            "description": "OK. {id, doc, lang, version}: a new immutable version, rendered with this install's values now. Body {doc, lang}; 404 for a document the pack does not carry. A version that asks for re-consent makes customers agree again. Admin only (stored role), audited."
+            "description": "OK. {id, doc, lang, version, requires_reconsent}: a new immutable version, rendered with this install's values now, or the owner's replacement text (recorded custom). Body {doc, lang, replacement?, requires_reconsent?}; either stops a live replacement. 404 for a document the pack does not carry, 409 legal_version_older / legal_already_published, 400 legal_replacement_lang. A version that asks for re-consent makes customers agree again. The owner with the owner code (x-owner-totp), spent only once the publish is accepted; audited."
           },
           "default": {
             "$ref": "#/components/responses/Error"

@@ -108,12 +108,18 @@ async fn ld_json_is_json_and_cannot_close_the_script(pool: PgPool) {
 async fn legal_text_is_empty_until_published_then_escaped(pool: PgPool) {
     let app = common::app(pool.clone());
     let token = admin(&pool).await;
-    let (_, html) = fragment(&app, "legal_terms").await;
+    let (_, html) = fragment(&app, "legal_location").await;
     assert_eq!(html, "", "no published text: the page keeps its built-in body");
     let item = json!({"kind": "legal", "slug": "terms", "title": {"ko": "이용약관"}, "body": {"text": {"ko": "제1조 <script>\n\n제2조"}},
                       "image_url": null, "link": null, "sort_order": 0, "starts_at": null, "ends_at": null, "active": true});
     let (st, b) = call(&app, "POST", "/v1/admin/content", Some(&token), Some(item)).await;
-    assert_eq!(st, StatusCode::OK, "{b}");
+    assert_eq!((st, b["error"]["code"].clone()), (StatusCode::CONFLICT, json!("legal_use_inbox")), "{b}");
+    // A replacement stored before the Legal inbox took them over stays readable.
+    sqlx::query(r#"INSERT INTO content_items (kind, slug, title, body) VALUES ('legal', 'terms', '{"ko": "이용약관"}', $1)"#)
+        .bind(json!({"text": {"ko": "제1조 <script>\n\n제2조"}}))
+        .execute(&pool)
+        .await
+        .expect("stored replacement");
     let (_, html) = fragment(&app, "legal_terms").await;
     assert!(
         html.contains("<h1>이용약관</h1>") && html.contains("<p>제1조 &lt;script&gt;</p>") && html.contains("<p>제2조</p>"),

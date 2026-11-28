@@ -351,6 +351,9 @@ impl ContentInput {
     }
 
     async fn validate(&self, s: &AppState) -> ApiResult<()> {
+        if self.kind == "legal" {
+            return Err(ApiError::Conflict(LEGAL_USE_INBOX));
+        }
         // Links and images end up in customer apps: allow only https or in-app routes, and our own uploads.
         let safe_link = self
             .link
@@ -360,7 +363,7 @@ impl ContentInput {
             .image_url
             .as_deref()
             .is_none_or(|u| u.starts_with("https://") || crate::util::own_upload(&s.config.public_base_url, u).is_some());
-        let ok = matches!(self.kind.as_str(), "notice" | "tip" | "faq" | "banner" | "legal" | "news")
+        let ok = matches!(self.kind.as_str(), "notice" | "tip" | "faq" | "banner" | "news")
             && self.title.is_object()
             && self.body.is_object()
             && safe_link
@@ -378,6 +381,21 @@ impl ContentInput {
     }
 }
 
+/// A legal page's replacement text changes what customers agreed to: it is published from the Legal inbox (the
+/// owner's code, a recorded version), never written here. Stored ones stay readable (list, website, apps).
+const LEGAL_USE_INBOX: &str = "legal_use_inbox";
+
+async fn refuse_legal(db: &sqlx::PgPool, id: Uuid) -> ApiResult<()> {
+    let kind: Option<String> = sqlx::query_scalar("SELECT kind FROM content_items WHERE id = $1")
+        .bind(id)
+        .fetch_optional(db)
+        .await?;
+    if kind.as_deref() == Some("legal") {
+        return Err(ApiError::Conflict(LEGAL_USE_INBOX));
+    }
+    Ok(())
+}
+
 async fn create_content(State(s): State<AppState>, Admin(st): Admin, Json(c): Json<ContentInput>) -> ApiResult<Json<Value>> {
     c.validate(&s).await?;
     let id: Uuid = sqlx::query_scalar("INSERT INTO content_items (kind, slug, title, body, image_url, link, sort_order, starts_at, ends_at, active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id")
@@ -391,6 +409,7 @@ async fn create_content(State(s): State<AppState>, Admin(st): Admin, Json(c): Js
 
 async fn update_content(State(s): State<AppState>, Admin(st): Admin, Path(id): Path<Uuid>, Json(c): Json<ContentInput>) -> ApiResult<Json<Value>> {
     c.validate(&s).await?;
+    refuse_legal(&s.db, id).await?;
     sqlx::query(
         "UPDATE content_items SET kind=$2, slug=$3, title=$4, body=$5, image_url=$6, link=$7, sort_order=$8, starts_at=$9, ends_at=$10, active=$11 WHERE id=$1",
     )
@@ -413,6 +432,7 @@ async fn update_content(State(s): State<AppState>, Admin(st): Admin, Path(id): P
 }
 
 async fn delete_content(State(s): State<AppState>, Admin(st): Admin, Path(id): Path<Uuid>) -> ApiResult<Json<Value>> {
+    refuse_legal(&s.db, id).await?;
     sqlx::query("DELETE FROM content_items WHERE id = $1").bind(id).execute(&s.db).await?;
     super::seller::live::invalidate_fragments();
     audit(&s.db, "staff", Some(st.id), "content.delete", &id.to_string(), json!({})).await?;

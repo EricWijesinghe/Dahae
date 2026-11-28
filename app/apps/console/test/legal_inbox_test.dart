@@ -17,6 +17,7 @@ Json _doc(
   String doc,
   String title, {
   bool pending = false,
+  bool custom = false,
   bool published = true,
   String version = '2026-11-17',
 }) => {
@@ -24,6 +25,7 @@ Json _doc(
   'lang': 'ko',
   'title': title,
   'pending': pending,
+  'custom': custom,
   'template': {
     'doc': doc,
     'lang': 'ko',
@@ -93,6 +95,25 @@ void main() {
       );
       expect(find.text(koT.lgiPending), findsNothing);
       expect(find.widgetWithText(FilledButton, koT.lgiPublish), findsNothing);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    "a page the owner replaced offers Publish to bring back the pack text",
+    (tester) async {
+      final api = FakeApi()
+        ..reply('GET', '/admin/legal', {
+          'country': 'KR',
+          'documents': [
+            _doc('terms', '서비스 이용약관'),
+            _doc('privacy', '개인정보처리방침', custom: true),
+          ],
+        });
+      await _pump(tester, api);
+
+      expect(find.text(koT.lgiPending), findsNothing);
+      expect(find.widgetWithText(FilledButton, koT.lgiPublish), findsOneWidget);
       await unmount(tester);
     },
   );

@@ -178,13 +178,13 @@ pub async fn legal_override(db: &sqlx::PgPool, slug: &str) -> sqlx::Result<Optio
     Ok(row.map(|(t, b)| legal_html(&t, &b)).filter(|h| !h.is_empty()))
 }
 
-/// What a legal page shows in place of its built-in body: the owner's replacement, else a published text that is not
-/// this release's pack text; empty keeps the built-in body.
+/// What a legal page shows in place of its built-in body: the owner's replacement, else the newest published text;
+/// empty (nothing published) keeps the built-in body.
 async fn legal(s: &AppState, doc: &str) -> ApiResult<String> {
     if let Some(html) = legal_override(&s.db, &crate::legal::slug(doc)).await? {
         return Ok(html);
     }
-    Ok(crate::legal::published_in_place_of_pack(s, doc).await?.unwrap_or_default())
+    Ok(crate::legal::published_text(s, doc).await?.unwrap_or_default())
 }
 
 fn used(s: &AppState, sec: Section) -> String {

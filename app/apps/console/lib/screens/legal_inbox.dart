@@ -243,7 +243,8 @@ class _DocRow extends StatelessWidget {
               onPressed: onVersions,
               child: KeepAllText(t.lgiVersions),
             ),
-            if (pending)
+            // Over the owner's replacement, Publish brings back the pack text (the replacement stops).
+            if (pending || doc['custom'] == true)
               FilledButton(
                 style: inlineFilled,
                 onPressed: onPublish,

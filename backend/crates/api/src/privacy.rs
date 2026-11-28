@@ -18,10 +18,10 @@ use serde_json::Value;
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
-/// Version of the built-in policy texts (privacy, terms, overseas transfer notice, marketing, location terms): what every
-/// consent kind needs while no text of its document is published (`legal_documents`), and the version of the KR texts
-/// imported as the first published rows (the baseline import records only templates at this version, the one existing
-/// consents name). After that a kind needs its document's published version ([`consent_versions`]).
+/// Version of the texts customers agreed to before published texts existed (the KR pack's `privacy.consent_version`,
+/// which a test keeps equal): what releases before per-document versions send and check. The consent rules read the
+/// pack and the published texts ([`consent_versions`]), never this constant, so neither a change here nor a new pack
+/// template version moves what a kind needs.
 pub const CONSENT_VERSION: &str = "2026-11-17";
 
 /// The legal document behind each consent kind (the pack's `privacy.consent_kinds[].doc`).
@@ -80,8 +80,57 @@ pub struct Published {
     doc: String,
     version: String,
     requires_reconsent: bool,
-    published_at: DateTime<Utc>,
+    effective_at: chrono::NaiveDate,
 }
+
+/// What the pack says about texts nobody published: the version customers agreed to before published texts existed,
+/// and each document's current template version in [`LEGAL_LANG`] (the text the website shows while none is published).
+#[derive(Debug, Clone, Default)]
+pub struct PackTexts {
+    consent_version: String,
+    templates: Vec<(String, String)>,
+}
+
+impl PackTexts {
+    fn of(p: &crate::pack::Pack) -> Self {
+        let templates = crate::legal::active_templates(p)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|t| t.lang == LEGAL_LANG)
+            .map(|t| (t.doc, t.version))
+            .collect();
+        Self {
+            consent_version: p.privacy.consent_version.clone(),
+            templates,
+        }
+    }
+
+    /// The same pack with `doc`'s template at `version` (a release that changed the text).
+    #[cfg(test)]
+    fn with_template(mut self, doc: &str, version: &str) -> Self {
+        self.templates.retain(|(d, _)| d != doc);
+        self.templates.push((doc.into(), version.into()));
+        self
+    }
+
+    /// What a kind of `doc` needs while no text of it in force asks again: with texts recorded, the version agreed to
+    /// before them (later texts that did not ask again are corrections of it); with none, the pack text shown.
+    fn need(&self, doc: &str, recorded: bool) -> &str {
+        match self.templates.iter().find(|(d, _)| d == doc) {
+            Some((_, v)) if !recorded => v,
+            _ => &self.consent_version,
+        }
+    }
+}
+
+/// The pack these consent kinds mirror (`CONSENT_DOCS`, [`LEGAL_LANG`]; `pack_validation` keeps them equal).
+/// shortcut: the KR pack for every install, until consent kinds come from the install's pack (`pack.privacy`).
+static PACK_TEXTS: std::sync::LazyLock<PackTexts> = std::sync::LazyLock::new(|| {
+    crate::pack::load("KR").map(|p| PackTexts::of(&p)).unwrap_or_else(|_| PackTexts {
+        consent_version: CONSENT_VERSION.into(),
+        templates: Vec::new(),
+    })
+});
 
 /// How long after a re-consent text is published a signup may still name the text it replaced (an app opened before
 /// the publish); the customer is then asked again at once. After that only the texts in force are accepted.
@@ -91,27 +140,43 @@ fn key(v: &str) -> Option<(chrono::NaiveDate, u32)> {
     crate::legal::version_key(v)
 }
 
-/// The published texts in force, from which each kind's versions follow.
-#[derive(Debug, Clone, Default)]
-pub struct Versions(Vec<Published>);
+/// The published texts in force, from which each kind's versions follow, and the pack's word on the rest.
+#[derive(Debug, Clone)]
+pub struct Versions(Vec<Published>, PackTexts);
+
+impl Default for Versions {
+    fn default() -> Self {
+        Self(Vec::new(), PACK_TEXTS.clone())
+    }
+}
 
 impl Versions {
+    /// These texts read against `pack` in place of the KR pack.
+    #[cfg(test)]
+    fn with_pack(self, pack: PackTexts) -> Self {
+        Self(self.0, pack)
+    }
+
+    fn doc(kind: &str) -> Option<&'static str> {
+        CONSENT_DOCS.iter().find(|(k, _)| *k == kind).map(|(_, d)| *d)
+    }
+
     fn texts<'a>(&'a self, kind: &str) -> impl Iterator<Item = &'a Published> + 'a {
-        let doc = CONSENT_DOCS.iter().find(|(k, _)| *k == kind).map(|(_, d)| *d);
+        let doc = Self::doc(kind);
         self.0.iter().filter(move |p| Some(p.doc.as_str()) == doc)
     }
 
-    /// What a kind needs: the newest text of its document in force that asked for re-consent, else
-    /// [`CONSENT_VERSION`]; an unknown kind needs a version nobody holds.
+    /// What a kind needs: the newest text of its document in force that asked for re-consent, else the pack's
+    /// ([`PackTexts::need`]); an unknown kind needs a version nobody holds.
     pub fn of(&self, kind: &str) -> &str {
-        if !CONSENT_DOCS.iter().any(|(k, _)| *k == kind) {
+        let Some(doc) = Self::doc(kind) else {
             return "";
-        }
+        };
         self.texts(kind)
             .filter(|p| p.requires_reconsent)
             .map(|p| p.version.as_str())
             .max_by_key(|v| key(v))
-            .unwrap_or(CONSENT_VERSION)
+            .unwrap_or_else(|| self.1.need(doc, self.texts(kind).next().is_some()))
     }
 
     /// The newest text in force of a kind's document: what the website and the apps show, and what a consent to "the
@@ -144,22 +209,19 @@ impl Versions {
     /// The newest text shown of any kind. Apps before per-document versions send one version for every kind (the one
     /// `GET /me/consents` reports), so it stands for "the texts shown now" for each kind.
     pub fn bundle(&self) -> &str {
-        CONSENT_DOCS
-            .iter()
-            .map(|(k, _)| self.current(k))
-            .max_by_key(|v| key(v))
-            .unwrap_or(CONSENT_VERSION)
+        CONSENT_DOCS.iter().map(|(k, _)| self.current(k)).max_by_key(|v| key(v)).unwrap_or_default()
     }
 
-    /// A signup naming an older text of the kind's document (one published, or the built-in one) is recorded while the
-    /// re-consent text that replaced it is younger than [`SIGNUP_GRACE_DAYS`].
+    /// A signup naming an older text of the kind's document (one published, or the one agreed to before published
+    /// texts) is recorded while the re-consent text that replaced it has been in force under [`SIGNUP_GRACE_DAYS`],
+    /// counted from its effective date (a text announced ahead replaced nothing before it).
     fn replaced_lately(&self, kind: &str, version: &str, now: DateTime<Utc>) -> bool {
-        let known = version == CONSENT_VERSION || self.texts(kind).any(|p| p.version == version);
+        let known = version == self.1.consent_version || self.texts(kind).any(|p| p.version == version);
         let replaced_by = self
             .texts(kind)
             .filter(|p| p.requires_reconsent && key(&p.version) > key(version))
             .min_by_key(|p| key(&p.version));
-        known && key(version).is_some() && replaced_by.is_some_and(|p| now - p.published_at < chrono::Duration::days(SIGNUP_GRACE_DAYS))
+        known && key(version).is_some() && replaced_by.is_some_and(|p| (now.date_naive() - p.effective_at).num_days() < SIGNUP_GRACE_DAYS)
     }
 }
 
@@ -167,14 +229,14 @@ impl Versions {
 /// `effective_at` changes nothing until that day (install time zone), so customers are not asked to accept it early.
 pub async fn consent_versions<'e>(db: impl sqlx::PgExecutor<'e>) -> sqlx::Result<Versions> {
     let rows: Vec<Published> = sqlx::query_as(&format!(
-        "SELECT doc, version, requires_reconsent, published_at FROM legal_documents
+        "SELECT doc, version, requires_reconsent, effective_at FROM legal_documents
          WHERE lang = $1 AND effective_at <= {}",
         crate::util::LOCAL_TODAY
     ))
     .bind(LEGAL_LANG)
     .fetch_all(db)
     .await?;
-    Ok(Versions(rows))
+    Ok(Versions(rows, PACK_TEXTS.clone()))
 }
 
 /// A consent counts only if it was given for the version its kind needs now or a later correction of it.
@@ -842,19 +904,54 @@ mod tests {
         }
     }
 
-    /// A published text of `doc` in force, published `days_ago`.
+    /// A published text of `doc` in force since `days_ago`.
     fn text(doc: &str, version: &str, reconsent: bool, days_ago: i64) -> Published {
         Published {
             doc: doc.into(),
             version: version.into(),
             requires_reconsent: reconsent,
-            published_at: Utc::now() - chrono::Duration::days(days_ago),
+            effective_at: (Utc::now() - chrono::Duration::days(days_ago)).date_naive(),
         }
     }
 
-    /// A new privacy text that asks again, published today.
+    fn texts(t: Vec<Published>) -> Versions {
+        Versions(t, PACK_TEXTS.clone())
+    }
+
+    /// A new privacy text that asks again, in force today.
     fn new_privacy() -> Versions {
-        Versions(vec![text("privacy", "2026-12-01", true, 0)])
+        texts(vec![text("privacy", "2026-12-01", true, 0)])
+    }
+
+    /// A release that changes a pack text moves only what a document nobody published needs; with texts recorded, a
+    /// kind keeps needing what its customers agreed to, and the constant plays no part.
+    #[test]
+    fn a_pack_version_bump_moves_only_unpublished_documents() {
+        let bumped = PACK_TEXTS.clone().with_template("privacy", "2026-12-01");
+        let none = Versions::default().with_pack(bumped.clone());
+        assert_eq!((none.of("privacy"), none.current("privacy")), ("2026-12-01", "2026-12-01"), "the text shown");
+        assert_eq!(none.of("terms"), CONSENT_VERSION);
+        let fix = texts(vec![text("privacy", "2026-12-01", false, 1)]).with_pack(bumped);
+        assert_eq!(
+            (fix.of("privacy"), fix.current("privacy")),
+            (CONSENT_VERSION, "2026-12-01"),
+            "a recorded correction"
+        );
+        let mut agreed = PACK_TEXTS.clone();
+        agreed.consent_version = "2026-11-01".into();
+        let v = texts(vec![text("privacy", "2026-11-17", false, 1)]).with_pack(agreed);
+        assert_eq!(v.of("privacy"), "2026-11-01", "the pack's agreed version, not the constant");
+        assert!(v.holds("privacy", "2026-11-01") && v.holds("privacy", "2026-11-17"));
+    }
+
+    /// The grace period runs from when the replacing text took effect, not from when it was published.
+    #[test]
+    fn signup_grace_counts_from_the_effective_date() {
+        let mut later = text("privacy", "2026-12-01", true, 0);
+        later.effective_at = (Utc::now() - chrono::Duration::days(SIGNUP_GRACE_DAYS - 1)).date_naive();
+        assert!(texts(vec![later.clone()]).replaced_lately("privacy", CONSENT_VERSION, Utc::now()));
+        later.effective_at = (Utc::now() - chrono::Duration::days(SIGNUP_GRACE_DAYS)).date_naive();
+        assert!(!texts(vec![later]).replaced_lately("privacy", CONSENT_VERSION, Utc::now()));
     }
 
     fn signup(set: &[ConsentChange]) -> ApiResult<Vec<ConsentChange>> {
@@ -958,12 +1055,12 @@ mod tests {
     /// be processed under a policy its customer never agreed to.
     #[test]
     fn signup_names_a_replaced_text_only_within_the_grace_period() {
-        let late = Versions(vec![text("privacy", "2026-12-01", true, SIGNUP_GRACE_DAYS + 1)]);
+        let late = texts(vec![text("privacy", "2026-12-01", true, SIGNUP_GRACE_DAYS + 1)]);
         assert_eq!(
             refusal(check_signup_consents(&required_set(), &late, Utc::now())),
             Some("stale_consent_version")
         );
-        let twice = Versions(vec![text("privacy", "2026-12-01", true, 400), text("privacy", "2027-06-01", true, 1)]);
+        let twice = texts(vec![text("privacy", "2026-12-01", true, 400), text("privacy", "2027-06-01", true, 1)]);
         let mut set = required_set();
         set[1].version = "2026-12-01".into();
         set[2].version = "2026-12-01".into();
@@ -980,7 +1077,7 @@ mod tests {
     /// and it holds, so nothing is pending; grants on the text it corrects still hold too.
     #[test]
     fn a_correction_is_recorded_and_holds_without_asking_again() {
-        let v = Versions(vec![text("privacy", CONSENT_VERSION, true, 10), text("privacy", "2026-11-20", false, 1)]);
+        let v = texts(vec![text("privacy", CONSENT_VERSION, true, 10), text("privacy", "2026-11-20", false, 1)]);
         assert_eq!(
             (v.of("privacy"), v.current("privacy"), v.bundle()),
             (CONSENT_VERSION, "2026-11-20", "2026-11-20")
@@ -1008,7 +1105,7 @@ mod tests {
     /// Pending names the text shown now (a correction after the re-consent text), which accepting records.
     #[test]
     fn pending_names_the_newest_text_shown() {
-        let v = Versions(vec![text("privacy", "2026-12-01", true, 2), text("privacy", "2026-12-03", false, 1)]);
+        let v = texts(vec![text("privacy", "2026-12-01", true, 2), text("privacy", "2026-12-03", false, 1)]);
         let rows = [row("terms", true, CONSENT_VERSION), row("privacy", true, CONSENT_VERSION)];
         let pending = pending_of(&rows, &v);
         assert_eq!(
@@ -1025,9 +1122,9 @@ mod tests {
 
     #[test]
     fn versions_compare_by_date_then_counter_not_as_text() {
-        let v = Versions(vec![text("privacy", "2026-12-01.9", true, 2), text("terms", "2026-12-01.10", true, 1)]);
+        let v = texts(vec![text("privacy", "2026-12-01.9", true, 2), text("terms", "2026-12-01.10", true, 1)]);
         assert_eq!(v.bundle(), "2026-12-01.10");
-        let v = Versions(vec![text("privacy", "2026-12-01.10", true, 2), text("privacy", "2026-12-01.9", false, 1)]);
+        let v = texts(vec![text("privacy", "2026-12-01.10", true, 2), text("privacy", "2026-12-01.9", false, 1)]);
         assert_eq!(v.of("privacy"), "2026-12-01.10");
         assert_eq!(v.current("privacy"), "2026-12-01.10", ".9 is older");
         assert!(!v.holds("privacy", "2026-12-01.9"));

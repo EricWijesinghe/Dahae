@@ -105,24 +105,20 @@ pub fn slug(doc: &str) -> String {
     doc.replace('_', "-")
 }
 
-/// The published text the website and the app must show instead of this release's pack text: the newest text of
-/// `doc` in force when it is not the pack's current template (the release is ahead of the owner's Publish, or behind
-/// it after a rollback), so customers always read the text their consents name. None while the pack text is the
-/// published one (the page keeps its built-in body, filled live) or nothing is published yet.
-pub async fn published_in_place_of_pack(s: &AppState, doc: &str) -> ApiResult<Option<String>> {
-    let Some(t) = active_templates(&s.pack)?.into_iter().find(|t| t.doc == doc && t.lang == privacy::LEGAL_LANG) else {
-        return Ok(None);
-    };
-    let rows: Vec<(String, Option<String>, String)> = sqlx::query_as(&format!(
-        "SELECT version, template_version, body_html FROM legal_documents
+/// The published text the website and the app show in place of the pack's built-in body: the newest text of `doc`
+/// in force, as it was published, so customers always read the text their consents name. Company fields or
+/// processors changed since reach customers only through the next Publish (the inbox shows it pending). None while
+/// nothing is published (the page keeps its built-in body, filled live).
+pub async fn published_text(s: &AppState, doc: &str) -> ApiResult<Option<String>> {
+    let rows: Vec<(String, String)> = sqlx::query_as(&format!(
+        "SELECT version, body_html FROM legal_documents
          WHERE doc = $1 AND lang = $2 AND NOT custom AND effective_at <= {LOCAL_TODAY}"
     ))
     .bind(doc)
     .bind(privacy::LEGAL_LANG)
     .fetch_all(&s.db)
     .await?;
-    let newest = rows.into_iter().max_by_key(|(v, _, _)| version_key(v));
-    Ok(newest.filter(|(_, tv, _)| tv.as_deref() != Some(t.version.as_str())).map(|(_, _, html)| html))
+    Ok(rows.into_iter().max_by_key(|(v, _)| version_key(v)).map(|(_, html)| html))
 }
 
 /// Every template of the pack's documents, each in every pack locale that has a text along the pack's scopes, all

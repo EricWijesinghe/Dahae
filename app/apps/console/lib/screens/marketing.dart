@@ -21,7 +21,8 @@ Json _archived(Object? texts) => {
   for (final e in ((texts as Json?) ?? const {}).entries)
     if (!_langs.contains(e.key)) e.key: e.value,
 };
-const _kinds = ['notice', 'news', 'tip', 'faq', 'banner', 'legal'];
+// Legal pages are replaced from the Legal inbox (owner code, recorded version); stored ones are listed read-only.
+const _kinds = ['notice', 'news', 'tip', 'faq', 'banner'];
 
 String kindLabel(T t, String k) => switch (k) {
   'notice' => t.cKind_notice,
@@ -158,7 +159,10 @@ class _CouponsState extends State<_Coupons> {
                     'move_out',
                     'move_in',
                   ])
-                    DropdownMenuItem(value: c, child: KeepAllText(t.service(c))),
+                    DropdownMenuItem(
+                      value: c,
+                      child: KeepAllText(t.service(c)),
+                    ),
                 ],
                 onChanged: (v) => setState(() => _service = v),
               ),
@@ -455,23 +459,29 @@ class _ContentState extends State<_Content> {
                       if (c['active'] != true) t.statusCancelled,
                     ].join(' · '),
                   ),
-                  trailing: IconButton(
-                    tooltip: t.delete,
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    onPressed: () async {
-                      if (!await confirmAction(context, t.delete) ||
-                          !context.mounted) {
-                        return;
-                      }
-                      try {
-                        await context.api.delete('/admin/content/${c['id']}');
-                        await reload();
-                      } catch (e) {
-                        if (context.mounted) showToast(context, t.error(e));
-                      }
-                    },
-                  ),
-                  onTap: () => _edit(c),
+                  trailing: c['kind'] == 'legal'
+                      ? null
+                      : IconButton(
+                          tooltip: t.delete,
+                          icon: const Icon(Icons.delete_outline_rounded),
+                          onPressed: () async {
+                            if (!await confirmAction(context, t.delete) ||
+                                !context.mounted) {
+                              return;
+                            }
+                            try {
+                              await context.api.delete(
+                                '/admin/content/${c['id']}',
+                              );
+                              await reload();
+                            } catch (e) {
+                              if (context.mounted) {
+                                showToast(context, t.error(e));
+                              }
+                            }
+                          },
+                        ),
+                  onTap: c['kind'] == 'legal' ? null : () => _edit(c),
                 ),
               ),
           ],

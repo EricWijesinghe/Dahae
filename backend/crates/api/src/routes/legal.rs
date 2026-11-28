@@ -4,25 +4,27 @@
 //! The console's Legal inbox: each pack document in each language with its published versions and the pack's
 //! current text as the draft. Nothing is published without the owner's click (D9): Publish is the owner's, with the
 //! owner's code. Each publish adds an immutable `legal_documents` row with its own version (one version is one text),
-//! the website and app show the newest text in force (`legal::published_in_place_of_pack`), and a version that asks
-//! for re-consent moves the consents behind that document (`privacy::consent_versions`).
+//! the website and app show the newest text in force as it was published (`legal::published_text`), and a version
+//! that asks for re-consent moves the consents behind that document (`privacy::consent_versions`). The owner's full
+//! replacement of a page is published here too (admin content refuses kind `legal`).
 
 use super::{
     audit,
-    seller::live::{invalidate_fragments, legal_override},
+    seller::live::{invalidate_fragments, legal_html, legal_override},
     setup::REAL_STAFF_EXISTS,
 };
 use crate::{
     auth::Admin,
     error::{ApiError, ApiResult},
     legal::{self, Template, version_key},
-    owner::OwnerTotp,
-    privacy,
+    owner, privacy,
     state::AppState,
+    util::LOCAL_TODAY,
 };
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{ConnectInfo, Path, State},
+    http::HeaderMap,
     routing::{get, post},
 };
 use chrono::{DateTime, NaiveDate, Utc};
@@ -30,6 +32,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use sqlx::{PgExecutor, PgPool};
+use std::net::SocketAddr;
 use uuid::Uuid;
 
 /// Written once with the baseline import; its presence means the import already ran on this database.
@@ -71,7 +74,11 @@ struct NewText<'a> {
     html: &'a str,
     values: &'a [(String, String)],
     custom: bool,
+    effective_at: NaiveDate,
 }
+
+/// One publish at a time (and none during the baseline import), so two never record one version twice.
+const LOCK: &str = "LOCK TABLE legal_documents IN SHARE ROW EXCLUSIVE MODE";
 
 fn sha(html: &str) -> String {
     hex::encode(Sha256::digest(html.as_bytes()))
@@ -94,7 +101,7 @@ async fn insert<'e>(db: impl PgExecutor<'e>, n: &NewText<'_>, by: Option<Uuid>) 
     .bind(sha(n.html))
     .bind(Value::Object(slots))
     .bind(n.custom)
-    .bind(n.t.effective_from)
+    .bind(n.effective_at)
     .bind(by)
     .fetch_one(db)
     .await?;
@@ -114,14 +121,16 @@ pub async fn import_baseline(s: &AppState) -> ApiResult<usize> {
     import_baseline_from(s, legal::active_templates(&s.pack)?).await
 }
 
-/// Once per database: an install that was already running (it has real staff) has customers who agreed to the texts
-/// at [`privacy::CONSENT_VERSION`], so those are recorded as the first published versions, dated as the texts are. A
-/// template at any other version (a release that changed it, booted by an install that skipped this one) was never
-/// agreed to: it is not recorded and waits in the inbox for the owner. A page the owner replaced is recorded as that
+/// Once per database: an install that was already running (it has real staff) shows its customers the pack texts of
+/// this release, so each is recorded at its own version as the first published text, dated as the text is. A text at
+/// the version its customers agreed to (the pack's `privacy.consent_version`) keeps every consent; one a release
+/// changed (an install that skipped the release before) asks again only when its template says so, and a correction
+/// keeps the consents to the text it corrects ([`privacy::Versions`]). A page the owner replaced is recorded as that
 /// text, marked custom, since it is what customers read. A fresh install imports nothing and its owner publishes from
 /// the inbox. Returns how many rows were written.
 pub async fn import_baseline_from(s: &AppState, templates: Vec<Template>) -> ApiResult<usize> {
     let mut tx = s.db.begin().await?;
+    sqlx::query(LOCK).execute(&mut *tx).await?;
     let first: Option<String> = sqlx::query_scalar("INSERT INTO settings (key, value) VALUES ($1, '{}'::jsonb) ON CONFLICT (key) DO NOTHING RETURNING key")
         .bind(BASELINE_MARKER)
         .fetch_optional(&mut *tx)
@@ -131,7 +140,7 @@ pub async fn import_baseline_from(s: &AppState, templates: Vec<Template>) -> Api
         return Ok(0);
     }
     let mut written = 0;
-    for t in templates.iter().filter(|t| t.version == privacy::CONSENT_VERSION) {
+    for t in &templates {
         let exists: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM legal_documents WHERE doc = $1 AND lang = $2)")
             .bind(&t.doc)
             .bind(&t.lang)
@@ -156,6 +165,7 @@ pub async fn import_baseline_from(s: &AppState, templates: Vec<Template>) -> Api
             html: &html,
             values: &values,
             custom,
+            effective_at: t.effective_from,
         };
         insert(&mut *tx, &row, None).await?;
         written += 1;
@@ -241,74 +251,132 @@ fn processors_changed(before: &Value, values: &[(String, String)]) -> bool {
         .any(|(k, v)| before.get(k).and_then(Value::as_str) != Some(v.as_str()))
 }
 
+/// The first version that sorts after every text of the document, from `date` on: `date` itself while no text is
+/// dated that day or later, else the next counter (`YYYY-MM-DD.N`) on the newest day.
+fn version_after(mine: &[&VersionRow], date: NaiveDate) -> String {
+    match mine.iter().filter_map(|r| version_key(&r.version)).max() {
+        Some((d, n)) if d >= date => format!("{}.{}", d.format("%Y-%m-%d"), n + 1),
+        _ => date.format("%Y-%m-%d").to_string(),
+    }
+}
+
+/// Whether customers last read an owner's replacement rather than a pack text.
+fn custom_is_newest(mine: &[&VersionRow]) -> bool {
+    mine.iter().max_by_key(|r| version_key(&r.version)).is_some_and(|r| r.custom)
+}
+
 /// The version a publish of `t` (rendered now as `body_sha`) records, and whether it asks again. Refused when the
 /// pack's template is older than one already published (a rollback) or the text is already the newest of its
-/// template. A version already used (this install's values changed the text, or a custom text holds it) gets the
-/// next counter, `YYYY-MM-DD.N`, which asks again only when the processor rows changed.
-fn next_version(t: &Template, mine: &[&VersionRow], body_sha: &str, values: &[(String, String)]) -> ApiResult<(String, bool)> {
+/// template (unless it takes over from the owner's replacement, `over_custom`). The template's version is used while
+/// it sorts after every text of the document; otherwise the next counter ([`version_after`]), which asks again only
+/// when the processor rows changed (always as the template says over a replacement).
+fn next_version(t: &Template, mine: &[&VersionRow], body_sha: &str, values: &[(String, String)], over_custom: bool) -> ApiResult<(String, bool)> {
     if newest_template(mine).is_some_and(|v| version_key(&t.version) < version_key(v)) {
         return Err(ApiError::Conflict("legal_version_older"));
     }
     let same = latest_of_template(mine, &t.version);
-    if same.is_some_and(|r| r.body_sha256 == body_sha) {
+    if !over_custom && same.is_some_and(|r| r.body_sha256 == body_sha) {
         return Err(ApiError::Conflict("legal_already_published"));
     }
-    if !mine.iter().any(|r| r.version == t.version) {
+    let key = version_key(&t.version).ok_or_else(|| ApiError::Internal(format!("legal template {} version", t.doc)))?;
+    if mine.iter().filter_map(|r| version_key(&r.version)).all(|k| k < key) {
         return Ok((t.version.clone(), t.requires_reconsent));
     }
-    let (date, _) = version_key(&t.version).ok_or_else(|| ApiError::Internal(format!("legal template {} version", t.doc)))?;
-    let n = mine
-        .iter()
-        .filter_map(|r| version_key(&r.version))
-        .filter(|(d, _)| *d == date)
-        .map(|(_, n)| n)
-        .max()
-        .unwrap_or(0);
-    let reconsent = same.map_or(t.requires_reconsent, |r| processors_changed(&r.slots_json, values));
-    Ok((format!("{}.{}", date.format("%Y-%m-%d"), n + 1), reconsent))
+    let reconsent = match same {
+        Some(r) if !over_custom => processors_changed(&r.slots_json, values),
+        _ => t.requires_reconsent,
+    };
+    Ok((version_after(mine, key.0), reconsent))
 }
 
 #[derive(Deserialize)]
 struct PublishBody {
     doc: String,
     lang: String,
+    /// The owner's full replacement text of the page (plain text, paragraphs split by blank lines), in place of the
+    /// pack's. Only in the language consents follow ([`privacy::LEGAL_LANG`]).
+    #[serde(default)]
+    replacement: Option<String>,
+    /// Whether a replacement asks customers again (default yes).
+    #[serde(default)]
+    requires_reconsent: Option<bool>,
 }
 
-/// `POST /admin/legal/publish`: publishes the pack's current text of one document in one language, rendered with
-/// this install's values now. The owner only, with the owner's code (it can withdraw every customer's optional
-/// consents); the row and its audit entry commit together.
-async fn publish(State(s): State<AppState>, OwnerTotp(a): OwnerTotp, Json(b): Json<PublishBody>) -> ApiResult<Json<Value>> {
+/// `POST /admin/legal/publish`: publishes one document in one language: the pack's current text rendered with this
+/// install's values now, or the owner's `replacement`. Either takes over from a live replacement (which stops). The
+/// owner only, with the owner's code (it can withdraw every customer's optional consents), spent only once the publish
+/// is accepted; the row, the replacement and the audit entry commit together.
+async fn publish(
+    State(s): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Admin(a): Admin,
+    Json(b): Json<PublishBody>,
+) -> ApiResult<Json<Value>> {
+    let step = owner::check_owner(&s, a, &headers, Some(peer.ip()), true).await?;
     let t = legal::active_templates(&s.pack)?
         .into_iter()
         .find(|t| t.doc == b.doc && t.lang == b.lang)
         .ok_or(ApiError::NotFound)?;
-    if custom_text(&s, &t).await?.is_some() {
-        return Err(ApiError::Conflict("legal_custom_text"));
-    }
-    let (html, values) = legal::render_live(&s, &t).await?;
+    let replacement = match b.replacement.as_deref().map(str::trim) {
+        Some("") => return Err(ApiError::BadRequest("invalid_content")),
+        Some(_) if t.lang != privacy::LEGAL_LANG => return Err(ApiError::BadRequest("legal_replacement_lang")),
+        r => r,
+    };
+    let title = json!({ "ko": t.title });
+    let body = replacement.map(|text| json!({ "text": { "ko": text } }));
+    let custom_live = custom_text(&s, &t).await?.is_some();
+    let (html, values) = match &body {
+        Some(body) => (legal_html(&title, body), Vec::new()),
+        None => legal::render_live(&s, &t).await?,
+    };
     let body_sha = sha(&html);
     let mut tx = s.db.begin().await?;
-    // One publish at a time, so two clicks never record one version twice.
-    sqlx::query("LOCK TABLE legal_documents IN SHARE ROW EXCLUSIVE MODE").execute(&mut *tx).await?;
+    sqlx::query(LOCK).execute(&mut *tx).await?;
     let rows: Vec<VersionRow> = sqlx::query_as(&format!("SELECT {COLUMNS} FROM legal_documents WHERE doc = $1 AND lang = $2"))
         .bind(&t.doc)
         .bind(&t.lang)
         .fetch_all(&mut *tx)
         .await?;
-    let (version, reconsent) = next_version(&t, &rows.iter().collect::<Vec<_>>(), &body_sha, &values)?;
+    let mine: Vec<&VersionRow> = rows.iter().collect();
+    let today: NaiveDate = sqlx::query_scalar(&format!("SELECT {LOCAL_TODAY}")).fetch_one(&mut *tx).await?;
+    let (version, reconsent, effective_at) = match replacement {
+        Some(_) => (version_after(&mine, today), b.requires_reconsent.unwrap_or(true), today),
+        None => {
+            let (v, r) = next_version(&t, &mine, &body_sha, &values, custom_live || custom_is_newest(&mine))?;
+            (v, r, t.effective_from)
+        }
+    };
+    owner::burn_totp(&s, a.id, owner::client_ip(&s, Some(peer.ip()), &headers), step).await?;
+    if t.lang == privacy::LEGAL_LANG {
+        let slug = legal::slug(&t.doc);
+        sqlx::query("UPDATE content_items SET active = false WHERE kind = 'legal' AND slug = $1 AND active")
+            .bind(&slug)
+            .execute(&mut *tx)
+            .await?;
+        if let Some(body) = &body {
+            sqlx::query("INSERT INTO content_items (kind, slug, title, body) VALUES ('legal', $1, $2, $3)")
+                .bind(&slug)
+                .bind(&title)
+                .bind(body)
+                .execute(&mut *tx)
+                .await?;
+        }
+    }
     let row = NewText {
         t: &t,
         version: &version,
-        template_version: Some(&t.version),
+        template_version: replacement.is_none().then_some(t.version.as_str()),
         reconsent,
-        body_md: &t.body,
+        body_md: replacement.unwrap_or(&t.body),
         html: &html,
         values: &values,
-        custom: false,
+        custom: replacement.is_some(),
+        effective_at,
     };
     let id = insert(&mut *tx, &row, Some(a.id)).await?;
-    let data = json!({ "id": id, "lang": t.lang, "version": version, "template_version": t.version,
-                       "requires_reconsent": reconsent, "body_sha256": body_sha });
+    let data = json!({ "id": id, "lang": t.lang, "version": version, "template_version": row.template_version,
+                       "requires_reconsent": reconsent, "custom": row.custom, "body_sha256": body_sha });
     audit(&mut *tx, "staff", Some(a.id), "legal.publish", &t.doc, data).await?;
     tx.commit().await?;
     invalidate_fragments();
