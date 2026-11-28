@@ -56,8 +56,24 @@ RC_NO_PREVIOUS=6                    # dahae rollback: 되돌릴 이전 버전 �
 LOG_MIN_LINES=50
 LOG_MAX_LINES=2000
 
-warn() { printf '! %s\n' "$*" >&2; }
-die()  { printf '✘ %s\n' "$*" >&2; exit 1; }
+# 메시지는 두 칸이에요: 한국어, 영어 (L 한국어 영어). 언어는 설치 프로그램이 .env 에 적은 INSTALL_LANG 을 따라요.
+# Messages come in two columns, Korean then English; the language is the install's (install.sh ui_lang, same rules).
+ui_lang() { # ui_lang env파일 -> ko|en
+  local v="${DAHAE_LANG:-${MALKKEUM_LANG:-}}"
+  [ -n "$v" ] || v=$({ grep -E '^INSTALL_LANG=' "$1" 2>/dev/null || true; } | tail -n1 | cut -d= -f2-)
+  if [ -z "$v" ] && grep -Eq '^API_IMAGE=.' "$1" 2>/dev/null; then v=ko; fi
+  [ -n "$v" ] || v=${LC_ALL:-${LANG:-}}
+  case "$v" in ko*) printf ko ;; *) printf en ;; esac
+}
+UI_LANG=$(ui_lang "$DIR/.env")
+L() { if [ "${UI_LANG:-en}" = ko ]; then printf '%s' "$1"; else printf '%s' "${2:-$1}"; fi; }
+Lf() { # Lf 한국어형식 영어형식 값...
+  local f; f=$(L "$1" "$2"); shift 2
+  # shellcheck disable=SC2059 # the format is one of two fixed catalogue strings
+  printf -- "$f" "$@"
+}
+warn() { printf '! %s\n' "$(L "$@")" >&2; }
+die()  { printf '✘ %s\n' "$(L "$@")" >&2; exit 1; }
 
 # ---- 상태 기록 (사용자에게 보여요: 단계 줄만, 명령 출력은 남기지 않아요) ----
 write_file() { # write_file 경로 내용 : 임시 파일에 쓴 뒤 바꿔요 (이름이 같은 링크는 따르지 않아요)
@@ -73,14 +89,14 @@ say_step() { # say_step 기호 내용 : 단계 줄을 덧붙여요 (기록이 �
   local log="$JOBS/status/$JOB_ID.log"
   # shortcut: -L 검사와 쓰기 사이에 틈이 남아요. status/ 가 관리자 소유라야 API 가 링크를 못 만들어요 (dir_ok)
   # shellcheck disable=SC2015 # the fallback is meant to run when either test fails
-  [ ! -L "$log" ] && printf '%s %s\n' "$1" "$2" >> "$log" || warn "단계 기록을 못 했어요"
+  [ ! -L "$log" ] && printf '%s %s\n' "$1" "$2" >> "$log" || warn "단계 기록을 못 했어요" "Could not record the step"
 }
 
 set_state() { # set_state 상태 [이유] : status/<id>.json 을 쓰고, 공개 토큰이 있으면 public/<토큰>.json 에도 상태만 써요. 이유는 고정 문장만 받아요
   local step=""
   [ -z "${2:-}" ] || step=$(printf ',"step":"%s"' "$2")
   write_file "$JOBS/status/$JOB_ID.json" "$(printf '{"id":"%s","kind":"%s","state":"%s"%s}' "$JOB_ID" "$JOB_KIND" "$1" "$step")" || return 1
-  [ -z "$JOB_TOKEN" ] || write_file "$JOBS/public/$JOB_TOKEN.json" "$(printf '{"state":"%s"}' "$1")" || warn "공개 진행 상태를 못 남겼어요"
+  [ -z "$JOB_TOKEN" ] || write_file "$JOBS/public/$JOB_TOKEN.json" "$(printf '{"state":"%s"}' "$1")" || warn "공개 진행 상태를 못 남겼어요" "Could not record the public progress"
 }
 
 # ---- 검사 (규칙 2~6) ----
@@ -267,15 +283,15 @@ cancel_slot() { # cancel_slot 이유 : 승인 칸의 작업을 취소로 남기�
   local reason="$1"
   if ! job_parse "$SLOT_JOB"; then clear_slot; return 0; fi
   say_step "!" "$reason"
-  set_state cancelled || warn "취소 상태를 못 남겼어요"
+  set_state cancelled || warn "취소 상태를 못 남겼어요" "Could not record the cancelled state"
   # 지금 맞는 코드는 모두 써 버린 것으로 해요: API 가 받아 둔 코드로 다음에 올린 작업을 승인하지 못해요
-  write_file "$APPROVAL_STEP" "$(( $(date +%s) / 30 + 1 ))" || warn "승인 단계를 못 남겼어요"
+  write_file "$APPROVAL_STEP" "$(( $(date +%s) / 30 + 1 ))" || warn "승인 단계를 못 남겼어요" "Could not record the approval step"
   clear_slot
 }
 
 expire_slot() { # 승인 시간이 지난 작업은 취소해요 (실행기가 돌 때마다 봐요)
   [ -e "$SLOT_JOB" ] || return 0
-  if [ "$(date +%s)" -ge "$(slot_field expires)" ]; then cancel_slot "승인 시간(10분)이 지나서 취소했어요"; fi
+  if [ "$(date +%s)" -ge "$(slot_field expires)" ]; then cancel_slot "$(L "승인 시간(10분)이 지나서 취소했어요" "Cancelled: the approval time (10 minutes) ran out")"; fi
   return 0
 }
 
@@ -284,30 +300,30 @@ prev_version() { # 되돌리면 올라올 버전: PREV_API_IMAGE 이미지의 �
   img=$(env_val PREV_API_IMAGE)
   [ -z "$img" ] || v=$(timeout 20 docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.version"}}' "$img" 2>/dev/null) || v=""
   case "$v" in [0-9]*) v="v$v" ;; esac
-  if printf '%s' "$v" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]{1,40})?$'; then printf '%s' "$v"; else printf '버전 모름'; fi
+  if printf '%s' "$v" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]{1,40})?$'; then printf '%s' "$v"; else L '버전 모름' 'version unknown'; fi
 }
 
 summary_for() { # 서버가 직접 쓰는 요약 (값은 이미 검사를 통과한 것만 들어가요)
   case "$1" in
-    update-tag) printf '업데이트: %s 버전으로 바꿔요 (먼저 백업해요)' "$2" ;;
-    rollback) printf '이전 버전으로 되돌려요: %s (데이터는 그대로예요)' "$(prev_version)" ;;
-    domain-set) printf '도메인을 %s 로 바꿔요 (예전 주소도 계속 응답해요)' "$2" ;;
-    edition) printf '업데이트 판을 %s 로 바꿔요 (먼저 백업해요. 데이터·키·도메인·앱은 그대로예요)' "$2" ;;
+    update-tag) Lf '업데이트: %s 버전으로 바꿔요 (먼저 백업해요)' 'Update: switch to version %s (backs up first)' "$2" ;;
+    rollback) Lf '이전 버전으로 되돌려요: %s (데이터는 그대로예요)' 'Roll back to the previous version: %s (data stays as it is)' "$(prev_version)" ;;
+    domain-set) Lf '도메인을 %s 로 바꿔요 (예전 주소도 계속 응답해요)' 'Change the domain to %s (the old address keeps answering)' "$2" ;;
+    edition) Lf '업데이트 판을 %s 로 바꿔요 (먼저 백업해요. 데이터·키·도메인·앱은 그대로예요)' 'Switch the update edition to %s (backs up first; data, keys, domain and apps stay as they are)' "$2" ;;
   esac
 }
 
 hold_for_approval() { # hold_for_approval 사본 : 승인 칸에 하나만 두고, 서버가 쓴 요약을 공개 파일에 남겨요
   local copy="$1"
   # 거부 이유는 단계 줄과 상태 파일(step)에 남겨요: 콘솔이 사장님께 그대로 보여 줘요
-  [ -n "$(approval_secret)" ] || { rm -f -- "$copy"; refuse_held "서버 승인 코드가 없어요. 설정에서 먼저 만들어 주세요"; return 1; }
-  approval_locked && { rm -f -- "$copy"; refuse_held "틀린 승인 코드가 많아서 승인이 잠겨 있어요 (1시간 뒤에 풀려요)"; return 1; }
-  [ ! -e "$SLOT_JOB" ] || { rm -f -- "$copy"; refuse_held "다른 작업이 서버 승인을 기다리고 있어요"; return 1; } # 승인 칸이 차 있으면 두 번째 작업은 거부해요
+  [ -n "$(approval_secret)" ] || { rm -f -- "$copy"; refuse_held "$(L "서버 승인 코드가 없어요. 설정에서 먼저 만들어 주세요" "There is no server approval code. Create one in Settings first")"; return 1; }
+  approval_locked && { rm -f -- "$copy"; refuse_held "$(L "틀린 승인 코드가 많아서 승인이 잠겨 있어요 (1시간 뒤에 풀려요)" "Approval is locked after too many wrong codes (it unlocks in an hour)")"; return 1; }
+  [ ! -e "$SLOT_JOB" ] || { rm -f -- "$copy"; refuse_held "$(L "다른 작업이 서버 승인을 기다리고 있어요" "Another job is waiting for server approval")"; return 1; } # 승인 칸이 차 있으면 두 번째 작업은 거부해요
   mv -f -- "$copy" "$SLOT_JOB" || { rm -f -- "$copy"; return 1; }
   write_file "$SLOT_META" "$(printf 'expires=%s\ntries=0' $(( $(date +%s) + APPROVAL_TTL_SEC )))" || return 1
-  set_state awaiting_approval || warn "승인 대기 상태를 못 남겼어요"
-  say_step "!" "서버 승인을 기다려요"
+  set_state awaiting_approval || warn "승인 대기 상태를 못 남겼어요" "Could not record the waiting-for-approval state"
+  say_step "!" "$(L "서버 승인을 기다려요" "Waiting for server approval")"
   [ -z "$JOB_TOKEN" ] || write_file "$JOBS/public/$JOB_TOKEN.json" \
-    "$(printf '{"state":"awaiting_approval","summary":"%s"}' "$(summary_for "$JOB_KIND" "$JOB_ARG")")" || warn "서버 요약을 못 남겼어요"
+    "$(printf '{"state":"awaiting_approval","summary":"%s"}' "$(summary_for "$JOB_KIND" "$JOB_ARG")")" || warn "서버 요약을 못 남겼어요" "Could not record the server summary"
 }
 
 refuse_held() { # refuse_held 이유 : 승인 칸에 두지 못한 작업을 이유와 함께 거부해요 (이유는 이 파일의 고정 문장만)
@@ -330,7 +346,7 @@ record_approval_fail() { # 틀린 승인 코드를 기록해요 (지난 한 시�
   local since
   since=$(( $(date +%s) - APPROVAL_FAIL_WINDOW_SEC ))
   write_file "$APPROVAL_FAILS" "$({ cat -- "$APPROVAL_FAILS" 2>/dev/null || true; date +%s; } | awk -v s="$since" '$1 + 0 >= s + 0')" && return 0
-  cancel_slot "승인 실패 기록을 못 남겨서 취소했어요"; return 1
+  cancel_slot "$(L "승인 실패 기록을 못 남겨서 취소했어요" "Cancelled: the failed approval could not be recorded")"; return 1
 }
 
 slot_try_fail() { # 틀린 승인 코드: 여러 번 틀리면 그 작업을 취소해요
@@ -338,16 +354,16 @@ slot_try_fail() { # 틀린 승인 코드: 여러 번 틀리면 그 작업을 취
   record_approval_fail || return 0
   tries=$(( $(slot_field tries) + 1 ))
   if [ "$tries" -ge "$APPROVAL_MAX_TRIES" ]; then
-    cancel_slot "승인 코드를 여러 번 틀려서 취소했어요"
+    cancel_slot "$(L "승인 코드를 여러 번 틀려서 취소했어요" "Cancelled: the approval code was wrong too many times")"
   else
-    write_file "$SLOT_META" "$(printf 'expires=%s\ntries=%s' "$(slot_field expires)" "$tries")" || warn "승인 기록을 못 남겼어요"
-    warn "승인 코드가 맞지 않아요"
+    write_file "$SLOT_META" "$(printf 'expires=%s\ntries=%s' "$(slot_field expires)" "$tries")" || warn "승인 기록을 못 남겼어요" "Could not record the approval attempt"
+    warn "승인 코드가 맞지 않아요" "The approval code is not right"
   fi
 }
 
 approve_run() { # 승인된 작업을 실행해요: 승인 칸의 사본을 다시 검사하고, 칸을 비운 뒤에 실행해요
   if ! { job_parse "$SLOT_JOB" && job_args_ok && token_ok; }; then
-    cancel_slot "승인 칸의 작업을 다시 검사하지 못해서 취소했어요"; return 1
+    cancel_slot "$(L "승인 칸의 작업을 다시 검사하지 못해서 취소했어요" "Cancelled: the job waiting for approval could not be checked again")"; return 1
   fi
   clear_slot
   run_job
@@ -363,8 +379,8 @@ approve_one() { # approve_one 경로 : 승인 코드 파일 하나를 받아요.
   copy=$(mktemp "$JOBS/work/copy.XXXXXX") || { rm -rf -- "$dst"; return 1; }
   if ! copy_small "$dst" "$copy" "$APPROVE_MAX_BYTES"; then rm -rf -- "$dst"; rm -f -- "$copy"; return 1; fi  # API 가 만든 폴더여도 지워요
   rm -f -- "$dst"
-  if approval_locked; then rm -f -- "$copy"; warn "틀린 승인 코드가 많아서 승인이 잠겨 있어요 (1시간 뒤에 풀려요)"; return 1; fi
-  if ! slot_is "$id"; then rm -f -- "$copy"; warn "승인 칸에 없는 작업이에요: $id"; return 1; fi
+  if approval_locked; then rm -f -- "$copy"; warn "틀린 승인 코드가 많아서 승인이 잠겨 있어요 (1시간 뒤에 풀려요)" "Approval is locked after too many wrong codes (it unlocks in an hour)"; return 1; fi
+  if ! slot_is "$id"; then rm -f -- "$copy"; warn "승인 칸에 없는 작업이에요: $id" "That job is not waiting for approval: $id"; return 1; fi
   code=$(sed -n 's/^code=\([0-9]\{6\}\)$/\1/p' "$copy" | head -n1)
   lines=$(grep -c '' "$copy" || true)
   rm -f -- "$copy"
@@ -378,7 +394,7 @@ approve_one() { # approve_one 경로 : 승인 코드 파일 하나를 받아요.
 approval_enroll() { # 승인 코드를 처음 한 번만 만들어요 (이미 있으면 실패). 사장님 계정 번호와 인증 앱 주소를 남겨요
   local secret
   # shellcheck disable=SC2015 # the fallback is meant to run when either test fails
-  [ ! -e "$APPROVAL_KEY" ] && [ ! -L "$APPROVAL_KEY" ] || { JOB_WHY="이미 서버 승인 코드가 있어요"; warn "$JOB_WHY"; return 1; }
+  [ ! -e "$APPROVAL_KEY" ] && [ ! -L "$APPROVAL_KEY" ] || { JOB_WHY="$(L "이미 서버 승인 코드가 있어요" "A server approval code already exists")"; warn "$JOB_WHY"; return 1; }
   secret=$(head -c 20 /dev/urandom | base32 | tr -d '=\n')
   [ "${#secret}" = 32 ] || return 1
   write_file "$OWNER_FILE" "$(printf '{"staff_id":"%s"}' "$JOB_ARG")" || return 1
@@ -428,7 +444,8 @@ mask_log() { # 로그에서 토큰·비밀번호·접속 주소의 암호·설�
     -e 's/\b[A-HJ-KM-NP-Z2-9]{4}-[A-HJ-KM-NP-Z2-9]{4}-[A-HJ-KM-NP-Z2-9]{4}\b/[가려짐]/g' \
     -e 's/((setup|code)[^[:space:]]*[[:space:]:=]+)[2-9A-HJ-KM-NP-Z]{12}\b/\1[가려짐]/gI' \
     -e 's/\b01[016-9][0-9]{7,8}\b/[가려짐]/g' \
-    -e 's/\b0[0-9]{1,2}[-. ][0-9]{3,4}[-. ][0-9]{4}\b/[가려짐]/g'
+    -e 's/\b0[0-9]{1,2}[-. ][0-9]{3,4}[-. ][0-9]{4}\b/[가려짐]/g' \
+    | if [ "$UI_LANG" = ko ]; then cat; else sed 's/\[가려짐\]/[redacted]/g'; fi
 }
 
 logs_job() { # 서비스 로그의 끝부분을 가려서 out/<토큰> 에 남겨요
@@ -438,7 +455,7 @@ logs_job() { # 서비스 로그의 끝부분을 가려서 out/<토큰> 에 남�
 update_tag() { # 승인 받은 버전 올리기: 성공하면 설치 기록에 남겨 다음부터 낮추지 못하게 해요
   local rc=0
   run_cli update "$JOB_ARG" || rc=$?
-  if [ "$rc" = 0 ]; then printf '%s\n' "$JOB_ARG" >> "$HOST_DIR/version-history" || warn "버전 기록을 못 남겼어요"; fi
+  if [ "$rc" = 0 ]; then printf '%s\n' "$JOB_ARG" >> "$HOST_DIR/version-history" || warn "버전 기록을 못 남겼어요" "Could not record the version history"; fi
   return "$rc"
 }
 
@@ -456,7 +473,7 @@ json_list() { awk 'NF { printf "%s\"%s\"", (n++ ? "," : ""), $1 }'; } # 줄마�
 
 domain_check() { # 도메인이 이 서버를 가리키는지 봐요 (서버 IP 는 이 서버가 직접 물어봐요). A 는 이 서버의 IPv4 여야 하고, AAAA 는 없어야 해요
   local ip a aaaa a_ok=false aaaa_ok=false
-  ip=$(server_ip 4) || { warn "서버 IP 를 확인하지 못했어요"; return 1; }
+  ip=$(server_ip 4) || { warn "서버 IP 를 확인하지 못했어요" "Could not find the server IP"; return 1; }
   a=$(getent ahostsv4 "$JOB_ARG" 2>/dev/null | awk '{ print $1 }' | grep -E "$IP_CHARS_RE" | sort -u || true)
   aaaa=$(getent ahostsv6 "$JOB_ARG" 2>/dev/null | awk '$1 ~ /:/ && $1 !~ /^::ffff:/ { print $1 }' | grep -E "$IP_CHARS_RE" | sort -u || true)
   grep -qxF "$ip" <<< "$a" && a_ok=true
@@ -474,12 +491,12 @@ keys_backup_job() { # 비밀번호(16진수)로 잠근 비밀 키 사본을 만�
   pass=$(printf '%s' "$JOB_ARG" | sed 's/../\\x&/g')
   { pass=$(printf '%b' "$pass"); } 2>/dev/null
   # NUL 이나 끝의 줄바꿈은 위에서 사라져요: 길이가 다르면 받은 비밀번호와 다르니 멈춰요
-  [ "$(LC_ALL=C; printf '%s' "${#pass}")" -eq $(( ${#JOB_ARG} / 2 )) ] || { JOB_WHY="비밀번호에 쓸 수 없는 글자가 있어요"; return 1; }
+  [ "$(LC_ALL=C; printf '%s' "${#pass}")" -eq $(( ${#JOB_ARG} / 2 )) ] || { JOB_WHY="$(L "비밀번호에 쓸 수 없는 글자가 있어요" "The password has characters that cannot be used")"; return 1; }
   mark=$(mktemp "$JOBS/work/keys.XXXXXX") || return 1
   DAHAE_KEYS_PASSPHRASE="$pass" run_cli keys-backup || { rm -f -- "$mark"; return 1; }
   f=$(find "$DIR/backups" -maxdepth 1 -type f -name 'keys-*.env.enc' -newer "$mark" 2>/dev/null | sort | tail -n1)
   rm -f -- "$mark"
-  [ -n "$f" ] || { JOB_WHY="비밀 키 사본 파일을 찾지 못했어요"; return 1; }
+  [ -n "$f" ] || { JOB_WHY="$(L "비밀 키 사본 파일을 찾지 못했어요" "Could not find the secret key copy")"; return 1; }
   base64 -w0 -- "$f" | out_publish "$JOB_TOKEN"
 }
 
@@ -515,9 +532,9 @@ ssh_alert() { # ssh_alert 차단 수 : 차단 중인 주소가 전보다 늘었�
   case "$now" in ''|*[!0-9]*) return 0 ;; esac
   last=$(cat -- "$HOST_DIR/ssh-banned.last" 2>/dev/null) || last=0
   case "$last" in ''|*[!0-9]*) last=0 ;; esac
-  if [ "$now" -le "$last" ]; then write_file "$HOST_DIR/ssh-banned.last" "$now" || warn "SSH 차단 기록을 못 남겼어요"; return 0; fi
-  if run_cli alert ssh "$now"; then write_file "$HOST_DIR/ssh-banned.last" "$now" || warn "SSH 차단 기록을 못 남겼어요"
-  else warn "SSH 차단 알림을 보내지 못했어요"; fi
+  if [ "$now" -le "$last" ]; then write_file "$HOST_DIR/ssh-banned.last" "$now" || warn "SSH 차단 기록을 못 남겼어요" "Could not record the SSH ban"; return 0; fi
+  if run_cli alert ssh "$now"; then write_file "$HOST_DIR/ssh-banned.last" "$now" || warn "SSH 차단 기록을 못 남겼어요" "Could not record the SSH ban"
+  else warn "SSH 차단 알림을 보내지 못했어요" "Could not send the SSH ban alert"; fi
 }
 
 host_refresh() { # 호스트 정보 파일(host.json): 확인 시각, 채널, 버전, 태그 고정 여부, 필요한 관리 명령 판, 다음 자동 업데이트, SSH 실패 로그인 수
@@ -557,30 +574,30 @@ dispatch() { # 종류에 맞는 명령 하나만 실행해요. 종료 코드를 
 
 fail_reason() { # fail_reason 종료코드 : 도메인 바꾸기가 끝나지 못한 이유 (관리 명령의 출력은 버려서, 종료 코드로 정해요)
   case "$JOB_KIND:$1" in
-    domain-set:"$RC_ROLLED_BACK") echo "새 주소가 5분 안에 응답하지 않아 예전 도메인으로 되돌렸어요 (DNS·방화벽 80/443 확인)" ;;
-    rollback:"$RC_PAYOUTS_IN_DOUBT") echo "토스 결과를 기다리는 정산이 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요" ;;
-    update:"$RC_TOOLS_STALE"|update-tag:"$RC_TOOLS_STALE"|channel:"$RC_TOOLS_STALE") echo "새 버전으로 바꿨고 정상이에요. 관리 도구만 바꾸지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" ;;
-    edition:"$RC_ROLLED_BACK") echo "새 판이 응답하지 않아 되돌렸어요. 지금 판 그대로예요 (데이터도 그대로예요)" ;;
+    domain-set:"$RC_ROLLED_BACK") echo "$(L "새 주소가 5분 안에 응답하지 않아 예전 도메인으로 되돌렸어요 (DNS·방화벽 80/443 확인)" "The new address did not answer within 5 minutes, so the old domain was put back (check DNS and firewall ports 80/443)")" ;;
+    rollback:"$RC_PAYOUTS_IN_DOUBT") echo "$(L "토스 결과를 기다리는 정산이 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요" "Not rolled back: payouts are waiting for a Toss result. Settle them with the status check in the console's [Payouts], then try again")" ;;
+    update:"$RC_TOOLS_STALE"|update-tag:"$RC_TOOLS_STALE"|channel:"$RC_TOOLS_STALE") echo "$(L "새 버전으로 바꿨고 정상이에요. 관리 도구만 바꾸지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" "Switched to the new version and it is healthy. Only the management tools did not switch: run the install line once more (guide 10 C-5)")" ;;
+    edition:"$RC_ROLLED_BACK") echo "$(L "새 판이 응답하지 않아 되돌렸어요. 지금 판 그대로예요 (데이터도 그대로예요)" "The new edition did not answer, so it was rolled back. The current edition stays (data too)")" ;;
     # 셸 없이 고쳐요: '지금 업데이트' 는 같은 이미지에서 관리 도구만 다시 받아요 (update:5 의 '설치 줄 다시 실행' 이 아니에요)
-    edition:"$RC_TOOLS_STALE") printf "%s 로 바꿨고 정상이에요. 관리 도구는 '지금 업데이트' 를 한 번 눌러 주세요\n" "$JOB_ARG" ;;
-    edition:*) echo "판을 바꾸지 못했어요. 지금 판 그대로예요. 새 판이 아직 나오지 않았거나 서명을 확인하지 못했을 수 있어요: 'dahae logs' 를 개발자에게 보여 주세요" ;;
-    rollback:"$RC_TOOLS_STALE") echo "이전 버전으로 되돌렸고 정상이에요. 관리 도구만 되돌리지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" ;;
-    rollback:"$RC_NO_PREVIOUS") echo "되돌릴 이전 버전이 없어요 (업데이트를 한 번 한 뒤에 쓸 수 있어요). 지금 버전 그대로예요" ;;
-    rollback:*) echo "되돌리지 못했어요. 시스템 상태를 확인하고 'dahae logs' 를 개발자에게 보여 주세요" ;;
-    domain-set:*) echo "도메인을 바꾸지 못했어요: 새 도메인 A 레코드가 이 서버를 가리키는지, 방화벽(80·443)이 열려 있는지 확인하세요. 지금 서비스는 그대로예요" ;;
+    edition:"$RC_TOOLS_STALE") Lf "%s 로 바꿨고 정상이에요. 관리 도구는 '지금 업데이트' 를 한 번 눌러 주세요\n" "Switched to %s and it is healthy. For the management tools, press 'Update now' once\n" "$JOB_ARG" ;;
+    edition:*) echo "$(L "판을 바꾸지 못했어요. 지금 판 그대로예요. 새 판이 아직 나오지 않았거나 서명을 확인하지 못했을 수 있어요: 'dahae logs' 를 개발자에게 보여 주세요" "The edition did not change. The current edition stays. The new edition may not be out yet, or its signature could not be checked: show 'dahae logs' to the developer")" ;;
+    rollback:"$RC_TOOLS_STALE") echo "$(L "이전 버전으로 되돌렸고 정상이에요. 관리 도구만 되돌리지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" "Rolled back to the previous version and it is healthy. Only the management tools did not roll back: run the install line once more (guide 10 C-5)")" ;;
+    rollback:"$RC_NO_PREVIOUS") echo "$(L "되돌릴 이전 버전이 없어요 (업데이트를 한 번 한 뒤에 쓸 수 있어요). 지금 버전 그대로예요" "There is no previous version to roll back to (available after one update). The current version stays")" ;;
+    rollback:*) echo "$(L "되돌리지 못했어요. 시스템 상태를 확인하고 'dahae logs' 를 개발자에게 보여 주세요" "Could not roll back. Check the system status and show 'dahae logs' to the developer")" ;;
+    domain-set:*) echo "$(L "도메인을 바꾸지 못했어요: 새 도메인 A 레코드가 이 서버를 가리키는지, 방화벽(80·443)이 열려 있는지 확인하세요. 지금 서비스는 그대로예요" "Could not change the domain: check that the new domain's A record points to this server and the firewall (80, 443) is open. The service stays as it is")" ;;
   esac
 }
 
 run_job() { # 작업 하나를 실행하고 결과(완료·되돌림·실패)를 상태에 남겨요 (잠금 안에서 한 번만 받은 작업이라, 기록이 실패해도 실행해요)
   local rc=0 why
   JOB_RUNNING=1; JOB_RAN=1; JOB_WHY=""
-  set_state running || warn "진행 상태를 못 남겼어요"
+  set_state running || warn "진행 상태를 못 남겼어요" "Could not record the running state"
   say_step "▶" "$JOB_KIND"
   if dispatch; then rc=0; else rc=$?; fi
   case "$rc" in
-    0) say_step "✔" "완료"; set_state ok || warn "완료 상태를 못 남겼어요" ;;
-    "$RC_ROLLED_BACK") why=$(fail_reason "$rc"); say_step "!" "${why:-이전 버전으로 되돌렸어요}"; set_state rolled_back "$why" || warn "되돌림 상태를 못 남겼어요" ;;
-    *) why=${JOB_WHY:-$(fail_reason "$rc")}; say_step "✘" "${why:-실패}"; set_state failed "$why" || warn "실패 상태를 못 남겼어요" ;;
+    0) say_step "✔" "$(L "완료" "Done")"; set_state ok || warn "완료 상태를 못 남겼어요" "Could not record the done state" ;;
+    "$RC_ROLLED_BACK") why=$(fail_reason "$rc"); say_step "!" "${why:-$(L "이전 버전으로 되돌렸어요" "Rolled back to the previous version")}"; set_state rolled_back "$why" || warn "되돌림 상태를 못 남겼어요" "Could not record the rolled-back state" ;;
+    *) why=${JOB_WHY:-$(fail_reason "$rc")}; say_step "✘" "${why:-$(L "실패" "Failed")}"; set_state failed "$why" || warn "실패 상태를 못 남겼어요" "Could not record the failed state" ;;
   esac
   JOB_RUNNING=""
 }
@@ -609,9 +626,9 @@ recover_interrupted() { # 실행 중에 꺼져서 running 으로 남은 작업�
     [ -f "$f" ] && [ ! -L "$f" ] || continue
     grep -q '"state":"running"' "$f" || continue
     id=$(basename -- "$f" .json)
-    write_file "$f" "$(sed 's/"state":"running"/"state":"failed"/' "$f")" || { warn "중단된 작업을 못 고쳤어요: $id"; continue; }
+    write_file "$f" "$(sed 's/"state":"running"/"state":"failed"/' "$f")" || { warn "중단된 작업을 못 고쳤어요: $id" "Could not fix the interrupted job: $id"; continue; }
     # shellcheck disable=SC2015 # the fallback is meant to run when either test fails
-    [ ! -L "$JOBS/status/$id.log" ] && printf '✘ %s\n' "중단됨 (서버가 실행 중에 다시 시작됐어요)" >> "$JOBS/status/$id.log" 2>/dev/null || true
+    [ ! -L "$JOBS/status/$id.log" ] && printf '✘ %s\n' "$(L "중단됨 (서버가 실행 중에 다시 시작됐어요)" "Interrupted (the server restarted while it was running)")" >> "$JOBS/status/$id.log" 2>/dev/null || true
   done
 }
 
@@ -628,9 +645,9 @@ reject_job() { # reject_job 번호 [이유] : 검사에 실패한 작업은 상�
   [ -z "${2:-}" ] || step=$(printf ',"step":"%s"' "$2")
   # 이미 상태가 있는 번호(예전 작업의 재전송)는 덮어쓰지 않아요. 끊어진 링크도 따라가지 않아요
   if printf '%s' "$id" | grep -Eq '^[0-9a-f-]{36}$' && [ ! -e "$dst" ] && [ ! -L "$dst" ]; then
-    printf '{"id":"%s","kind":"unknown","state":"rejected"%s}\n' "$id" "$step" > "$dst" || warn "거부 기록을 못 했어요"
+    printf '{"id":"%s","kind":"unknown","state":"rejected"%s}\n' "$id" "$step" > "$dst" || warn "거부 기록을 못 했어요" "Could not record the refusal"
   fi
-  warn "작업을 거부했어요: $id"
+  warn "작업을 거부했어요: $id" "Job refused: $id"
 }
 
 intake_check() { # intake_check 사본 번호 : 파일 내용과 번호를 검사해요 (성공하면 JOB_* 가 채워져요)
@@ -647,7 +664,7 @@ intake_one() { # intake_one 경로 : 작업 파일 하나를 규칙대로 받아
   copy=$(mktemp "$JOBS/work/copy.XXXXXX") || return 1
   if job_copy "$dst" "$copy" && intake_check "$copy" "$id"; then
     rm -f -- "$dst"
-    if ! ledger_take "$id"; then rm -f -- "$copy"; warn "같은 작업이 이미 있어요: $id"; return 0; fi
+    if ! ledger_take "$id"; then rm -f -- "$copy"; warn "같은 작업이 이미 있어요: $id" "The same job already exists: $id"; return 0; fi
     if is_high_kind "$JOB_KIND"; then hold_for_approval "$copy"; return; fi
     rm -f -- "$copy"; run_job
   else
@@ -662,12 +679,12 @@ intake_all() { # 승인 코드를 먼저 봐요 (30초 단위라 기다리면 �
   for f in "$JOBS"/inbox/*.approve; do
     [ -z "$JOB_RAN" ] || return 0
     [ -e "$f" ] || continue
-    approve_one "$f" || warn "건너뛰었어요: $(basename -- "$f")"
+    approve_one "$f" || warn "건너뛰었어요: $(basename -- "$f")" "Skipped: $(basename -- "$f")"
   done
   for f in "$JOBS"/inbox/*.job; do
     [ -z "$JOB_RAN" ] || return 0
     [ -e "$f" ] || continue
-    intake_one "$f" || warn "건너뛰었어요: $(basename -- "$f")"
+    intake_one "$f" || warn "건너뛰었어요: $(basename -- "$f")" "Skipped: $(basename -- "$f")"
   done
 }
 
@@ -677,15 +694,15 @@ main() {
       trap 'exit 143' TERM INT HUP
       trap abort_job EXIT
       # shellcheck disable=SC2015 # the fallback is meant to run when either test fails
-      exec 9>"$LOCK" && flock -w "$LOCK_WAIT" 9 || die "잠금을 잡지 못했어요"
-      dirs_ok || die "작업 폴더의 주인이나 권한이 안전하지 않아요"
+      exec 9>"$LOCK" && flock -w "$LOCK_WAIT" 9 || die "잠금을 잡지 못했어요" "Could not take the lock"
+      dirs_ok || die "작업 폴더의 주인이나 권한이 안전하지 않아요" "The job folders' owner or permissions are not safe"
       sweep_work
       recover_interrupted
       prune_old
-      host_refresh || warn "호스트 정보를 못 남겼어요"
+      host_refresh || warn "호스트 정보를 못 남겼어요" "Could not record the host information"
       expire_slot
       intake_all ;;
-    *) die "사용법: agent.sh run" ;;
+    *) die "사용법: agent.sh run" "Usage: agent.sh run" ;;
   esac
 }
 

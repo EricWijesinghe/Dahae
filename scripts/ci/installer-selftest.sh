@@ -17,6 +17,8 @@ eq() { [ "$1" = "$2" ] || { echo "   got [$1] want [$2]"; return 1; }; }
 
 bash -n "$ROOT/deploy/install.sh"
 bash -n "$ROOT/deploy/agent.sh"
+# The checks below read the Korean column (existing installs keep Korean); the English one is checked at the end.
+export DAHAE_LANG=ko
 # shellcheck source=deploy/install.sh
 DAHAE_SELFTEST=1 . "$ROOT/deploy/install.sh"
 set +e # the sourced installer turned on -e; failures are counted below, not fatal
@@ -1341,6 +1343,37 @@ nt "tools mode needs an installed server"           installed_here
 printf 'API_IMAGE=repo/api@sha256:aa\n' >> "$SB/.env"
 t  "...which has its images set"                    installed_here
 rm -rf "$SB/.env" "$SB/host" "$SB/rel" "$SB/tools.log"
+
+# ---- messages: two columns (Korean, English), one language per install ----
+lang_of() { ( unset DAHAE_LANG MALKKEUM_LANG LC_ALL; LANG="$1"; ui_lang "$2" ); } # lang_of LANG env파일
+printf 'DOMAIN=x\n' > "$SB/lang-fresh.env"
+printf 'DOMAIN=x\nAPI_IMAGE=repo/api@sha256:aa\n' > "$SB/lang-old.env"
+printf 'API_IMAGE=repo/api@sha256:aa\nINSTALL_LANG=en\n' > "$SB/lang-en.env"
+t  "lang: a new install is English by default"        eq "$(lang_of C.UTF-8 "$SB/none.env")" en
+t  "lang: a Korean system locale picks Korean"         eq "$(lang_of ko_KR.UTF-8 "$SB/none.env")" ko
+t  "lang: a half-done install follows the locale"      eq "$(lang_of C "$SB/lang-fresh.env")" en
+t  "lang: an install from before keeps Korean"         eq "$(lang_of C.UTF-8 "$SB/lang-old.env")" ko
+t  "lang: the recorded language wins over the locale"  eq "$(lang_of ko_KR.UTF-8 "$SB/lang-en.env")" en
+t  "lang: DAHAE_LANG (the install page) wins"          eq "$( ( unset MALKKEUM_LANG; DAHAE_LANG=ko ui_lang "$SB/lang-en.env" ) )" ko
+t  "lang: MALKKEUM_LANG is the old name"               eq "$( ( unset DAHAE_LANG; MALKKEUM_LANG=ko-KR ui_lang "$SB/none.env" ) )" ko
+t  "L: Korean column"                                  eq "$( UI_LANG=ko L 가 b )" 가
+t  "L: English column"                                 eq "$( UI_LANG=en L 가 b )" b
+t  "L: a one-column message prints that column"        eq "$( UI_LANG=en L 가 )" 가
+t  "Lf: the format follows the language"               eq "$( UI_LANG=en Lf '%s 가' '%s b' x )" "x b"
+t  "die speaks English on an English install"          grep -qF 'Run this on an Ubuntu' <<< "$( ( UI_LANG=en die "Ubuntu 또는 Debian 서버에서 실행해 주세요." "Run this on an Ubuntu or Debian server." ) 2>&1 )"
+# shellcheck disable=SC2016 # literal text searched in the installer
+t  "the installer records the language"                grep -qF 'then env_set INSTALL_LANG "$UI_LANG"; fi' "$ROOT/deploy/install.sh"
+# Every Korean message the installer, the dahae command it writes and the job runner print has an English column:
+# say/ok/warn/die/die_code take it as the next argument, everything else goes through L or Lf with two.
+untranslated() { # untranslated 파일 : 한국어 한 칸뿐인 메시지 줄
+  LC_ALL=C.UTF-8 grep -P '^\s*[^#\s].*\b(say|ok|warn|die|die_code "[^"]*") "[^"]*[\x{AC00}-\x{D7A3}][^"]*"\s*($|[;|&)>}])' "$1" || true
+}
+t  "the dahae command helps in English"                grep -q '^Usage: dahae <command>' <<< "$(DAHAE_LANG=en bash "$SB/dahae" help)"
+t  "...and in Korean"                                   grep -q '^사용법: dahae <명령>' <<< "$(DAHAE_LANG=ko bash "$SB/dahae" help)"
+t  "...and follows the recorded language"               grep -q '^Usage: dahae <command>' <<< "$( ( printf 'INSTALL_LANG=en\n' > "$SB/.env"; unset DAHAE_LANG; bash "$SB/dahae" help ); rm -f "$SB/.env" )"
+t  "installer: every message has an English column"    eq "$(untranslated "$ROOT/deploy/install.sh")" ""
+t  "agent: every message has an English column"        eq "$(untranslated "$ROOT/deploy/agent.sh")" ""
+t  "L calls always carry both columns"                 eq "$(grep -ohE '\$\(L "[^"$][^"]*"\)' "$ROOT/deploy/install.sh" "$ROOT/deploy/agent.sh")" ""
 
 bash "$ROOT/scripts/ci/agent-selftest.sh" >/dev/null ||{ FAIL=$((FAIL + 1)); echo "FAIL: agent self-test (run scripts/ci/agent-selftest.sh)"; }
 

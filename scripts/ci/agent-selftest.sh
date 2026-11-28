@@ -68,6 +68,8 @@ EOF
 chmod +x "$SB/bin/curl" "$SB/bin/getent" "$SB/bin/timeout"
 export PATH="$SB/bin:$PATH"
 
+# The checks read the Korean column (existing installs keep Korean); English is checked at the end.
+export DAHAE_LANG=ko
 # shellcheck source=deploy/agent.sh
 DAHAE_SELFTEST=1 . "$ROOT/deploy/agent.sh"
 set +e
@@ -704,6 +706,16 @@ t  "edition whose tools stayed asks for 'update now', no shell" sh -c 'case "$1"
 nt "...not the install line text"          grep -qF '설치 줄' <<< "$out"
 # shellcheck disable=SC2016 # literal text on purpose
 t  "any other edition failure says nothing changed" sh -c 'case "$1" in failed*"지금 판 그대로"*) ;; *) exit 1 ;; esac' _ "$(ed_end 1)"
+
+# ---- English installs: the same messages in the English column ----
+printf 'API_IMAGE=repo/api@sha256:aa\nINSTALL_LANG=en\n' > "$SB/lang-en.env"
+printf 'API_IMAGE=repo/api@sha256:aa\n' > "$SB/lang-old.env"
+t  "lang: the job runner follows the recorded language" eq "$( ( unset DAHAE_LANG MALKKEUM_LANG; ui_lang "$SB/lang-en.env" ) )" en
+t  "lang: an install from before keeps Korean"          eq "$( ( unset DAHAE_LANG MALKKEUM_LANG LC_ALL; LANG=C; ui_lang "$SB/lang-old.env" ) )" ko
+t  "summary in English"                  eq "$( UI_LANG=en summary_for update-tag v2.1.0 )" "Update: switch to version v2.1.0 (backs up first)"
+t  "redaction marker in English"         eq "$(printf 'Bearer abc.def\n' | UI_LANG=en mask_log)" "Bearer [redacted]"
+t  "redaction marker in Korean"          eq "$(printf 'Bearer abc.def\n' | UI_LANG=ko mask_log)" "Bearer [가려짐]"
+t  "a failure reason in English"         grep -qF 'Could not roll back' <<< "$( UI_LANG=en JOB_KIND=rollback fail_reason 1 )"
 
 echo "agent self-test: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ]

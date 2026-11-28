@@ -59,14 +59,33 @@ COSIGN_VERSION=v3.1.4
 COSIGN_SHA256_AMD64=424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa
 COSIGN_SHA256_ARM64=ade83b7aac62e131cacfe96d958948b2150cc9efec46a570a2649b8e27dedad2
 
-say()  { printf '\n\033[1;34m▶ %s\033[0m\n' "$*"; }
-ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
-warn() { printf '\033[1;33m! %s\033[0m\n' "$*"; }
-die()  { printf '\033[1;31m✘ %s\033[0m\n' "$*" >&2; exit 1; }
+# 메시지는 두 칸이에요: 한국어, 영어 (L 한국어 영어). 어느 칸을 쓸지는 UI_LANG 이 정해요 (ui_lang).
+# Messages come in two columns, Korean then English; UI_LANG picks one for the whole run. A message with one
+# column only prints that one.
+ui_lang() { # ui_lang env파일 -> ko|en : DAHAE_LANG/MALKKEUM_LANG, then INSTALL_LANG in .env, then Korean for an install
+  # from before INSTALL_LANG (its .env names a running image: existing installs keep Korean), then LC_ALL/LANG.
+  # English is the default for a new install.
+  local v="${DAHAE_LANG:-${MALKKEUM_LANG:-}}"
+  [ -n "$v" ] || v=$({ grep -E '^INSTALL_LANG=' "$1" 2>/dev/null || true; } | tail -n1 | cut -d= -f2-)
+  if [ -z "$v" ] && grep -Eq '^API_IMAGE=.' "$1" 2>/dev/null; then v=ko; fi
+  [ -n "$v" ] || v=${LC_ALL:-${LANG:-}}
+  case "$v" in ko*) printf ko ;; *) printf en ;; esac
+}
+UI_LANG=$(ui_lang "$DIR/.env")
+L() { if [ "${UI_LANG:-en}" = ko ]; then printf '%s' "$1"; else printf '%s' "${2:-$1}"; fi; }
+Lf() { # Lf 한국어형식 영어형식 값... : printf, 형식은 설치 언어로
+  local f; f=$(L "$1" "$2"); shift 2
+  # shellcheck disable=SC2059 # the format is one of two fixed catalogue strings
+  printf -- "$f" "$@"
+}
+say()  { printf '\n\033[1;34m▶ %s\033[0m\n' "$(L "$@")"; }
+ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$(L "$@")"; }
+warn() { printf '\033[1;33m! %s\033[0m\n' "$(L "$@")"; }
+die()  { printf '\033[1;31m✘ %s\033[0m\n' "$(L "$@")" >&2; exit 1; }
 dc() { # WAL 보관이 켜져 있으면 pgBackRest 이미지 설정(wal/)을 항상 같이 써요: 기본 이미지에는 pgbackrest 가 없어서 아카이브가 실패해요
   local -a compose_files=(-f docker-compose.yml)
   if [ "$(env_get WAL_ARCHIVE_MODE)" = on ]; then
-    [ -f wal/docker-compose.wal.yml ] || { echo "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." >&2; return 1; }
+    [ -f wal/docker-compose.wal.yml ] || { echo "$(L "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." "WAL_ARCHIVE_MODE=on but the wal/ settings are missing. Check the WAL settings again.")" >&2; return 1; }
     compose_files+=(-f wal/docker-compose.wal.yml)
   fi
   docker compose "${compose_files[@]}" --env-file .env "$@"
@@ -88,9 +107,9 @@ ask_until() { # ask_until 검사함수 "질문" "잘못됐을 때 안내" -> 답
   for i in 1 2 3; do
     a=$(ask "$q" "")
     if "$check" "$a"; then printf '%s' "$a"; return 0; fi
-    if [ -z "$a" ]; then warn "입력이 비어 있어요" >&2; else warn "$bad" >&2; fi
+    if [ -z "$a" ]; then warn "입력이 비어 있어요" "Nothing was entered" >&2; else warn "$bad" >&2; fi
     has_tty || break
-    [ "$i" -lt 3 ] && warn "다시 입력해 주세요 ($i/3)" >&2
+    [ "$i" -lt 3 ] && warn "다시 입력해 주세요 ($i/3)" "Please try again ($i/3)" >&2
   done
   return 1
 }
@@ -108,7 +127,7 @@ valid_email() { [ -z "$1" ] || printf '%s' "$1" | grep -Eq '^[A-Za-z0-9._+-]+@[A
 valid_setup_code() { printf '%s' "$1" | grep -Eq '^[2-9A-HJKMNP-Z]{12}$'; } # setup_code 와 같은 글자만 (0 O 1 I L 제외)
 check_setup_code_env() { # MALKKEUM_SETUP_CODE 가 있으면 형식을 검사해요 (틀리면 아무것도 바꾸기 전에 멈춰요)
   [ -z "${MALKKEUM_SETUP_CODE:-}" ] || valid_setup_code "$MALKKEUM_SETUP_CODE" || { printf '%s
-' "설치 코드는 12자리 영문 대문자·숫자예요 (0 O 1 I L 은 없어요)." >&2; return 1; }
+' "$(L "설치 코드는 12자리 영문 대문자·숫자예요 (0 O 1 I L 은 없어요)." "The setup code is 12 capital letters and digits (there is no 0, O, 1, I or L).")" >&2; return 1; }
 }
 valid_hb_url() { printf '%s' "$1" | grep -Eq "$HB_URL_RE"; }
 ver_ge() { [ "$(printf '%s\n%s\n' "${2#v}" "${1#v}" | sort -V | head -n1)" = "${2#v}" ]; } # ver_ge 2.29.1 2.20
@@ -162,7 +181,7 @@ setup_code() { # 0/O/1/I/L 을 뺀 12자리. 화면을 보고 손으로 입력�
 
 env_set() { # env_set 키 값 : .env 에 키가 있으면 바꾸고, 없으면 추가해요 (inode 와 권한은 그대로)
   local k="$1" v="$2" tmp; tmp=$(mktemp)
-  case "$v" in *$'\n'*|*$'\r'*) die "설정 값에 줄바꿈을 넣을 수 없어요" ;; esac
+  case "$v" in *$'\n'*|*$'\r'*) die "설정 값에 줄바꿈을 넣을 수 없어요" "A setting value cannot contain a line break" ;; esac
   if grep -q "^$k=" .env; then # 값은 -v 가 아니라 환경 변수로 넘겨요: awk 가 \n 같은 이스케이프를 바꾸지 않아요
     K="$k" V="$v" awk 'index($0, ENVIRON["K"] "=") == 1 { print ENVIRON["K"] "=" ENVIRON["V"]; next } { print }' .env > "$tmp"
   else
@@ -173,10 +192,10 @@ env_set() { # env_set 키 값 : .env 에 키가 있으면 바꾸고, 없으면 �
 
 load_images() { # load_images 파일 이미지... : tar 를 docker load 하고, 필요한 이미지가 다 있는지 확인해요
   local f="$1" img; shift
-  [ -f "$f" ] || die "이미지 파일을 찾을 수 없어요: $f"
-  docker load -i "$f" >/dev/null || die "이미지 파일을 불러오지 못했어요: $f"
+  [ -f "$f" ] || die "이미지 파일을 찾을 수 없어요: $f" "Image file not found: $f"
+  docker load -i "$f" >/dev/null || die "이미지 파일을 불러오지 못했어요: $f" "Could not load the image file: $f"
   for img in "$@"; do
-    docker image inspect "$img" >/dev/null 2>&1 || die "이미지 파일에 $img 이 없어요. 같은 버전으로 만든 파일인지 확인하세요."
+    docker image inspect "$img" >/dev/null 2>&1 || die "이미지 파일에 $img 이 없어요. 같은 버전으로 만든 파일인지 확인하세요." "The image file does not contain $img. Check that it was made for the same version."
   done
 }
 
@@ -184,7 +203,7 @@ apt_retry() { # 새 서버는 자동 업데이트가 apt 를 잠그고 있어요
   local i
   for i in 1 2 3; do
     DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout="$APT_LOCK_WAIT" "$@" && return 0
-    [ "$i" -lt 3 ] && { warn "패키지 설치가 잠시 막혔어요. 30초 뒤 다시 시도해요 ($i/3)"; sleep 30; }
+    [ "$i" -lt 3 ] && { warn "패키지 설치가 잠시 막혔어요. 30초 뒤 다시 시도해요 ($i/3)" "Package installation is briefly blocked. Trying again in 30 seconds ($i/3)"; sleep 30; }
   done
   return 1
 }
@@ -192,15 +211,15 @@ apt_retry() { # 새 서버는 자동 업데이트가 apt 를 잠그고 있어요
 install_cosign() { # 서명 확인 도구를 $DIR/bin/cosign 에 둬요. 지문(SHA-256)이 다르면 설치를 멈춰요
   local arch sum tmp dest="$DIR/bin/cosign"
   arch=$(uname -m)
-  sum=$(cosign_sha256 "$arch") || die "이 서버($arch)용 서명 확인 도구가 없어요."
+  sum=$(cosign_sha256 "$arch") || die "이 서버($arch)용 서명 확인 도구가 없어요." "There is no signature checker for this server ($arch)."
   if [ -x "$dest" ] && sha256_is "$dest" "$sum"; then return 0; fi
   case "$arch" in x86_64|amd64) arch=amd64 ;; *) arch=arm64 ;; esac
   mkdir -p "$DIR/bin"; tmp=$(mktemp "$DIR/bin/.cosign.XXXXXX")
   if ! curl -fsSL --retry 3 --max-time 180 -o "$tmp" "https://github.com/sigstore/cosign/releases/download/$COSIGN_VERSION/cosign-linux-$arch"; then
-    rm -f "$tmp"; die "이미지 서명 확인 도구(cosign)를 내려받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요."
+    rm -f "$tmp"; die "이미지 서명 확인 도구(cosign)를 내려받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요." "Could not download the image signature checker (cosign). Check the internet connection and run again."
   fi
   if ! sha256_is "$tmp" "$sum"; then
-    rm -f "$tmp"; die "내려받은 서명 확인 도구(cosign)의 지문이 예상과 달라요. 안전을 위해 멈췄어요. 잠시 뒤 다시 실행하고, 계속되면 개발자에게 알려 주세요."
+    rm -f "$tmp"; die "내려받은 서명 확인 도구(cosign)의 지문이 예상과 달라요. 안전을 위해 멈췄어요. 잠시 뒤 다시 실행하고, 계속되면 개발자에게 알려 주세요." "The downloaded signature checker (cosign) has an unexpected fingerprint. Stopped for safety. Run again in a while, and tell the developer if it keeps happening."
   fi
   chmod 755 "$tmp"; mv -f "$tmp" "$dest"
 }
@@ -220,20 +239,20 @@ KEYONLY_CONF=/etc/ssh/sshd_config.d/00-dahae-keyonly.conf
 firewall_wanted() { # 방화벽을 켤지 물어요. MALKKEUM_FIREWALL=on|off 로 묻지 않고 정할 수 있어요
   local a
   case "${MALKKEUM_FIREWALL:-}" in on) return 0 ;; off) return 1 ;; esac
-  a=$(ask "방화벽(ufw)을 켜고 22(SSH)·80·443 포트만 열까요? (y/N)" n)
+  a=$(ask "$(L "방화벽(ufw)을 켜고 22(SSH)·80·443 포트만 열까요? (y/N)" "Turn on the firewall (ufw) and open only ports 22 (SSH), 80 and 443? (y/N)")" n)
   case "$a" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
 ufw_allow_web() { ufw allow 22/tcp >/dev/null && ufw allow 80/tcp >/dev/null && ufw allow 443/tcp >/dev/null; }
 firewall_setup() { # 이미 켜져 있으면 규칙만 맞추고, 꺼져 있으면 확인을 받은 뒤에만 켜요 (SSH 규칙을 먼저 넣어요)
-  command -v ufw >/dev/null || { warn "ufw 가 없어 방화벽을 설정하지 못했어요"; return 0; }
+  command -v ufw >/dev/null || { warn "ufw 가 없어 방화벽을 설정하지 못했어요" "ufw is missing, so the firewall was not set up"; return 0; }
   if ufw status | grep -q '^Status: active'; then
-    ufw_allow_web || warn "방화벽 규칙을 넣지 못했어요"
+    ufw_allow_web || warn "방화벽 규칙을 넣지 못했어요" "Could not add the firewall rules"
   elif firewall_wanted; then
     if ! { ufw_allow_web && ufw default deny incoming >/dev/null && ufw default allow outgoing >/dev/null \
-      && ufw --force enable >/dev/null; }; then die "방화벽을 켜지 못했어요. 'sudo ufw status' 를 확인하세요."; fi
-    ok "방화벽을 켰어요 (22·80·443 만 열려 있어요)"
+      && ufw --force enable >/dev/null; }; then die "방화벽을 켜지 못했어요. 'sudo ufw status' 를 확인하세요." "Could not turn on the firewall. Check 'sudo ufw status'."; fi
+    ok "방화벽을 켰어요 (22·80·443 만 열려 있어요)" "Firewall on (only 22, 80 and 443 are open)"
   else
-    warn "방화벽을 켜지 않았어요. 클라우드 콘솔 방화벽에서 22·80·443 만 열어 두세요 (나중에 'sudo ufw enable' 로 켤 수 있어요)"
+    warn "방화벽을 켜지 않았어요. 클라우드 콘솔 방화벽에서 22·80·443 만 열어 두세요 (나중에 'sudo ufw enable' 로 켤 수 있어요)" "The firewall was not turned on. Open only 22, 80 and 443 in your cloud console's firewall (you can turn it on later with 'sudo ufw enable')"
   fi
 }
 operator_account() { # 이 설치를 맡은 계정: sudo 로 실행했으면 그 계정, 아니면 root
@@ -249,23 +268,23 @@ login_key_file() { # login_key_file 계정 : 그 계정의 SSH 공개 키 파일
 ssh_keyonly_check() { # 비밀번호 로그인이 켜져 있으면 알려요. 이 계정에 SSH 키가 있을 때만, 확인을 받고 끌어요 (키 없이 끄면 접속을 잃어요)
   local cfg acct keyf
   command -v sshd >/dev/null || return 0
-  cfg=$(sshd -T 2>/dev/null) || { warn "SSH 설정을 읽지 못해 비밀번호 로그인 여부를 확인하지 못했어요"; return 0; }
-  password_login_on "$cfg" || { ok "SSH 는 키로만 접속할 수 있어요"; return 0; }
-  warn "SSH 비밀번호 로그인이 켜져 있어요. 무차별 대입 공격을 받기 쉬워요."
+  cfg=$(sshd -T 2>/dev/null) || { warn "SSH 설정을 읽지 못해 비밀번호 로그인 여부를 확인하지 못했어요" "Could not read the SSH settings, so password login was not checked"; return 0; }
+  password_login_on "$cfg" || { ok "SSH 는 키로만 접속할 수 있어요" "SSH accepts keys only"; return 0; }
+  warn "SSH 비밀번호 로그인이 켜져 있어요. 무차별 대입 공격을 받기 쉬워요." "SSH password login is on. It is easy to attack by guessing passwords."
   acct=$(operator_account)
-  keyf=$(login_key_file "$acct") || { warn "계정 '$acct' 의 홈 폴더를 찾지 못해 SSH 키를 확인하지 못했어요"; return 0; }
-  has_key "$keyf" || { warn "계정 '$acct' 에 SSH 공개 키가 아직 없어요. 키를 등록한 뒤 다시 실행하면 비밀번호 로그인을 끌 수 있어요."; return 0; }
-  [ "$(ask "SSH 비밀번호 로그인을 끌까요? 끄면 '$acct' 계정은 SSH 키로만 접속해요. (y/N)" n)" = y ] || { warn "비밀번호 로그인을 그대로 두었어요"; return 0; }
+  keyf=$(login_key_file "$acct") || { warn "계정 '$acct' 의 홈 폴더를 찾지 못해 SSH 키를 확인하지 못했어요" "Could not find the home folder of account '$acct', so its SSH key was not checked"; return 0; }
+  has_key "$keyf" || { warn "계정 '$acct' 에 SSH 공개 키가 아직 없어요. 키를 등록한 뒤 다시 실행하면 비밀번호 로그인을 끌 수 있어요." "Account '$acct' has no SSH public key yet. Add a key and run again to turn password login off."; return 0; }
+  [ "$(ask "$(L "SSH 비밀번호 로그인을 끌까요? 끄면 '$acct' 계정은 SSH 키로만 접속해요. (y/N)" "Turn off SSH password login? Account '$acct' will then sign in with its SSH key only. (y/N)")" n)" = y ] || { warn "비밀번호 로그인을 그대로 두었어요" "Password login was left on"; return 0; }
   write_keyonly_dropin "$KEYONLY_CONF"
   if sshd -t 2>/dev/null; then
-    { systemctl reload ssh || systemctl reload sshd; } >/dev/null 2>&1 && ok "SSH 비밀번호 로그인을 껐어요" && return 0
+    { systemctl reload ssh || systemctl reload sshd; } >/dev/null 2>&1 && ok "SSH 비밀번호 로그인을 껐어요" "SSH password login turned off" && return 0
   fi
-  rm -f "$KEYONLY_CONF"; warn "SSH 설정을 바꾸지 못해 되돌렸어요"
+  rm -f "$KEYONLY_CONF"; warn "SSH 설정을 바꾸지 못해 되돌렸어요" "Could not change the SSH settings, so they were put back"
 }
 harden_host() { # 자동 보안 업데이트 · fail2ban(SSH 감옥) · 방화벽 · SSH 키 로그인 점검
   write_auto_upgrades /etc/apt/apt.conf.d/20auto-upgrades
   write_f2b_jail /etc/fail2ban/jail.d/dahae-sshd.local
-  systemctl enable fail2ban >/dev/null 2>&1; systemctl restart fail2ban >/dev/null 2>&1 || warn "fail2ban 을 켜지 못했어요"
+  systemctl enable fail2ban >/dev/null 2>&1; systemctl restart fail2ban >/dev/null 2>&1 || warn "fail2ban 을 켜지 못했어요" "Could not turn on fail2ban"
   firewall_setup
   ssh_keyonly_check
 }
@@ -273,39 +292,39 @@ harden_host() { # 자동 보안 업데이트 · fail2ban(SSH 감옥) · 방화�
 preflight() {
   local arch mem swap need p free busy
   arch=$(uname -m)
-  arch_ok "$arch" || die "이 서버($arch)는 지원하지 않아요. x86_64(amd64) 또는 arm64 서버가 필요해요."
+  arch_ok "$arch" || die "이 서버($arch)는 지원하지 않아요. x86_64(amd64) 또는 arm64 서버가 필요해요." "This server ($arch) is not supported. An x86_64 (amd64) or arm64 server is needed."
   mem=$(mem_kb MemTotal); swap=$(mem_kb SwapTotal)
-  [ "$mem" -ge "$MIN_RAM_KB" ] || die "메모리가 $((mem / 1024)) MB 예요. 최소 1 GB, 권장 2 GB 이상인 서버가 필요해요."
+  [ "$mem" -ge "$MIN_RAM_KB" ] || die "메모리가 $((mem / 1024)) MB 예요. 최소 1 GB, 권장 2 GB 이상인 서버가 필요해요." "The server has $((mem / 1024)) MB of memory. At least 1 GB is needed, 2 GB or more recommended."
   need=$DISK_FRESH_KB; [ -f "$DIR/.env" ] && need=$DISK_UPGRADE_KB
   for p in /var/lib /opt; do
     [ -d "$p" ] || continue
     free=$(disk_free_kb "$p")
-    [ "$free" -ge "$need" ] || die "$p 의 남은 디스크가 $((free / 1024)) MB 예요. 최소 $((need / KB_PER_GB)) GB 가 필요해요. 필요 없는 파일을 지우거나 디스크를 늘려 주세요."
+    [ "$free" -ge "$need" ] || die "$p 의 남은 디스크가 $((free / 1024)) MB 예요. 최소 $((need / KB_PER_GB)) GB 가 필요해요. 필요 없는 파일을 지우거나 디스크를 늘려 주세요." "$p has $((free / 1024)) MB of free disk. At least $((need / KB_PER_GB)) GB is needed. Delete files you do not need or enlarge the disk."
   done
   if [ "$mem" -lt "$SWAP_BELOW_KB" ] && [ "$swap" -eq 0 ]; then make_swap; fi
   if command -v ss >/dev/null; then
     busy=$(ss -ltnpH '( sport = :80 or sport = :443 )' 2>/dev/null | port_holders | tr '\n' ' ' || true)
-    [ -z "$busy" ] || die "80/443 포트를 다른 프로그램(${busy% })이 쓰고 있어요. 그 프로그램을 끄고 다시 실행하세요. 예: sudo systemctl disable --now nginx apache2"
+    [ -z "$busy" ] || die "80/443 포트를 다른 프로그램(${busy% })이 쓰고 있어요. 그 프로그램을 끄고 다시 실행하세요. 예: sudo systemctl disable --now nginx apache2" "Ports 80/443 are used by another program (${busy% }). Stop that program and run again. Example: sudo systemctl disable --now nginx apache2"
   else
-    warn "ss 명령이 없어 80/443 포트 확인은 건너뛰었어요"
+    warn "ss 명령이 없어 80/443 포트 확인은 건너뛰었어요" "The ss command is missing, so the 80/443 port check was skipped"
   fi
-  ok "서버 점검 통과 ($arch, 메모리 $((mem / 1024)) MB)"
+  ok "서버 점검 통과 ($arch, 메모리 $((mem / 1024)) MB)" "Server check passed ($arch, memory $((mem / 1024)) MB)"
 }
 
 make_swap() {
   local free; free=$(disk_free_kb /)
   if [ -e /swapfile ] || [ "$free" -lt $((DISK_FRESH_KB + 2 * KB_PER_GB)) ]; then
-    warn "메모리가 2 GB 보다 작은데 스왑이 없어요. 디스크가 부족하거나 /swapfile 이 이미 있어서 만들지 않았어요."
+    warn "메모리가 2 GB 보다 작은데 스왑이 없어요. 디스크가 부족하거나 /swapfile 이 이미 있어서 만들지 않았어요." "Memory is below 2 GB and there is no swap. It was not created because the disk is short or /swapfile already exists."
     return 0
   fi
-  say "메모리가 2 GB 보다 작아서 2 GB 스왑 파일을 만들어요"
+  say "메모리가 2 GB 보다 작아서 2 GB 스왑 파일을 만들어요" "Memory is below 2 GB, so a 2 GB swap file is being created"
   if (umask 077; fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none) \
       && mkswap /swapfile >/dev/null && swapon /swapfile; then
     grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-    ok "스왑 2 GB 를 켰어요 (재부팅 후에도 유지)"
+    ok "스왑 2 GB 를 켰어요 (재부팅 후에도 유지)" "2 GB swap on (kept after a reboot)"
   else
     rm -f /swapfile
-    warn "스왑을 만들지 못했어요 (서버 종류에 따라 막혀 있어요). 그대로 진행하지만 느릴 수 있어요."
+    warn "스왑을 만들지 못했어요 (서버 종류에 따라 막혀 있어요). 그대로 진행하지만 느릴 수 있어요." "Could not create swap (some server types block it). Continuing, but it may be slow."
   fi
 }
 
@@ -321,25 +340,25 @@ public_ip() {
 dns_check() { # DNS_OK=1 이면 도메인이 이 서버를 가리켜요
   DNS_OK=1
   if [ "$TLS_MODE" = internal ] || [ -n "${MALKKEUM_SKIP_DNS_CHECK:-}" ]; then
-    ok "도메인 IP 확인은 건너뛰었어요 (테스트 설치)"; return 0
+    ok "도메인 IP 확인은 건너뛰었어요 (테스트 설치)" "Domain IP check skipped (test install)"; return 0
   fi
   local server a4 a6 bad6 v i
   server=$(public_ip)
-  if [ -z "$server" ]; then warn "이 서버의 공인 IP 를 알 수 없어 도메인 확인을 건너뛰어요."; return 0; fi
+  if [ -z "$server" ]; then warn "이 서버의 공인 IP 를 알 수 없어 도메인 확인을 건너뛰어요." "The public IP of this server is unknown, so the domain check is skipped."; return 0; fi
   for i in $(seq "$DNS_MAX_TRIES"); do
     a4=$(dig +short A "$DOMAIN" 2>/dev/null | only_ipv4 || true)
     a6=$(dig +short AAAA "$DOMAIN" 2>/dev/null | only_ipv6 || true); bad6=""
     # AAAA 는 이 서버 주소여도 막아요: IPv6 손님이 모두 도커 게이트웨이 주소로 보여, 한 사람이 모든 IPv6 손님의 로그인을 막을 수 있어요
     for v in $a6; do bad6="$bad6 $v"; done
-    if ip_in_list "$server" "$a4" && [ -z "$bad6" ]; then ok "$DOMAIN → $server (이 서버)"; return 0; fi
-    warn "$DOMAIN 이 아직 이 서버를 가리키지 않아요 (현재 A: ${a4:-없음})."
-    printf '   도메인 관리 화면에서 이렇게 설정하세요:  A 레코드   %s   →   %s\n' "$DOMAIN" "$server"
-    [ -z "$bad6" ] || printf '   AAAA(IPv6) 레코드%s 를 지우세요. 이 서버 주소여도 지워야 해요 (IPv6 접속은 아직 받지 않아요).\n' "$bad6"
+    if ip_in_list "$server" "$a4" && [ -z "$bad6" ]; then ok "$DOMAIN → $server (이 서버)" "$DOMAIN -> $server (this server)"; return 0; fi
+    warn "$DOMAIN 이 아직 이 서버를 가리키지 않아요 (현재 A: ${a4:-없음})." "$DOMAIN does not point to this server yet (current A: ${a4:-none})."
+    Lf '   도메인 관리 화면에서 이렇게 설정하세요:  A 레코드   %s   →   %s\n' '   Set this in your domain DNS settings:  A record   %s   ->   %s\n' "$DOMAIN" "$server"
+    [ -z "$bad6" ] || Lf '   AAAA(IPv6) 레코드%s 를 지우세요. 이 서버 주소여도 지워야 해요 (IPv6 접속은 아직 받지 않아요).\n' '   Delete the AAAA (IPv6) record%s, even if it is this server (IPv6 is not served yet).\n' "$bad6"
     if ! has_tty; then break; fi
-    [ "$(ask "설정한 뒤 Enter 를 누르면 다시 확인해요. 반영까지 몇 분 걸릴 수 있어요 (건너뛰려면 s, $i/$DNS_MAX_TRIES)" "")" = s ] && break
+    [ "$(ask "$(L "설정한 뒤 Enter 를 누르면 다시 확인해요. 반영까지 몇 분 걸릴 수 있어요 (건너뛰려면 s, $i/$DNS_MAX_TRIES)" "Press Enter once it is set to check again. It can take a few minutes (s to skip, $i/$DNS_MAX_TRIES)")" "")" = s ] && break
   done
   DNS_OK=0
-  warn "도메인 연결 전이라도 설치는 계속해요. DNS 가 연결되면 HTTPS 인증서가 자동으로 발급돼요."
+  warn "도메인 연결 전이라도 설치는 계속해요. DNS 가 연결되면 HTTPS 인증서가 자동으로 발급돼요." "Installation continues before the domain is connected. Once DNS points here, the HTTPS certificate is issued automatically."
 }
 
 # ---- 서버가 가진 파일들 ----
@@ -523,23 +542,66 @@ USAGE='사용법: dahae <명령>
   keys-confirm                비밀 키 사본을 서버 밖에 보관했다고 기록하기 (콘솔에서 내려받으면 자동으로 해요)
   keys-restore 파일 [--yes]   새 서버에 예전 비밀 키 넣기 (restore-offsite 전에)
   alert update|backup|ssh     자동 작업 실패·SSH 차단 증가를 외부 가동 확인 주소로 알리기 (예약 작업·서버 점검용)'
+USAGE_EN='Usage: dahae <command>
+  status                      service status
+  update [tag]                backup -> new version -> automatic rollback if it does not answer
+  rollback                    go back to the previous version
+  channel stable|beta         change the update channel
+  edition <name>              change the update edition (only when the editions table lists this domain; backup -> new edition -> rollback if it does not answer)
+  version                     current version
+  backup                      back up now
+  restore file [--yes]        restore a backup (database + photos)
+  restore-offsite [name] [--yes]  list off-site backups / download and restore one
+  load file.tar               load images downloaded in advance (update without internet)
+  heartbeat <https address>|off  set the external uptime ping address
+  domain <new domain> [--yes]  change the service address (the old address keeps answering; rolls back if the new one does not answer)
+  host-approval enroll <number>|status  create the server approval code / status (approves version changes and rollbacks)
+  owner-reset                 delete the server approval code (asks for confirmation text)
+  applinks --android-sha256 fp[,fp] --apple-team-id TEAMID   set app links
+  demo load [--force] | demo clear   demo data
+  logs [api|web|db]           show logs
+  setup-code [--renew]        owner account setup code (valid 7 days; --renew makes a new one)
+  update-schedule mon@04:00|off  automatic update day and time (off: no automatic updates)
+  uninstall [--yes]           stop the services (data and backups stay)
+  uninstall --purge [--confirm domain]  delete data and backups too (confirm by typing the domain; --yes does not skip it)
+  keys-backup                 make a password-locked copy of the secret keys (keep it off the server: needed to open off-site backups)
+  keys-confirm                record that the secret key copy is kept off the server (automatic when downloaded in the console)
+  keys-restore file [--yes]   put the old secret keys on a new server (before restore-offsite)
+  alert update|backup|ssh     report failed automatic jobs or rising SSH bans to the uptime ping address (for scheduled jobs and checks)'
 
 dc() { # WAL 보관이 켜져 있으면 pgBackRest 이미지 설정(wal/)을 항상 같이 써요: 기본 이미지에는 pgbackrest 가 없어서 아카이브가 실패해요
   local -a compose_files=(-f docker-compose.yml)
   if [ "$(env_get WAL_ARCHIVE_MODE)" = on ]; then
-    [ -f wal/docker-compose.wal.yml ] || { echo "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." >&2; return 1; }
+    [ -f wal/docker-compose.wal.yml ] || { echo "$(L "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." "WAL_ARCHIVE_MODE=on but the wal/ settings are missing. Check the WAL settings again.")" >&2; return 1; }
     compose_files+=(-f wal/docker-compose.wal.yml)
   fi
   docker compose "${compose_files[@]}" --env-file .env "$@"
 }
-ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
-warn() { printf '\033[1;33m! %s\033[0m\n' "$*"; }
-die()  { printf '\033[1;31m✘ %s\033[0m\n' "$*" >&2; exit 1; }
+# 메시지는 두 칸이에요: 한국어, 영어. 언어는 설치 프로그램이 .env 에 적은 INSTALL_LANG 을 따라요 (install.sh ui_lang).
+# Messages come in two columns, Korean then English, in the install's language (INSTALL_LANG, set by install.sh).
+ui_lang() { # ui_lang env파일 -> ko|en
+  local v="${DAHAE_LANG:-${MALKKEUM_LANG:-}}"
+  [ -n "$v" ] || v=$({ grep -E '^INSTALL_LANG=' "$1" 2>/dev/null || true; } | tail -n1 | cut -d= -f2-)
+  if [ -z "$v" ] && grep -Eq '^API_IMAGE=.' "$1" 2>/dev/null; then v=ko; fi
+  [ -n "$v" ] || v=${LC_ALL:-${LANG:-}}
+  case "$v" in ko*) printf ko ;; *) printf en ;; esac
+}
+UI_LANG=$(ui_lang "$DIR/.env")
+L() { if [ "${UI_LANG:-en}" = ko ]; then printf '%s' "$1"; else printf '%s' "${2:-$1}"; fi; }
+Lf() { # Lf 한국어형식 영어형식 값...
+  local f; f=$(L "$1" "$2"); shift 2
+  # shellcheck disable=SC2059 # the format is one of two fixed catalogue strings
+  printf -- "$f" "$@"
+}
+USAGE=$(L "$USAGE" "$USAGE_EN")
+ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$(L "$@")"; }
+warn() { printf '\033[1;33m! %s\033[0m\n' "$(L "$@")"; }
+die()  { printf '\033[1;31m✘ %s\033[0m\n' "$(L "$@")" >&2; exit 1; }
 has_tty() { (: </dev/tty) 2>/dev/null; }
 env_get() { { grep -E "^$1=" .env 2>/dev/null || true; } | tail -n1 | cut -d= -f2-; }
 env_set() { # 키 값 : .env 에 기록 (있으면 바꾸고 없으면 추가)
   local k="$1" v="$2" tmp; tmp=$(mktemp)
-  case "$v" in *$'\n'*|*$'\r'*) die "설정 값에 줄바꿈을 넣을 수 없어요" ;; esac
+  case "$v" in *$'\n'*|*$'\r'*) die "설정 값에 줄바꿈을 넣을 수 없어요" "A setting value cannot contain a line break" ;; esac
   if grep -q "^$k=" .env; then
     K="$k" V="$v" awk 'index($0, ENVIRON["K"] "=") == 1 { print ENVIRON["K"] "=" ENVIRON["V"]; next } { print }' .env > "$tmp"
   else
@@ -550,10 +612,10 @@ env_set() { # 키 값 : .env 에 기록 (있으면 바꾸고 없으면 추가)
 confirm() { # confirm "질문" 기대값 : 터미널에서 기대값을 입력해야 통과 (--yes 면 묻지 않아요)
   local a=""
   [ "${YES:-0}" = 1 ] && return 0
-  has_tty || die "확인할 터미널이 없어요. 스크립트에서는 --yes 를 붙여 주세요."
-  printf '%s (%s 입력) ' "$1" "$2" >/dev/tty
+  has_tty || die "확인할 터미널이 없어요. 스크립트에서는 --yes 를 붙여 주세요." "There is no terminal to confirm on. Add --yes in scripts."
+  Lf '%s (%s 입력) ' '%s (type %s) ' "$1" "$2" >/dev/tty
   IFS= read -r a </dev/tty || true
-  [ "$a" = "$2" ] || die "취소했어요."
+  [ "$a" = "$2" ] || die "취소했어요." "Cancelled."
 }
 uploads_for() { local b; b=$(basename "$1"); b=${b#db-}; b=${b%.enc}; printf '%s/uploads-%s.tar.gz' "$(dirname "$1")" "${b%.sql.gz}"; }
 # 봉인된 백업(.enc)은 같은 폴더에 풀어요. 풀린 평문은 SCRATCH 에 넣어 두었다가 명령이 끝나면 지워요.
@@ -568,7 +630,7 @@ seal_local() { # seal_local 파일 : 봉인된 .enc 를 확인한 뒤에만 평�
   # Already sealed (the plaintext went with an earlier seal): keep that copy, never delete it below.
   if [ ! -e "$f" ] && [ -s "$f.enc" ]; then return 0; fi
   if api_backup backup-seal "/$f" "/$f.enc" >> backups/backup.log 2>&1 && [ -s "$f.enc" ]; then rm -f -- "$f"; return 0; fi
-  rm -f -- "$f.enc"; BACKUP_WARN=1; warn "백업 봉인에 실패했어요. 평문 사본은 그대로 남겨 두었어요: $f"; return 1
+  rm -f -- "$f.enc"; BACKUP_WARN=1; warn "백업 봉인에 실패했어요. 평문 사본은 그대로 남겨 두었어요: $f" "Could not seal the backup. The plain copy was kept: $f"; return 1
 }
 # 복원·업데이트·되돌리기 전에 쓰는 백업 파일은 backups/ 안의 상대 경로만 받아요 (컨테이너는 그 폴더만 보여요)
 backup_rel() { printf '%s' "${1#"$DIR"/}"; } # 'dahae backup' 이 보여 주는 전체 경로도 backups/... 로 받아요
@@ -595,9 +657,9 @@ signer_re() { # signer_re 서명자 [태그] : 태그를 주면 정확히 그 �
 
 purge_ok() { # purge_ok [입력한 도메인] : 데이터 삭제는 --yes 나 DAHAE_YES 로 넘어가지 않아요. 도메인을 직접 맞혀야 해요
   local d YES=0; d=$(env_get DOMAIN)
-  [ -n "$d" ] || die "설정 파일에 도메인이 없어 삭제를 확인할 수 없어요."
-  if [ -n "${1:-}" ]; then [ "$1" = "$d" ] || die "도메인이 달라서 취소했어요."; return 0; fi
-  confirm "모든 고객·예약 데이터와 백업을 지울까요? 되돌릴 수 없어요. 확인을 위해 도메인을" "$d"
+  [ -n "$d" ] || die "설정 파일에 도메인이 없어 삭제를 확인할 수 없어요." "The settings file has no domain, so deletion cannot be confirmed."
+  if [ -n "${1:-}" ]; then [ "$1" = "$d" ] || die "도메인이 달라서 취소했어요." "The domain does not match, so it was cancelled."; return 0; fi
+  confirm "$(L "모든 고객·예약 데이터와 백업을 지울까요? 되돌릴 수 없어요. 확인을 위해 도메인을" "Delete all customer and booking data and every backup? This cannot be undone. To confirm, type the domain")" "$d"
 }
 
 # 사진 백업은 uploads/ 아래 평범한 파일과 폴더만 담아야 해요: 절대 경로, .., 링크, 장치 파일이 있으면 거부해요.
@@ -677,34 +739,36 @@ END $$;
 SQL
 }
 db_up() { # DB 컨테이너를 켜요 (이미 켜져 있으면 그대로예요). 백업·계정 준비·복원 전에 써요
-  dc up -d --wait db >/dev/null || die "DB 를 시작하지 못했어요. 'dahae logs db' 로 확인하세요."
+  dc up -d --wait db >/dev/null || die "DB 를 시작하지 못했어요. 'dahae logs db' 로 확인하세요." "Could not start the database. Check 'dahae logs db'."
   # 첫 시작 때 healthcheck 는 초기화용 서버(유닉스 소켓만)에서 DB 가 만들어지기 전에 통과해요. 최종 서버만 TCP 로 받아요
   local end=$((SECONDS + DB_READY_SECS))
   until dc exec -T db pg_isready -q -h 127.0.0.1 -U app -d cleaning >/dev/null 2>&1; do
-    [ "$SECONDS" -ge "$end" ] && die "DB 를 시작하지 못했어요. 'dahae logs db' 로 확인하세요."
+    [ "$SECONDS" -ge "$end" ] && die "DB 를 시작하지 못했어요. 'dahae logs db' 로 확인하세요." "Could not start the database. Check 'dahae logs db'."
     sleep 2
   done
 }
 db_roles() { # 앱 DB 계정 준비. 설치·업데이트·복원 전에 매번 실행해요 (이미 돼 있으면 바뀌는 게 없어요)
   local pw; db_up; pw=$(env_get API_DB_PASSWORD)
-  printf '%s' "$pw" | grep -Eq '^[0-9a-f]{32,}$' || die "설정 파일에 API_DB_PASSWORD 가 없어요. 설치 프로그램을 다시 실행하세요."
+  printf '%s' "$pw" | grep -Eq '^[0-9a-f]{32,}$' || die "설정 파일에 API_DB_PASSWORD 가 없어요. 설치 프로그램을 다시 실행하세요." "The settings file has no API_DB_PASSWORD. Run the installer again."
   db_roles_sql "$pw" | dc exec -T db psql -X -v ON_ERROR_STOP=1 -q -U app -d cleaning >/dev/null \
-    || die "앱 DB 계정을 준비하지 못했어요. 'dahae logs db' 로 확인하세요. 지금 서비스는 그대로예요."
+    || die "앱 DB 계정을 준비하지 못했어요. 'dahae logs db' 로 확인하세요. 지금 서비스는 그대로예요." "Could not prepare the app's database account. Check 'dahae logs db'. The service stays as it is."
 }
 
 verify_image() { # verify_image 저장소/이름:태그 -> 서명이 확인된 저장소/이름@sha256:… (확인 못 하면 멈춰요)
   local ref="$1" signer out digest cosign="$DIR/bin/cosign"
   signer=$(env_get SIGNER_REPO)
-  valid_signer "$signer" || die "이미지 서명자 설정(SIGNER_REPO)이 없거나 이상해요: '$signer'. 설치 프로그램을 다시 실행하세요."
-  [ -x "$cosign" ] || die "이미지 서명 확인 도구($cosign)가 없어요. 설치 프로그램을 다시 실행하세요. 지금 서비스는 그대로예요."
+  valid_signer "$signer" || die "이미지 서명자 설정(SIGNER_REPO)이 없거나 이상해요: '$signer'. 설치 프로그램을 다시 실행하세요." "The image signer setting (SIGNER_REPO) is missing or malformed: '$signer'. Run the installer again."
+  [ -x "$cosign" ] || die "이미지 서명 확인 도구($cosign)가 없어요. 설치 프로그램을 다시 실행하세요. 지금 서비스는 그대로예요." "The image signature checker ($cosign) is missing. Run the installer again. The service stays as it is."
   if ! out=$(TUF_ROOT="$DIR/.sigstore" "$cosign" verify --certificate-identity-regexp "$(signer_re "$signer")" \
       --certificate-oidc-issuer "$SIGN_ISSUER" -o json "$ref" 2>&1); then
     printf '%s\n' "$out" | tail -n 3 >&2
     die "이미지 서명을 확인하지 못해서 새 버전을 적용하지 않았어요: $ref
-  정식 릴리스($signer)가 서명한 이미지가 아니거나 서명 확인 서버(sigstore)에 닿지 못했어요. 지금 서비스는 그대로예요."
+  정식 릴리스($signer)가 서명한 이미지가 아니거나 서명 확인 서버(sigstore)에 닿지 못했어요. 지금 서비스는 그대로예요." \
+      "The image signature could not be checked, so the new version was not applied: $ref
+  The image is not signed by the official release ($signer), or the signature server (sigstore) could not be reached. The service stays as it is."
   fi
   digest=$(printf '%s' "$out" | grep -o '"docker-manifest-digest":"sha256:[0-9a-f]\{64\}"' | head -n1 | cut -d'"' -f4)
-  [ -n "$digest" ] || die "서명 확인 결과에서 이미지 지문을 찾지 못했어요: $ref. 지금 서비스는 그대로예요."
+  [ -n "$digest" ] || die "서명 확인 결과에서 이미지 지문을 찾지 못했어요: $ref. 지금 서비스는 그대로예요." "No image fingerprint was found in the signature check: $ref. The service stays as it is."
   printf '%s@%s' "${ref%:*}" "$digest"
 }
 pull_images() { # pull_images 저장소 태그 : 띄울 이미지를 NEW_API / NEW_WEB 에 정해요 (서명 확인 → 그 다이제스트로 내려받기)
@@ -715,20 +779,20 @@ pull_images() { # pull_images 저장소 태그 : 띄울 이미지를 NEW_API / N
     for c in "$ver" "$rver"; do
       if docker image inspect "$repo/malkkeum-api:$c" "$repo/malkkeum-web:$c" >/dev/null 2>&1; then local_tag=$c; break; fi
     done
-    [ -n "$local_tag" ] || die "이미지 $ver 이 없어요. 먼저 'dahae load 파일.tar' 를 실행하세요."
-    warn "직접 불러온 이미지 파일(.tar)이라 서명 확인 없이 써요."
+    [ -n "$local_tag" ] || die "이미지 $ver 이 없어요. 먼저 'dahae load 파일.tar' 를 실행하세요." "Image $ver is missing. Run 'dahae load file.tar' first."
+    warn "직접 불러온 이미지 파일(.tar)이라 서명 확인 없이 써요." "A directly loaded image file (.tar) is used without a signature check."
     NEW_API=$repo/malkkeum-api:$local_tag; NEW_WEB=$repo/malkkeum-web:$local_tag
     return 0
   fi
   if [ "$(env_get IMAGE_VERIFY)" = off ]; then
-    warn "이미지 서명 확인이 꺼져 있어요 (서명 없는 테스트 저장소 전용). 실제 서버라면 설치 프로그램을 다시 실행하세요."
+    warn "이미지 서명 확인이 꺼져 있어요 (서명 없는 테스트 저장소 전용). 실제 서버라면 설치 프로그램을 다시 실행하세요." "Image signature checks are off (only for unsigned test registries). On a real server, run the installer again."
     NEW_API=$repo/malkkeum-api:$rver; NEW_WEB=$repo/malkkeum-web:$rver
   else
     NEW_API=$(verify_image "$repo/malkkeum-api:$rver") || exit 1
     NEW_WEB=$(verify_image "$repo/malkkeum-web:$rver") || exit 1
   fi
   { docker pull -q "$NEW_API" >/dev/null && docker pull -q "$NEW_WEB" >/dev/null; } \
-    || die "새 버전을 내려받지 못했어요. 지금 서비스는 그대로 돌고 있어요."
+    || die "새 버전을 내려받지 못했어요. 지금 서비스는 그대로 돌고 있어요." "Could not download the new version. The service keeps running as it is."
 }
 
 # 앱이 DB 까지 정상인지(컨테이너 안 /ready)와 웹 서버가 돌고 있는지를 봐요. HTTPS 인증서와는 무관해요.
@@ -771,7 +835,7 @@ set_images() { # 이미지 두 개를 지정해서 기동하고 .env 에 기록�
   local img
   for img in "$1" "$2"; do
     docker image inspect "$img" >/dev/null 2>&1 || docker pull "$img" >/dev/null 2>&1 \
-      || die "이미지를 내려받지 못해서 버전을 바꾸지 않았어요: $img. 지금 버전 그대로예요."
+      || die "이미지를 내려받지 못해서 버전을 바꾸지 않았어요: $img. 지금 버전 그대로예요." "Could not download the image, so the version was not changed: $img. The current version stays."
   done
   env_set API_IMAGE "$1"; env_set WEB_IMAGE "$2"
   dc up -d --remove-orphans
@@ -781,27 +845,27 @@ cmd_backup() { # BACKUP_WARN=1 이면 DB 는 백업됐지만 사진 파일이나
   local ts db up prune="${1:-prune}" photo_days=$BACKUP_KEEP_DAYS; ts=$(date +%Y%m%d-%H%M%S); BACKUP_WARN=0; db_up
   db="backups/db-$ts.sql.gz"; up="backups/uploads-$ts.tar.gz"
   if ! dc exec -T db pg_dump -U app -d cleaning --clean --if-exists | gzip > "$db"; then
-    rm -f "$db"; die "DB 백업에 실패했어요. 'dahae logs db' 로 확인하세요."
+    rm -f "$db"; die "DB 백업에 실패했어요. 'dahae logs db' 로 확인하세요." "The database backup failed. Check 'dahae logs db'."
   fi
   if ! dc run --rm --no-deps -T --entrypoint tar api czf - -C /data uploads > "$up"; then
-    rm -f "$up"; BACKUP_WARN=1; warn "사진 파일 백업에 실패했어요 (DB 백업은 됐어요). 'dahae logs api' 로 확인하세요."
+    rm -f "$up"; BACKUP_WARN=1; warn "사진 파일 백업에 실패했어요 (DB 백업은 됐어요). 'dahae logs api' 로 확인하세요." "The photo backup failed (the database backup worked). Check 'dahae logs api'."
   fi
   # Offsite copy (콘솔: 설정 > 외부 백업). The local backup stays good if this fails or isn't set up.
   if [ -f "$up" ] && ! api_backup backup-upload "/$up" >> backups/backup.log 2>&1; then
-    BACKUP_WARN=1; warn "사진 파일 외부 백업이 실패했어요 (로컬 백업은 됐어요). 콘솔 [설정 > 외부 백업]을 확인하세요"
+    BACKUP_WARN=1; warn "사진 파일 외부 백업이 실패했어요 (로컬 백업은 됐어요). 콘솔 [설정 > 외부 백업]을 확인하세요" "The off-site photo backup failed (the local backup worked). Check [Settings > Off-site backup] in the console"
   elif tail -n 20 backups/backup.log 2>/dev/null | grep -qxF "offsite backup uploaded: ${up##*/}"; then
     photo_days=$PHOTO_KEEP_DAYS_OFFSITE # 미설정이어도 성공(0)으로 끝나요: 실제로 올라간 기록이 있을 때만 줄여요
   fi
   api_backup backup-upload "/$db" >> backups/backup.log 2>&1 \
-    || warn "외부 백업 실패 또는 미설정 — 콘솔 [설정 > 외부 백업]을 확인하세요"
+    || warn "외부 백업 실패 또는 미설정 — 콘솔 [설정 > 외부 백업]을 확인하세요" "Off-site backup failed or not set up. Check [Settings > Off-site backup] in the console"
   # 서버 디스크에 남는 로컬 사본은 봉인해요: 평문 덤프(고객 정보)가 그대로 남지 않아요.
   # 예전 설치가 남긴 평문 사본도 이때 함께 봉인해요 (업그레이드 뒤 첫 백업).
   seal_local "$db" || true
   if [ -f "$up" ]; then seal_local "$up" || true; fi
   seal_leftover_plaintext
   [ "$prune" = noprune ] || prune_backups "$photo_days"
-  if [ -f "$db.enc" ]; then ok "백업 완료: $DIR/$db.enc"; return 0; fi
-  BACKUP_WARN=1; warn "로컬 백업을 봉인하지 못했어요. 업데이트·복원·되돌리기를 멈춰요. 'dahae logs' 로 확인하세요."
+  if [ -f "$db.enc" ]; then ok "백업 완료: $DIR/$db.enc" "Backup done: $DIR/$db.enc"; return 0; fi
+  BACKUP_WARN=1; warn "로컬 백업을 봉인하지 못했어요. 업데이트·복원·되돌리기를 멈춰요. 'dahae logs' 로 확인하세요." "Could not seal the local backup. Update, restore and rollback are stopped. Check 'dahae logs'."
   return 1
 }
 prune_backups() { # prune_backups 사진보관일 : DB 덤프는 BACKUP_KEEP_DAYS 일, 사진 묶음은 받은 날수가 지나면 지워요
@@ -817,14 +881,15 @@ seal_leftover_plaintext() { # 봉인되지 않은 평문 db-*.sql.gz · uploads-
 }
 
 cmd_load() { # 미리 받아 둔 이미지 묶음(.tar)을 불러와요. 인터넷 없이 업데이트할 때 써요.
-  local f="${1:?사용법: dahae load 파일.tar}"
-  [ -f "$f" ] || die "파일을 찾을 수 없어요: $f"
-  docker load -i "$f" || die "이미지 파일을 불러오지 못했어요: $f"
+  local f="${1:-}"
+  [ -n "$f" ] || die "사용법: dahae load 파일.tar" "Usage: dahae load file.tar"
+  [ -f "$f" ] || die "파일을 찾을 수 없어요: $f" "File not found: $f"
+  docker load -i "$f" || die "이미지 파일을 불러오지 못했어요: $f" "Could not load the image file: $f"
   env_set IMAGE_SOURCE local
-  ok "이미지를 불러왔어요. 적용하려면: dahae update <태그>  (위 Loaded image 의 태그)"
+  ok "이미지를 불러왔어요. 적용하려면: dahae update <태그>  (위 Loaded image 의 태그)" "Images loaded. To apply: dahae update <tag>  (the tag of the Loaded image above)"
 }
 
-die_code() { local rc="$1"; shift; printf '\033[1;31m✘ %s\033[0m\n' "$*" >&2; exit "$rc"; } # die_code 종료코드 안내 : 작업 실행기가 종료 코드로 이유를 골라요
+die_code() { local rc="$1"; shift; printf '\033[1;31m✘ %s\033[0m\n' "$(L "$@")" >&2; exit "$rc"; } # die_code 종료코드 안내 : 작업 실행기가 종료 코드로 이유를 골라요
 die_rolled_back() { die_code 3 "$@"; } # 종료 코드 3: 이전 버전으로 되돌렸어요 (작업 실행기가 rolled_back 으로 남겨요)
 
 running_tag() { # running_tag : 방금 띄운 이미지의 버전 태그(vX.Y.Z[-접미사]). 이미지 표시를 읽어요 (모르면 빈 값)
@@ -838,8 +903,8 @@ running_tag() { # running_tag : 방금 띄운 이미지의 버전 태그(vX.Y.Z[
 record_version() { # 실제로 띄운 버전을 설치 기록(host/version-history)에 남겨요. 서버 에이전트는 이 기록보다 낮은 버전 올리기를 막아요
   local v
   v=$(running_tag)
-  if [ -z "$v" ]; then warn "버전을 확인하지 못해서 설치 기록을 남기지 못했어요"; return 0; fi
-  grep -qxF "$v" host/version-history 2>/dev/null || printf '%s\n' "$v" >> host/version-history || warn "설치 기록을 남기지 못했어요"
+  if [ -z "$v" ]; then warn "버전을 확인하지 못해서 설치 기록을 남기지 못했어요" "The version is unknown, so the install history was not recorded"; return 0; fi
+  grep -qxF "$v" host/version-history 2>/dev/null || printf '%s\n' "$v" >> host/version-history || warn "설치 기록을 남기지 못했어요" "Could not record the install history"
 }
 
 tools_ref() { # tools_ref 버전 : 배포 저장소에서 그 버전의 관리 도구가 있는 곳 (태그는 v 를 붙여 그대로, stable → main, beta → beta). 모르면 빈 값
@@ -859,38 +924,38 @@ fetch_installer() { # fetch_installer 위치 폴더 : 그 버전의 install.sh·
   # 종료 코드 2: 받은 설치 프로그램이 관리 도구만 바꾸는 모드를 몰라요 (오래된 버전). 관리 도구는 그대로 둬요
   local ref="$1" ch="$1" out="$2" base signer want got f v newest cosign="$DIR/bin/cosign"
   base=$(env_get DELIVERY_RAW); signer=$(env_get SIGNER_REPO)
-  valid_signer "$signer" || die "서명자 설정(SIGNER_REPO)이 이상해서 업데이트를 멈췄어요: '$signer'. 지금 버전 그대로예요."
-  [ -x "$cosign" ] || die "서명 확인 도구($cosign)가 없어서 업데이트를 멈췄어요. 설치 명령을 다시 실행하세요. 지금 버전 그대로예요."
+  valid_signer "$signer" || die "서명자 설정(SIGNER_REPO)이 이상해서 업데이트를 멈췄어요: '$signer'. 지금 버전 그대로예요." "The signer setting (SIGNER_REPO) is malformed, so the update stopped: '$signer'. The current version stays."
+  [ -x "$cosign" ] || die "서명 확인 도구($cosign)가 없어서 업데이트를 멈췄어요. 설치 명령을 다시 실행하세요. 지금 버전 그대로예요." "The signature checker ($cosign) is missing, so the update stopped. Run the install command again. The current version stays."
   case "$ref" in main|beta) # 채널은 바뀌는 가지예요: 지금 가리키는 태그로 바꿔 받고, 그 태그의 서명만 믿어요
     v=$(curl -fsSL --retry 3 --max-time 30 "$base/$ref/VERSION" | tr -d '[:space:]') \
-      || die "채널($ch)의 버전 기록을 받지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+      || die "채널($ch)의 버전 기록을 받지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요." "Could not fetch the version record of channel $ch, so the update stopped. The current version stays."
     ref=$(tools_ref "${v#v}")
-    [ -n "$ref" ] || die "채널($ch)의 버전 기록이 이상해서 업데이트를 멈췄어요: '$v'. 지금 버전 그대로예요."
+    [ -n "$ref" ] || die "채널($ch)의 버전 기록이 이상해서 업데이트를 멈췄어요: '$v'. 지금 버전 그대로예요." "The version record of channel $ch is malformed, so the update stopped: '$v'. The current version stays."
     newest=$(newest_installed)
     if [ -n "$newest" ] && ver_older "$ref" "$newest"; then
-      die "채널이 이 서버에 올렸던 버전($newest)보다 오래된 관리 도구($ref)를 가리켜서 업데이트를 멈췄어요. 개발자에게 알려 주세요. 지금 버전 그대로예요."
+      die "채널이 이 서버에 올렸던 버전($newest)보다 오래된 관리 도구($ref)를 가리켜서 업데이트를 멈췄어요. 개발자에게 알려 주세요. 지금 버전 그대로예요." "The channel points to management tools ($ref) older than the version this server ran ($newest), so the update stopped. Tell the developer. The current version stays."
     fi ;;
   esac
   mkdir -p "$out"
   for f in install.sh SHA256SUMS SHA256SUMS.bundle; do
     SCRATCH+=("$out/$f")
     curl -fsSL --retry 3 --max-time 120 -o "$out/$f" "$base/$ref/$f" \
-      || die "새 버전의 관리 도구($f)를 내려받지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+      || die "새 버전의 관리 도구($f)를 내려받지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요." "Could not download the new version's management tools ($f), so the update stopped. The current version stays."
   done
   # 이미지와 같은 서명자(release.yml), 그리고 정확히 이 태그: 예전 릴리스의 서명된 파일을 다시 내밀어도 맞지 않아요
   TUF_ROOT="$DIR/.sigstore" "$cosign" verify-blob --bundle "$out/SHA256SUMS.bundle" --certificate-identity-regexp "$(signer_re "$signer" "$ref")" \
       --certificate-oidc-issuer "$SIGN_ISSUER" "$out/SHA256SUMS" >/dev/null 2>&1 \
-    || die "새 버전 지문 파일(SHA256SUMS)의 서명을 확인하지 못해서 업데이트를 멈췄어요 ($signer, $ref). 지금 버전 그대로예요."
-  sums_ok "$out" install.sh || die "받은 install.sh 의 지문이 서명된 SHA256SUMS 와 달라서 업데이트를 멈췄어요. 지금 버전 그대로예요."
-  bash -n "$out/install.sh" || die "받은 install.sh 가 손상됐어요. 지금 버전 그대로예요."
+    || die "새 버전 지문 파일(SHA256SUMS)의 서명을 확인하지 못해서 업데이트를 멈췄어요 ($signer, $ref). 지금 버전 그대로예요." "Could not check the signature of the new version's fingerprint file (SHA256SUMS), so the update stopped ($signer, $ref). The current version stays."
+  sums_ok "$out" install.sh || die "받은 install.sh 의 지문이 서명된 SHA256SUMS 와 달라서 업데이트를 멈췄어요. 지금 버전 그대로예요." "The downloaded install.sh does not match the signed SHA256SUMS, so the update stopped. The current version stays."
+  bash -n "$out/install.sh" || die "받은 install.sh 가 손상됐어요. 지금 버전 그대로예요." "The downloaded install.sh is damaged. The current version stays."
   grep -qF 'MALKKEUM_HOST_UPDATE:-}" != tools' "$out/install.sh" || return 2
   SCRATCH+=("$out/agent.sh")
   curl -fsSL --retry 3 --max-time 120 -o "$out/agent.sh" "$base/$ref/agent.sh" \
-    || die "새 버전의 작업 실행기(agent.sh)를 내려받지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+    || die "새 버전의 작업 실행기(agent.sh)를 내려받지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요." "Could not download the new version's job runner (agent.sh), so the update stopped. The current version stays."
   want=$(sed -n 's/^AGENT_SHA256=\([0-9a-f]\{64\}\)$/\1/p' "$out/install.sh")
   got=$(sha256sum "$out/agent.sh" | cut -d' ' -f1)
   sums_ok "$out" agent.sh && [ -n "$want" ] && [ "$want" = "$got" ] \
-    || die "받은 agent.sh 의 지문이 서명된 SHA256SUMS·install.sh 와 달라서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+    || die "받은 agent.sh 의 지문이 서명된 SHA256SUMS·install.sh 와 달라서 업데이트를 멈췄어요. 지금 버전 그대로예요." "The downloaded agent.sh does not match the signed SHA256SUMS and install.sh, so the update stopped. The current version stays."
 }
 sums_ok() { # sums_ok 폴더 파일 : 파일의 SHA-256 이 같은 폴더의 SHA256SUMS 에 적힌 값과 같아야 해요
   local want got
@@ -903,11 +968,11 @@ tools_prepare() { # tools_prepare 버전 : 이미지를 바꾸기 전에 새 버
   local ref rc=0; ref=$(tools_ref "$1"); TOOLS_READY=0
   [ -z "${DAHAE_TOOLS_FRESH:-}" ] || return 0 # 설치 프로그램이 방금 관리 도구를 썼어요
   if [ -z "$(env_get DELIVERY_RAW)" ] || [ -z "$ref" ] || [ "$(env_get IMAGE_SOURCE)" = local ] || [ "$(env_get IMAGE_VERIFY)" = off ]; then
-    warn "관리 도구(dahae 명령·작업 실행기·설정)는 그대로 둬요 (배포 주소가 없거나 직접 불러온 이미지예요). 바꾸려면 설치 명령을 다시 실행하세요."
+    warn "관리 도구(dahae 명령·작업 실행기·설정)는 그대로 둬요 (배포 주소가 없거나 직접 불러온 이미지예요). 바꾸려면 설치 명령을 다시 실행하세요." "The management tools (dahae command, job runner, settings) stay as they are (no delivery address, or a directly loaded image). Run the install command again to switch them."
     return 0
   fi
   fetch_installer "$ref" "$TOOLS_NEXT" || rc=$?
-  if [ "$rc" = 2 ]; then warn "그 버전의 설치 프로그램은 관리 도구만 바꾸는 모드가 없어서 관리 도구는 그대로 둬요."; return 0; fi
+  if [ "$rc" = 2 ]; then warn "그 버전의 설치 프로그램은 관리 도구만 바꾸는 모드가 없어서 관리 도구는 그대로 둬요." "That version's installer has no tools-only mode, so the management tools stay as they are."; return 0; fi
   TOOLS_READY=1
 }
 
@@ -923,10 +988,10 @@ tools_rotate() { keep_as_prev "$INSTALLER_KEEP" "$INSTALLER_PREV"; keep_as_prev 
 tools_apply() { # 새 버전이 정상이면 확인해 둔 설치 프로그램으로 관리 도구를 바꿔요
   [ "${TOOLS_READY:-0}" = 1 ] || return 0
   { install -m 600 "$TOOLS_NEXT/install.sh" "$INSTALLER_KEEP" && install -m 600 "$TOOLS_NEXT/agent.sh" "$AGENT_KEEP"; } \
-    || die_code "$RC_TOOLS_STALE" "새 버전은 정상이에요. 관리 도구(dahae 명령·작업 실행기)를 바꾸지 못했어요. 설치 명령을 한 번 다시 실행해 주세요 (안내서 10 C-5)."
+    || die_code "$RC_TOOLS_STALE" "새 버전은 정상이에요. 관리 도구(dahae 명령·작업 실행기)를 바꾸지 못했어요. 설치 명령을 한 번 다시 실행해 주세요 (안내서 10 C-5)." "The new version is healthy. Could not switch the management tools (dahae command, job runner). Run the install command once more (guide 10 C-5)."
   run_installer_tools "$INSTALLER_KEEP" "$AGENT_KEEP" \
-    || die_code "$RC_TOOLS_STALE" "새 버전은 정상이에요. 관리 도구(dahae 명령·작업 실행기)를 바꾸지 못했어요. 설치 명령을 한 번 다시 실행해 주세요 (안내서 10 C-5)."
-  ok "관리 도구도 새 버전으로 바꿨어요"
+    || die_code "$RC_TOOLS_STALE" "새 버전은 정상이에요. 관리 도구(dahae 명령·작업 실행기)를 바꾸지 못했어요. 설치 명령을 한 번 다시 실행해 주세요 (안내서 10 C-5)." "The new version is healthy. Could not switch the management tools (dahae command, job runner). Run the install command once more (guide 10 C-5)."
+  ok "관리 도구도 새 버전으로 바꿨어요" "Management tools switched to the new version too"
 }
 
 swap_files() { # swap_files a b : 두 파일을 맞바꿔요 (없는 쪽은 없는 그대로 바뀌어요)
@@ -937,11 +1002,11 @@ swap_files() { # swap_files a b : 두 파일을 맞바꿔요 (없는 쪽은 없�
 }
 
 tools_rollback() { # 되돌린 버전의 설치 프로그램이 남아 있으면 관리 도구도 그 버전으로 맞춰요 (없으면 그대로 두고 알려요)
-  if [ ! -f "$INSTALLER_PREV" ]; then warn "관리 도구는 그대로 둬요 (전 버전의 설치 프로그램 기록이 없어요)"; return 0; fi
+  if [ ! -f "$INSTALLER_PREV" ]; then warn "관리 도구는 그대로 둬요 (전 버전의 설치 프로그램 기록이 없어요)" "The management tools stay as they are (no installer record of the previous version)"; return 0; fi
   swap_files "$INSTALLER_PREV" "$INSTALLER_KEEP"; swap_files "$AGENT_PREV" "$AGENT_KEEP"
   run_installer_tools "$INSTALLER_KEEP" "$AGENT_KEEP" \
-    || die_code "$RC_TOOLS_STALE" "전 버전은 정상이에요. 관리 도구는 되돌리지 못했어요. 설치 명령을 한 번 다시 실행해 주세요 (안내서 10 C-5)."
-  ok "관리 도구도 전 버전으로 되돌렸어요"
+    || die_code "$RC_TOOLS_STALE" "전 버전은 정상이에요. 관리 도구는 되돌리지 못했어요. 설치 명령을 한 번 다시 실행해 주세요 (안내서 10 C-5)." "The previous version is healthy. The management tools could not be rolled back. Run the install command once more (guide 10 C-5)."
+  ok "관리 도구도 전 버전으로 되돌렸어요" "Management tools rolled back to the previous version too"
 }
 
 update_disk_check() { # 백업·새 이미지가 들어갈 자리가 없으면 아무것도 바꾸기 전에 멈춰요 (가득 찬 디스크는 DB 까지 멈춰요)
@@ -952,21 +1017,21 @@ update_disk_check() { # 백업·새 이미지가 들어갈 자리가 없으면 �
   for p in "$DIR" /var/lib/docker; do
     [ -d "$p" ] || continue
     free=$(df -Pk "$p" | awk 'NR == 2 { print $4 }')
-    case "$free" in ''|*[!0-9]*) die "디스크 남은 공간을 확인하지 못해서 업데이트를 멈췄어요 ($p). 지금 버전 그대로예요." ;; esac
-    [ "$free" -ge "$need" ] || die "디스크가 부족해서 업데이트를 멈췄어요 ($p: 남은 $((free / 1024)) MB, 필요 $((need / 1024)) MB). 지금 버전 그대로예요."
+    case "$free" in ''|*[!0-9]*) die "디스크 남은 공간을 확인하지 못해서 업데이트를 멈췄어요 ($p). 지금 버전 그대로예요." "Could not check the free disk space, so the update stopped ($p). The current version stays." ;; esac
+    [ "$free" -ge "$need" ] || die "디스크가 부족해서 업데이트를 멈췄어요 ($p: 남은 $((free / 1024)) MB, 필요 $((need / 1024)) MB). 지금 버전 그대로예요." "Not enough disk, so the update stopped ($p: $((free / 1024)) MB free, $((need / 1024)) MB needed). The current version stays."
   done
 }
 
 cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔요 (로컬 이미지면 먼저 dahae load). 관리 도구도 같은 버전으로 바꿔요
   local repo ver cur_api cur_web new_api rotate=0
-  printf '\n▶ 업데이트를 시작합니다 (먼저 백업해요)\n'
+  Lf '\n▶ 업데이트를 시작합니다 (먼저 백업해요)\n' '\n▶ Starting the update (backs up first)\n'
   edition_recover # 끊긴 판 바꾸기가 남긴 값으로 자동 업데이트가 판을 마저 바꾸지 않게 먼저 정리해요
   update_disk_check
   repo=$(env_get IMAGE_REPO); ver=${1:-$(env_get VERSION)}
   rm -f "$ROLLBACK_HOLD" # 사람이(또는 새 버전을 찾은 자동 업데이트가) 고른 업데이트: 되돌린 버전 지키기는 끝나요
   tools_prepare "$ver" # 받거나 확인하지 못하면 아무것도 바꾸기 전에 멈춰요
   db_roles # 백업의 외부 업로드도 앱 계정으로 접속해요: 예전 설치를 처음 올릴 때 계정부터 만들어요
-  cmd_backup || die "백업을 끝내지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요."
+  cmd_backup || die "백업을 끝내지 못해서 업데이트를 멈췄어요. 지금 버전 그대로예요." "The backup did not finish, so the update stopped. The current version stays."
   pull_images "$repo" "$ver"
   cur_api=$(digest_ref "$(running_image api "$(env_get API_IMAGE)")" "$repo/malkkeum-api")
   cur_web=$(digest_ref "$(running_image web "$(env_get WEB_IMAGE)")" "$repo/malkkeum-web")
@@ -989,26 +1054,27 @@ cmd_update() { # dahae update [태그]: 태그를 주면 그 버전으로 바꿔
     env_set VERSION "$ver"
     record_version
     prune_keep_tags
-    ok "최신 버전($ver)으로 업데이트했어요"
+    ok "최신 버전($ver)으로 업데이트했어요" "Updated to the latest version ($ver)"
     # 관리 도구의 되돌리기 기록도 이미지 기록(PREV_*)과 같이 바뀌어요: 같은 이미지로 다시 맞추면 그대로 둬요
     [ "$rotate" = 0 ] || tools_rotate
     tools_apply
     return 0
   fi
-  warn "새 버전이 응답하지 않아요. 이전 버전으로 되돌릴게요."
+  warn "새 버전이 응답하지 않아요. 이전 버전으로 되돌릴게요." "The new version does not answer. Rolling back to the previous version."
   set_images "$cur_api" "$cur_web"
   if wait_healthy; then
     rollback_hold "$ver" # 같은 버전을 다음 주에 또 올렸다 되돌리지 않아요: 새 버전이 나오면 다시 올려요
-    die_rolled_back "업데이트에 실패해서 이전 버전으로 되돌렸어요. 'dahae logs' 로 원인을 확인해 주세요."
+    die_rolled_back "업데이트에 실패해서 이전 버전으로 되돌렸어요. 'dahae logs' 로 원인을 확인해 주세요." "The update failed, so it was rolled back to the previous version. Check 'dahae logs' for the cause."
   fi
-  die "이전 버전으로도 응답하지 않아요. 'dahae logs' 화면을 개발자에게 전달해 주세요."
+  die "이전 버전으로도 응답하지 않아요. 'dahae logs' 화면을 개발자에게 전달해 주세요." "The previous version does not answer either. Send the 'dahae logs' output to the developer."
 }
 
 cmd_prepare() { # 설치 프로그램이 처음 띄우기 전에 불러요: 이미지 확인·내려받기 → DB 시작 → 앱 DB 계정
-  local repo ver="${1:?사용법: dahae prepare 태그}"; repo=$(env_get IMAGE_REPO)
+  local repo ver="${1:-}"; repo=$(env_get IMAGE_REPO)
+  [ -n "$ver" ] || die "사용법: dahae prepare 태그" "Usage: dahae prepare tag"
   pull_images "$repo" "$ver"
   env_set API_IMAGE "$NEW_API"; env_set WEB_IMAGE "$NEW_WEB"
-  dc up -d --wait db >/dev/null || die "DB 를 시작하지 못했어요. 'dahae logs db' 로 확인하세요."
+  dc up -d --wait db >/dev/null || die "DB 를 시작하지 못했어요. 'dahae logs db' 로 확인하세요." "Could not start the database. Check 'dahae logs db'."
   db_roles
 }
 
@@ -1020,8 +1086,8 @@ payouts_settled_for_rollback() { # 토스에서 결과를 기다리는 정산이
   n=$(dc exec -T db psql -X -U app -d cleaning -tAc "$PAYOUTS_IN_DOUBT_SQL" 2>/dev/null | tr -d '[:space:]') || n=
   case "$n" in
     0) return 0 ;;
-    ''|*[!0-9]*) die "정산 상태를 확인하지 못해서 되돌리지 않았어요. 'dahae logs db' 로 확인하세요." ;;
-    *) die_code "$RC_PAYOUTS_IN_DOUBT" "토스 결과를 기다리는 정산이 ${n}건 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요." ;;
+    ''|*[!0-9]*) die "정산 상태를 확인하지 못해서 되돌리지 않았어요. 'dahae logs db' 로 확인하세요." "Could not check the payouts, so nothing was rolled back. Check 'dahae logs db'." ;;
+    *) die_code "$RC_PAYOUTS_IN_DOUBT" "토스 결과를 기다리는 정산이 ${n}건 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요." "Not rolled back: ${n} payouts are waiting for a Toss result. Settle them with the status check in the console's [Payouts], then try again." ;;
   esac
 }
 
@@ -1030,16 +1096,16 @@ cmd_rollback() {
   edition_recover # 끊긴 판 바꾸기가 남긴 값으로 전 버전 관리 도구를 돌리면 이미지·서명자·배포 주소가 서로 다른 판을 가리켜요
   prev_api=$(env_get PREV_API_IMAGE); prev_web=$(env_get PREV_WEB_IMAGE); repo=$(env_get IMAGE_REPO)
   if [ -z "$prev_api" ] || [ "$prev_api" = "$(env_get API_IMAGE)" ]; then
-    die_code "$RC_NO_PREVIOUS" "되돌릴 이전 버전 기록이 없어요. 업데이트를 한 번 한 뒤에 쓸 수 있어요."
+    die_code "$RC_NO_PREVIOUS" "되돌릴 이전 버전 기록이 없어요. 업데이트를 한 번 한 뒤에 쓸 수 있어요." "There is no record of a previous version to roll back to. It works after one update."
   fi
-  cmd_backup || die "백업을 끝내지 못해서 되돌리기를 멈췄어요. 지금 버전 그대로예요."
+  cmd_backup || die "백업을 끝내지 못해서 되돌리기를 멈췄어요. 지금 버전 그대로예요." "The backup did not finish, so the rollback stopped. The current version stays."
   payouts_settled_for_rollback
   cur_api=$(digest_ref "$(running_image api "$(env_get API_IMAGE)")" "$repo/malkkeum-api")
   cur_web=$(digest_ref "$(running_image web "$(env_get WEB_IMAGE)")" "$repo/malkkeum-web")
   env_set PREV_API_IMAGE "$cur_api"; env_set PREV_WEB_IMAGE "$cur_web"
   set_images "$prev_api" "${prev_web:-$(env_get WEB_IMAGE)}"
   # 데이터베이스 구조 변경(마이그레이션)은 되돌리지 않아요. 이전 버전은 새 구조를 그대로 읽어요.
-  if wait_healthy; then ok "이전 버전으로 되돌렸어요"; else die "되돌린 뒤에도 응답이 없어요. 'dahae logs' 를 확인하세요."; fi
+  if wait_healthy; then ok "이전 버전으로 되돌렸어요" "Rolled back to the previous version"; else die "되돌린 뒤에도 응답이 없어요. 'dahae logs' 를 확인하세요." "No answer after rolling back. Check 'dahae logs'."; fi
   rollback_hold
   tools_rollback
 }
@@ -1048,11 +1114,11 @@ cmd_channel() {
   local ch="${1:-}"
   case "$ch" in
     stable|beta) ;;
-    *) die "사용법: dahae channel stable | beta" ;;
+    *) die "사용법: dahae channel stable | beta" "Usage: dahae channel stable | beta" ;;
   esac
   edition_recover
   env_set CHANNEL "$ch"; env_set VERSION "$ch"
-  printf '\n▶ %s 채널로 바꾸고 업데이트합니다\n' "$ch"
+  Lf '\n▶ %s 채널로 바꾸고 업데이트합니다\n' '\n▶ Switching to the %s channel and updating\n' "$ch"
   cmd_update
 }
 
@@ -1085,7 +1151,7 @@ edition_restore() { # 기록해 둔 이전 값으로 되돌리고 기록을 지�
   done
   rm -f "$ROLLBACK_HOLD" "$EDITION_JOURNAL"
   # 앱이 새 판 값(EDITION)으로 떠 있었을 수 있어요: 되돌린 .env 로 다시 띄워요 (값이 같으면 compose 가 그대로 둬요)
-  dc up -d api >/dev/null 2>&1 || warn "앱을 되돌린 설정으로 다시 띄우지 못했어요. 'dahae status' 로 확인하세요."
+  dc up -d api >/dev/null 2>&1 || warn "앱을 되돌린 설정으로 다시 띄우지 못했어요. 'dahae status' 로 확인하세요." "Could not restart the app with the restored settings. Check 'dahae status'."
 }
 edition_recover() { # 판 바꾸기가 끊겼으면(전원·강제 종료) 먼저 정리해요: 새 판 이미지가 이미 떠 있으면 새 판 그대로, 아니면 이전 판으로
   local old cur repo
@@ -1095,45 +1161,45 @@ edition_recover() { # 판 바꾸기가 끊겼으면(전원·강제 종료) 먼�
   old=$(sed -n 's/^API_IMAGE=//p' "$EDITION_JOURNAL" | tail -n1); cur=$(env_get API_IMAGE); repo=$(env_get IMAGE_REPO)
   case "$cur" in
     "$old"|*:keep-*) ;; # 새 이미지를 띄우기 전이거나, 이전 이미지로 되돌린 뒤예요
-    "$repo"/malkkeum-api[:@]*) rm -f "$EDITION_JOURNAL"; warn "판 바꾸기가 끊겼지만 새 판이 이미 떠 있어서 새 판 그대로 둬요"; return 0 ;;
+    "$repo"/malkkeum-api[:@]*) rm -f "$EDITION_JOURNAL"; warn "판 바꾸기가 끊겼지만 새 판이 이미 떠 있어서 새 판 그대로 둬요" "The edition switch was interrupted, but the new edition is already running, so it stays"; return 0 ;;
   esac
   edition_restore
-  warn "판 바꾸기가 끝나지 않아서 이전 판으로 되돌려 두었어요"
+  warn "판 바꾸기가 끝나지 않아서 이전 판으로 되돌려 두었어요" "The edition switch did not finish, so the previous edition was put back"
 }
 
 cmd_edition() { # dahae edition <이름> : 판 표의 그 판으로 바꿔요. 먼저 그 판의 채널과 서명을 확인하고, 실패하면 이전 판 그대로예요
   local name="${1:-}" row cur img signer raw ref v tag newest k rc pre="$TOOLS_NEXT.edition" cosign="$DIR/bin/cosign"
-  printf '%s' "$name" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' || die "사용법: dahae edition <판 이름>"
+  printf '%s' "$name" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' || die "사용법: dahae edition <판 이름>" "Usage: dahae edition <edition name>"
   edition_recover
-  row=$(edition_row "$name") || die "판 표에 없는 판이에요: $name. 지금 판 그대로예요."
-  edition_allows "$row" "$(env_get DOMAIN)" || die "이 서버의 도메인은 '$name' 판을 고를 수 없어요. 지금 판 그대로예요."
-  cur=$(env_get EDITION); [ "$name" != "${cur:-dahae}" ] || die "이미 '$name' 판이에요."
+  row=$(edition_row "$name") || die "판 표에 없는 판이에요: $name. 지금 판 그대로예요." "That edition is not in the editions table: $name. The current edition stays."
+  edition_allows "$row" "$(env_get DOMAIN)" || die "이 서버의 도메인은 '$name' 판을 고를 수 없어요. 지금 판 그대로예요." "This server's domain cannot choose the '$name' edition. The current edition stays."
+  cur=$(env_get EDITION); [ "$name" != "${cur:-dahae}" ] || die "이미 '$name' 판이에요." "Already on the '$name' edition."
   img=$(field "$row" 2); signer=$(field "$row" 3); raw=$(field "$row" 4)
-  edition_row_ok "$row" "$( [ "$(env_get IMAGE_VERIFY)" != off ] || echo file)" || die "판 표의 '$name' 줄이 이상해요 (이미지·서명자·배포 주소·도메인). 지금 판 그대로예요."
+  edition_row_ok "$row" "$( [ "$(env_get IMAGE_VERIFY)" != off ] || echo file)" || die "판 표의 '$name' 줄이 이상해요 (이미지·서명자·배포 주소·도메인). 지금 판 그대로예요." "The '$name' line in the editions table is malformed (images, signer, delivery address, domains). The current edition stays."
   # 1) 미리 확인 (.env 를 바꾸기 전): 그 판 채널(베타 서버는 beta 가지)의 버전이 이 서버에 올렸던 가장 높은 버전보다 높고,
   #    그 판의 서명자가 정확히 그 태그에서 서명한 지문 파일이 있어야 해요. 아직 나오지 않은 판은 여기서 멈춰요
-  ref=$(tools_ref "$(env_get CHANNEL)"); [ -n "$ref" ] || die "채널 설정이 이상해서 판을 바꾸지 않았어요."
+  ref=$(tools_ref "$(env_get CHANNEL)"); [ -n "$ref" ] || die "채널 설정이 이상해서 판을 바꾸지 않았어요." "The channel setting is malformed, so the edition was not changed."
   v=$(curl -fsSL --retry 3 --max-time 30 "$raw/$ref/VERSION" | tr -d '[:space:]') \
-    || die "'$name' 판 채널($ref)의 버전 기록을 받지 못했어요. 그 판이 아직 나오지 않았을 수 있어요. 지금 판 그대로예요."
-  tag=$(tools_ref "${v#v}"); [ -n "$tag" ] || die "'$name' 판 채널의 버전 기록이 이상해요: '$v'. 지금 판 그대로예요."
+    || die "'$name' 판 채널($ref)의 버전 기록을 받지 못했어요. 그 판이 아직 나오지 않았을 수 있어요. 지금 판 그대로예요." "Could not fetch the version record of the '$name' edition channel ($ref). That edition may not be out yet. The current edition stays."
+  tag=$(tools_ref "${v#v}"); [ -n "$tag" ] || die "'$name' 판 채널의 버전 기록이 이상해요: '$v'. 지금 판 그대로예요." "The version record of the '$name' edition channel is malformed: '$v'. The current edition stays."
   newest=$(newest_installed || true) # 기록 파일이 없으면 sed 가 실패해요 (set -e)
   if [ -n "$newest" ] && ! ver_older "$newest" "$tag"; then
-    die "'$name' 판의 버전($tag)이 이 서버에 올렸던 버전($newest)보다 높지 않아서 바꾸지 않았어요. 지금 판 그대로예요."
+    die "'$name' 판의 버전($tag)이 이 서버에 올렸던 버전($newest)보다 높지 않아서 바꾸지 않았어요. 지금 판 그대로예요." "The '$name' edition's version ($tag) is not newer than the version this server ran ($newest), so nothing changed. The current edition stays."
   fi
   if [ "$(env_get IMAGE_SOURCE)" != local ] && [ "$(env_get IMAGE_VERIFY)" != off ]; then
-    [ -x "$cosign" ] || die "서명 확인 도구($cosign)가 없어서 판을 바꾸지 않았어요. 지금 판 그대로예요."
+    [ -x "$cosign" ] || die "서명 확인 도구($cosign)가 없어서 판을 바꾸지 않았어요. 지금 판 그대로예요." "The signature checker ($cosign) is missing, so the edition was not changed. The current edition stays."
     mkdir -p "$pre"
     for k in SHA256SUMS SHA256SUMS.bundle; do
       SCRATCH+=("$pre/$k")
-      curl -fsSL --retry 3 --max-time 120 -o "$pre/$k" "$raw/$tag/$k" || die "'$name' 판의 지문 파일($k)을 받지 못했어요. 지금 판 그대로예요."
+      curl -fsSL --retry 3 --max-time 120 -o "$pre/$k" "$raw/$tag/$k" || die "'$name' 판의 지문 파일($k)을 받지 못했어요. 지금 판 그대로예요." "Could not fetch the '$name' edition's fingerprint file ($k). The current edition stays."
     done
     TUF_ROOT="$DIR/.sigstore" "$cosign" verify-blob --bundle "$pre/SHA256SUMS.bundle" --certificate-identity-regexp "$(signer_re "$signer" "$tag")" \
         --certificate-oidc-issuer "$SIGN_ISSUER" "$pre/SHA256SUMS" >/dev/null 2>&1 \
-      || die "'$name' 판의 서명($signer, $tag)을 확인하지 못해서 바꾸지 않았어요. 지금 판 그대로예요."
+      || die "'$name' 판의 서명($signer, $tag)을 확인하지 못해서 바꾸지 않았어요. 지금 판 그대로예요." "Could not check the '$name' edition's signature ($signer, $tag), so nothing changed. The current edition stays."
   fi
   # 2) 이전 값을 기록(root 만 읽어요) 3) 세 값과 채널을 바꾸고 4) 평소 업데이트: 백업 → 새 서명자로 확인 → 바꾸기 → 응답 확인 → 관리 도구
   edition_journal
-  printf '\n▶ %s 판으로 바꿉니다 (%s)\n' "$name" "$tag"
+  Lf '\n▶ %s 판으로 바꿉니다 (%s)\n' '\n▶ Switching to the %s edition (%s)\n' "$name" "$tag"
   env_set EDITION "$name"; env_set IMAGE_REPO "$img"; env_set SIGNER_REPO "$signer"; env_set DELIVERY_RAW "$raw"; env_set VERSION "$(env_get CHANNEL)"
   # 서브셸로 돌려요 (cmd_update 는 실패하면 exit 해요). || 로 붙이면 그 안의 set -e 가 꺼져서, set +e 뒤에 따로 받아요
   set +e
@@ -1143,7 +1209,7 @@ cmd_edition() { # dahae edition <이름> : 판 표의 그 판으로 바꿔요. �
   # 5) 0: 새 판 정상. 5: 새 판 정상, 관리 도구만 못 바꿨어요 (새 판 그대로). 3: 이미지는 이미 이전 것으로 돌아가 있어요
   if [ "$rc" = 0 ] || [ "$rc" = "$RC_TOOLS_STALE" ]; then
     rm -f "$EDITION_JOURNAL"
-    if [ "$rc" = 0 ]; then ok "$name 판으로 바꿨어요"; fi
+    if [ "$rc" = 0 ]; then ok "$name 판으로 바꿨어요" "Switched to the $name edition"; fi
     return "$rc"
   fi
   # 그 밖의 실패에 새 판 이미지가 이미 .env 에 있으면(응답 확인 뒤의 마무리 실패, 띄우다 멈춤): 떠서 응답하면 새 판 그대로(5),
@@ -1154,17 +1220,17 @@ cmd_edition() { # dahae edition <이름> : 판 표의 그 판으로 바꿔요. �
       "$img"/malkkeum-api[:@]*)
       if api_runs "$(env_get API_IMAGE)" && wait_healthy; then
         rm -f "$EDITION_JOURNAL"
-        die_code "$RC_TOOLS_STALE" "$name 판으로 바꿨고 정상이에요. 마무리를 끝내지 못했어요: 콘솔에서 '지금 업데이트' 를 한 번 눌러 주세요."
+        die_code "$RC_TOOLS_STALE" "$name 판으로 바꿨고 정상이에요. 마무리를 끝내지 못했어요: 콘솔에서 '지금 업데이트' 를 한 번 눌러 주세요." "Switched to the $name edition and it is healthy. The finishing step did not complete: press 'Update now' once in the console."
       fi
-      warn "새 판 이미지가 응답하지 않아서 이전 이미지로 되돌려요"
+      warn "새 판 이미지가 응답하지 않아서 이전 이미지로 되돌려요" "The new edition's image does not answer, so the previous image is being put back"
       if [ -n "$(journal_get API_IMAGE)" ]; then
         { ( set_images "$(journal_get API_IMAGE)" "$(journal_get WEB_IMAGE)" ) && wait_healthy; } \
-          || warn "이전 이미지로도 응답하지 않아요. 'dahae logs' 화면을 개발자에게 전달해 주세요."
+          || warn "이전 이미지로도 응답하지 않아요. 'dahae logs' 화면을 개발자에게 전달해 주세요." "The previous image does not answer either. Send the 'dahae logs' output to the developer."
       fi ;;
     esac
   fi
   edition_restore
-  die_code "$rc" "$name 판으로 바꾸지 못해서 이전 판(${cur:-dahae}) 그대로예요. 'dahae logs' 로 원인을 확인해 주세요."
+  die_code "$rc" "$name 판으로 바꾸지 못해서 이전 판(${cur:-dahae}) 그대로예요. 'dahae logs' 로 원인을 확인해 주세요." "Could not switch to the $name edition, so the previous edition (${cur:-dahae}) stays. Check 'dahae logs' for the cause."
 }
 
 cmd_version() {
@@ -1175,42 +1241,42 @@ cmd_version() {
     running=$(curl -fsSk --max-time 5 --resolve "$(env_get DOMAIN):443:127.0.0.1" "https://$(env_get DOMAIN)/health" 2>/dev/null | grep -o '"version":"[^"]*"' | cut -d'"' -f4 || true)
   fi
   echo "edition: $(edition_name)"
-  echo "채널: $(env_get CHANNEL)  (이미지 태그: $(env_get VERSION))"
-  echo "실행 중인 버전: ${running:-알 수 없음}"
+  echo "$(L "채널: $(env_get CHANNEL)  (이미지 태그: $(env_get VERSION))" "Channel: $(env_get CHANNEL)  (image tag: $(env_get VERSION))")"
+  echo "$(L "실행 중인 버전: ${running:-알 수 없음}" "Running version: ${running:-unknown}")"
 }
 
 cmd_status() {
   dc ps
-  if health_ok; then ok "앱 정상"; else warn "앱 응답 없음 — 'dahae logs' 로 확인하세요"; fi
-  if https_ok; then ok "HTTPS 정상: https://$(env_get DOMAIN)/admin/"
-  else warn "HTTPS 인증서가 아직 없어요. 도메인 A 레코드가 이 서버를 가리키면 몇 분 안에 자동으로 발급돼요."; fi
-  if [ -n "$(env_get HEARTBEAT_URL)" ]; then ok "외부 가동 확인(heartbeat) 설정됨"; else warn "외부 가동 확인이 없어요 — 'dahae heartbeat <주소>' 로 켜세요 (healthchecks.io 등)"; fi
+  if health_ok; then ok "앱 정상" "App OK"; else warn "앱 응답 없음 — 'dahae logs' 로 확인하세요" "App not answering. Check 'dahae logs'"; fi
+  if https_ok; then ok "HTTPS 정상: https://$(env_get DOMAIN)/admin/" "HTTPS OK: https://$(env_get DOMAIN)/admin/"
+  else warn "HTTPS 인증서가 아직 없어요. 도메인 A 레코드가 이 서버를 가리키면 몇 분 안에 자동으로 발급돼요." "No HTTPS certificate yet. It is issued automatically within minutes once the domain A record points to this server."; fi
+  if [ -n "$(env_get HEARTBEAT_URL)" ]; then ok "외부 가동 확인(heartbeat) 설정됨" "External uptime check (heartbeat) set"; else warn "외부 가동 확인이 없어요 — 'dahae heartbeat <주소>' 로 켜세요 (healthchecks.io 등)" "No external uptime check. Turn it on with 'dahae heartbeat <address>' (healthchecks.io and similar)"; fi
   # 로컬 백업은 DB 와 같은 디스크에 있어요: 외부 백업이 없으면 디스크 하나를 잃을 때 전부 잃어요.
-  if tail -n 40 backups/backup.log 2>/dev/null | grep -q 'offsite backup uploaded: db-'; then ok "외부 백업 정상"
-  else warn "최근 외부 백업이 없어요 — 서버 디스크를 잃으면 데이터도 모두 잃어요. 콘솔 [설정 > 외부 백업]에서 켜세요"; fi
-  if tail -n 40 backups/backup.log 2>/dev/null | grep -q 'offsite backup uploaded: uploads-'; then ok "사진 파일 외부 백업 정상"
-  else warn "최근 사진 파일 외부 백업이 없어요 — 사진은 서버 디스크에만 있어요. 'dahae logs' 로 확인하세요"; fi
-  if compgen -G 'backups/keys-*.env.enc' >/dev/null; then ok "비밀 키 사본 있음"
-  else warn "비밀 키 사본이 없어요 — 'dahae keys-backup' 으로 만들어 서버 밖에 보관하세요. 없으면 외부 백업을 풀 수 없어요"; fi
-  if [ -n "$(env_get KEY_ESCROW_AT)" ]; then ok "비밀 키 사본을 서버 밖에 보관했다고 확인했어요"
-  else warn "비밀 키 사본을 서버 밖에 보관했다는 확인이 없어요 — 'dahae keys-backup' 을 다시 실행해 확인하세요"; fi
+  if tail -n 40 backups/backup.log 2>/dev/null | grep -q 'offsite backup uploaded: db-'; then ok "외부 백업 정상" "Off-site backup OK"
+  else warn "최근 외부 백업이 없어요 — 서버 디스크를 잃으면 데이터도 모두 잃어요. 콘솔 [설정 > 외부 백업]에서 켜세요" "No recent off-site backup. If the server disk is lost, all data is lost. Turn it on in [Settings > Off-site backup] in the console"; fi
+  if tail -n 40 backups/backup.log 2>/dev/null | grep -q 'offsite backup uploaded: uploads-'; then ok "사진 파일 외부 백업 정상" "Off-site photo backup OK"
+  else warn "최근 사진 파일 외부 백업이 없어요 — 사진은 서버 디스크에만 있어요. 'dahae logs' 로 확인하세요" "No recent off-site photo backup. The photos exist only on this server's disk. Check 'dahae logs'"; fi
+  if compgen -G 'backups/keys-*.env.enc' >/dev/null; then ok "비밀 키 사본 있음" "Secret key copy exists"
+  else warn "비밀 키 사본이 없어요 — 'dahae keys-backup' 으로 만들어 서버 밖에 보관하세요. 없으면 외부 백업을 풀 수 없어요" "No secret key copy. Make one with 'dahae keys-backup' and keep it off this server. Without it, off-site backups cannot be opened"; fi
+  if [ -n "$(env_get KEY_ESCROW_AT)" ]; then ok "비밀 키 사본을 서버 밖에 보관했다고 확인했어요" "Confirmed that the secret key copy is kept off this server"
+  else warn "비밀 키 사본을 서버 밖에 보관했다는 확인이 없어요 — 'dahae keys-backup' 을 다시 실행해 확인하세요" "Not yet confirmed that the secret key copy is kept off this server. Run 'dahae keys-backup' again to confirm"; fi
 }
 
 cmd_keys_backup() { # dahae keys-backup : 외부 백업은 DATA_KEY 로 잠겨요. 서버를 잃어도 풀 수 있게 비밀 키(DATA_KEY·JWT_SECRET)를 비밀번호로 잠근 사본을 만들어요
   local out pass="${DAHAE_KEYS_PASSPHRASE:-}" again
   out="backups/keys-$(date +%Y%m%d-%H%M%S).env.enc"
   if [ -z "$pass" ]; then
-    has_tty || die "비밀번호를 물어볼 터미널이 없어요. 터미널에서 'sudo dahae keys-backup' 을 실행하세요."
-    IFS= read -rsp "잠금 비밀번호 (12자 이상, 서버 밖에 적어 두세요): " pass </dev/tty; echo
-    IFS= read -rsp "한 번 더: " again </dev/tty; echo
-    [ "$pass" = "$again" ] || die "두 비밀번호가 달라요. 다시 실행하세요."
+    has_tty || die "비밀번호를 물어볼 터미널이 없어요. 터미널에서 'sudo dahae keys-backup' 을 실행하세요." "There is no terminal to ask for the password. Run 'sudo dahae keys-backup' in a terminal."
+    IFS= read -rsp "$(L "잠금 비밀번호 (12자 이상, 서버 밖에 적어 두세요): " "Lock password (12 characters or more, write it down off this server): ")" pass </dev/tty; echo
+    IFS= read -rsp "$(L "한 번 더: " "Once more: ")" again </dev/tty; echo
+    [ "$pass" = "$again" ] || die "두 비밀번호가 달라요. 다시 실행하세요." "The two passwords differ. Run again."
   fi
-  [ "${#pass}" -ge 12 ] || die "비밀번호는 12자 이상이어야 해요."
+  [ "${#pass}" -ge 12 ] || die "비밀번호는 12자 이상이어야 해요." "The password must be 12 characters or more."
   # keys-restore 가 쓰는 두 키만 담아요: DB 비밀번호 같은 다른 값은 사본에 없어요 (사본이 새어도 DB 를 열 수 없어요)
-  grep -E '^(DATA_KEY|JWT_SECRET)=' .env | keys_seal "$pass" > "$out" || { rm -f "$out"; die "비밀 키 사본을 만들지 못했어요 (openssl)."; }
-  ok "비밀 키 사본: $DIR/$out"
-  echo "  이 파일과 비밀번호를 서버 밖(USB, 비밀번호 관리자 등)에 따로 보관하세요. 서버를 잃으면:"
-  echo "  새 서버에 설치 → dahae keys-restore <이 파일> → 콘솔에서 외부 백업 연결 → dahae restore-offsite"
+  grep -E '^(DATA_KEY|JWT_SECRET)=' .env | keys_seal "$pass" > "$out" || { rm -f "$out"; die "비밀 키 사본을 만들지 못했어요 (openssl)." "Could not make the secret key copy (openssl)."; }
+  ok "비밀 키 사본: $DIR/$out" "Secret key copy: $DIR/$out"
+  echo "$(L "  이 파일과 비밀번호를 서버 밖(USB, 비밀번호 관리자 등)에 따로 보관하세요. 서버를 잃으면:" "  Keep this file and the password apart, off this server (USB, a password manager). If the server is lost:")"
+  echo "$(L "  새 서버에 설치 → dahae keys-restore <이 파일> → 콘솔에서 외부 백업 연결 → dahae restore-offsite" "  install on a new server -> dahae keys-restore <this file> -> connect off-site backup in the console -> dahae restore-offsite")"
   key_escrow_confirm
 }
 
@@ -1219,84 +1285,85 @@ cmd_keys_backup() { # dahae keys-backup : 외부 백업은 DATA_KEY 로 잠겨�
 key_escrow_confirm() {
   local a=""
   if has_tty; then
-    printf '서버 밖에 보관했어요? 보관했다면 "보관했어요" 를 입력하세요 (나중에 하려면 Enter): ' >/dev/tty
+    Lf '서버 밖에 보관했어요? 보관했다면 "보관했어요" 를 입력하세요 (나중에 하려면 Enter): ' 'Is it kept off this server? If so, type "stored" (Enter to do it later): ' >/dev/tty
     IFS= read -r a </dev/tty || true
   fi
-  if [ "$a" = "보관했어요" ]; then env_set KEY_ESCROW_AT "$(date +%s)"; ok "비밀 키 사본 보관을 확인했어요"
-  else warn "비밀 키 사본 보관은 아직 확인되지 않았어요 (dahae status 에서 다시 확인해요)"; fi
+  if [ "$a" = "$(L 보관했어요 stored)" ]; then env_set KEY_ESCROW_AT "$(date +%s)"; ok "비밀 키 사본 보관을 확인했어요" "Confirmed: the secret key copy is kept off the server"
+  else warn "비밀 키 사본 보관은 아직 확인되지 않았어요 (dahae status 에서 다시 확인해요)" "The secret key copy is not confirmed yet (dahae status asks again)"; fi
 }
 
-cmd_keys_confirm() { env_set KEY_ESCROW_AT "$(date +%s)"; ok "비밀 키 사본 보관을 확인했어요"; } # 콘솔에서 사장님이 사본을 내려받은 뒤 작업 실행기가 불러요
+cmd_keys_confirm() { env_set KEY_ESCROW_AT "$(date +%s)"; ok "비밀 키 사본 보관을 확인했어요" "Confirmed: the secret key copy is kept off the server"; } # 콘솔에서 사장님이 사본을 내려받은 뒤 작업 실행기가 불러요
 
 keys_field() { sed -n "s/^$1=\([0-9a-f]\{32,\}\)\$/\1/p" | tail -n1; } # keys_field 이름 < 내용 : 16진수 값만
 
 cmd_keys_restore() { # dahae keys-restore 파일 [--yes] : 잠근 사본의 DATA_KEY·JWT_SECRET 을 이 서버에 넣어요
   local f="" a pass="${DAHAE_KEYS_PASSPHRASE:-}" plain key jwt
   for a in "$@"; do case "$a" in --yes|-y) YES=1 ;; *) f="$a" ;; esac; done
-  { [ -n "$f" ] && [ -f "$f" ]; } || die "사용법: dahae keys-restore keys-20261110-033000.env.enc [--yes]"
+  { [ -n "$f" ] && [ -f "$f" ]; } || die "사용법: dahae keys-restore keys-20261110-033000.env.enc [--yes]" "Usage: dahae keys-restore keys-20261110-033000.env.enc [--yes]"
   if [ -z "$pass" ]; then
-    has_tty || die "비밀번호를 물어볼 터미널이 없어요."
-    IFS= read -rsp "잠금 비밀번호: " pass </dev/tty; echo
+    has_tty || die "비밀번호를 물어볼 터미널이 없어요." "There is no terminal to ask for the password."
+    IFS= read -rsp "$(L "잠금 비밀번호: " "Lock password: ")" pass </dev/tty; echo
   fi
-  plain=$(keys_open "$pass" < "$f") || die "비밀번호가 틀렸거나 파일이 손상됐어요. 아무것도 바뀌지 않았어요."
+  plain=$(keys_open "$pass" < "$f") || die "비밀번호가 틀렸거나 파일이 손상됐어요. 아무것도 바뀌지 않았어요." "The password is wrong or the file is damaged. Nothing changed."
   # 파이프로 넘겨요: here-string 은 오래된 bash 에서 /tmp 에 임시 파일을 만들어요.
   key=$(printf '%s\n' "$plain" | keys_field DATA_KEY); jwt=$(printf '%s\n' "$plain" | keys_field JWT_SECRET)
-  [ "${#key}" = 64 ] || die "사본에 DATA_KEY 가 없어요. 아무것도 바뀌지 않았어요."
-  confirm "이 서버의 DATA_KEY 를 사본의 키로 바꿀까요? 이 서버에서 새로 입력한 연동 키는 다시 입력해야 해요." yes
+  [ "${#key}" = 64 ] || die "사본에 DATA_KEY 가 없어요. 아무것도 바뀌지 않았어요." "The copy has no DATA_KEY. Nothing changed."
+  confirm "$(L "이 서버의 DATA_KEY 를 사본의 키로 바꿀까요? 이 서버에서 새로 입력한 연동 키는 다시 입력해야 해요." "Replace this server's DATA_KEY with the key from the copy? Integration keys entered on this server must be entered again.")" yes
   cp -p .env "backups/env-before-keys-restore-$(date +%Y%m%d-%H%M%S)"
   env_set DATA_KEY "$key"
   if [ -n "$jwt" ]; then env_set JWT_SECRET "$jwt"; fi
   dc up -d api >/dev/null
-  wait_healthy || die "키를 바꾼 뒤 앱이 응답하지 않아요. 'dahae logs' 를 확인하세요. 예전 .env 는 backups/ 에 있어요."
-  ok "예전 비밀 키를 넣었어요. 이제 콘솔에서 외부 백업을 연결하고 'dahae restore-offsite' 로 되돌리세요."
+  wait_healthy || die "키를 바꾼 뒤 앱이 응답하지 않아요. 'dahae logs' 를 확인하세요. 예전 .env 는 backups/ 에 있어요." "The app does not answer after the key change. Check 'dahae logs'. The old .env is in backups/."
+  ok "예전 비밀 키를 넣었어요. 이제 콘솔에서 외부 백업을 연결하고 'dahae restore-offsite' 로 되돌리세요." "The old secret keys are back. Now connect the off-site backup in the console and restore with 'dahae restore-offsite'."
 }
 
 cmd_alert() { # dahae alert update|backup|ssh [차단 주소 수] : 예약 작업 실패나 SSH 차단 증가를 외부 가동 확인 주소로 알려요
   local what="${1:-}" n="${2:-}" url payload
-  case "$what" in update|backup) ;; ssh) printf '%s' "$n" | grep -Eq '^[0-9]{1,6}$' || die "사용법: dahae alert ssh <차단 주소 수>" ;; *) die "사용법: dahae alert update|backup|ssh" ;; esac
+  case "$what" in update|backup) ;; ssh) printf '%s' "$n" | grep -Eq '^[0-9]{1,6}$' || die "사용법: dahae alert ssh <차단 주소 수>" "Usage: dahae alert ssh <number of banned addresses>" ;; *) die "사용법: dahae alert update|backup|ssh" "Usage: dahae alert update|backup|ssh" ;; esac
   url=$(env_get HEARTBEAT_URL)
-  [ -n "$url" ] || { warn "외부 가동 확인 주소가 없어 알리지 못했어요 ('dahae heartbeat <주소>' 로 켜세요)"; return 1; }
-  if [ "$what" = ssh ]; then payload="SSH 로그인 실패가 늘어 $n 개 주소를 차단했어요 (fail2ban). 'sudo fail2ban-client status sshd' 로 확인하세요."
+  [ -n "$url" ] || { warn "외부 가동 확인 주소가 없어 알리지 못했어요 ('dahae heartbeat <주소>' 로 켜세요)" "No external uptime check address, so no alert was sent (turn it on with 'dahae heartbeat <address>')"; return 1; }
+  if [ "$what" = ssh ]; then payload="$(L "SSH 로그인 실패가 늘어 $n 개 주소를 차단했어요 (fail2ban). 'sudo fail2ban-client status sshd' 로 확인하세요." "Failed SSH logins rose, so $n addresses were banned (fail2ban). Check 'sudo fail2ban-client status sshd'.")"
   else payload=$(tail -n 30 "backups/$what.log" 2>/dev/null); fi
-  printf '%s' "$payload" | curl -fsS --max-time 15 -o /dev/null --data-binary @- "$(fail_url "$url")"     || { warn "알림을 보내지 못했어요"; return 1; }
-  ok "$what 알림을 보냈어요"
+  printf '%s' "$payload" | curl -fsS --max-time 15 -o /dev/null --data-binary @- "$(fail_url "$url")"     || { warn "알림을 보내지 못했어요" "Could not send the alert"; return 1; }
+  ok "$what 알림을 보냈어요" "$what alert sent"
 }
 
 cmd_restore() { # dahae restore 파일 [--yes]
   local f="" up a
   for a in "$@"; do case "$a" in --yes|-y) YES=1 ;; *) f="$a" ;; esac; done
-  [ -n "$f" ] || die "복원할 백업 파일을 지정하세요. 예: dahae restore backups/db-20261110-033000.sql.gz.enc"
+  [ -n "$f" ] || die "복원할 백업 파일을 지정하세요. 예: dahae restore backups/db-20261110-033000.sql.gz.enc" "Name the backup file to restore. Example: dahae restore backups/db-20261110-033000.sql.gz.enc"
   f=$(backup_rel "$f")
-  backup_path_ok "$f" || die "백업 파일은 backups/ 폴더 안의 파일만 쓸 수 있어요 (예: backups/db-20261110-033000.sql.gz.enc): $f"
-  [ -f "$f" ] || die "백업 파일을 찾을 수 없어요: $f"
-  confirm "현재 데이터를 ${f%.enc} 로 되돌릴까요? 지금 데이터는 먼저 따로 백업해 둬요." yes
+  backup_path_ok "$f" || die "백업 파일은 backups/ 폴더 안의 파일만 쓸 수 있어요 (예: backups/db-20261110-033000.sql.gz.enc): $f" "Only files inside the backups/ folder can be used (example: backups/db-20261110-033000.sql.gz.enc): $f"
+  [ -f "$f" ] || die "백업 파일을 찾을 수 없어요: $f" "Backup file not found: $f"
+  confirm "$(L "현재 데이터를 ${f%.enc} 로 되돌릴까요? 지금 데이터는 먼저 따로 백업해 둬요." "Restore the current data to ${f%.enc}? The current data is backed up separately first.")" yes
   # 확인을 받은 뒤에만 평문을 풀어요
-  open_backup "$f" || die "백업을 풀지 못했어요. 봉인 키(DATA_KEY)가 맞는지 확인하세요: $f"
+  open_backup "$f" || die "백업을 풀지 못했어요. 봉인 키(DATA_KEY)가 맞는지 확인하세요: $f" "Could not open the backup. Check that the sealing key (DATA_KEY) is right: $f"
   f="${f%.enc}"
   up=$(uploads_for "$f")
-  if [ -f "$up.enc" ]; then open_backup "$up.enc" || die "사진 파일 백업을 풀지 못했어요: $up.enc"; fi
-  gzip -t "$f" 2>/dev/null || die "백업 파일이 손상됐어요: $f"
+  if [ -f "$up.enc" ]; then open_backup "$up.enc" || die "사진 파일 백업을 풀지 못했어요: $up.enc" "Could not open the photo backup: $up.enc"; fi
+  gzip -t "$f" 2>/dev/null || die "백업 파일이 손상됐어요: $f" "The backup file is damaged: $f"
   if [ -f "$up" ] && ! uploads_tar_ok "$up"; then
-    die "사진 파일 백업이 손상됐거나 허용되지 않는 항목(절대 경로, .., 링크)이 있어서 복원을 멈췄어요. 아무것도 바뀌지 않았어요: $up"
+    die "사진 파일 백업이 손상됐거나 허용되지 않는 항목(절대 경로, .., 링크)이 있어서 복원을 멈췄어요. 아무것도 바뀌지 않았어요: $up" "The photo backup is damaged or has entries that are not allowed (absolute paths, .., links), so the restore stopped. Nothing changed: $up"
   fi
-  printf '\n▶ 복원 전에 지금 상태를 백업해요\n'
-  cmd_backup noprune || die "복원 전 백업을 끝내지 못해서 복원을 멈췄어요. 아무것도 바뀌지 않았어요."
+  Lf '\n▶ 복원 전에 지금 상태를 백업해요\n' '\n▶ Backing up the current state before the restore\n'
+  cmd_backup noprune || die "복원 전 백업을 끝내지 못해서 복원을 멈췄어요. 아무것도 바뀌지 않았어요." "The pre-restore backup did not finish, so the restore stopped. Nothing changed."
   db_roles
   dc stop api >/dev/null
   # 한 트랜잭션으로 적용해요: 오류가 하나라도 나면 아무것도 바뀌지 않아요.
   if ! restore_stream "$f" | psql_api -v ON_ERROR_STOP=1 --single-transaction -q >/dev/null; then
     dc start api >/dev/null || true
-    die "DB 복원에 실패했어요. 데이터는 복원 전 그대로예요. 위 오류를 개발자에게 전달해 주세요."
+    die "DB 복원에 실패했어요. 데이터는 복원 전 그대로예요. 위 오류를 개발자에게 전달해 주세요." "The database restore failed. The data is as it was before. Send the error above to the developer."
   fi
-  local files=복원됨 rc=0
+  local files rc=0
+  files=$(L 복원됨 restored)
   if [ ! -f "$up" ]; then
-    files="백업 없음"; warn "같은 시각의 사진 파일 백업($up)이 없어 DB 만 복원했어요. 외부 백업에 있으면 'dahae restore-offsite' 로 함께 복원돼요."
+    files="$(L "백업 없음" "no backup")"; warn "같은 시각의 사진 파일 백업($up)이 없어 DB 만 복원했어요. 외부 백업에 있으면 'dahae restore-offsite' 로 함께 복원돼요." "There is no photo backup ($up) from the same time, so only the database was restored. If the off-site backup has it, 'dahae restore-offsite' restores both."
   elif ! dc run --rm --no-deps -T --entrypoint sh api -c "$UPLOADS_SWAP" < "$up"; then
-    files=실패; rc=1; warn "사진 파일 복원에 실패했어요 (DB 는 복원됐어요): $up"
+    files=실패; rc=1; warn "사진 파일 복원에 실패했어요 (DB 는 복원됐어요): $up" "The photo restore failed (the database was restored): $up"
   fi
   dc start api >/dev/null
-  wait_healthy || die "복원 뒤 앱이 응답하지 않아요. 'dahae logs' 를 확인하세요."
-  ok "복원 완료: $f (사진 파일: $files)"
+  wait_healthy || die "복원 뒤 앱이 응답하지 않아요. 'dahae logs' 를 확인하세요." "The app does not answer after the restore. Check 'dahae logs'."
+  ok "복원 완료: $f (사진 파일: $files)" "Restore done: $f (photos: $files)"
   return "$rc"
 }
 
@@ -1304,28 +1371,28 @@ cmd_restore_offsite() { # dahae restore-offsite [이름] [--yes]
   local name="" a db up
   for a in "$@"; do case "$a" in --yes|-y) YES=1 ;; *) name="$a" ;; esac; done
   if [ -z "$name" ]; then api_backup backup-list; return 0; fi
-  valid_backup_name "$name" || die "외부 백업 이름이 아니에요 (예: db-20261110-033000.sql.gz.enc): $name"
+  valid_backup_name "$name" || die "외부 백업 이름이 아니에요 (예: db-20261110-033000.sql.gz.enc): $name" "That is not an off-site backup name (example: db-20261110-033000.sql.gz.enc): $name"
   db="backups/${name%.enc}"; up=$(uploads_for "$db")
-  confirm "외부 백업 $name 으로 되돌릴까요? 지금 데이터는 먼저 따로 백업해 둬요." yes
+  confirm "$(L "외부 백업 $name 으로 되돌릴까요? 지금 데이터는 먼저 따로 백업해 둬요." "Restore to the off-site backup $name? The current data is backed up separately first.")" yes
   SCRATCH+=("$db" "$up")   # 내려받은 평문은 복원이 끝나면 지워요
-  api_backup backup-fetch "$name" "/$db" || die "외부 백업을 내려받지 못했어요"
+  api_backup backup-fetch "$name" "/$db" || die "외부 백업을 내려받지 못했어요" "Could not download the off-site backup"
   api_backup backup-fetch "$(basename "$up").enc" "/$up" >/dev/null 2>&1 \
-    || warn "외부 백업에 같은 시각의 사진 파일이 없어요"
+    || warn "외부 백업에 같은 시각의 사진 파일이 없어요" "The off-site backup has no photos from the same time"
   YES=1 cmd_restore "$db" # 위에서 이미 확인했어요: 평문은 확인 뒤에만 내려받아요
 }
 
 cmd_heartbeat() { # dahae heartbeat <https 주소>|off
   local url="${1:-}"
   case "$url" in
-    "") die "사용법: dahae heartbeat https://hc-ping.com/... (끄려면: dahae heartbeat off)" ;;
+    "") die "사용법: dahae heartbeat https://hc-ping.com/... (끄려면: dahae heartbeat off)" "Usage: dahae heartbeat https://hc-ping.com/... (to turn off: dahae heartbeat off)" ;;
     off) url="" ;;
-    *) printf '%s' "$url" | grep -Eq "$HB_URL_RE" || die "https:// 로 시작하는 주소만 쓸 수 있어요 (& 나 공백은 안 돼요): $url" ;;
+    *) printf '%s' "$url" | grep -Eq "$HB_URL_RE" || die "https:// 로 시작하는 주소만 쓸 수 있어요 (& 나 공백은 안 돼요): $url" "Only addresses starting with https:// can be used (no & or spaces): $url" ;;
   esac
   env_set HEARTBEAT_URL "$url"
   dc up -d api >/dev/null
-  if [ -z "$url" ]; then ok "외부 가동 확인을 껐어요"; return 0; fi
-  if curl -fsS --max-time 10 -o /dev/null "$url"; then ok "외부 가동 확인을 켰어요. 테스트 핑을 보냈어요."
-  else warn "주소는 저장했지만 테스트 핑이 실패했어요. 주소를 확인하세요."; fi
+  if [ -z "$url" ]; then ok "외부 가동 확인을 껐어요" "External uptime check turned off"; return 0; fi
+  if curl -fsS --max-time 10 -o /dev/null "$url"; then ok "외부 가동 확인을 켰어요. 테스트 핑을 보냈어요." "External uptime check turned on. A test ping was sent."
+  else warn "주소는 저장했지만 테스트 핑이 실패했어요. 주소를 확인하세요." "The address was saved, but the test ping failed. Check the address."; fi
 }
 
 new_domain_ok() { # new_domain_ok 도메인 : 설치 프로그램의 valid_domain 과 같아요 (소문자로 받은 값)
@@ -1354,62 +1421,62 @@ cmd_domain() { # dahae domain <새 도메인> [--yes] : .env 를 백업하고 DO
   local new old backup
   new=$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')
   [ "${2:-}" != --yes ] || YES=1
-  new_domain_ok "$new" || die "사용법: dahae domain <새 도메인> (예: myshop.co.kr)"
+  new_domain_ok "$new" || die "사용법: dahae domain <새 도메인> (예: myshop.co.kr)" "Usage: dahae domain <new domain> (example: myshop.com)"
   old=$(env_get DOMAIN)
-  [ "$new" != "$old" ] || die "지금 쓰는 도메인이에요: $new"
-  domain_dns_ok "$new" || die "$new 이 아직 이 서버를 가리키지 않아요. A 레코드를 이 서버의 IP 로 맞추고 AAAA(IPv6) 레코드는 지운 뒤 다시 해 주세요. 지금 서비스는 그대로예요."
-  confirm "서비스 주소를 $old 에서 $new 로 바꿀까요? 30초쯤 멈춰요. 예전 주소도 계속 응답해요." "$new"
+  [ "$new" != "$old" ] || die "지금 쓰는 도메인이에요: $new" "That is the domain in use now: $new"
+  domain_dns_ok "$new" || die "$new 이 아직 이 서버를 가리키지 않아요. A 레코드를 이 서버의 IP 로 맞추고 AAAA(IPv6) 레코드는 지운 뒤 다시 해 주세요. 지금 서비스는 그대로예요." "$new does not point to this server yet. Set the A record to this server's IP, delete any AAAA (IPv6) record, then try again. The service stays as it is."
+  confirm "$(L "서비스 주소를 $old 에서 $new 로 바꿀까요? 30초쯤 멈춰요. 예전 주소도 계속 응답해요." "Change the service address from $old to $new? It pauses for about 30 seconds. The old address keeps answering.")" "$new"
   # 바꾸기 전에 새 주소를 https 로 확인해요: API 가 이 파일(읽기 전용)을 보고 15분 동안 인증서를 허락하고, Caddy 는
   # 받은 인증서를 바꾼 뒤에도 그대로 써요. 응답하지 않으면 아무것도 바꾸지 않고 끝나요
-  mkdir -p jobs/out && printf '%s\n' "$new" > jobs/out/domain-pending || die "새 주소를 확인하지 못해서 바꾸지 않았어요. 지금 서비스는 그대로예요."
+  mkdir -p jobs/out && printf '%s\n' "$new" > jobs/out/domain-pending || die "새 주소를 확인하지 못해서 바꾸지 않았어요. 지금 서비스는 그대로예요." "Could not check the new address, so nothing changed. The service stays as it is."
   if ! domain_https_ok "$new"; then
     rm -f jobs/out/domain-pending
-    die "$new 이 https 로 응답하지 않아서 바꾸지 않았어요. DNS 와 방화벽(80·443)을 확인하고 다시 해 주세요. 지금 서비스는 그대로예요."
+    die "$new 이 https 로 응답하지 않아서 바꾸지 않았어요. DNS 와 방화벽(80·443)을 확인하고 다시 해 주세요. 지금 서비스는 그대로예요." "$new does not answer over https, so nothing changed. Check DNS and the firewall (80, 443) and try again. The service stays as it is."
   fi
   rm -f jobs/out/domain-pending
   mkdir -p backups
   backup="backups/env-before-domain-$(date +%Y%m%d-%H%M%S)"
-  (umask 077; cp -- .env "$backup") || die ".env 를 백업하지 못해서 바꾸지 않았어요."
+  (umask 077; cp -- .env "$backup") || die ".env 를 백업하지 못해서 바꾸지 않았어요." "Could not back up .env, so nothing changed."
   # 바꾸는 도중에 끊기면(작업 시간 제한, Ctrl+C) 새 DOMAIN 을 .env 에 남기지 않아요
   # shellcheck disable=SC2064 # 지금의 백업 경로를 넣어 둬요
   trap "cat -- $(printf '%q' "$backup") > .env; exit 143" TERM INT HUP
   env_set DOMAIN "$new"
   if dc up -d api web >/dev/null 2>&1 && wait_healthy && domain_https_ok "$new"; then
     trap - TERM INT HUP
-    ok "서비스 주소를 $new 로 바꿨어요. 예전 주소 $old 도 계속 응답해요 (콘솔 설정 > 도메인에서 은퇴시켜요)."
+    ok "서비스 주소를 $new 로 바꿨어요. 예전 주소 $old 도 계속 응답해요 (콘솔 설정 > 도메인에서 은퇴시켜요)." "Service address changed to $new. The old address $old keeps answering (retire it in the console under Settings > Domain)."
     return 0
   fi
-  warn "$new 가 응답하지 않아서 예전 설정으로 되돌려요."
+  warn "$new 가 응답하지 않아서 예전 설정으로 되돌려요." "$new does not answer, so the old settings are being put back."
   cat -- "$backup" > .env
   # API 가 다시 켜질 때 이 주소를 예전 도메인으로 남기지 않게 알려 줘요
-  printf '%s\n' "$new" > jobs/out/domain-rolled-back || warn "되돌린 주소를 API 에 알리지 못했어요"
+  printf '%s\n' "$new" > jobs/out/domain-rolled-back || warn "되돌린 주소를 API 에 알리지 못했어요" "Could not tell the API about the restored address"
   trap - TERM INT HUP
   # 되돌린 서비스가 응답할 때만 rolled_back 이에요. 아니면 실패로 끝나서 콘솔이 "되돌렸어요" 라고 하지 않아요
-  { dc up -d api web >/dev/null 2>&1 && wait_healthy; } || die "되돌렸지만 서비스가 응답하지 않아요. 'dahae status' 를 확인하세요."
-  die_rolled_back "도메인을 바꾸지 못해서 $old 로 되돌렸어요. DNS 와 방화벽(80·443)을 확인하고 다시 해 주세요."
+  { dc up -d api web >/dev/null 2>&1 && wait_healthy; } || die "되돌렸지만 서비스가 응답하지 않아요. 'dahae status' 를 확인하세요." "Rolled back, but the service does not answer. Check 'dahae status'."
+  die_rolled_back "도메인을 바꾸지 못해서 $old 로 되돌렸어요. DNS 와 방화벽(80·443)을 확인하고 다시 해 주세요." "Could not change the domain, so it went back to $old. Check DNS and the firewall (80, 443) and try again."
 }
 
 cmd_applinks() { # dahae applinks --android-sha256 지문[,지문] --apple-team-id 팀ID
   local sha="" team="" changed=0
   while [ $# -gt 0 ]; do
     case "$1" in
-      --android-sha256) sha="${2:-}"; shift 2 || die "--android-sha256 다음에 지문을 쓰세요" ;;
-      --apple-team-id) team="${2:-}"; shift 2 || die "--apple-team-id 다음에 팀 ID 를 쓰세요" ;;
+      --android-sha256) sha="${2:-}"; shift 2 || die "--android-sha256 다음에 지문을 쓰세요" "Write the fingerprint after --android-sha256" ;;
+      --apple-team-id) team="${2:-}"; shift 2 || die "--apple-team-id 다음에 팀 ID 를 쓰세요" "Write the team ID after --apple-team-id" ;;
       *) die "$USAGE" ;;
     esac
   done
-  [ -n "$sha$team" ] || die "사용법: dahae applinks --android-sha256 AA:BB:...(32쌍)[,다른지문] --apple-team-id ABCDE12345"
+  [ -n "$sha$team" ] || die "사용법: dahae applinks --android-sha256 AA:BB:...(32쌍)[,다른지문] --apple-team-id ABCDE12345" "Usage: dahae applinks --android-sha256 AA:BB:...(32 pairs)[,another] --apple-team-id ABCDE12345"
   if [ -n "$sha" ]; then
-    valid_fingerprints "$sha" || die "Android 인증서 SHA-256 지문 형식이 아니에요 (AA:BB:... 32쌍, 여러 개는 쉼표로): $sha"
+    valid_fingerprints "$sha" || die "Android 인증서 SHA-256 지문 형식이 아니에요 (AA:BB:... 32쌍, 여러 개는 쉼표로): $sha" "Not an Android certificate SHA-256 fingerprint (AA:BB:... 32 pairs, several separated by commas): $sha"
     env_set ANDROID_CERT_SHA256 "$(printf '%s' "$sha" | tr 'a-f' 'A-F')"; changed=1
   fi
   if [ -n "$team" ]; then
-    valid_team_id "$team" || die "Apple 팀 ID 는 영문·숫자 10자리예요: $team"
+    valid_team_id "$team" || die "Apple 팀 ID 는 영문·숫자 10자리예요: $team" "An Apple team ID is 10 letters and digits: $team"
     env_set APPLE_TEAM_ID "$team"; changed=1
   fi
   [ "$changed" = 1 ] && dc up -d api >/dev/null
-  wait_healthy || die "설정 후 앱이 응답하지 않아요. 'dahae logs' 를 확인하세요."
-  ok "앱 링크를 설정했어요: https://$(env_get DOMAIN)/.well-known/assetlinks.json"
+  wait_healthy || die "설정 후 앱이 응답하지 않아요. 'dahae logs' 를 확인하세요." "The app does not answer after the change. Check 'dahae logs'."
+  ok "앱 링크를 설정했어요: https://$(env_get DOMAIN)/.well-known/assetlinks.json" "App links set: https://$(env_get DOMAIN)/.well-known/assetlinks.json"
 }
 
 cmd_host_approval() { # dahae host-approval enroll <사장님 계정 번호> | status : 서버 승인 코드를 처음 만들어요 (버전 올리기·되돌리기를 승인할 때 인증 앱 코드를 써요)
@@ -1417,27 +1484,27 @@ cmd_host_approval() { # dahae host-approval enroll <사장님 계정 번호> | s
   case "${1:-status}" in
     enroll)
       printf '%s' "$staff" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' \
-        || die "사장님 계정 번호(UUID)를 함께 주세요: dahae host-approval enroll <번호>"
-      [ ! -e host/approval.key ] || die "이미 서버 승인 코드가 있어요. 다시 만들려면: dahae owner-reset"
+        || die "사장님 계정 번호(UUID)를 함께 주세요: dahae host-approval enroll <번호>" "Give the owner account number (UUID) too: dahae host-approval enroll <number>"
+      [ ! -e host/approval.key ] || die "이미 서버 승인 코드가 있어요. 다시 만들려면: dahae owner-reset" "A server approval code already exists. To make a new one: dahae owner-reset"
       secret=$(head -c 20 /dev/urandom | base32 | tr -d '=\n')
-      printf '{"staff_id":"%s"}\n' "$staff" > host/owner.json || die "사장님 계정 번호를 저장하지 못했어요"
-      (umask 077; printf '%s\n' "$secret" > host/approval.key) || die "서버 승인 코드를 저장하지 못했어요"
+      printf '{"staff_id":"%s"}\n' "$staff" > host/owner.json || die "사장님 계정 번호를 저장하지 못했어요" "Could not save the owner account number"
+      (umask 077; printf '%s\n' "$secret" > host/approval.key) || die "서버 승인 코드를 저장하지 못했어요" "Could not save the server approval code"
       issuer=$(env_get DOMAIN); printf '%s' "$issuer" | grep -Eq "$DOMAIN_RE" || issuer=server
       uri="otpauth://totp/$issuer:server?secret=$secret&issuer=$issuer&digits=6&period=30"
-      ok "서버 승인 코드를 만들었어요. 인증 앱에 아래 주소나 키를 넣어 주세요 (6자리, 30초)."
-      printf '  키: %s\n  주소: %s\n' "$secret" "$uri"
+      ok "서버 승인 코드를 만들었어요. 인증 앱에 아래 주소나 키를 넣어 주세요 (6자리, 30초)." "Server approval code created. Add the address or key below to your authenticator app (6 digits, 30 seconds)."
+      Lf '  키: %s\n  주소: %s\n' '  Key: %s\n  Address: %s\n' "$secret" "$uri"
       if command -v qrencode >/dev/null; then qrencode -t ANSIUTF8 "$uri"; fi ;;
     status)
-      if [ -f host/approval.key ]; then ok "서버 승인 코드가 있어요"; else warn "서버 승인 코드가 없어요 (dahae host-approval enroll <번호>)"; fi
-      [ ! -e host/awaiting.job ] || warn "서버 승인을 기다리는 작업이 있어요" ;;
-    *) die "사용법: dahae host-approval enroll <번호> | status" ;;
+      if [ -f host/approval.key ]; then ok "서버 승인 코드가 있어요" "A server approval code exists"; else warn "서버 승인 코드가 없어요 (dahae host-approval enroll <번호>)" "No server approval code (dahae host-approval enroll <number>)"; fi
+      [ ! -e host/awaiting.job ] || warn "서버 승인을 기다리는 작업이 있어요" "A job is waiting for server approval" ;;
+    *) die "사용법: dahae host-approval enroll <번호> | status" "Usage: dahae host-approval enroll <number> | status" ;;
   esac
 }
 
 cmd_owner_reset() { # dahae owner-reset : 서버 승인 코드와 틀린 기록을 지워요. 기다리는 승인 작업도 취소돼요
-  confirm "서버 승인 코드를 지울까요? 지운 뒤에는 새로 만들어 인증 앱에 다시 넣어야 해요. 기다리는 작업은 취소돼요." 초기화
+  confirm "$(L "서버 승인 코드를 지울까요? 지운 뒤에는 새로 만들어 인증 앱에 다시 넣어야 해요. 기다리는 작업은 취소돼요." "Delete the server approval code? A new one must then be made and added to the authenticator app again. Waiting jobs are cancelled.")" 초기화
   rm -f -- host/approval.key host/approval.last-step host/approval.fails host/owner.json host/awaiting.job host/awaiting.meta
-  ok "서버 승인 코드를 지웠어요. 새로 만들려면: dahae host-approval enroll <번호>"
+  ok "서버 승인 코드를 지웠어요. 새로 만들려면: dahae host-approval enroll <번호>" "Server approval code deleted. To make a new one: dahae host-approval enroll <number>"
 }
 
 cmd_uninstall() { # dahae uninstall [--yes] | dahae uninstall --purge [--confirm 도메인]
@@ -1446,7 +1513,7 @@ cmd_uninstall() { # dahae uninstall [--yes] | dahae uninstall --purge [--confirm
     case "$1" in
       --purge) purge=1 ;;
       --yes|-y) YES=1 ;;
-      --confirm) given="${2:-}"; [ -n "$given" ] || die "--confirm 다음에 도메인을 쓰세요"; shift ;;
+      --confirm) given="${2:-}"; [ -n "$given" ] || die "--confirm 다음에 도메인을 쓰세요" "Write the domain after --confirm"; shift ;;
       *) die "$USAGE" ;;
     esac
     shift
@@ -1454,15 +1521,15 @@ cmd_uninstall() { # dahae uninstall [--yes] | dahae uninstall --purge [--confirm
   if [ "$purge" = 1 ]; then
     purge_ok "$given"
   else
-    confirm "다해 서비스를 끌까요? 데이터와 백업은 $DIR 와 Docker 볼륨에 남겨 둬요." yes
+    confirm "$(L "다해 서비스를 끌까요? 데이터와 백업은 $DIR 와 Docker 볼륨에 남겨 둬요." "Stop the Dahae services? Data and backups stay in $DIR and the Docker volumes.")" yes
   fi
   if [ "$purge" = 1 ]; then dc down --volumes --remove-orphans || true; else dc down --remove-orphans || true; fi
   rm -f /etc/cron.d/malkkeum /etc/logrotate.d/dahae "$BIN/malkkeum-heartbeat" "$BIN/malkkeum" "$BIN/dahae"
   if [ "$purge" = 1 ]; then
-    case "$DIR" in /opt/?*) cd / && rm -rf "$DIR" ;; *) die "삭제할 폴더가 이상해요: $DIR" ;; esac
-    ok "다해를 모두 지웠어요 (Docker 자체는 남겨 뒀어요)"
+    case "$DIR" in /opt/?*) cd / && rm -rf "$DIR" ;; *) die "삭제할 폴더가 이상해요: $DIR" "The folder to delete looks wrong: $DIR" ;; esac
+    ok "다해를 모두 지웠어요 (Docker 자체는 남겨 뒀어요)" "Dahae removed completely (Docker itself was left installed)"
   else
-    ok "다해 서비스를 껐어요. 설정과 백업은 $DIR 에 남아 있어요. 설치 프로그램을 다시 실행하면 그대로 이어서 써요."
+    ok "다해 서비스를 껐어요. 설정과 백업은 $DIR 에 남아 있어요. 설치 프로그램을 다시 실행하면 그대로 이어서 써요." "Dahae services stopped. Settings and backups stay in $DIR. Run the installer again to carry on."
   fi
 }
 
@@ -1490,10 +1557,10 @@ cmd_write_cron() { # 예약 작업표(/etc/cron.d/malkkeum)를 다시 써요: �
 cmd_update_schedule() { # dahae update-schedule mon@04:00 | off : 자동 업데이트 요일·시각을 바꾸고 예약표를 다시 써요
   local spec="${1:-}"
   printf '%s' "$spec" | grep -Eq '^(off|(mon|tue|wed|thu|fri|sat|sun)@([01][0-9]|2[0-3]):[0-5][0-9])$' \
-    || die "사용법: dahae update-schedule mon@04:00 | off  (요일: mon, tue, wed, thu, fri, sat, sun)"
+    || die "사용법: dahae update-schedule mon@04:00 | off  (요일: mon, tue, wed, thu, fri, sat, sun)" "Usage: dahae update-schedule mon@04:00 | off  (days: mon, tue, wed, thu, fri, sat, sun)"
   printf '%s\n' "$spec" > "$DIR/update-schedule"
   cmd_write_cron
-  ok "자동 업데이트 예약: $spec"
+  ok "자동 업데이트 예약: $spec" "Automatic update scheduled: $spec"
 }
 
 manifest_key() { # manifest_key 태그 : API·웹 이미지 목록(그 태그, 레지스트리에는 v 없이)의 지문. 둘 중 하나라도 못 읽으면 실패해요
@@ -1507,8 +1574,8 @@ stable_manifest_key() { manifest_key stable; }
 
 rollback_hold() { # rollback_hold [태그] : 되돌린 뒤: 채널(또는 고정 태그)이 아직 되돌리기 전 버전을 가리키면 자동 업데이트가 그 버전을 다시 올리지 않아요
   local key
-  if key=$(manifest_key "${1:-$(env_get VERSION)}"); then printf '%s\n' "$key" > "$ROLLBACK_HOLD" || warn "되돌린 버전 지키기 기록을 남기지 못했어요"
-  else warn "버전 정보를 읽지 못해서, 다음 자동 업데이트가 되돌리기 전 버전을 다시 올릴 수 있어요. 막으려면 콘솔에서 '다음 업데이트 건너뛰기' 를 누르세요"; fi
+  if key=$(manifest_key "${1:-$(env_get VERSION)}"); then printf '%s\n' "$key" > "$ROLLBACK_HOLD" || warn "되돌린 버전 지키기 기록을 남기지 못했어요" "Could not record that the rolled-back version is kept"
+  else warn "버전 정보를 읽지 못해서, 다음 자동 업데이트가 되돌리기 전 버전을 다시 올릴 수 있어요. 막으려면 콘솔에서 '다음 업데이트 건너뛰기' 를 누르세요" "The version information could not be read, so the next automatic update may bring back the version that was rolled back. To prevent it, press 'Skip the next update' in the console"; fi
 }
 
 stable_seasoned() { # 0: 받아도 돼요. 1: 새 버전을 막 봤어요(24시간 기다려요). 2: 새 버전 정보를 못 읽었어요. 지문은 STABLE_KEY 에 둬요
@@ -1534,33 +1601,33 @@ rejoin_channel() { # 'dahae update 태그' 로 고정된 서버를 채널로 되
   if [ -z "$(tools_ref "$ver")" ] || [ -z "$(env_get DELIVERY_RAW)" ] || [ "$(env_get IMAGE_SOURCE)" = local ]; then return 0; fi
   case "$ch" in stable|beta) ;; *) return 0 ;; esac
   cv=$(curl -fsSL --retry 3 --max-time 30 "$(env_get DELIVERY_RAW)/$(tools_ref "$ch")/VERSION" | tr -d '[:space:]') \
-    || { echo "채널($ch)의 버전 기록을 받지 못했어요. 인터넷 연결을 확인하세요" >&2; return 1; }
-  [ -n "$(tools_ref "${cv#v}")" ] || { echo "채널($ch)의 버전 기록이 이상해요: '$cv'" >&2; return 1; }
-  if ver_older "$cv" "$ver"; then echo "채널($cv)보다 앞선 버전($ver)에 고정돼 있어요. 채널이 따라오면 다시 채널을 따라가요"; return 2; fi
+    || { echo "$(L "채널($ch)의 버전 기록을 받지 못했어요. 인터넷 연결을 확인하세요" "Could not fetch the version record of channel $ch. Check the internet connection")" >&2; return 1; }
+  [ -n "$(tools_ref "${cv#v}")" ] || { echo "$(L "채널($ch)의 버전 기록이 이상해요: '$cv'" "The version record of channel $ch is malformed: '$cv'")" >&2; return 1; }
+  if ver_older "$cv" "$ver"; then echo "$(L "채널($cv)보다 앞선 버전($ver)에 고정돼 있어요. 채널이 따라오면 다시 채널을 따라가요" "Pinned to a version ($ver) ahead of the channel ($cv). It follows the channel again once the channel catches up")"; return 2; fi
   env_set VERSION "$ch"
-  echo "고정 버전($ver)에서 $ch 채널로 돌아가요"
+  echo "$(L "고정 버전($ver)에서 $ch 채널로 돌아가요" "Going back from the pinned version ($ver) to the $ch channel")"
 }
 
 cmd_auto_update() { # dahae auto-update : 예약 업데이트. 건너뛰기 표시, 기다리는 작업, 되돌린 버전 지키기, 안정 채널 24시간 대기를 먼저 확인해요
   local queued key rc=0
   edition_recover
   if [ -e "$DIR/host/skip-next-update" ]; then
-    rm -f "$DIR/host/skip-next-update"; echo "건너뛰기 표시가 있어 이번 자동 업데이트를 건너뛰었어요"; return 0
+    rm -f "$DIR/host/skip-next-update"; echo "$(L "건너뛰기 표시가 있어 이번 자동 업데이트를 건너뛰었어요" "A skip mark is set, so this automatic update was skipped")"; return 0
   fi
   queued=$(find "$DIR/jobs/inbox" -maxdepth 1 -name '*.job' 2>/dev/null | head -n1 || true)
-  if [ -n "$queued" ]; then echo "기다리는 작업이 있어 자동 업데이트를 미뤘어요"; return 0; fi
+  if [ -n "$queued" ]; then echo "$(L "기다리는 작업이 있어 자동 업데이트를 미뤘어요" "A job is waiting, so the automatic update was postponed")"; return 0; fi
   rejoin_channel || rc=$?
   if [ "$rc" = 2 ]; then return 0; elif [ "$rc" != 0 ]; then return 1; fi
   if [ -s "$ROLLBACK_HOLD" ]; then
-    key=$(manifest_key "$(env_get VERSION)") || { echo "새 버전 정보를 읽지 못했어요. 인터넷 연결과 이미지 저장소를 확인하세요" >&2; return 1; }
-    if [ "$key" = "$(cat "$ROLLBACK_HOLD")" ]; then echo "되돌린 버전을 지켜요: 새 버전이 나오면 다시 자동으로 업데이트해요"; return 0; fi
+    key=$(manifest_key "$(env_get VERSION)") || { echo "$(L "새 버전 정보를 읽지 못했어요. 인터넷 연결과 이미지 저장소를 확인하세요" "Could not read the new version information. Check the internet connection and the image registry")" >&2; return 1; }
+    if [ "$key" = "$(cat "$ROLLBACK_HOLD")" ]; then echo "$(L "되돌린 버전을 지켜요: 새 버전이 나오면 다시 자동으로 업데이트해요" "Keeping the rolled-back version: the next new version updates automatically again")"; return 0; fi
   fi
   STABLE_KEY=""
   if [ "$(env_get CHANNEL)" = stable ]; then
     stable_seasoned || rc=$?
-    if [ "$rc" = 1 ]; then echo "새 안정 버전을 막 확인했어요. 24시간 뒤에 받을게요"; return 0; fi
+    if [ "$rc" = 1 ]; then echo "$(L "새 안정 버전을 막 확인했어요. 24시간 뒤에 받을게요" "A new stable version was just seen. It is installed in 24 hours")"; return 0; fi
     # 실패로 돌려보내면 예약표가 'dahae alert update' 를 불러 사장님께 알려요. 다음 예약 때 다시 봐요.
-    if [ "$rc" != 0 ]; then echo "새 버전 정보를 읽지 못했어요. 인터넷 연결과 이미지 저장소를 확인하세요" >&2; return 1; fi
+    if [ "$rc" != 0 ]; then echo "$(L "새 버전 정보를 읽지 못했어요. 인터넷 연결과 이미지 저장소를 확인하세요" "Could not read the new version information. Check the internet connection and the image registry")" >&2; return 1; fi
   fi
   cmd_update
   if [ -n "$STABLE_KEY" ]; then printf '%s\n' "$STABLE_KEY" > "$DIR/host/applied-key"; fi
@@ -1571,12 +1638,12 @@ cmd_setup_code() { # dahae setup-code [--renew] : 사장님 계정 설치 코드
   if [ "${1:-}" = --renew ]; then
     code=$(head -c 1024 /dev/urandom | tr -dc '23456789ABCDEFGHJKMNPQRSTUVWXYZ' | cut -c1-12)
     env_set SETUP_CODE "$code"; env_set SETUP_CODE_AT "$(date +%s)"
-    dc up -d --no-deps api >/dev/null || die "새 코드를 적용하지 못했어요. 'dahae status' 를 확인하세요."
-    ok "새 설치 코드를 만들었어요"
+    dc up -d --no-deps api >/dev/null || die "새 코드를 적용하지 못했어요. 'dahae status' 를 확인하세요." "Could not apply the new code. Check 'dahae status'."
+    ok "새 설치 코드를 만들었어요" "New setup code created"
   fi
   at=$(env_get SETUP_CODE_AT); now=$(date +%s)
   if [ -z "$at" ]; then env_set SETUP_CODE_AT "$now"; at=$now; fi
-  if [ $((now - at)) -gt 604800 ]; then die "설치 코드 기간(7일)이 지났어요. 새로 받으려면: dahae setup-code --renew"; fi
+  if [ $((now - at)) -gt 604800 ]; then die "설치 코드 기간(7일)이 지났어요. 새로 받으려면: dahae setup-code --renew" "The setup code expired (7 days). To get a new one: dahae setup-code --renew"; fi
   env_get SETUP_CODE | sed -E 's/(....)(....)(....)/\1-\2-\3/'
 }
 
@@ -1616,12 +1683,12 @@ main() {
     demo)
       case "${2:-}" in
         load)
-          echo "체험용 데이터를 넣을게요. 실제 예약이 이미 있으면 넣지 않아요. (강제로 넣으려면: dahae demo load --force)"
-          dc exec -T api api demo load ${3:+"$3"} && ok "체험용 데이터를 넣었어요. 지우려면: dahae demo clear" ;;
+          echo "$(L "체험용 데이터를 넣을게요. 실제 예약이 이미 있으면 넣지 않아요. (강제로 넣으려면: dahae demo load --force)" "Loading demo data. Nothing is loaded if real bookings already exist. (To force it: dahae demo load --force)")"
+          dc exec -T api api demo load ${3:+"$3"} && ok "체험용 데이터를 넣었어요. 지우려면: dahae demo clear" "Demo data loaded. To remove it: dahae demo clear" ;;
         clear)
-          confirm "체험용 데이터를 모두 지울까요? 실제 고객·예약 데이터는 지우지 않아요." yes
-          dc exec -T api api demo clear && ok "체험용 데이터를 지웠어요" ;;
-        *) die "사용법: dahae demo [load [--force] | clear]" ;;
+          confirm "$(L "체험용 데이터를 모두 지울까요? 실제 고객·예약 데이터는 지우지 않아요." "Delete all demo data? Real customer and booking data is not deleted.")" yes
+          dc exec -T api api demo clear && ok "체험용 데이터를 지웠어요" "Demo data deleted" ;;
+        *) die "사용법: dahae demo [load [--force] | clear]" "Usage: dahae demo [load [--force] | clear]" ;;
       esac ;;
     logs) dc logs --tail 200 -f "${2:-api}" ;;
     setup-code) shift; cmd_setup_code "$@" ;;
@@ -1671,15 +1738,15 @@ $DIR/backups/*.log {
   notifempty
 }
 EOF
-  ok "매일 새벽 3시 30분 자동 백업, 매주 월요일 자동 업데이트를 예약했어요"
+  ok "매일 새벽 3시 30분 자동 백업, 매주 월요일 자동 업데이트를 예약했어요" "Daily backup at 03:30 and weekly update on Monday are scheduled"
 }
 
 load_answers() { # load_answers 파일 : MALKKEUM_ANSWERS 파일의 DOMAIN=·EMAIL= 줄로 질문에 미리 답해요 (source 하지 않아요). 이미 정한 환경 변수는 그대로 둬요
   local f="$1" k v m
-  if [ ! -f "$f" ] || [ -L "$f" ]; then die "MALKKEUM_ANSWERS 파일을 읽을 수 없어요: $f"; fi
+  if [ ! -f "$f" ] || [ -L "$f" ]; then die "MALKKEUM_ANSWERS 파일을 읽을 수 없어요: $f" "Cannot read the MALKKEUM_ANSWERS file: $f"; fi
   while IFS='=' read -r k v || [ -n "$k" ]; do
     case "$k" in DOMAIN|EMAIL) ;; *) continue ;; esac
-    case "$v" in *[[:space:]]*|*\\*|*=*) die "MALKKEUM_ANSWERS 의 $k 값에 쓸 수 없는 문자가 있어요" ;; esac
+    case "$v" in *[[:space:]]*|*\\*|*=*) die "MALKKEUM_ANSWERS 의 $k 값에 쓸 수 없는 문자가 있어요" "The $k value in MALKKEUM_ANSWERS has characters that are not allowed" ;; esac
     m="MALKKEUM_$k"; [ -n "${!m:-}" ] || printf -v "$m" '%s' "$v"
     export "${m?}"
   done < "$f"
@@ -1693,18 +1760,18 @@ agent_sha_ok() { # agent_sha_ok 파일 지문 : 파일의 SHA-256 이 install.sh
 
 fetch_agent() { # 같은 릴리스의 agent.sh 를 받아 install.sh 의 지문과 맞을 때만 $DIR/agent.sh 로 둬요 (MALKKEUM_AGENT_FILE 은 개발·테스트용 로컬 파일)
   local tmp
-  tmp=$(mktemp "$DIR/.agent.XXXXXX") || die "작업 실행기 파일을 만들지 못했어요."
+  tmp=$(mktemp "$DIR/.agent.XXXXXX") || die "작업 실행기 파일을 만들지 못했어요." "Could not create the job runner file."
   if [ -n "${MALKKEUM_AGENT_FILE:-}" ]; then
-    cp -- "$MALKKEUM_AGENT_FILE" "$tmp" || { rm -f "$tmp"; die "작업 실행기 파일을 읽지 못했어요: $MALKKEUM_AGENT_FILE"; }
+    cp -- "$MALKKEUM_AGENT_FILE" "$tmp" || { rm -f "$tmp"; die "작업 실행기 파일을 읽지 못했어요: $MALKKEUM_AGENT_FILE" "Could not read the job runner file: $MALKKEUM_AGENT_FILE"; }
     # 배포본(지문이 적힌 install.sh)이면 로컬 파일도 그 지문과 같아야 해요 (dahae update 가 확인해 둔 파일을 넘겨요)
-    [ -z "$AGENT_SHA256" ] || agent_sha_ok "$tmp" "$AGENT_SHA256" || { rm -f "$tmp"; die "작업 실행기의 지문이 설치 프로그램에 적힌 값과 달라요. 설치를 멈췄어요."; }
+    [ -z "$AGENT_SHA256" ] || agent_sha_ok "$tmp" "$AGENT_SHA256" || { rm -f "$tmp"; die "작업 실행기의 지문이 설치 프로그램에 적힌 값과 달라요. 설치를 멈췄어요." "The job runner's fingerprint differs from the one in the installer. Installation stopped."; }
   else
-    { [ -n "$RELEASE_RAW" ] && [ -n "$AGENT_SHA256" ]; } || { rm -f "$tmp"; die "이 설치 프로그램에는 작업 실행기 주소나 지문이 없어요. 배포본의 install.sh 를 쓰세요."; }
+    { [ -n "$RELEASE_RAW" ] && [ -n "$AGENT_SHA256" ]; } || { rm -f "$tmp"; die "이 설치 프로그램에는 작업 실행기 주소나 지문이 없어요. 배포본의 install.sh 를 쓰세요." "This installer has no job runner address or fingerprint. Use the released install.sh."; }
     curl -fsSL --retry 3 --max-time 60 "$RELEASE_RAW/agent.sh" -o "$tmp" \
-      || { rm -f "$tmp"; die "작업 실행기를 내려받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요."; }
-    agent_sha_ok "$tmp" "$AGENT_SHA256" || { rm -f "$tmp"; die "작업 실행기의 지문이 설치 프로그램에 적힌 값과 달라요. 설치를 멈췄어요."; }
+      || { rm -f "$tmp"; die "작업 실행기를 내려받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요." "Could not download the job runner. Check the internet connection and run again."; }
+    agent_sha_ok "$tmp" "$AGENT_SHA256" || { rm -f "$tmp"; die "작업 실행기의 지문이 설치 프로그램에 적힌 값과 달라요. 설치를 멈췄어요." "The job runner's fingerprint differs from the one in the installer. Installation stopped."; }
   fi
-  bash -n "$tmp" || { rm -f "$tmp"; die "작업 실행기 파일이 손상됐어요."; }
+  bash -n "$tmp" || { rm -f "$tmp"; die "작업 실행기 파일이 손상됐어요." "The job runner file is damaged."; }
   chmod 0755 "$tmp"; mv -f "$tmp" "$DIR/agent.sh"; AGENT_READY=1
 }
 
@@ -1759,10 +1826,10 @@ install_agent() { # 작업 실행기와 systemd 단위를 설치하고 켜요. �
   chown 10001:10001 "$DIR/jobs/inbox"; chmod 0700 "$DIR/jobs/inbox"   # API 컨테이너(사용자 10001)만 작업을 넣어요
   [ "${AGENT_READY:-0}" = 1 ] || fetch_agent
   write_units /etc/systemd/system
-  systemctl daemon-reload || die "systemd 를 다시 읽지 못했어요."
+  systemctl daemon-reload || die "systemd 를 다시 읽지 못했어요." "Could not reload systemd."
   systemctl enable --now dahae-agent.path dahae-agent.timer >/dev/null 2>&1 \
-    || die "서버 작업 실행기를 켜지 못했어요. 'systemctl status dahae-agent.path' 를 확인하세요."
-  ok "서버 작업 실행기를 설치하고 켰어요"
+    || die "서버 작업 실행기를 켜지 못했어요. 'systemctl status dahae-agent.path' 를 확인하세요." "Could not turn on the server job runner. Check 'systemctl status dahae-agent.path'."
+  ok "서버 작업 실행기를 설치하고 켰어요" "Server job runner installed and on"
 }
 
 wait_for() { # wait_for 초 명령... : 명령이 성공할 때까지 기다려요
@@ -1780,23 +1847,21 @@ owner_exists() { [ "$(dc exec -T db psql -U app -d cleaning -tAc 'SELECT EXISTS 
 final_banner() { # final_banner https정상(1/0)
   local code ch line='────────────────────────────────────────────────────────────' sc
   ch=$(env_get CHANNEL)
-  sc=$("$BIN/dahae" setup-code 2>/dev/null) || sc="(기간이 지났어요. 새로 받으려면: sudo dahae setup-code --renew)"
-  code="  2) 설치 코드를 입력하고 사장님 계정을 만드세요:
-
-         설치 코드:  $sc
-"
-  owner_exists && code="  2) 사장님 계정으로 로그인하세요 (계정은 이미 만들어져 있어요).
-"
+  sc=$("$BIN/dahae" setup-code 2>/dev/null) || sc="$(L "(기간이 지났어요. 새로 받으려면: sudo dahae setup-code --renew)" "(expired. To get a new one: sudo dahae setup-code --renew)")"
+  code=$(Lf '  2) 설치 코드를 입력하고 사장님 계정을 만드세요:\n\n         설치 코드:  %s\n' '  2) Enter the setup code and create the owner account:\n\n         Setup code:  %s\n' "$sc")
+  owner_exists && code=$(L "  2) 사장님 계정으로 로그인하세요 (계정은 이미 만들어져 있어요)." "  2) Sign in with the owner account (it already exists).")
+  code+=$'
+' # $( ) drops the trailing newline the layout keeps
   if [ "$1" = 1 ]; then
-    printf '\n%s\n  ✔ 설치가 끝났어요!   (채널: %s)\n\n  1) 브라우저에서 이 주소를 여세요:   https://%s/admin/\n' "$line" "$ch" "$DOMAIN"
+    Lf '\n%s\n  ✔ 설치가 끝났어요!   (채널: %s)\n\n  1) 브라우저에서 이 주소를 여세요:   https://%s/admin/\n' '\n%s\n  ✔ Installation finished!   (channel: %s)\n\n  1) Open this address in a browser:   https://%s/admin/\n' "$line" "$ch" "$DOMAIN"
   else
-    printf '\n%s\n  ! 앱은 정상이에요. HTTPS 인증서는 아직이에요.   (채널: %s)\n' "$line" "$ch"
-    printf '    도메인 A 레코드가 이 서버를 가리키면 몇 분 안에 자동으로 발급돼요. 확인: dahae status\n\n'
-    printf '  1) 인증서가 나오면 브라우저에서 이 주소를 여세요:   https://%s/admin/\n' "$DOMAIN"
+    Lf '\n%s\n  ! 앱은 정상이에요. HTTPS 인증서는 아직이에요.   (채널: %s)\n' '\n%s\n  ! The app is up. The HTTPS certificate is not issued yet.   (channel: %s)\n' "$line" "$ch"
+    Lf '    도메인 A 레코드가 이 서버를 가리키면 몇 분 안에 자동으로 발급돼요. 확인: dahae status\n\n' '    It is issued automatically within minutes once the domain A record points here. Check: dahae status\n\n'
+    Lf '  1) 인증서가 나오면 브라우저에서 이 주소를 여세요:   https://%s/admin/\n' '  1) Once the certificate is issued, open this address in a browser:   https://%s/admin/\n' "$DOMAIN"
   fi
-  printf '%s\n  3) [설정] 메뉴에서 결제·문자·로그인 연동을 차례로 연결하세요.\n\n' "$code"
-  printf '  ⚠ 비밀 키 사본을 꼭 만들어 서버 밖에 보관하세요:  sudo dahae keys-backup\n    (%s/.env 의 키가 없으면 외부 백업을 복원할 수 없어요)\n\n' "$DIR"
-  printf '  관리 명령:  dahae status | update | rollback | backup | restore | logs | help\n%s\n' "$line"
+  Lf '%s\n  3) [설정] 메뉴에서 결제·문자·로그인 연동을 차례로 연결하세요.\n\n' '%s\n  3) In [Settings], connect payments, messaging and sign-in one by one.\n\n' "$code"
+  Lf '  ⚠ 비밀 키 사본을 꼭 만들어 서버 밖에 보관하세요:  sudo dahae keys-backup\n    (%s/.env 의 키가 없으면 외부 백업을 복원할 수 없어요)\n\n' '  ⚠ Make a copy of the secret keys and keep it off this server:  sudo dahae keys-backup\n    (without the keys in %s/.env, off-site backups cannot be restored)\n\n' "$DIR"
+  Lf '  관리 명령:  dahae status | update | rollback | backup | restore | logs | help\n%s\n' '  Management:  dahae status | update | rollback | backup | restore | logs | help\n%s\n' "$line"
 }
 
 notify_result() { # EXIT 트랩: 설치가 끝나면 알림 주소에 결과를 보내요 (성공 …/0, 실패 …/fail). 알림이 실패해도 설치 결과는 그대로예요
@@ -1812,8 +1877,8 @@ installed_here() { [ -f "$DIR/.env" ] && grep -q '^API_IMAGE=.' "$DIR/.env"; } #
 check_backup_s3_env() { # AWS 템플릿이 넘기는 백업 저장소 이름과 리전: 둘 다 있거나 둘 다 없어야 하고, 모양이 맞아야 해요
   local b="${MALKKEUM_BACKUP_S3_BUCKET:-}" r="${MALKKEUM_BACKUP_S3_REGION:-}"
   [ -z "$b$r" ] && return 0
-  printf '%s' "$b" | grep -Eq '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$' || { warn "MALKKEUM_BACKUP_S3_BUCKET 이 S3 저장소 이름이 아니에요: $b"; return 1; }
-  printf '%s' "$r" | grep -Eq '^[a-z]{2}(-[a-z]+)+-[0-9]$' || { warn "MALKKEUM_BACKUP_S3_REGION 이 AWS 리전이 아니에요: $r"; return 1; }
+  printf '%s' "$b" | grep -Eq '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$' || { warn "MALKKEUM_BACKUP_S3_BUCKET 이 S3 저장소 이름이 아니에요: $b" "MALKKEUM_BACKUP_S3_BUCKET is not an S3 bucket name: $b"; return 1; }
+  printf '%s' "$r" | grep -Eq '^[a-z]{2}(-[a-z]+)+-[0-9]$' || { warn "MALKKEUM_BACKUP_S3_REGION 이 AWS 리전이 아니에요: $r" "MALKKEUM_BACKUP_S3_REGION is not an AWS region: $r"; return 1; }
 }
 
 apply_backup_s3_env() { # 받은 백업 저장소를 .env 에 남겨요 (없으면 예전 값 그대로). 앱이 서버 역할로 그 저장소에 백업해요
@@ -1822,17 +1887,17 @@ apply_backup_s3_env() { # 받은 백업 저장소를 .env 에 남겨요 (없으�
 }
 
 install_packages() { # 필수 프로그램과 Docker. 새 설치와 손으로 다시 실행할 때만 해요 (dahae update 의 관리 도구 모드는 건너뛰어요)
-  say "필수 프로그램 설치 (새 서버면 자동 업데이트가 끝날 때까지 최대 10분 기다려요)"
-  apt_retry update -qq || die "패키지 목록을 받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요."
+  say "필수 프로그램 설치 (새 서버면 자동 업데이트가 끝날 때까지 최대 10분 기다려요)" "Installing required programs (on a new server this waits up to 10 minutes for automatic updates to finish)"
+  apt_retry update -qq || die "패키지 목록을 받지 못했어요. 인터넷 연결을 확인하고 다시 실행하세요." "Could not fetch the package list. Check the internet connection and run again."
   apt_retry install -y -qq ca-certificates curl openssl gzip cron dnsutils logrotate iproute2 ufw fail2ban unattended-upgrades >/dev/null \
-    || die "필수 프로그램을 설치하지 못했어요. 잠시 뒤 다시 실행하세요."
+    || die "필수 프로그램을 설치하지 못했어요. 잠시 뒤 다시 실행하세요." "Could not install the required programs. Run again in a while."
   if ! command -v docker >/dev/null; then
-    curl -fsSL https://get.docker.com | sh >/dev/null || die "Docker 를 설치하지 못했어요. 잠시 뒤 다시 실행하세요."
+    curl -fsSL https://get.docker.com | sh >/dev/null || die "Docker 를 설치하지 못했어요. 잠시 뒤 다시 실행하세요." "Could not install Docker. Run again in a while."
   fi
   systemctl enable --now docker >/dev/null 2>&1 || true
-  local cv; cv=$(docker compose version --short 2>/dev/null) || die "Docker Compose 를 설치하지 못했어요."
-  ver_ge "$cv" "$COMPOSE_MIN" || die "Docker Compose($cv)가 너무 오래됐어요. 'curl -fsSL https://get.docker.com | sudo sh' 로 업데이트하세요."
-  ok "Docker 준비 완료"
+  local cv; cv=$(docker compose version --short 2>/dev/null) || die "Docker Compose 를 설치하지 못했어요." "Could not install Docker Compose."
+  ver_ge "$cv" "$COMPOSE_MIN" || die "Docker Compose($cv)가 너무 오래됐어요. 'curl -fsSL https://get.docker.com | sudo sh' 로 업데이트하세요." "Docker Compose ($cv) is too old. Update it with 'curl -fsSL https://get.docker.com | sudo sh'."
+  ok "Docker 준비 완료" "Docker ready"
 }
 
 install_mode() { # install_mode FRESH : 설치된 적이 있으면(0) DB 가 꺼져 있어도 업데이트로 가요 (백업 → 새 버전 → 되돌리기)
@@ -1863,21 +1928,21 @@ main() {
   if [ -n "${MALKKEUM_ANSWERS:-}" ]; then load_answers "$MALKKEUM_ANSWERS"; fi   # 질문 없이 설치: DOMAIN=·EMAIL= 줄 파일
   trap notify_result EXIT
 
-  [ "$(id -u)" -eq 0 ] || die "관리자 권한이 필요해요. 명령 앞에 sudo 를 붙여 다시 실행해 주세요."
-  command -v apt-get >/dev/null || die "Ubuntu 또는 Debian 서버에서 실행해 주세요."
+  [ "$(id -u)" -eq 0 ] || die "관리자 권한이 필요해요. 명령 앞에 sudo 를 붙여 다시 실행해 주세요." "Administrator rights are needed. Run the command again with sudo in front."
+  command -v apt-get >/dev/null || die "Ubuntu 또는 Debian 서버에서 실행해 주세요." "Run this on an Ubuntu or Debian server."
   check_setup_code_env || exit 1
-  if [ -n "${MALKKEUM_NOTIFY_URL:-}" ]; then valid_hb_url "$MALKKEUM_NOTIFY_URL" || die "MALKKEUM_NOTIFY_URL 은 https:// 주소여야 해요 (& 나 공백은 안 돼요)."; fi
+  if [ -n "${MALKKEUM_NOTIFY_URL:-}" ]; then valid_hb_url "$MALKKEUM_NOTIFY_URL" || die "MALKKEUM_NOTIFY_URL 은 https:// 주소여야 해요 (& 나 공백은 안 돼요)." "MALKKEUM_NOTIFY_URL must be an https:// address (no & or spaces)."; fi
   check_backup_s3_env || exit 1
-  if [ "$TOOLS_ONLY" = 1 ]; then installed_here || die "설치된 서버가 아니에요. 관리 도구만 바꾸는 모드는 dahae update 가 써요."; fi
+  if [ "$TOOLS_ONLY" = 1 ]; then installed_here || die "설치된 서버가 아니에요. 관리 도구만 바꾸는 모드는 dahae update 가 써요." "This is not an installed server. The tools-only mode is used by dahae update."; fi
 
-  say "다해 서버 설치를 시작합니다"
+  say "다해 서버 설치를 시작합니다" "Starting the Dahae server installation"
   [ "$TOOLS_ONLY" = 1 ] || preflight
   mkdir -p "$DIR/backups"
   cd "$DIR"
 
   if [ -f .env ]; then
-    if [ -n "$(env_get API_IMAGE)" ]; then ok "기존 설치를 찾았어요. 설정과 데이터는 그대로 두고 최신 버전으로 업데이트합니다."
-    else ok "지난 설치가 끝나지 않았어요. 저장된 설정으로 설치를 이어서 합니다."; fi
+    if [ -n "$(env_get API_IMAGE)" ]; then ok "기존 설치를 찾았어요. 설정과 데이터는 그대로 두고 최신 버전으로 업데이트합니다." "Found an existing install. Updating to the latest version; settings and data stay as they are."
+    else ok "지난 설치가 끝나지 않았어요. 저장된 설정으로 설치를 이어서 합니다." "The last installation did not finish. Continuing with the saved settings."; fi
     FRESH=0
   else
     FRESH=1
@@ -1898,42 +1963,42 @@ main() {
   SIGNER_REPO=${MALKKEUM_SIGNER:-$(env_get SIGNER_REPO)}; SIGNER_REPO=${SIGNER_REPO:-$SIGNER_REPO_DEFAULT}
   IMAGE_VERIFY=on; [ -z "${MALKKEUM_SKIP_SIGNATURE:-}" ] || IMAGE_VERIFY=off
   if [ -n "${DAHAE_EDITIONS_FILE:-}" ]; then # e2e-install.sh 전용: 서명 확인을 끈 테스트 설치에서만 판 표를 바꿔 써요
-    [ "$IMAGE_VERIFY" = off ] || die "DAHAE_EDITIONS_FILE 은 서명 확인을 끈 테스트 설치(MALKKEUM_SKIP_SIGNATURE)에서만 써요."
-    EDITIONS=$(cat "$DAHAE_EDITIONS_FILE") || die "판 표 파일을 읽지 못했어요: $DAHAE_EDITIONS_FILE"
+    [ "$IMAGE_VERIFY" = off ] || die "DAHAE_EDITIONS_FILE 은 서명 확인을 끈 테스트 설치(MALKKEUM_SKIP_SIGNATURE)에서만 써요." "DAHAE_EDITIONS_FILE is only for test installs with signature checks off (MALKKEUM_SKIP_SIGNATURE)."
+    EDITIONS=$(cat "$DAHAE_EDITIONS_FILE") || die "판 표 파일을 읽지 못했어요: $DAHAE_EDITIONS_FILE" "Could not read the editions file: $DAHAE_EDITIONS_FILE"
   fi
   # 다른 판을 따르는 서버는 세 값(이미지·서명자·배포 주소)을 그 판의 줄에서 가져와요: 되돌리기로 이 설치 프로그램이 다시 돌아도
   # 그 판을 계속 따라가요. EDITION 이 없거나 dahae 면 아래 줄들은 예전 그대로예요 (직접 정한 서명자·이미지도 그대로)
   EDITION=$(env_get EDITION); EDITION_RAW=""
   if [ -n "$EDITION" ] && [ "$EDITION" != dahae ]; then
-    row=$(edition_row "$EDITION") || die "이 설치 프로그램의 판 표에 '$EDITION' 이 없어요. 아무것도 바꾸지 않고 멈춰요."
-    edition_row_ok "$row" "$( [ "$IMAGE_VERIFY" != off ] || echo file)" || die "판 표의 '$EDITION' 줄이 이상해요. 아무것도 바꾸지 않고 멈춰요."
+    row=$(edition_row "$EDITION") || die "이 설치 프로그램의 판 표에 '$EDITION' 이 없어요. 아무것도 바꾸지 않고 멈춰요." "This installer's editions table has no '$EDITION'. Stopped without changing anything."
+    edition_row_ok "$row" "$( [ "$IMAGE_VERIFY" != off ] || echo file)" || die "판 표의 '$EDITION' 줄이 이상해요. 아무것도 바꾸지 않고 멈춰요." "The '$EDITION' line in the editions table is malformed. Stopped without changing anything."
     IMAGE_REPO=$(field "$row" 2); SIGNER_REPO=$(field "$row" 3); EDITION_RAW=$(field "$row" 4)
   fi
-  case "$CHANNEL" in stable|beta) ;; *) die "채널은 stable 또는 beta 중 하나예요." ;; esac
-  printf '%s' "$SIGNER_REPO" | grep -Eq '^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$' || die "MALKKEUM_SIGNER 는 owner/repo 형식이에요: $SIGNER_REPO"
-  case "$TLS_MODE" in ""|internal) ;; *) die "MALKKEUM_TLS 는 internal 만 쓸 수 있어요." ;; esac
+  case "$CHANNEL" in stable|beta) ;; *) die "채널은 stable 또는 beta 중 하나예요." "The channel is stable or beta." ;; esac
+  printf '%s' "$SIGNER_REPO" | grep -Eq '^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$' || die "MALKKEUM_SIGNER 는 owner/repo 형식이에요: $SIGNER_REPO" "MALKKEUM_SIGNER must look like owner/repo: $SIGNER_REPO"
+  case "$TLS_MODE" in ""|internal) ;; *) die "MALKKEUM_TLS 는 internal 만 쓸 수 있어요." "MALKKEUM_TLS can only be internal." ;; esac
 
   DOMAIN=${MALKKEUM_DOMAIN:-$(env_get DOMAIN)}
   if [ -z "$DOMAIN" ]; then
-    DOMAIN=$(ask_until valid_domain "서비스 주소(도메인)를 입력하세요. 예: myshop.co.kr" "도메인 형식이 올바르지 않아요 (예: myshop.co.kr)") \
-      || die "도메인이 필요해요. 예: myshop.co.kr"
+    DOMAIN=$(ask_until valid_domain "$(L "서비스 주소(도메인)를 입력하세요. 예: myshop.co.kr" "Enter the service address (domain). Example: myshop.com")" "$(L "도메인 형식이 올바르지 않아요 (예: myshop.co.kr)" "That is not a valid domain (example: myshop.com)")") \
+      || die "도메인이 필요해요. 예: myshop.co.kr" "A domain is needed. Example: myshop.com"
   fi
-  valid_domain "$DOMAIN" || die "도메인 형식이 올바르지 않아요: $DOMAIN (예: myshop.co.kr)"
+  valid_domain "$DOMAIN" || die "도메인 형식이 올바르지 않아요: $DOMAIN (예: myshop.co.kr)" "That is not a valid domain: $DOMAIN (example: myshop.com)"
   DOMAIN=$(norm_domain "$DOMAIN")
   if [ -n "${MALKKEUM_EMAIL:-}" ] || [ "$FRESH" = 0 ]; then
     ACME_EMAIL=${MALKKEUM_EMAIL:-$(env_get ACME_EMAIL)}
   else
-    ACME_EMAIL=$(ask_until valid_email "보안 인증서 안내를 받을 이메일 (없으면 Enter)" "이메일 형식이 올바르지 않아요 (예: owner@myshop.co.kr)") \
-      || die "이메일 형식이 올바르지 않아요."
+    ACME_EMAIL=$(ask_until valid_email "$(L "보안 인증서 안내를 받을 이메일 (없으면 Enter)" "Email for security certificate notices (Enter to skip)")" "$(L "이메일 형식이 올바르지 않아요 (예: owner@myshop.co.kr)" "That is not a valid email (example: owner@myshop.com)")") \
+      || die "이메일 형식이 올바르지 않아요." "That is not a valid email."
   fi
-  valid_email "$ACME_EMAIL" || die "이메일 형식이 올바르지 않아요: $ACME_EMAIL"
+  valid_email "$ACME_EMAIL" || die "이메일 형식이 올바르지 않아요: $ACME_EMAIL" "That is not a valid email: $ACME_EMAIL"
   if [ -n "${MALKKEUM_HEARTBEAT_URL:-}" ]; then
-    valid_hb_url "$MALKKEUM_HEARTBEAT_URL" || die "MALKKEUM_HEARTBEAT_URL 은 https:// 주소여야 해요 (& 나 공백은 안 돼요)."
+    valid_hb_url "$MALKKEUM_HEARTBEAT_URL" || die "MALKKEUM_HEARTBEAT_URL 은 https:// 주소여야 해요 (& 나 공백은 안 돼요)." "MALKKEUM_HEARTBEAT_URL must be an https:// address (no & or spaces)."
   fi
 
   if [ "$TOOLS_ONLY" = 0 ]; then
     install_packages
-    say "도메인 확인"
+    say "도메인 확인" "Checking the domain"
     dns_check
   fi
 
@@ -1941,7 +2006,7 @@ main() {
     umask 077
     write_fresh_env
     umask 022
-    ok "보안 키를 새로 만들었어요"
+    ok "보안 키를 새로 만들었어요" "New security keys created"
   fi
   lock_env
   # 앱 전용 DB 계정 비밀번호. 예전 설치에는 없어서 처음 다시 실행할 때 만들어요 (계정은 dahae update 가 만들어요).
@@ -1954,6 +2019,9 @@ main() {
   env_set IMAGE_SOURCE "$IMAGE_SOURCE"
   env_set SIGNER_REPO "$SIGNER_REPO"
   env_set IMAGE_VERIFY "$IMAGE_VERIFY"
+  # dahae 명령과 작업 실행기도 이 언어로 말해요. 새 설치이거나 언어를 바꿀 때만 적어요: 그 밖의 .env 는 한 글자도 바뀌지 않아요
+  # (the dahae command and job runner read it; written for a new install or a changed language only)
+  if [ "$FRESH" = 1 ] || [ "$UI_LANG" != "$(DAHAE_LANG='' MALKKEUM_LANG='' ui_lang .env)" ]; then env_set INSTALL_LANG "$UI_LANG"; fi
   if [ -n "${MALKKEUM_HEARTBEAT_URL:-}" ]; then env_set HEARTBEAT_URL "$MALKKEUM_HEARTBEAT_URL"; fi
   # 배포 저장소 주소(…/Dahae-install): dahae update 가 새 버전의 관리 도구를 여기서 받아요
   if [ -n "$EDITION_RAW" ]; then env_set DELIVERY_RAW "$EDITION_RAW"
@@ -1969,12 +2037,12 @@ main() {
   write_cli "$BIN/dahae"
   ln -sf dahae "$BIN/malkkeum"
   write_heartbeat "$BIN/malkkeum-heartbeat"
-  ok "관리 명령 dahae 를 설치했어요 (예전 이름 malkkeum 도 그대로 돼요)"
+  ok "관리 명령 dahae 를 설치했어요 (예전 이름 malkkeum 도 그대로 돼요)" "Management command dahae installed (the old name malkkeum still works)"
   write_schedules
   install_agent   # 새 설치와 업데이트 모두: 작업 실행기는 dahae update 가 쓰는 작업 폴더를 쓰므로 compose 를 띄우기 전에 둬요
   # dahae edition 이 읽는 판 표: 이 (서명된) 설치 프로그램의 것
   { mkdir -p "$DIR/host" && printf '%s\n' "$EDITIONS" > "$DIR/host/editions.new" && mv -f "$DIR/host/editions.new" "$DIR/host/editions"; } \
-    || die "판 표(host/editions)를 쓰지 못했어요."
+    || die "판 표(host/editions)를 쓰지 못했어요." "Could not write the editions table (host/editions)."
 
   [ "$TOOLS_ONLY" = 1 ] || harden_host
 
@@ -1982,43 +2050,43 @@ main() {
     :
   elif [ "$IMAGE_VERIFY" = on ]; then
     install_cosign
-    ok "이미지 서명 확인 도구 준비 완료 (cosign $COSIGN_VERSION)"
+    ok "이미지 서명 확인 도구 준비 완료 (cosign $COSIGN_VERSION)" "Image signature checker ready (cosign $COSIGN_VERSION)"
   else
-    warn "이미지 서명 확인을 껐어요 (MALKKEUM_SKIP_SIGNATURE). 서명 없는 테스트 저장소에서만 쓰세요."
+    warn "이미지 서명 확인을 껐어요 (MALKKEUM_SKIP_SIGNATURE). 서명 없는 테스트 저장소에서만 쓰세요." "Image signature checks are off (MALKKEUM_SKIP_SIGNATURE). Use this only with unsigned test registries."
   fi
 
   if [ -n "$IMAGES_TAR" ]; then
-    say "미리 받아 둔 이미지를 불러와요 (인터넷에서 받지 않아요)"
+    say "미리 받아 둔 이미지를 불러와요 (인터넷에서 받지 않아요)" "Loading the images downloaded in advance (nothing is downloaded from the internet)"
     load_images "$IMAGES_TAR" "$IMAGE_REPO/malkkeum-api:$VERSION" "$IMAGE_REPO/malkkeum-web:$VERSION"
-    ok "이미지를 불러왔어요: $IMAGES_TAR"
+    ok "이미지를 불러왔어요: $IMAGES_TAR" "Images loaded: $IMAGES_TAR"
   fi
 
   if [ "$TOOLS_ONLY" = 1 ]; then
     # 이미지는 그대로예요. 바뀐 설정(compose)으로 다시 띄우고 응답만 확인해요
-    dc up -d --remove-orphans >/dev/null || die "새 설정으로 서비스를 다시 띄우지 못했어요. 'dahae logs' 를 확인하세요."
-    wait_for "$HEALTH_WAIT_SECS" app_ready || die "관리 도구를 바꾼 뒤 앱이 응답하지 않아요. 'dahae logs' 를 확인하세요."
-    ok "관리 도구를 이 버전으로 바꿨어요 (설정과 데이터는 그대로예요)"
+    dc up -d --remove-orphans >/dev/null || die "새 설정으로 서비스를 다시 띄우지 못했어요. 'dahae logs' 를 확인하세요." "Could not restart the services with the new settings. Check 'dahae logs'."
+    wait_for "$HEALTH_WAIT_SECS" app_ready || die "관리 도구를 바꾼 뒤 앱이 응답하지 않아요. 'dahae logs' 를 확인하세요." "The app does not answer after the tools changed. Check 'dahae logs'."
+    ok "관리 도구를 이 버전으로 바꿨어요 (설정과 데이터는 그대로예요)" "Management tools switched to this version (settings and data stay as they are)"
     return 0
   elif [ "$(install_mode "$FRESH")" = update ]; then
     # 다시 실행 = 안전한 업데이트: 백업 → 새 버전 → 응답 확인, 실패하면 이전 버전으로 되돌려요.
     # 관리 도구는 방금 이 설치 프로그램이 썼어요 (DAHAE_TOOLS_FRESH). 종료 코드 3(되돌림)은 그대로 넘겨요
     local rc=0
     DAHAE_HEALTH_WAIT=$HEALTH_WAIT_SECS DAHAE_TOOLS_FRESH=1 "$BIN/dahae" update "$VERSION" || rc=$?
-    [ "$rc" = 0 ] || { warn "업데이트하지 못했어요. 위 안내를 확인해 주세요."; exit "$rc"; }
+    [ "$rc" = 0 ] || { warn "업데이트하지 못했어요. 위 안내를 확인해 주세요." "Could not update. Check the messages above."; exit "$rc"; }
   else
     env_set VERSION "$VERSION"
-    say "서비스 시작 (처음에는 몇 분 걸릴 수 있어요)"
+    say "서비스 시작 (처음에는 몇 분 걸릴 수 있어요)" "Starting the services (the first time can take a few minutes)"
     # 이미지 서명 확인 → 확인된 다이제스트로 내려받기 → DB 와 앱 전용 계정 준비. 실패하면 아무것도 띄우지 않아요.
-    "$BIN/dahae" prepare "$VERSION" || die "서비스를 준비하지 못했어요. 위 안내를 확인해 주세요. (다시 실행해도 안전해요)"
+    "$BIN/dahae" prepare "$VERSION" || die "서비스를 준비하지 못했어요. 위 안내를 확인해 주세요. (다시 실행해도 안전해요)" "Could not prepare the services. Check the messages above. (It is safe to run again)"
     dc up -d --remove-orphans
     wait_for "$HEALTH_WAIT_SECS" app_ready \
-      || die "서비스가 시작되지 않았어요. 'dahae logs' 화면을 개발자에게 전달해 주세요. (다시 실행해도 안전해요)"
+      || die "서비스가 시작되지 않았어요. 'dahae logs' 화면을 개발자에게 전달해 주세요. (다시 실행해도 안전해요)" "The services did not start. Send the 'dahae logs' output to the developer. (It is safe to run again)"
   fi
-  ok "앱 정상"
+  ok "앱 정상" "App OK"
 
   local tls_wait=$HEALTH_WAIT_SECS tls=0
   [ "$DNS_OK" = 1 ] || tls_wait=15
-  if wait_for "$tls_wait" https_up; then tls=1; ok "HTTPS 정상"; fi
+  if wait_for "$tls_wait" https_up; then tls=1; ok "HTTPS 정상" "HTTPS OK"; fi
   final_banner "$tls"
 }
 
