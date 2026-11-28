@@ -373,7 +373,7 @@ mod tests {
                 assert!(offered.contains(&code.as_str().expect("code")), "{code} is not offered");
             }
         }
-        assert_eq!(target_facts(&kr)[2].1, json!("Asia/Seoul"));
+        assert_eq!(target_facts(&kr)[2].1, json!("Asia/Seoul")); // tz-ok: the KR pack fixture
     }
 
     #[test]
