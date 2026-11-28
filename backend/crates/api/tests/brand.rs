@@ -118,6 +118,20 @@ async fn every_response_carries_the_brand_version_and_it_changes_on_save(pool: P
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn brand_carries_the_install_languages_for_the_website(pool: PgPool) {
+    let app = common::app(pool.clone());
+    let (_, brand) = call(&app, "GET", "/v1/brand", None, None).await;
+    assert_eq!(brand["locales"], json!([]), "a fresh install has none yet: {brand}");
+    sqlx::query("INSERT INTO settings (key, value) VALUES ('reg.install.locales', $1)")
+        .bind(json!(["ko", "en"]))
+        .execute(&pool)
+        .await
+        .expect("locales");
+    let (_, brand) = call(&app, "GET", "/v1/brand", None, None).await;
+    assert_eq!(brand["locales"], json!(["ko", "en"]));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn fill_colour_is_optional_reaches_the_apps_and_moves_the_brand_version(pool: PgPool) {
     let app = common::app(pool.clone());
     let (admin, _) = common::staff_token(&pool, Role::StaffAdmin).await;

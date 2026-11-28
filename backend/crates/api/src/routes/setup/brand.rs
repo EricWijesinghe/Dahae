@@ -201,6 +201,10 @@ pub(super) async fn get_brand(State(s): State<AppState>) -> ApiResult<Json<Value
     if let Some(m) = out.as_object_mut() {
         m.insert("version".into(), json!(brand_version(&b)));
         m.insert("assets".into(), assets(&s.config.public_base_url, &b));
+        // The install's languages, default first: the website's `lang`/`dir` follow them when the visitor's own
+        // language has no copy. Empty until the country is set.
+        let locales = crate::settings_registry::get_list(&s.db, &s.config, "install.locales").await?;
+        m.insert("locales".into(), json!(locales));
     }
     Ok(Json(out))
 }

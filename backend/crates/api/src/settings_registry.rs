@@ -449,6 +449,14 @@ pub async fn get_text(db: &PgPool, cfg: &Config, key: &str) -> ApiResult<String>
         .ok_or_else(|| ApiError::Internal(format!("setting {key} is not text")))
 }
 
+/// The effective values of one multi-choice key (`install.locales`); empty while unset.
+pub async fn get_list(db: &PgPool, cfg: &Config, key: &str) -> ApiResult<Vec<String>> {
+    Ok(match load(db, cfg, key).await? {
+        Value::Array(items) => items.into_iter().filter_map(|v| v.as_str().map(str::to_string)).collect(),
+        _ => Vec::new(),
+    })
+}
+
 /// Only staff admins may change limits; consultants may read them.
 pub async fn ensure_can_write(db: &PgPool, actor: Uuid) -> ApiResult<()> {
     if live_staff_role(db, actor).await? != Role::StaffAdmin {
