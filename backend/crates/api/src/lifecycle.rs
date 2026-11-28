@@ -9,7 +9,7 @@
 //! after their current pass, joined under a deadline.
 
 use crate::{
-    providers::{TOSS, TOSS_BILLING},
+    adapters::{self, Capability},
     routes::APP_VERSION,
     state::AppState,
 };
@@ -90,10 +90,12 @@ pub async fn live() -> Json<Value> {
 }
 
 /// Every adapter code a live row may name: `payments.provider`, `payment_methods.gateway`, `refund_queue.provider`
-/// (the payment gateways) and `payouts.provider`. Codes are never removed (D12): this is every code any release ever
-/// wrote there, including `pg`, the pre-release fake gateway's `payments.provider` (still in long-lived dev databases).
-/// shortcut: static list, replaced by the adapter registry when it lands (R2).
-pub const KNOWN_ADAPTERS: [&str; 6] = ["portone", TOSS, TOSS_BILLING, "toss", "manual", "pg"];
+/// (the payment gateways) and `payouts.provider`. The registry never drops a code (D12) and lists `Dark` adapters
+/// too (D11), so this is every code any release wrote there, including `pg`, the pre-release fake gateway's
+/// `payments.provider` (still in long-lived dev databases).
+pub fn known_adapters() -> Vec<&'static str> {
+    adapters::stored_codes(&[Capability::Payments, Capability::Payouts])
+}
 
 /// Readiness: the database answers, every shipped migration is applied, and this binary knows every adapter a
 /// live row still needs (`adapters_ok`: refundable payments, saved cards, queued refunds, open payouts). After an
@@ -113,7 +115,7 @@ pub async fn ready(State(s): State<AppState>) -> Response {
     (status, Json(body)).into_response()
 }
 
-/// False when a live row names an adapter code outside `KNOWN_ADAPTERS`, or when the check cannot run in time.
+/// False when a live row names an adapter code outside `known_adapters`, or when the check cannot run in time.
 async fn adapters_known(db: &PgPool) -> bool {
     let unknown = sqlx::query_scalar::<_, String>(
         "SELECT code FROM (
@@ -123,7 +125,7 @@ async fn adapters_known(db: &PgPool) -> bool {
             UNION SELECT provider FROM payouts WHERE state <> 'paid'
          ) live WHERE code <> ALL($1)",
     )
-    .bind(&KNOWN_ADAPTERS[..])
+    .bind(known_adapters())
     .fetch_all(db);
     match tokio::time::timeout(PROBE_TIMEOUT, unknown).await {
         Ok(Ok(codes)) if codes.is_empty() => true,

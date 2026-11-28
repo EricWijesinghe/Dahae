@@ -51,7 +51,7 @@ pub mod tax_invoices;
 pub(crate) mod tips;
 pub mod uploads;
 pub(crate) mod waitlist;
-mod webhooks;
+pub(crate) mod webhooks;
 
 use crate::{contract, lifecycle, metrics, realtime, state::AppState, telemetry};
 use axum::{

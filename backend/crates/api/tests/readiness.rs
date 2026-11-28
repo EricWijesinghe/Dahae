@@ -57,7 +57,7 @@ async fn a_legacy_pg_payment_stays_ready(pool: PgPool) {
 /// payouts.provider (git history of their insert sites). Removing one would fail /ready on an install holding it.
 #[test]
 fn the_known_adapters_cover_every_code_ever_written() {
-    let mut known = api::lifecycle::KNOWN_ADAPTERS.to_vec();
+    let mut known = api::lifecycle::known_adapters();
     known.sort_unstable();
     assert_eq!(known, ["manual", "pg", "portone", "toss", "tosspayments", "tosspayments_billing"]);
 }

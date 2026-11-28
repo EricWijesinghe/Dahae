@@ -5,6 +5,7 @@
 //! New top-level modules are declared here (not in main.rs).
 
 pub mod acquisition;
+pub mod adapters;
 pub mod address;
 pub mod ai;
 pub mod analytics;

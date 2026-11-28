@@ -24,20 +24,8 @@ pub const EMBEDDED: &[(&str, &str)] = &[
     ("KR/banks.json", include_str!("../../../packs/KR/banks.json")),
 ];
 
-/// Ids a pack may name, each backed by code in this build. Adapter ids are today's stored codes (D12).
-pub const KNOWN_ADAPTERS: &[&str] = &[
-    "portone",
-    "tosspayments",
-    "tosspayments_billing",
-    "solapi",
-    "kakao",
-    "naver",
-    "google",
-    "apple",
-    "juso",
-    "manual",
-    "toss",
-];
+/// Ids a pack may name, each backed by code in this build. Adapter ids come from the registry (`adapters`): the
+/// codes of `Available` adapters.
 pub const KNOWN_VALIDATORS: &[&str] = &["kr_brn", "kr_rrn"];
 pub const KNOWN_REPORTS: &[&str] = &["kr_vat_quarter", "kr_tax_invoice", "kr_withholding", "kr_payroll"];
 pub const KNOWN_LEGAL: &[&str] = &["terms", "privacy", "location_terms"];
@@ -457,7 +445,7 @@ fn validate(p: &Pack, files: &[(&str, &str)]) -> Result<(), PackError> {
         .collect();
     adapters.push(p.address.adapter.clone());
     adapters.extend(p.address.fallback.clone());
-    known(id, "adapter", &adapters, KNOWN_ADAPTERS)?;
+    known(id, "adapter", &adapters, &crate::adapters::offerable_codes())?;
     known(id, "channel", &p.messaging.channel_order, KNOWN_CHANNELS)?;
     known(id, "marketplace model", &p.payments.marketplace_models, KNOWN_MARKETPLACE_MODELS)?;
     known(id, "legal document", &p.legal, KNOWN_LEGAL)?;
