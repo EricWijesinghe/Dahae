@@ -1,6 +1,6 @@
 # 10. AWS 에 다해 서버 올리고 자동 배포하기
 
-[English](#english) · 한국어
+[English](10-aws-deploy.md) · 한국어
 
 이 안내서는 다해 서버를 **DODA 의 AWS 계정**에 올리고, 개발자의 GitHub 저장소(`EricWijesinghe/Dahae`)에서 새 버전이 배포되도록 연결하는 전 과정입니다. AWS 계정과 비용은 DODA 명의이고, 배포와 유지보수는 개발자가 해요. DODA 가 원하면 배포 승인자를 한 명 넣을 수 있어요 (C 단계). DODA 가 할 일(A 단계)은 **화면의 버튼을 누르는 순서대로** 따라 하면 되고, 명령은 입력하지 않아요. 명령은 개발자가 B-1 (템플릿 만들기) 과 서버 안 (`dahae setup-code`) 에서만 씁니다.
 
@@ -13,7 +13,7 @@
 - B. 서버 만들기 (CloudFormation)
 - C. 자동 배포 연결하기 (GitHub)
 - D. 백업, 모니터링, 비용, 삭제
-- English
+- [English](10-aws-deploy.md)
 
 ---
 
@@ -165,7 +165,7 @@ sudo dahae status
 sudo dahae setup-code
 ```
 
-12자리 코드가 `XXXX-XXXX-XXXX` 형식으로 나옵니다. 이 코드는 **처음 보인 뒤 2시간 동안만** 씁니다. 지났으면 `sudo dahae setup-code --renew` 로 새로 받으세요.
+12자리 코드가 `XXXX-XXXX-XXXX` 형식으로 나옵니다. 이 코드는 **처음 보인 뒤 7일 동안** 씁니다. 지났으면 `sudo dahae setup-code --renew` 로 새로 받으세요.
 
 아래 1–4번은 **DODA 사장님이** 해요. 통화 중에 개발자가 코드를 알려 주면 사장님이 바로 진행해요 (인증 앱은 DODA 휴대폰). 개발자가 이 계정을 만들면 결제 카드를 지키는 소유자 코드가 개발자 휴대폰에 생겨요.
 
@@ -302,23 +302,4 @@ AWS 콘솔 → **Systems Manager > Run Command > AWS-RunShellScript** → 대상
 
 ---
 
-## English
-
-This guide sets up one Dahae server on AWS (Seoul) and connects the developer's GitHub Actions (github.com/EricWijesinghe/Dahae), so that a stable release is installed on the server with `dahae update`, optionally after a DODA reviewer approves. A non-specialist can finish the server part from the AWS console.
-
-0. **Fastest path (AWS CloudShell, the `>_` icon in the console, region Seoul):** DODA's admin runs `curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --admin` once (creates both policies), then creates the user below with `dahae-deployer-policy` and `AWSCloudShellFullAccess` attached. The developer, signed in as that user, runs `curl -fsSL https://raw.githubusercontent.com/EricWijesinghe/Dahae/master/deploy/aws/launch.sh | bash -s -- --domain example.co.kr --email owner@example.co.kr`: it checks the latest release's install.sh against the release SHA256SUMS, pins it into the template, finds the default VPC's public subnet, creates stack `dahae-main` and prints the outputs (options: `--domain auto` for a temporary `<ip>.sslip.io` address until the real domain is moved in from the console, `--hosted-zone-id`, `--instance-type`, `--dry-run`). It never touches an existing stack; new versions go through C. Steps 1–2 below are the manual equivalent.
-1. **Deployer account (DODA, for the developer):** first create the customer-managed policy `dahae-boundary` (exact name) from `deploy/aws/dahae-boundary-policy.json` and attach it to nobody; it is the permissions boundary of the template's roles. Then create an IAM user with console access for the developer and attach `deploy/aws/deployer-iam-policy.json` (as a second customer-managed policy) and the AWS managed policy `AWSCloudShellFullAccess`. Assign its MFA on a call: the developer scans the QR code with the developer's own phone and reads back the two codes. Create no access keys. Send the sign-in URL and user name through a separate channel from the password.
-2. **Template (developer):** the simplest path is `launch.sh` (step 0). To upload a template by hand, download `dahae-aws.yaml` from the latest release (Releases → Latest → Assets); the release builds it from `master`'s template with that release's install.sh URL and SHA-256 filled in. Optional fallback, building it locally: on a `master` checkout, download `install.sh`, `SHA256SUMS` and `SHA256SUMS.bundle` of v1.6.1 (`gh release download v1.6.1 -R EricWijesinghe/Dahae -p install.sh -p SHA256SUMS -p SHA256SUMS.bundle -D rel-v1.6.1`), check them (`scripts/release/verify-blob.sh rel-v1.6.1/SHA256SUMS EricWijesinghe/Dahae` when cosign is installed, then `sha256sum -c --ignore-missing SHA256SUMS`), and, with `dist=https://raw.githubusercontent.com/EricWijesinghe/Dahae-install` (the public delivery repo), run `bash scripts/release/build-aws-template.sh rel-v1.6.1/install.sh "$dist/v1.6.1/install.sh" out`. It writes `out/dahae-aws.yaml` and prints the install.sh SHA-256, which must match the `install.sh` line in `SHA256SUMS`.
-3. **Launch (developer, signed in as the deployer user):** in CloudFormation (region ap-northeast-2), create a stack from that `dahae-aws.yaml`. Keep `GitHubRepo` (`EricWijesinghe/Dahae`) and `GitHubRepoIds` (`EricWijesinghe@48539716/Dahae@1452913067`) at their defaults. The stack name must start with `dahae-`. Fill Domain, Email, and optionally HostedZoneId (Route 53). Leave SshCidr empty. Acknowledge IAM and create. Wait for CREATE_COMPLETE, then about 20 minutes for the installer.
-4. **DNS (developer, Cloudflare):** add an A record for the domain pointing to the `PublicIp` output, DNS only (grey cloud). For a bare domain such as `example.co.kr`, add two: `@` and `www`. With Route 53 (HostedZoneId) the stack writes the `Domain` record only.
-5. **Setup code without SSH:** EC2 > Instances > Connect > Session Manager > Connect, then `sudo dahae setup-code` (valid 2 hours; `--renew` for a new code). DODA's owner, on a call with the developer, opens `https://<domain>/admin`, enters the code, creates the owner account and enables two-step sign-in on DODA's phone (the owner code guards the payment cards, so the developer never creates this account).
-6. **CD:** the developer's repository `EricWijesinghe/Dahae` holds the GitHub environment `doda-aws` (deployment branches limited to `master`; required reviewers from DODA are optional, and without them a run deploys as soon as the developer starts it) and four environment variables from the stack outputs: `AWS_REGION`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `DAHAE_DOMAIN`. The AWS role trusts that repository (by its immutable owner and repository ids) and environment, so no other repository can deploy here. The workflow `deploy-aws.yml` runs there. Each stable tag (vX.Y.Z) runs `dahae update <tag>` through SSM and checks health and version (after approval, when reviewers are set). Manual deploy and rollback are in the Actions tab (deploy-aws, Run workflow). Beta tags are never deployed.
-7. **Note:** the server's weekly auto-update is on by default. To make the GitHub deploy the only path, run `sudo dahae update-schedule off`.
-8. **Backups:** the template makes a private S3 bucket (block public access, versioning, SSE-S3, lifecycle: 35 days, then 35 more for old versions; kept when the stack is deleted) and the server's role may only create new objects (every PUT must carry `If-None-Match: *`), get and list: it can never delete or overwrite a copy. Backups stop for good about 70 days after uploads stop, so check `dahae status`. Stacks made before this release have no bucket (launch.sh never updates a stack): connect the console backup card with keys for another S3-compatible store. A replacement stack takes the old stack's `BackupBucket` output as `ExistingBackupBucket` (`launch.sh --backup-bucket NAME`), then `dahae keys-restore` and `dahae restore-offsite`. S3 storage is roughly (DB + all photos) x about 70 days of copies. Offsite backups and photo backups go there with no keys to type (console backup card: "AWS S3 (automatic)"); keys saved on that card for another S3-compatible store win. Keep the keys backup outside the server: console System status > Server update > Recovery > download the secret key copy (owner code, one download; recorded as kept only after the owner presses "Kept off the server"), or `sudo dahae keys-backup`. The copy holds only DATA_KEY and JWT_SECRET. EBS snapshots run daily at 03:00 Seoul time, keep 7.
-8a. **Alarm e-mails:** the system-check alarm (auto-recover) also mails the stack's Email through SNS, and again when it is OK. AWS first sends "Subscription Confirmation": click **Confirm subscription** once. No disk-space alarm: the server has no CloudWatch agent.
-8b. **Host tools and rollback:** after v1.6.0, `dahae update <tag>` also replaces the host tools (CLI, agent, units, cron, compose) with that release's install.sh from the delivery repo, and agent.sh, only when they match the SHA256SUMS that the release workflow signed at exactly that tag (a channel is read as the tag it points at and refused if older than the newest version this server ran); otherwise nothing changes. The rollback copy of the tools moves only when the images really change. If only the tools could not be replaced, the job says so (exit 5): re-run the install line once. After a rollback, the weekly auto-update holds the rolled-back version until a newer release appears (any manual update ends the hold); a rollback with no previous version says so (exit 6). `dahae rollback` (also in the console: Recovery > Roll back, owner code plus server approval code) puts the previous version's tools back too, and still stops while a Toss payout is in doubt. Servers made with v1.6.0 or older re-run the install line once.
-8c. **Policies and Windows:** accounts that ran `--admin` before run it again once (existing policies get the new default version: the template now adds the bucket and the alarm topic). `launch.sh` also runs from Git Bash on Windows with the AWS CLI for Windows.
-9. **Costs:** use the AWS pricing calculator (https://calculator.aws/) with Seoul pricing. This guide lists no prices.
-10. **Deleting:** back up first, turn off termination protection, then delete the stack. The disk and the Elastic IP stay until you delete them yourself. The GitHub OIDC provider is account-wide and stays. With no Dahae server left, DODA's admin deletes the deployer user and both policies.
-
-[한국어로 돌아가기](#10-aws-에-다해-서버-올리고-자동-배포하기)
+English version: [10. Deploying Dahae on AWS with automatic deploys](10-aws-deploy.md).

@@ -7,7 +7,7 @@ This repository holds **only the installer and the guides**. There is no code to
 ## Steps (once)
 | Step | Guide | Who | Time |
 |---|---|---|---|
-| 1 | [Install in one go](guide/00-install.md) (more detail: [Server setup](guide/01-server-setup.md); provider screens: [Install by cloud provider](guide/09-클라우드별-설치.md), Korean) | Owner or installer | About 30 minutes |
+| 1 | [Install in one go](guide/00-install.md) (more detail: [Server setup](guide/01-server-setup.md); provider screens: [Install by cloud provider](guide/09-install-by-cloud.md)) | Owner or installer | About 30 minutes |
 | 2 | [Setup wizard](guide/02-setup-wizard.md) | Installer and owner | 1 to 2 hours (plus the providers' approval time) |
 | 3 | [App store release](guide/03-app-release.md) | Installer, then developer | The stores' account approval time |
 | 4 | [Owner's daily guide](guide/04-owner-guide.md) | Owner | Five minutes a day |

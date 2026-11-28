@@ -1,5 +1,7 @@
 # 다해 운영 가이드 · Dahae operations guide
 
+[English](#english) · 한국어 (both in this file; the English version follows the Korean one)
+
 > 대상 / Audience: 사장님(서버 운영자) · 엔지니어와 리뷰어 / owners who run the server, engineers and reviewers.
 > 장애가 났을 때는 먼저 [RUNBOOK.md](RUNBOOK.md) 를 보세요. 이 문서는 평소 운영 방법과 구조를 설명해요.
 > 명령과 동작은 모두 코드에서 확인했어요. 출처는 각 항목 옆의 파일 링크예요.

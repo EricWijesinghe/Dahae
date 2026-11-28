@@ -1,5 +1,7 @@
 # 세무 기능 안내 / Tax features guide
 
+[English](#english) · 한국어 (both in this file; the English version follows the Korean one)
+
 Status: **WIP, untested against live services.** Every feature below is off or unverified until the items in
 "Accountant checklist" are confirmed and the PortOne sandbox run is done. Audience: owner and accountant.
 

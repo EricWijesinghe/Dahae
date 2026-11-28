@@ -47,7 +47,7 @@ Everything runs on one server. You do not rent a separate database.
 
 ### Outside services Dahae connects to
 
-You connect these services under **[Setup]** in the console (Part 3).
+You connect these services under **[Setup]** in the console (Part 3). They are the services of the **Korea pack**, the only country pack available today; other countries get their own when their packs ship.
 
 | Connection | What it does | Chapter |
 |---|---|---|

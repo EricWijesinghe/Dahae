@@ -130,7 +130,7 @@ DODA 는 빌드, 서명, 배포 같은 기술 작업을 하지 않아요. 아래
 
 ## English
 
-Audience: DODA (operator of the Dahae service) and the developer (Eric). Step-by-step details: [guide 03](guide/03-앱-출시.md), [guide 10](guide/10-AWS-배포.md), [guide 11](guide/11-앱-직접-빌드.md), [store/ios-release.md](store/ios-release.md), [DEPLOY.md](DEPLOY.md) §1, §3, §4.
+Audience: DODA (operator of the Dahae service) and the developer (Eric). Step-by-step details: [guide 03](guide/03-app-release.md), [guide 10](guide/10-aws-deploy.md), [guide 11](guide/11-store-app-builds.md), [store/ios-release.md](store/ios-release.md), [DEPLOY.md](DEPLOY.md) §1, §3, §4.
 
 **Principle.** The developer builds, deploys and maintains everything for DODA from his GitHub repository [EricWijesinghe/Dahae](https://github.com/EricWijesinghe/Dahae). DODA owns every business account (Apple organization, Play organization, AWS, PortOne, Solapi, Kakao, Firebase) and gives the developer admin access, because the developer cannot own business accounts (D-2 visa). DODA does no technical work. DODA pays no extra service.
 
@@ -144,10 +144,10 @@ Audience: DODA (operator of the Dahae service) and the developer (Eric). Step-by
 
 ### 2. Android (Google Play)
 
-- **Build timing.** Set `API_BASE=https://<domain>` in the `store` environment and run `store-apps` with `android` ([guide 11](guide/11-앱-직접-빌드.md) steps 3 and 8). The server does not need to be running for the build.
+- **Build timing.** Set `API_BASE=https://<domain>` in the `store` environment and run `store-apps` with `android` ([guide 11](guide/11-store-app-builds.md) steps 3 and 8). The server does not need to be running for the build.
 - **Without keys.** Kakao, Naver and Google sign-in buttons stay hidden and push stays off. Enough for internal testing. Add the keys and rebuild later.
 - **Server before review.** The server must be running before review, because reviewers log in with the demo account (section 4, item 6).
-- **Play Console (DODA organization, developer as administrator).** DODA registers as an **Organization** (D-U-N-S needed). A new personal account must run a closed test with 12 testers for 14 days first. DODA invites the developer's Google account as an administrator; the developer creates the two apps and the service account ([guide 11](guide/11-앱-직접-빌드.md) step 5).
+- **Play Console (DODA organization, developer as administrator).** DODA registers as an **Organization** (D-U-N-S needed). A new personal account must run a closed test with 12 testers for 14 days first. DODA invites the developer's Google account as an administrator; the developer creates the two apps and the service account ([guide 11](guide/11-store-app-builds.md) step 5).
 - **Upload and signing.** The developer creates the upload key and keeps two offline copies (guide 11, step 4). Play App Signing stays on (default). The first AAB is uploaded by hand, because the Play API cannot create the first release (guide 11, step 5.2). After that, `store-apps` uploads each AAB to the internal track as a **draft**, with the service account key (Release manager). The developer checks and promotes it.
 - **Sign-in SHA-1.** Kakao and Google sign-in need the Play app-signing SHA-1. After the first upload, copy it from Play Console → App integrity and register it in the Kakao and Google consoles. Put the SHA-256 from the same page into the console under Settings → App links.
 - **Updates.** Tag a new version and run `store-apps` again (guide 11, step 10). Build numbers are automatic.
@@ -160,27 +160,27 @@ Audience: DODA (operator of the Dahae service) and the developer (Eric). Step-by
 
 ### 4. Backend server: deployment plan
 
-All of DODA's services run on AWS, so the server goes to **DODA's AWS Seoul region (ap-northeast-2)**. The account belongs to DODA; the developer deploys with granted access. Full click path: [guide 10](guide/10-AWS-배포.md).
+All of DODA's services run on AWS, so the server goes to **DODA's AWS Seoul region (ap-northeast-2)**. The account belongs to DODA; the developer deploys with granted access. Full click path: [guide 10](guide/10-aws-deploy.md).
 
-1. **DODA: create a deployer IAM user.** First create the permissions-boundary policy `dahae-boundary` and attach it to nobody ([guide 10](guide/10-AWS-배포.md) A, step 3). Then attach only [`deploy/aws/deployer-iam-policy.json`](../deploy/aws/deployer-iam-policy.json), turn on MFA, create no access keys. Send the sign-in URL and user name to the developer separately from the password.
-2. **Developer: run the CloudFormation template once**, signed in as the deployer IAM user ([guide 10](guide/10-AWS-배포.md) B). Easiest: one command in AWS CloudShell (`deploy/aws/launch.sh`, top of guide 10 B). Manually: use the `dahae-aws.yaml` the developer builds in B-1. Keep `GitHubRepo` at its default `EricWijesinghe/Dahae`: only the developer's deploy workflow in that repository is trusted by the server's AWS role. It creates:
+1. **DODA: create a deployer IAM user.** First create the permissions-boundary policy `dahae-boundary` and attach it to nobody ([guide 10](guide/10-aws-deploy.md) A, step 3). Then attach only [`deploy/aws/deployer-iam-policy.json`](../deploy/aws/deployer-iam-policy.json), turn on MFA, create no access keys. Send the sign-in URL and user name to the developer separately from the password.
+2. **Developer: run the CloudFormation template once**, signed in as the deployer IAM user ([guide 10](guide/10-aws-deploy.md) B). Easiest: one command in AWS CloudShell (`deploy/aws/launch.sh`, top of guide 10 B). Manually: use the `dahae-aws.yaml` the developer builds in B-1. Keep `GitHubRepo` at its default `EricWijesinghe/Dahae`: only the developer's deploy workflow in that repository is trusted by the server's AWS role. It creates:
    - One Ubuntu 24.04 server (default t3.medium, 50 GB encrypted disk), an Elastic IP, a security group open only on 80/443 (SSH 22 closed by default; shell access through Session Manager in the browser)
    - The installer, run automatically and checked by SHA-256: PostgreSQL, Caddy with automatic HTTPS, firewall, automatic backups
    - Daily disk snapshots kept 7 days, auto-recovery on AWS hardware failure, termination protection
    - The domain A record when Route 53 is used; otherwise two A records (`@`, `www`) at the registrar to the output IP
    - No RDS: PostgreSQL runs in a container on the server.
-3. **Setup wizard (DODA admin).** The owner creates the owner account and enters PortOne, Solapi, Firebase and sign-in keys in the console ([guide 02](guide/02-설정-마법사.md)). Once the owner creates an admin account for the developer under Staff, the developer can make the first save of the SMS, push and sign-in cards. The PortOne and Toss cards, unlocking, and the connection check after saving work only from the owner account. Keys are never committed or sent in chat.
-4. **CD with GitHub Actions (developer repository).** On each release, `deploy-aws.yml` sends `dahae update <version>` through AWS Systems Manager, then checks `https://<domain>/health` ([guide 10](guide/10-AWS-배포.md) C).
+3. **Setup wizard (DODA admin).** The owner creates the owner account and enters PortOne, Solapi, Firebase and sign-in keys in the console ([guide 02](guide/02-setup-wizard.md)). Once the owner creates an admin account for the developer under Staff, the developer can make the first save of the SMS, push and sign-in cards. The PortOne and Toss cards, unlocking, and the connection check after saving work only from the owner account. Keys are never committed or sent in chat.
+4. **CD with GitHub Actions (developer repository).** On each release, `deploy-aws.yml` sends `dahae update <version>` through AWS Systems Manager, then checks `https://<domain>/health` ([guide 10](guide/10-aws-deploy.md) C).
    - Add required reviewers to the environment `doda-aws` if DODA wants to approve deploys (the reviewer then needs access to the developer's repository). Without reviewers the developer runs it directly.
    - AWS access uses a GitHub OIDC role: no AWS keys or passwords are stored in GitHub; the role can only send commands to this server.
-5. **Backups and key copy.** Offsite backup to an S3 bucket is recommended ([guide 02](guide/02-설정-마법사.md) §6). Keep the key copy outside the server ([guide 08](guide/08-클라우드-배포.md) §6-5); without it, offsite backups cannot be opened.
-6. **Demo account.** Reviewers cannot receive Korean SMS. Just before submitting, DODA's admin turns on the review demo account in the console and writes the number and code into the review notes. It turns off after 14 days ([guide 03](guide/03-앱-출시.md) D).
+5. **Backups and key copy.** Offsite backup to an S3 bucket is recommended ([guide 02](guide/02-setup-wizard.md) §6). Keep the key copy outside the server ([guide 08](guide/08-cloud-deploy.md) §6-5); without it, offsite backups cannot be opened.
+6. **Demo account.** Reviewers cannot receive Korean SMS. Just before submitting, DODA's admin turns on the review demo account in the console and writes the number and code into the review notes. It turns off after 14 days ([guide 03](guide/03-app-release.md) D).
 
 **Not yet verified.** The template and CD pass the AWS linters (cfn-lint, actionlint) but have not been launched on a real AWS account. The first deploy is checked together by DODA's admin and the developer.
 
-**Template and new versions:** the simplest path is `deploy/aws/launch.sh` ([guide 10](guide/10-AWS-배포.md) B). To upload the template by hand, download `dahae-aws.yaml` from the release page (Releases → Latest → Assets); the install script URL and SHA-256 are already filled in. New versions are released from the same repository, which starts `deploy-aws` automatically (waiting for approval if reviewers are set).
+**Template and new versions:** the simplest path is `deploy/aws/launch.sh` ([guide 10](guide/10-aws-deploy.md) B). To upload the template by hand, download `dahae-aws.yaml` from the release page (Releases → Latest → Assets); the install script URL and SHA-256 are already filled in. New versions are released from the same repository, which starts `deploy-aws` automatically (waiting for approval if reviewers are set).
 
-**Other clouds:** [guide 09](guide/09-클라우드별-설치.md) and [guide 08](guide/08-클라우드-배포.md).
+**Other clouds:** [guide 09](guide/09-install-by-cloud.md) and [guide 08](guide/08-cloud-deploy.md).
 
 ### 5. Timeline
 
@@ -189,7 +189,7 @@ All of DODA's services run on AWS, so the server goes to **DODA's AWS Seoul regi
 | Day 0 | DODA | Sign the license agreement, pick domain, create the AWS deployer IAM user, register Play and Apple organizations, request App Store Connect API access, invite the developer as admin, sign up for Firebase, Kakao, PortOne, Solapi |
 | Day 0 | Developer | Confirm the signed license, create the `store` and `doda-aws` environments |
 | Day 0–1 | Developer · DODA owner | CloudFormation server (developer, section 4); owner account and setup wizard (owner, guided by the developer on a call) |
-| Day 1 | Developer | App IDs, App Store Connect apps, API key, APNs key, GitHub secrets, first `store-apps` run, first AAB manual Play upload, first TestFlight build (Apple processing 10–30 min) ([guide 11](guide/11-앱-직접-빌드.md)) |
+| Day 1 | Developer | App IDs, App Store Connect apps, API key, APNs key, GitHub secrets, first `store-apps` run, first AAB manual Play upload, first TestFlight build (Apple processing 10–30 min) ([guide 11](guide/11-store-app-builds.md)) |
 | Day 1 | Developer | Check and promote the AAB draft on the Play internal track; register the Play app-signing SHA-1; enter the SHA-256 under App links |
 | Day 1–3 | DODA staff · developer | Test on real Android and iPhone devices (sign-in, photos, payment window, push, location) |
 | At submission | DODA admin · developer | Turn on the demo account, review notes, confirm privacy and account-deletion URLs, submit |
@@ -215,8 +215,8 @@ DODA does no build, signing or deployment work. It creates the accounts and cont
 
 ### 7. What the developer provides
 
-- [ ] A signed written license agreement (repository `LICENSE` sections 1.4 and 3.1). No build or deploy for DODA before it is signed ([guide 11](guide/11-앱-직접-빌드.md) step 0).
-- [ ] The `store` environment in the developer repository (secrets: keystore, Play service account, App Store Connect API key, native keys) and the `doda-aws` environment (four AWS variables) ([guide 11](guide/11-앱-직접-빌드.md) step 3, [guide 10](guide/10-AWS-배포.md) C).
+- [ ] A signed written license agreement (repository `LICENSE` sections 1.4 and 3.1). No build or deploy for DODA before it is signed ([guide 11](guide/11-store-app-builds.md) step 0).
+- [ ] The `store` environment in the developer repository (secrets: keystore, Play service account, App Store Connect API key, native keys) and the `doda-aws` environment (four AWS variables) ([guide 11](guide/11-store-app-builds.md) step 3, [guide 10](guide/10-aws-deploy.md) C).
 - [ ] Store builds, uploads, the first manual AAB upload, TestFlight checks, review submission.
 - [ ] Server releases and deployments (`deploy-aws`), maintenance and incident response.
 - [ ] Store material (listing text, screenshots, data safety, app privacy labels, review notes) is in `docs/store/`. Screenshots and graphics are not committed; the developer attaches them to the release as `dahae-store-images-<version>.zip` (`gh release upload`).

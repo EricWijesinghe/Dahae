@@ -8,6 +8,9 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+### Changed
+- Documentation: every guide has an English version (new English pages for guides 8 to 11; guide 5 English first; an English summary on the Korea-only AlimTalk guide), the install page points at the English provider guide, the manual book has an English entry page, and the bilingual reference docs link straight to their English half. README, architecture and deployment docs describe what 1.6.6 built for country packs (the built-in KR pack, install facts, `adapters_ok` and `pack_ok`) and the update editions.
+
 ## [1.6.6] - 2026-11-28
 
 1.6.6 prepares servers for other countries and for other release streams. A Korean server keeps working exactly as

@@ -61,7 +61,7 @@ You never edit code or files. You rent a server, point your domain at it, paste 
    It says: the install is done; open the admin address; enter the setup code and create the owner account; then connect payments, messaging and sign-in under **Settings**.
 7. **Write down the setup code.** You use it once, to create the owner account.
 
-> **If you installed with user data (cloud-init) or a startup script**, you will not see this screen; the result is only in the server's logs. Open `https://<domain>/health` in a browser: `{"ok":true}` means it is done. Use the setup code shown on the install-file page. Provider-by-provider steps are in [9. Install by cloud provider](09-클라우드별-설치.md) (Korean).
+> **If you installed with user data (cloud-init) or a startup script**, you will not see this screen; the result is only in the server's logs. Open `https://<domain>/health` in a browser: `{"ok":true}` means it is done. Use the setup code shown on the install-file page. Provider-by-provider steps are in [9. Install by cloud provider](09-install-by-cloud.md).
 
 > If you see "the app is fine, the HTTPS certificate is not ready yet", the service is running and only the domain connection is left. Once the A record takes effect, the certificate is issued automatically. Check with `sudo dahae status`.
 

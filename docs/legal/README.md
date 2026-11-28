@@ -1,5 +1,7 @@
 # 법적 문서 안내 / Legal documents
 
+[English](#english) · 한국어 (both in this file; the English version follows the Korean one)
+
 다해(Dahae) 소프트웨어의 소유권과 사용 조건을 정한 문서는 세 가지입니다. 저장소 루트의 두 파일과 이 폴더의 계약서 양식입니다.
 
 Three documents set out who owns Dahae and on what terms it may be used. Two are in the repository root, and one is the contract template in this folder.

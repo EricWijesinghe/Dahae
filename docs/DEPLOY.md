@@ -8,7 +8,7 @@ store accounts (guide 11).
 |---|---|---|
 | API image, web image (website + console at `/admin/`) | `release.yml` → GHCR | `docker pull` via install.sh |
 | install.sh + `SHA256SUMS` + `guide/` + `store/` | `release.yml` → `DIST_REPO` (branches `main` = stable, `beta`; annotated tag `v<VER>` on the release's channel commit) | one `curl … \| sudo bash` line |
-| Customer / partner apps | GitHub Actions `store-apps` in the public repository ([guide 11](guide/11-앱-직접-빌드.md)) | TestFlight / Play internal test, then stores |
+| Customer / partner apps | GitHub Actions `store-apps` in the public repository ([guide 11](guide/11-store-app-builds.md)) | TestFlight / Play internal test, then stores |
 
 ## 0. Release gate
 
@@ -199,14 +199,14 @@ process holds port 80 or 443.
 
 ### AWS server and GitHub deploys (per client)
 
-The release also uploads `dahae-aws.yaml` (CloudFormation, pinned to the same `install.sh`) as a release asset, signed like the install page. The developer launches it in the client's AWS console, signed in as the deployer IAM user, or runs [`deploy/aws/launch.sh`](../deploy/aws/launch.sh) in CloudShell, which pins the latest release's `install.sh` into the same template; [`.github/workflows/deploy-aws.yml`](../.github/workflows/deploy-aws.yml) then runs `dahae update <tag>` (or `dahae rollback`) on that server through SSM, after approval when the `doda-aws` GitHub environment has reviewers. The client-facing steps are in [guide 10](guide/10-AWS-배포.md); the IAM policy is [deploy/aws/deployer-iam-policy.json](../deploy/aws/deployer-iam-policy.json).
+The release also uploads `dahae-aws.yaml` (CloudFormation, pinned to the same `install.sh`) as a release asset, signed like the install page. The developer launches it in the client's AWS console, signed in as the deployer IAM user, or runs [`deploy/aws/launch.sh`](../deploy/aws/launch.sh) in CloudShell, which pins the latest release's `install.sh` into the same template; [`.github/workflows/deploy-aws.yml`](../.github/workflows/deploy-aws.yml) then runs `dahae update <tag>` (or `dahae rollback`) on that server through SSM, after approval when the `doda-aws` GitHub environment has reviewers. The client-facing steps are in [guide 10](guide/10-aws-deploy.md); the IAM policy is [deploy/aws/deployer-iam-policy.json](../deploy/aws/deployer-iam-policy.json).
 
 ## 3. Store apps (per client)
 
 The developer builds the store apps with GitHub Actions in the public repository (workflow `store-apps`, manual
 run, GitHub-hosted runners incl. macOS, free for public repos). The apps are uploaded to the client's own store accounts
 (the client owns the Apple organization and the Play organization and grants the developer admin access). Follow
-[guide 11](guide/11-앱-직접-빌드.md). Setup, in the repository:
+[guide 11](guide/11-store-app-builds.md). Setup, in the repository:
 1. Settings → Environments → `store`: deployment branch `master`; required reviewers optional.
 2. Environment `store` → Variables: `API_BASE=https://<client domain>`, `APPLE_TEAM_ID` (10 characters),
    `APP_LINK_DOMAIN` (optional, bare host; after a domain move `new.host,old.host`, three at most),
@@ -421,3 +421,27 @@ pack is Korea (KR), so section 4 lists Korean providers. Planned packs (UK, Irel
 Singapore) arrive as data plus adapters inside the same image, and the owner will pick the country in the setup wizard.
 Delivery and update steps in this runbook do not change per country. Design and release rules:
 [ARCHITECTURE.md §9](ARCHITECTURE.md#9-country-packs-roadmap).
+
+What an operator sees today (1.6.6):
+
+- **The pack is built in.** `backend/packs/KR/pack.json` (on top of `_base`) is embedded in the API image and
+  checked at start; a bad pack stops the API before it serves anything, so a broken image fails its health check and
+  the update rolls back. There is nothing to configure: the active pack is always KR.
+- **Install facts.** On its first boot of 1.6.6 a server that already has staff writes `install.country=KR`,
+  `install.currency=KRW`, `install.tz=Asia/Seoul`, `install.locales`, `install.pack_version_applied`, and
+  `install.locked_at` if it ever took a live payment (audit action `install.auto_country`). A fresh install leaves
+  them unset; it still uses Asia/Seoul. These are rows in the `settings` table, not `.env` values.
+- **Readiness.** `adapters_ok` and `pack_ok` in `/ready` (section 9) guard rollbacks across packs and providers:
+  `adapters_ok` fails readiness when live rows need a provider the binary does not know; `pack_ok` only warns.
+
+## 12. Editions
+
+A server follows one signed release stream, its edition. `deploy/editions` lists each stream (name, image
+repository, signer repository, delivery repository, the domains allowed to switch); `deploy/publish-delivery.sh`
+checks every row, bakes the table into the delivered `install.sh` and lists it in `SHA256SUMS`. Rows today: `dahae`
+(this product, `*`: followed by default, never offered as a switch) and `uzipsa` (a separate Korea-first edition,
+offered only to its listed domains). A server without `EDITION` in `.env` follows `dahae` through its own `.env`
+values, exactly as before editions existed. On a listed domain the console shows an **Update edition** card;
+the switch (`dahae edition <name>`) needs the owner code and the server approval code, checks the new stream's
+channel version and `SHA256SUMS` signature first, keeps the old values in `host/edition.prev`, and puts them back
+(exit 3) if the new version does not answer. `dahae version` and the agent's `host.json` show the edition.

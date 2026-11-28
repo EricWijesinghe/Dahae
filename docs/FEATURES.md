@@ -1,5 +1,7 @@
 # 다해 기능 카탈로그 · Dahae feature catalogue
 
+[English](#english) · 한국어 (both in this file; the English version follows the Korean one)
+
 > 이 문서는 저장소 코드에 실제로 있는 기능만 적어요. 코드에 없는 기능은 여기에 넣지 않아요. 만들지 않은 것은 "의도적으로 뺀 것"에 적었어요.
 > This catalogue lists only what the code in this repository does. Features not in the code are left out; see "Left out on purpose".
 > 모든 항목의 주요 파일은 저장소 안의 상대 링크예요. 확인이 필요한 부분은 마지막 [확인이 필요한 점](#확인이-필요한-점) 과 [Known limits](#known-limits) 에 모았어요.

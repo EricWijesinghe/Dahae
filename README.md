@@ -33,14 +33,18 @@ Dahae is a complete booking system for a home-services business, such as home cl
 
 ## Country packs
 
-Country packs are the planned way to hold what differs from one country to the next: payment gateways, SMS and chat messaging, social sign-in, address search, currency and tax rules, business identifiers, legal templates and languages. Today there is no country choice: every install runs the Korea pack. When more packs ship, the owner will pick the country in the setup wizard.
+A country pack holds what differs from one country to the next: payment gateways, SMS and chat messaging, social sign-in, address search, currency and tax rules, business identifiers, legal templates and languages. Since 1.6.6 the Korean rules (VAT and withholding rates, rounding, cancellation defaults, consent kinds, banks, service areas) live in a built-in Korea pack that the server checks when it starts. There is no country choice yet: every install runs the Korea pack, in Korean won, on Korea time. When more packs ship, the owner will pick the country in the setup wizard.
 
 | Country | Status | What the pack covers |
 |---|---|---|
 | **Korea (KR)** | **Available** | PortOne V2 and Toss Payments checkout, Toss Payments payouts, Solapi SMS and KakaoTalk AlimTalk, Kakao, Naver, Google and Apple sign-in, PASS identity check, Korean VAT and withholding exports, Korean legal templates, Korean and English screens |
 | UK, Ireland, Australia, New Zealand, Singapore | **Planned** | Not built yet. Their providers are being chosen; nothing here works for these countries today. |
 
-Today every install runs the Korea pack. The country-pack design is described in [Architecture §9](docs/ARCHITECTURE.md#9-country-packs-roadmap). Countries are added one pack at a time, and a pack is listed as available only once it ships in a release.
+An existing server records its country facts once (country, currency, time zone, languages, and the time of its first live payment, which will lock the country once a country choice exists); a fresh install leaves them for the setup wizard's future country step. What is built and what is planned is in [Architecture §9](docs/ARCHITECTURE.md#9-country-packs-roadmap). Countries are added one pack at a time, and a pack is listed as available only once it ships in a release.
+
+## Editions
+
+Dahae is the international edition: English first, with countries added as packs. A server follows one signed release stream, called an edition. The installer carries a signed edition table: `dahae` is the default and the one every server follows unless told otherwise; `uzipsa` is a separate Korea-first edition, offered only to the servers listed for it. Details: [Deployment §12](docs/DEPLOY.md#12-editions).
 
 ## Install in one command
 
@@ -105,7 +109,7 @@ Captured from the real apps with the Korea pack and **demo data**: the shop news
 
 ## Features
 
-The full list, with code locations and known limits, is in the [feature catalogue](docs/FEATURES.md).
+The full list, with code locations and known limits, is in the [feature catalogue](docs/FEATURES.md#english).
 
 - **Booking:** fixed prices from the catalogue, per-option counts with a multi-item discount, quotes with a deposit for larger jobs, rescheduling, cancellation with refunds under the cancellation policy, waitlist, subscriptions with renewals, peak pricing, tips.
 - **Payments and payouts:** hosted gateway checkout, signed webhooks, daily reconciliation, receipts and tax documents, points and coupons. Partner payouts are recorded manually by default, or sent automatically where the pack has a payout provider. VAT and withholding exports as CSV.
@@ -156,11 +160,12 @@ In the Korea pack the payment gateway is PortOne V2 or Toss Payments, the payout
 | Document | What is in it |
 |---|---|
 | [Guides](docs/guide/README.md) | Step-by-step guides for owners and installers: install, setup wizard, operations ([한국어](docs/guide/README.ko.md)) |
-| [Feature catalogue](docs/FEATURES.md) | What owners, customers, partners and the system do, with code locations and known limits |
+| [Manual book](docs/manual/README.md) | Click-by-click manual for owners and admins, every screen and field, as a PDF too ([한국어](docs/manual/ko/00-cover.md)) |
+| [Feature catalogue](docs/FEATURES.md#english) | What owners, customers, partners and the system do, with code locations and known limits |
 | [Architecture](docs/ARCHITECTURE.md) | Components, request and data flows, deployment layout, country-pack roadmap ([한국어 요약](docs/ARCHITECTURE.ko.md)) |
 | [Security and privacy](docs/SECURITY-AND-PRIVACY.md) | Trust boundaries, authentication, authorisation, encryption, personal data flows, known gaps |
 | [Security policy](SECURITY.md) | How to report a vulnerability, and what is in scope |
-| [Operations guide](docs/OPERATIONS.md) and [incident runbook](docs/RUNBOOK.md) | Day-to-day operations, and first checks by symptom |
+| [Operations guide](docs/OPERATIONS.md#english) and [incident runbook](docs/RUNBOOK.md#english) | Day-to-day operations, and first checks by symptom |
 | [Quality and checks](docs/QUALITY.md) | Test layers and counts, CI gates, release pipeline, known gaps |
 | [API index](docs/api/README.md) | Endpoint list and shared rules (idempotency, error shape, versioning) |
 | [Deployment details](docs/DEPLOY.md) | Release and delivery detail for developers |
@@ -200,7 +205,7 @@ This software is proprietary to its copyright holder, Eric Wijesinghe (EricWijes
 - Licence terms: [LICENSE](LICENSE) (the English text governs; a Korean summary is at the top of the file)
 - Ownership notice: [NOTICE](NOTICE)
 - Commercial licence agreement template: [docs/legal/COMMERCIAL-LICENSE-AGREEMENT.md](docs/legal/COMMERCIAL-LICENSE-AGREEMENT.md) (have it reviewed by a lawyer before signing)
-- Guide to the legal documents: [docs/legal/README.md](docs/legal/README.md)
+- Guide to the legal documents: [docs/legal/README.md](docs/legal/README.md#english)
 - Third-party components and their licences: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - The names and logos Dahae and 다해 are trademarks (™) of the copyright holder and are not licensed.
 - The source is publicly visible. Viewing or cloning it grants no licence (LICENSE sections 1.4 and 3.1).

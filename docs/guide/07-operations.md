@@ -167,4 +167,4 @@ sudo dahae uninstall --purge
 | `sudo dahae setup-code` | Show the setup code for creating the owner account again (`--renew` makes a new one) |
 | `sudo dahae restore-offsite` | List offsite backups / download and restore one |
 | `sudo dahae demo load` / `demo clear` | Load / clear demo data ([1. Server setup](01-server-setup.md)) |
-| `sudo dahae load <file>.tar` | Load an image file to update without internet ([5. Demo install](05-demo-install.md), Korean) |
+| `sudo dahae load <file>.tar` | Load an image file to update without internet ([5. Demo install](05-demo-install.md)) |

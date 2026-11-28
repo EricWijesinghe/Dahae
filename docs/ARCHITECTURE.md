@@ -4,7 +4,7 @@ English · [한국어 요약](ARCHITECTURE.ko.md)
 
 > Engineering reference for Dahae, a self-hosted home-services booking platform. Every claim cites the code it describes.
 > Status is stated per feature. Items marked **planned** or **unverified** are not production-proven.
-> Today every install runs the Korea country pack; the pack design for other countries is in [§9](#9-country-packs-roadmap).
+> Today every install runs the Korea country pack; what is built and what is planned for other countries is in [§9](#9-country-packs-roadmap).
 
 ---
 
@@ -414,6 +414,7 @@ sequenceDiagram
 - **Stable channel holds.** On the stable channel, a new digest must be seen for 24 hours before the scheduled update applies it (`stable_seasoned`, [`install.sh`](../deploy/install.sh)).
 - **Schedule.** Default auto-update on Mondays at 04:00 KST, after the backup; configurable with `dahae update-schedule` (`write_schedules`, `cmd_update_schedule`).
 - **Rollback.** `dahae rollback` backs up first, then starts `PREV_API_IMAGE` and `PREV_WEB_IMAGE`. Database migrations are not reversed; the previous image runs against the newer, additive schema ([`install.sh`](../deploy/install.sh), `cmd_rollback`; [`lib.rs`, `migrate`](../backend/crates/api/src/lib.rs)).
+- **Editions.** A server follows one signed release stream, its edition. The table [`deploy/editions`](../deploy/editions) names each stream's image repository, signer and delivery repository and the domains allowed to switch to it; `publish-delivery.sh` bakes it into the delivered `install.sh` and lists it in `SHA256SUMS`, so the release signature covers it. Two rows exist: `dahae` (this product, the default) and `uzipsa` (a separate Korea-first edition, offered only to its listed domains). A server without `EDITION` in `.env` follows `dahae`. `dahae edition <name>` checks the new stream's signature and version first and puts the old values back if the new version does not answer (`cmd_edition`, [`install.sh`](../deploy/install.sh)).
 - **Approval.** Jobs that change the version (`update-tag`, rollback), the domain (`domain-set`) or the release stream (`edition`) need an owner approval code on the server; the job runner checks it ([`deploy/agent.sh`](../deploy/agent.sh) header comment). The console sends the code with `POST /v1/admin/host/jobs/{id}/approve`, which writes `inbox/<id>.approve`. The runner moves that file into the root-only `work/` folder before it reads it, and the read is capped at 5 seconds, so a FIFO or a swapped file cannot stall the runner while it holds the lock (`approve_one`, `copy_small`).
 - **Former domains.** After `dahae domain`, the API records the old host as an alias ([`domains.rs`](../backend/crates/api/src/domains.rs), settings row `domains`), adds it to CORS, and answers Caddy's on-demand TLS question (`/internal/tls-ask`). Caddy's `https://` catch-all site serves aliases like the main domain and redirects only website pages; nothing about aliases is in compose or `.env`.
 - **Job file format.** The API writes one file per job (`id`, `kind`, `arg`, optional `token`). The runner accepts only known keys, rejects duplicates and stale ids (older than 15 min), and never interprets file content as shell ([`deploy/agent.sh`](../deploy/agent.sh), [`host_jobs.rs`](../backend/crates/api/src/host_jobs.rs)). Kinds the API writes: `status-refresh`, `backup-now`, `update`, `update-skip`, `channel`, `restart`, `schedule`, `heartbeat`, `domain-check`, `domain-set`, `host-approval-enroll`, `rollback`, `keys-backup`, `edition`; the runner also handles `update-tag`, `logs` and `offsite-list` ([`deploy/agent.sh`](../deploy/agent.sh)).
@@ -593,7 +594,7 @@ Each item is stated as the code and documents state it, with the owner-facing ac
 | 9 | Partner app does not show verification status or checklist | CHANGELOG Added | Open |
 | 10 | Partner training gate is off by default: partners have no way yet to publish or complete training | CHANGELOG Unreleased | Owner setting, off |
 | 11 | Point-in-time recovery needs `WAL_ARCHIVE_MODE` and an S3 bucket; the restore step is not in the setup wizard | [`deploy/wal`](../deploy/wal), CHANGELOG Unreleased | Optional, engineer path |
-| 12 | Store apps build and sign on GitHub Actions (store-apps.yml) | [guide 11](guide/11-앱-직접-빌드.md) | Closed |
+| 12 | Store apps build and sign on GitHub Actions (store-apps.yml) | [guide 11](guide/11-store-app-builds.md) | Closed |
 | 13 | NTD branch: its migrations (`0230` to `0237`) sort below migrations already on master (`0240` to `0375`). Confirm the migrator applies out-of-order versions on a database that has already run `0375` before merging | `feat/ntd-redesign` `backend/migrations/` | Check before merge |
 | 14 | Consent policy version is `2026-11-17`, matching the policy texts' 시행일 ([`privacy.rs`](../backend/crates/api/src/privacy.rs) `CONSENT_VERSION`). Bump it with any text change | [`privacy.rs`](../backend/crates/api/src/privacy.rs) | Done |
 
@@ -619,7 +620,20 @@ Related documents: [DEPLOY.md](DEPLOY.md) (operator steps), [guide/](guide/READM
 
 ## 9. Country packs (roadmap)
 
-Status: **planned**. Nothing in this section is built yet, except that today's Korea code is the first pack to be extracted. Until the work below ships, every install behaves as the Korea pack, and the code cited in sections 1 to 8 is the Korea behaviour.
+Status: **groundwork shipped in 1.6.6; the rest is planned.** Every install runs the Korea pack, and the code cited in sections 1 to 8 is the Korea behaviour. There is no country choice yet: the setup wizard has no country step, KRW is the only currency and Asia/Seoul the only time zone offered.
+
+**What exists today (1.6.6).**
+
+- **Pack data.** [`backend/packs/_base/pack.json`](../backend/packs/_base/pack.json) (strict global defaults) and [`backend/packs/KR/pack.json`](../backend/packs/KR/pack.json) with `KR/areas.json` and `KR/banks.json`. [`api/src/pack.rs`](../backend/crates/api/src/pack.rs) embeds them at build time, merges a pack along `extends` and validates it when the server starts; a bad pack stops the server instead of running with wrong rules. The active pack is fixed to `KR` (`pack::ACTIVE`). VAT and withholding rates, rounding, cancel defaults, consent kinds, banks and areas are read from it, and tests prove every old constant equals its pack value.
+- **KR golden tests.** [`crates/api/tests/kr_golden.rs`](../backend/crates/api/tests/kr_golden.rs), [`crates/domain/tests/kr_golden.rs`](../backend/crates/domain/tests/kr_golden.rs) and the files in [`crates/api/tests/golden/kr/`](../backend/crates/api/tests/golden/kr) freeze Korean amounts, tax, cancel rules, messages, exports and times. They are regenerated only with `UPDATE_GOLDENS=1` and a reviewed diff.
+- **Install facts.** Settings keys `install.country`, `install.currency`, `install.tz`, `install.locales`, `install.console_locale`, `install.pack_version_applied` and `install.locked_at` ([`settings_registry.rs`](../backend/crates/api/src/settings_registry.rs)). On the first boot of 1.6.6 a server that already has staff records `KR`, `KRW`, `Asia/Seoul`, its languages and the pack version, plus `install.locked_at` if it ever took a live payment; a fresh install leaves them unset for the future country step. `install.locked_at` is also written at the first live payment on any server without it ([`routes/setup/install.rs`](../backend/crates/api/src/routes/setup/install.rs)).
+- **Time zone.** Business dates, booking slots, day windows, quiet hours and the cancel window follow `install.tz`. Every pool connection carries it as the `dahae.tz` setting, which SQL reads through `dahae_tz()` (migration 0511, [`util.rs`](../backend/crates/api/src/util.rs)). [`scripts/ci/check-tz.sh`](../scripts/ci/check-tz.sh) fails on a new hard-coded Korean zone.
+- **Money and currency.** `Money` (integer minor units), `Currency` and the generalised VAT split and withholding live in [`crates/domain/src/money.rs`](../backend/crates/domain/src/money.rs), [`currency.rs`](../backend/crates/domain/src/currency.rs) and [`tax.rs`](../backend/crates/domain/src/tax.rs). `checkouts` and `payments` record a currency (migrations 0504, 0505; `KRW` on existing rows), and payment confirmation and saved-card charges refuse a currency mismatch.
+- **Webhook ledger.** PortOne, Toss Payments and Toss payout deliveries are recorded in `webhook_events` before they are handled (migrations 0503, 0506), so a repeated delivery changes nothing.
+- **Phone numbers in E.164.** A `phone_e164` copy sits next to each phone column (migrations 0507 to 0510), filled in the background; sign-in and lookups still read the old columns.
+- **Readiness.** `GET /ready` adds `adapters_ok` (false, and readiness fails, when a live payment, saved card, queued refund or open payout names a provider this binary does not know; the list is static in [`lifecycle.rs`](../backend/crates/api/src/lifecycle.rs) until the adapter registry lands) and `pack_ok` (a warning only: false after a rollback to a binary whose pack is older than the one the install applied).
+
+**Planned, not built.** The adapter traits and registry, the outbound host guard, the generic webhook route, the wizard's country and language steps, legal templates with a Legal inbox, live-checkout gates, and every pack other than KR.
 
 | Country | Status |
 |---|---|

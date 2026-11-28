@@ -1,5 +1,7 @@
 # 다해 장애 대응 런북 · Dahae incident runbook
 
+[English](#english) · 한국어 (both in this file; the English version follows the Korean one)
+
 > 대상 / Audience: 사장님(서버 운영자) 우선, 엔지니어는 각 항목의 "개발자에게 연락할 때" 를 보세요.
 > 서버에서 명령을 칠 때는 항상 `sudo` 를 붙이고, 터미널은 콘솔 화면의 **브라우저에서 SSH 연결** 을 쓰면 돼요.
 > 평소 운영 방법은 [OPERATIONS.md](OPERATIONS.md) 에 있어요. 명령 목록은 [deploy/install.sh](../deploy/install.sh) 의 `USAGE` 가 기준이에요.

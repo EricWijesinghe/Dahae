@@ -34,7 +34,7 @@ You never edit code or files. You rent a server, point your domain at it, paste 
 3. When the server is ready, note its **public IP address** (for example `203.0.113.10`).
 4. In the firewall (security group) settings, open ports **22, 80 and 443**.
 
-> Every provider names its screens differently. Provider-by-provider steps are in [9. Install by cloud provider](09-클라우드별-설치.md) (Korean).
+> Every provider names its screens differently. Provider-by-provider steps are in [9. Install by cloud provider](09-install-by-cloud.md).
 
 > A server with less than 2 GB of memory (1 GB) still installs: the installer adds 2 GB of swap on disk, but it can be slow. Choose the recommended size for a server that takes real customers.
 
@@ -83,7 +83,7 @@ If you paste the install setup while creating the server, the install starts as 
 2. Enter the **domain** (for example `myshop.com`) and a **notification email**. The completion-alert address is optional.
 3. Tick the two boxes: you chose Ubuntu 24.04, and you will open ports 22, 80 and 443 in the firewall.
 4. Press **[Make the install file]**, note the **setup code** (12 characters) it shows, then press **[Copy]**.
-5. On the provider's server-creation screen, paste it into whichever field exists: **"User data"**, **"cloud-init"** or **"Startup script"**. Field names per provider are in [9. Install by cloud provider](09-클라우드별-설치.md) (Korean).
+5. On the provider's server-creation screen, paste it into whichever field exists: **"User data"**, **"cloud-init"** or **"Startup script"**. Field names per provider are in [9. Install by cloud provider](09-install-by-cloud.md).
 6. Create the server and wait **10 to 30 minutes**. The install runs inside the server by itself.
 7. Copy the server's **public IP** from the provider's screen, and set the A records `@` and `www` to that IP in the DNS screen from ②.
 8. After 10 to 30 minutes, open `https://myshop.com/health` in a browser. When you see **`{"ok":true}`** the install is done. Go to ④.
