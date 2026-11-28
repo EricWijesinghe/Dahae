@@ -72,6 +72,7 @@ write_file() { # write_file 경로 내용 : 임시 파일에 쓴 뒤 바꿔요 (
 say_step() { # say_step 기호 내용 : 단계 줄을 덧붙여요 (기록이 안 돼도 작업은 계속해요)
   local log="$JOBS/status/$JOB_ID.log"
   # shortcut: -L 검사와 쓰기 사이에 틈이 남아요. status/ 가 관리자 소유라야 API 가 링크를 못 만들어요 (dir_ok)
+  # shellcheck disable=SC2015 # the fallback is meant to run when either test fails
   [ ! -L "$log" ] && printf '%s %s\n' "$1" "$2" >> "$log" || warn "단계 기록을 못 했어요"
 }
 
@@ -376,6 +377,7 @@ approve_one() { # approve_one 경로 : 승인 코드 파일 하나를 받아요.
 
 approval_enroll() { # 승인 코드를 처음 한 번만 만들어요 (이미 있으면 실패). 사장님 계정 번호와 인증 앱 주소를 남겨요
   local secret
+  # shellcheck disable=SC2015 # the fallback is meant to run when either test fails
   [ ! -e "$APPROVAL_KEY" ] && [ ! -L "$APPROVAL_KEY" ] || { JOB_WHY="이미 서버 승인 코드가 있어요"; warn "$JOB_WHY"; return 1; }
   secret=$(head -c 20 /dev/urandom | base32 | tr -d '=\n')
   [ "${#secret}" = 32 ] || return 1
@@ -603,10 +605,12 @@ sweep_work() { # 예전 실행이 중간에 끝나서 남긴 작업 파일과 �
 recover_interrupted() { # 실행 중에 꺼져서 running 으로 남은 작업은 중단으로 바꿔요 (잠금을 잡은 지금 실행 중인 작업은 없어요)
   local f id
   for f in "$JOBS"/status/*.json; do
+    # shellcheck disable=SC2015 # the fallback is meant to run when either test fails
     [ -f "$f" ] && [ ! -L "$f" ] || continue
     grep -q '"state":"running"' "$f" || continue
     id=$(basename -- "$f" .json)
     write_file "$f" "$(sed 's/"state":"running"/"state":"failed"/' "$f")" || { warn "중단된 작업을 못 고쳤어요: $id"; continue; }
+    # shellcheck disable=SC2015 # the fallback is meant to run when either test fails
     [ ! -L "$JOBS/status/$id.log" ] && printf '✘ %s\n' "중단됨 (서버가 실행 중에 다시 시작됐어요)" >> "$JOBS/status/$id.log" 2>/dev/null || true
   done
 }
@@ -672,6 +676,7 @@ main() {
     run)
       trap 'exit 143' TERM INT HUP
       trap abort_job EXIT
+      # shellcheck disable=SC2015 # the fallback is meant to run when either test fails
       exec 9>"$LOCK" && flock -w "$LOCK_WAIT" 9 || die "잠금을 잡지 못했어요"
       dirs_ok || die "작업 폴더의 주인이나 권한이 안전하지 않아요"
       sweep_work

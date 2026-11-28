@@ -187,10 +187,12 @@ nt "launch: an existing stack is never updated" env LAUNCH_STACK=1 PATH="$L/bin:
 nt "launch: a domain is required" launch --email o@example.co.kr
 nt "launch: stops early when --admin never ran" env LAUNCH_NO_BOUNDARY=1 PATH="$L/bin:$PATH" LAUNCH_FILES="$L/files" LAUNCH_LOG="$L/log" bash "$ROOT/deploy/aws/launch.sh" --domain example.co.kr --email o@example.co.kr
 t  "launch: --domain auto passes auto to the template" launch --domain auto --email o@example.co.kr
+# shellcheck disable=SC2016 # expanded by the inner shell
 t  "launch: ...and names the sslip.io address in the next steps" bash -c 'PATH="$1/bin:$PATH" LAUNCH_FILES="$1/files" LAUNCH_LOG="$1/log" bash "$2/deploy/aws/launch.sh" --domain auto --email o@example.co.kr | grep -q "https://203.0.113.7.sslip.io/admin"' _ "$L" "$ROOT"
 t  "launch: ...in the deploy parameters" grep -q "Domain=auto " "$L/log"
 nt "launch: auto cannot take a Route 53 zone" launch --domain auto --email o@example.co.kr --hosted-zone-id Z123
 nt "launch: stack names stay dahae-*" launch --domain example.co.kr --email o@example.co.kr --stack prod
+# shellcheck disable=SC2016 # expanded by the inner shell
 t  "launch: the next steps name the alarm e-mail confirmation" bash -c 'PATH="$1/bin:$PATH" LAUNCH_FILES="$1/files" LAUNCH_LOG="$1/log" bash "$2/deploy/aws/launch.sh" --domain example.co.kr --email o@example.co.kr | grep -q "Confirm subscription once"' _ "$L" "$ROOT"
 : > "$L/log"
 t  "launch: --backup-bucket reuses a lost server's bucket" launch --domain example.co.kr --email o@example.co.kr --backup-bucket dahae-main-backupbucket-1a2b
@@ -203,7 +205,9 @@ mv "$L/files/install.ok" "$L/files/install.sh"
 launch --domain example.co.kr --email o@example.co.kr >/dev/null 2>&1
 t  "launch: AWS_CLI_FILE_ENCODING=UTF-8 for every aws call" sh -c "[ -s '$L/log.env' ] && ! grep -vqx 'ENC=UTF-8' '$L/log.env'"
 # Git Bash on Windows: a fake cygpath turns the work folder into W:<path>; the fake aws only opens W: paths then
-mkdir -p "$L/winbin"; printf '#!/usr/bin/env bash\n[ "$1" = -m ] && printf "W:%%s\\n" "$2"\n' > "$L/winbin/cygpath"; chmod +x "$L/winbin/cygpath"
+mkdir -p "$L/winbin"
+# shellcheck disable=SC2016 # the fake script expands them
+printf '#!/usr/bin/env bash\n[ "$1" = -m ] && printf "W:%%s\\n" "$2"\n' > "$L/winbin/cygpath"; chmod +x "$L/winbin/cygpath"
 winlaunch() { PATH="$L/winbin:$L/bin:$PATH" LAUNCH_WIN=1 LAUNCH_FILES="$L/files" LAUNCH_LOG="$L/log" bash "$ROOT/deploy/aws/launch.sh" "$@"; }
 : > "$L/log"
 t  "launch (Git Bash): the template goes over as a Windows path" winlaunch --domain example.co.kr --email o@example.co.kr

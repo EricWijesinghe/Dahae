@@ -109,7 +109,7 @@ t  "dns: the owner is told to delete the AAAA" grep -q 'AAAA(IPv6) 레코드 200
 ping_url() {
   rm -f "$SB/ping.out"
   ( curl() { printf '%s' "${*: -1}" > "$SB/ping.out"; }
-    # shellcheck disable=SC2030 # the change is meant to stay in this subshell
+    # shellcheck disable=SC2030,SC2034 # the change is meant to stay in this subshell
     MALKKEUM_NOTIFY_URL="$1"; (exit "$2"); notify_result ) >/dev/null 2>&1
   cat "$SB/ping.out" 2>/dev/null || true
 }
@@ -647,7 +647,7 @@ fresh_env() { # fresh_env 코드 : write_fresh_env 가 만든 .env 의 설치 �
   local d; d=$(mktemp -d "$SB/fresh.XXXX")
   ( cd "$d" && MALKKEUM_SETUP_CODE="$1" write_fresh_env >/dev/null 2>&1 && grep '^SETUP_CODE=' .env ) || true
 }
-# shellcheck disable=SC2030 # the change is meant to stay in this subshell
+# shellcheck disable=SC2030,SC2034 # the change is meant to stay in this subshell
 code_env() { ( MALKKEUM_SETUP_CODE="$1"; check_setup_code_env ) >/dev/null 2>&1; }
 t  "fresh .env keeps the page code"      eq "$(fresh_env ABCD2345678J)" SETUP_CODE=ABCD2345678J
 t  "fresh .env makes a code without one" eq "$(fresh_env '' | awk '{ print length($0) }')" 23
@@ -766,7 +766,7 @@ t  "install runs harden_host in main"      grep -qE '^  \[ "\$TOOLS_ONLY" = 1 \]
 FWLOG="$HB/fw.log"
 fw_run() { # fw_run 방화벽상태 모드 : firewall_setup 을 가짜 ufw 로 돌리고 실행한 명령을 fw.log 에 남겨요
   : > "$FWLOG"
-  # shellcheck disable=SC2030 # the change is meant to stay in this subshell
+  # shellcheck disable=SC2030,SC2034 # the change is meant to stay in this subshell
   ( UFW_STATUS="$1"; MALKKEUM_FIREWALL="$2"
     ufw() { if [ "$1" = status ]; then printf '%s\n' "$UFW_STATUS"; else printf '%s\n' "$*" >> "$FWLOG"; fi; }
     firewall_setup ) >/dev/null 2>&1
@@ -788,6 +788,7 @@ ssh_run() { # ssh_run sshd설정 키파일 응답 : ssh_keyonly_check 를 가짜
     ask() { printf '%s\n' "$1" >> "$FWLOG"; printf '%s' "$ASK_ANSWER"; }
     write_keyonly_dropin() { printf 'dropin %s\n' "$1" >> "$FWLOG"; }
     systemctl() { return 0; }
+    # shellcheck disable=SC2034 # read by the sourced installer functions
     KEYONLY_CONF="$HB/keyonly-test.conf"
     ssh_keyonly_check ) >"$HB/ssh.out" 2>&1
 }
@@ -1257,6 +1258,7 @@ tools_main() { # tools_main : 설치된 서버(가짜)에서 MALKKEUM_HOST_UPDAT
     PATH="$SB/fakebin:$PATH" # a dahae update or prepare would reach docker: the fake one logs it
     # TM_EDITIONS / TM_RAW: the table and release address a delivered (baked) installer carries
     if [ -n "${TM_EDITIONS+x}" ]; then EDITIONS=$TM_EDITIONS; fi
+    # shellcheck disable=SC2034 # read by the sourced installer functions
     if [ -n "${TM_RAW:-}" ]; then RELEASE_RAW=$TM_RAW; fi
     MALKKEUM_HOST_UPDATE=tools MALKKEUM_AGENT_FILE=$SB/agent-src.sh main ) >/dev/null 2>&1
 }
