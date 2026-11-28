@@ -20,7 +20,14 @@ use crate::{
     },
     state::AppState,
 };
-use axum::{Json, Router, body::Bytes, extract::State, http::HeaderMap, routing::post};
+use axum::{
+    Json, Router,
+    body::Bytes,
+    extract::{Path, State},
+    http::HeaderMap,
+    response::{IntoResponse, Response},
+    routing::post,
+};
 use chrono::Utc;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -35,11 +42,30 @@ const CANCEL_EVENTS: [&str; 2] = ["Transaction.Cancelled", "Transaction.PartialC
 const PORTONE_NAME: &str = "PortOne";
 const TOSS_NAME: &str = "Toss Payments";
 
+/// One route for every adapter: `/webhooks/{adapter_id}`. The paths providers were configured with before the
+/// registry are those adapters' ids, kept as literal aliases of the same handlers, forever.
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/webhooks/portone", post(portone))
         .route("/webhooks/toss", post(toss))
         .route("/webhooks/tosspayments", post(toss_payments))
+        .route("/webhooks/{adapter}", post(by_adapter))
+}
+
+/// The webhook handler of a registered adapter that takes deliveries. Unknown ids, adapters without webhooks and
+/// the fakes (never registered) are 404, so the path reveals nothing more.
+pub fn webhook_handler(adapter: &str) -> Option<&'static str> {
+    crate::adapters::ADAPTERS.iter().find(|s| s.id == adapter && s.webhook.is_some()).map(|s| s.id)
+}
+
+async fn by_adapter(State(s): State<AppState>, Path(adapter): Path<String>, headers: HeaderMap, body: Bytes) -> ApiResult<Response> {
+    match webhook_handler(&adapter) {
+        Some("portone") => portone(State(s), headers, body).await.map(IntoResponse::into_response),
+        Some(TOSS) => toss_payments(State(s), headers, body).await.map(IntoResponse::into_response),
+        Some("toss") => toss(State(s), headers, body).await.map(IntoResponse::into_response),
+        // A registered adapter with webhooks but no handler yet is a build mistake, caught by a unit test.
+        Some(_) | None => Err(ApiError::NotFound),
+    }
 }
 
 /// How a Toss Payments webhook is let in. Toss does not promise the signature header on payment events, and the
@@ -516,6 +542,15 @@ async fn locate(s: &AppState, payment_id: &str) -> ApiResult<Option<CheckoutRow>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_adapter_with_webhooks_has_a_handler_and_nothing_else_does() {
+        let routed: Vec<&str> = crate::adapters::ADAPTERS.iter().filter_map(|s| webhook_handler(s.id)).collect();
+        assert_eq!(routed, ["portone", TOSS, "toss"], "add the new adapter's arm to by_adapter");
+        for id in ["pg", TOSS_BILLING, "solapi", "juso", "stripe", "fake", "", "PORTONE"] {
+            assert_eq!(webhook_handler(id), None, "{id}");
+        }
+    }
 
     #[test]
     fn the_event_id_is_the_provider_id_or_a_body_hash() {

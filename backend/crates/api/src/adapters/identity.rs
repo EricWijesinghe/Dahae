@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
-//! The identity-verification port (KR: PASS / 본인인증). Today's PortOne identity code still runs through
-//! `Providers::identity`.
+//! The identity-verification port (KR: PASS / 본인인증). KR shim: `portone_identity.rs`.
 
 use super::Fut;
 pub use crate::providers::IdentityInfo;

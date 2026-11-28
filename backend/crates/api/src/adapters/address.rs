@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
-//! The address port: keyword or postcode search, and reverse lookup for pin-first markets. Today's juso code still
-//! runs through `crate::address`.
+//! The address port: keyword or postcode search, and reverse lookup for pin-first markets. KR shim: `juso.rs`.
 
 use super::Fut;
 

@@ -12,15 +12,23 @@
 
 pub mod address;
 pub mod fake;
+pub mod fake_ports;
 pub mod http_guard;
 pub mod identity;
 pub mod invoice;
+pub mod juso;
 pub mod login;
+pub mod manual;
 pub mod messaging;
 pub mod payments;
 pub mod payouts;
 pub mod portone;
+pub mod portone_cash_receipt;
+pub mod portone_identity;
+pub mod social;
+pub mod solapi;
 pub mod toss_payments;
+pub mod toss_payouts;
 
 use crate::integrations::{Field, Section};
 use crate::providers::{ProviderError, Providers, TOSS, TOSS_BILLING};
@@ -129,7 +137,7 @@ pub struct AdapterSpec {
     pub hosts: &'static [&'static str],
     pub webhook: Option<WebhookTrust>,
     pub status: AdapterStatus,
-    /// None while the capability's code paths still run through `Providers` directly (no trait shim yet).
+    /// None for a code with nothing of its own to call.
     pub build: Option<Build>,
 }
 
@@ -205,12 +213,14 @@ pub static ADAPTERS: &[AdapterSpec] = &[
         caps: Caps::ONBOARD_KYC.with(Caps::WEBHOOK_SIGNED),
         hosts: &["api.tosspayments.com"],
         webhook: Some(WebhookTrust::Signed),
+        build: Some(toss_payouts::build),
         ..BASE
     },
     AdapterSpec {
         id: "manual",
         capability: Capability::Payouts,
         countries: ANYWHERE,
+        build: Some(manual::build),
         ..BASE
     },
     AdapterSpec {
@@ -219,6 +229,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
         capability: Capability::Messaging,
         caps: Caps::TEMPLATES_REQUIRED,
         hosts: &["api.solapi.com"],
+        build: Some(solapi::build),
         ..BASE
     },
     AdapterSpec {
@@ -226,6 +237,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
         section: "kakao",
         capability: Capability::Login,
         hosts: &["kapi.kakao.com"],
+        build: Some(social::build),
         ..BASE
     },
     AdapterSpec {
@@ -233,6 +245,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
         section: "naver",
         capability: Capability::Login,
         hosts: &["nid.naver.com", "openapi.naver.com"],
+        build: Some(social::build),
         ..BASE
     },
     AdapterSpec {
@@ -241,6 +254,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
         capability: Capability::Login,
         countries: ANYWHERE,
         hosts: &["www.googleapis.com", "oauth2.googleapis.com"],
+        build: Some(social::build),
         ..BASE
     },
     AdapterSpec {
@@ -249,6 +263,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
         capability: Capability::Login,
         countries: ANYWHERE,
         hosts: &["appleid.apple.com"],
+        build: Some(social::build),
         ..BASE
     },
     AdapterSpec {
@@ -256,6 +271,27 @@ pub static ADAPTERS: &[AdapterSpec] = &[
         section: "juso",
         capability: Capability::Address,
         hosts: &["business.juso.go.kr"],
+        build: Some(juso::build),
+        ..BASE
+    },
+    // PortOne's cash receipts and PASS, on the PortOne keys. New codes, so Dark (D11): no row or pack names them
+    // yet; today's routes call the same code directly.
+    AdapterSpec {
+        id: "portone_cash_receipt",
+        section: "portone",
+        capability: Capability::Invoice,
+        hosts: &["api.portone.io"],
+        status: AdapterStatus::Dark,
+        build: Some(portone_cash_receipt::build),
+        ..BASE
+    },
+    AdapterSpec {
+        id: "portone_identity",
+        section: "portone",
+        capability: Capability::Identity,
+        hosts: &["api.portone.io"],
+        status: AdapterStatus::Dark,
+        build: Some(portone_identity::build),
         ..BASE
     },
 ];
@@ -297,6 +333,44 @@ pub fn payment_gateway(p: &Providers, code: &str) -> R<Arc<dyn payments::Payment
         }
     }
 }
+
+/// `$name(p, code)`: the adapter behind a code when it has capability `$variant`, else `NotConfigured`.
+macro_rules! port {
+    ($(#[$doc:meta])* $name:ident, $variant:ident, $tr:path) => {
+        $(#[$doc])*
+        pub fn $name(p: &Providers, code: &str) -> R<Arc<dyn $tr>> {
+            match adapter(p, code)? {
+                AnyAdapter::$variant(a) => Ok(a),
+                _ => Err(ProviderError::NotConfigured("adapter")),
+            }
+        }
+    };
+}
+
+port!(
+    /// The payout rail behind a `payouts.provider` code.
+    payout_rail, Payout, payouts::PayoutRail
+);
+port!(
+    /// The messenger behind a code (`solapi`).
+    messenger, Msg, messaging::Messenger
+);
+port!(
+    /// The sign-in verifier behind a `user_identities.provider` code.
+    social_verifier, Login, login::SocialVerifier
+);
+port!(
+    /// The address search behind a code (`juso`).
+    address_lookup, Address, address::AddressLookup
+);
+port!(
+    /// The tax-document issuer behind a code (`portone_cash_receipt`).
+    invoice_sink, Invoice, invoice::InvoiceSink
+);
+port!(
+    /// The identity verifier behind a code (`portone_identity`).
+    identity_verifier, Identity, identity::IdentityVerifier
+);
 
 /// Codes the previous release (1.6.6) already reads. D11: an adapter may only be `Available` (written) when its
 /// codes are here. Raise this list once per release, to what that release shipped, never ahead of it.
@@ -385,6 +459,16 @@ mod tests {
         assert!(spec("").is_none());
     }
 
+    /// R2: every code with something of its own to call has a trait shim; the legacy `pg` borrows PortOne's.
+    #[test]
+    fn every_adapter_builds_behind_its_capability() {
+        for s in ADAPTERS {
+            assert!(s.build.is_some(), "{} has no shim", s.id);
+        }
+        let dark: Vec<&str> = ADAPTERS.iter().filter(|s| s.status == AdapterStatus::Dark).map(|s| s.id).collect();
+        assert_eq!(dark, ["portone_cash_receipt", "portone_identity"]);
+    }
+
     #[test]
     fn caps_combine() {
         assert!(KR_PG.has(Caps::CARD) && KR_PG.has(Caps::SAVED_METHOD));
@@ -399,15 +483,23 @@ mod tests {
             include_str!("mod.rs"),
             include_str!("address.rs"),
             include_str!("fake.rs"),
+            include_str!("fake_ports.rs"),
             include_str!("http_guard.rs"),
             include_str!("identity.rs"),
             include_str!("invoice.rs"),
+            include_str!("juso.rs"),
             include_str!("login.rs"),
+            include_str!("manual.rs"),
             include_str!("messaging.rs"),
             include_str!("payments.rs"),
             include_str!("payouts.rs"),
             include_str!("portone.rs"),
+            include_str!("portone_cash_receipt.rs"),
+            include_str!("portone_identity.rs"),
+            include_str!("social.rs"),
+            include_str!("solapi.rs"),
             include_str!("toss_payments.rs"),
+            include_str!("toss_payouts.rs"),
         ];
         let banned = [concat!("sql", "x::"), concat!("ax", "um::")];
         for src in sources {

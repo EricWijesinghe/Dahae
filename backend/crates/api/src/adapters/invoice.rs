@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
 //! The tax-document port: cash receipts, tax invoices, e-receipts and credit notes issued at a national system or
-//! provider. Today's PortOne cash receipts still run through `providers::portone_cash_receipt`.
+//! provider. PortOne cash receipts: `portone_cash_receipt.rs`.
 
 use super::Fut;
 use domain::money::Money;
@@ -24,6 +24,8 @@ pub struct TaxDoc {
     pub currency: String,
     /// The buyer's identifier (phone, business number, tax id), when the document names one.
     pub buyer: Option<String>,
+    /// The buyer is a business (KR: a 지출증빙 cash receipt on its registration number, not a personal one).
+    pub business: bool,
     /// Chained numbering (ZATCA, PT): our sequence number and the previous document's hash.
     pub seq_no: i64,
     pub prev_hash: Option<String>,

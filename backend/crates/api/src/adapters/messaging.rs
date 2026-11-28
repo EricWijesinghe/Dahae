@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
-//! The messaging port: transactional messages (SMS, AlimTalk, WhatsApp, LINE, Viber, email). Today's Solapi code
-//! still runs through `Providers::send_customer_message`; its shim lands next.
+//! The messaging port: transactional messages (SMS, AlimTalk, WhatsApp, LINE, Viber, email). KR shim (Solapi):
+//! `solapi.rs`.
 
 use super::Fut;
 use domain::money::Money;

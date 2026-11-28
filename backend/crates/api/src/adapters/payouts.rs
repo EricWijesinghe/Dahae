@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
-//! The payout port: paying pros out through a PSP that keeps their KYC. Today's Toss payouts still run through
-//! `Providers` (`send_transfer`, `transfer_status`); a shim lands with the next payout adapter.
+//! The payout port: paying pros out through a PSP that keeps their KYC. KR shims: `toss_payouts.rs` and the
+//! owner's own transfers, `manual.rs`.
 
 use super::Fut;
 use crate::integrations::Field;

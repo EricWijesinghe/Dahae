@@ -429,7 +429,7 @@ Staff routes under /v1/admin. Each route uses the Admin or Staff extractor (see 
 | DELETE | `/v1/admin/domains/{host}` | Retire a former domain: it stops getting certificates (owner TOTP, logged) | bearer: staff |  |
 | PUT | `/v1/admin/domains/checklist/{id}` | Tick or untick one after-move checklist item (logged) | bearer: staff |  |
 
-### Provider callbacks (4)
+### Provider callbacks (5)
 
 Payment and Apple notifications. Authenticated by the provider's signature, not a bearer token.
 
@@ -439,6 +439,7 @@ Payment and Apple notifications. Authenticated by the provider's signature, not 
 | POST | `/v1/webhooks/toss` | Toss Payments notifications (signature verified) | signature |  |
 | POST | `/v1/auth/apple/notifications` | Sign in with Apple server-to-server notifications (JWS verified against Apple's keys; replays acknowledged once) | signature |  |
 | POST | `/v1/webhooks/tosspayments` | Toss Payments payment-window notifications (HMAC checked when set; the server re-reads the payment by orderId) | signature |  |
+| POST | `/v1/webhooks/{adapter}` | Webhook of any registered adapter by its id; the three paths above are this route for their ids. Unknown ids answer 404 | signature |  |
 
 ### Realtime (2)
 

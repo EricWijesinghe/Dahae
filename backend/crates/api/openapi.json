@@ -576,6 +576,40 @@
         }
       }
     },
+    "/v1/webhooks/{adapter}": {
+      "post": {
+        "operationId": "adapterWebhook",
+        "tags": [
+          "webhook"
+        ],
+        "summary": "Webhook of any registered adapter, by its id. /v1/webhooks/portone, /v1/webhooks/tosspayments and /v1/webhooks/toss are this route for those ids and keep working. An unknown id, an adapter without webhooks and a fake adapter answer 404",
+        "security": [],
+        "parameters": [
+          {
+            "name": "adapter",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "No adapter with webhooks has this id"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/auth/otp": {
       "post": {
         "operationId": "requestOtp",

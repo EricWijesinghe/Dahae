@@ -436,20 +436,23 @@ pub async fn links(conn: &mut sqlx::PgConnection, data_key: &[u8; 32], role: &st
 /// values and never undoes the deletion.
 pub async fn unlink(p: &Providers, role: &str, subject: uuid::Uuid, links: Vec<Link>) {
     for l in links {
-        let result = if p.cfg().dev_mode {
-            tracing::info!(target: "fake_social", provider = l.provider, has_token = l.token.is_some(), "social sign-in unlinked");
-            Ok(())
-        } else {
-            match l.provider.as_str() {
-                "apple" => apple::revoke(p, l.client_id.as_deref(), l.token.as_deref()).await,
-                "kakao" => kakao_unlink(p, &l.user_id).await,
-                "naver" => naver_delete(p, l.token.as_deref()).await,
-                _ => Err("unsupported"),
-            }
-        };
-        if let Err(reason) = result {
+        if let Err(reason) = unlink_one(p, &l.provider, &l.user_id, l.client_id.as_deref(), l.token.as_deref()).await {
             tracing::warn!(provider = l.provider, role, %subject, reason, "social sign-in not unlinked at the provider");
         }
+    }
+}
+
+/// Disconnects one sign-in at its provider (see `unlink`). Dev mode only logs.
+pub async fn unlink_one(p: &Providers, provider: &str, user_id: &str, client_id: Option<&str>, token: Option<&str>) -> UnlinkResult {
+    if p.cfg().dev_mode {
+        tracing::info!(target: "fake_social", provider, has_token = token.is_some(), "social sign-in unlinked");
+        return Ok(());
+    }
+    match provider {
+        "apple" => apple::revoke(p, client_id, token).await,
+        "kakao" => kakao_unlink(p, user_id).await,
+        "naver" => naver_delete(p, token).await,
+        _ => Err("unsupported"),
     }
 }
 

@@ -91,6 +91,22 @@ async fn portone_event_with_a_valid_signature_is_accepted(pool: PgPool) {
     assert_eq!(post(&app, "/v1/webhooks/portone", &headers, body).await, StatusCode::OK);
 }
 
+/// The generic route takes deliveries for registered adapters with webhooks only; the legacy paths (those adapters'
+/// ids) keep answering as before.
+#[sqlx::test(migrations = "../../migrations")]
+async fn the_generic_webhook_route_answers_404_for_anything_without_webhooks(pool: PgPool) {
+    let app = app(pool);
+    for adapter in ["stripe", "solapi", "juso", "pg", "tosspayments_billing", "portone_identity", "fake", "PortOne"] {
+        let body = payment_event(PAYMENT_ID);
+        let headers = signed_headers(KEY, "msg_generic", &body);
+        let uri = format!("/v1/webhooks/{adapter}");
+        assert_eq!(post(&app, &uri, &headers, body).await, StatusCode::NOT_FOUND, "{adapter}");
+    }
+    let body = payment_event(PAYMENT_ID);
+    let headers = signed_headers(KEY, "msg_alias", &body);
+    assert_eq!(post(&app, "/v1/webhooks/portone", &headers, body).await, StatusCode::OK);
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn portone_event_signed_with_another_key_is_rejected(pool: PgPool) {
     let app = app(pool);

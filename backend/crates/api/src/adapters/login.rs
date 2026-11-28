@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
-//! The social-login port. Today's Kakao, Naver, Google and Apple code still runs through `providers::social`.
+//! The social-login port. KR shim (Kakao, Naver, Google, Apple): `social.rs`.
 
 use super::Fut;
 pub use crate::providers::social::SocialUser;
