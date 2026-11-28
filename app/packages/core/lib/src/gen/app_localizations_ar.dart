@@ -1,0 +1,8553 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Arabic (`ar`).
+class TAr extends T {
+  TAr([String locale = 'ar']) : super(locale);
+
+  @override
+  String get cAdapterKeysLink => 'Where do I get these keys?';
+
+  @override
+  String get cAdapterSignupLink => 'Create an account';
+
+  @override
+  String get cAdapterRecommended => 'Recommended';
+
+  @override
+  String get cAdapterNotSet => 'Not set';
+
+  @override
+  String get cAdapterWebhook =>
+      'Webhook URL (paste into this service\'s dashboard)';
+
+  @override
+  String get cAdapterOtherServices => 'Other services';
+
+  @override
+  String get addressSearchHint => 'Road name, building or lot number';
+
+  @override
+  String get addressSearchButton => 'Search';
+
+  @override
+  String get addressSearchOffHint =>
+      'Address search is not ready yet. Please type your address.';
+
+  @override
+  String get addressSearchFailedHint =>
+      'Address search is not working right now. Please type your address.';
+
+  @override
+  String get addressSearchMinChars => 'Enter at least 2 characters';
+
+  @override
+  String get addressNoResults => 'No results. Try different words.';
+
+  @override
+  String get cardRegisterTitle => 'Register card';
+
+  @override
+  String get cIntJuso => 'Address search (juso.go.kr)';
+
+  @override
+  String get aiLabel => 'AI assistant';
+
+  @override
+  String get aiBadge => 'AI';
+
+  @override
+  String get aiCardHint =>
+      'Answers customer chats automatically. Each message costs API fees.';
+
+  @override
+  String get aiModeOffline => 'Answer only when staff are away';
+
+  @override
+  String get aiModeAlways => 'AI answers first, always';
+
+  @override
+  String get aiPause => 'Pause AI';
+
+  @override
+  String get aiResume => 'Resume AI';
+
+  @override
+  String get aiPausedNote => 'AI is paused for this chat';
+
+  @override
+  String aiUsageMonth(String count) {
+    return 'AI calls this month: $count';
+  }
+
+  @override
+  String get aiNotConfigured => 'AI support is off';
+
+  @override
+  String get aiCapThreadLabel => 'Replies per chat per hour';
+
+  @override
+  String get aiCapMemberLabel => 'Replies per customer per day';
+
+  @override
+  String get aiCapDailyLabel => 'Replies per day, all chats';
+
+  @override
+  String get aiCapHint => 'Numbers only. Leave empty for the default.';
+
+  @override
+  String get aiOutageBanner =>
+      'AI replies are having trouble connecting. Please answer chats directly.';
+
+  @override
+  String get cAppLinkTitle => 'App links';
+
+  @override
+  String get cAppLinkHint =>
+      'These links let Naver sign-in return to the app. Saving applies them right away. If unsure, ask your developer.';
+
+  @override
+  String get cAppLinkAndroidLabel => 'Android signing fingerprint (SHA-256)';
+
+  @override
+  String get cAppLinkAndroidHint =>
+      'One per line: 32 hex pairs separated by colons. Up to 8.';
+
+  @override
+  String get cAppLinkTeamLabel => 'Apple Team ID (10 characters)';
+
+  @override
+  String get cAppLinkSourceDb => 'Using the values saved in the console';
+
+  @override
+  String get cAppLinkSourceEnv => 'Using the server configuration values';
+
+  @override
+  String get cAppLinkAndroidOn => 'Android app links: on';
+
+  @override
+  String get cAppLinkAndroidOff => 'Android app links: off';
+
+  @override
+  String get cAppLinkIosOn => 'iPhone app links: on';
+
+  @override
+  String get cAppLinkIosOff => 'iPhone app links: off';
+
+  @override
+  String get cAppLinkNone =>
+      'With no values both links are off, and Naver sign-in may not return to the app.';
+
+  @override
+  String get cAppLinkChecked => 'Checked. Not saved yet.';
+
+  @override
+  String get cAppLinkCheck => 'Check';
+
+  @override
+  String get cAudit => 'Activity log';
+
+  @override
+  String get audIntro =>
+      'Who did what and when, newest first. Records cannot be deleted.';
+
+  @override
+  String get audPeriodToday => 'Today';
+
+  @override
+  String get audPeriod7 => 'Last 7 days';
+
+  @override
+  String get audPeriod30 => 'Last 30 days';
+
+  @override
+  String get audPeriodAll => 'All time';
+
+  @override
+  String get audFilterWho => 'Who';
+
+  @override
+  String get audFilterWhat => 'What';
+
+  @override
+  String get audWhoAll => 'Everyone';
+
+  @override
+  String get audWhatAll => 'All actions';
+
+  @override
+  String get audRoleStaff => 'Staff';
+
+  @override
+  String get audRoleCustomer => 'Customer';
+
+  @override
+  String get audRolePro => 'Partner';
+
+  @override
+  String get audRoleSystem => 'Automatic';
+
+  @override
+  String get audCatCase => 'Cases and refunds';
+
+  @override
+  String get audCatBooking => 'Bookings';
+
+  @override
+  String get audCatCustomer => 'Customer data';
+
+  @override
+  String get audCatStaff => 'Staff';
+
+  @override
+  String get audCatSettlement => 'Settlements';
+
+  @override
+  String get audCatPoints => 'Points';
+
+  @override
+  String get audCatService => 'Services and prices';
+
+  @override
+  String get audActCaseRefund => 'Case refund';
+
+  @override
+  String get audActCaseUpdate => 'Case updated';
+
+  @override
+  String get audActPointsAdjust => 'Points adjusted';
+
+  @override
+  String get audActPiiView => 'Customer contact viewed';
+
+  @override
+  String get audActPiiList => 'Customer search';
+
+  @override
+  String get audActStaffCreate => 'Staff added';
+
+  @override
+  String get audActStaffActive => 'Staff access changed';
+
+  @override
+  String get audActSettlementHold => 'Settlement hold changed';
+
+  @override
+  String get audActServiceUpdate => 'Service updated';
+
+  @override
+  String get audUnknownActor => 'Unknown';
+
+  @override
+  String get audOtherAction => 'Other action';
+
+  @override
+  String get audTarget => 'Target';
+
+  @override
+  String get audDetailTitle => 'Details';
+
+  @override
+  String get audActionCode => 'Action code';
+
+  @override
+  String get audNoDetail => 'No details recorded';
+
+  @override
+  String get audEmpty => 'No records match these filters';
+
+  @override
+  String get audLoadMore => 'Load more';
+
+  @override
+  String get audClose => 'Close';
+
+  @override
+  String get audRange => 'Period';
+
+  @override
+  String get apSocialOr => 'or';
+
+  @override
+  String get apSocialSignIn => 'Quick sign-in';
+
+  @override
+  String get apLoginKakao => 'Continue with Kakao';
+
+  @override
+  String get apLoginNaver => 'Continue with Naver';
+
+  @override
+  String get apLoginGoogle => 'Continue with Google';
+
+  @override
+  String get apLoginApple => 'Continue with Apple';
+
+  @override
+  String get apDevSocialNote =>
+      'Dev mode: signs in to a test account, not a real social account.';
+
+  @override
+  String get apSocialFailed => 'Quick sign-in failed. Please try again.';
+
+  @override
+  String get apProviderNotConfigured =>
+      'This sign-in method isn\'t available yet';
+
+  @override
+  String get apPhoneTaken => 'This number is already linked to another account';
+
+  @override
+  String get apPhoneAttachTitle => 'Verify your mobile number';
+
+  @override
+  String get apPhoneAttachBody =>
+      'We use this number for bookings and pro contact. One-time check.';
+
+  @override
+  String get apPayAllTitle => 'Choose a payment method';
+
+  @override
+  String get apPaySavedTitle => 'Saved methods';
+
+  @override
+  String get apPayMoreTitle => 'All payment methods';
+
+  @override
+  String get apPayBillingHint => 'Save once, then pay in one tap';
+
+  @override
+  String get apPayCheckoutHint => 'Finish in the payment window';
+
+  @override
+  String get apPayRegistering => 'Registering…';
+
+  @override
+  String get apPayManageHint =>
+      'Pay in one tap with saved methods. Add quick-pay methods here.';
+
+  @override
+  String get apMethodCard => 'Credit & debit card';
+
+  @override
+  String get apMethodKakao => 'KakaoPay';
+
+  @override
+  String get apMethodNaver => 'NaverPay';
+
+  @override
+  String get apMethodToss => 'TossPay';
+
+  @override
+  String get apMethodPayco => 'PAYCO';
+
+  @override
+  String get apMethodSamsung => 'Samsung Pay';
+
+  @override
+  String get apMethodApple => 'Apple Pay';
+
+  @override
+  String get apMethodTransfer => 'Bank transfer';
+
+  @override
+  String get apMethodVirtual => 'Virtual account';
+
+  @override
+  String get apMethodPhone => 'Mobile bill';
+
+  @override
+  String get apMethodUnknown => 'Other';
+
+  @override
+  String get apVaTitle => 'Your deposit account is ready';
+
+  @override
+  String get apVaWaiting => 'Waiting for your deposit';
+
+  @override
+  String get apVaBody =>
+      'Your booking is confirmed once the deposit arrives. We check it automatically.';
+
+  @override
+  String get apVaBank => 'Bank';
+
+  @override
+  String get apVaAccount => 'Account number';
+
+  @override
+  String get apVaHolder => 'Account holder';
+
+  @override
+  String get apVaAmount => 'Amount';
+
+  @override
+  String apVaDue(String due) {
+    return 'Deposit by $due';
+  }
+
+  @override
+  String get apVaCopy => 'Copy';
+
+  @override
+  String get apVaCopied => 'Account number copied';
+
+  @override
+  String get apVaBannerTitle => 'A booking is waiting for your deposit';
+
+  @override
+  String apVaBannerBody(String amount, String due) {
+    return '$amount · by $due';
+  }
+
+  @override
+  String get apVaBannerAction => 'View account';
+
+  @override
+  String get apPgTitle => 'Payment window';
+
+  @override
+  String get apPgDevNote =>
+      'Development-only payment simulation. No real charge happens.';
+
+  @override
+  String apPgPay(String amount) {
+    return 'Pay $amount';
+  }
+
+  @override
+  String get apPgIssue => 'Get account number';
+
+  @override
+  String get apPgCancel => 'Cancel payment';
+
+  @override
+  String get apErrSlotFullRefunded =>
+      'That slot just filled up, so your payment was cancelled automatically';
+
+  @override
+  String get apErrCheckoutExpired =>
+      'The payment window expired. Please try again.';
+
+  @override
+  String get apIdentityTitle => 'Identity check (PASS)';
+
+  @override
+  String get apIdentityBody =>
+      'Confirms you with your phone carrier. Used for safe trading and payouts.';
+
+  @override
+  String get apIdentityAction => 'Verify identity';
+
+  @override
+  String get apIdentityDone => 'Identity verified';
+
+  @override
+  String get apIdentityVerified => 'Verified';
+
+  @override
+  String get apIdentityUnverified => 'Not verified yet';
+
+  @override
+  String get apIdentityDevTitle => 'Test identity check';
+
+  @override
+  String get apIdentityDevBody =>
+      'In development, this passes without a real check.';
+
+  @override
+  String get apIdentityDevPass => 'Pass';
+
+  @override
+  String get apPayManageTitle => 'Register quick-pay';
+
+  @override
+  String get bankKdb => 'KDB Korea Development Bank';
+
+  @override
+  String get bankIbk => 'IBK Industrial Bank of Korea';
+
+  @override
+  String get bankKookmin => 'KB Kookmin Bank';
+
+  @override
+  String get bankSuhyup => 'Suhyup Bank';
+
+  @override
+  String get bankSuhyupFederation => 'Suhyup (National Federation)';
+
+  @override
+  String get bankNonghyup => 'NH NongHyup Bank';
+
+  @override
+  String get bankLocalNonghyup => 'Local NongHyup cooperative';
+
+  @override
+  String get bankWoori => 'Woori Bank';
+
+  @override
+  String get bankStandardChartered => 'SC First Bank';
+
+  @override
+  String get bankCiti => 'Citibank Korea';
+
+  @override
+  String get bankDaegu => 'iM Bank (Daegu)';
+
+  @override
+  String get bankBusan => 'Busan Bank';
+
+  @override
+  String get bankKwangju => 'Kwangju Bank';
+
+  @override
+  String get bankJeju => 'Jeju Bank';
+
+  @override
+  String get bankJeonbuk => 'Jeonbuk Bank';
+
+  @override
+  String get bankKyongnam => 'Kyongnam Bank';
+
+  @override
+  String get bankKfcc => 'MG Saemaeul Geumgo';
+
+  @override
+  String get bankShinhyup => 'Shinhyup credit union';
+
+  @override
+  String get bankSavingsBank => 'Savings bank';
+
+  @override
+  String get bankNfcf => 'Forestry cooperative (NFCF)';
+
+  @override
+  String get bankPost => 'Korea Post';
+
+  @override
+  String get bankHana => 'Hana Bank';
+
+  @override
+  String get bankShinhan => 'Shinhan Bank';
+
+  @override
+  String get bankKBank => 'K Bank';
+
+  @override
+  String get bankKakao => 'KakaoBank';
+
+  @override
+  String get bankToss => 'Toss Bank';
+
+  @override
+  String get bizInfoTitle => 'Business information';
+
+  @override
+  String get bizInfoVerify => 'Verify business registration';
+
+  @override
+  String get cSetupHostingProvider => 'Hosting provider';
+
+  @override
+  String cancelRefundCta(String amount) {
+    return 'Cancel and get $amount back';
+  }
+
+  @override
+  String get cancelNoRefund => 'Nothing is refunded for this cancellation';
+
+  @override
+  String cancelTierLine(String days, String percent) {
+    return 'Cancelling $days days before the visit · $percent% fee';
+  }
+
+  @override
+  String cancelFeeLine(String fee) {
+    return 'Cancellation fee $fee';
+  }
+
+  @override
+  String cancelRefundLine(String refund) {
+    return 'Refund $refund';
+  }
+
+  @override
+  String get cancelMethodLine => 'Refunded to the payment method you used';
+
+  @override
+  String get cancelPolicyLink => 'View the cancellation and refund policy';
+
+  @override
+  String get cancelPolicyTitle => 'Cancellation and refund policy';
+
+  @override
+  String get cancelReasonTitle => 'Reason for cancelling (optional)';
+
+  @override
+  String get cancelReasonSchedule => 'The date does not work';
+
+  @override
+  String get cancelReasonProvider => 'I chose another provider';
+
+  @override
+  String get cancelReasonPrice => 'The price is too high';
+
+  @override
+  String get cancelReasonOther => 'Other';
+
+  @override
+  String get bookingsEmptyDay => 'No bookings on this day';
+
+  @override
+  String get cntTitle => 'Counted pricing';
+
+  @override
+  String get cntHelp =>
+      'Customers pick a count for each option. Two or more items get the discount. Prices are examples you can change';
+
+  @override
+  String get cntAddOption => 'Add option';
+
+  @override
+  String get cntOptionName => 'Option name';
+
+  @override
+  String get cntMaxEach => 'Max per option (empty = no limit)';
+
+  @override
+  String get cntDiscount => 'Discount for two or more (%)';
+
+  @override
+  String get cntPreview => 'Preview (pick counts)';
+
+  @override
+  String cntPreviewTotal(String price, String time) {
+    return 'Total $price · about $time';
+  }
+
+  @override
+  String cntPreviewDiscount(String amount) {
+    return 'Discount −$amount';
+  }
+
+  @override
+  String get cntMoveUp => 'Move up';
+
+  @override
+  String get cntMoveDown => 'Move down';
+
+  @override
+  String get cntRemove => 'Remove option';
+
+  @override
+  String get cntLess => 'One less';
+
+  @override
+  String get cntMore => 'One more';
+
+  @override
+  String get cntNeedOption => 'Add at least one option';
+
+  @override
+  String get cntNeedName => 'Enter a name for every option';
+
+  @override
+  String get cntNeedPrice =>
+      'Enter a price and time above zero for every option';
+
+  @override
+  String get cntMaxEachInvalid => 'Max per option must be 1 to 20';
+
+  @override
+  String get cntDiscountInvalid => 'Discount must be 0 to 50%';
+
+  @override
+  String get cgTabPeak => 'Peak surcharges';
+
+  @override
+  String get cgTabQuality => 'Quality';
+
+  @override
+  String get cgTabDemo => 'Sample data';
+
+  @override
+  String get cgNewService => 'New service';
+
+  @override
+  String get cgNewServiceTitle => 'New service';
+
+  @override
+  String get cgServiceCode => 'Service code (lowercase letters)';
+
+  @override
+  String get cgServiceCodeHint =>
+      'Lowercase letters, digits and _ only. It cannot be changed later';
+
+  @override
+  String get cgServiceName => 'Name shown to customers';
+
+  @override
+  String get cgPriceFixed => 'Fixed price';
+
+  @override
+  String get cgPriceQuote => 'Quoted per visit';
+
+  @override
+  String get cgServiceCreated => 'Service created';
+
+  @override
+  String get cgArchiveHint => 'Off archives it. Customers stop seeing it';
+
+  @override
+  String get cgArchived => 'Archived';
+
+  @override
+  String get cgCodeTaken => 'A service with this code already exists';
+
+  @override
+  String get cgServiceInvalid => 'Check the service code and price';
+
+  @override
+  String get cgCodeInvalid => 'Check the numbers';
+
+  @override
+  String get cgPeakWeekend => 'Weekend surcharge (%)';
+
+  @override
+  String get cgPeakHoliday => 'Public holiday surcharge (%)';
+
+  @override
+  String get cgPeakLunar => 'Lunar holiday surcharge (%)';
+
+  @override
+  String get cgPeakEvening => 'Evening surcharge (%)';
+
+  @override
+  String get cgPeakEveningFrom => 'Evening starts at (hour 0-23)';
+
+  @override
+  String get cgPeakEveningTo => 'Evening ends at (hour 1-24)';
+
+  @override
+  String get cgPeakMax => 'Maximum total surcharge (%)';
+
+  @override
+  String get cgPeakHint => 'Applies to new quotes and new bookings';
+
+  @override
+  String get cgQualityWarning => 'Warning below this score';
+
+  @override
+  String get cgQualityPause => 'Auto-pause below this score';
+
+  @override
+  String get cgQualityHint => 'Applies from the next score calculation';
+
+  @override
+  String get cgSubEdit => 'Edit schedule';
+
+  @override
+  String get cgSubCadence => 'How often';
+
+  @override
+  String get cgSubWeekday => 'Day';
+
+  @override
+  String get cgSubStartHour => 'Start time';
+
+  @override
+  String get cgSubEditHint =>
+      'Tomorrow\'s visit stays as booked. Later planned visits are rebooked on the new schedule';
+
+  @override
+  String get cgWeekdayMon => 'Mon';
+
+  @override
+  String get cgWeekdayTue => 'Tue';
+
+  @override
+  String get cgWeekdayWed => 'Wed';
+
+  @override
+  String get cgWeekdayThu => 'Thu';
+
+  @override
+  String get cgWeekdayFri => 'Fri';
+
+  @override
+  String get cgWeekdaySat => 'Sat';
+
+  @override
+  String get cgWeekdaySun => 'Sun';
+
+  @override
+  String get cgDemoTitle => 'Demo sample data';
+
+  @override
+  String get cgDemoBody =>
+      'Adds fake customers, partners and bookings for demos or training. Not possible when real bookings exist.';
+
+  @override
+  String get cgDemoLoad => 'Add sample data';
+
+  @override
+  String get cgDemoClear => 'Remove sample data';
+
+  @override
+  String get cgDemoClearBody =>
+      'Removes only the sample data; real records stay. Enter the 6-digit code from your authenticator app.';
+
+  @override
+  String get cgDemoOwnerCode => '6-digit authenticator code';
+
+  @override
+  String get cgDemoLoaded => 'Sample data added';
+
+  @override
+  String get cgDemoCleared => 'Sample data removed';
+
+  @override
+  String get cgDemoRealData =>
+      'Real bookings exist, so sample data cannot be added';
+
+  @override
+  String get cgDemoAlready => 'Sample data is already in place';
+
+  @override
+  String get cgCodeWrong =>
+      'The code is wrong or already used. Enter the current code';
+
+  @override
+  String get cgTabGroups => 'Service groups';
+
+  @override
+  String get cgGroupsHelp =>
+      'The four big tiles on the app\'s home screen. Change titles, order and member services here';
+
+  @override
+  String get cgGroupTitleKo => 'Title (Korean)';
+
+  @override
+  String get cgGroupTitleEn => 'Title (English)';
+
+  @override
+  String get cgGroupOrder => 'Order (smaller comes first)';
+
+  @override
+  String get cgGroupIcon => 'Picture';
+
+  @override
+  String get cgGroupChooser => 'When tapped';
+
+  @override
+  String get cgChooserMove => 'Move questions first';
+
+  @override
+  String get cgChooserList => 'Pick a service';
+
+  @override
+  String get cgChooserDirect => 'Open the service directly';
+
+  @override
+  String get cgChooserMoveHelp =>
+      'Asks whether the home is new or old, then the home size';
+
+  @override
+  String get cgChooserListHelp => 'Shows the member services as a list';
+
+  @override
+  String get cgChooserDirectHelp =>
+      'With one service, goes straight to its screen';
+
+  @override
+  String get cgGroupMembers => 'Member services (shown in this order)';
+
+  @override
+  String get cgGroupMembersHelp =>
+      'A service in another group must be removed from that group first';
+
+  @override
+  String cgMemberOtherGroup(String group) {
+    return 'In another group: $group';
+  }
+
+  @override
+  String get cgMoveNewService => 'Service for a new home';
+
+  @override
+  String get cgMoveOldService => 'Service for an older home';
+
+  @override
+  String get cgMoveHomeTypes => 'Home size choices';
+
+  @override
+  String get cgHomeOneTwo => 'Studio or two-room';
+
+  @override
+  String get cgHomeApartment => 'Apartment';
+
+  @override
+  String get cgHomeVilla => 'Villa or house';
+
+  @override
+  String cgGroupRowInfo(String chooser, String count) {
+    return '$chooser · $count services';
+  }
+
+  @override
+  String get cgGroupHidden => 'Hidden';
+
+  @override
+  String get cgGroupShown => 'Shown in app';
+
+  @override
+  String get cgGroupSaved => 'Group saved';
+
+  @override
+  String get cgGroupErrTitle => 'Titles must be 1 to 40 characters';
+
+  @override
+  String get cgGroupErrOrder => 'Order must be 0 to 99';
+
+  @override
+  String get cgGroupErrMembers => 'Pick at least one service';
+
+  @override
+  String get cgGroupErrDirect => 'Open directly needs exactly one service';
+
+  @override
+  String get cgGroupErrMove =>
+      'Pick the new-home and older-home services and at least one home size';
+
+  @override
+  String get cgGroupErrOtherGroup =>
+      'A service is already in another group. Remove it there first';
+
+  @override
+  String get cgGroupErrIcon => 'Pick the picture again';
+
+  @override
+  String get cgGroupErrUnknown =>
+      'Could not save. Check the details and try again';
+
+  @override
+  String get checkoutPriceChanged =>
+      'The amount to pay changed. Check the new amount and pay again.';
+
+  @override
+  String get cTitle => 'Operations console';
+
+  @override
+  String get cEmail => 'Email';
+
+  @override
+  String get cPassword => 'Password';
+
+  @override
+  String get cLogin => 'Sign in';
+
+  @override
+  String get cLoginFailed => 'Wrong email or password';
+
+  @override
+  String get cDashboard => 'Dashboard';
+
+  @override
+  String get cBookings => 'Bookings';
+
+  @override
+  String get cQuoteDesk => 'Quote desk';
+
+  @override
+  String get cInbox => 'Inbox';
+
+  @override
+  String get cCatalog => 'Catalog & prices';
+
+  @override
+  String get cMarketing => 'Coupons & content';
+
+  @override
+  String get cPartners => 'Partners';
+
+  @override
+  String get cSettlements => 'Settlements';
+
+  @override
+  String get cCustomers => 'Customers';
+
+  @override
+  String get cStaff => 'Staff';
+
+  @override
+  String get cSearchCommand => 'ابحث أو انتقل';
+
+  @override
+  String get cPaletteHint => 'اكتب اسم قسم أو رقم حجز';
+
+  @override
+  String get cTodayJobs => 'Today\'s jobs';
+
+  @override
+  String get cOpenQuotes => 'Open quotes';
+
+  @override
+  String get cUnassigned => 'Unassigned';
+
+  @override
+  String get cUnreadThreads => 'Unread chats';
+
+  @override
+  String get cRevenue30 => '30-day revenue';
+
+  @override
+  String get cBookings30 => '30-day bookings';
+
+  @override
+  String get cByService => 'Bookings by service (30 days)';
+
+  @override
+  String get cAllStatus => 'All statuses';
+
+  @override
+  String get cAllServices => 'All services';
+
+  @override
+  String get cSearch => 'Search (number, phone, name, address)';
+
+  @override
+  String get cNoResults => 'No results';
+
+  @override
+  String get cNumber => 'Number';
+
+  @override
+  String get cVisit => 'Visit';
+
+  @override
+  String get cService => 'Service';
+
+  @override
+  String get cStatus => 'Status';
+
+  @override
+  String get cTeam => 'Team';
+
+  @override
+  String get cAmount => 'Amount';
+
+  @override
+  String get cCustomer => 'Customer';
+
+  @override
+  String get cPayments => 'Payments';
+
+  @override
+  String get cChangeStatus => 'Change status';
+
+  @override
+  String get cTeamName => 'Assigned team';
+
+  @override
+  String get cAssign => 'Assign team';
+
+  @override
+  String get cMarkDone => 'Mark completed';
+
+  @override
+  String get cMarkDoneAsk =>
+      'Only mark a booking completed once the cleaning is done. This cannot be undone.';
+
+  @override
+  String get cConfirm => 'Mark confirmed';
+
+  @override
+  String get cCancelRefund => 'Cancel & refund';
+
+  @override
+  String get cRefundAmount => 'Refund amount (empty = full)';
+
+  @override
+  String get cDone => 'Done';
+
+  @override
+  String get cAnswers => 'Customer answers';
+
+  @override
+  String get cEstimateCalc => 'Calculated estimate';
+
+  @override
+  String get cBase => 'Base';
+
+  @override
+  String get cExtras => 'Extras';
+
+  @override
+  String get cSurcharge => 'Surcharge';
+
+  @override
+  String get cBeforeVat => 'Before VAT';
+
+  @override
+  String get cProQuotes => 'Partner quotes';
+
+  @override
+  String get cNoProQuotes => 'No partner quotes yet';
+
+  @override
+  String get cFinalPrice => 'Final price to customer';
+
+  @override
+  String get cQuoteNote => 'Note to customer';
+
+  @override
+  String get cSendQuote => 'Send quote to customer';
+
+  @override
+  String get cQuoteSent => 'Quote sent';
+
+  @override
+  String get cCustomerChats => 'Customers';
+
+  @override
+  String get cPartnerChats => 'Partners';
+
+  @override
+  String get cSelectBooking => 'Pick a booking';
+
+  @override
+  String get cRefunded => 'Refunded';
+
+  @override
+  String get cPartRefunded => 'Partly refunded';
+
+  @override
+  String get cFailed => 'Failed';
+
+  @override
+  String get cSelectThread => 'Pick a conversation';
+
+  @override
+  String get cReplyHint => 'Reply · Ctrl+Enter to send';
+
+  @override
+  String get cOpenBooking => 'فتح الحجز';
+
+  @override
+  String get cShortcuts => 'J/K move · Ctrl+K command';
+
+  @override
+  String get cPricing => 'Pricing';
+
+  @override
+  String get cMinutes => 'Minutes';
+
+  @override
+  String get cActive => 'Active';
+
+  @override
+  String get cSaved => 'Saved';
+
+  @override
+  String get cSlotCapacity => 'Capacity per arrival slot';
+
+  @override
+  String get cUnlimited => 'Unlimited';
+
+  @override
+  String get cFormula => 'Quote formula';
+
+  @override
+  String get cTabCancelPolicy => 'Cancellation policy';
+
+  @override
+  String get cPolicyDefaultBanner =>
+      'This is the built-in default. Review it and save to confirm.';
+
+  @override
+  String get cPolicyDaysBefore => 'Days before visit (from)';
+
+  @override
+  String get cPolicyPercent => 'Fee % (blank = not cancellable in app)';
+
+  @override
+  String get cPolicyMinFee => 'Minimum fee (KRW)';
+
+  @override
+  String get cPolicyReschedule => 'Reschedule allowed (days before visit)';
+
+  @override
+  String get cPolicyHint =>
+      'Applies to the customer app cancel screen right away. Terms update on the next legal build.';
+
+  @override
+  String get f_base_studio => 'Base: studio';
+
+  @override
+  String get f_base_one_and_half => 'Base: 1.5 rooms';
+
+  @override
+  String get f_base_two_rooms => 'Base: 2 rooms';
+
+  @override
+  String get f_base_three_rooms => 'Base: 3 rooms';
+
+  @override
+  String get f_base_four_plus => 'Base: 4+ rooms';
+
+  @override
+  String get f_per_extra_bathroom => 'Per extra bathroom';
+
+  @override
+  String get f_per_balcony => 'Per balcony';
+
+  @override
+  String get f_duplex => 'Duplex';
+
+  @override
+  String get f_no_elevator_high_floor => 'No elevator & floor 3+';
+
+  @override
+  String get cIssueCoupon => 'Issue coupons';
+
+  @override
+  String get cCouponName => 'Coupon name';
+
+  @override
+  String get cCouponPhones => 'Phone numbers (one per line)';
+
+  @override
+  String get cAllCustomers => 'To all customers';
+
+  @override
+  String cIssued(String n) {
+    return 'Issued $n';
+  }
+
+  @override
+  String get cContent => 'Content';
+
+  @override
+  String get cKind_notice => 'Notice';
+
+  @override
+  String get cKind_tip => 'Tip';
+
+  @override
+  String get cKind_faq => 'FAQ';
+
+  @override
+  String get cKind_banner => 'Banner';
+
+  @override
+  String get cKind_legal => 'Legal';
+
+  @override
+  String get cNewContent => 'New content';
+
+  @override
+  String get cTitleField => 'Title';
+
+  @override
+  String get cBodyField => 'Body';
+
+  @override
+  String get cCardLabel => 'Banner card label';
+
+  @override
+  String get cCardValue => 'Banner card value';
+
+  @override
+  String get cSlug => 'Slug (legal: privacy / terms)';
+
+  @override
+  String get cVerify => 'Approve';
+
+  @override
+  String get cSuspend => 'Suspend';
+
+  @override
+  String get cPro_pending => 'Pending';
+
+  @override
+  String get cPro_verified => 'Active';
+
+  @override
+  String get cPro_suspended => 'Suspended';
+
+  @override
+  String get cCompleted => 'Completed';
+
+  @override
+  String get cCancelledN => 'Cancelled';
+
+  @override
+  String get cRating => 'Rating';
+
+  @override
+  String cFeeRate(String rate) {
+    return 'Fee $rate%';
+  }
+
+  @override
+  String get cProsEmpty => 'No partners yet';
+
+  @override
+  String get cProsEmptyBody =>
+      'Partners sign up in the partner app. Once they do, you review and approve them here.';
+
+  @override
+  String get cRunPayouts => 'Run payouts';
+
+  @override
+  String get cPayoutDate => 'Pay up to date';
+
+  @override
+  String cPayoutDone(String n) {
+    return 'Paid $n partners';
+  }
+
+  @override
+  String get cHold => 'Hold';
+
+  @override
+  String get cRelease => 'Release';
+
+  @override
+  String get cNet => 'Net';
+
+  @override
+  String get cAddStaff => 'Add staff';
+
+  @override
+  String get cRoleAdmin => 'Admin';
+
+  @override
+  String get cRoleConsultant => 'Consultant';
+
+  @override
+  String get cDeactivate => 'Deactivate';
+
+  @override
+  String get cActivate => 'Activate';
+
+  @override
+  String get cPasswordRule => 'At least 12 characters';
+
+  @override
+  String get cAdminOnly => 'Admins only';
+
+  @override
+  String cBookingsCount(String n) {
+    return '$n bookings';
+  }
+
+  @override
+  String get cJoined => 'Joined';
+
+  @override
+  String get cNewBooking => 'New booking';
+
+  @override
+  String get cNewMessage => 'New message';
+
+  @override
+  String get cConfirmAsk => 'Are you sure?';
+
+  @override
+  String get cServerTitle => 'Enter your server address';
+
+  @override
+  String get cServerBody =>
+      'Enter the server address that starts with https:// from your setup notes. You only need to do this once.';
+
+  @override
+  String get cServerSave => 'Save and continue';
+
+  @override
+  String get cServerInvalid =>
+      'That is not a valid address. Enter a server address that starts with https://.';
+
+  @override
+  String get cServerChange => 'Change server address';
+
+  @override
+  String get svc_window => 'Window cleaning';
+
+  @override
+  String get svc_disinfection => 'Pest control & disinfection';
+
+  @override
+  String get svcDesc_window =>
+      'Inside and outside of windows, priced per window size';
+
+  @override
+  String get svcDesc_disinfection =>
+      'Choose the pest control and disinfection you need';
+
+  @override
+  String get unitTitle_window => 'Choose window sizes\nand counts.';
+
+  @override
+  String get unitTitle_disinfection => 'Choose the\ntreatments.';
+
+  @override
+  String get unit_window_small => 'Small window (under 1 m)';
+
+  @override
+  String get unit_window_large => 'Large window (1 m or more)';
+
+  @override
+  String get unit_pest => 'Pest control';
+
+  @override
+  String get unit_mite_bedbug => 'Mite & bed bug treatment';
+
+  @override
+  String get unit_sanitize => 'Sanitising & virus disinfection';
+
+  @override
+  String get unit_sick_house => 'New-home syndrome removal';
+
+  @override
+  String get unitShort_wall => 'Wall';
+
+  @override
+  String get unitShort_stand => 'Stand';
+
+  @override
+  String get unitShort_two_in_one => '2-in-1';
+
+  @override
+  String get unitShort_ceiling => 'Ceiling';
+
+  @override
+  String get unitShort_seat_1_2 => '1–2 seats';
+
+  @override
+  String get unitShort_seat_3 => '3 seats';
+
+  @override
+  String get unitShort_seat_4_plus => '4+ seats';
+
+  @override
+  String get unitShort_l_shape => 'L-shape';
+
+  @override
+  String get unitShort_small => 'Small window (under 1 m)';
+
+  @override
+  String get unitShort_large => 'Large window (1 m or more)';
+
+  @override
+  String get unitShort_pest => 'Pest control';
+
+  @override
+  String get unitShort_mite_bedbug => 'Mites & bed bugs';
+
+  @override
+  String get unitShort_sanitize => 'Sanitising';
+
+  @override
+  String get unitShort_sick_house => 'New-home syndrome';
+
+  @override
+  String get unitHint => 'Use + and − to choose what you need';
+
+  @override
+  String countsDiscount(String percent) {
+    return '$percent% off for 2 or more';
+  }
+
+  @override
+  String get countMinus => 'Decrease count';
+
+  @override
+  String get countPlus => 'Increase count';
+
+  @override
+  String get countSelect => 'Select';
+
+  @override
+  String get svcNotes_disinfection =>
+      'Prices assume about 30 pyeong\nLarger homes are adjusted in chat';
+
+  @override
+  String get ok => 'حسنًا';
+
+  @override
+  String get cancel => 'إلغاء';
+
+  @override
+  String get next => 'التالي';
+
+  @override
+  String get close => 'إغلاق';
+
+  @override
+  String get save => 'حفظ';
+
+  @override
+  String get delete => 'حذف';
+
+  @override
+  String get edit => 'تعديل';
+
+  @override
+  String get change => 'Change';
+
+  @override
+  String get retry => 'أعد المحاولة';
+
+  @override
+  String get yes => 'نعم';
+
+  @override
+  String get no => 'لا';
+
+  @override
+  String get required => 'Required';
+
+  @override
+  String get viewAll => 'See all';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get errorGeneric => 'Something went wrong. Please try again.';
+
+  @override
+  String get errorNetwork => 'Check your internet connection';
+
+  @override
+  String get err_invalid_phone => 'Check your mobile number';
+
+  @override
+  String get err_otp_invalid => 'That code is incorrect';
+
+  @override
+  String get err_otp_expired => 'The code expired. Request a new one.';
+
+  @override
+  String get err_rate_limited => 'Too many attempts. Try again later.';
+
+  @override
+  String get err_studio_too_large =>
+      'Studio cleaning is for homes up to 10 pyeong.';
+
+  @override
+  String get err_date_out_of_range =>
+      'Pick a date from tomorrow up to 60 days ahead';
+
+  @override
+  String get err_slot_full => 'That time just filled up. Pick another.';
+
+  @override
+  String get err_coupon_expired => 'This coupon has expired';
+
+  @override
+  String get err_coupon_used => 'This coupon was already used';
+
+  @override
+  String get err_coupon_wrong_service =>
+      'This coupon isn\'t valid for this service';
+
+  @override
+  String get err_payment_failed => 'Payment was declined. Try another method.';
+
+  @override
+  String get err_payment_method_required => 'Choose a payment method';
+
+  @override
+  String get err_cancellation_window_closed =>
+      'This booking can no longer be cancelled in the app. Please contact our team';
+
+  @override
+  String get err_address_required => 'Add the visit address';
+
+  @override
+  String get err_already_taken => 'Another pro accepted it first';
+
+  @override
+  String get err_invalid_address => 'Fill in every address field';
+
+  @override
+  String get tabHome => 'الرئيسية';
+
+  @override
+  String get tabBookings => 'حجوزاتي';
+
+  @override
+  String get tabChat => 'المحادثة';
+
+  @override
+  String get tabMore => 'المزيد';
+
+  @override
+  String get introTitle => 'Professional cleaning,\nbooked in a minute';
+
+  @override
+  String get introBody => 'Upfront prices · Vetted teams · Live progress';
+
+  @override
+  String get introStart => 'Continue with phone number';
+
+  @override
+  String get loginPhoneTitle => 'What\'s your mobile number?';
+
+  @override
+  String get loginPhoneHint => '010-0000-0000';
+
+  @override
+  String get loginSendCode => 'Send code';
+
+  @override
+  String get loginCodeTitle => 'Enter the 6-digit code';
+
+  @override
+  String loginCodeSentTo(String phone) {
+    return 'Sent to $phone';
+  }
+
+  @override
+  String get loginResend => 'Resend';
+
+  @override
+  String get loginVerify => 'Verify';
+
+  @override
+  String get loginTerms =>
+      'By continuing you agree to the Terms and Privacy Policy';
+
+  @override
+  String get profileTitle => 'What should we call you?';
+
+  @override
+  String get profileNameHint => 'Name';
+
+  @override
+  String get profileDone => 'Get started';
+
+  @override
+  String get welcomeToast => '2 welcome coupons are in your wallet';
+
+  @override
+  String get svc_studio => 'Studio cleaning';
+
+  @override
+  String get svc_kitchen => 'Kitchen cleaning';
+
+  @override
+  String get svc_bathroom => 'Bathroom cleaning';
+
+  @override
+  String get svc_mattress => 'Mattress cleaning';
+
+  @override
+  String get svc_aircon => 'Air conditioner cleaning';
+
+  @override
+  String get svc_sofa => 'Sofa cleaning';
+
+  @override
+  String get svc_move_out => 'Move-out cleaning';
+
+  @override
+  String get svc_move_in => 'Move-in cleaning';
+
+  @override
+  String get svcShort_studio => 'Studio';
+
+  @override
+  String get svcShort_kitchen => 'Kitchen';
+
+  @override
+  String get svcShort_bathroom => 'Bathroom';
+
+  @override
+  String get svcShort_mattress => 'Mattress';
+
+  @override
+  String get svcShort_aircon => 'Aircon';
+
+  @override
+  String get svcShort_sofa => 'Sofa';
+
+  @override
+  String get svcShort_move_out => 'Move-out';
+
+  @override
+  String get svcShort_move_in => 'Move-in';
+
+  @override
+  String get svcDesc_studio =>
+      'A 2-hour clean of a studio up to 10 pyeong: one room and one bathroom.';
+
+  @override
+  String get svcDesc_kitchen =>
+      'Focused kitchen clean: sink, stove, hood exterior and counters.';
+
+  @override
+  String get svcDesc_bathroom =>
+      'Shelves, taps, basin and toilet inside and out, finished with a dry floor.';
+
+  @override
+  String get svcDesc_mattress =>
+      'Pro equipment extracts dust, mites and stains, then steam-sanitises.';
+
+  @override
+  String get svcDesc_aircon =>
+      'Disassembled, then coil, fan and filter pressure-washed and sanitised.';
+
+  @override
+  String get svcDesc_sofa =>
+      'Fabric-matched cleaner breaks down dirt, then wet extraction lifts it out.';
+
+  @override
+  String get svcDesc_move_out =>
+      'Before you move out, a pro team brings equipment and cleans the empty home.';
+
+  @override
+  String get svcDesc_move_in =>
+      'Before you move in, a pro team brings equipment and cleans the new home.';
+
+  @override
+  String get svcNotes_bathroom =>
+      'Blocked drains or toilets may limit the service\nNo special-chemical, ceiling or vent cleaning\nOld mould and set-in grime may not fully come off';
+
+  @override
+  String get svcNotes_mattress =>
+      'Same price from single to king\nFully dry in 4–6 hours\nSpring damage or sagging can\'t be fixed';
+
+  @override
+  String get svcNotes_aircon =>
+      'Units over 10 years old may not be safe to disassemble\nOutdoor unit not included\nWe check it works before and after';
+
+  @override
+  String get svcNotes_sofa =>
+      'Leather sofas get cleaning plus conditioning\nOld stains or dye transfer may not fully lift\nFully dry in 4–6 hours';
+
+  @override
+  String get unitTitle_bathroom => 'Number of bathrooms';
+
+  @override
+  String get unitTitle_mattress => 'Number of mattresses';
+
+  @override
+  String get unitTitle_aircon => 'Choose your\nAC type.';
+
+  @override
+  String get unitTitle_sofa => 'Sofa size';
+
+  @override
+  String unit_count(String n) {
+    return '$n';
+  }
+
+  @override
+  String get unit_wall => 'Wall-mounted';
+
+  @override
+  String get unit_stand => 'Floor-standing';
+
+  @override
+  String get unit_two_in_one => '2-in-1 (stand + wall)';
+
+  @override
+  String get unit_ceiling => 'Ceiling cassette';
+
+  @override
+  String get unit_seat_1_2 => '1–2 seats';
+
+  @override
+  String get unit_seat_3 => '3 seats';
+
+  @override
+  String get unit_seat_4_plus => '4+ seats';
+
+  @override
+  String get unit_l_shape => 'L-shape / couch';
+
+  @override
+  String durH(String h) {
+    return '$h h';
+  }
+
+  @override
+  String durHM(String h, String m) {
+    return '$h h $m min';
+  }
+
+  @override
+  String durM(String m) {
+    return '$m min';
+  }
+
+  @override
+  String about(String value) {
+    return 'about $value';
+  }
+
+  @override
+  String fromPrice(String price) {
+    return 'from $price';
+  }
+
+  @override
+  String get quoteBadge => 'Quote';
+
+  @override
+  String get status0 => 'In consultation';
+
+  @override
+  String get status1 => 'Confirmed';
+
+  @override
+  String get status2 => 'Team assigned';
+
+  @override
+  String get status3 => 'Completed';
+
+  @override
+  String get statusCancelled => 'Cancelled';
+
+  @override
+  String homeGreeting(String name) {
+    return 'Hi $name,\nwhat shall we clean today?';
+  }
+
+  @override
+  String get homeGreetingAnon => 'What shall we\nclean today?';
+
+  @override
+  String get homeUpcoming => 'Upcoming';
+
+  @override
+  String dDay(String days) {
+    return 'in $days days';
+  }
+
+  @override
+  String get homeServices => 'What do you need?';
+
+  @override
+  String get homeAddAddress => 'Add your address to see what\'s available';
+
+  @override
+  String get homeAddAddressCta => 'Add address';
+
+  @override
+  String homeRebook(String service) {
+    return 'Book $service again';
+  }
+
+  @override
+  String get homeRebookBody => 'Same options as last time, two taps';
+
+  @override
+  String get homeNotices => 'What\'s new';
+
+  @override
+  String get trustVat => 'VAT included,\nno surprises';
+
+  @override
+  String get trustCancel => 'Free cancellation\nup to 2 days before';
+
+  @override
+  String get trustCard => 'Card details stay\nwith the payment firm';
+
+  @override
+  String stepOf(String current, String total) {
+    return '$current of $total';
+  }
+
+  @override
+  String get chooseDate => 'Choose a date';
+
+  @override
+  String get notIncluded => 'Good to know';
+
+  @override
+  String studioBlockedTitle(String size) {
+    return '$size pyeong is too large for studio cleaning';
+  }
+
+  @override
+  String get studioBlockedBody =>
+      'Our team will suggest the right service for your home.';
+
+  @override
+  String get consultCta => 'Ask our team';
+
+  @override
+  String get addressTitle => 'Where should we go?';
+
+  @override
+  String get addressAdd => 'Add address';
+
+  @override
+  String get addressLabel => 'Label';
+
+  @override
+  String get addressLabelHint => 'e.g. Home';
+
+  @override
+  String get addressDistrict => 'District';
+
+  @override
+  String get addressRoad => 'Street address';
+
+  @override
+  String get addressDetail => 'Unit / floor';
+
+  @override
+  String get addressSize => 'Home size (pyeong)';
+
+  @override
+  String get addressSizeHelp => 'Net floor area · 1 pyeong ≈ 3.3 m²';
+
+  @override
+  String get addressHome => 'Home';
+
+  @override
+  String get addressOffice => 'Office';
+
+  @override
+  String get addressEmpty => 'No saved addresses';
+
+  @override
+  String get addressSaved => 'Address saved';
+
+  @override
+  String pyeong(String n) {
+    return '$n pyeong';
+  }
+
+  @override
+  String get scheduleTitle => 'When should we come?';
+
+  @override
+  String get scheduleArrival => 'Arrival time';
+
+  @override
+  String get scheduleFull => 'Full';
+
+  @override
+  String scheduleWindow(String start, String end) {
+    return 'Arrive $start–$end';
+  }
+
+  @override
+  String scheduleEnds(String duration, String time) {
+    return '$duration · done around $time';
+  }
+
+  @override
+  String get scheduleRange => 'Book from tomorrow up to 60 days ahead';
+
+  @override
+  String get morning => 'Morning';
+
+  @override
+  String get afternoon => 'Afternoon';
+
+  @override
+  String get scheduleQuoteNote => 'We\'ll confirm the exact time in chat';
+
+  @override
+  String get goToPayment => 'Continue to payment';
+
+  @override
+  String get prepTitle => 'Please have these ready';
+
+  @override
+  String get prepBody => 'Some tasks may be limited without them.';
+
+  @override
+  String get prepAsk => 'Can\'t prepare these? Let our team know';
+
+  @override
+  String get tool_vacuum => 'Vacuum';
+
+  @override
+  String get tool_trash => 'Trash bags';
+
+  @override
+  String get tool_mop => 'Mop';
+
+  @override
+  String get tool_cloth => 'Cloths';
+
+  @override
+  String get tool_gloves => 'Rubber gloves';
+
+  @override
+  String get tool_sponge => 'Scrubber';
+
+  @override
+  String get tool_spray => 'All-purpose cleaner';
+
+  @override
+  String get checkoutTitle => 'Payment';
+
+  @override
+  String get coupon => 'Coupon';
+
+  @override
+  String get couponNone => 'None';
+
+  @override
+  String couponAvailable(String count) {
+    return '$count available';
+  }
+
+  @override
+  String get paymentMethod => 'Payment method';
+
+  @override
+  String get addPaymentMethod => 'Add a payment method';
+
+  @override
+  String get methodCard => 'Credit / debit card';
+
+  @override
+  String get methodKakao => 'KakaoPay';
+
+  @override
+  String get methodNaver => 'Naver Pay';
+
+  @override
+  String get methodToss => 'Toss Pay';
+
+  @override
+  String get methodRegistered => 'Added';
+
+  @override
+  String get methodAdded => 'Payment method added';
+
+  @override
+  String get listPrice => 'Service';
+
+  @override
+  String get discount => 'Coupon';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get vatIncluded => 'VAT included';
+
+  @override
+  String payAmount(String amount) {
+    return 'Pay $amount';
+  }
+
+  @override
+  String get needMethod => 'Add a payment method first';
+
+  @override
+  String get dfCancelNote =>
+      'Free cancellation up to 2 days before the visit. Paying means you agree to the terms and the cancellation policy.';
+
+  @override
+  String get doneTitle => 'تم حجزك!';
+
+  @override
+  String get doneConfirmedTitle => 'Your booking is confirmed';
+
+  @override
+  String get doneBody => 'سنرسل لك إشعارًا عند تعيين مدير.';
+
+  @override
+  String get doneQuoteTitle => 'Request received';
+
+  @override
+  String get doneQuoteBody =>
+      'Our team will send a final quote. Find it in the Chat tab.';
+
+  @override
+  String get goHome => 'Home';
+
+  @override
+  String get viewBooking => 'View booking';
+
+  @override
+  String get bookingsTitle => 'Bookings';
+
+  @override
+  String get bookingsUpcoming => 'Upcoming';
+
+  @override
+  String get bookingsPast => 'Past';
+
+  @override
+  String get bookingsEmpty => 'No bookings yet';
+
+  @override
+  String get bookingsEmptyBody =>
+      'Welcome coupons are waiting for your first booking';
+
+  @override
+  String get bookNow => 'Book a clean';
+
+  @override
+  String get detailTitle => 'Booking';
+
+  @override
+  String get stepRequested => 'Requested';
+
+  @override
+  String get stepConfirmed => 'Confirmed';
+
+  @override
+  String get stepAssigned => 'Team assigned';
+
+  @override
+  String get stepCompleted => 'Completed';
+
+  @override
+  String teamVisiting(String team) {
+    return '$team is coming';
+  }
+
+  @override
+  String get photosSoon => 'Before & after photos will appear here';
+
+  @override
+  String photoThumb(String n) {
+    return 'Photo $n';
+  }
+
+  @override
+  String get before => 'Before';
+
+  @override
+  String get after => 'After';
+
+  @override
+  String get prepCheck => 'Prep checklist';
+
+  @override
+  String get prepAllSet => 'All set';
+
+  @override
+  String get visitAddress => 'Address';
+
+  @override
+  String get paid => 'Paid';
+
+  @override
+  String get askTeam => 'Message our team';
+
+  @override
+  String get cancelBooking => 'Cancel booking';
+
+  @override
+  String get cancelTitle => 'هل تريد إلغاء هذا الحجز؟';
+
+  @override
+  String get cancelFree => 'ستسترد المبلغ كاملًا وتستعيد قسيمتك.';
+
+  @override
+  String get cancelKeep => 'احتفظ به';
+
+  @override
+  String cancelFeeNow(String fee, String refund) {
+    return 'الإلغاء الآن يفرض رسومًا قدرها $fee ويعيد $refund.';
+  }
+
+  @override
+  String cancelFeeAccept(String fee) {
+    return 'Accept $fee fee and cancel';
+  }
+
+  @override
+  String get cancelled => 'تم إلغاء الحجز';
+
+  @override
+  String get reschedule => 'Reschedule';
+
+  @override
+  String get rescheduled => 'Rescheduled';
+
+  @override
+  String get rescheduleRequested =>
+      'Change requested. We\'ll let you know once the pro confirms.';
+
+  @override
+  String get reschedulePending => 'Waiting for the pro to confirm';
+
+  @override
+  String reschedulePendingTo(String when) {
+    return 'You asked to move it to $when. It changes once the pro confirms.';
+  }
+
+  @override
+  String get visitNotes => 'Notes for the team';
+
+  @override
+  String get notesEntry => 'How to get in (door code etc.)';
+
+  @override
+  String get notesParking => 'Parking';
+
+  @override
+  String get notesOther => 'Anything else';
+
+  @override
+  String get notesSaved => 'Notes saved';
+
+  @override
+  String depositDue(String amount) {
+    return 'Pay the $amount deposit to confirm';
+  }
+
+  @override
+  String get payDeposit => 'Pay deposit';
+
+  @override
+  String get waitingQuote => 'Our team is preparing your quote';
+
+  @override
+  String get estimate => 'Estimate';
+
+  @override
+  String get finalPrice => 'Final quote';
+
+  @override
+  String get deposit => 'Deposit';
+
+  @override
+  String get balance => 'Balance';
+
+  @override
+  String balanceDue(String amount) {
+    return 'Please pay the $amount balance';
+  }
+
+  @override
+  String get payBalance => 'Pay balance';
+
+  @override
+  String get reviewTitle => 'How did it go?';
+
+  @override
+  String get reviewHint => 'Tell us what went well or could be better';
+
+  @override
+  String ratingStars(String n) {
+    return '$n stars';
+  }
+
+  @override
+  String get reviewSubmit => 'Submit review';
+
+  @override
+  String get reviewThanks => 'Thanks for your review';
+
+  @override
+  String get bookAgain => 'Book again';
+
+  @override
+  String get chatTitle => 'Chat';
+
+  @override
+  String get chatTeam => 'Support team';
+
+  @override
+  String get chatHours => 'Weekdays 09:00~18:00';
+
+  @override
+  String get chatEmpty => 'Questions? Ask us anytime';
+
+  @override
+  String get chatAiNotice =>
+      'When AI replies, the chat text you type is sent to Anthropic, PBC (USA).';
+
+  @override
+  String get chatNew => 'New chat';
+
+  @override
+  String get chatTopicTitle => 'What\'s it about?';
+
+  @override
+  String get topicOther => 'Something else';
+
+  @override
+  String get chatHint => 'Write a message';
+
+  @override
+  String get chatSend => 'Send';
+
+  @override
+  String get chatPhoto => 'Send photo';
+
+  @override
+  String get chatTyping => 'Team is typing';
+
+  @override
+  String get quick_confirm => 'Let\'s confirm';
+
+  @override
+  String get quick_price => 'About the price';
+
+  @override
+  String get quick_date => 'Change the date';
+
+  @override
+  String get quick_parking => 'Is parking available?';
+
+  @override
+  String get quick_hello => 'Hello';
+
+  @override
+  String get quick_duration => 'How long will it take?';
+
+  @override
+  String get quoteArrived => 'Your final quote is here';
+
+  @override
+  String get quoteDepositNow => 'Deposit now (10%)';
+
+  @override
+  String get quoteBalanceLater => 'Balance after the job';
+
+  @override
+  String get quotePay => 'Pay deposit & confirm';
+
+  @override
+  String get quotePaid => 'Paid';
+
+  @override
+  String get requestCard => 'Quote request';
+
+  @override
+  String get sys_consultation_received => 'Your request was received';
+
+  @override
+  String sys_deposit_paid(String amount) {
+    return 'Deposit of $amount paid. You\'re confirmed.';
+  }
+
+  @override
+  String get sys_booking_cancelled => 'The booking was cancelled';
+
+  @override
+  String sys_status_changed(String status) {
+    return 'Status changed to $status';
+  }
+
+  @override
+  String get sys_job_completed => 'All done! Check the before & after photos.';
+
+  @override
+  String sys_rescheduled(String date) {
+    return 'Rescheduled to $date';
+  }
+
+  @override
+  String get sys_reschedule_declined =>
+      'The pro can\'t make the new time. Our team will sort it out.';
+
+  @override
+  String get moreTitle => 'More';
+
+  @override
+  String get moreScope => 'What\'s included';
+
+  @override
+  String get morePayments => 'Payment methods';
+
+  @override
+  String get moreCoupons => 'Coupons';
+
+  @override
+  String get morePoints => 'Points';
+
+  @override
+  String get moreAccount => 'Account';
+
+  @override
+  String get moreAddresses => 'Addresses';
+
+  @override
+  String get moreNotices => 'Notices';
+
+  @override
+  String get moreTips => 'Cleaning tips';
+
+  @override
+  String get moreFaq => 'FAQ';
+
+  @override
+  String get morePartner => 'Partnerships';
+
+  @override
+  String get brandTagline => 'We take care of your chores';
+
+  @override
+  String get moreLanguage => 'Language';
+
+  @override
+  String get langSystem => 'Use device setting';
+
+  @override
+  String moreVersion(String v) {
+    return 'Version $v';
+  }
+
+  @override
+  String get morePrivacy => 'Privacy policy';
+
+  @override
+  String get moreTerms => 'Terms of service';
+
+  @override
+  String get moreLicenses => 'تراخيص المصادر المفتوحة';
+
+  @override
+  String get logout => 'تسجيل الخروج';
+
+  @override
+  String get deleteAccount => 'Delete account';
+
+  @override
+  String get deleteAccountBody =>
+      'Your personal data will be erased. This can\'t be undone. Cancel active bookings first.';
+
+  @override
+  String get couponsEmpty => 'No coupons yet';
+
+  @override
+  String couponUntil(String date) {
+    return 'Until $date';
+  }
+
+  @override
+  String get couponUsed => 'Used';
+
+  @override
+  String get couponExpired => 'Expired';
+
+  @override
+  String get couponAnyService => 'Any service';
+
+  @override
+  String get coupon_welcome_studio => 'Welcome: studio';
+
+  @override
+  String get coupon_welcome_any => 'Welcome coupon';
+
+  @override
+  String get pointsBalance => 'Your points';
+
+  @override
+  String get pointsEmpty => 'No point history';
+
+  @override
+  String get accountName => 'Name';
+
+  @override
+  String get accountPhone => 'Mobile';
+
+  @override
+  String get accountEmail => 'Email';
+
+  @override
+  String get accountLogin => 'Sign-in method';
+
+  @override
+  String get accountLoginPhone => 'Phone verification';
+
+  @override
+  String get methodsEmpty => 'No payment methods';
+
+  @override
+  String get noContent => 'Nothing here yet';
+
+  @override
+  String get quoteTypeTitle => 'Which kind of clean?';
+
+  @override
+  String get type_standard => 'Standard move-out';
+
+  @override
+  String get type_same_day_move => 'Same-day move';
+
+  @override
+  String get type_some_luggage_left => 'Some items left';
+
+  @override
+  String get type_normal_move_in => 'Standard move-in';
+
+  @override
+  String get type_after_interior => 'After renovation';
+
+  @override
+  String get type_lived_in_deep_clean => 'Lived-in deep clean';
+
+  @override
+  String get luggageTitle => 'How full is the home?';
+
+  @override
+  String get luggage_empty => 'Empty';
+
+  @override
+  String get luggage_partly_unpacked => 'Partly unpacked';
+
+  @override
+  String get luggage_fully_lived_in => 'Fully lived-in';
+
+  @override
+  String get luggage_unknown => 'Not sure';
+
+  @override
+  String get quoteBasicTitle => 'Tell us about the home';
+
+  @override
+  String get buildingType => 'Building type';
+
+  @override
+  String get building_apartment => 'Apartment';
+
+  @override
+  String get building_villa => 'Low-rise';
+
+  @override
+  String get building_officetel => 'Officetel';
+
+  @override
+  String get building_house => 'House';
+
+  @override
+  String get building_other => 'Other';
+
+  @override
+  String get layoutTitle => 'Layout';
+
+  @override
+  String get layout_studio => 'Studio';
+
+  @override
+  String get layout_one_and_half => '1.5 rooms';
+
+  @override
+  String get layout_two_rooms => '2 rooms';
+
+  @override
+  String get layout_three_rooms => '3 rooms';
+
+  @override
+  String get layout_four_plus => '4+ rooms';
+
+  @override
+  String get duplexTitle => 'Is it a duplex?';
+
+  @override
+  String get quoteSpaceTitle => 'A bit more about the space';
+
+  @override
+  String get bathroomsLabel => 'Bathrooms';
+
+  @override
+  String get balconiesLabel => 'Balconies / utility';
+
+  @override
+  String get elevatorTitle => 'Is there an elevator?';
+
+  @override
+  String get floor3Label => 'Floor 3 or higher';
+
+  @override
+  String get quoteEstimateTitle => 'Here\'s your estimate';
+
+  @override
+  String get quoteEstimateBody =>
+      'The final price is set in chat after we see photos';
+
+  @override
+  String get quoteG1 => 'Final price agreed with you in chat';
+
+  @override
+  String get quoteG2 => '10% deposit to confirm, rest after';
+
+  @override
+  String get quoteG3 => 'Free to cancel before you confirm';
+
+  @override
+  String get quoteConfirmTitle => 'Check your request';
+
+  @override
+  String get quoteRequest => 'Send request';
+
+  @override
+  String get quoteNoPayNow => 'Nothing to pay yet';
+
+  @override
+  String get summaryType => 'Type';
+
+  @override
+  String get summaryHome => 'Home';
+
+  @override
+  String get summaryDate => 'Visit';
+
+  @override
+  String get cpTitle => 'Cancellation policy';
+
+  @override
+  String cpWhen(String days) {
+    return '$days or more days before the visit';
+  }
+
+  @override
+  String get cpWhenSameDay => 'On the day of the visit';
+
+  @override
+  String get cpFree => 'Full refund';
+
+  @override
+  String cpFee(String percent, String fee, String refund) {
+    return '$percent% fee ($fee), refund $refund';
+  }
+
+  @override
+  String get cpClosed => 'Not cancellable in the app (team review)';
+
+  @override
+  String get hhTitle => 'Household';
+
+  @override
+  String get hhAddPet => 'Add pet';
+
+  @override
+  String get hhPetCount => 'Count';
+
+  @override
+  String get hhFloorLabel => 'Floor (negative for basement)';
+
+  @override
+  String get hhElevator => 'Elevator available';
+
+  @override
+  String get hhNotes => 'Notes';
+
+  @override
+  String get hhHint => 'Saved to this address and editable per booking.';
+
+  @override
+  String get bkStepConsult => 'Consultation requested';
+
+  @override
+  String get bkStepConfirmed => 'Booking confirmed';
+
+  @override
+  String get bkStepMatched => 'Matched';
+
+  @override
+  String get bkStepCompleted => 'Service completed';
+
+  @override
+  String get bkViewWeek => 'Week view';
+
+  @override
+  String get bkViewMonth => 'Month view';
+
+  @override
+  String get chatHoursTitle => 'Chat hours';
+
+  @override
+  String get chatReplyFast => 'Usually replies within 10 minutes';
+
+  @override
+  String get quoteVisit => 'Visit';
+
+  @override
+  String get quoteKind => 'Type';
+
+  @override
+  String quotePayAmount(String amount) {
+    return 'Pay deposit $amount';
+  }
+
+  @override
+  String get quoteSuperseded => 'Replaced by a newer quote';
+
+  @override
+  String get quick_quote => 'About the quote';
+
+  @override
+  String get cQuoteOverride => 'Send a quote far from the estimate';
+
+  @override
+  String cQuoteOverrideBody(String price, String estimate, String ratio) {
+    return 'Quote $price · estimate $estimate · $ratio×. Send anyway?';
+  }
+
+  @override
+  String get cQuoteNeedsAdmin =>
+      'This price is far from the estimate: an admin needs to approve it';
+
+  @override
+  String get quick_reschedule => 'Change the schedule';
+
+  @override
+  String chatThreadConsult(String service) {
+    return '$service consultation';
+  }
+
+  @override
+  String chatThreadAsk(String service) {
+    return '$service question';
+  }
+
+  @override
+  String get chatYesterday => 'Yesterday';
+
+  @override
+  String get chatDayReceived => 'Request received';
+
+  @override
+  String chatRequestTitle(String service) {
+    return '$service booking request';
+  }
+
+  @override
+  String get quoteConfirmedTitle => 'Final quote';
+
+  @override
+  String quoteDepositLine(String pct, String amount) {
+    return 'Pay the $pct% deposit ($amount) to confirm your booking.';
+  }
+
+  @override
+  String get quotePayDeposit => 'Pay deposit';
+
+  @override
+  String get dfScopeDusting => 'Dusting furniture surfaces';
+
+  @override
+  String get dfScopeVacuum => 'Vacuuming and mopping floors';
+
+  @override
+  String get dfScopeDishes => 'Washing dishes and the sink';
+
+  @override
+  String get dfScopeBathroom => 'Taps, basin and toilet inside and out';
+
+  @override
+  String get dfScopeTrash => 'Sorting recycling and taking out trash';
+
+  @override
+  String get dfScopeBedding => 'Tidying the bedding';
+
+  @override
+  String get dfScopeTidy => 'Putting things back in place';
+
+  @override
+  String get dfScopeStove => 'Wiping the stove and counters';
+
+  @override
+  String get dfScopeFridge => 'Wiping the fridge outside';
+
+  @override
+  String get dfScopeTiles => 'Bathroom floor and wall tiles';
+
+  @override
+  String get dfScopeMold => 'Removing mould and limescale';
+
+  @override
+  String get dfScopeHood => 'Degreasing the hood and stove';
+
+  @override
+  String get dfScopeCabinets => 'Inside built-in wardrobes and cabinets';
+
+  @override
+  String get dfScopeWindows => 'Dusting window frames and sashes';
+
+  @override
+  String get dfScopeShoes => 'Inside the shoe cabinet';
+
+  @override
+  String get dfScopeEntrance => 'Entrance floor';
+
+  @override
+  String get dfScopePest => 'Spraying pest control treatment';
+
+  @override
+  String get dfScopeMite => 'Mite and bedbug treatment';
+
+  @override
+  String get dfScopeSanitize => 'Sterilising and virus disinfection';
+
+  @override
+  String get dfScopeSickHouse => 'New-home syndrome removal treatment';
+
+  @override
+  String get dfScopeWholeHomeGroup => 'Whole-home cleaning';
+
+  @override
+  String get dfScopeWindowGroup => 'Window cleaning';
+
+  @override
+  String get dfScopeDisinfGroup => 'Pest control and disinfection';
+
+  @override
+  String get dfBasicService => 'Included';
+
+  @override
+  String get dfNotProvided => 'Not included';
+
+  @override
+  String get dfNp1 => 'Laundry and folding';
+
+  @override
+  String get dfNp2 => 'Places out of reach';
+
+  @override
+  String get dfNp3 => 'Specialist cleaning';
+
+  @override
+  String get dfNp4 => 'Chores other than cleaning';
+
+  @override
+  String get dfRoom => 'Room';
+
+  @override
+  String get dfKitchen => 'Kitchen';
+
+  @override
+  String get dfBath => 'Bathroom';
+
+  @override
+  String get dfEntrance => 'Entrance';
+
+  @override
+  String get dfEntranceTrash => 'Entrance / trash';
+
+  @override
+  String get dfScopeMove => 'Move-in / move-out';
+
+  @override
+  String get dfScopeBathKitchen => 'Bathroom & kitchen';
+
+  @override
+  String get dfDuration => 'Duration';
+
+  @override
+  String get dfPriceVat => 'Price (VAT incl.)';
+
+  @override
+  String get dfDetails => 'Details';
+
+  @override
+  String dfStudioNote(String max) {
+    return '※ Homes over $max pyeong can\'t book studio cleaning. We\'ll suggest the right service in chat.';
+  }
+
+  @override
+  String get dfBookNow => 'Book now';
+
+  @override
+  String get dfMustCheck => 'Please check';
+
+  @override
+  String get dfAddressTitle => 'Choose the address to book.';
+
+  @override
+  String get dfEdit => 'Edit';
+
+  @override
+  String dfStudioToast(String service, String max) {
+    return '$service is for homes up to $max pyeong.';
+  }
+
+  @override
+  String dfOverPyeong(String max) {
+    return 'Only homes up to $max pyeong';
+  }
+
+  @override
+  String get dfDateTitle => 'Choose a date and time.';
+
+  @override
+  String get dfManagerIntro => 'A trained manager visits you.';
+
+  @override
+  String get dfTrainingLink => 'What training do they get?';
+
+  @override
+  String get dfServiceTime => 'Service time';
+
+  @override
+  String get dfChange => 'Change';
+
+  @override
+  String get dfVisitDay => 'Visit date';
+
+  @override
+  String get dfVisitTime => 'Visit time';
+
+  @override
+  String get dfConsultNote => 'We\'ll help you with this in chat.';
+
+  @override
+  String get dfSelect => 'Choose';
+
+  @override
+  String get dfSlotClosed => 'Full';
+
+  @override
+  String get dfSelectDone => 'Done';
+
+  @override
+  String get dfDateNote => 'Some dates and times cost a little more.';
+
+  @override
+  String get dfAmVisit => 'Morning visit';
+
+  @override
+  String get dfPmVisit => 'Afternoon visit';
+
+  @override
+  String dfArrive(String range) {
+    return 'Arrive $range';
+  }
+
+  @override
+  String dfPrepHeader(String name) {
+    return '$name,\nplease have these ready!';
+  }
+
+  @override
+  String get dfPrepTools => 'Cleaning tools to prepare';
+
+  @override
+  String get dfNoTools => 'Missing some tools?';
+
+  @override
+  String get dfNoToolsBody => 'Ask our team what to prepare';
+
+  @override
+  String get dfPayTitle => 'Choose discounts and payment.';
+
+  @override
+  String get dfPoints => 'Points';
+
+  @override
+  String get dfPointsFirst => 'Use points first';
+
+  @override
+  String get dfPointsOff => 'Not applied';
+
+  @override
+  String get dfPointsNone => 'No points to use';
+
+  @override
+  String get dfPayMethod => 'Payment method';
+
+  @override
+  String dfBaseAmount(String duration) {
+    return 'Base price ($duration)';
+  }
+
+  @override
+  String get dfCouponDiscount => 'Coupon discount';
+
+  @override
+  String get dfDue => 'Amount to pay';
+
+  @override
+  String get dfPgNotice =>
+      'Payments are processed by a licensed payment gateway (PG).';
+
+  @override
+  String get dfRefundPolicy => 'Cancellation & refund policy';
+
+  @override
+  String get dfSummaryService => 'Service';
+
+  @override
+  String get dfSummaryWhen => 'Visit';
+
+  @override
+  String get dfSummaryAddress => 'Address';
+
+  @override
+  String get dfSummaryPaid => 'Paid';
+
+  @override
+  String get luggage_not_unpacked => 'Boxes not unpacked yet';
+
+  @override
+  String get luggage_out_partly_unpacked => 'Boxes partly unpacked';
+
+  @override
+  String get luggage_out_fully_lived_in => 'Fully unpacked or lived in';
+
+  @override
+  String get luggage_out_unknown => 'Not sure about the boxes';
+
+  @override
+  String get dfReviewsTitle => 'See what customers say.';
+
+  @override
+  String get dfBefore => 'BEFORE';
+
+  @override
+  String get dfAfter => 'AFTER';
+
+  @override
+  String get dfBasicBody =>
+      'These details are required and can affect the price.';
+
+  @override
+  String get building_commercial => 'Commercial space';
+
+  @override
+  String get dfBldVillaHouse => 'Villa / house';
+
+  @override
+  String get dfLayoutOneHalf => '1.5 rooms (split studio / living + 1)';
+
+  @override
+  String get dfLayoutTwo => 'Living room + 2 rooms';
+
+  @override
+  String get dfLayoutThree => 'Living room + 3 rooms';
+
+  @override
+  String get dfLayoutFour => 'Living room + 4 or more';
+
+  @override
+  String get dfDuplexTitle => 'Duplex';
+
+  @override
+  String get dfNone => 'No';
+
+  @override
+  String get dfHas => 'Yes';
+
+  @override
+  String get dfPleaseSelect => 'Please choose';
+
+  @override
+  String get dfBathCount => 'Bathrooms';
+
+  @override
+  String get dfBalconyCount => 'Balconies / utility rooms';
+
+  @override
+  String dfCountN(String n) {
+    return '$n';
+  }
+
+  @override
+  String get dfElevatorTitle => 'Elevator';
+
+  @override
+  String get dfFloor3 => 'The home is on floor 3 or higher';
+
+  @override
+  String get dfAcAddonBanner => 'Add AC cleaning for a discount';
+
+  @override
+  String get dfAcAddonBody => 'Move in with clean air conditioners too.';
+
+  @override
+  String get dfAcAddonAdd => 'Add';
+
+  @override
+  String dfAcAddonAdded(String count) {
+    return '$count AC units added';
+  }
+
+  @override
+  String get dfAcAddonNote =>
+      'You\'ll see the discounted price in your estimate';
+
+  @override
+  String get dfAcCouponCta => 'Get coupon';
+
+  @override
+  String dfAcCouponTitle(String amount) {
+    return '$amount off AC cleaning';
+  }
+
+  @override
+  String get dfAcCouponClaimed =>
+      'Coupon saved. Use it when you book AC cleaning.';
+
+  @override
+  String dfEstAddons(String pct) {
+    return 'AC cleaning add-on ($pct% off)';
+  }
+
+  @override
+  String dfCountUnits(String count) {
+    return '$count units';
+  }
+
+  @override
+  String get f_ac_addon_discount_bps => 'AC add-on discount (bps, 1000 = 10%)';
+
+  @override
+  String get dfQuoteMethodTitle => 'Check how the quote works\nand continue.';
+
+  @override
+  String dfSafeBooking(String brand) {
+    return '$brand Safe Booking';
+  }
+
+  @override
+  String get dfRecommended => 'Recommended';
+
+  @override
+  String get dfEstimateVat =>
+      'Estimate (VAT incl.) · may change after consultation';
+
+  @override
+  String get dfBenefit1 => 'Done by a trained, certified team';
+
+  @override
+  String get dfBenefit2 => '7 days of free touch-ups after service';
+
+  @override
+  String get dfBenefit3 => 'Live progress in your consultation chat';
+
+  @override
+  String get dfBenefit4 => 'Eco-friendly detergents';
+
+  @override
+  String get dfBenefit5 => 'Points for writing a review';
+
+  @override
+  String dfDepositNote(String pct) {
+    return '※ Nothing is charged now. Once the price is agreed in chat, a $pct% deposit confirms the booking.';
+  }
+
+  @override
+  String dfReviewHeader(String date) {
+    return '$date\nFinish your booking.';
+  }
+
+  @override
+  String dfVisitTimeLine(String slot) {
+    return 'Visit time: $slot';
+  }
+
+  @override
+  String get dfReviewNote =>
+      '※ A consultation chat opens after you send the request. Agree the quote and schedule there, then pay the deposit to confirm.';
+
+  @override
+  String get dfHomeInfo => 'Home';
+
+  @override
+  String get dfName => 'Name';
+
+  @override
+  String get dfBasicInfo => 'Basics';
+
+  @override
+  String get dfCleanType => 'Cleaning type';
+
+  @override
+  String get dfBuilding => 'Building';
+
+  @override
+  String get dfSpaceInfo => 'Space';
+
+  @override
+  String get dfPayInfo => 'Payment';
+
+  @override
+  String get dfEstAmount => 'Estimated price';
+
+  @override
+  String get dfDepositOnConfirm => 'Deposit (paid on confirmation)';
+
+  @override
+  String get dfNotes => 'Good to know';
+
+  @override
+  String get dfNote1 =>
+      'Free cancellation during consultation or up to 2 days before the visit.';
+
+  @override
+  String get dfNote2 =>
+      'The final price is set in chat; the balance is paid after the service.';
+
+  @override
+  String get dfNote3 =>
+      'If we can\'t reach you to get in on the day, the team leaves after 30 minutes. Please check how to get in beforehand.';
+
+  @override
+  String get dfNoteWarn =>
+      'If a manager asks you to pay them directly, please tell our support team right away.';
+
+  @override
+  String get dfSubmitRequest => 'Send booking request';
+
+  @override
+  String get dfRequested => 'Consultation requested.';
+
+  @override
+  String get dfStatusNote =>
+      '※ Our team sends the final quote in chat. Paying the deposit confirms the booking.';
+
+  @override
+  String dfPayInfoBody(String pct) {
+    return 'The price may change after consultation. The deposit is $pct% of the agreed price.';
+  }
+
+  @override
+  String get dfQuoteMethod => 'Quote type';
+
+  @override
+  String get dfDeposit => 'Deposit';
+
+  @override
+  String get dfAwaitingPay => 'Awaiting payment';
+
+  @override
+  String get dfServiceInfo => 'Service';
+
+  @override
+  String get dfSpace => 'Space';
+
+  @override
+  String get dfChat => 'Consultation chat';
+
+  @override
+  String get dfRequestDone => 'Request sent';
+
+  @override
+  String get dfRequestDoneBody =>
+      'Your consultation chat is open.\nOur team will send the final quote.';
+
+  @override
+  String get dfAcUpsell => 'Clean the air conditioners after the move too?';
+
+  @override
+  String get dfAcUpsellCta => 'Book AC cleaning';
+
+  @override
+  String get dfViewChat => 'Open consultation chat';
+
+  @override
+  String get dhHomeRecommended => 'Recommended';
+
+  @override
+  String dhHomeNews(String brand) {
+    return '$brand News';
+  }
+
+  @override
+  String get dhHomeAll => 'All';
+
+  @override
+  String dhHomePick(String brand) {
+    return '$brand PICK';
+  }
+
+  @override
+  String get dhBadgeNew => 'NEW';
+
+  @override
+  String get dhBadgeHot => 'HOT';
+
+  @override
+  String get dhNoticeTag => 'Notice';
+
+  @override
+  String dhBannerPage(String n, String total) {
+    return '$n/$total';
+  }
+
+  @override
+  String get cKind_news => 'News';
+
+  @override
+  String get cLink => 'Link (coupons, service/move_in, https://…)';
+
+  @override
+  String get welcomePackTitle => 'Sign-up welcome coupons';
+
+  @override
+  String get welcomePackBody =>
+      'Issued once when a customer finishes sign-up. Remove all to switch it off.';
+
+  @override
+  String get welcomePackAmount => 'Coupon amount (KRW)';
+
+  @override
+  String get welcomePackAdd => 'Add coupon';
+
+  @override
+  String get welcomePackRemove => 'Remove coupon';
+
+  @override
+  String moreGreeting(String brand) {
+    return 'Leave today\'s chores to $brand.';
+  }
+
+  @override
+  String moreBrandTips(String brand) {
+    return '$brand tips';
+  }
+
+  @override
+  String get moreContact => 'Chat with us';
+
+  @override
+  String get moreVersionInfo => 'Version';
+
+  @override
+  String get payAvailableTitle => 'Available payment methods';
+
+  @override
+  String get accountLoginKakao => 'Kakao';
+
+  @override
+  String get accountLoginNaver => 'Naver';
+
+  @override
+  String get accountLoginApple => 'Apple';
+
+  @override
+  String get accountLoginGoogle => 'Google';
+
+  @override
+  String moreNameSuffix(String name) {
+    return '$name';
+  }
+
+  @override
+  String moreCouponCount(String n) {
+    return '$n';
+  }
+
+  @override
+  String get couponsAvailableTitle => 'Available coupons';
+
+  @override
+  String get couponsUsedTitle => 'Used coupons';
+
+  @override
+  String get couponsNote => '※ One coupon per booking.';
+
+  @override
+  String payCardNote(String brand) {
+    return '※ Card numbers are never stored by $brand; the payment provider keeps them securely.';
+  }
+
+  @override
+  String accountJoined(String date) {
+    return 'Joined $date';
+  }
+
+  @override
+  String addressPyeongNote(String max) {
+    return 'Size is required. Studio cleaning is for homes up to $max pyeong.';
+  }
+
+  @override
+  String get faqAll => 'All';
+
+  @override
+  String get faqCat_booking => 'Booking & changes';
+
+  @override
+  String get faqCat_payment => 'Payment & coupons';
+
+  @override
+  String get faqCat_move => 'Move-in & move-out';
+
+  @override
+  String get themeTitle => 'Theme';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get themeSystem => 'System';
+
+  @override
+  String get themeTip => 'تغيير المظهر';
+
+  @override
+  String get ednTitle => 'Update edition';
+
+  @override
+  String ednBody(String current) {
+    return 'Current edition: $current. Switching makes this server take its updates from another release. Needs your owner code and the server approval code.';
+  }
+
+  @override
+  String ednSwitch(String name) {
+    return 'Switch to $name';
+  }
+
+  @override
+  String ednConfirm(String name) {
+    return 'It backs up first. From then on the server follows $name\'s releases. Data, keys, domain and store apps stay as they are. \'Roll back to the previous version\' stays available. The service restarts for a few minutes.';
+  }
+
+  @override
+  String get ednRunning =>
+      'Switching: backup, check, switch, health check. It keeps going on the server even if you close this screen.';
+
+  @override
+  String ednDone(String name) {
+    return 'Switched to $name.';
+  }
+
+  @override
+  String ednRolledBack(String current) {
+    return 'The new edition did not answer, so it went back. Still on $current.';
+  }
+
+  @override
+  String ednFailed(String reason) {
+    return 'Could not switch the edition: $reason';
+  }
+
+  @override
+  String get ednNoSummary =>
+      'The server\'s summary was not an edition switch, so no approval code was sent. Check the recent jobs below.';
+
+  @override
+  String get ednCancelled =>
+      'No server approval code was entered, so the edition was not switched. The held job cancels itself after 10 minutes.';
+
+  @override
+  String get ednToolsStale =>
+      'The server tools are still the old ones. Press \'Update now\' above once.';
+
+  @override
+  String get ednKind => 'Edition switch';
+
+  @override
+  String get err_price_changed =>
+      'The price changed. Review the new quote and try again.';
+
+  @override
+  String get err_checkout_closed =>
+      'This payment is no longer open. Start again.';
+
+  @override
+  String get err_checkout_refunded =>
+      'This payment was cancelled and refunded.';
+
+  @override
+  String get err_checkout_refund_pending =>
+      'We cancelled this payment and the refund is on its way. We\'ll let you know once it\'s done.';
+
+  @override
+  String get err_payment_not_for_checkout =>
+      'This payment doesn\'t match this order. Please pay again.';
+
+  @override
+  String get err_already_paid => 'This is already paid.';
+
+  @override
+  String get err_quote_not_payable =>
+      'This quote can\'t be paid yet. Check with our team.';
+
+  @override
+  String get err_payment_method_disabled =>
+      'This payment method isn\'t available right now.';
+
+  @override
+  String get err_payment_methods_empty =>
+      'Keep at least one payment method on. With none on, customers can\'t pay.';
+
+  @override
+  String get err_invalid_payment_method =>
+      'That payment method can\'t be used. Choose another.';
+
+  @override
+  String get err_balance_not_due => 'The balance isn\'t due yet.';
+
+  @override
+  String get err_invalid_slot => 'That time isn\'t offered for this service.';
+
+  @override
+  String get err_booking_changed =>
+      'The booking changed. Refresh and check the details.';
+
+  @override
+  String get err_booking_closed => 'This booking can\'t be changed anymore.';
+
+  @override
+  String get err_reschedule_closed =>
+      'The visit can\'t be rescheduled now. Contact our team.';
+
+  @override
+  String get err_reschedule_changed =>
+      'The customer changed the request. Check the new one.';
+
+  @override
+  String get err_reschedule_expired =>
+      'The requested day can no longer be booked. Decline it and agree a new time with the customer.';
+
+  @override
+  String get err_too_many_open_requests =>
+      'You have too many open requests. Finish one first.';
+
+  @override
+  String get err_already_reviewed => 'You already reviewed this visit.';
+
+  @override
+  String get err_identity_not_verified => 'Finish identity verification first.';
+
+  @override
+  String get err_email_taken => 'This email is already in use.';
+
+  @override
+  String get err_invalid_email => 'Check the email address.';
+
+  @override
+  String get err_file_too_large =>
+      'That file is too large. Upload a smaller one.';
+
+  @override
+  String get err_unsupported_image =>
+      'This photo format isn\'t supported. Upload a JPG or PNG.';
+
+  @override
+  String get err_upload_quota =>
+      'Upload limit reached for today. Try again tomorrow.';
+
+  @override
+  String get err_provider_unreachable =>
+      'Couldn\'t reach the service. Try again shortly.';
+
+  @override
+  String get err_invalid_token => 'Sign-in didn\'t go through. Try again.';
+
+  @override
+  String get err_invalid_transition =>
+      'The status can\'t be changed that way right now.';
+
+  @override
+  String get err_job_not_started => 'Start the job first.';
+
+  @override
+  String get err_not_checked_in =>
+      'The arrival isn\'t recorded. Check in first, or give a reason.';
+
+  @override
+  String get err_override_reason_too_long =>
+      'Keep the reason to 200 characters or fewer.';
+
+  @override
+  String get err_job_not_active => 'This job isn\'t active.';
+
+  @override
+  String get err_quote_locked => 'This quote is locked and can\'t be edited.';
+
+  @override
+  String get err_request_closed => 'This request is closed.';
+
+  @override
+  String get err_team_full => 'Your team is full.';
+
+  @override
+  String get err_invalid_store_id => 'The store ID must start with store-.';
+
+  @override
+  String get err_invalid_api_secret =>
+      'The V2 API secret does not look right. Paste the whole value with no spaces.';
+
+  @override
+  String get err_invalid_channel_key =>
+      'A channel key starts with channel-key-.';
+
+  @override
+  String get err_unknown_channel_key =>
+      'This payment method slot is not known.';
+
+  @override
+  String get err_invalid_secret_key =>
+      'The secret key starts with test_sk_ or live_sk_.';
+
+  @override
+  String get err_invalid_security_key =>
+      'The security key is 64 characters, each 0-9 or a-f. Copy it from the Toss developer center as is.';
+
+  @override
+  String get err_invalid_webhook_secret =>
+      'The webhook secret must start with whsec_.';
+
+  @override
+  String get err_invalid_endpoint => 'The endpoint must start with https://.';
+
+  @override
+  String get err_invalid_bucket => 'The bucket name isn\'t valid.';
+
+  @override
+  String get err_invalid_region => 'The region isn\'t valid.';
+
+  @override
+  String get err_invalid_retention => 'The retention period is out of range.';
+
+  @override
+  String get err_invalid_service_account =>
+      'The service account file isn\'t valid.';
+
+  @override
+  String get err_invalid_mode => 'Pick a valid AI mode.';
+
+  @override
+  String get err_invalid_model => 'The AI model name isn\'t valid.';
+
+  @override
+  String get err_missing_field => 'Fill in every required field.';
+
+  @override
+  String get err_invalid_amount => 'Enter a valid amount.';
+
+  @override
+  String get err_cannot_deactivate_self =>
+      'You can\'t deactivate your own account.';
+
+  @override
+  String get err_invalid_coupon => 'This coupon isn\'t valid.';
+
+  @override
+  String get err_settlement_state =>
+      'The settlement can\'t be changed right now.';
+
+  @override
+  String get err_deposit_required => 'The deposit must be paid first.';
+
+  @override
+  String get err_payout_state =>
+      'The payout status changed. Refresh and check again.';
+
+  @override
+  String get err_payout_provider =>
+      'This payout method isn\'t available right now.';
+
+  @override
+  String get err_payout_in_transfer =>
+      'This payout may already be with the bank, so it can\'t be changed right now. Check its status.';
+
+  @override
+  String get err_payout_checked =>
+      'Toss answered, so the status now comes from Toss. Check the list.';
+
+  @override
+  String get err_settlement_in_transfer =>
+      'This booking\'s payout is already with the bank, so it can\'t be cancelled.';
+
+  @override
+  String get err_checkout_not_open =>
+      'This payment has already been processed or closed, so it can\'t be changed now.';
+
+  @override
+  String get err_unsupported_bank => 'This bank isn\'t supported for payouts.';
+
+  @override
+  String get err_toss_unverified =>
+      'Toss payouts aren\'t available yet. Use manual transfer.';
+
+  @override
+  String get err_invalid_cap => 'Enter a number within the allowed range.';
+
+  @override
+  String get err_invalid_capacity => 'Enter a valid capacity.';
+
+  @override
+  String get err_seller_declined =>
+      'Toss did not approve the seller registration. Check the business details.';
+
+  @override
+  String get err_payout_account_unverified =>
+      'This partner has no verified payout account yet. Verify the account first.';
+
+  @override
+  String get err_sms_required =>
+      'A staff member without an authenticator app can only reset by a text to their own phone.';
+
+  @override
+  String get err_invite_pending =>
+      'This invitation has no password yet. It turns on when the staff member enters the code.';
+
+  @override
+  String get err_phone_taken =>
+      'Another staff member already uses this phone number.';
+
+  @override
+  String get err_code_invalid =>
+      'The code is wrong or has expired. Ask the admin for a new one.';
+
+  @override
+  String get err_no_phone => 'There is no phone number on file. Enter one.';
+
+  @override
+  String get guestSheetTitle => 'Sign in to continue';
+
+  @override
+  String get guestSheetBody =>
+      'Everything you entered is kept. You continue right where you left off.';
+
+  @override
+  String get greetMorning => 'Good morning';
+
+  @override
+  String get greetAfternoon => 'Good afternoon';
+
+  @override
+  String get greetEvening => 'Good evening';
+
+  @override
+  String get feedHeading => 'Picked for you';
+
+  @override
+  String get feedTitleDue => 'Your next clean is due';
+
+  @override
+  String get feedTitleRebook => 'Book your 5-star partner again';
+
+  @override
+  String get feedTitleDraft => 'Finish the quote you started';
+
+  @override
+  String get feedTitleSeasonal => 'A clean that suits this season';
+
+  @override
+  String get feedTitleSize => 'Quote from your saved home size';
+
+  @override
+  String get feedTitleSubscription => 'Save more with a subscription';
+
+  @override
+  String get feedTitleDistrict => 'Neighbours are booking too';
+
+  @override
+  String feedWhyCadence(String days) {
+    return '$days days since your last clean';
+  }
+
+  @override
+  String feedWhyRated(String days) {
+    return 'You rated this partner 5 stars $days days ago';
+  }
+
+  @override
+  String get feedWhyDraft => 'You left a quote unfinished on this device';
+
+  @override
+  String get feedWhySummer => 'A good time to clean the aircon before summer';
+
+  @override
+  String get feedWhyMoving => 'Move-in and moving season is busy';
+
+  @override
+  String feedWhyHoliday(String days) {
+    return '$days days until the holiday deep clean';
+  }
+
+  @override
+  String feedWhySize(String pyeong) {
+    return 'Instant quote for your saved $pyeong pyeong home';
+  }
+
+  @override
+  String get feedWhyRepeat => 'If you book often, a subscription costs less';
+
+  @override
+  String feedWhyDistrict(String district, String count) {
+    return '$count homes in $district booked this week';
+  }
+
+  @override
+  String get fFinance => 'Finance';
+
+  @override
+  String get fPeriodDay => 'Day';
+
+  @override
+  String get fPeriodWeek => 'Week';
+
+  @override
+  String get fPeriodMonth => 'Month';
+
+  @override
+  String get fPeriodCustom => 'Custom';
+
+  @override
+  String get fFrom => 'From';
+
+  @override
+  String get fTo => 'To';
+
+  @override
+  String get fGross => 'Gross bookings';
+
+  @override
+  String get fRefunds => 'Refunds';
+
+  @override
+  String get fNetRevenue => 'Net revenue';
+
+  @override
+  String get fPlatformFee => 'Platform fee';
+
+  @override
+  String get fPaidOut => 'Paid to partners';
+
+  @override
+  String get fPendingOut => 'Pending payouts';
+
+  @override
+  String get fHeldOut => 'On hold';
+
+  @override
+  String get fVatEstimate => 'VAT estimate';
+
+  @override
+  String get fVatNote =>
+      'Estimate: 10% of the platform fee. Confirm with your accountant.';
+
+  @override
+  String get fAov => 'Avg order value';
+
+  @override
+  String get fBookings => 'Bookings';
+
+  @override
+  String get fCancelRate => 'Cancellation rate';
+
+  @override
+  String get fDiscounts => 'Discounts & coupons';
+
+  @override
+  String get fMethods => 'Payment methods';
+
+  @override
+  String get fTrend => 'Trend';
+
+  @override
+  String fRangeDays(String n) {
+    return 'Last $n days';
+  }
+
+  @override
+  String get fRangeWeeks => 'Last 12 weeks';
+
+  @override
+  String get fRangeMonths => 'Last 12 months';
+
+  @override
+  String get fByPartner => 'Earnings by partner';
+
+  @override
+  String get fByService => 'Revenue by service';
+
+  @override
+  String get fExportTitle => 'Accounting exports';
+
+  @override
+  String get fExportLedger => 'Payments ledger CSV';
+
+  @override
+  String get fExportSettlements => 'Settlements CSV';
+
+  @override
+  String get fExportMonthly => 'Monthly summary CSV (accountant)';
+
+  @override
+  String get fDownload => 'Download CSV';
+
+  @override
+  String get fDownloadWebOnly => 'CSV download works in the web console';
+
+  @override
+  String get fDownloadFailed => 'Download failed';
+
+  @override
+  String get fNoRecords => 'No records in this period';
+
+  @override
+  String get fLoadFailed => 'Could not load finance data';
+
+  @override
+  String get fRetry => 'Try again';
+
+  @override
+  String get fColPartner => 'Partner';
+
+  @override
+  String get fColJobs => 'Jobs';
+
+  @override
+  String get fColSettled => 'Settled';
+
+  @override
+  String get fColFee => 'Fee';
+
+  @override
+  String get fColNet => 'Net';
+
+  @override
+  String get pEarnings => 'Earnings';
+
+  @override
+  String get pNextPayout => 'Next payout';
+
+  @override
+  String pNextPayoutOn(String date) {
+    return 'Paid on $date';
+  }
+
+  @override
+  String get pNoPayout => 'No payout scheduled';
+
+  @override
+  String get pPendingTotal => 'Waiting to pay';
+
+  @override
+  String get pPaidTotal => 'Paid out';
+
+  @override
+  String get pWeekly => 'Weekly';
+
+  @override
+  String get pMonthly => 'Monthly';
+
+  @override
+  String proofHomes(String count) {
+    return '$count homes cleaned this month';
+  }
+
+  @override
+  String proofRating(String rating, String count) {
+    return 'Average $rating stars · $count reviews';
+  }
+
+  @override
+  String get proofReviewsTitle => 'Recent reviews';
+
+  @override
+  String get rebookTitle => 'Book the last service again?';
+
+  @override
+  String rebookBody(String service, String date) {
+    return '$service · last visit $date';
+  }
+
+  @override
+  String get rebookButton => 'Book again';
+
+  @override
+  String seatsLeft(String count) {
+    return '$count left';
+  }
+
+  @override
+  String get reviewSheetTitle => 'How was this clean?';
+
+  @override
+  String get reviewPhotosAdd => 'Add photos';
+
+  @override
+  String get reviewPhotosHint => 'Up to 5 photos';
+
+  @override
+  String get reviewSaved => 'Thanks for your review';
+
+  @override
+  String get reviewPhotoFailed => 'Couldn\'t upload the photo. Try again.';
+
+  @override
+  String get referralTitle => 'Invite a friend, get a coupon';
+
+  @override
+  String referralBody(String amount) {
+    return 'When your friend completes a first booking, you both get a $amount coupon';
+  }
+
+  @override
+  String get referralCopy => 'Copy code';
+
+  @override
+  String get referralCopied => 'Referral code copied';
+
+  @override
+  String get referralClaimTitle => 'Have a referral code?';
+
+  @override
+  String get referralClaimField => 'Enter referral code';
+
+  @override
+  String get referralClaimButton => 'Apply';
+
+  @override
+  String get referralClaimed => 'Referral code applied';
+
+  @override
+  String referralStats(String invited, String rewarded) {
+    return '$invited invited · $rewarded rewarded';
+  }
+
+  @override
+  String get err_self_referral => 'You can\'t use your own code';
+
+  @override
+  String get err_referee_already_booked =>
+      'Codes can only be added before your first booking';
+
+  @override
+  String get err_already_referred => 'A referral code is already applied';
+
+  @override
+  String get err_invalid_referral_code => 'Check the referral code';
+
+  @override
+  String get err_referral_disabled => 'Referrals are paused right now';
+
+  @override
+  String get err_invalid_photos =>
+      'Only photos uploaded in this app can be attached';
+
+  @override
+  String get welcomeOfferTitle => 'First-booking offer';
+
+  @override
+  String get welcomeOfferBody =>
+      'Applied automatically to a new customer\'s first booking. Not combined with coupons.';
+
+  @override
+  String get offerKindAmount => 'Fixed (won)';
+
+  @override
+  String get offerKindPercent => 'Percent (%)';
+
+  @override
+  String get offerValue => 'Discount value';
+
+  @override
+  String get offerEnabled => 'On';
+
+  @override
+  String get offerSaved => 'Saved';
+
+  @override
+  String get referralSettingsTitle => 'Referral reward';
+
+  @override
+  String get referralSettingsBody =>
+      'Paid once a friend\'s first booking is completed and paid. Self-referrals and duplicate phones are blocked.';
+
+  @override
+  String get referralRewardAmount => 'Reward amount (won)';
+
+  @override
+  String get reviewsModerationTitle => 'Review moderation';
+
+  @override
+  String get reviewHide => 'Hide';
+
+  @override
+  String get reviewShow => 'Show again';
+
+  @override
+  String get reviewHiddenTag => 'Hidden';
+
+  @override
+  String get growthAverageRating => 'Average rating';
+
+  @override
+  String growthReviewCount(String count) {
+    return '$count reviews';
+  }
+
+  @override
+  String get growthReferralConversion => 'Referral conversion';
+
+  @override
+  String get growthTab => 'Growth';
+
+  @override
+  String growthReferralValue(String rewarded, String invited) {
+    return '$rewarded of $invited';
+  }
+
+  @override
+  String get guestReasonQuote => 'Sign in to save this quote and book';
+
+  @override
+  String get guestReasonBook => 'Sign in to confirm your booking';
+
+  @override
+  String get guestReasonChat => 'Sign in to chat with our team';
+
+  @override
+  String get guestReasonAccount =>
+      'Sign in to see your coupons, points and bookings';
+
+  @override
+  String get guestAccountHint => 'Sign in to view';
+
+  @override
+  String guestPriceLine(String amount) {
+    return 'Estimated $amount · no sign-up needed';
+  }
+
+  @override
+  String get guestPeakNote => 'Peak-hour visits may add a surcharge';
+
+  @override
+  String get guestBookWithQuote => 'Book with this quote';
+
+  @override
+  String get guestSeePrices => 'See prices without signing up';
+
+  @override
+  String get guestFlowTitle => 'Here is how a booking works';
+
+  @override
+  String get guestFlowQuote => 'Quote';
+
+  @override
+  String get guestFlowQuoteBody =>
+      'Tell us about your home and see the price right away';
+
+  @override
+  String get guestFlowConfirm => 'Booking confirmed';
+
+  @override
+  String get guestFlowConfirmBody => 'Pick a date and time to confirm';
+
+  @override
+  String get guestFlowVisit => 'Visit';
+
+  @override
+  String get guestFlowVisitBody => 'Your pro arrives at the agreed time';
+
+  @override
+  String get guestFlowDone => 'Done and review';
+
+  @override
+  String get guestFlowDoneBody => 'Check the photos and leave a review';
+
+  @override
+  String get guestFirstQuoteCta => 'Get your first quote';
+
+  @override
+  String get guestFaqTitle => 'Frequently asked questions';
+
+  @override
+  String get guestChatCta => 'Chat with our team (sign-in required)';
+
+  @override
+  String welcomeOfferLine(String value, String days) {
+    return '$value off your first booking · once, after sign-up · valid $days days';
+  }
+
+  @override
+  String referralOfferLine(String amount) {
+    return 'You and a friend each get $amount';
+  }
+
+  @override
+  String get hgMoveQuestion => 'Which kind of home are you moving into?';
+
+  @override
+  String get hgNewBuild => 'New build';
+
+  @override
+  String get hgNewBuildBody => 'Newly built home · move-in cleaning';
+
+  @override
+  String get hgOldBuild => 'Existing building';
+
+  @override
+  String get hgOldBuildBody => 'Older home · move-out cleaning';
+
+  @override
+  String get hgSizeQuestion => 'How big is your home?';
+
+  @override
+  String get hgHomeOneTwo => 'Studio · 2-room';
+
+  @override
+  String get hgHomeApartment => 'Apartment';
+
+  @override
+  String get hgHomeVilla => 'Villa · house';
+
+  @override
+  String get hgEstimateOnly => 'Estimate';
+
+  @override
+  String get hgEstimateNote =>
+      'This is an estimate. We confirm the final quote after a consultation.';
+
+  @override
+  String get hgFloorTitle => 'Which floor is it on?';
+
+  @override
+  String get hgFloorLow => 'Floors 1–2';
+
+  @override
+  String get hgFloorHigh => 'Floor 3 or higher';
+
+  @override
+  String get hgAddressAlias => 'Address label';
+
+  @override
+  String get inboxSummaryTitle => 'Booking summary';
+
+  @override
+  String get inboxSummaryService => 'Service';
+
+  @override
+  String get inboxSummaryVisit => 'Visit';
+
+  @override
+  String get inboxSummaryAddress => 'Address';
+
+  @override
+  String get inboxSummaryAmount => 'Amount';
+
+  @override
+  String get inboxSummaryStatus => 'Status';
+
+  @override
+  String get inboxSummaryCustomer => 'Customer';
+
+  @override
+  String get inboxSummaryNoBooking => 'Could not load the booking';
+
+  @override
+  String quoteSentEntry(String amount, String time) {
+    return 'Quote sent · $amount · $time';
+  }
+
+  @override
+  String get quoteResend => 'Resend';
+
+  @override
+  String get quoteRevise => 'Revise';
+
+  @override
+  String get quoteResent => 'Quote sent again';
+
+  @override
+  String get quoteSentChip => 'Quote sent';
+
+  @override
+  String get legalCopyright =>
+      'Dahae software © 2026 Eric Wijesinghe. All rights reserved.';
+
+  @override
+  String get lgiTitle => 'Legal inbox';
+
+  @override
+  String get lgiIntro =>
+      'The terms and privacy texts prepared for your country. A new text arrives here first and applies to customers only once you press Publish.';
+
+  @override
+  String lgiPublished(String version, String date) {
+    return 'Published · $version · $date';
+  }
+
+  @override
+  String get lgiNotPublished => 'Not published yet';
+
+  @override
+  String get lgiPending => 'New text';
+
+  @override
+  String get lgiPreview => 'Preview';
+
+  @override
+  String get lgiVersions => 'Versions';
+
+  @override
+  String get lgiNoVersions => 'No version has been published.';
+
+  @override
+  String get lgiPublish => 'Publish';
+
+  @override
+  String lgiPublishAsk(String title, String version) {
+    return 'Publish version $version of $title? It applies right away.';
+  }
+
+  @override
+  String get lgiReconsent =>
+      'Publishing this version asks customers to agree again.';
+
+  @override
+  String get lgiPublishedDone => 'Published.';
+
+  @override
+  String get locUseCurrent => 'Use my current location';
+
+  @override
+  String get locConsentTitle => 'Location-based service terms';
+
+  @override
+  String get locConsentBody =>
+      'To find your address from your current location, please agree to the location-based service terms. We check your location once, only when you tap \"Use my current location\", and use it only to suggest an address. Your coordinates are not stored on our servers. You can withdraw this consent any time in Consent settings.';
+
+  @override
+  String get locConsentAgree => 'Agree and continue';
+
+  @override
+  String get locSuggestionTitle => 'Is this your address?';
+
+  @override
+  String get locUseAddress => 'Use this address';
+
+  @override
+  String get locDenied =>
+      'Location permission is off. Please enter your address yourself.';
+
+  @override
+  String get locServicesOff =>
+      'Location services are turned off on this device. Please enter your address yourself.';
+
+  @override
+  String get locTimeout =>
+      'Finding your location is taking too long. Please enter your address yourself.';
+
+  @override
+  String get locNoAddress =>
+      'We could not find an address for your location. Please enter your address yourself.';
+
+  @override
+  String get uMaintenanceTitle => 'We are under maintenance';
+
+  @override
+  String get uMaintenanceBody =>
+      'We are improving the service. Please come back shortly.';
+
+  @override
+  String get uMaintenanceBookingPaused =>
+      'New bookings are paused during maintenance.';
+
+  @override
+  String get cmTab => 'Campaigns';
+
+  @override
+  String get cmNew => 'New campaign';
+
+  @override
+  String get cmAudience => 'Audience';
+
+  @override
+  String get cmSegAll => 'All customers';
+
+  @override
+  String get cmSegNever => 'Never booked';
+
+  @override
+  String cmSegLapsed(String days) {
+    return 'Last booking $days+ days ago';
+  }
+
+  @override
+  String get cmDays => 'Days';
+
+  @override
+  String cmConsentCount(String total, String consented) {
+    return '$consented of $total have marketing consent';
+  }
+
+  @override
+  String get cmChannel => 'Channel';
+
+  @override
+  String get cmPush => 'App push';
+
+  @override
+  String get cmSms => 'SMS';
+
+  @override
+  String get cmTitle => 'Title';
+
+  @override
+  String get cmBody => 'Message';
+
+  @override
+  String get cmOptout => 'Opt-out number (080)';
+
+  @override
+  String get cmPreview => 'Preview';
+
+  @override
+  String get cmSchedule => 'Send at';
+
+  @override
+  String get cmSendNow => 'Send now';
+
+  @override
+  String get cmTestSend => 'Send a test to my phone';
+
+  @override
+  String get cmCreate => 'Save campaign';
+
+  @override
+  String get cmNeedOptout => 'SMS needs an 080 opt-out number';
+
+  @override
+  String get cmLog => 'Send log';
+
+  @override
+  String cmStatSent(String count) {
+    return 'Sent $count';
+  }
+
+  @override
+  String cmStatSkipped(String count) {
+    return 'No consent $count';
+  }
+
+  @override
+  String cmStatFailed(String count) {
+    return 'Failed $count';
+  }
+
+  @override
+  String get cmSaved => 'Campaign saved';
+
+  @override
+  String anFunnel(String days) {
+    return 'Signup funnel (last $days days)';
+  }
+
+  @override
+  String get anInstalls => 'App opened (consented)';
+
+  @override
+  String get anSignedUp => 'Signed up';
+
+  @override
+  String get anQuoted => 'Requested a quote';
+
+  @override
+  String get anBooked => 'Booked';
+
+  @override
+  String get anPaid => 'Paid';
+
+  @override
+  String get anRepeat => 'Repeat (2+ visits)';
+
+  @override
+  String get anCohorts => 'Weekly cohorts (booking rate by signup week)';
+
+  @override
+  String anCohortSize(String count) {
+    return 'Signups $count';
+  }
+
+  @override
+  String anWeekAfter(String n) {
+    return 'Booked in week $n';
+  }
+
+  @override
+  String get err_gateway_has_refundable_payments =>
+      'Payments taken through this gateway can still be refunded (up to a year after payment), so it can\'t be disconnected: those refunds would fail. To stop new payments only, turn Toss Payments\' Active off, or clear PortOne\'s channel key slots.';
+
+  @override
+  String get err_gateway_account_changed =>
+      'Payments, saved cards or refunds on this gateway still belong to the current account (PortOne store, Toss Payments MID), so it can\'t switch to another account: their lookups and refunds would go to the new one and fail. A new key from the same account is fine.';
+
+  @override
+  String get oRuleTestChannel => 'Payment on a PortOne test channel';
+
+  @override
+  String get oCheckTestChannel => 'PortOne test-channel payments';
+
+  @override
+  String get oActTestChannel =>
+      'A payment or card save came in through a PortOne test channel, so no real money moved. Ones on a test channel whose key this server does not hold were refused and booked nothing. If you are testing with test keys, this is fine. If you are live, make sure the channel keys under Setup > Payments (PortOne) are live channel keys, delete this store\'s test channels in the PortOne console, then find the payment in PortOne\'s test payment history and check the booking with the customer.';
+
+  @override
+  String get cSetupAwsAuto => 'AWS S3 (automatic)';
+
+  @override
+  String get cSetupNoInstanceRole =>
+      'The server role could not reach the AWS bucket. Check that this server was made with the AWS template and that the AWS admin ran launch.sh --admin once more.';
+
+  @override
+  String get srTitle => 'Recovery';
+
+  @override
+  String get srRollbackBody =>
+      'If something breaks after an update, go back to the version before. It backs up first and keeps your data. It does not run while a Toss payout is still waiting for its result. After a rollback, automatic updates leave that version alone until a newer one comes out. Needs your owner code and the server approval code.';
+
+  @override
+  String get srRollbackButton => 'Roll back to the previous version';
+
+  @override
+  String get srRollbackConfirm =>
+      'Roll back to the previous version? The service restarts for a few minutes.';
+
+  @override
+  String get srRunning =>
+      'Running. It keeps going on the server even if you close this screen.';
+
+  @override
+  String get srRollbackDone =>
+      'Rolled back to the previous version. Automatic updates keep it until a newer version comes out.';
+
+  @override
+  String get srApprovalCancelled =>
+      'No server approval code was entered, so nothing was rolled back. The held job cancels itself after 10 minutes.';
+
+  @override
+  String get srApprovalNoSummary =>
+      'The server\'s summary was not a rollback, so no approval code was sent. Check the recent jobs below.';
+
+  @override
+  String get srStillRunning =>
+      'Still running. See the result under recent jobs below.';
+
+  @override
+  String get srOldTools =>
+      'The server\'s tools are older and do not know this job. Run the install line once more (guide 10 C-5).';
+
+  @override
+  String srFailed(String reason) {
+    return 'Could not roll back: $reason';
+  }
+
+  @override
+  String get srKeysTitle => 'Download the secret key copy';
+
+  @override
+  String get srKeysBody =>
+      'Download the server\'s secret keys locked with a passphrase, so offsite backups can be opened even if the server is lost. Keep the file and the passphrase apart, off the server. Each copy downloads once.';
+
+  @override
+  String get srKeysPass => 'Passphrase (12 characters or more)';
+
+  @override
+  String get srKeysPassAgain => 'Passphrase again';
+
+  @override
+  String get srKeysPassShort => 'Use 12 characters or more';
+
+  @override
+  String get srKeysPassMismatch => 'The two passphrases differ';
+
+  @override
+  String get srKeysButton => 'Make and download';
+
+  @override
+  String get srKeysRunning => 'Making the secret key copy';
+
+  @override
+  String get srKeysDone => 'Recorded as kept off the server.';
+
+  @override
+  String get srKeysKept => 'Kept off the server';
+
+  @override
+  String get srKeysKeptConfirm =>
+      'Did you move the downloaded file off the server (a USB stick or a password manager) and write the passphrase down separately? Only then can backups be opened if the server is lost.';
+
+  @override
+  String get srKeysNotKept =>
+      'Downloaded. Not yet recorded as kept off the server: move it, then make a new copy to confirm.';
+
+  @override
+  String get srKeysSaveFailed =>
+      'The file could not be saved. Make a new copy.';
+
+  @override
+  String srKeysFailed(String reason) {
+    return 'Could not make the copy: $reason';
+  }
+
+  @override
+  String get srKindRollback => 'Roll back';
+
+  @override
+  String get srKindKeysBackup => 'Secret key copy';
+
+  @override
+  String get srKindKeysConfirm => 'Key copy recorded';
+
+  @override
+  String get ntNavLabel => 'Notification text';
+
+  @override
+  String get ntIntro =>
+      'Change the text customers and cleaning teams see in app alerts and the inbox. Without a change, the built-in text is used.';
+
+  @override
+  String get ntLangKo => 'Korean';
+
+  @override
+  String get ntLangEn => 'English';
+
+  @override
+  String get ntBuiltIn => 'Built-in text';
+
+  @override
+  String get ntUsingCustom => 'Using your text';
+
+  @override
+  String get ntUsingBuiltIn => 'Using the built-in text';
+
+  @override
+  String ntVars(String names) {
+    return 'Values you can use: $names';
+  }
+
+  @override
+  String get ntTitleField => 'Title';
+
+  @override
+  String get ntBodyField => 'Message';
+
+  @override
+  String get ntPreview => 'Preview';
+
+  @override
+  String get ntPreviewResult => 'This is how it looks';
+
+  @override
+  String get ntSave => 'Save';
+
+  @override
+  String get ntRestore => 'Restore built-in text';
+
+  @override
+  String get ntRestored => 'Restored to the built-in text';
+
+  @override
+  String get ntErrVar =>
+      'A value that is not allowed is in the text. Only use the values listed above inside braces.';
+
+  @override
+  String get ntErrBraces => 'The curly brackets do not match.';
+
+  @override
+  String get ntErrEmpty => 'Enter both a title and a message.';
+
+  @override
+  String get ntErrLong =>
+      'Too long. Titles allow 40 characters and messages 120.';
+
+  @override
+  String get ntErrChars =>
+      'Line breaks and control characters are not allowed.';
+
+  @override
+  String get unit_mattress => 'Mattress';
+
+  @override
+  String get unitShort_mattress => 'Mattress';
+
+  @override
+  String get svc_whole_home => 'Whole-home cleaning';
+
+  @override
+  String get svcShort_whole_home => 'Whole home';
+
+  @override
+  String get svcShort_window => 'Window';
+
+  @override
+  String get svcShort_disinfection => 'Disinfection';
+
+  @override
+  String get svcNote_studio_limit =>
+      'Homes over 10 pyeong can\'t book studio cleaning. We\'ll suggest the right service in chat.';
+
+  @override
+  String get cOps => 'System status';
+
+  @override
+  String get oLevelGreen => 'OK';
+
+  @override
+  String get oLevelYellow => 'Check';
+
+  @override
+  String get oLevelRed => 'Action needed';
+
+  @override
+  String get oOverall => 'Server status';
+
+  @override
+  String get oRefresh => 'Refresh';
+
+  @override
+  String get oVersion => 'Version';
+
+  @override
+  String get oUptime => 'Uptime';
+
+  @override
+  String oUptimeValue(String hours, String minutes) {
+    return '$hours h $minutes min';
+  }
+
+  @override
+  String get oChecks => 'Checks';
+
+  @override
+  String get oCheckDb => 'Database';
+
+  @override
+  String oCheckDbValue(String ms, String mb) {
+    return 'Response $ms ms · size $mb MB';
+  }
+
+  @override
+  String get oCheckDisk => 'Server disk';
+
+  @override
+  String oCheckDiskValue(String pct) {
+    return '$pct% free';
+  }
+
+  @override
+  String get oCheckBackup => 'Automatic backup';
+
+  @override
+  String oCheckBackupValue(String hours) {
+    return 'Last backup $hours h ago';
+  }
+
+  @override
+  String get oCheckBackupNone => 'No backup yet';
+
+  @override
+  String get oCheckErrors => 'Server errors (24 h)';
+
+  @override
+  String oCheckErrorsValue(String count) {
+    return '$count';
+  }
+
+  @override
+  String get oCheckPayments => 'Payments to check';
+
+  @override
+  String oCheckPaymentsValue(String count) {
+    return '$count (24 h)';
+  }
+
+  @override
+  String get oCheckWebhook => 'Payment webhooks';
+
+  @override
+  String oCheckWebhookValue(String count) {
+    return 'Signature failures $count (24 h)';
+  }
+
+  @override
+  String get oIntegrations => 'External services';
+
+  @override
+  String get oIntNotSet => 'Not set up';
+
+  @override
+  String oIntLastOk(String at) {
+    return 'Last success $at';
+  }
+
+  @override
+  String oIntLastFail(String at, String code) {
+    return 'Last failure $at ($code)';
+  }
+
+  @override
+  String get oIntNever => 'No traffic yet';
+
+  @override
+  String get oActDb =>
+      'The database is unreachable. If this continues, ask your developer to check the server.';
+
+  @override
+  String get oActDisk =>
+      'Less than 10% disk space is free. Delete old backup files or add disk space.';
+
+  @override
+  String get oActBackup =>
+      'The automatic backup is overdue. Ask your developer to check the backup. If offsite backup is on, check its connection under Setup > Offsite backup (S3-compatible).';
+
+  @override
+  String get oActErrors =>
+      'Many server errors. If they keep happening, send the error details to your developer.';
+
+  @override
+  String get oActPayments =>
+      'A payment may have gone through without being processed. Check it in the PortOne or Toss Payments console and refund it yourself if needed.';
+
+  @override
+  String get oActWebhook =>
+      'Payment webhook signature checks are failing. Re-enter the webhook secret under Setup > Payments (PortOne) for PortOne, or the security key under Setup > Payments (Toss Payments) for Toss Payments.';
+
+  @override
+  String get oActIntegration =>
+      'This connection is failing. Check the keys in Setup and press Check connection.';
+
+  @override
+  String get oActNotSet => 'Not set up yet. Enter the keys in Setup.';
+
+  @override
+  String get oAlerts => 'Alert settings';
+
+  @override
+  String get oAlertsHint =>
+      'Problems show in the inbox and are texted to the owner\'s phone. The same problem is sent once every 6 hours.';
+
+  @override
+  String get oRuleSms => 'SMS sending fails';
+
+  @override
+  String get oRulePush => 'Push notifications fail';
+
+  @override
+  String get oRulePayment => 'Payment connection fails';
+
+  @override
+  String get oRuleStuck => 'Payment not processed automatically';
+
+  @override
+  String get oRuleMismatch =>
+      'Payments differ from the gateway (PortOne/Toss Payments)';
+
+  @override
+  String get oRuleSocial => 'Social sign-in fails';
+
+  @override
+  String get oRuleBackup => 'Automatic backup missed';
+
+  @override
+  String get oRuleBackupPhotos => 'Offsite photo backup failed';
+
+  @override
+  String get oRuleBackupOffsite => 'Offsite database backup failed';
+
+  @override
+  String get oRuleBackupOffsiteNotConfigured => 'Offsite backup not set up';
+
+  @override
+  String get oRuleDisk => 'Disk nearly full';
+
+  @override
+  String get oRuleOtp => 'Sign-in code sends are unusually high (SMS cost)';
+
+  @override
+  String get oRuleAuth => 'Suspicious sign-in activity';
+
+  @override
+  String get oRuleUnassigned =>
+      'Confirmed bookings with no pro for a long time';
+
+  @override
+  String get oRuleSameDayCancel => 'High same-day cancellations';
+
+  @override
+  String get oRuleTaxDeadline => 'VAT filing deadline approaching';
+
+  @override
+  String get oRulePayoutUnconfirmed =>
+      'Toss payout result unknown for over 30 minutes';
+
+  @override
+  String get oQuietHours => 'Quiet hours';
+
+  @override
+  String get oQuietFrom => 'From';
+
+  @override
+  String get oQuietTo => 'To';
+
+  @override
+  String oHour(String hour) {
+    return '$hour:00';
+  }
+
+  @override
+  String get oQuietHint =>
+      'No alerts during these hours; you get one message after they end.';
+
+  @override
+  String get oAlertPhone => 'Phone for alerts';
+
+  @override
+  String get oAlertPhoneHint =>
+      'Leave empty to use the support number from business info.';
+
+  @override
+  String get oSave => 'Save';
+
+  @override
+  String get oSaved => 'Alert settings saved';
+
+  @override
+  String get oSaveFailed => 'Could not save. Check the values.';
+
+  @override
+  String get oLoadFailed => 'Could not load status';
+
+  @override
+  String get oBackupOffsite => 'Offsite backup (S3)';
+
+  @override
+  String get oBackupOffsiteOff =>
+      'Off. Turn it on under Setup > Offsite backup.';
+
+  @override
+  String get oLastBackup => 'Last backup';
+
+  @override
+  String get oDiskFree => 'Free space';
+
+  @override
+  String get oNoData => 'No data yet';
+
+  @override
+  String get cIntBackup => 'Offsite backup (S3-compatible)';
+
+  @override
+  String get cIntBackupPhotos => 'Offsite photo backup (S3-compatible)';
+
+  @override
+  String get oJobs => 'Background jobs';
+
+  @override
+  String oJobLastOk(String time) {
+    return 'Last success $time';
+  }
+
+  @override
+  String get oJobNever => 'No successful run yet';
+
+  @override
+  String get oJobStalled => 'Stalled';
+
+  @override
+  String oJobErrors(String count) {
+    return '$count errors';
+  }
+
+  @override
+  String oJobDeadLetters(String count) {
+    return '$count texts dead-lettered';
+  }
+
+  @override
+  String get oJob_settings_refresh => 'Settings refresh';
+
+  @override
+  String get oJob_reconciler => 'Payment reconciliation';
+
+  @override
+  String get oJob_ops_alerts => 'Owner alerts';
+
+  @override
+  String get oJob_payout_sync => 'Payout sync';
+
+  @override
+  String get oJob_retention => 'Data retention cleanup';
+
+  @override
+  String get oJob_noshow => 'No-show check';
+
+  @override
+  String get oJob_points => 'Points expiry';
+
+  @override
+  String get oJob_marketing => 'Marketing sends';
+
+  @override
+  String get oJob_quality => 'Quality scores';
+
+  @override
+  String get oJob_waitlist => 'Waitlist';
+
+  @override
+  String get oJob_subscription_engine => 'Regular cleaning';
+
+  @override
+  String get oJob_notify_outbox => 'Notification outbox';
+
+  @override
+  String get oFlowTitle => 'Booking flow (last 30 days)';
+
+  @override
+  String get oFlowUnavailable => 'Flow figures are unavailable right now';
+
+  @override
+  String get oFlowAssign => 'Median time to assign a pro';
+
+  @override
+  String oFlowAssignValue(String hours) {
+    return '$hours h';
+  }
+
+  @override
+  String get oFlowNoAssignYet => 'No assigned bookings yet';
+
+  @override
+  String get oFlowUnassigned => 'Bookings with no pro for over 24 h';
+
+  @override
+  String oFlowUnassignedValue(String count) {
+    return '$count';
+  }
+
+  @override
+  String get oFlowSameDay => 'Same-day cancellations today';
+
+  @override
+  String oFlowSameDayValue(String cancelled, String booked) {
+    return '$cancelled of $booked booked today';
+  }
+
+  @override
+  String get oFlowNoShow => 'No-show rate by service';
+
+  @override
+  String oFlowNoShowValue(String noShows, String bookings, String pct) {
+    return '$noShows of $bookings ($pct%)';
+  }
+
+  @override
+  String get oFlowNoBookings => 'No bookings';
+
+  @override
+  String get hjTitle => 'Server update';
+
+  @override
+  String get hjBody =>
+      'Installs the newest version. The site may drop for a few minutes. If it fails, the server goes back to the previous version by itself.';
+
+  @override
+  String get hjUpdateNow => 'Update now';
+
+  @override
+  String get hjQueued => 'Update started. You can follow its progress below';
+
+  @override
+  String get hjRecent => 'Recent server jobs';
+
+  @override
+  String get hjKindUpdate => 'Update';
+
+  @override
+  String get hjStateQueued => 'Waiting';
+
+  @override
+  String get hjStateUnclaimed => 'The server agent never picked it up';
+
+  @override
+  String get hjAgentSilent =>
+      'The server agent has not picked this job up for several minutes. It may be waiting for another job (such as a backup) to finish, or it may have stopped. See the result under recent server jobs below.';
+
+  @override
+  String get hjStateRunning => 'In progress';
+
+  @override
+  String get hjStateOk => 'Done';
+
+  @override
+  String get hjStateFailed => 'Failed';
+
+  @override
+  String get hjStateRolledBack =>
+      'Failed, so it went back to the previous version';
+
+  @override
+  String get hjStateCheck => 'Needs a check';
+
+  @override
+  String get hjEmpty => 'No server jobs yet';
+
+  @override
+  String get err_owner_exists => 'An owner is already set';
+
+  @override
+  String get err_second_factor_required =>
+      'Finish two-step sign-in and saving recovery codes first';
+
+  @override
+  String get err_recovery_unconfirmed =>
+      'Your recovery codes are not confirmed yet. In My account, tap \'I wrote down my recovery codes\' and type one code';
+
+  @override
+  String get err_owner_transfer_self =>
+      'You cannot hand the owner role to yourself';
+
+  @override
+  String get err_owner_target_invalid =>
+      'The new owner must be an active admin';
+
+  @override
+  String get err_wrong_password => 'The current password is wrong';
+
+  @override
+  String get err_mfa_not_enabled => 'Set up two-step sign-in first';
+
+  @override
+  String get err_reset_code_invalid => 'The reset code is wrong or has expired';
+
+  @override
+  String get err_sms_failed =>
+      'The SMS could not be sent, so the number was not changed. Try again shortly';
+
+  @override
+  String get oaTitle => 'My account';
+
+  @override
+  String get oaOwnerBadge => 'Owner';
+
+  @override
+  String get oaNotOwner =>
+      'Only the owner can change account security and server settings.';
+
+  @override
+  String get oaClaimTitle => 'Claim the owner role';
+
+  @override
+  String get oaClaimBody =>
+      'No owner is set. As owner you manage account security and server settings.';
+
+  @override
+  String get oaClaim => 'Make me the owner';
+
+  @override
+  String get oaClaimDone => 'You are now the owner';
+
+  @override
+  String get oaTwoFactorHint =>
+      'Finish two-step sign-in and saving your recovery codes before owner actions open up.';
+
+  @override
+  String get oaConfirmCodes => 'I wrote down my recovery codes';
+
+  @override
+  String get oaCodesConfirmed => 'Recovery codes confirmed';
+
+  @override
+  String get oaAlertPhone => 'Alert phone';
+
+  @override
+  String get oaAlertPhoneNone =>
+      'Not set. Add one to get important alerts by SMS.';
+
+  @override
+  String get oaChangePhone => 'Change number';
+
+  @override
+  String get oaPhoneHint => 'Mobile number starting with 010';
+
+  @override
+  String get oaPhoneNote => 'The current number gets an SMS about the change.';
+
+  @override
+  String get oaPhoneSaved => 'Alert number updated';
+
+  @override
+  String get oaPassword => 'Change password';
+
+  @override
+  String get oaPasswordNote =>
+      'Changing it signs out every device. Sign in again with the new password.';
+
+  @override
+  String get oaCurrentPassword => 'Current password';
+
+  @override
+  String get oaNewPassword => 'New password';
+
+  @override
+  String get oaPasswordChanged => 'Password changed. Please sign in again.';
+
+  @override
+  String get oaSignOutAll => 'Sign out everywhere';
+
+  @override
+  String get oaSignOutAllBody =>
+      'Every device is signed out, this one included. This cannot be undone.';
+
+  @override
+  String get oaSessions => 'Signed-in devices';
+
+  @override
+  String get oaRecoveryCodes => 'Make new recovery codes';
+
+  @override
+  String get oaRecoveryBody =>
+      'All old recovery codes stop working. Write the new ones down and keep them somewhere safe.';
+
+  @override
+  String get oaRecoveryShown => 'New recovery codes';
+
+  @override
+  String get oaTransfer => 'Hand over the owner role';
+
+  @override
+  String get oaTransferBody =>
+      'The new owner must also enter a code from their own app. After the handover this account loses owner powers.';
+
+  @override
+  String get oaTransferTarget => 'New owner';
+
+  @override
+  String get oaTransferCode => 'New owner\'s 6-digit code';
+
+  @override
+  String get oaTransferNone => 'No other active admin to hand over to';
+
+  @override
+  String get oaTransferDone =>
+      'Owner role handed over. This account no longer has owner actions.';
+
+  @override
+  String get oaTotpTitle => 'Enter your code';
+
+  @override
+  String get oaTotpBody =>
+      'Enter the 6-digit code from your authenticator app. Each code works once.';
+
+  @override
+  String get oaTotpLabel => '6-digit code';
+
+  @override
+  String get oaTotpInvalid => 'Enter the 6 digits';
+
+  @override
+  String get oaContinue => 'Continue';
+
+  @override
+  String get oaCancel => 'Cancel';
+
+  @override
+  String get oaSignInAgain => 'Please sign in again';
+
+  @override
+  String get oaRecoveryTypeTitle => 'Confirm you saved the codes';
+
+  @override
+  String get oaRecoveryTypeBody =>
+      'To confirm, type one of the recovery codes you were just shown.';
+
+  @override
+  String get oaRecoveryTypeLabel => 'One recovery code';
+
+  @override
+  String get err_recovery_code_invalid =>
+      'That code does not match the recovery codes you were just shown';
+
+  @override
+  String get err_totp_invalid =>
+      'That code is wrong. Enter the 6-digit code shown in your app';
+
+  @override
+  String get err_totp_required => 'Enter your 6-digit code';
+
+  @override
+  String get err_totp_reused =>
+      'That code was already used. Wait about 30 seconds for the next code';
+
+  @override
+  String get err_owner_cannot_deactivate =>
+      'The owner account cannot be turned off. Hand the owner role to another admin first';
+
+  @override
+  String get pTabJobs => 'Jobs';
+
+  @override
+  String get pTabQuotes => 'My quotes';
+
+  @override
+  String get pTabSchedule => 'Schedule';
+
+  @override
+  String get pIntroTitle => 'Jobs, schedule and payouts\nfor cleaning pros';
+
+  @override
+  String get pIntroBody =>
+      'Work only where and when you want. Get paid weekly.';
+
+  @override
+  String get pOnbTitle => 'Tell us about you';
+
+  @override
+  String get pOnbName => 'Your name';
+
+  @override
+  String get pOnbTeam => 'Team name';
+
+  @override
+  String get pOnbServices => 'Services you offer';
+
+  @override
+  String get pOnbAreas => 'Where you work';
+
+  @override
+  String get pOnbDone => 'Apply';
+
+  @override
+  String get pPendingTitle => 'Your account is under review';
+
+  @override
+  String get pPendingBody =>
+      'We\'ll notify you once approved. Meanwhile, add your payout account.';
+
+  @override
+  String get pSuspended => 'Your account is paused. Please contact operations.';
+
+  @override
+  String get pDirect => 'Direct';
+
+  @override
+  String get pQuoteReq => 'Quote requests';
+
+  @override
+  String get pShowClosed => 'Show closed jobs';
+
+  @override
+  String get pSortNewest => 'Newest';
+
+  @override
+  String get pSortVisit => 'Soonest visit';
+
+  @override
+  String get pSortAmount => 'Highest amount';
+
+  @override
+  String get pNoJobs => 'No matching jobs right now';
+
+  @override
+  String get pNoJobsBody => 'Widen services, areas or hours to see more';
+
+  @override
+  String get pPayout => 'Your payout';
+
+  @override
+  String get pCustomerEstimate => 'Customer estimate';
+
+  @override
+  String get pHomeOneTwo => 'Studio / two-room';
+
+  @override
+  String get pHomeApartment => 'Apartment';
+
+  @override
+  String get pHomeVillaHouse => 'Villa / house';
+
+  @override
+  String get pCountsTitle => 'Quantities';
+
+  @override
+  String get pUnitWall => 'Wall-mounted';
+
+  @override
+  String get pUnitStand => 'Standing';
+
+  @override
+  String get pUnitTwoInOne => '2-in-1';
+
+  @override
+  String get pUnitCeiling => 'Ceiling';
+
+  @override
+  String get pUnitSeat12 => '1–2 seats';
+
+  @override
+  String get pUnitSeat3 => '3 seats';
+
+  @override
+  String get pUnitSeat4Plus => '4+ seats';
+
+  @override
+  String get pUnitLShape => 'L-shape';
+
+  @override
+  String get pUnitMattress => 'Mattress';
+
+  @override
+  String get pUnitWindowSmall => 'Small window';
+
+  @override
+  String get pUnitWindowLarge => 'Large window';
+
+  @override
+  String get pUnitPest => 'Pest control';
+
+  @override
+  String get pUnitMiteBedbug => 'Mites and bed bugs';
+
+  @override
+  String get pUnitSanitize => 'Sanitizing';
+
+  @override
+  String get pUnitSickHouse => 'Sick-house care';
+
+  @override
+  String get pLogoutConfirm => 'Sign out?';
+
+  @override
+  String get pLogoutBody => 'Sign in again to see your jobs and schedule.';
+
+  @override
+  String get pNew => 'NEW';
+
+  @override
+  String get pClosed => 'Closed';
+
+  @override
+  String get pPrivacyNote =>
+      'Exact address and customer details appear after you accept';
+
+  @override
+  String get pAccept => 'Accept job';
+
+  @override
+  String get pAcceptConfirm => 'Accept this job?';
+
+  @override
+  String get pAcceptBody =>
+      'It goes on your schedule and the customer is notified. Cancelling within 2 days of the visit is restricted.';
+
+  @override
+  String get pAccepted => 'Job accepted';
+
+  @override
+  String get pSendQuote => 'Send quote';
+
+  @override
+  String get pQuotePrice => 'Customer price';
+
+  @override
+  String get pQuoteNote => 'Note for the team';
+
+  @override
+  String get pQuoteSent => 'Quote sent';
+
+  @override
+  String pFee(String rate) {
+    return '$rate% fee';
+  }
+
+  @override
+  String get pYouGet => 'You receive';
+
+  @override
+  String get pQuoteAll => 'All';
+
+  @override
+  String get pQ_waiting => 'Waiting';
+
+  @override
+  String get pQ_selected => 'Selected';
+
+  @override
+  String get pQ_rejected => 'Not selected';
+
+  @override
+  String get pQ_closed => 'Closed';
+
+  @override
+  String get pUnseenOnly => 'New results only';
+
+  @override
+  String get pNoQuotes => 'No quotes yet';
+
+  @override
+  String get pMyQuote => 'My quote';
+
+  @override
+  String get pWithdraw => 'Withdraw';
+
+  @override
+  String get pWithdrawn => 'Quote withdrawn';
+
+  @override
+  String get pOnlyMine => 'Only mine';
+
+  @override
+  String pJobsCount(String n) {
+    return '$n jobs';
+  }
+
+  @override
+  String get pNoSchedule => 'Nothing scheduled';
+
+  @override
+  String get pCancelledBanner =>
+      'This job was cancelled and can\'t be completed.';
+
+  @override
+  String pRescheduleBanner(String from, String to) {
+    return 'Reschedule: $from → $to';
+  }
+
+  @override
+  String get pRescheduleOk => 'I can make it';
+
+  @override
+  String get pRescheduleNo => 'Can\'t make it';
+
+  @override
+  String get pCustomer => 'Customer';
+
+  @override
+  String get pCall => 'Call (masked number)';
+
+  @override
+  String get pCallSoon => 'Masked calling activates at launch';
+
+  @override
+  String get pQuietHours => 'No calls after 8 pm';
+
+  @override
+  String get pAssignee => 'Assignee';
+
+  @override
+  String get pChangeAssignee => 'Change assignee';
+
+  @override
+  String get pCustomerRequests => 'Customer requests';
+
+  @override
+  String get pHousehold => 'Household';
+
+  @override
+  String get pPets => 'Pets';
+
+  @override
+  String get pPetDog => 'Dog';
+
+  @override
+  String get pPetCat => 'Cat';
+
+  @override
+  String get pPetBird => 'Bird';
+
+  @override
+  String get pPetFish => 'Fish';
+
+  @override
+  String get pPetOther => 'Other pet';
+
+  @override
+  String get pAllergies => 'Allergies & sensitivities';
+
+  @override
+  String get pPreferredProducts => 'Preferred products';
+
+  @override
+  String get pParking => 'Parking';
+
+  @override
+  String pFloor(String floor) {
+    return 'Floor $floor';
+  }
+
+  @override
+  String get pElevatorYes => 'Elevator';
+
+  @override
+  String get pElevatorNo => 'No elevator';
+
+  @override
+  String get pTeamMemo => 'Team memo (customer can\'t see)';
+
+  @override
+  String get pMemoSaved => 'Memo saved';
+
+  @override
+  String get pPayoutBreakdown => 'Payout';
+
+  @override
+  String get pAfterBalance => 'Paid out after the customer pays the balance';
+
+  @override
+  String get pChatOps => 'Chat with operations';
+
+  @override
+  String get pComplete => 'Complete job';
+
+  @override
+  String get pBeforePhotos => 'Before photos';
+
+  @override
+  String get pAfterPhotos => 'After photos';
+
+  @override
+  String get pAddPhoto => 'Add photo';
+
+  @override
+  String get pChecklist => 'Checklist';
+
+  @override
+  String get pCheckInReasonTitle => 'Why there is no arrival record';
+
+  @override
+  String get pCheckInReasonHint =>
+      'e.g. Could not tap arrival in the app (confirmed by phone)';
+
+  @override
+  String get pCheck1 => 'All requested areas cleaned';
+
+  @override
+  String get pCheck2 => 'Trash handled, tools collected';
+
+  @override
+  String get pCheck3 => 'Windows, power and water checked';
+
+  @override
+  String get pCheck4 => 'Customer requests handled';
+
+  @override
+  String get pCompleteCta => 'Mark complete';
+
+  @override
+  String get pCompleteNeed => 'Add at least one photo each and tick every item';
+
+  @override
+  String get pCompleted => 'Great work!';
+
+  @override
+  String pPayoutOn(String date, String amount) {
+    return '$amount will be paid on $date';
+  }
+
+  @override
+  String get pPayoutWaiting => 'Payout date is set after the customer pays';
+
+  @override
+  String get pPendingPayout => 'Pending payout';
+
+  @override
+  String get pSettlements => 'Settlements';
+
+  @override
+  String get pS_waiting_balance => 'Awaiting balance';
+
+  @override
+  String get pS_pending => 'Scheduled';
+
+  @override
+  String get pS_paid => 'Paid';
+
+  @override
+  String get pS_held => 'On hold';
+
+  @override
+  String get pReviews => 'Reviews';
+
+  @override
+  String get pNoReviews => 'No reviews yet';
+
+  @override
+  String get pReplyLater => 'Replies are coming soon';
+
+  @override
+  String get pServicesAreas => 'Services & areas';
+
+  @override
+  String get pPayoutAccount => 'Payout account';
+
+  @override
+  String get pBank => 'Bank';
+
+  @override
+  String get pAccountNumber => 'Account number';
+
+  @override
+  String get pHolder => 'Account holder';
+
+  @override
+  String get pVerified => 'Verified';
+
+  @override
+  String get pUnverified => 'Verifying';
+
+  @override
+  String get pAccountSaved => 'Saved. Changes are re-verified.';
+
+  @override
+  String get pWorkSchedule => 'Work schedule';
+
+  @override
+  String get pWeekdays => 'Working days';
+
+  @override
+  String get pDayParts => 'Working hours';
+
+  @override
+  String get pDaysOff => 'Days off';
+
+  @override
+  String get pAddDayOff => 'Add a day off';
+
+  @override
+  String get pSaved => 'Saved';
+
+  @override
+  String get pTeam => 'Team';
+
+  @override
+  String get pOwner => 'Owner';
+
+  @override
+  String get pInvited => 'Invited';
+
+  @override
+  String get pInvite => 'Invite member';
+
+  @override
+  String get pInviteSent => 'Invitation sent';
+
+  @override
+  String get pRemove => 'Remove';
+
+  @override
+  String get pNotifications => 'Notifications';
+
+  @override
+  String get pNotifyDirect => 'New direct jobs';
+
+  @override
+  String get pNotifyQuotes => 'Quote requests & results';
+
+  @override
+  String get pNotifyChat => 'Operations messages';
+
+  @override
+  String get pQuietNight => 'Quiet at night (22–08)';
+
+  @override
+  String get pNewInquiry => 'New inquiry';
+
+  @override
+  String get pTopic_settlement => 'Payouts';
+
+  @override
+  String get pTopic_reschedule => 'Reschedule / cancel';
+
+  @override
+  String get pTopic_app => 'App help';
+
+  @override
+  String get pOpsTeam => 'Operations';
+
+  @override
+  String get pViewJob => 'View job';
+
+  @override
+  String pBookingNo(String n) {
+    return 'Booking $n';
+  }
+
+  @override
+  String get pSize => 'Size';
+
+  @override
+  String get pSchedule => 'Schedule';
+
+  @override
+  String get pSpace => 'Space';
+
+  @override
+  String get pNavigate => 'Directions';
+
+  @override
+  String get pNavHint =>
+      'Opens the visit address in a map app. Without the app, the web map opens.';
+
+  @override
+  String get pOfflineSaved =>
+      'No signal. Saved, and it will send once you\'re back online.';
+
+  @override
+  String get pPhotoRetry => 'Retry upload';
+
+  @override
+  String get pPhotoWaiting =>
+      'Photos that didn\'t upload will send automatically once you\'re online.';
+
+  @override
+  String pUploadedCount(String total, String done) {
+    return '$done of $total uploaded';
+  }
+
+  @override
+  String get payConfirmingTitle => 'Checking your payment';
+
+  @override
+  String get payConfirmingBody =>
+      'Your payment went through to the card company and we\'re confirming it. Don\'t pay again. You can leave this screen; the booking shows up in your bookings once it\'s confirmed.';
+
+  @override
+  String get apPgPickMethod => 'Choose a payment method';
+
+  @override
+  String get apPgConfirmTitle => 'Review your payment';
+
+  @override
+  String get apPgConfirmBtn => 'Confirm payment';
+
+  @override
+  String get apPgProcessing => 'Processing payment…';
+
+  @override
+  String get apPgDoneTitle => 'Payment complete';
+
+  @override
+  String get apPgReceiptTitle => 'Receipt';
+
+  @override
+  String get apPgReceiptApproval => 'Approval no.';
+
+  @override
+  String get apPgReceiptMethod => 'Method';
+
+  @override
+  String get apPgReceiptAmount => 'Amount';
+
+  @override
+  String get apPgReceiptDone => 'Done';
+
+  @override
+  String get apPgVaIssued => 'Virtual account issued (test account)';
+
+  @override
+  String get apPgTestBadge => 'TEST';
+
+  @override
+  String get cIntPayout => 'Partner payouts';
+
+  @override
+  String get poTabSettlements => 'Settlements';
+
+  @override
+  String get poTabPayouts => 'Payouts';
+
+  @override
+  String get poState_requested => 'Requested';
+
+  @override
+  String get poState_sent => 'Sent';
+
+  @override
+  String get poState_paid => 'Paid';
+
+  @override
+  String get poState_failed => 'Failed';
+
+  @override
+  String get poProviderManual => 'Manual transfer';
+
+  @override
+  String get poProviderToss => 'Toss payouts';
+
+  @override
+  String get poShowAccount => 'Show account';
+
+  @override
+  String get poAccountTitle => 'Transfer details';
+
+  @override
+  String poAccountBody(
+    String holder,
+    String bank,
+    String account,
+    String amount,
+  ) {
+    return 'Send $amount won to $holder · $bank · $account, then tap confirm.';
+  }
+
+  @override
+  String get poConfirmPaid => 'Mark as transferred';
+
+  @override
+  String get poMarkFailed => 'Mark as failed';
+
+  @override
+  String get poReasonTitle => 'Failure reason';
+
+  @override
+  String get poReasonHint => 'e.g. wrong account, transfer cancelled';
+
+  @override
+  String get poSend => 'Send via Toss';
+
+  @override
+  String get poSync => 'Check status';
+
+  @override
+  String get poRetry => 'Retry';
+
+  @override
+  String get poNoPayouts => 'No payouts yet';
+
+  @override
+  String poRequestedToast(String n) {
+    return 'Created $n payout requests';
+  }
+
+  @override
+  String get poReasonRequired => 'Enter a reason';
+
+  @override
+  String get poRevealNote => 'Viewing account details is logged';
+
+  @override
+  String get poSellerAction => 'Register seller';
+
+  @override
+  String get poSellerTitle => 'Register as Toss seller';
+
+  @override
+  String get poSellerHint =>
+      'Uses the partner\'s verified payout account. Enter business details only.';
+
+  @override
+  String get poSellerIndividual => 'Individual';
+
+  @override
+  String get poSellerCompany => 'Business';
+
+  @override
+  String get poSellerName => 'Name';
+
+  @override
+  String get poSellerRepresentative => 'Representative name';
+
+  @override
+  String get poSellerRegNo => 'Business registration no. (10 digits)';
+
+  @override
+  String get poSellerEmail => 'Settlement email';
+
+  @override
+  String get poSellerPhone => 'Phone';
+
+  @override
+  String get poSellerSubmit => 'Register';
+
+  @override
+  String poSellerDone(String status) {
+    return 'Seller status: $status';
+  }
+
+  @override
+  String get poCheckToss => 'Check with Toss';
+
+  @override
+  String get poCheckPending =>
+      'Toss\'s records don\'t show this payout. Check again in a few minutes, or look in the Toss dashboard yourself.';
+
+  @override
+  String get poNotSent => 'Confirm it was not sent';
+
+  @override
+  String get poNotSentTitle => 'Was this payout really not sent?';
+
+  @override
+  String poNotSentBody(String name, String amount) {
+    return 'Toss did not answer or did not list it, so we can\'t tell automatically whether this payout left.\n\nSign in to the Toss Payments merchant dashboard and look in the payouts list for $name, $amount.\n\n• If it isn\'t there, or it shows failed or cancelled, it was not sent. Confirm below: this payout becomes failed and you can send it again. Its bookings can\'t be cancelled until Toss reports how that send ended.\n• If it shows requested, in progress or completed, the money left or is leaving. Don\'t confirm; tap \'Check with Toss\' again later.';
+  }
+
+  @override
+  String get poNotSentWarning =>
+      'If this is wrong, the partner may be paid twice.';
+
+  @override
+  String get poNotSentChecked => 'I checked the Toss dashboard myself';
+
+  @override
+  String get poNotSentConfirm => 'Mark as not sent';
+
+  @override
+  String get poNotSentDone => 'Marked as failed. You can retry it now.';
+
+  @override
+  String get cgPeakFixedScope =>
+      'Apply surcharge to fixed-price and subscription visits';
+
+  @override
+  String get cgPeakFixedScopeHint =>
+      'When off, fixed-price and subscription visits are booked at the base price. Quotes always show the surcharge';
+
+  @override
+  String get popularServices => 'Popular services';
+
+  @override
+  String get reviewsSeeAll => 'See all reviews';
+
+  @override
+  String get reviewsAllTitle => 'Reviews';
+
+  @override
+  String get reviewsEmpty => 'No reviews yet';
+
+  @override
+  String get reviewMenu => 'Review options';
+
+  @override
+  String get oFlags => 'Feature switches';
+
+  @override
+  String get oFlagBooking => 'Bookings';
+
+  @override
+  String get oFlagChat => 'Chat';
+
+  @override
+  String get oFlagAi => 'AI assistant';
+
+  @override
+  String get oFlagPayments => 'Payments';
+
+  @override
+  String get oMaintenance => 'Maintenance mode';
+
+  @override
+  String get oMaintenanceHint =>
+      'When on, customer and partner apps show a maintenance screen. The console keeps working.';
+
+  @override
+  String get oMaintenanceMessage => 'Maintenance message';
+
+  @override
+  String get oClientErrors => 'App error reports';
+
+  @override
+  String get oClientErrorsHint =>
+      'Recent errors reported by web, Windows and console. Personal data is masked automatically.';
+
+  @override
+  String get oClientErrorsEmpty => 'No recent errors';
+
+  @override
+  String get oHeartbeat => 'Uptime heartbeat';
+
+  @override
+  String get oHeartbeatOn =>
+      'Connected. An outside service is notified while the server is up.';
+
+  @override
+  String get oHeartbeatOff =>
+      'Not set: ask your developer to connect the uptime heartbeat.';
+
+  @override
+  String get pvManage => 'Consent settings';
+
+  @override
+  String get pvOptional => 'Optional';
+
+  @override
+  String get pvTerms => 'Terms of service';
+
+  @override
+  String get pvPrivacy => 'Personal data collection and use';
+
+  @override
+  String get pvOverseas => 'Transfer of personal data abroad';
+
+  @override
+  String get pvMarketing => 'Marketing messages';
+
+  @override
+  String get pvMarketingHint =>
+      'Get coupon and event news by SMS, KakaoTalk and app push. You can turn this off any time.';
+
+  @override
+  String get pvReconsent =>
+      'Our privacy policy changed. Please review and agree again.';
+
+  @override
+  String get pvSaved => 'Consent settings saved';
+
+  @override
+  String get pvExport => 'Download my data';
+
+  @override
+  String get pvExportHint =>
+      'Shows everything we hold about you as JSON. You can copy it and keep it.';
+
+  @override
+  String get pvCopy => 'Copy';
+
+  @override
+  String get pvCopied => 'Copied';
+
+  @override
+  String get pvExportFailed =>
+      'Could not load your data. Please try again later.';
+
+  @override
+  String get prqTitle => 'Account deletion and data requests';
+
+  @override
+  String get prqIntro =>
+      'When a customer asks for a copy of their data or to delete their account, find them by phone number and handle it here. Every step is logged. Deletion cannot be undone.';
+
+  @override
+  String get prqPhone => 'Customer phone number';
+
+  @override
+  String get prqFind => 'Find';
+
+  @override
+  String get prqNotFound => 'No customer is registered with this number.';
+
+  @override
+  String get prqBookings => 'Bookings';
+
+  @override
+  String get prqExport => 'Download a copy of the data (CSV)';
+
+  @override
+  String get prqExported => 'The copy of the data was saved.';
+
+  @override
+  String get prqDelete => 'Delete account';
+
+  @override
+  String get prqDeleteAdminOnly => 'Only an admin can delete an account.';
+
+  @override
+  String get prqDeleteAsk =>
+      'Type the customer\'s phone number again to confirm. Their name and contact details are erased and this cannot be undone. Bookings and payment records stay, as the law requires.';
+
+  @override
+  String get prqPhoneAgain => 'Type the phone number again';
+
+  @override
+  String get prqPhoneMismatch => 'The phone number does not match.';
+
+  @override
+  String get prqDeleteDone => 'The account was deleted.';
+
+  @override
+  String get prqFailed =>
+      'This could not be completed. Please try again shortly.';
+
+  @override
+  String get prqLog => 'Request log';
+
+  @override
+  String get prqLogEmpty => 'No requests have been handled yet.';
+
+  @override
+  String get prqKindExport => 'Data copy';
+
+  @override
+  String get prqKindDelete => 'Deletion';
+
+  @override
+  String get prqStatusDone => 'Done';
+
+  @override
+  String get prqStatusFailed => 'Failed';
+
+  @override
+  String get prqBy => 'Handled by';
+
+  @override
+  String get cPfTitle => 'Staff profile · verification';
+
+  @override
+  String get cPfTabChecklist => 'Verification checklist';
+
+  @override
+  String get cPfTabProfile => 'Profile';
+
+  @override
+  String get cPfChecklistHelp =>
+      'Every item must be ticked before the pro can be approved as active.';
+
+  @override
+  String get cPfItemIdentity => 'ID document checked';
+
+  @override
+  String get cPfItemTaxType => 'Tax type confirmed (business or wage income)';
+
+  @override
+  String get cPfItemExperience => 'Experience checked';
+
+  @override
+  String get cPfItemEmergency => 'Emergency contact confirmed';
+
+  @override
+  String get cPfLegacyNote =>
+      'Approved before checklists existed, so nothing is recorded yet. Check the items and save.';
+
+  @override
+  String get cPfIncomplete => 'Tick every checklist item before approving.';
+
+  @override
+  String get cPfSaveChecklist => 'Save checklist';
+
+  @override
+  String get cPfApprove => 'Approve as active';
+
+  @override
+  String get cPfPhoto => 'Photo';
+
+  @override
+  String get cPfPickPhoto => 'Upload photo';
+
+  @override
+  String get cPfBio => 'Bio';
+
+  @override
+  String get cPfEmployment => 'Employment type';
+
+  @override
+  String get cPfEmpFreelance => 'Freelance';
+
+  @override
+  String get cPfEmpEmployee => 'Employee';
+
+  @override
+  String get cPfEmpContract => 'Contract';
+
+  @override
+  String get cPfEmergency => 'Emergency contact';
+
+  @override
+  String get cPfEmergencyHelp =>
+      'Digits and hyphens only. Stored encrypted; every view is logged.';
+
+  @override
+  String get cPfHiredOn => 'Hire date';
+
+  @override
+  String get cPfNoDate => 'Not set';
+
+  @override
+  String get cPfPayee => 'Resident or business registration number';
+
+  @override
+  String get cPfPayeeHelp =>
+      'Used only for the 지급명세서 (payment statement). Stored encrypted. Enter it only after the partner consents. Every view is logged.';
+
+  @override
+  String cPfPayeeSaved(String masked) {
+    return 'On file: $masked';
+  }
+
+  @override
+  String get cPfPayeeReveal => 'Show full number (needs verification)';
+
+  @override
+  String get cPfPayeeRevealTitle => 'Identifier';
+
+  @override
+  String get cPfPayeeRevealBody =>
+      'This view is logged. It cannot be shown again after you close this.';
+
+  @override
+  String get err_invalid_payee_identifier =>
+      'Check the resident number (13 digits) or business number (10 digits).';
+
+  @override
+  String get cPfSaveProfile => 'Save profile';
+
+  @override
+  String get err_checklist_incomplete =>
+      'Tick every checklist item before approving.';
+
+  @override
+  String get err_invalid_checklist =>
+      'Checklist data is out of date. Reload the screen.';
+
+  @override
+  String get err_invalid_emergency_contact =>
+      'Emergency contact: digits and hyphens only, 30 characters at most.';
+
+  @override
+  String get err_invalid_employment_type =>
+      'Pick an employment type from the list.';
+
+  @override
+  String get err_invalid_photo =>
+      'Only photos uploaded here can be used. Upload the photo again.';
+
+  @override
+  String get err_invalid_bio => 'Keep the bio to 500 characters.';
+
+  @override
+  String get pQualityScore => 'Quality score';
+
+  @override
+  String get pQualityNone => 'No score yet. It appears once you have jobs';
+
+  @override
+  String get pQualityReadOnly =>
+      'Scores are recalculated regularly. This screen is read-only';
+
+  @override
+  String get pQualityOk => 'Good standing';
+
+  @override
+  String get pQualityWarning => 'Needs attention';
+
+  @override
+  String get pQualityPaused => 'Paused · no new jobs';
+
+  @override
+  String get pQualityOverridden => 'Pause lifted by operations';
+
+  @override
+  String get pQualityComponents => 'By category';
+
+  @override
+  String get pQualityRating => 'Customer rating';
+
+  @override
+  String get pQualityCompletion => 'Assigned jobs completed';
+
+  @override
+  String get pQualityOnTime => 'On-time arrival';
+
+  @override
+  String get pQualityReliability => 'Cancellations and no-shows';
+
+  @override
+  String get pQualityComplaints => 'Complaints';
+
+  @override
+  String get pQualityTips => 'Tips to improve';
+
+  @override
+  String get pTipImproveRating =>
+      'To raise ratings, check the finish carefully before you leave';
+
+  @override
+  String get pTipCompleteAssigned => 'Finish the jobs you accept';
+
+  @override
+  String get pTipCheckInOnTime => 'Check in on time when you arrive';
+
+  @override
+  String get pTipAvoidCancellations => 'Avoid cancellations and no-shows';
+
+  @override
+  String get pTipReduceComplaints => 'Reduce complaints';
+
+  @override
+  String get err_quality_paused =>
+      'This partner is paused for quality and cannot take jobs. Choose another partner.';
+
+  @override
+  String get err_training_required =>
+      'This partner has not finished required training. Choose a partner who has.';
+
+  @override
+  String get err_no_partner_available =>
+      'No partner is available for this job right now.';
+
+  @override
+  String get err_reassign_closed =>
+      'This job can no longer be reassigned. Check its status.';
+
+  @override
+  String get cQualityScore => 'Quality score';
+
+  @override
+  String get cQualityNone => 'No score yet';
+
+  @override
+  String get cQualityOk => 'Good';
+
+  @override
+  String get cQualityWarning => 'Warning';
+
+  @override
+  String get cQualityPaused => 'Paused';
+
+  @override
+  String get cQualityOverridden => 'Pause lifted';
+
+  @override
+  String get cQualityTips => 'Improvement tips';
+
+  @override
+  String get cQualityLastCalc => 'Calculated automatically';
+
+  @override
+  String get qaHomeType => 'Home type';
+
+  @override
+  String get homeType_one_two_room => 'Studio / two rooms';
+
+  @override
+  String get homeType_apartment => 'Apartment';
+
+  @override
+  String get homeType_villa_house => 'Villa / house';
+
+  @override
+  String get qaCleaningType => 'Cleaning type';
+
+  @override
+  String get qaLuggage => 'Belongings';
+
+  @override
+  String get qaLayout => 'Layout';
+
+  @override
+  String get qaFloor => 'Floor';
+
+  @override
+  String get qaFloorLow => 'Floors 1–2';
+
+  @override
+  String get qaFloorHigh => 'Floor 3 or higher';
+
+  @override
+  String get quoteUnknown => 'Not answered';
+
+  @override
+  String get qaPeak => 'Weekend / holiday / evening surcharge';
+
+  @override
+  String get previewRequestCard => 'Booking request card';
+
+  @override
+  String previewQuoteCard(String amount) {
+    return 'Quote card · $amount';
+  }
+
+  @override
+  String get nameNone => 'No name';
+
+  @override
+  String get qaTotal => 'Total';
+
+  @override
+  String get qaVat => 'VAT 10%';
+
+  @override
+  String get quoteSizeTitle => 'The layout and the saved size don\'t match';
+
+  @override
+  String quoteSizeBody(String size, String layout) {
+    return 'This address is $size, which may not suit the $layout layout.';
+  }
+
+  @override
+  String get quoteSizeChangeLayout => 'Change layout';
+
+  @override
+  String get quoteSizeChangeSize => 'Change size';
+
+  @override
+  String partnerAppTitle(String brand) {
+    return '$brand Partner';
+  }
+
+  @override
+  String get rbLegalOpenWeb => 'Open the web page';
+
+  @override
+  String get cRbNameEn => 'English name';
+
+  @override
+  String get cRbShortName =>
+      'Short name (up to 12 characters: the name in [ ] at the start of text messages, the payment name (○○ deposit) and notification channel name, home screen label)';
+
+  @override
+  String get cRbTagline => 'Tagline';
+
+  @override
+  String get cRbTaglineEn => 'English tagline';
+
+  @override
+  String get cRbPrivacyEmail => 'Privacy contact email';
+
+  @override
+  String get cRbLetterMark => 'Make a letter logo';
+
+  @override
+  String get cRbNoLogoWarn =>
+      'There is no logo, so the built-in mark shows. Upload a logo or make a letter logo from the first letter of the name.';
+
+  @override
+  String get cRbPreviewTitle => 'This is how it looks';
+
+  @override
+  String get cRbPreviewBody =>
+      'Saving uploads these images and applies them on every screen at once.';
+
+  @override
+  String get cRbSlotFavicon => 'Browser tab';
+
+  @override
+  String get cRbSlotAppIcon => 'App icon';
+
+  @override
+  String get cRbSlotMaskable => 'Home screen icon';
+
+  @override
+  String get cRbSlotShare => 'Share card';
+
+  @override
+  String get cRbMaking => 'Making the images';
+
+  @override
+  String cRbUploading(String done, String total) {
+    return 'Uploading images ($done/$total)';
+  }
+
+  @override
+  String get cRbDeriveFailed =>
+      'Could not make images from this logo. Try another PNG or JPG file.';
+
+  @override
+  String get cRbAppliedTitle => 'Saved. This is where it shows';
+
+  @override
+  String get cRbAppliedList =>
+      '· Right away: SMS, AlimTalk and payment names, search pages\n· Next time they open: website, legal pages, icons, share image, apps from older versions\n· On their next request: the web apps and apps from this version on (customer, partner, console)\n· After a store build: app name, icon, app IDs (Store app build card)\n· By hand: PG merchant name, Kakao channel name, store listings';
+
+  @override
+  String get cRbStoreTitle => 'Store app build';
+
+  @override
+  String get cRbStoreBody =>
+      'The app name, icon, app IDs and the Naver sign-in address change only with a new store build.';
+
+  @override
+  String get cRbStoreNone => 'Nothing has changed since the last build';
+
+  @override
+  String cRbStoreChanged(String items) {
+    return 'Changed since the last build: $items';
+  }
+
+  @override
+  String get cRbStoreItemName => 'name';
+
+  @override
+  String get cRbStoreItemIcon => 'icon';
+
+  @override
+  String get cRbStoreItemColor => 'colour';
+
+  @override
+  String get cRbStoreItemAppIds => 'app IDs';
+
+  @override
+  String get cRbStoreItemDomain => 'domain';
+
+  @override
+  String get cRbStoreBuildUrl => 'Build page address';
+
+  @override
+  String get cRbStoreOpen => 'Open the build page';
+
+  @override
+  String get cRbStoreAck => 'I built it';
+
+  @override
+  String get cRbStoreAcked => 'Recorded as built';
+
+  @override
+  String cRbStoreLastAck(String date) {
+    return 'Last build recorded: $date';
+  }
+
+  @override
+  String get cRbStoreBuildTimeTitle => 'Changes only with a new build';
+
+  @override
+  String get cRbStoreBuildTimeList =>
+      '· App IDs (a new ID is a new store app)\n· Home screen name, launcher icon, launch screen\n· Store listing text, screenshots, privacy URLs\n· Signing keys and Apple team\n· Firebase config files (same project as the console\'s FCM key)\n· Kakao, Naver and Google app keys\n· App link hosts (Naver sign-in)\n· The first server address (later moves are followed by the app)\n· The built-in brand shown on first open\n· Languages built into the app';
+
+  @override
+  String get cRbStoreOutsideTitle => 'Change by hand in other consoles';
+
+  @override
+  String get cRbStoreOutsideList =>
+      '· Merchant name on card statements (PortOne, Toss)\n· Kakao channel name and AlimTalk wording (Kakao approval)\n· SMS sender number registration\n· App name on social sign-in consent screens\n· Store listing names';
+
+  @override
+  String get cRbDomainTitle => 'Domain';
+
+  @override
+  String cRbDomainCurrent(String host) {
+    return 'Current address: $host';
+  }
+
+  @override
+  String get cRbDomainAliases => 'Old addresses (still answer)';
+
+  @override
+  String get cRbDomainChange => 'Change domain';
+
+  @override
+  String get cRbDomainNew => 'New domain (e.g. example.com)';
+
+  @override
+  String get cRbDomainInvalid =>
+      'Not a domain name, or the same as the current one. Enter it without https://, like example.com. Enter a non-Latin domain in its xn-- form';
+
+  @override
+  String get cRbDomainCheck => 'Check DNS';
+
+  @override
+  String get cRbDomainChecking => 'Checking DNS';
+
+  @override
+  String cRbDomainDnsOk(String ip) {
+    return 'The A record points to this server ($ip)';
+  }
+
+  @override
+  String cRbDomainDnsBad(String ip, String found) {
+    return 'Point the A record to this server\'s IP $ip. Now: $found';
+  }
+
+  @override
+  String get cRbDomainDnsAaaa =>
+      'The AAAA record points elsewhere. Remove it or point it to this server.';
+
+  @override
+  String get cRbDomainDnsNone => 'none';
+
+  @override
+  String get cRbDomainWhatTitle => 'What changes';
+
+  @override
+  String get cRbDomainWhatList =>
+      '· The website and web apps move to the new domain\n· The service pauses for about 30 seconds\n· Installed apps keep working on the old address. Apps from the next store build on move by themselves on their next start\n· Outside services (payments, sign-in, search) need the new address. A list follows the move\n· The old address keeps answering until you retire it\n· On the web, people sign in again on the new address';
+
+  @override
+  String get cRbDomainApply => 'Change';
+
+  @override
+  String get cRbDomainRunning =>
+      'Changing. The service pauses for about 30 seconds.';
+
+  @override
+  String cRbDomainDone(String domain) {
+    return 'Moved to $domain';
+  }
+
+  @override
+  String get cRbDomainOpenNew => 'Open on the new address';
+
+  @override
+  String cRbDomainRolledBack(String reason) {
+    return 'Rolled back: $reason';
+  }
+
+  @override
+  String cRbDomainRejected(String reason) {
+    return 'The server refused: $reason';
+  }
+
+  @override
+  String cRbDomainFailed(String reason) {
+    return 'Could not change it: $reason';
+  }
+
+  @override
+  String get cRbDomainOldAgent =>
+      'The server agent is out of date. Re-run the install line once, then try again (in the cloud console\'s browser SSH, the command from install guide 00; your data stays).';
+
+  @override
+  String get cRbDomainNoReason => 'no reason was given';
+
+  @override
+  String get cRbDomainRetire => 'Retire';
+
+  @override
+  String cRbRetireTitle(String host) {
+    return 'Retire $host';
+  }
+
+  @override
+  String cRbRetireBody(String customer, String partner) {
+    return 'After this, apps that use this address no longer connect. Current minimum app versions: customer $customer, partner $partner.';
+  }
+
+  @override
+  String get cRbRetireConfirm =>
+      'Store builds with the new address are out and the minimum version is raised';
+
+  @override
+  String get cRbRetired => 'Old address retired';
+
+  @override
+  String get cRbApprovalTitle => 'Server approval code';
+
+  @override
+  String get cRbApprovalBody =>
+      'Enter the 6 digits of the server approval entry in your authenticator. It is not your owner code.';
+
+  @override
+  String get cRbApprovalNoSummary =>
+      'Could not read the server\'s own job summary, or it names another domain. Do not approve.';
+
+  @override
+  String get cRbApprovalEnter => 'Enter approval code';
+
+  @override
+  String get cRbChecklistTitle => 'After the move';
+
+  @override
+  String get cRbChecklistHint =>
+      'Copy each value into its outside service, then tick it.';
+
+  @override
+  String get cRbCheck_portone_webhook => 'PortOne console → webhook URL';
+
+  @override
+  String get cRbCheck_toss_payments_webhook =>
+      'Toss Payments developer center → webhook';
+
+  @override
+  String get cRbCheck_toss_payouts_webhook => 'Toss payouts webhook';
+
+  @override
+  String get cRbCheck_pg_site_url =>
+      'Site URL in the PG contract (may be reviewed again)';
+
+  @override
+  String get cRbCheck_naver_callback =>
+      'Naver Developers → add Callback URL (keep the old one while old apps exist)';
+
+  @override
+  String get cRbCheck_naver_service_url => 'Naver Developers → service URL';
+
+  @override
+  String get cRbCheck_kakao_site_domain =>
+      'Kakao Developers → Platform → Web (if registered)';
+
+  @override
+  String get cRbCheck_google_consent =>
+      'Google Cloud consent screen: homepage and privacy links (if set)';
+
+  @override
+  String get cRbCheck_search_console =>
+      'Google Search Console: new property, token in Business profile';
+
+  @override
+  String get cRbCheck_naver_search_advisor =>
+      'Naver Search Advisor: new site, token in Business profile';
+
+  @override
+  String get cRbCheck_apple_notifications =>
+      'Apple Developer → Sign in with Apple → server-to-server notification URL (if set)';
+
+  @override
+  String get cRbCheck_app_store_urls =>
+      'App Store Connect: support, privacy and account deletion URLs';
+
+  @override
+  String get cRbCheck_play_urls =>
+      'Play Console: privacy and account deletion URLs';
+
+  @override
+  String get cRbCheck_ms_store_urls =>
+      'Microsoft Partner Center: privacy and account deletion URLs';
+
+  @override
+  String get cRbCheck_github_store_vars =>
+      'GitHub store environment variables, then a store build';
+
+  @override
+  String get cRbCheck_alimtalk_links =>
+      'AlimTalk templates with web link buttons (need approval again)';
+
+  @override
+  String get cRbCheck_dns_keep_old =>
+      'Keep the old A/AAAA records until retiring; add www.<new>';
+
+  @override
+  String get cRbCheck_version_floor =>
+      'After the new store builds are live: raise the minimum app version in Business profile';
+
+  @override
+  String cRbServerMoved(String base) {
+    return 'The server moved to $base. Change this app\'s server address too.';
+  }
+
+  @override
+  String get cRbServerMovedAction => 'Change server address';
+
+  @override
+  String get cRbHostTitle => 'Server settings';
+
+  @override
+  String get cRbChannel => 'Update channel';
+
+  @override
+  String get cRbChannelStable => 'Stable';
+
+  @override
+  String get cRbChannelBeta => 'Beta';
+
+  @override
+  String get cRbSchedule => 'Automatic update';
+
+  @override
+  String get cRbOff => 'Off';
+
+  @override
+  String get cRbDays => 'Mon,Tue,Wed,Thu,Fri,Sat,Sun';
+
+  @override
+  String get cRbTime => 'Time (HH:MM)';
+
+  @override
+  String get cRbInvalidTime => 'Use the HH:MM format';
+
+  @override
+  String get cRbApply => 'Apply';
+
+  @override
+  String get cRbBackupNow => 'Back up now';
+
+  @override
+  String get cRbRestart => 'Restart the service';
+
+  @override
+  String get cRbRestartConfirm =>
+      'Restart the service? It drops for about a minute.';
+
+  @override
+  String get cRbSkipUpdate => 'Skip the next automatic update';
+
+  @override
+  String get cRbJobQueued => 'Requested. See it under Recent server jobs';
+
+  @override
+  String get cRbHeartbeatUrl => 'Heartbeat URL (https://...)';
+
+  @override
+  String get cRbHeartbeatInvalid =>
+      'Enter an address that starts with https:// and has no =';
+
+  @override
+  String get cRbHeartbeatOff =>
+      'Not set: paste the heartbeat URL from your uptime service and save.';
+
+  @override
+  String get cRbKindStatusRefresh => 'Status refresh';
+
+  @override
+  String get cRbKindBackupNow => 'Back up now';
+
+  @override
+  String get cRbKindUpdateSkip => 'Skip update';
+
+  @override
+  String get cRbKindChannel => 'Update channel';
+
+  @override
+  String get cRbKindRestart => 'Restart';
+
+  @override
+  String get cRbKindSchedule => 'Update schedule';
+
+  @override
+  String get cRbKindHeartbeat => 'Heartbeat';
+
+  @override
+  String get cRbKindDomainCheck => 'DNS check';
+
+  @override
+  String get cRbKindDomainSet => 'Domain change';
+
+  @override
+  String get cRbKindEnroll => 'Approval code setup';
+
+  @override
+  String get cRbStateAwaiting => 'Waiting for the approval code';
+
+  @override
+  String get cRbStateRejected => 'Refused';
+
+  @override
+  String get cRbEnrollTitle => 'Server approval code';
+
+  @override
+  String get cRbEnrollBody =>
+      'Big jobs such as a domain change need this second code, checked by the server itself. Add it to your authenticator once.';
+
+  @override
+  String get cRbEnrollStart => 'Set up';
+
+  @override
+  String get cRbEnrollWaiting => 'The server is making the code';
+
+  @override
+  String get cRbEnrollSecret => 'Setup key';
+
+  @override
+  String get cRbEnrollUri => 'Authenticator link';
+
+  @override
+  String get cRbEnrollDone =>
+      'Once it is in your authenticator you are done. It cannot be shown again after you leave.';
+
+  @override
+  String cRbEnrollFailed(String reason) {
+    return 'Could not set it up: $reason';
+  }
+
+  @override
+  String get cRbPayoutSwitch => 'Turn on Toss payouts';
+
+  @override
+  String get cRbPayoutSwitchHint =>
+      'When on, settlements go to partners\' accounts through Toss payouts. Each change needs your owner code.';
+
+  @override
+  String get cRbPayoutOn => 'Toss payouts turned on';
+
+  @override
+  String get cRbPayoutOff => 'Toss payouts turned off';
+
+  @override
+  String get cRbHoursTitle => 'Business hours';
+
+  @override
+  String get cRbHoursHint =>
+      'Used when the AI chat tells customers you are closed.';
+
+  @override
+  String get cRbHoursOpen => 'Opens (HH:MM)';
+
+  @override
+  String get cRbHoursClose => 'Closes (HH:MM)';
+
+  @override
+  String get cRbHoursInvalid =>
+      'Pick at least one day, and a closing time after the opening time.';
+
+  @override
+  String get cRbAndroidPackages => 'Android package names (one per line)';
+
+  @override
+  String get cRbIosBundles => 'iOS bundle IDs (one per line)';
+
+  @override
+  String get cRbAppIdsHint =>
+      'Leave empty for the built-in app IDs. If you change them, use the same values in the store build, and register the new IDs in Settings > Apple login (bundle IDs) and in the Kakao, Naver and Google consoles (package and bundle IDs, key hash). Otherwise those sign-ins are refused.';
+
+  @override
+  String get rnwTitle => 'Renewal calendar';
+
+  @override
+  String get rnwIntro =>
+      'Record renewal dates for domains, hosting, store and SMS accounts. A text goes to your phone 30 and 7 days before each date.';
+
+  @override
+  String get rnwAdd => 'Add a renewal';
+
+  @override
+  String get rnwEmpty => 'No renewal items yet.';
+
+  @override
+  String get rnwLoadFailed =>
+      'The list could not be loaded. Please try again shortly.';
+
+  @override
+  String get rnwName => 'Name (for example myshop.co.kr)';
+
+  @override
+  String get rnwNameError => 'Enter a name of 1 to 80 characters.';
+
+  @override
+  String get rnwKind => 'Type';
+
+  @override
+  String get rnwDate => 'Due date';
+
+  @override
+  String get rnwPickDate => 'Pick a date';
+
+  @override
+  String get rnwDateError => 'Pick a due date.';
+
+  @override
+  String get rnwKindDomain => 'Domain';
+
+  @override
+  String get rnwKindDomainAlias => 'Old domain (alias)';
+
+  @override
+  String get rnwKindHosting => 'Hosting (server cost)';
+
+  @override
+  String get rnwKindApple => 'Apple developer account';
+
+  @override
+  String get rnwKindSolapi => 'SMS service (Solapi)';
+
+  @override
+  String get rnwKindStorage => 'Off-site backup storage';
+
+  @override
+  String get rnwKindOther => 'Other';
+
+  @override
+  String get rnwKindKeysTest => 'Secret key copy check';
+
+  @override
+  String get rnwKeysNote =>
+      'Due one year after the last successful upload test. The date is set automatically.';
+
+  @override
+  String rnwDaysLeft(String n) {
+    return '$n days left';
+  }
+
+  @override
+  String get rnwToday => 'Due today';
+
+  @override
+  String get rnwOverdue => 'Overdue';
+
+  @override
+  String get rnwSmsNote =>
+      'A text goes out 30 and 7 days before the date. Changing the date starts the reminders again for the new date.';
+
+  @override
+  String get rnwEdit => 'Edit';
+
+  @override
+  String get rnwDelete => 'Delete';
+
+  @override
+  String get rnwDeleteAsk =>
+      'This removes the item from the list. Its texts stop too.';
+
+  @override
+  String get rnwSave => 'Save';
+
+  @override
+  String get rnwCancel => 'Cancel';
+
+  @override
+  String get rnwSaved => 'Saved.';
+
+  @override
+  String get rnwDeleted => 'Deleted.';
+
+  @override
+  String get rnwFailed =>
+      'This could not be saved. Check the entries and try again.';
+
+  @override
+  String get cSetupColorContrast =>
+      'White text on this colour is hard to read, so the apps will not use it. Choose a darker colour.';
+
+  @override
+  String get safetyEmergency => 'Emergency contacts';
+
+  @override
+  String get emergencyPolice => '112 Police';
+
+  @override
+  String get emergencyFire => '119 Fire & rescue';
+
+  @override
+  String get emergencyShop => 'Support';
+
+  @override
+  String get caseReportAction => 'Report a problem';
+
+  @override
+  String get caseReportTitle => 'What happened?';
+
+  @override
+  String get caseKindDamage => 'Damage';
+
+  @override
+  String get caseKindLoss => 'Loss';
+
+  @override
+  String get caseKindComplaint => 'Complaint';
+
+  @override
+  String get caseKindNoShow => 'Cleaner did not arrive';
+
+  @override
+  String get caseKindSafety => 'Safety concern';
+
+  @override
+  String get caseKindPayment => 'Payment dispute';
+
+  @override
+  String get caseSummaryHint => 'Describe what happened (up to 300 characters)';
+
+  @override
+  String get caseSubmit => 'Submit';
+
+  @override
+  String get caseSubmitted => 'Received. Our team will reply within 24 hours.';
+
+  @override
+  String get caseFailed => 'Couldn\'t send it. Try again.';
+
+  @override
+  String get checkInAction => 'Check in';
+
+  @override
+  String get checkOutAction => 'Check out';
+
+  @override
+  String checkedInAt(String time) {
+    return 'Arrived $time';
+  }
+
+  @override
+  String checkedOutAt(String time) {
+    return 'Left $time';
+  }
+
+  @override
+  String get entryCodeAction => 'Show entry code';
+
+  @override
+  String get entryCodeTitle => 'Entry code';
+
+  @override
+  String get entryCodeNotToday => 'Available on the visit day only';
+
+  @override
+  String get entryCodeEmpty => 'No entry code on file';
+
+  @override
+  String get actionFailed => 'Couldn\'t complete that. Try again.';
+
+  @override
+  String get consoleCasesTitle => 'Case queue';
+
+  @override
+  String get consoleCasesEmpty => 'No open cases';
+
+  @override
+  String get caseOverdue => 'Overdue';
+
+  @override
+  String get caseStatusOpen => 'Open';
+
+  @override
+  String get caseStatusInvestigating => 'Investigating';
+
+  @override
+  String get caseStatusResolved => 'Resolved';
+
+  @override
+  String get caseStatusRejected => 'Rejected';
+
+  @override
+  String get caseReassign => 'Reassign partner';
+
+  @override
+  String get caseRefund => 'Refund';
+
+  @override
+  String get caseHold => 'Hold settlement';
+
+  @override
+  String get caseNoteHint => 'Internal note';
+
+  @override
+  String get caseSave => 'Save';
+
+  @override
+  String get err_schedule_overlap => 'You already have a job at this time';
+
+  @override
+  String get servicePhotoSlot => 'Service photo goes here';
+
+  @override
+  String get rulesTab => 'Operating rules';
+
+  @override
+  String get rulesIntro =>
+      'Changes apply right away or after a server restart. Reset a value to go back to its original setting.';
+
+  @override
+  String get rulesGroupBusiness => 'Business limits';
+
+  @override
+  String get rulesGroupMarketing => 'Advertising';
+
+  @override
+  String get rulesGroupPoints => 'Points';
+
+  @override
+  String get rulesGroupQuality => 'Partner quality';
+
+  @override
+  String get rulesGroupOps => 'Server and alert limits';
+
+  @override
+  String get rulesRange => 'Allowed range';
+
+  @override
+  String get rulesSource => 'Value source';
+
+  @override
+  String get rulesSourceDb => 'Changed here';
+
+  @override
+  String get rulesSourceEnv => 'Installation setting';
+
+  @override
+  String get rulesSourceDefault => 'Default';
+
+  @override
+  String get rulesTightenDown => 'Can only be lowered from the default';
+
+  @override
+  String get rulesTightenUp => 'Can only be raised from the default';
+
+  @override
+  String get rulesApplyInstant => 'Applies now';
+
+  @override
+  String get rulesApplyRebuild => 'Applies after a server restart';
+
+  @override
+  String get rulesReadOnly => 'Cannot be changed here (ask the developer)';
+
+  @override
+  String get rulesReset => 'Reset';
+
+  @override
+  String get rulesSave => 'Save';
+
+  @override
+  String get rulesSaved => 'Saved';
+
+  @override
+  String get rulesNoChanges => 'Nothing changed';
+
+  @override
+  String get rulesInvalid => 'Check the values you entered';
+
+  @override
+  String get rulePointsAdjustMax => 'Most points per manual adjustment';
+
+  @override
+  String get ruleUploadDailyQuota => 'Daily photo upload limit (count)';
+
+  @override
+  String get ruleMaxOpenQuoteRequests => 'Open quote requests per customer';
+
+  @override
+  String get ruleMaxThreadsPerDay => 'Daily chat threads per customer';
+
+  @override
+  String get ruleReviewReportThreshold => 'Review reports before hiding';
+
+  @override
+  String get ruleNoshowGraceMinutes => 'No-show grace period (minutes)';
+
+  @override
+  String get ruleAiChatRetentionDays => 'AI chat retention (days)';
+
+  @override
+  String get ruleUploadOrphanDays => 'Delete unlinked photos after (days)';
+
+  @override
+  String get ruleReconcileIntervalSecs =>
+      'Payment reconciliation interval (seconds)';
+
+  @override
+  String get ruleFreqCapPerWeek => 'Ads per customer per week';
+
+  @override
+  String get ruleNudgeRebookDays => 'Rebooking reminder (days after visit)';
+
+  @override
+  String get ruleQualityWindowDays => 'Quality score window (days)';
+
+  @override
+  String get ruleQualityOnTimeGraceMin => 'On-time grace period (minutes)';
+
+  @override
+  String get ruleTrainingGateEnabled =>
+      'Block job acceptance until partner training is complete';
+
+  @override
+  String get ruleBackupStaleHours => 'Backup overdue after (hours)';
+
+  @override
+  String get ruleBackupLateHours => 'Backup late after (hours)';
+
+  @override
+  String get ruleDiskLowPct => 'Disk free space red below (%)';
+
+  @override
+  String get ruleDiskWarnPct => 'Disk free space yellow below (%)';
+
+  @override
+  String get ruleUnassignedAlertHours =>
+      'Alert when a booking has no pro for (hours)';
+
+  @override
+  String get ruleSameDayCancelAlertPct =>
+      'Same-day cancel rate alert above (%)';
+
+  @override
+  String get ruleTaxDeadlineRemindDays =>
+      'VAT reminder days before the filing day';
+
+  @override
+  String get ruleMaintenanceOn => 'Maintenance mode (blocks new bookings)';
+
+  @override
+  String get ruleMaintenanceMessage => 'Maintenance message';
+
+  @override
+  String get rulesApplyStoreManual => 'Edited in the app store';
+
+  @override
+  String get rulesMaxLength => 'Maximum characters';
+
+  @override
+  String get rulesDeleteWarning =>
+      'A shorter period deletes older records at the next cleanup. Deleted records cannot be restored.';
+
+  @override
+  String get rulesNoshowWarning =>
+      'Changing the no-show grace period changes when a partner is marked as a no-show.';
+
+  @override
+  String get err_tighten_only =>
+      'This value is past the default limit. It can only be changed toward the default.';
+
+  @override
+  String get err_threshold_order =>
+      'The yellow and red limits are in the wrong order. Check both values.';
+
+  @override
+  String get err_read_only_setting =>
+      'This value cannot be changed here. Ask the developer.';
+
+  @override
+  String get cSetup => 'Setup';
+
+  @override
+  String get cSetupTitle => 'استعد للإطلاق';
+
+  @override
+  String cSetupProgress(String done, String total) {
+    return 'تم $done من $total';
+  }
+
+  @override
+  String get cSetupAllDone => 'كل شيء جاهز!';
+
+  @override
+  String get cSetupBusiness => 'Business profile';
+
+  @override
+  String get cSetupBusinessName => 'Service name';
+
+  @override
+  String get cSetupSupportPhone => 'Support phone';
+
+  @override
+  String get cSetupSupportEmail => 'Support email';
+
+  @override
+  String get cSetupSupportHours => 'Support hours';
+
+  @override
+  String get cSetupColor => 'Brand color';
+
+  @override
+  String get cSetupFillColor => 'Fill color';
+
+  @override
+  String get cSetupFillColorHint =>
+      'Paints buttons and selected items. Leave it empty to use the brand color. Text and links keep the brand color, shown slightly darker where needed to stay readable. Service icon artwork keeps its own colors.';
+
+  @override
+  String get cSetupFillSample => 'Book now';
+
+  @override
+  String get cSetupFillLinkSample => 'Links and text use the brand color';
+
+  @override
+  String cSetupFillLabelWhite(String ratio) {
+    return 'Button text shows in white. (contrast $ratio:1)';
+  }
+
+  @override
+  String cSetupFillLabelDark(String ratio) {
+    return 'White text is hard to read on this light color, so button text turns dark automatically. (contrast $ratio:1)';
+  }
+
+  @override
+  String get cSetupLogo => 'Upload logo';
+
+  @override
+  String get cSetupCompany =>
+      'Company details (shown in app and website footer)';
+
+  @override
+  String get cSetupLegalName => 'Legal name';
+
+  @override
+  String get cSetupCeo => 'Representative';
+
+  @override
+  String get cSetupRegNo => 'Business registration no.';
+
+  @override
+  String get cSetupMailOrderNo => 'Mail-order registration no.';
+
+  @override
+  String get cSetupAddress => 'Business address';
+
+  @override
+  String get cSetupPrivacyOfficer => 'Privacy officer';
+
+  @override
+  String get cSetupStoreLinks =>
+      'Store links (the website buttons turn on once filled)';
+
+  @override
+  String get cSetupCustomerApp => 'Customer app';
+
+  @override
+  String get cSetupPartnerApp => 'Partner app';
+
+  @override
+  String get cSetupPayMethods => 'Payment methods';
+
+  @override
+  String get cSetupPayMethodsHint =>
+      'Turn the methods customers see on or off. Applies instantly.';
+
+  @override
+  String get cPayMethodNoKey =>
+      'This payment channel is not connected yet, so customers can\'t see it. Ask whoever manages your setup.';
+
+  @override
+  String get cReviewTitle => 'Store review demo account';
+
+  @override
+  String get cReviewHint =>
+      'Reviewers can\'t receive Korean SMS. Put this number and 6-digit code in the review notes. It switches off automatically.';
+
+  @override
+  String get cReviewPhone => 'Demo phone number';
+
+  @override
+  String get cReviewCode => 'Fixed sign-in code (6 digits)';
+
+  @override
+  String cReviewActiveUntil(String date) {
+    return 'Active until $date';
+  }
+
+  @override
+  String get cReviewEnable => 'Turn on (14 days)';
+
+  @override
+  String get cReviewPhoneInUse =>
+      'A customer, partner or staff member already uses this number. Enter a number nobody uses.';
+
+  @override
+  String get pDeleteAccountBody =>
+      'Your team and personal data will be erased. This can\'t be undone. Finish assigned jobs and pending payouts first.';
+
+  @override
+  String get err_has_active_jobs =>
+      'You still have assigned jobs. Finish them or ask support to reassign.';
+
+  @override
+  String get err_pending_payouts =>
+      'A payout is still pending. You can delete the account after it is paid.';
+
+  @override
+  String get err_phone_required =>
+      'Verify your phone number before taking jobs.';
+
+  @override
+  String get nAlerts => 'Alerts';
+
+  @override
+  String get nEmpty => 'No alerts yet';
+
+  @override
+  String nUnread(String count) {
+    return '$count unread alerts';
+  }
+
+  @override
+  String get pVerifyPhone => 'Verify';
+
+  @override
+  String get mMyJobs => 'My jobs';
+
+  @override
+  String get mNoJobs =>
+      'No jobs assigned yet. Jobs your team lead assigns show up here.';
+
+  @override
+  String mTeam(String team) {
+    return 'Member of $team';
+  }
+
+  @override
+  String get cSetupSave => 'حفظ';
+
+  @override
+  String get cSetupSaved => 'تم الحفظ';
+
+  @override
+  String get cSetupTest => 'تحقق من الاتصال';
+
+  @override
+  String get cSetupLockNow => 'اقفل الآن';
+
+  @override
+  String get cSetupShow => 'إظهار';
+
+  @override
+  String get cSetupHide => 'إخفاء';
+
+  @override
+  String get cSetupUnlockedBadge => 'غير مقفل';
+
+  @override
+  String get cSetupOwnerOnly => 'المالك وحده يستطيع فتح القفل';
+
+  @override
+  String get cSetupLastPassKept => 'The earlier passing check is still in use';
+
+  @override
+  String get cPaymentsTitle => 'المدفوعات';
+
+  @override
+  String get cSetupClear => 'قطع الاتصال';
+
+  @override
+  String get cSetupConnected => 'Connected';
+
+  @override
+  String get cSetupNotConnected => 'غير متصل';
+
+  @override
+  String get cSetupFromEnv => 'يستخدم إعدادات الخادم';
+
+  @override
+  String get cSetupCheckInApp => 'Saved · confirm by signing in from the app';
+
+  @override
+  String get cSetupInvalidKey =>
+      'The key was rejected. Check the value you copied';
+
+  @override
+  String get cSetupUnreachable =>
+      'Could not reach the service. Try again shortly';
+
+  @override
+  String get cSetupKeepValue => 'محفوظ (اكتب فقط للاستبدال)';
+
+  @override
+  String get cSetupClearSlot => 'Clear this slot';
+
+  @override
+  String get cSetupUndoClearSlot => 'Keep this slot';
+
+  @override
+  String get cSetupSlotCleared => 'This key is removed when you save';
+
+  @override
+  String get cSetupGuide => 'طريقة الإعداد';
+
+  @override
+  String get cSetupOpenSite => 'افتح الموقع';
+
+  @override
+  String get cSetupWebhook => 'Webhook URL (paste into the PortOne console)';
+
+  @override
+  String get cSetupTossWebhook =>
+      'Webhook URL (paste into the Toss Payments developer center)';
+
+  @override
+  String get cCopied => 'Copied';
+
+  @override
+  String get cCopy => 'Copy';
+
+  @override
+  String get cSetupLocked =>
+      'This card is locked. The owner must unlock it to change it';
+
+  @override
+  String get cSetupLockedBadge => 'مقفل';
+
+  @override
+  String get cSetupUnlock => 'فتح القفل (رمز المالك)';
+
+  @override
+  String get cSetupDevMode => 'وضع الاختبار: لا تُرسل مدفوعات أو رسائل حقيقية';
+
+  @override
+  String get cSetupOptional => 'اختياري';
+
+  @override
+  String get cSetupModeTest => 'اختبار';
+
+  @override
+  String get cSetupModeLive => 'مباشر';
+
+  @override
+  String get cOwnerCodeTitle => 'Owner authenticator code';
+
+  @override
+  String get cOwnerCodeBody =>
+      'To change this setting, enter the 6-digit code from your authenticator app.';
+
+  @override
+  String get cOwnerCodeField => '6-digit code';
+
+  @override
+  String get cOwnerCodeConfirm => 'Confirm';
+
+  @override
+  String get cOwnerCodeWrong =>
+      'هذا الرمز غير صحيح. أدخل الرمز الذي يعرضه تطبيقك الآن';
+
+  @override
+  String get cOwnerCodeLocked =>
+      'رموز خاطئة كثيرة. حاول مرة أخرى بعد بضع دقائق';
+
+  @override
+  String get cIntPortone => 'Payments (PortOne)';
+
+  @override
+  String get cIntSolapi => 'SMS & KakaoTalk (Solapi)';
+
+  @override
+  String get cIntPush => 'App push (Firebase)';
+
+  @override
+  String get cIntKakao => 'Kakao login';
+
+  @override
+  String get cIntNaver => 'Naver login';
+
+  @override
+  String get cIntGoogle => 'Google login';
+
+  @override
+  String get cIntApple => 'Apple login';
+
+  @override
+  String get cFirstRunTitle => 'Welcome! Create the owner account';
+
+  @override
+  String get cFirstRunBody =>
+      'Enter the 12-character setup code shown during installation. This account manages every setting.';
+
+  @override
+  String get cFirstRunCode => 'Setup code';
+
+  @override
+  String get cName => 'Name';
+
+  @override
+  String get cFirstRunCreate => 'Create account and start';
+
+  @override
+  String get cWrongSetupCode => 'That setup code is not right';
+
+  @override
+  String get cSetupCodeExpired =>
+      'This setup code expired (valid for 7 days). Ask your developer or installer for a new code';
+
+  @override
+  String get cWeakPassword => 'Password needs at least 12 characters';
+
+  @override
+  String get cInvalidValue => 'Please check the highlighted value';
+
+  @override
+  String get cSetupNothingSaved =>
+      'Nothing is saved yet. Save first, then unlock';
+
+  @override
+  String cSetupUnlockLeft(String minutes) {
+    return 'يُقفل خلال $minutes دقيقة';
+  }
+
+  @override
+  String get cSetupTestApiKey => 'Check API key';
+
+  @override
+  String get cSetupNeedsKey =>
+      'Needs a PortOne channel key or Toss Payments with Active on';
+
+  @override
+  String get cSetupOtherMethods => 'طرق دفع أخرى';
+
+  @override
+  String get cSlotHintCard =>
+      'Copy the card payment channel key from the channel list in the PortOne console';
+
+  @override
+  String get cSlotHintBilling =>
+      'Channel key for recurring billing. Left blank, the card channel key is used';
+
+  @override
+  String get cSlotHintIdentity =>
+      'Identity verification channel key, used for identity sign-in';
+
+  @override
+  String get cSlotHintCashReceipt =>
+      'Cash receipt channel key. Used on the server only, never sent to the customer app';
+
+  @override
+  String get cSlotHintMethod =>
+      'Copy this payment method\'s channel key from the PortOne console';
+
+  @override
+  String get cLangStepTitle => 'لغة لوحة التحكم';
+
+  @override
+  String get cLangStepBody =>
+      'اللغة التي تستخدمها لوحة التحكم هذه. لا تعتمد على بلدك.';
+
+  @override
+  String get cCountryStepTitle => 'البلد';
+
+  @override
+  String get cCountryStepBody =>
+      'اختر البلد الذي تعمل فيه. تتبعه العملة والمنطقة الزمنية والنصوص القانونية وخدمات الدفع.';
+
+  @override
+  String get cCountrySearch => 'ابحث عن بلد';
+
+  @override
+  String cCountryDetected(String name) {
+    return 'يبدو أن هذا الخادم موجود في $name. يرجى التأكيد.';
+  }
+
+  @override
+  String get cCountryReviewed => 'تمت المراجعة';
+
+  @override
+  String get cCountryDraft => 'مسودة';
+
+  @override
+  String get cCountryContact => 'تواصل معنا';
+
+  @override
+  String get cCountryNone => 'لا يوجد بلد مطابق.';
+
+  @override
+  String cCountryPreviewTitle(String name) {
+    return 'ما يجهزه $name';
+  }
+
+  @override
+  String get cCountryCurrency => 'العملة';
+
+  @override
+  String cCountryPriceSample(String price) {
+    return 'تظهر الأسعار هكذا: $price';
+  }
+
+  @override
+  String get cCountryZones => 'المنطقة الزمنية';
+
+  @override
+  String get cCountryLanguages => 'لغات العملاء';
+
+  @override
+  String get cCountryProviders => 'الخدمات الموصى بها';
+
+  @override
+  String get cCountryLegal => 'المستندات القانونية المجهزة';
+
+  @override
+  String get cCountryMaturity => 'الجاهزية';
+
+  @override
+  String get cCountryDraftWarn =>
+      'لم تتم مراجعة إعدادات هذا البلد بعد. استشر محاميًا محليًا قبل قبول المدفوعات.';
+
+  @override
+  String get cCountryDraftAck =>
+      'قرأت هذا وسأستشير محاميًا محليًا قبل قبول المدفوعات.';
+
+  @override
+  String get cCountryConfirm => 'استخدم هذا البلد';
+
+  @override
+  String get cCountrySaved => 'تم حفظ البلد.';
+
+  @override
+  String get cCountryChangeNote =>
+      'يمكنك تغيير البلد من الإعدادات حتى أول دفعة حقيقية.';
+
+  @override
+  String get cCountryDocTerms => 'شروط الخدمة';
+
+  @override
+  String get cCountryDocPrivacy => 'سياسة الخصوصية';
+
+  @override
+  String get cCountryDocLocation => 'شروط خدمات الموقع';
+
+  @override
+  String get sgConsentHint =>
+      'Agree to the required items to get a verification code.';
+
+  @override
+  String get err_required_consent =>
+      'Please agree to all required terms to sign up';
+
+  @override
+  String get sgOverseasNote =>
+      'This consent is needed to sign up. Without it you cannot sign up. AI chat sends the sentences you type, with the chat context, to Anthropic, PBC (USA), which writes the AI replies. After signing up you can withdraw it in Consent settings, but then push notifications and the AI chat stop.';
+
+  @override
+  String get cStaffInvite => 'Invite staff';
+
+  @override
+  String get cStaffInviteTitle => 'Invite a staff member';
+
+  @override
+  String get cStaffInviteBody =>
+      'We text a sign-in code to the staff member\'s phone. They set a password with it within 24 hours.';
+
+  @override
+  String get cStaffPhone => 'Mobile number';
+
+  @override
+  String get cStaffPhoneNeeded =>
+      'This staff member has no phone number. Enter one to save it and send the code.';
+
+  @override
+  String get cStaffChannel => 'How to send the code';
+
+  @override
+  String get cStaffChannelSms => 'Send by text';
+
+  @override
+  String get cStaffChannelCopy => 'Hand over (copy)';
+
+  @override
+  String get cStaffCodeTitle => 'Sign-in code';
+
+  @override
+  String get cStaffCodeBody =>
+      'Give this code to the staff member. It works once, for 24 hours. You cannot see it again after closing.';
+
+  @override
+  String get cStaffSentSms =>
+      'Text sent. The staff member must enter it within 24 hours.';
+
+  @override
+  String get cStaffInvited => 'Invitation sent';
+
+  @override
+  String get cStaffInvitePending => 'Invitation pending (no password yet)';
+
+  @override
+  String get cStaffAdminOnly => 'Only admins can grant admin access';
+
+  @override
+  String get cStaffInviteResend => 'Resend invite code';
+
+  @override
+  String get cStaffSendCode => 'Send';
+
+  @override
+  String get cMfaTitle => 'Two-step sign-in';
+
+  @override
+  String get cMfaCode => '6-digit code from your authenticator app';
+
+  @override
+  String get cMfaRecovery => 'Recovery code';
+
+  @override
+  String get cMfaUseRecovery => 'Use a recovery code instead';
+
+  @override
+  String get cMfaUseCode => 'Use an authenticator code instead';
+
+  @override
+  String get cMfaVerify => 'Verify';
+
+  @override
+  String get cMfaBack => 'Back to sign-in';
+
+  @override
+  String get cMfaEnrolTitle => 'Set up two-step sign-in';
+
+  @override
+  String get cMfaEnrolBody =>
+      'Admins need an authenticator app. Add this key to Google Authenticator, 1Password or similar, then enter the 6-digit code it shows.';
+
+  @override
+  String get cMfaSecret => 'Setup key';
+
+  @override
+  String get cMfaLink => 'Setup link (otpauth)';
+
+  @override
+  String get cMfaCopy => 'Copy';
+
+  @override
+  String get cMfaCopied => 'Copied';
+
+  @override
+  String get cMfaConfirm => 'Confirm and turn on';
+
+  @override
+  String get cMfaCodesTitle => 'Save your recovery codes';
+
+  @override
+  String get cMfaCodesBody =>
+      'If you lose your authenticator, each code signs you in once. They are shown only now.';
+
+  @override
+  String get cMfaDownload => 'Download';
+
+  @override
+  String get cMfaSaveFailed =>
+      'This device cannot save the file here. Copy the codes and keep them safe.';
+
+  @override
+  String get cMfaContinue => 'Continue to the console';
+
+  @override
+  String get cMfaInvalid =>
+      'That code does not match. Check that your phone\'s clock is right, then try again.';
+
+  @override
+  String get cMfaExpired =>
+      'Sign-in expired. Start again from the password step.';
+
+  @override
+  String get cMfaLocked =>
+      'Too many attempts. Wait a few minutes and try again.';
+
+  @override
+  String get cStaffReset => 'Reset password';
+
+  @override
+  String get cStaffResetConfirm =>
+      'Reset this staff member\'s password? They will be signed out everywhere.';
+
+  @override
+  String get cStaffResetTitle => 'Reset code';
+
+  @override
+  String get cStaffResetBody =>
+      'This code works once, for 24 hours. Once the staff member sets a password, they are signed out everywhere.';
+
+  @override
+  String get cStepUpTitle => 'Confirm with your authenticator';
+
+  @override
+  String get cStepUpBody =>
+      'This action needs a 6-digit code from your authenticator app. Once confirmed, it stays unlocked for 5 minutes.';
+
+  @override
+  String get cStepUpConfirm => 'Confirm and continue';
+
+  @override
+  String get cStepUpCancel => 'Cancel';
+
+  @override
+  String get err_stepup_required =>
+      'This action needs a fresh authenticator code. Confirm it, then try again.';
+
+  @override
+  String get subTitle => 'Regular cleaning';
+
+  @override
+  String get subNew => 'Start a subscription';
+
+  @override
+  String get subCadence => 'How often';
+
+  @override
+  String get subWeekly => 'Every week';
+
+  @override
+  String get subBiweekly => 'Every 2 weeks';
+
+  @override
+  String get subEvery4Weeks => 'Every 4 weeks';
+
+  @override
+  String get subWeekday => 'Day of week';
+
+  @override
+  String get subHour => 'Arrival time';
+
+  @override
+  String subDiscountNote(String percent) {
+    return 'Subscriptions get $percent% off each visit';
+  }
+
+  @override
+  String get subChargeNote =>
+      'Each visit is charged the day before, to your saved card';
+
+  @override
+  String get subCreate => 'Subscribe';
+
+  @override
+  String get subCreated => 'Subscription started';
+
+  @override
+  String get subNeedAddress => 'Add a visit address first';
+
+  @override
+  String get subListEmpty => 'No subscriptions yet';
+
+  @override
+  String get subStatusActive => 'Active';
+
+  @override
+  String get subStatusPaused => 'Paused';
+
+  @override
+  String get subStatusCancelled => 'Cancelled';
+
+  @override
+  String subNextVisit(String date) {
+    return 'Next visit $date';
+  }
+
+  @override
+  String get subPause => 'Pause';
+
+  @override
+  String get subResume => 'Resume';
+
+  @override
+  String get subCancelSub => 'Cancel subscription';
+
+  @override
+  String get subCancelConfirm =>
+      'Future visits will be cancelled. Booked visits need separate cancellation, and fees may apply.';
+
+  @override
+  String get subSkip => 'Skip this visit';
+
+  @override
+  String get subMove => 'Move this visit';
+
+  @override
+  String get subVisitLocked => 'Visits can\'t change from the day before';
+
+  @override
+  String get subPausedPayment =>
+      'Paused after repeated payment failures. Change your card, then resume.';
+
+  @override
+  String get subStatePlanned => 'Planned';
+
+  @override
+  String get subStateBooked => 'Booked';
+
+  @override
+  String get subStateSkipped => 'Skipped';
+
+  @override
+  String get subStateMissed => 'Missed';
+
+  @override
+  String get pSubsTitle => 'Recurring customers';
+
+  @override
+  String get pSubsEmpty => 'No recurring customers yet';
+
+  @override
+  String get cSubsTitle => 'Subscriptions';
+
+  @override
+  String get cSubsEdit => 'Edit for customer';
+
+  @override
+  String get cMrr => 'Monthly recurring revenue (MRR)';
+
+  @override
+  String get cChurn => 'Churn';
+
+  @override
+  String get cActiveSubs => 'Active subscriptions';
+
+  @override
+  String get cRecognized => 'Recognized in period';
+
+  @override
+  String get cSubsLoadFailed => 'Could not load subscriptions';
+
+  @override
+  String get tTaxSection => 'Tax';
+
+  @override
+  String tVatQuarter(String q) {
+    return 'Q$q VAT CSV';
+  }
+
+  @override
+  String get tVatYear => 'Year';
+
+  @override
+  String get tExportWithholding => 'Withholding statement CSV';
+
+  @override
+  String get tExportTaxInvoices => 'Tax invoice upload CSV';
+
+  @override
+  String get tReExport => 'Export again';
+
+  @override
+  String get tReExportTitle => 'Export again';
+
+  @override
+  String get tReExportConfirm =>
+      'Downloads the already exported tax invoice requests again. Use only if the file was lost or damaged.';
+
+  @override
+  String get tTaxLayoutNote =>
+      'Check the columns against the 홈택스 template before uploading. Layout not yet verified.';
+
+  @override
+  String get tCashReceipts => 'Cash receipts';
+
+  @override
+  String get tCashIssued => 'Issued';
+
+  @override
+  String get tCashFailed => 'Failed';
+
+  @override
+  String get tCashPending => 'Pending';
+
+  @override
+  String get tCashCancelled => 'Cancelled';
+
+  @override
+  String get tReissue => 'Reissue';
+
+  @override
+  String get tTaxInvoices => 'Tax invoices';
+
+  @override
+  String get tApprovalNumber => 'Approval no.';
+
+  @override
+  String get tIssuedOn => 'Issued on';
+
+  @override
+  String get tMarkIssued => 'Mark as issued';
+
+  @override
+  String get tQueueEmpty => 'No requests waiting';
+
+  @override
+  String get tWithholdingLabel => 'Withholding';
+
+  @override
+  String get tGrossAmount => 'Gross';
+
+  @override
+  String get tIncomeTax => 'Income tax';
+
+  @override
+  String get tLocalTax => 'Local income tax';
+
+  @override
+  String get tNetAmount => 'Net';
+
+  @override
+  String get tNoWithholding => 'No withholding (registered business)';
+
+  @override
+  String get tEstWithholding => 'Estimated withholding (pending)';
+
+  @override
+  String get tReceiptOptions => 'Receipt options';
+
+  @override
+  String get tWantCashReceipt => 'Get a cash receipt';
+
+  @override
+  String get tCashForIncome => 'For tax deduction (phone number)';
+
+  @override
+  String get tCashForBusiness => 'For business expense (business no.)';
+
+  @override
+  String get tWantTaxInvoice => 'Get a tax invoice (business)';
+
+  @override
+  String get tPhoneForReceipt => 'Phone number';
+
+  @override
+  String get tBusinessNumber => 'Business registration no.';
+
+  @override
+  String get tCompanyName => 'Company name';
+
+  @override
+  String get tRepresentative => 'Representative';
+
+  @override
+  String get tInvoiceEmail => 'Email for the invoice';
+
+  @override
+  String get tReceiptSave => 'Save and pay';
+
+  @override
+  String get tReceiptSaveFailed => 'Could not save the receipt details';
+
+  @override
+  String get tTaxType => 'Tax type';
+
+  @override
+  String get tTaxFreelancer => 'Freelancer (withheld)';
+
+  @override
+  String get tTaxBusiness => 'Registered business (no withholding)';
+
+  @override
+  String get tReceiptSettings => 'Receipt settings';
+
+  @override
+  String get cIntTossPayments => 'Payments (Toss Payments)';
+
+  @override
+  String cSetupGatewayLive(String name) {
+    return 'تذهب المدفوعات إلى: $name';
+  }
+
+  @override
+  String get cSetupGatewayNone =>
+      'No gateway takes payments right now. Set up PortOne or Toss Payments, or turn Toss Payments\' Active on.';
+
+  @override
+  String cPayMethodGateway(String name) {
+    return 'Gateway: $name';
+  }
+
+  @override
+  String get cSetupGatewayTestKeys => '(مفاتيح اختبار: لا تنتقل أموال حقيقية)';
+
+  @override
+  String get cSetupBillingInvalidKey =>
+      'The billing keys were rejected. Check the billing MID\'s keys';
+
+  @override
+  String get err_invalid_client_key =>
+      'The client key starts with test_ck_ or live_ck_.';
+
+  @override
+  String get err_gateway_in_use =>
+      'This gateway still has payments in progress, saved cards or refunds, so it can\'t be disconnected. To stop new payments only, turn Toss Payments\' Active off, or clear PortOne\'s channel key slots.';
+
+  @override
+  String get err_key_mode_mismatch =>
+      'Test and live keys can\'t be mixed. Use keys of one kind.';
+
+  @override
+  String get reviewRuleLine =>
+      'No insults, personal information, fake or promotional content. Reported reviews are hidden.';
+
+  @override
+  String get reportAction => 'Report';
+
+  @override
+  String get reportSheetTitle => 'Report this review?';
+
+  @override
+  String get reportReasonSpam => 'Spam or ads';
+
+  @override
+  String get reportReasonOffensive => 'Insults or hate';
+
+  @override
+  String get reportReasonPersonal => 'Personal information';
+
+  @override
+  String get reportReasonOther => 'Other';
+
+  @override
+  String get reportNoteHint => 'Details (optional, up to 300 characters)';
+
+  @override
+  String get reportSubmit => 'Submit report';
+
+  @override
+  String get reportThanks => 'Thanks. Our team will review it.';
+
+  @override
+  String get reportAlready => 'You already reported this review';
+
+  @override
+  String get reportFailed => 'Couldn\'t send the report. Try again.';
+
+  @override
+  String get reviewBlocked =>
+      'Reviews are disabled for this account. Contact support.';
+
+  @override
+  String get modTitle => 'Review reports';
+
+  @override
+  String get modEmpty => 'No reports waiting';
+
+  @override
+  String modReports(String count) {
+    return '$count reports';
+  }
+
+  @override
+  String get modKeep => 'Keep';
+
+  @override
+  String get modHide => 'Hide';
+
+  @override
+  String get modDelete => 'Delete';
+
+  @override
+  String get modBlockAuthor => 'Restrict author';
+
+  @override
+  String get modUnblockAuthor => 'Lift restriction';
+
+  @override
+  String get modDone => 'Done';
+
+  @override
+  String get modFailed => 'Couldn\'t apply that. Try again.';
+
+  @override
+  String get modHidden => 'Hidden review';
+
+  @override
+  String uUpdateBanner(String version) {
+    return 'Version $version is available';
+  }
+
+  @override
+  String get uUpdateNow => 'Update';
+
+  @override
+  String get uUpdateLater => 'Later';
+
+  @override
+  String get uUpdateRequiredTitle => 'An update is required';
+
+  @override
+  String get uUpdateRequiredBody =>
+      'This version is no longer supported. Please update from the store.';
+
+  @override
+  String get uUpdateStore => 'Update in the store';
+
+  @override
+  String get uUpdateStoreMissing =>
+      'The update link is not ready yet. Please try again later.';
+
+  @override
+  String uCurrentVersion(String version) {
+    return 'Current version $version';
+  }
+
+  @override
+  String get uAppVersionTitle => 'App versions';
+
+  @override
+  String get uAppVersionHint =>
+      'Apps below the minimum stop on an update screen. Apps below the latest version see a banner. Format: 1.2.0';
+
+  @override
+  String get uMinVersion => 'Minimum version';
+
+  @override
+  String get uLatestVersion => 'Latest version';
+
+  @override
+  String get walletTitle => 'Points wallet';
+
+  @override
+  String get walletBalance => 'Available points';
+
+  @override
+  String walletPoints(String count) {
+    return '$count pts';
+  }
+
+  @override
+  String walletExpiring(String days, String count) {
+    return '$count pts expire within $days days';
+  }
+
+  @override
+  String get walletOff => 'Points rewards are not open yet';
+
+  @override
+  String get walletEmpty => 'No points activity yet';
+
+  @override
+  String get walletHistory => 'Recent activity';
+
+  @override
+  String get walletKindEarn => 'Booking cashback';
+
+  @override
+  String get walletKindWelcome => 'Welcome points';
+
+  @override
+  String get walletKindReferral => 'Referral reward';
+
+  @override
+  String get walletKindRefund => 'Points returned after cancellation';
+
+  @override
+  String get walletKindSpend => 'Used for a booking';
+
+  @override
+  String get walletKindExpire => 'Expired';
+
+  @override
+  String get walletKindOther => 'Points adjustment';
+
+  @override
+  String get moreWallet => 'Points wallet';
+
+  @override
+  String get payHistoryTitle => 'Payment history';
+
+  @override
+  String get payHistoryEmpty => 'No payments yet';
+
+  @override
+  String get payStatusPaid => 'Paid';
+
+  @override
+  String get payStatusRefunded => 'Refunded';
+
+  @override
+  String get payStatusRefundPending => 'Refund in progress';
+
+  @override
+  String get payStatusPending => 'Awaiting payment';
+
+  @override
+  String get payStatusClosed => 'Not paid';
+
+  @override
+  String get receiptTitle => 'Receipt';
+
+  @override
+  String get receiptLegal => 'Business name';
+
+  @override
+  String get receiptRegNo => 'Business reg. no.';
+
+  @override
+  String get receiptAddr => 'Address';
+
+  @override
+  String get receiptPhone => 'Support';
+
+  @override
+  String get receiptDate => 'Paid on';
+
+  @override
+  String get receiptCopy => 'Copy receipt';
+
+  @override
+  String get receiptCopied => 'Receipt copied';
+
+  @override
+  String get receiptNote =>
+      'Proof of payment only. For a tax invoice, request one from the booking details.';
+
+  @override
+  String get checkoutPointsUse => 'Use points';
+
+  @override
+  String checkoutPointsAvail(String count, String max) {
+    return '$count pts available · up to $max on this payment';
+  }
+
+  @override
+  String get checkoutPointsNeedsWindow =>
+      'Points can be used when you pay in the payment window';
+
+  @override
+  String get pointsLedgerTitle => 'Points ledger';
+
+  @override
+  String get pointsAdjustAmount => 'Points (negative to deduct)';
+
+  @override
+  String get pointsAdjustReason => 'Reason for adjustment';
+
+  @override
+  String get pointsAdjustInvalid => 'Enter a non-zero amount and a reason';
+
+  @override
+  String get pointsAdjustDone => 'Points adjusted';
+
+  @override
+  String get err_points_insufficient =>
+      'You don\'t have enough points. Lower the points to use.';
+
+  @override
+  String get err_points_over_cap =>
+      'That is more points than this payment allows.';
+
+  @override
+  String get err_points_cover_total =>
+      'Points can\'t cover the whole amount. Use a little less.';
+
+  @override
+  String get webBookNow => 'Book on the web';
+
+  @override
+  String get webBookSub => 'Book without installing the app';
+
+  @override
+  String get apPgBrowserNote =>
+      'Complete the payment in your browser, then come back here and tap the button below.';
+
+  @override
+  String get apPgBrowserDone => 'I finished paying';
+}

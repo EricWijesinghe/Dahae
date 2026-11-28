@@ -18,11 +18,15 @@ class ConsoleTestHost extends StatelessWidget {
     required this.env,
     required this.state,
     required this.home,
+    this.locales,
   });
 
   final TestEnv env;
   final ConsoleState state;
   final Widget home;
+
+  /// The app's languages unless a test needs one no app offers (the Arabic right-to-left test locale).
+  final List<Locale>? locales;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -38,7 +42,7 @@ class ConsoleTestHost extends StatelessWidget {
         darkTheme: buildTheme(BrandConfig.placeholder, Brightness.dark),
         themeMode: env.theme.mode,
         locale: env.locale.locale,
-        supportedLocales: LocaleController.supported,
+        supportedLocales: locales ?? LocaleController.supported,
         localizationsDelegates: const [
           T.delegate,
           GlobalMaterialLocalizations.delegate,
@@ -54,10 +58,13 @@ class ConsoleTestHost extends StatelessWidget {
 Future<ConsoleState> pumpConsoleScreen(
   WidgetTester tester,
   TestEnv env,
-  Widget home,
-) async {
+  Widget home, {
+  List<Locale>? locales,
+}) async {
   final state = ConsoleState(env.api, FakeRealtime(env.api), env.session);
-  await tester.pumpWidget(ConsoleTestHost(env: env, state: state, home: home));
+  await tester.pumpWidget(
+    ConsoleTestHost(env: env, state: state, home: home, locales: locales),
+  );
   return state;
 }
 

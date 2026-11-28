@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_ar.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_ko.dart';
 
@@ -93,6 +94,7 @@ abstract class T {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
+    Locale('ar'),
     Locale('en'),
     Locale('ko'),
   ];
@@ -14166,6 +14168,162 @@ abstract class T {
   /// **'이 결제수단의 채널 키를 PortOne 콘솔에서 복사하세요'**
   String get cSlotHintMethod;
 
+  /// No description provided for @cLangStepTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'콘솔 언어'**
+  String get cLangStepTitle;
+
+  /// No description provided for @cLangStepBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 콘솔을 볼 언어예요. 나라와 상관없이 고를 수 있어요.'**
+  String get cLangStepBody;
+
+  /// No description provided for @cCountryStepTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'나라'**
+  String get cCountryStepTitle;
+
+  /// No description provided for @cCountryStepBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'사업하는 나라를 고르세요. 통화, 시간대, 약관과 결제 서비스가 이 나라에 맞춰져요.'**
+  String get cCountryStepBody;
+
+  /// No description provided for @cCountrySearch.
+  ///
+  /// In ko, this message translates to:
+  /// **'나라 검색'**
+  String get cCountrySearch;
+
+  /// No description provided for @cCountryDetected.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 서버는 {name}에 있는 것 같아요. 맞는지 확인해 주세요.'**
+  String cCountryDetected(String name);
+
+  /// No description provided for @cCountryReviewed.
+  ///
+  /// In ko, this message translates to:
+  /// **'검토됨'**
+  String get cCountryReviewed;
+
+  /// No description provided for @cCountryDraft.
+  ///
+  /// In ko, this message translates to:
+  /// **'초안'**
+  String get cCountryDraft;
+
+  /// No description provided for @cCountryContact.
+  ///
+  /// In ko, this message translates to:
+  /// **'문의해 주세요'**
+  String get cCountryContact;
+
+  /// No description provided for @cCountryNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'찾는 나라가 없어요.'**
+  String get cCountryNone;
+
+  /// No description provided for @cCountryPreviewTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name}에서 준비되는 것'**
+  String cCountryPreviewTitle(String name);
+
+  /// No description provided for @cCountryCurrency.
+  ///
+  /// In ko, this message translates to:
+  /// **'통화'**
+  String get cCountryCurrency;
+
+  /// No description provided for @cCountryPriceSample.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격 표시 예: {price}'**
+  String cCountryPriceSample(String price);
+
+  /// No description provided for @cCountryZones.
+  ///
+  /// In ko, this message translates to:
+  /// **'시간대'**
+  String get cCountryZones;
+
+  /// No description provided for @cCountryLanguages.
+  ///
+  /// In ko, this message translates to:
+  /// **'고객 언어'**
+  String get cCountryLanguages;
+
+  /// No description provided for @cCountryProviders.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천 서비스'**
+  String get cCountryProviders;
+
+  /// No description provided for @cCountryLegal.
+  ///
+  /// In ko, this message translates to:
+  /// **'준비되는 약관·방침'**
+  String get cCountryLegal;
+
+  /// No description provided for @cCountryMaturity.
+  ///
+  /// In ko, this message translates to:
+  /// **'준비 상태'**
+  String get cCountryMaturity;
+
+  /// No description provided for @cCountryDraftWarn.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 나라 설정은 아직 검토 전이에요. 결제를 받기 전에 현지 변호사에게 확인하세요.'**
+  String get cCountryDraftWarn;
+
+  /// No description provided for @cCountryDraftAck.
+  ///
+  /// In ko, this message translates to:
+  /// **'읽었어요. 결제를 받기 전에 현지 변호사에게 확인할게요.'**
+  String get cCountryDraftAck;
+
+  /// No description provided for @cCountryConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 나라로 정하기'**
+  String get cCountryConfirm;
+
+  /// No description provided for @cCountrySaved.
+  ///
+  /// In ko, this message translates to:
+  /// **'나라를 정했어요.'**
+  String get cCountrySaved;
+
+  /// No description provided for @cCountryChangeNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'첫 실제 결제 전까지는 설정에서 나라를 바꿀 수 있어요.'**
+  String get cCountryChangeNote;
+
+  /// No description provided for @cCountryDocTerms.
+  ///
+  /// In ko, this message translates to:
+  /// **'이용약관'**
+  String get cCountryDocTerms;
+
+  /// No description provided for @cCountryDocPrivacy.
+  ///
+  /// In ko, this message translates to:
+  /// **'개인정보처리방침'**
+  String get cCountryDocPrivacy;
+
+  /// No description provided for @cCountryDocLocation.
+  ///
+  /// In ko, this message translates to:
+  /// **'위치기반서비스 이용약관'**
+  String get cCountryDocLocation;
+
   /// No description provided for @sgConsentHint.
   ///
   /// In ko, this message translates to:
@@ -15515,7 +15673,7 @@ class _TDelegate extends LocalizationsDelegate<T> {
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en', 'ko'].contains(locale.languageCode);
+      <String>['ar', 'en', 'ko'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_TDelegate old) => false;
@@ -15524,6 +15682,8 @@ class _TDelegate extends LocalizationsDelegate<T> {
 T lookupT(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'ar':
+      return TAr();
     case 'en':
       return TEn();
     case 'ko':

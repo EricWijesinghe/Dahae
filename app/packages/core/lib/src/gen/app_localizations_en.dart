@@ -7736,6 +7736,95 @@ class TEn extends T {
       'Copy this payment method\'s channel key from the PortOne console';
 
   @override
+  String get cLangStepTitle => 'Console language';
+
+  @override
+  String get cLangStepBody =>
+      'The language this console uses. It does not depend on your country.';
+
+  @override
+  String get cCountryStepTitle => 'Country';
+
+  @override
+  String get cCountryStepBody =>
+      'Choose the country you operate in. Currency, time zone, legal texts and payment services follow it.';
+
+  @override
+  String get cCountrySearch => 'Search countries';
+
+  @override
+  String cCountryDetected(String name) {
+    return 'This server looks like it is in $name. Please confirm.';
+  }
+
+  @override
+  String get cCountryReviewed => 'Reviewed';
+
+  @override
+  String get cCountryDraft => 'Draft';
+
+  @override
+  String get cCountryContact => 'Contact us';
+
+  @override
+  String get cCountryNone => 'No country matches.';
+
+  @override
+  String cCountryPreviewTitle(String name) {
+    return 'What $name sets up';
+  }
+
+  @override
+  String get cCountryCurrency => 'Currency';
+
+  @override
+  String cCountryPriceSample(String price) {
+    return 'Prices read like $price';
+  }
+
+  @override
+  String get cCountryZones => 'Time zone';
+
+  @override
+  String get cCountryLanguages => 'Customer languages';
+
+  @override
+  String get cCountryProviders => 'Recommended services';
+
+  @override
+  String get cCountryLegal => 'Legal documents prepared';
+
+  @override
+  String get cCountryMaturity => 'Readiness';
+
+  @override
+  String get cCountryDraftWarn =>
+      'This country\'s setup has not been reviewed yet. Check with a local lawyer before taking payments.';
+
+  @override
+  String get cCountryDraftAck =>
+      'I have read this and will check with a local lawyer before taking payments.';
+
+  @override
+  String get cCountryConfirm => 'Use this country';
+
+  @override
+  String get cCountrySaved => 'Country saved.';
+
+  @override
+  String get cCountryChangeNote =>
+      'You can change the country in Settings until the first live payment.';
+
+  @override
+  String get cCountryDocTerms => 'Terms of service';
+
+  @override
+  String get cCountryDocPrivacy => 'Privacy policy';
+
+  @override
+  String get cCountryDocLocation => 'Location services terms';
+
+  @override
   String get sgConsentHint =>
       'Agree to the required items to get a verification code.';
 

@@ -1,0 +1,65 @@
+# Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-Proprietary
+
+# Console setup wizard, steps 0 and 1 (a fresh install only): the console language, then the country with a preview
+# of what its pack sets up. Owner-facing, plain words. Columns: ko (source), en. X carries the machine-translated
+# Arabic test locale (lang_ar.py).
+S = {
+  "cLangStepTitle": ["콘솔 언어", "Console language"],
+  "cLangStepBody": ["이 콘솔을 볼 언어예요. 나라와 상관없이 고를 수 있어요.", "The language this console uses. It does not depend on your country."],
+  "cCountryStepTitle": ["나라", "Country"],
+  "cCountryStepBody": ["사업하는 나라를 고르세요. 통화, 시간대, 약관과 결제 서비스가 이 나라에 맞춰져요.", "Choose the country you operate in. Currency, time zone, legal texts and payment services follow it."],
+  "cCountrySearch": ["나라 검색", "Search countries"],
+  "cCountryDetected": ["이 서버는 {name}에 있는 것 같아요. 맞는지 확인해 주세요.", "This server looks like it is in {name}. Please confirm."],
+  "cCountryReviewed": ["검토됨", "Reviewed"],
+  "cCountryDraft": ["초안", "Draft"],
+  "cCountryContact": ["문의해 주세요", "Contact us"],
+  "cCountryNone": ["찾는 나라가 없어요.", "No country matches."],
+  "cCountryPreviewTitle": ["{name}에서 준비되는 것", "What {name} sets up"],
+  "cCountryCurrency": ["통화", "Currency"],
+  "cCountryPriceSample": ["가격 표시 예: {price}", "Prices read like {price}"],
+  "cCountryZones": ["시간대", "Time zone"],
+  "cCountryLanguages": ["고객 언어", "Customer languages"],
+  "cCountryProviders": ["추천 서비스", "Recommended services"],
+  "cCountryLegal": ["준비되는 약관·방침", "Legal documents prepared"],
+  "cCountryMaturity": ["준비 상태", "Readiness"],
+  "cCountryDraftWarn": ["이 나라 설정은 아직 검토 전이에요. 결제를 받기 전에 현지 변호사에게 확인하세요.", "This country's setup has not been reviewed yet. Check with a local lawyer before taking payments."],
+  "cCountryDraftAck": ["읽었어요. 결제를 받기 전에 현지 변호사에게 확인할게요.", "I have read this and will check with a local lawyer before taking payments."],
+  "cCountryConfirm": ["이 나라로 정하기", "Use this country"],
+  "cCountrySaved": ["나라를 정했어요.", "Country saved."],
+  "cCountryChangeNote": ["첫 실제 결제 전까지는 설정에서 나라를 바꿀 수 있어요.", "You can change the country in Settings until the first live payment."],
+  "cCountryDocTerms": ["이용약관", "Terms of service"],
+  "cCountryDocPrivacy": ["개인정보처리방침", "Privacy policy"],
+  "cCountryDocLocation": ["위치기반서비스 이용약관", "Location services terms"],
+}
+
+X = {
+  "ar": {
+    "cLangStepTitle": "لغة لوحة التحكم",
+    "cLangStepBody": "اللغة التي تستخدمها لوحة التحكم هذه. لا تعتمد على بلدك.",
+    "cCountryStepTitle": "البلد",
+    "cCountryStepBody": "اختر البلد الذي تعمل فيه. تتبعه العملة والمنطقة الزمنية والنصوص القانونية وخدمات الدفع.",
+    "cCountrySearch": "ابحث عن بلد",
+    "cCountryDetected": "يبدو أن هذا الخادم موجود في {name}. يرجى التأكيد.",
+    "cCountryReviewed": "تمت المراجعة",
+    "cCountryDraft": "مسودة",
+    "cCountryContact": "تواصل معنا",
+    "cCountryNone": "لا يوجد بلد مطابق.",
+    "cCountryPreviewTitle": "ما يجهزه {name}",
+    "cCountryCurrency": "العملة",
+    "cCountryPriceSample": "تظهر الأسعار هكذا: {price}",
+    "cCountryZones": "المنطقة الزمنية",
+    "cCountryLanguages": "لغات العملاء",
+    "cCountryProviders": "الخدمات الموصى بها",
+    "cCountryLegal": "المستندات القانونية المجهزة",
+    "cCountryMaturity": "الجاهزية",
+    "cCountryDraftWarn": "لم تتم مراجعة إعدادات هذا البلد بعد. استشر محاميًا محليًا قبل قبول المدفوعات.",
+    "cCountryDraftAck": "قرأت هذا وسأستشير محاميًا محليًا قبل قبول المدفوعات.",
+    "cCountryConfirm": "استخدم هذا البلد",
+    "cCountrySaved": "تم حفظ البلد.",
+    "cCountryChangeNote": "يمكنك تغيير البلد من الإعدادات حتى أول دفعة حقيقية.",
+    "cCountryDocTerms": "شروط الخدمة",
+    "cCountryDocPrivacy": "سياسة الخصوصية",
+    "cCountryDocLocation": "شروط خدمات الموقع",
+  },
+}

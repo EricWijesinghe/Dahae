@@ -15,6 +15,7 @@ import 'host_controls.dart';
 import 'legal_inbox.dart';
 import 'setup_app_links.dart';
 import 'setup_business.dart';
+import 'setup_country.dart';
 import 'setup_domain.dart';
 import 'setup_formats.dart';
 import 'setup_guides.dart';
@@ -68,6 +69,8 @@ class _SetupScreenState extends State<SetupScreen> {
                   devMode: data['dev_mode'] == true,
                 ),
                 const SizedBox(height: Space.lg),
+                // Fresh install only: console language and country (shows nothing once the country is set).
+                SetupCountryCard(onSaved: _reload),
                 BusinessCard(initial: business, onSaved: _reload),
                 if (data['store_build'] case final Json build) ...[
                   const SizedBox(height: Space.md),

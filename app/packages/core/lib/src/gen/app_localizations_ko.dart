@@ -7493,6 +7493,92 @@ class TKo extends T {
   String get cSlotHintMethod => '이 결제수단의 채널 키를 PortOne 콘솔에서 복사하세요';
 
   @override
+  String get cLangStepTitle => '콘솔 언어';
+
+  @override
+  String get cLangStepBody => '이 콘솔을 볼 언어예요. 나라와 상관없이 고를 수 있어요.';
+
+  @override
+  String get cCountryStepTitle => '나라';
+
+  @override
+  String get cCountryStepBody =>
+      '사업하는 나라를 고르세요. 통화, 시간대, 약관과 결제 서비스가 이 나라에 맞춰져요.';
+
+  @override
+  String get cCountrySearch => '나라 검색';
+
+  @override
+  String cCountryDetected(String name) {
+    return '이 서버는 $name에 있는 것 같아요. 맞는지 확인해 주세요.';
+  }
+
+  @override
+  String get cCountryReviewed => '검토됨';
+
+  @override
+  String get cCountryDraft => '초안';
+
+  @override
+  String get cCountryContact => '문의해 주세요';
+
+  @override
+  String get cCountryNone => '찾는 나라가 없어요.';
+
+  @override
+  String cCountryPreviewTitle(String name) {
+    return '$name에서 준비되는 것';
+  }
+
+  @override
+  String get cCountryCurrency => '통화';
+
+  @override
+  String cCountryPriceSample(String price) {
+    return '가격 표시 예: $price';
+  }
+
+  @override
+  String get cCountryZones => '시간대';
+
+  @override
+  String get cCountryLanguages => '고객 언어';
+
+  @override
+  String get cCountryProviders => '추천 서비스';
+
+  @override
+  String get cCountryLegal => '준비되는 약관·방침';
+
+  @override
+  String get cCountryMaturity => '준비 상태';
+
+  @override
+  String get cCountryDraftWarn =>
+      '이 나라 설정은 아직 검토 전이에요. 결제를 받기 전에 현지 변호사에게 확인하세요.';
+
+  @override
+  String get cCountryDraftAck => '읽었어요. 결제를 받기 전에 현지 변호사에게 확인할게요.';
+
+  @override
+  String get cCountryConfirm => '이 나라로 정하기';
+
+  @override
+  String get cCountrySaved => '나라를 정했어요.';
+
+  @override
+  String get cCountryChangeNote => '첫 실제 결제 전까지는 설정에서 나라를 바꿀 수 있어요.';
+
+  @override
+  String get cCountryDocTerms => '이용약관';
+
+  @override
+  String get cCountryDocPrivacy => '개인정보처리방침';
+
+  @override
+  String get cCountryDocLocation => '위치기반서비스 이용약관';
+
+  @override
   String get sgConsentHint => '필수 항목에 동의해야 인증번호를 받을 수 있어요.';
 
   @override

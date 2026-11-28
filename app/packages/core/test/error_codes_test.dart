@@ -28,7 +28,8 @@ void main() {
   test(
     'every localized backend code has copy in all supported locales',
     () async {
-      expect(T.supportedLocales, hasLength(2));
+      // ko and en, plus the Arabic right-to-left test locale (not a user choice).
+      expect(T.supportedLocales, hasLength(3));
       for (final locale in T.supportedLocales) {
         final t = await T.delegate.load(locale);
         for (final code in localized) {
