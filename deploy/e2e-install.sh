@@ -35,7 +35,8 @@ else
   ENVS=("MALKKEUM_IMAGES=$REG" "MALKKEUM_SKIP_SIGNATURE=1") # locally built images carry no release signature
 fi
 ENVS+=("MALKKEUM_DOMAIN=$DOMAIN" "MALKKEUM_EMAIL=ci@example.com" "MALKKEUM_VERSION=$TAG" "MALKKEUM_TLS=internal"
-  "MALKKEUM_HEALTH_WAIT=240" "MALKKEUM_AGENT_FILE=$(pwd)/deploy/agent.sh" "MALKKEUM_FIREWALL=on")
+  "MALKKEUM_HEALTH_WAIT=240" "MALKKEUM_AGENT_FILE=$(pwd)/deploy/agent.sh" "MALKKEUM_FIREWALL=on"
+  "DAHAE_LANG=ko") # the steps below read the Korean texts; step 9c checks English and Arabic
 mkdir -p "$LOG"
 
 step() { printf '\n== %s  (%s)\n' "$*" "$(date +%T)"; }
@@ -157,6 +158,24 @@ old_page_moved() { [ "$(old_curl -o /dev/null -w '%{http_code} %{redirect_url}' 
 stranger_refused() { ! curl -sk --max-time 20 --resolve "stranger.test:443:127.0.0.1" -o /dev/null https://stranger.test/health; }
 bad_domain_refused() { ! $SUDO env DAHAE_YES=1 /usr/local/bin/dahae domain localhost </dev/null >/dev/null 2>&1; }
 drop_hosts_line() { $SUDO sed -i '/ # dahae-e2e$/d' /etc/hosts; }
+put_auth() { curl_d -H "Authorization: Bearer $2" -H 'Content-Type: application/json' -X PUT "https://$DOMAIN$1" -d "$3"; }
+# Step 9c (R4): the wizard of a fresh install, whose country is still unset, in English and in Arabic.
+no_country_yet() { [ "$(get_auth /v1/admin/setup/packs "$W" | json current country)" = None ]; }
+kr_pack_offered() { [ "$(get_auth /v1/admin/setup/packs "$W" | json default)" = KR ]; }
+no_dark_adapter_offered() { ! get_auth /v1/admin/setup/packs "$W" | grep -Eq '"(stripe|twilio|google_places|oidc)"'; }
+country_chosen() { [ "$(put_auth /v1/admin/setup/country "$W" '{"country":"KR"}' | json current country)" = KR ]; }
+gates_enforced() { [ "$(get_auth /v1/admin/setup/gates "$W" | json enforced)" = True ]; }
+site_preview_matches_gates() { [ "$(get /v1/setup | json preview)" = "$(get_auth /v1/admin/setup/gates "$W" | json preview)" ]; }
+languages_set() { # languages_set ar : the console, customer and own language all become it
+  local b='{"console_locale":"'"$1"'","locales":["'"$1"'"],"my_locale":"'"$1"'"}'
+  [ "$(put_auth /v1/admin/setup/languages "$W" "$b" | json console_locale)" = "$1" ] \
+    && [ "$(get_auth /v1/admin/setup/languages "$W" | json my_locale)" = "$1" ]
+}
+brand_lists_language() { [ "$(get /v1/brand | json locales)" = '["'"$1"'"]' ]; }
+cli_speaks_without_korean() { # DAHAE_LANG=en|ar: the dahae command's usage text, no Korean left (ar reads English)
+  $SUDO env DAHAE_LANG="$1" /usr/local/bin/dahae help | python3 -I -c 'import re, sys
+t = sys.stdin.read(); sys.exit(0 if "dahae" in t and not re.search("[가-힣]", t) else 1)'
+}
 no_dev_code() { ! post /v1/auth/otp '{"phone":"01012345678"}' | grep -q dev_code; }
 dev_api_up() { curl -fs --max-time 5 http://127.0.0.1:18080/health; }
 nothing_left() {
@@ -427,6 +446,21 @@ expect "the old domain names the new one for the apps" old_names_new_domain
 expect "old website pages move to the new domain (301)" old_page_moved
 expect "a stranger's host name gets no certificate" stranger_refused
 expect "a bad domain is refused" bad_domain_refused
+
+step "9c. a fresh install's wizard in en and ar: languages, country card, go-live gates, CLI texts"
+W=$(owner_token)
+expect "the owner is signed in" test -n "$W"
+expect "no country chosen yet" no_country_yet
+expect "the KR pack is offered as the default" kr_pack_offered
+expect "dark adapters are never offered" no_dark_adapter_offered
+expect "the owner chooses the country" country_chosen
+expect "the chosen country turns the go-live gates on" gates_enforced
+expect "the website's preview flag follows the gates" site_preview_matches_gates
+for l in en ar; do
+  expect "languages set to $l" languages_set "$l"
+  expect "the website reads $l from the brand" wait_until 60 brand_lists_language "$l"
+  expect "dahae speaks $l without Korean" cli_speaks_without_korean "$l"
+done
 
 step "10. uninstall"
 expect "--purge is not skipped by --yes or DAHAE_YES" purge_needs_domain
