@@ -167,7 +167,14 @@ owner_signs_in() { owner_token >"$LOG/owner-token" 2>"$LOG/owner-token.err"; }
 no_country_yet() { [ "$(get_auth /v1/admin/setup/packs "$W" | json current country)" = None ]; }
 kr_pack_offered() { [ "$(get_auth /v1/admin/setup/packs "$W" | json default)" = KR ]; }
 no_dark_adapter_offered() { ! get_auth /v1/admin/setup/packs "$W" | grep -Eq '"(stripe|twilio|google_places|oidc)"'; }
-country_chosen() { [ "$(put_auth /v1/admin/setup/country "$W" '{"country":"KR"}' | json current country)" = KR ]; }
+owner_claimed() { # the first admin claims the owner role with a second-factor code (only the owner sets the country)
+  curl_d -H "Authorization: Bearer $W" -H "x-owner-totp: $(fresh_totp)" -X POST "https://$DOMAIN/v1/admin/owner/claim" | grep -q '"ok":true' \
+    && [ "$(get_auth /v1/admin/me/account "$W" | json is_owner)" = True ]
+}
+country_chosen() {
+  local r; r=$(put_auth /v1/admin/setup/country "$W" '{"country":"KR"}')
+  [ "$(printf '%s' "$r" | json current country 2>/dev/null)" = KR ] || { echo "country answered: $r" >&2; return 1; }
+}
 gates_enforced() { [ "$(get_auth /v1/admin/setup/gates "$W" | json enforced)" = True ]; }
 site_preview_matches_gates() { [ "$(get /v1/setup | json preview)" = "$(get_auth /v1/admin/setup/gates "$W" | json preview)" ]; }
 languages_set() { # languages_set ar : the console, customer and own language all become it
@@ -439,6 +446,7 @@ W=$(cat "$LOG/owner-token"); echo "ok: the owner is signed in"
 expect "no country chosen yet" no_country_yet
 expect "the KR pack is offered as the default" kr_pack_offered
 expect "dark adapters are never offered" no_dark_adapter_offered
+expect "the first admin claims the owner role" owner_claimed
 expect "the owner chooses the country" country_chosen
 expect "the chosen country turns the go-live gates on" gates_enforced
 expect "the website's preview flag follows the gates" site_preview_matches_gates
