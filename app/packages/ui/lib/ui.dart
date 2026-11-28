@@ -24,6 +24,7 @@ export 'src/components/interactive.dart';
 export 'src/components/keep_all.dart';
 export 'src/components/logo.dart';
 export 'src/components/modern.dart';
+export 'src/components/money.dart';
 export 'src/components/motion.dart';
 export 'src/brand_scope.dart';
 export 'src/components/service_card.dart';
