@@ -28,7 +28,7 @@ class PendingDepositsBanner extends StatelessWidget {
         final due = first.account.due;
         final amount = context.won(first.amount);
         return Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.gutter,
             Space.gutter,
             Space.gutter,
@@ -49,7 +49,10 @@ class PendingDepositsBanner extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        KeepAllText(t.apVaBannerTitle, style: context.text.titleSmall),
+                        KeepAllText(
+                          t.apVaBannerTitle,
+                          style: context.text.titleSmall,
+                        ),
                         KeepAllText(
                           due == null
                               ? amount

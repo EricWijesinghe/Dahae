@@ -155,7 +155,11 @@ class _Segment extends StatelessWidget {
                 color: selected ? c.ink : c.inkMuted,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
-              child: KeepAllText(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: KeepAllText(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ),
@@ -192,7 +196,6 @@ class ProgressLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final horizontal = axis == Axis.horizontal;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
     final radius = BorderRadius.circular(thickness / 2);
     final f = fraction.clamp(0.0, 1.0);
     return SizedBox(
@@ -209,7 +212,7 @@ class ProgressLine extends StatelessWidget {
           curve: Motion.emphasized,
           builder: (_, v, child) => Transform(
             alignment: horizontal
-                ? (rtl ? Alignment.centerRight : Alignment.centerLeft)
+                ? AlignmentDirectional.centerStart
                 : Alignment.topCenter,
             transform: Matrix4.diagonal3Values(
               horizontal ? v : 1,

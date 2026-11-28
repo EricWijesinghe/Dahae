@@ -220,7 +220,7 @@ class MoreTab extends StatelessWidget {
         title: tabRootTitle(context, t.moreTitle),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.md,
           Space.xs,
           Space.md,
@@ -268,7 +268,7 @@ class _ProfileCard extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: const EdgeInsetsDirectional.fromSTEB(
               Space.lg,
               Space.lg,
               Space.md,
@@ -305,7 +305,12 @@ class _ProfileCard extends StatelessWidget {
             ),
           ),
           Container(
-            margin: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, Space.md),
+            margin: const EdgeInsetsDirectional.fromSTEB(
+              Space.md,
+              0,
+              Space.md,
+              Space.md,
+            ),
             decoration: BoxDecoration(
               color: c.surfaceHigh,
               borderRadius: BorderRadius.circular(Radii.chip),
@@ -711,7 +716,10 @@ class ContentDetailScreen extends StatelessWidget {
     body: ListView(
       padding: const EdgeInsets.all(Space.gutter),
       children: [
-        KeepAllText(item.title(context.lang), style: context.text.headlineSmall),
+        KeepAllText(
+          item.title(context.lang),
+          style: context.text.headlineSmall,
+        ),
         if (noticeDateLabel(item).isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: Space.xs),

@@ -158,14 +158,14 @@ void _shareCard(
     size: 88,
     weight: FontWeight.w800,
     width: width,
-    align: TextAlign.left,
+    align: TextAlign.left, // rtl-ok: drawn into a fixed image
   );
   final sub = _paragraph(
     tagline,
     size: 44,
     weight: FontWeight.w500,
     width: width,
-    align: TextAlign.left,
+    align: TextAlign.left, // rtl-ok: drawn into a fixed image
   );
   final (gap, subHeight) = tagline.isEmpty ? (0.0, 0.0) : (24.0, sub.height);
   final top = (area.height - title.height - gap - subHeight) / 2;

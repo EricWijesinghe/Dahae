@@ -152,7 +152,7 @@ class _HouseholdEditorState extends State<HouseholdEditor> {
           ),
         if (_pets.length < _maxPets)
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: TextButton.icon(
               icon: const Icon(Icons.add_rounded),
               label: KeepAllText(t.hhAddPet),

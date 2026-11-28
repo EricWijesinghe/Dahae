@@ -114,7 +114,7 @@ class QuoteReviewPage extends StatelessWidget {
       children: [
         FlowTitle(t.dfReviewHeader(dateLabel(date, lang)), chip: chip),
         Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.gutter,
             0,
             Space.gutter,

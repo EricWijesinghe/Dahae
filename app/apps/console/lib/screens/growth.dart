@@ -167,7 +167,7 @@ class _GrowthSettingsState extends State<GrowthSettings> {
       ),
     ),
     Align(
-      alignment: Alignment.centerRight,
+      alignment: AlignmentDirectional.centerEnd,
       child: FilledButton(
         style: inlineFilled,
         onPressed: _savePack,
@@ -218,7 +218,10 @@ class _GrowthSettingsState extends State<GrowthSettings> {
             children: [
               if (_welcome != null) ..._packEditor(t),
               if (_welcome != null) ...[
-                KeepAllText(t.welcomeOfferTitle, style: context.text.titleMedium),
+                KeepAllText(
+                  t.welcomeOfferTitle,
+                  style: context.text.titleMedium,
+                ),
                 KeepAllText(t.welcomeOfferBody, style: context.text.bodySmall),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
@@ -251,7 +254,7 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                 ),
                 const SizedBox(height: Space.sm),
                 Align(
-                  alignment: Alignment.centerRight,
+                  alignment: AlignmentDirectional.centerEnd,
                   child: FilledButton(
                     style: inlineFilled,
                     onPressed: _saveWelcome,
@@ -261,8 +264,14 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                 const Divider(height: Space.xxl),
               ],
               if (_referral != null) ...[
-                KeepAllText(t.referralSettingsTitle, style: context.text.titleMedium),
-                KeepAllText(t.referralSettingsBody, style: context.text.bodySmall),
+                KeepAllText(
+                  t.referralSettingsTitle,
+                  style: context.text.titleMedium,
+                ),
+                KeepAllText(
+                  t.referralSettingsBody,
+                  style: context.text.bodySmall,
+                ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: KeepAllText(t.offerEnabled),
@@ -279,7 +288,7 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                 ),
                 const SizedBox(height: Space.sm),
                 Align(
-                  alignment: Alignment.centerRight,
+                  alignment: AlignmentDirectional.centerEnd,
                   child: FilledButton(
                     style: inlineFilled,
                     onPressed: _saveReferral,
@@ -316,10 +325,16 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                 isAdmin: context.console.isAdmin,
               ),
               const Divider(height: Space.xxl),
-              KeepAllText(t.reviewsModerationTitle, style: context.text.titleMedium),
+              KeepAllText(
+                t.reviewsModerationTitle,
+                style: context.text.titleMedium,
+              ),
               const SizedBox(height: Space.sm),
               if (_reviews.isEmpty)
-                KeepAllText(t.growthReviewCount('0'), style: context.text.bodySmall),
+                KeepAllText(
+                  t.growthReviewCount('0'),
+                  style: context.text.bodySmall,
+                ),
               for (final r in _reviews)
                 Padding(
                   padding: const EdgeInsets.only(bottom: Space.sm),
@@ -350,7 +365,7 @@ class _GrowthSettingsState extends State<GrowthSettings> {
                             style: context.text.bodyMedium,
                           ),
                         Align(
-                          alignment: Alignment.centerRight,
+                          alignment: AlignmentDirectional.centerEnd,
                           child: TextButton(
                             onPressed: () => _moderate(r),
                             child: KeepAllText(

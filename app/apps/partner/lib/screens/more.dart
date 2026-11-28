@@ -236,7 +236,7 @@ class MoreTab extends StatelessWidget {
       context,
       title: t.pLogoutConfirm,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,
@@ -272,7 +272,7 @@ class MoreTab extends StatelessWidget {
       context,
       title: t.deleteAccount,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,
@@ -634,7 +634,9 @@ class _WorkState extends _PrefsEditorState<WorkScheduleScreen> {
             children: [
               for (final d in off)
                 InputChip(
-                  label: KeepAllText(dateLabel(DateTime.parse(d), context.lang)),
+                  label: KeepAllText(
+                    dateLabel(DateTime.parse(d), context.lang),
+                  ),
                   onDeleted: () => toggle('days_off', d, false),
                 ),
             ],

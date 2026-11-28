@@ -80,7 +80,7 @@ class _ReviewAccountCardState extends State<ReviewAccountCard> {
             horizontal: Space.lg,
             vertical: Space.xs,
           ),
-          childrenPadding: const EdgeInsets.fromLTRB(
+          childrenPadding: const EdgeInsetsDirectional.fromSTEB(
             Space.lg,
             0,
             Space.lg,
@@ -95,7 +95,7 @@ class _ReviewAccountCardState extends State<ReviewAccountCard> {
               ? Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: AlignmentDirectional.centerStart,
                     child: Tag(
                       label: t.cReviewActiveUntil(
                         DateFormat.yMd(context.lang).format(until),

@@ -543,7 +543,7 @@ class _IntegrationCardState extends State<IntegrationCard> {
             horizontal: Space.lg,
             vertical: Space.xs,
           ),
-          childrenPadding: const EdgeInsets.fromLTRB(
+          childrenPadding: const EdgeInsetsDirectional.fromSTEB(
             Space.lg,
             0,
             Space.lg,

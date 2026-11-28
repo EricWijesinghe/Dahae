@@ -203,7 +203,7 @@ class ReceiptSettingsLine extends StatelessWidget {
       builder: (context, snap) {
         if (snap.data != true) return const SizedBox.shrink();
         return Align(
-          alignment: Alignment.centerLeft,
+          alignment: AlignmentDirectional.centerStart,
           child: TextButton.icon(
             onPressed: () => _edit(context),
             icon: const Icon(Icons.receipt_long_rounded, size: 18),
@@ -301,7 +301,7 @@ class _ReceiptFormState extends State<_ReceiptForm> {
   Widget build(BuildContext context) {
     final t = context.t;
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,
@@ -321,8 +321,14 @@ class _ReceiptFormState extends State<_ReceiptForm> {
             if (_cash) ...[
               SegmentedButton<bool>(
                 segments: [
-                  ButtonSegment(value: false, label: KeepAllText(t.tCashForIncome)),
-                  ButtonSegment(value: true, label: KeepAllText(t.tCashForBusiness)),
+                  ButtonSegment(
+                    value: false,
+                    label: KeepAllText(t.tCashForIncome),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    label: KeepAllText(t.tCashForBusiness),
+                  ),
                 ],
                 selected: {_corporate},
                 onSelectionChanged: (s) => setState(() => _corporate = s.first),

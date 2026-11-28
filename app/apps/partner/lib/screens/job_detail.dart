@@ -148,7 +148,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.place_outlined),
-                title: KeepAllText(committed ? t.visitAddress : t.addressDistrict),
+                title: KeepAllText(
+                  committed ? t.visitAddress : t.addressDistrict,
+                ),
                 subtitle: KeepAllText(
                   addr ?? districtName(context, b['district_code'] as String),
                 ),
@@ -197,7 +199,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 ),
                 if (isQuote)
                   Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: AlignmentDirectional.centerStart,
                     child: KeepAllText(
                       t.pAfterBalance,
                       style: context.text.labelSmall,
@@ -218,7 +220,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: KeepAllText(t.pPrivacyNote, style: context.text.labelSmall),
+                child: KeepAllText(
+                  t.pPrivacyNote,
+                  style: context.text.labelSmall,
+                ),
               ),
             ],
           ),
@@ -435,7 +440,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            KeepAllText(t.pRescheduleBanner(from, to), style: context.text.titleSmall),
+            KeepAllText(
+              t.pRescheduleBanner(from, to),
+              style: context.text.titleSmall,
+            ),
             const SizedBox(height: Space.sm),
             Row(
               children: [
@@ -479,7 +487,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       context,
       title: t.pAcceptConfirm,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,
@@ -528,7 +536,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       title: context.t.pChangeAssignee,
       builder: (ctx) => ListView(
         shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,
@@ -562,7 +570,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       context,
       title: context.t.pTeamMemo,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,
@@ -619,7 +627,7 @@ Future<bool?> showQuoteSheet(
         final amount =
             int.tryParse(price.text.replaceAll(RegExp(r'\D'), '')) ?? 0;
         return Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.gutter,
             0,
             Space.gutter,
@@ -724,7 +732,7 @@ class _PhoneGate extends StatelessWidget {
     final t = context.t;
     final pro = context.pro;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         Space.sm,
         Space.gutter,
@@ -737,7 +745,10 @@ class _PhoneGate extends StatelessWidget {
             Icon(Icons.phone_iphone_rounded, color: context.colors.sun),
             const SizedBox(width: Space.sm),
             Expanded(
-              child: KeepAllText(t.err_phone_required, style: context.text.bodyMedium),
+              child: KeepAllText(
+                t.err_phone_required,
+                style: context.text.bodyMedium,
+              ),
             ),
             const SizedBox(width: Space.sm),
             FilledButton(

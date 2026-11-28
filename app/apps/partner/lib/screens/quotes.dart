@@ -75,7 +75,7 @@ class _QuotesTabState extends State<QuotesTab> {
                   'closed',
                 ])
                   Padding(
-                    padding: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsetsDirectional.only(end: 6),
                     child: ChoiceChip(
                       label: KeepAllText(
                         s == null ? t.pQuoteAll : quoteStateLabel(t, s),
@@ -208,7 +208,7 @@ class _QuotesTabState extends State<QuotesTab> {
       context,
       title: t.pMyQuote,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,

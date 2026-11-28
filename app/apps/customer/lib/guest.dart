@@ -94,16 +94,19 @@ class _SignInSheetState extends State<_SignInSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: const EdgeInsetsDirectional.fromSTEB(
               Space.gutter,
               0,
               Space.gutter,
               Space.sm,
             ),
-            child: KeepAllText(widget.reason.title(t), style: context.text.titleLarge),
+            child: KeepAllText(
+              widget.reason.title(t),
+              style: context.text.titleLarge,
+            ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: const EdgeInsetsDirectional.fromSTEB(
               Space.gutter,
               0,
               Space.gutter,

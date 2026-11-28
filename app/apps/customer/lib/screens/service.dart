@@ -144,7 +144,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
             ..._units(context, t, d),
           if (notes.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: const EdgeInsetsDirectional.fromSTEB(
                 Space.gutter,
                 0,
                 Space.gutter,
@@ -228,7 +228,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
 
   List<Widget> _units(BuildContext context, T t, BookingDraft d) => [
     Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,
@@ -256,7 +256,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
     final discounted = s.multiDiscountBps > 0 && items >= 2;
     return [
       Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,
@@ -270,7 +270,7 @@ class _ServiceScreenState extends State<ServiceScreen> {
         ),
       ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,

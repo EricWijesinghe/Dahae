@@ -82,7 +82,7 @@ class _OpsChatTabState extends State<OpsChatTab> {
       title: t.pNewInquiry,
       builder: (ctx) => ListView(
         shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,
@@ -414,8 +414,8 @@ class _OpsRoomState extends State<OpsRoom> {
                       );
                 return Align(
                   alignment: mine
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
+                      ? AlignmentDirectional.centerEnd
+                      : AlignmentDirectional.centerStart,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 3),
                     child: ConstrainedBox(

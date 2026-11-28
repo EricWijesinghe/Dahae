@@ -113,7 +113,12 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
       children: [
         if (_aiOutage)
           Padding(
-            padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.md, 0),
+            padding: const EdgeInsetsDirectional.fromSTEB(
+              Space.md,
+              Space.md,
+              Space.md,
+              0,
+            ),
             child: KeepAllText(
               t.aiOutageBanner,
               style: context.text.labelSmall?.copyWith(
@@ -123,7 +128,12 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
           ),
         if (_aiLine != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.md, 0),
+            padding: const EdgeInsetsDirectional.fromSTEB(
+              Space.md,
+              Space.md,
+              Space.md,
+              0,
+            ),
             child: KeepAllText(_aiLine!, style: context.text.labelSmall),
           ),
         Padding(
@@ -133,8 +143,14 @@ class _InboxScreenState extends State<InboxScreen> with LiveReload {
             child: SegmentedButton<String>(
               showSelectedIcon: false,
               segments: [
-                ButtonSegment(value: 'customer', label: KeepAllText(t.cCustomerChats)),
-                ButtonSegment(value: 'partner', label: KeepAllText(t.cPartnerChats)),
+                ButtonSegment(
+                  value: 'customer',
+                  label: KeepAllText(t.cCustomerChats),
+                ),
+                ButtonSegment(
+                  value: 'partner',
+                  label: KeepAllText(t.cPartnerChats),
+                ),
               ],
               selected: {_audience},
               onSelectionChanged: (s) {
@@ -397,8 +413,11 @@ class _ThreadViewState extends State<ThreadView> {
             if (_aiPaused)
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(left: Space.lg),
-                  child: KeepAllText(t.aiPausedNote, style: context.text.labelSmall),
+                  padding: const EdgeInsetsDirectional.only(start: Space.lg),
+                  child: KeepAllText(
+                    t.aiPausedNote,
+                    style: context.text.labelSmall,
+                  ),
                 ),
               )
             else
@@ -415,7 +434,12 @@ class _ThreadViewState extends State<ThreadView> {
         ),
         if (widget.bookingId != null) ...[
           Padding(
-            padding: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, 0),
+            padding: const EdgeInsetsDirectional.fromSTEB(
+              Space.md,
+              0,
+              Space.md,
+              0,
+            ),
             child: InboxBookingCard(
               // A new message (for example a sent quote) refreshes the summary's status.
               key: ValueKey('${widget.bookingId}-${_msgs.length}'),
@@ -423,7 +447,7 @@ class _ThreadViewState extends State<ThreadView> {
             ),
           ),
           Align(
-            alignment: Alignment.centerRight,
+            alignment: AlignmentDirectional.centerEnd,
             child: TextButton.icon(
               icon: const Icon(Icons.open_in_new_rounded, size: 18),
               label: KeepAllText(t.cOpenBooking),
@@ -540,7 +564,9 @@ class _Message extends StatelessWidget {
       _ => SelectableText(m.body['text'] as String? ?? ''),
     };
     return Align(
-      alignment: staff ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: staff
+          ? AlignmentDirectional.centerEnd
+          : AlignmentDirectional.centerStart,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 480),
         margin: const EdgeInsets.symmetric(vertical: 3),
@@ -641,8 +667,10 @@ class _ResendQuoteButtonState extends State<ResendQuoteButton> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      TextButton(onPressed: _busy ? null : _resend, child: KeepAllText(widget.label));
+  Widget build(BuildContext context) => TextButton(
+    onPressed: _busy ? null : _resend,
+    child: KeepAllText(widget.label),
+  );
 }
 
 /// Small "AI" tag on messages the AI support agent wrote.

@@ -25,7 +25,7 @@ Future<PayChoice?> choosePayMethod(
     context,
     title: context.t.apPayAllTitle,
     builder: (ctx) => SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,

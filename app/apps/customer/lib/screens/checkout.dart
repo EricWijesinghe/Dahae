@@ -194,7 +194,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       context,
       title: context.t.dfPayMethod,
       builder: (ctx) => SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,
@@ -430,7 +430,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       title: t.coupon,
       builder: (ctx) => ListView(
         shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,
@@ -603,7 +603,7 @@ class AgreementBox extends StatelessWidget {
                   context,
                   title: t.dfRefundPolicy,
                   builder: (_) => SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: const EdgeInsetsDirectional.fromSTEB(
                       Space.gutter,
                       0,
                       Space.gutter,

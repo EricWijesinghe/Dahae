@@ -58,7 +58,7 @@ Future<void> showNavigateSheet(BuildContext context, String address) async {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.gutter,
             0,
             Space.gutter,

@@ -349,7 +349,7 @@ class _BusinessCardState extends State<BusinessCard> {
           ),
         ),
       Align(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: TextButton.icon(
           onPressed: _busy || name.isEmpty ? null : _letterMark,
           icon: const Icon(Icons.abc_rounded),
@@ -383,7 +383,7 @@ class _BusinessCardState extends State<BusinessCard> {
             horizontal: Space.lg,
             vertical: Space.xs,
           ),
-          childrenPadding: const EdgeInsets.fromLTRB(
+          childrenPadding: const EdgeInsetsDirectional.fromSTEB(
             Space.lg,
             0,
             Space.lg,
@@ -483,7 +483,7 @@ class _BusinessCardState extends State<BusinessCard> {
             for (final k in _versions) field(k),
             const SizedBox(height: Space.sm),
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: FilledButton.icon(
                 style: inlineFilled,
                 onPressed: _busy ? null : _save,

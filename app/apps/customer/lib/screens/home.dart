@@ -265,7 +265,7 @@ class _HomeTabState extends State<HomeTab> {
         ColoredBox(
           color: c.surface,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: const EdgeInsetsDirectional.fromSTEB(
               Space.gutter,
               0,
               Space.gutter,
@@ -304,7 +304,7 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.gutter,
             Space.xl,
             Space.gutter,
@@ -349,7 +349,7 @@ class _HomeTabState extends State<HomeTab> {
       key: const ValueKey(_HomeView.pick),
       color: context.colors.surface,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           Space.md,
           Space.gutter,
@@ -561,7 +561,12 @@ class _UpcomingCard extends StatelessWidget {
     return AppCard(
       level: Level.flat,
       border: context.colors.line,
-      padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, Space.md, 0),
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        Space.md,
+        Space.sm,
+        Space.md,
+        0,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

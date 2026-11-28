@@ -71,7 +71,7 @@ class _AcAddonBannerState extends State<AcAddonBanner> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => ListView(
           shrinkWrap: true,
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.gutter,
             0,
             Space.gutter,
@@ -194,7 +194,7 @@ class _AcAddonBannerState extends State<AcAddonBanner> {
                     minHeight: _ctaMinSize,
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.only(right: Space.sm),
+                    padding: const EdgeInsetsDirectional.only(end: Space.sm),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

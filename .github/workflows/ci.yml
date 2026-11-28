@@ -238,6 +238,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
       - run: python3 -I scripts/ci/check-native.py
+      - name: App layouts follow the text direction (no new left/right-only APIs)
+        run: python3 -I scripts/ci/check-rtl.py
       - name: Store brand step (name, icons, app id) on a fixture, no network
         run: |
           set -euo pipefail

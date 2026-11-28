@@ -73,17 +73,23 @@ class _PayMethodsCardState extends State<PayMethodsCard> {
             horizontal: Space.lg,
             vertical: Space.xs,
           ),
-          childrenPadding: const EdgeInsets.fromLTRB(
+          childrenPadding: const EdgeInsetsDirectional.fromSTEB(
             Space.lg,
             0,
             Space.lg,
             Space.lg,
           ),
           leading: Icon(Icons.credit_card_rounded, color: context.primary),
-          title: KeepAllText(t.cSetupPayMethods, style: context.text.titleMedium),
+          title: KeepAllText(
+            t.cSetupPayMethods,
+            style: context.text.titleMedium,
+          ),
           subtitle: methods == null
               ? null
-              : KeepAllText('$on / ${methods.length}', style: context.text.bodySmall),
+              : KeepAllText(
+                  '$on / ${methods.length}',
+                  style: context.text.bodySmall,
+                ),
           children: [
             KeepAllText(t.cSetupPayMethodsHint, style: context.text.bodyMedium),
             const SizedBox(height: Space.sm),

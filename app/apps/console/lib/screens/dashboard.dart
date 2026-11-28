@@ -95,7 +95,10 @@ class DashboardScreen extends StatelessWidget {
         children: [
           StaggerIn(
             index: 0,
-            child: KeepAllText(t.cDashboard, style: context.text.headlineMedium),
+            child: KeepAllText(
+              t.cDashboard,
+              style: context.text.headlineMedium,
+            ),
           ),
           if (failed != null) ...[const SizedBox(height: Space.md), failed],
           const SizedBox(height: Space.lg),
@@ -133,7 +136,7 @@ class DashboardScreen extends StatelessWidget {
                                 ),
                                 FittedBox(
                                   fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
+                                  alignment: AlignmentDirectional.centerStart,
                                   child: KeepAllText(
                                     value,
                                     style: context.text.headlineSmall,
@@ -205,7 +208,7 @@ class DashboardScreen extends StatelessWidget {
                             width: 44,
                             child: KeepAllText(
                               '${byService[code] ?? 0}',
-                              textAlign: TextAlign.right,
+                              textAlign: TextAlign.end,
                               style: context.text.labelMedium,
                             ),
                           ),

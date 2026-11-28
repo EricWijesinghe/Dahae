@@ -130,7 +130,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
       );
       final saved = await saveCsv(bytes, fileName);
       messenger.showSnackBar(
-        SnackBar(content: KeepAllText(saved ? t.fDownload : t.fDownloadWebOnly)),
+        SnackBar(
+          content: KeepAllText(saved ? t.fDownload : t.fDownloadWebOnly),
+        ),
       );
     } on ApiException {
       messenger.showSnackBar(SnackBar(content: KeepAllText(t.fDownloadFailed)));
@@ -229,9 +231,18 @@ class _PeriodBar extends StatelessWidget {
         SegmentedButton<_Period>(
           segments: [
             ButtonSegment(value: _Period.day, label: KeepAllText(t.fPeriodDay)),
-            ButtonSegment(value: _Period.week, label: KeepAllText(t.fPeriodWeek)),
-            ButtonSegment(value: _Period.month, label: KeepAllText(t.fPeriodMonth)),
-            ButtonSegment(value: _Period.custom, label: KeepAllText(t.fPeriodCustom)),
+            ButtonSegment(
+              value: _Period.week,
+              label: KeepAllText(t.fPeriodWeek),
+            ),
+            ButtonSegment(
+              value: _Period.month,
+              label: KeepAllText(t.fPeriodMonth),
+            ),
+            ButtonSegment(
+              value: _Period.custom,
+              label: KeepAllText(t.fPeriodCustom),
+            ),
           ],
           selected: {period},
           onSelectionChanged: (s) => onPick(s.first),
@@ -368,8 +379,11 @@ class _KpiGrid extends StatelessWidget {
                       ),
                       FittedBox(
                         fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: KeepAllText(value, style: context.text.headlineSmall),
+                        alignment: AlignmentDirectional.centerStart,
+                        child: KeepAllText(
+                          value,
+                          style: context.text.headlineSmall,
+                        ),
                       ),
                       KeepAllText(
                         label,
@@ -413,7 +427,9 @@ class _TrendCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: KeepAllText(t.fTrend, style: context.text.titleMedium)),
+              Expanded(
+                child: KeepAllText(t.fTrend, style: context.text.titleMedium),
+              ),
               Wrap(
                 spacing: Space.xs,
                 children: [
@@ -678,7 +694,9 @@ class _PartnerCard extends StatelessWidget {
                           ),
                         ),
                         DataCell(Text('${_n(p, 'jobs')}')),
-                        DataCell(KeepAllText(context.won(_n(p, 'settled_gross')))),
+                        DataCell(
+                          KeepAllText(context.won(_n(p, 'settled_gross'))),
+                        ),
                         DataCell(KeepAllText(context.won(_n(p, 'fee')))),
                         DataCell(KeepAllText(context.won(_n(p, 'net')))),
                         DataCell(KeepAllText(context.won(_n(p, 'paid')))),
@@ -747,7 +765,7 @@ class _ServiceCard extends StatelessWidget {
                     width: 110,
                     child: KeepAllText(
                       context.won(_n(s, 'gross')),
-                      textAlign: TextAlign.right,
+                      textAlign: TextAlign.end,
                       style: context.text.labelMedium,
                     ),
                   ),

@@ -49,7 +49,7 @@ class _BrowserReturnSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.t;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,

@@ -93,7 +93,7 @@ class _CancelSheetBodyState extends State<_CancelSheetBody> {
         ? t.cancelRefundCta(context.won(p.refund))
         : t.cancelBooking;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,

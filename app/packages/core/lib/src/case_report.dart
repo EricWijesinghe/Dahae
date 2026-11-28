@@ -95,7 +95,7 @@ class _CaseReportSheetState extends State<CaseReportSheet> {
     final t = context.t;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(
+      padding: EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,
@@ -131,7 +131,10 @@ class _CaseReportSheetState extends State<CaseReportSheet> {
             onChanged: (_) => setState(() {}),
           ),
           if (_error != null)
-            KeepAllText(_error!, style: TextStyle(color: context.colors.danger)),
+            KeepAllText(
+              _error!,
+              style: TextStyle(color: context.colors.danger),
+            ),
           const SizedBox(height: Space.sm),
           FilledButton(
             onPressed: _kind == null || _summary.text.trim().isEmpty || _busy

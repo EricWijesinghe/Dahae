@@ -157,7 +157,7 @@ class _TeamState extends State<TeamScreen> {
       context,
       title: t.pInvite,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,

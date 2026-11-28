@@ -240,7 +240,7 @@ class _CountsDialogState extends State<_CountsDialog> {
               const SizedBox(height: 12),
               for (var i = 0; i < _d.rows.length; i++) _optionRow(i, t),
               Align(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerStart,
                 child: TextButton.icon(
                   onPressed: () => _refresh(
                     () => _d.rows.add(
@@ -267,7 +267,10 @@ class _CountsDialogState extends State<_CountsDialog> {
                 ],
               ),
               const Divider(height: 24),
-              KeepAllText(t.cntPreview, style: Theme.of(context).textTheme.titleSmall),
+              KeepAllText(
+                t.cntPreview,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               for (var i = 0; i < _d.rows.length; i++)
                 _stepper(i, cap, options[i].label, t),
               const SizedBox(height: 8),

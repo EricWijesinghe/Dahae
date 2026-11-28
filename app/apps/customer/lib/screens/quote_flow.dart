@@ -468,7 +468,7 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
       body: t.serviceDesc(widget.service.code),
       [
         Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.gutter,
             0,
             Space.gutter,
@@ -640,7 +640,7 @@ class _QuoteFlowScreenState extends State<QuoteFlowScreen> {
     final offer = aircon == null
         ? null
         : Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: const EdgeInsetsDirectional.fromSTEB(
               Space.gutter,
               Space.lg,
               Space.gutter,

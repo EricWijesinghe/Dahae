@@ -461,9 +461,9 @@ class Clay3DPlate extends StatelessWidget {
             child: Stack(
               children: [
                 // Inner top highlight: the lit upper lip of a clay tile.
-                Positioned(
-                  left: size * 0.10,
-                  right: size * 0.10,
+                PositionedDirectional(
+                  start: size * 0.10,
+                  end: size * 0.10,
                   top: size * 0.05,
                   height: size * 0.38,
                   child: DecoratedBox(

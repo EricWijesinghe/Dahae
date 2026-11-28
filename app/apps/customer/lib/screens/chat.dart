@@ -141,7 +141,7 @@ class _ChatListTabState extends State<ChatListTab> {
           GridView.count(
             shrinkWrap: true,
             crossAxisCount: 3,
-            padding: const EdgeInsets.fromLTRB(
+            padding: const EdgeInsetsDirectional.fromSTEB(
               Space.gutter,
               0,
               Space.gutter,
@@ -177,7 +177,7 @@ class _ChatListTabState extends State<ChatListTab> {
             ],
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: const EdgeInsetsDirectional.fromSTEB(
               Space.gutter,
               0,
               Space.gutter,
@@ -291,7 +291,7 @@ class _HoursBar extends StatelessWidget {
     final t = context.t;
     final c = context.colors;
     return Container(
-      margin: const EdgeInsets.fromLTRB(
+      margin: const EdgeInsetsDirectional.fromSTEB(
         Space.md,
         Space.xxs,
         Space.md,

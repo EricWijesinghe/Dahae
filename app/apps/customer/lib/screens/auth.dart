@@ -345,7 +345,10 @@ class _PhoneScreenState extends State<PhoneScreen> {
                   granted: _granted,
                   onChanged: (kind, v) => setState(() => _granted[kind] = v),
                 ),
-                KeepAllText(context.t.sgConsentHint, style: context.text.bodySmall),
+                KeepAllText(
+                  context.t.sgConsentHint,
+                  style: context.text.bodySmall,
+                ),
                 const SizedBox(height: Space.xl),
                 SocialSignInRow(
                   providers: defaultSocialSignIns(
@@ -609,7 +612,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(Space.gutter),
               children: [
-                KeepAllText(context.t.profileTitle, style: context.text.headlineSmall),
+                KeepAllText(
+                  context.t.profileTitle,
+                  style: context.text.headlineSmall,
+                ),
                 const SizedBox(height: Space.xl),
                 TextField(
                   controller: _ctrl,
@@ -654,7 +660,12 @@ class _InlineError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(Space.gutter, Space.sm, Space.gutter, 0),
+    padding: const EdgeInsetsDirectional.fromSTEB(
+      Space.gutter,
+      Space.sm,
+      Space.gutter,
+      0,
+    ),
     child: Row(
       children: [
         Expanded(

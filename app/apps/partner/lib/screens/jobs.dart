@@ -73,7 +73,7 @@ class _JobsTabState extends State<JobsTab> {
         title: KeepAllText(t.pTabJobs, style: context.text.headlineSmall),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: Space.md),
+            padding: const EdgeInsetsDirectional.only(end: Space.md),
             // Capped and scaled so long translations never push the title off a small phone.
             child: Center(
               child: ConstrainedBox(
@@ -97,7 +97,7 @@ class _JobsTabState extends State<JobsTab> {
             MediaQuery.textScalerOf(context).scale(120).clamp(104, 200),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: const EdgeInsetsDirectional.fromSTEB(
               Space.gutter,
               0,
               Space.gutter,
@@ -110,8 +110,14 @@ class _JobsTabState extends State<JobsTab> {
                   child: SegmentedButton<String>(
                     showSelectedIcon: false,
                     segments: [
-                      ButtonSegment(value: 'direct', label: KeepAllText(t.pDirect)),
-                      ButtonSegment(value: 'quote', label: KeepAllText(t.pQuoteReq)),
+                      ButtonSegment(
+                        value: 'direct',
+                        label: KeepAllText(t.pDirect),
+                      ),
+                      ButtonSegment(
+                        value: 'quote',
+                        label: KeepAllText(t.pQuoteReq),
+                      ),
                     ],
                     selected: {_kind},
                     onSelectionChanged: (s) => _set(() => _kind = s.first),

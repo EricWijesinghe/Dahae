@@ -17,7 +17,12 @@ class CouponsScreen extends StatelessWidget {
     final usable = coupons.where((c) => c.usable).toList();
     final spent = coupons.where((c) => !c.usable).toList();
     Widget heading(String title, [String? count]) => Padding(
-      padding: const EdgeInsets.fromLTRB(Space.xxs, Space.md, 0, Space.xs),
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        Space.xxs,
+        Space.md,
+        0,
+        Space.xs,
+      ),
       child: Text.rich(
         TextSpan(
           children: [
@@ -42,7 +47,7 @@ class CouponsScreen extends StatelessWidget {
               hue: ServiceHues.studio,
             )
           : ListView(
-              padding: const EdgeInsets.fromLTRB(
+              padding: const EdgeInsetsDirectional.fromSTEB(
                 Space.md,
                 0,
                 Space.md,
@@ -460,7 +465,7 @@ Future<void> _deleteAccount(BuildContext context) async {
     context,
     title: t.deleteAccount,
     builder: (ctx) => Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,
@@ -552,7 +557,7 @@ class _FaqScreenState extends State<FaqScreen> {
     Widget chip(String? code, String label) {
       final on = _category == code;
       return Padding(
-        padding: const EdgeInsets.only(right: Space.xs),
+        padding: const EdgeInsetsDirectional.only(end: Space.xs),
         child: ChoiceChip(
           label: KeepAllText(label),
           selected: on,
@@ -615,7 +620,7 @@ class FaqRow extends StatelessWidget {
           item.title(context.lang),
           style: context.text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
-        childrenPadding: const EdgeInsets.fromLTRB(
+        childrenPadding: const EdgeInsetsDirectional.fromSTEB(
           Space.md,
           0,
           Space.md,

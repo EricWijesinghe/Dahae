@@ -96,7 +96,7 @@ class GuestChatTab extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: Space.gutter),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.gutter,
             Space.gutter,
             Space.gutter,

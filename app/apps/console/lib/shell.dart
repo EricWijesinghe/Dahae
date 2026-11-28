@@ -116,7 +116,7 @@ class _ConsoleShellState extends State<ConsoleShell> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.md,
             Space.lg,
             Space.md,
@@ -144,13 +144,16 @@ class _ConsoleShellState extends State<ConsoleShell> {
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(40),
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
             ),
             icon: const Icon(Icons.search_rounded, size: 18),
             label: Row(
               children: [
                 Expanded(
-                  child: KeepAllText(t.cSearchCommand, style: context.text.bodySmall),
+                  child: KeepAllText(
+                    t.cSearchCommand,
+                    style: context.text.bodySmall,
+                  ),
                 ),
                 KeepAllText('Ctrl K', style: context.text.labelSmall),
               ],
@@ -312,7 +315,9 @@ class _PaletteState extends State<_Palette> {
                   if (looksLikeBooking)
                     ListTile(
                       leading: const Icon(Icons.tag_rounded),
-                      title: KeepAllText('${widget.t.cOpenBooking}: ${_q.trim()}'),
+                      title: KeepAllText(
+                        '${widget.t.cOpenBooking}: ${_q.trim()}',
+                      ),
                       onTap: () => Navigator.of(context).pop(_q.trim()),
                     ),
                 ],

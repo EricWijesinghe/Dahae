@@ -275,7 +275,7 @@ class BottomActionBar extends StatelessWidget {
     child: SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           Space.sm,
           Space.gutter,
@@ -413,25 +413,29 @@ class _GlyphCluster extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            left: 0,
+          PositionedDirectional(
+            start: 0,
             top: 26,
             child: Transform.rotate(
               angle: -0.14,
               child: ServiceGlyph(codes[0], size: 64),
             ),
           ),
-          Positioned(
-            right: 0,
+          PositionedDirectional(
+            end: 0,
             top: 26,
             child: Transform.rotate(
               angle: 0.14,
               child: ServiceGlyph(codes[1], size: 64),
             ),
           ),
-          Positioned(left: 50, top: 0, child: ServiceGlyph(codes[2], size: 76)),
-          Positioned(
-            right: 4,
+          PositionedDirectional(
+            start: 50,
+            top: 0,
+            child: ServiceGlyph(codes[2], size: 76),
+          ),
+          PositionedDirectional(
+            end: 4,
             bottom: 0,
             child: Container(
               padding: const EdgeInsets.all(7),
@@ -510,7 +514,7 @@ class _ErrorRetryState extends State<ErrorRetry> {
     return AppCard(
       level: Level.flat,
       border: c.line,
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.md,
         Space.xs,
         Space.xs,
@@ -685,7 +689,7 @@ Future<T?> showAppSheet<T>(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.gutter,
             0,
             Space.gutter,

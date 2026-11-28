@@ -74,7 +74,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (ctx) => SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           Space.xs,
           Space.gutter,
@@ -84,7 +84,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: CloseButton(onPressed: () => Navigator.of(ctx).pop()),
             ),
             StaggerIn(
@@ -385,9 +385,9 @@ class _Tracker extends StatelessWidget {
       child: Stack(
         children: [
           // The connector runs from the first dot's centre to the last one's, under the dots.
-          Positioned(
-            left: 0,
-            right: 0,
+          PositionedDirectional(
+            start: 0,
+            end: 0,
             top: 0,
             height: _dotRow,
             child: Center(

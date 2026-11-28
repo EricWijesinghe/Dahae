@@ -131,7 +131,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                   ),
                 if (channels.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: const EdgeInsetsDirectional.fromSTEB(
                       Space.gutter,
                       Space.lg,
                       Space.gutter,

@@ -430,7 +430,12 @@ class _ContentState extends State<_Content> {
         load: () async =>
             (await context.api.get('/admin/content') as List).cast<Json>(),
         builder: (context, rows, reload) => ListView(
-          padding: const EdgeInsets.fromLTRB(Space.lg, Space.lg, Space.lg, 96),
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            Space.lg,
+            Space.lg,
+            Space.lg,
+            96,
+          ),
           children: [
             for (final c in rows)
               Card(

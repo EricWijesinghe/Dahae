@@ -127,7 +127,7 @@ class _ServiceScopeScreenState extends State<ServiceScopeScreen> {
               children: [
                 for (final g in ScopeGroup.values)
                   Padding(
-                    padding: const EdgeInsets.only(right: Space.xs),
+                    padding: const EdgeInsetsDirectional.only(end: Space.xs),
                     child: ChoiceChip(
                       label: KeepAllText(_groupLabel(t, g)),
                       selected: g == _group,
@@ -207,7 +207,7 @@ class _ServiceScopeScreenState extends State<ServiceScopeScreen> {
                       t.dfNotProvided,
                       style: context.text.titleSmall,
                     ),
-                    childrenPadding: const EdgeInsets.fromLTRB(
+                    childrenPadding: const EdgeInsetsDirectional.fromSTEB(
                       Space.md,
                       0,
                       Space.md,
@@ -218,7 +218,10 @@ class _ServiceScopeScreenState extends State<ServiceScopeScreen> {
                       for (final n in [t.dfNp1, t.dfNp2, t.dfNp3, t.dfNp4])
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
-                          child: KeepAllText('·  $n', style: context.text.bodySmall),
+                          child: KeepAllText(
+                            '·  $n',
+                            style: context.text.bodySmall,
+                          ),
                         ),
                     ],
                   ),
@@ -327,6 +330,7 @@ class FloorPlan extends StatelessWidget {
               ),
             ),
             for (final MapEntry(key: a, value: r) in rects.entries)
+              // rtl-ok: hotspots are picture coordinates, the same in every language
               Positioned(
                 left: r.left * box.maxWidth,
                 top: r.top * box.maxHeight,
@@ -340,7 +344,8 @@ class FloorPlan extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     onTap: available.contains(a) ? () => onTap(a) : null,
                     child: Align(
-                      alignment: Alignment.topLeft,
+                      alignment: Alignment
+                          .topLeft, // rtl-ok: label sits on the picture
                       child: AnimatedContainer(
                         duration: motionFor(context, Motion.standard),
                         margin: const EdgeInsets.all(6),

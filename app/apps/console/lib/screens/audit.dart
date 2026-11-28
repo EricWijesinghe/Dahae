@@ -103,7 +103,12 @@ class _AuditScreenState extends State<AuditScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(Space.xl, Space.xl, Space.xl, 0),
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            Space.xl,
+            Space.xl,
+            Space.xl,
+            0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -226,7 +231,7 @@ class _Rows extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.t;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.xl,
         Space.xs,
         Space.xl,
@@ -277,7 +282,10 @@ class _RowTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              KeepAllText(auditActionLabel(t, action), style: ctx.text.titleMedium),
+              KeepAllText(
+                auditActionLabel(t, action),
+                style: ctx.text.titleMedium,
+              ),
               const SizedBox(height: Space.sm),
               KeepAllText('${t.audActionCode}: $action'),
               KeepAllText('${t.audTarget}: ${row['target'] ?? ''}'),

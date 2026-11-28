@@ -200,7 +200,12 @@ class _BookingsTabState extends State<BookingsTab>
       padding: const EdgeInsets.only(bottom: Space.xxxl),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(Space.sm, Space.xs, Space.sm, 0),
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            Space.sm,
+            Space.xs,
+            Space.sm,
+            0,
+          ),
           child: Column(
             children: [
               MediaQuery.withClampedTextScaling(
@@ -743,7 +748,7 @@ class _DayList extends StatelessWidget {
     }
     var row = 0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         Space.lg,
         Space.gutter,
@@ -756,7 +761,10 @@ class _DayList extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: Space.lg),
               child: Center(
-                child: KeepAllText(t.bookingsEmptyDay, style: context.text.bodySmall),
+                child: KeepAllText(
+                  t.bookingsEmptyDay,
+                  style: context.text.bodySmall,
+                ),
               ),
             ),
           for (final MapEntry(key: label, value: list) in groups.entries) ...[

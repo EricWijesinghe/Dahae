@@ -385,7 +385,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     from: const Offset(24, 0),
                     delay: Duration(milliseconds: 40 * i),
                     child: Padding(
-                      padding: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsetsDirectional.only(end: 6),
                       child: ActionChip(
                         label: KeepAllText(q),
                         shape: const StadiumBorder(),
@@ -414,7 +414,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: const EdgeInsetsDirectional.fromSTEB(
                 Space.xs,
                 Space.xs,
                 Space.sm,

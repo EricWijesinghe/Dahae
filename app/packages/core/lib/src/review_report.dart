@@ -65,9 +65,9 @@ class ReviewReportButton extends StatelessWidget {
           bookingId: bookingId,
         );
         if (sent && context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: KeepAllText(context.t.reportThanks)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: KeepAllText(context.t.reportThanks)),
+          );
         }
       },
       child: KeepAllText(context.t.reportAction),
@@ -129,7 +129,7 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
     final t = context.t;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(
+      padding: EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,
@@ -163,7 +163,8 @@ class _ReviewReportSheetState extends State<ReviewReportSheet> {
             enabled: !_busy,
             decoration: InputDecoration(hintText: t.reportNoteHint),
           ),
-          if (_error != null) KeepAllText(_error!, style: context.text.bodySmall),
+          if (_error != null)
+            KeepAllText(_error!, style: context.text.bodySmall),
           const SizedBox(height: Space.sm),
           FilledButton(
             onPressed: _reason == null || _busy ? null : _send,

@@ -369,7 +369,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       title: t.dfVisitTime,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.gutter,
             0,
             Space.gutter,
@@ -460,7 +460,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         children: [
           FlowTitle(t.dfDateTitle),
           Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: const EdgeInsetsDirectional.fromSTEB(
               Space.gutter,
               0,
               Space.gutter,
@@ -472,7 +472,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      KeepAllText(t.dfManagerIntro, style: context.text.bodyMedium),
+                      KeepAllText(
+                        t.dfManagerIntro,
+                        style: context.text.bodyMedium,
+                      ),
                       TextButton.icon(
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,

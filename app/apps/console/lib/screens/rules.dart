@@ -289,7 +289,7 @@ class _RuleRowState extends State<_RuleRow> {
           for (final n in notes) KeepAllText(n, style: context.text.bodySmall),
           if (!readOnly && item['source'] == 'db')
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
                 onPressed: widget.onReset,
                 child: KeepAllText(t.rulesReset),

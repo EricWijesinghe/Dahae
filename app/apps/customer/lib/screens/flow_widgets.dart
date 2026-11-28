@@ -39,7 +39,7 @@ class FlowTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(
+    padding: const EdgeInsetsDirectional.fromSTEB(
       Space.gutter,
       Space.xs,
       Space.gutter,
@@ -114,7 +114,7 @@ class FlowSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(
+    padding: const EdgeInsetsDirectional.fromSTEB(
       Space.gutter,
       Space.lg,
       Space.gutter,
@@ -727,7 +727,7 @@ Future<void> showPriceBreakdown(BuildContext context, BookingDraft d) {
     context,
     title: [t.service(d.service.code), ?unit].join(' · '),
     builder: (ctx) => SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,

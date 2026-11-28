@@ -66,7 +66,7 @@ class _BookingsScreenState extends State<BookingsScreen> with LiveReload {
     final list = Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: const EdgeInsetsDirectional.fromSTEB(
             Space.md,
             Space.md,
             Space.md,
@@ -137,7 +137,10 @@ class _BookingsScreenState extends State<BookingsScreen> with LiveReload {
                                     'move_out',
                                     'move_in',
                                   ])
-                          DropdownMenuItem(value: c, child: KeepAllText(t.service(c))),
+                          DropdownMenuItem(
+                            value: c,
+                            child: KeepAllText(t.service(c)),
+                          ),
                       ],
                       onChanged: (v) {
                         setState(() => _service = v);
@@ -734,7 +737,10 @@ class _QuoteDeskState extends State<_QuoteDesk> {
           Row(
             children: [
               Expanded(
-                child: KeepAllText(t.cQuoteDesk, style: context.text.titleMedium),
+                child: KeepAllText(
+                  t.cQuoteDesk,
+                  style: context.text.titleMedium,
+                ),
               ),
               if (widget.booking.finalPrice != null)
                 Chip(

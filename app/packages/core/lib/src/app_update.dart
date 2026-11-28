@@ -237,7 +237,7 @@ class _UpdateBanner extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 8),
           child: Row(
             children: [
               Expanded(
@@ -246,7 +246,10 @@ class _UpdateBanner extends StatelessWidget {
                   style: TextStyle(color: scheme.onSecondaryContainer),
                 ),
               ),
-              TextButton(onPressed: onLater, child: KeepAllText(t.uUpdateLater)),
+              TextButton(
+                onPressed: onLater,
+                child: KeepAllText(t.uUpdateLater),
+              ),
               FilledButton.tonal(
                 // The theme's full-width minimum cannot lay out inside a Row.
                 style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),

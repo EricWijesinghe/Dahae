@@ -183,7 +183,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
       context,
       title: '',
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,
@@ -234,7 +234,10 @@ class _CompleteScreenState extends State<CompleteScreen> {
           if (waiting > 0)
             Padding(
               padding: const EdgeInsets.only(top: Space.sm),
-              child: KeepAllText(t.pPhotoWaiting, style: context.text.labelSmall),
+              child: KeepAllText(
+                t.pPhotoWaiting,
+                style: context.text.labelSmall,
+              ),
             ),
           const SizedBox(height: Space.lg),
           SectionTitle(t.pChecklist),
@@ -257,7 +260,10 @@ class _CompleteScreenState extends State<CompleteScreen> {
           if (!_ready)
             Padding(
               padding: const EdgeInsets.only(top: Space.sm),
-              child: KeepAllText(t.pCompleteNeed, style: context.text.labelSmall),
+              child: KeepAllText(
+                t.pCompleteNeed,
+                style: context.text.labelSmall,
+              ),
             ),
           if (_needsReason) ...[
             const SizedBox(height: Space.lg),
@@ -314,7 +320,10 @@ class _CompleteScreenState extends State<CompleteScreen> {
                       const ExcludeSemantics(
                         child: Icon3D('p_camera', size: 40),
                       ),
-                      KeepAllText(context.t.pAddPhoto, style: context.text.labelSmall),
+                      KeepAllText(
+                        context.t.pAddPhoto,
+                        style: context.text.labelSmall,
+                      ),
                     ],
                   ),
                 ),
@@ -331,7 +340,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
   Widget _tile(QueuedPhoto p, List<QueuedPhoto> list) {
     final t = context.t;
     return Padding(
-      padding: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsetsDirectional.only(start: 6),
       child: Stack(
         children: [
           ClipRRect(
@@ -363,8 +372,8 @@ class _CompleteScreenState extends State<CompleteScreen> {
                 ),
               ),
             ),
-          Positioned(
-            right: 2,
+          PositionedDirectional(
+            end: 2,
             top: 2,
             child: IconButton.filledTonal(
               tooltip: t.delete,

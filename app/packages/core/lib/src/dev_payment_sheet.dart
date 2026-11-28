@@ -68,7 +68,7 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
       _Step.done => _done(context),
     };
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,
@@ -121,7 +121,10 @@ class _DevPaymentSheetState extends State<DevPaymentSheet> {
             PayBrandBadge(code: _method),
             const SizedBox(width: Space.md),
             Expanded(
-              child: KeepAllText(t.payMethod(_method), style: context.text.titleSmall),
+              child: KeepAllText(
+                t.payMethod(_method),
+                style: context.text.titleSmall,
+              ),
             ),
           ],
         ),
@@ -271,7 +274,9 @@ class _MethodTile extends StatelessWidget {
             children: [
               PayBrandBadge(code: code),
               const SizedBox(width: Space.md),
-              Expanded(child: KeepAllText(label, style: context.text.bodyMedium)),
+              Expanded(
+                child: KeepAllText(label, style: context.text.bodyMedium),
+              ),
               Icon(
                 selected
                     ? Icons.radio_button_checked_rounded

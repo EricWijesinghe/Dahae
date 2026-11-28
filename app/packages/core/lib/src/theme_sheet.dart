@@ -20,7 +20,7 @@ Future<void> showThemeSheet(BuildContext context, ThemeController theme) {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(20, 4, 20, 8),
                 child: KeepAllText(
                   t.themeTitle,
                   style: Theme.of(context).textTheme.titleMedium,

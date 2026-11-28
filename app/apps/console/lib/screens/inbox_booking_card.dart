@@ -58,7 +58,7 @@ class _Summary extends StatelessWidget {
     return ExpansionTile(
       initiallyExpanded: context.isWide,
       tilePadding: const EdgeInsets.symmetric(horizontal: Space.lg),
-      childrenPadding: const EdgeInsets.fromLTRB(
+      childrenPadding: const EdgeInsetsDirectional.fromSTEB(
         Space.lg,
         0,
         Space.lg,
@@ -96,7 +96,10 @@ class _SummaryRow extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(width: 72, child: KeepAllText(label, style: context.text.labelSmall)),
+        SizedBox(
+          width: 72,
+          child: KeepAllText(label, style: context.text.labelSmall),
+        ),
         Expanded(child: KeepAllText(value, style: context.text.bodyMedium)),
         if (chip != null)
           Chip(label: KeepAllText(chip!), visualDensity: VisualDensity.compact),

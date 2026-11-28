@@ -277,7 +277,7 @@ class _ReceiptViewState extends State<ReceiptView> {
     final t = context.t;
     final c = widget.checkout;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: const EdgeInsetsDirectional.fromSTEB(
         Space.gutter,
         0,
         Space.gutter,

@@ -164,7 +164,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 children: [
                   BookingStatusChip(status: b.status),
                   const SizedBox(height: 4),
-                  KeepAllText(bookingWhen(context, b), style: context.text.titleLarge),
+                  KeepAllText(
+                    bookingWhen(context, b),
+                    style: context.text.titleLarge,
+                  ),
                   KeepAllText(
                     [
                       t.service(b.serviceCode),
@@ -395,7 +398,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     KeepAllText(title, style: context.text.titleSmall),
-                    if (body != null) KeepAllText(body, style: context.text.bodySmall),
+                    if (body != null)
+                      KeepAllText(body, style: context.text.bodySmall),
                   ],
                 ),
               ),
@@ -483,7 +487,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       title: t.visitNotes,
       builder: (ctx) => ListView(
         shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(
+        padding: const EdgeInsetsDirectional.fromSTEB(
           Space.gutter,
           0,
           Space.gutter,

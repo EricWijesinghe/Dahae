@@ -215,7 +215,7 @@ class _ServicesState extends State<_Services> {
         children: [
           if (context.console.isAdmin)
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: FilledButton.icon(
                 style: inlineFilled,
                 onPressed: () => _create(),
@@ -229,7 +229,9 @@ class _ServicesState extends State<_Services> {
               child: ListTile(
                 leading: ServiceGlyph(s['code'] as String, size: 40),
                 title: KeepAllText(_name(context, s)),
-                subtitle: KeepAllText(_priceSummary(context, s['pricing'] as Json)),
+                subtitle: KeepAllText(
+                  _priceSummary(context, s['pricing'] as Json),
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

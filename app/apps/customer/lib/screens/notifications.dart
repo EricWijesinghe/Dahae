@@ -131,8 +131,8 @@ class _AlertTile extends StatelessWidget {
             child: Icon(icon, color: context.primary),
           ),
           if (unread)
-            Positioned(
-              right: -2,
+            PositionedDirectional(
+              end: -2,
               top: -2,
               child: Container(
                 width: 12,

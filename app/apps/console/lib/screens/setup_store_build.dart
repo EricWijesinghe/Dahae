@@ -78,7 +78,10 @@ class _StoreBuildCardState extends State<StoreBuildCard> {
               ),
               const SizedBox(width: Space.sm),
               Expanded(
-                child: KeepAllText(t.cRbStoreTitle, style: context.text.titleSmall),
+                child: KeepAllText(
+                  t.cRbStoreTitle,
+                  style: context.text.titleSmall,
+                ),
               ),
             ],
           ),
@@ -129,15 +132,21 @@ class _StoreBuildCardState extends State<StoreBuildCard> {
               t.cRbStoreBuildTimeTitle,
               style: context.text.labelLarge,
             ),
-            expandedAlignment: Alignment.centerLeft,
+            expandedAlignment: AlignmentDirectional.centerStart,
             children: [
-              KeepAllText(t.cRbStoreBuildTimeList, style: context.text.bodySmall),
+              KeepAllText(
+                t.cRbStoreBuildTimeList,
+                style: context.text.bodySmall,
+              ),
             ],
           ),
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
-            title: KeepAllText(t.cRbStoreOutsideTitle, style: context.text.labelLarge),
-            expandedAlignment: Alignment.centerLeft,
+            title: KeepAllText(
+              t.cRbStoreOutsideTitle,
+              style: context.text.labelLarge,
+            ),
+            expandedAlignment: AlignmentDirectional.centerStart,
             children: [
               KeepAllText(t.cRbStoreOutsideList, style: context.text.bodySmall),
             ],
