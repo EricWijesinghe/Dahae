@@ -15,11 +15,21 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
 def section(text, version):
-    """Body of the `## [<version>]` section, without its heading. The tag's leading v is not part of the heading."""
+    """Body of the `## [<version>]` section, without its heading. The tag's leading v is not part of the heading.
+
+    A pre-release tag (v1.6.6-beta.1) without its own section uses its release's section ([1.6.6]), so a beta
+    carries the notes of the release it leads to.
+    """
     ver = version.removeprefix("v")
     lines = text.splitlines()
-    heading = re.compile(r"^## \[" + re.escape(ver) + r"\](?: |$)")
-    start = next((i for i, line in enumerate(lines) if heading.match(line)), None)
+
+    def find(v):
+        heading = re.compile(r"^## \[" + re.escape(v) + r"\](?: |$)")
+        return next((i for i, line in enumerate(lines) if heading.match(line)), None)
+
+    start = find(ver)
+    if start is None and "-" in ver:
+        start = find(ver.split("-", 1)[0])
     if start is None:
         raise ValueError(f"CHANGELOG has no section [{ver}]")
     end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## [")), len(lines))

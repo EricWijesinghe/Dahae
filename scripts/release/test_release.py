@@ -56,6 +56,13 @@ class ChangelogNotesTests(unittest.TestCase):
         text = self.CHANGELOG.replace("## [1.5.0]", "## [1.5.0-beta.1]")
         self.assertEqual(NOTES.section(text, "v1.5.0-beta.1"), "### Added\n- New thing.\n")
 
+    def test_prerelease_without_own_section_uses_its_release(self):
+        self.assertEqual(NOTES.section(self.CHANGELOG, "v1.5.0-beta.1"), "### Added\n- New thing.\n")
+
+    def test_prerelease_of_unlisted_release_fails(self):
+        with self.assertRaises(ValueError):
+            NOTES.section(self.CHANGELOG, "v9.9.9-beta.1")
+
     def test_missing_section_fails(self):
         with self.assertRaises(ValueError):
             NOTES.section(self.CHANGELOG, "v9.9.9")
