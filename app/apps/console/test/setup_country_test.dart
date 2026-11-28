@@ -17,18 +17,18 @@ final arT = lookupT(const Locale('ar'));
 const _packs = '/admin/setup/packs';
 const _country = '/admin/setup/country';
 
+/// A pack card as `GET /admin/setup/packs` serves it.
 Json _pack(String id, String name, String level, Json currency) => {
   'id': id,
   'name': name,
   'maturity': {'level': level},
-  'currency': currency,
+  'currency': currency['code'],
+  'minor_units': currency['minor_units'],
   'zones': ['Europe/London'],
   'locales': ['en'],
-  'payments': {
-    'recommended': ['stripe'],
-  },
-  'messaging': {
-    'recommended': ['twilio'],
+  'recommended': {
+    'payments': ['stripe'],
+    'messaging': ['twilio'],
   },
   'legal': ['terms', 'privacy'],
 };
@@ -37,8 +37,9 @@ final _kr = {
   ..._pack('KR', '대한민국', 'reviewed', {'code': 'KRW', 'minor_units': 0}),
   'zones': ['Asia/Seoul'],
   'locales': ['ko', 'en'],
-  'payments': {
-    'recommended': ['portone', 'tosspayments'],
+  'recommended': {
+    'payments': ['portone', 'tosspayments'],
+    'messaging': ['twilio'],
   },
   'legal': ['terms', 'privacy', 'location_terms'],
 };
@@ -49,8 +50,8 @@ final _gb = _pack('GB', 'United Kingdom', 'draft', {
 
 /// A fresh install: no country yet, the server guesses KR.
 Json _fresh() => {
-  'country': null,
-  'detected': 'KR',
+  'current': {'country': null, 'locked': false},
+  'default': 'KR',
   'packs': [_kr, _gb],
 };
 
@@ -130,7 +131,14 @@ void main() {
   testWidgets('an install whose country is set never sees the steps', (
     tester,
   ) async {
-    await _open(tester, packs: {..._fresh(), 'country': 'KR'}, locale: 'ko');
+    await _open(
+      tester,
+      packs: {
+        ..._fresh(),
+        'current': {'country': 'KR', 'locked': false},
+      },
+      locale: 'ko',
+    );
     expect(find.text(koT.cCountryStepTitle), findsNothing);
     expect(find.byType(AppCard), findsNothing);
   });

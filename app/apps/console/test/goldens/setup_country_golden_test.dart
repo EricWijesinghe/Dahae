@@ -28,18 +28,19 @@ void main() {
       await tester.runAsync(loadShotFonts);
       final fake = FakeApi()
         ..reply('GET', '/admin/setup/packs', {
-          'country': null,
-          'detected': 'GB',
+          'current': {'country': null, 'locked': false},
+          'default': 'GB',
           'packs': [
             {
               'id': 'GB',
               'name': 'United Kingdom',
               'maturity': {'level': 'draft'},
-              'currency': {'code': 'GBP', 'minor_units': 2},
+              'currency': 'GBP',
+              'minor_units': 2,
               'zones': ['Europe/London'],
               'locales': ['en'],
-              'payments': {
-                'recommended': ['stripe'],
+              'recommended': {
+                'payments': ['stripe'],
               },
               'legal': ['terms', 'privacy'],
             },

@@ -12,7 +12,7 @@ import 'setup_guides.dart';
 import 'setup_language.dart';
 
 /// Setup steps 0 and 1 on a fresh install: the console language, then the country, with a preview of what its pack
-/// sets up. `GET /admin/setup/packs` lists the packs (`{country, detected, packs: [pack]}`); the choice goes to
+/// sets up. `GET /admin/setup/packs` lists the packs (`{current: {country, ...}, default, packs: [card]}`); the choice goes to
 /// `PUT /admin/setup/country`. A server without the list (404) or an install whose country is set (every existing
 /// Korean install) shows nothing, so the steps never reach an install that already runs.
 class SetupCountryCard extends StatefulWidget {
@@ -50,8 +50,8 @@ class _SetupCountryCardState extends State<SetupCountryCard> {
       setState(() {
         _data = data;
         // The detected region is only a default: nothing is saved until the owner confirms.
-        _picked ??= listed.contains(data['detected'])
-            ? data['detected'] as String
+        _picked ??= listed.contains(data['default'])
+            ? data['default'] as String
             : null;
       });
     } on ApiException catch (e) {
@@ -61,6 +61,11 @@ class _SetupCountryCardState extends State<SetupCountryCard> {
       }
     }
   }
+
+  static Json _current(Json? data) => switch (data?['current']) {
+    final Json c => c,
+    _ => const {},
+  };
 
   static List<Json> _packsOf(Json data) => switch (data['packs']) {
     final List<Object?> list => list.whereType<Json>().toList(),
@@ -76,7 +81,12 @@ class _SetupCountryCardState extends State<SetupCountryCard> {
       });
       if (!mounted) return;
       showToast(context, context.t.cCountrySaved);
-      setState(() => _data = {...?_data, 'country': pack['id']});
+      setState(
+        () => _data = {
+          ...?_data,
+          'current': {..._current(_data), 'country': pack['id']},
+        },
+      );
       widget.onSaved();
     } on ApiException catch (e) {
       if (mounted) showToast(context, context.t.error(e));
@@ -96,7 +106,7 @@ class _SetupCountryCardState extends State<SetupCountryCard> {
       );
     }
     final data = _data;
-    if (data == null || data['country'] != null || _packs.isEmpty) {
+    if (data == null || _current(data)['country'] != null || _packs.isEmpty) {
       return const SizedBox.shrink();
     }
     final pack = _pack;
@@ -155,7 +165,7 @@ class _SetupCountryCardState extends State<SetupCountryCard> {
   }
 
   String? _detectedName(Json data) => _packs
-      .where((p) => p['id'] == data['detected'])
+      .where((p) => p['id'] == data['default'])
       .map((p) => p['name'] as String?)
       .firstOrNull;
 
@@ -231,7 +241,10 @@ class CountryPreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.t;
     final lang = context.lang;
-    final currency = Currency.fromJson(pack['currency']);
+    final currency = Currency.fromJson({
+      'code': pack['currency'],
+      'minor_units': pack['minor_units'],
+    });
     final rows = <(String, String)>[
       if (currency != null)
         (
@@ -250,8 +263,8 @@ class CountryPreviewCard extends StatelessWidget {
         t.cCountryProviders,
         {
           for (final id in [
-            ..._strings((pack['payments'] as Json?)?['recommended']),
-            ..._strings((pack['messaging'] as Json?)?['recommended']),
+            ..._strings((pack['recommended'] as Json?)?['payments']),
+            ..._strings((pack['recommended'] as Json?)?['messaging']),
           ])
             guides[id]?.title(t) ?? id,
         }.join(', '),
