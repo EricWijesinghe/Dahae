@@ -162,6 +162,8 @@ bad_domain_refused() { ! $SUDO env DAHAE_YES=1 /usr/local/bin/dahae domain local
 drop_hosts_line() { $SUDO sed -i '/ # dahae-e2e$/d' /etc/hosts; }
 put_auth() { curl_d -H "Authorization: Bearer $2" -H 'Content-Type: application/json' -X PUT "https://$DOMAIN$1" -d "$3"; }
 # Step 9b (R4): the wizard of a fresh install, whose country is still unset, in English and in Arabic.
+# Right after smoke.py the sign-in may meet the per-minute auth limit (rate_limited): keep trying until it admits.
+owner_signs_in() { owner_token >"$LOG/owner-token" 2>"$LOG/owner-token.err"; }
 no_country_yet() { [ "$(get_auth /v1/admin/setup/packs "$W" | json current country)" = None ]; }
 kr_pack_offered() { [ "$(get_auth /v1/admin/setup/packs "$W" | json default)" = KR ]; }
 no_dark_adapter_offered() { ! get_auth /v1/admin/setup/packs "$W" | grep -Eq '"(stripe|twilio|google_places|oidc)"'; }
@@ -432,8 +434,8 @@ expect "API healthy in production mode" wait_until 180 api_healthy
 expect "no dev login codes in production mode" no_dev_code
 
 step "9b. a fresh install's wizard in en and ar: languages, country card, go-live gates, CLI texts"
-W=$(owner_token)
-expect "the owner is signed in" test -n "$W"
+wait_until 960 owner_signs_in || { cat "$LOG/owner-token.err" >&2; fail "the owner is signed in"; }
+W=$(cat "$LOG/owner-token"); echo "ok: the owner is signed in"
 expect "no country chosen yet" no_country_yet
 expect "the KR pack is offered as the default" kr_pack_offered
 expect "dark adapters are never offered" no_dark_adapter_offered
