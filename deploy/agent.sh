@@ -574,17 +574,17 @@ dispatch() { # 종류에 맞는 명령 하나만 실행해요. 종료 코드를 
 
 fail_reason() { # fail_reason 종료코드 : 도메인 바꾸기가 끝나지 못한 이유 (관리 명령의 출력은 버려서, 종료 코드로 정해요)
   case "$JOB_KIND:$1" in
-    domain-set:"$RC_ROLLED_BACK") echo "$(L "새 주소가 5분 안에 응답하지 않아 예전 도메인으로 되돌렸어요 (DNS·방화벽 80/443 확인)" "The new address did not answer within 5 minutes, so the old domain was put back (check DNS and firewall ports 80/443)")" ;;
-    rollback:"$RC_PAYOUTS_IN_DOUBT") echo "$(L "토스 결과를 기다리는 정산이 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요" "Not rolled back: payouts are waiting for a Toss result. Settle them with the status check in the console's [Payouts], then try again")" ;;
-    update:"$RC_TOOLS_STALE"|update-tag:"$RC_TOOLS_STALE"|channel:"$RC_TOOLS_STALE") echo "$(L "새 버전으로 바꿨고 정상이에요. 관리 도구만 바꾸지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" "Switched to the new version and it is healthy. Only the management tools did not switch: run the install line once more (guide 10 C-5)")" ;;
-    edition:"$RC_ROLLED_BACK") echo "$(L "새 판이 응답하지 않아 되돌렸어요. 지금 판 그대로예요 (데이터도 그대로예요)" "The new edition did not answer, so it was rolled back. The current edition stays (data too)")" ;;
+    domain-set:"$RC_ROLLED_BACK") printf '%s\n' "$(L "새 주소가 5분 안에 응답하지 않아 예전 도메인으로 되돌렸어요 (DNS·방화벽 80/443 확인)" "The new address did not answer within 5 minutes, so the old domain was put back (check DNS and firewall ports 80/443)")" ;;
+    rollback:"$RC_PAYOUTS_IN_DOUBT") printf '%s\n' "$(L "토스 결과를 기다리는 정산이 있어서 되돌리지 않았어요. 콘솔 [정산]에서 상태 확인으로 정리한 뒤 다시 해 주세요" "Not rolled back: payouts are waiting for a Toss result. Settle them with the status check in the console's [Payouts], then try again")" ;;
+    update:"$RC_TOOLS_STALE"|update-tag:"$RC_TOOLS_STALE"|channel:"$RC_TOOLS_STALE") printf '%s\n' "$(L "새 버전으로 바꿨고 정상이에요. 관리 도구만 바꾸지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" "Switched to the new version and it is healthy. Only the management tools did not switch: run the install line once more (guide 10 C-5)")" ;;
+    edition:"$RC_ROLLED_BACK") printf '%s\n' "$(L "새 판이 응답하지 않아 되돌렸어요. 지금 판 그대로예요 (데이터도 그대로예요)" "The new edition did not answer, so it was rolled back. The current edition stays (data too)")" ;;
     # 셸 없이 고쳐요: '지금 업데이트' 는 같은 이미지에서 관리 도구만 다시 받아요 (update:5 의 '설치 줄 다시 실행' 이 아니에요)
     edition:"$RC_TOOLS_STALE") Lf "%s 로 바꿨고 정상이에요. 관리 도구는 '지금 업데이트' 를 한 번 눌러 주세요\n" "Switched to %s and it is healthy. For the management tools, press 'Update now' once\n" "$JOB_ARG" ;;
-    edition:*) echo "$(L "판을 바꾸지 못했어요. 지금 판 그대로예요. 새 판이 아직 나오지 않았거나 서명을 확인하지 못했을 수 있어요: 'dahae logs' 를 개발자에게 보여 주세요" "The edition did not change. The current edition stays. The new edition may not be out yet, or its signature could not be checked: show 'dahae logs' to the developer")" ;;
-    rollback:"$RC_TOOLS_STALE") echo "$(L "이전 버전으로 되돌렸고 정상이에요. 관리 도구만 되돌리지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" "Rolled back to the previous version and it is healthy. Only the management tools did not roll back: run the install line once more (guide 10 C-5)")" ;;
-    rollback:"$RC_NO_PREVIOUS") echo "$(L "되돌릴 이전 버전이 없어요 (업데이트를 한 번 한 뒤에 쓸 수 있어요). 지금 버전 그대로예요" "There is no previous version to roll back to (available after one update). The current version stays")" ;;
-    rollback:*) echo "$(L "되돌리지 못했어요. 시스템 상태를 확인하고 'dahae logs' 를 개발자에게 보여 주세요" "Could not roll back. Check the system status and show 'dahae logs' to the developer")" ;;
-    domain-set:*) echo "$(L "도메인을 바꾸지 못했어요: 새 도메인 A 레코드가 이 서버를 가리키는지, 방화벽(80·443)이 열려 있는지 확인하세요. 지금 서비스는 그대로예요" "Could not change the domain: check that the new domain's A record points to this server and the firewall (80, 443) is open. The service stays as it is")" ;;
+    edition:*) printf '%s\n' "$(L "판을 바꾸지 못했어요. 지금 판 그대로예요. 새 판이 아직 나오지 않았거나 서명을 확인하지 못했을 수 있어요: 'dahae logs' 를 개발자에게 보여 주세요" "The edition did not change. The current edition stays. The new edition may not be out yet, or its signature could not be checked: show 'dahae logs' to the developer")" ;;
+    rollback:"$RC_TOOLS_STALE") printf '%s\n' "$(L "이전 버전으로 되돌렸고 정상이에요. 관리 도구만 되돌리지 못했어요: 설치 줄을 한 번 다시 실행해 주세요 (안내서 10 C-5)" "Rolled back to the previous version and it is healthy. Only the management tools did not roll back: run the install line once more (guide 10 C-5)")" ;;
+    rollback:"$RC_NO_PREVIOUS") printf '%s\n' "$(L "되돌릴 이전 버전이 없어요 (업데이트를 한 번 한 뒤에 쓸 수 있어요). 지금 버전 그대로예요" "There is no previous version to roll back to (available after one update). The current version stays")" ;;
+    rollback:*) printf '%s\n' "$(L "되돌리지 못했어요. 시스템 상태를 확인하고 'dahae logs' 를 개발자에게 보여 주세요" "Could not roll back. Check the system status and show 'dahae logs' to the developer")" ;;
+    domain-set:*) printf '%s\n' "$(L "도메인을 바꾸지 못했어요: 새 도메인 A 레코드가 이 서버를 가리키는지, 방화벽(80·443)이 열려 있는지 확인하세요. 지금 서비스는 그대로예요" "Could not change the domain: check that the new domain's A record points to this server and the firewall (80, 443) is open. The service stays as it is")" ;;
   esac
 }
 

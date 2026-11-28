@@ -85,7 +85,7 @@ die()  { printf '\033[1;31m✘ %s\033[0m\n' "$(L "$@")" >&2; exit 1; }
 dc() { # WAL 보관이 켜져 있으면 pgBackRest 이미지 설정(wal/)을 항상 같이 써요: 기본 이미지에는 pgbackrest 가 없어서 아카이브가 실패해요
   local -a compose_files=(-f docker-compose.yml)
   if [ "$(env_get WAL_ARCHIVE_MODE)" = on ]; then
-    [ -f wal/docker-compose.wal.yml ] || { echo "$(L "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." "WAL_ARCHIVE_MODE=on but the wal/ settings are missing. Check the WAL settings again.")" >&2; return 1; }
+    [ -f wal/docker-compose.wal.yml ] || { printf '%s\n' "$(L "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." "WAL_ARCHIVE_MODE=on but the wal/ settings are missing. Check the WAL settings again.")" >&2; return 1; }
     compose_files+=(-f wal/docker-compose.wal.yml)
   fi
   docker compose "${compose_files[@]}" --env-file .env "$@"
@@ -572,7 +572,7 @@ USAGE_EN='Usage: dahae <command>
 dc() { # WAL 보관이 켜져 있으면 pgBackRest 이미지 설정(wal/)을 항상 같이 써요: 기본 이미지에는 pgbackrest 가 없어서 아카이브가 실패해요
   local -a compose_files=(-f docker-compose.yml)
   if [ "$(env_get WAL_ARCHIVE_MODE)" = on ]; then
-    [ -f wal/docker-compose.wal.yml ] || { echo "$(L "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." "WAL_ARCHIVE_MODE=on but the wal/ settings are missing. Check the WAL settings again.")" >&2; return 1; }
+    [ -f wal/docker-compose.wal.yml ] || { printf '%s\n' "$(L "WAL_ARCHIVE_MODE=on 인데 wal/ 설정이 없어요. WAL 설정을 다시 확인하세요." "WAL_ARCHIVE_MODE=on but the wal/ settings are missing. Check the WAL settings again.")" >&2; return 1; }
     compose_files+=(-f wal/docker-compose.wal.yml)
   fi
   docker compose "${compose_files[@]}" --env-file .env "$@"
