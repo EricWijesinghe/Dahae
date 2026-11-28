@@ -55,10 +55,11 @@ class _LegalInboxCardState extends State<LegalInboxCard> {
     } on ApiException catch (e) {
       messenger.showSnackBar(SnackBar(content: KeepAllText(t.error(e))));
     }
-    if (mounted)
+    if (mounted) {
       setState(() {
         _data = _load();
       });
+    }
   }
 
   Future<void> _versions(Json doc) async {
