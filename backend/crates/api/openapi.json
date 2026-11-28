@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Dahae API",
-    "version": "1.6.5",
+    "version": "1.6.6",
     "summary": "Customer, partner (pro), member and staff API. Versioning and deprecation: docs/api/README.md.",
     "description": "All business routes live under /v1 (health and app-links at the root). Errors use the envelope {\"error\":{\"code\":\"<stable_code>\",\"message\":\"<optional>\"}}. Lists are cursor-paginated where marked: pass the X-Next-Cursor response header back as `cursor`. Business dates are Korean dates (KST); timestamps are RFC 3339 in UTC."
   },
@@ -5006,6 +5006,7 @@
           "public"
         ],
         "summary": "Readiness: database reachable and migrations applied (not proxied publicly)",
+        "description": "Body `{\"ready\", \"db\", \"migrations\", \"adapters_ok\", \"pack_ok\"}` (all booleans). `ready` is `db && migrations && adapters_ok` and the status is 200 when it is true, 503 otherwise. `adapters_ok` is false when a live row (refundable payment, saved card, queued refund, open payout) names a payment or payout adapter this binary does not know; the installer then rolls the update back. `pack_ok` is a warning only: false when the install applied a newer country pack than this binary carries (after a rollback); it never fails readiness.",
         "responses": {
           "200": {
             "description": "OK"
