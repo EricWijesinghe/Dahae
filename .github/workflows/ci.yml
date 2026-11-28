@@ -206,6 +206,8 @@ jobs:
         run: bash scripts/ci/check-tz.sh
       - name: Legal pages match their generator
         run: python3 -I scripts/build_legal.py website --check
+      - name: Website script (price grid, page language and direction)
+        run: node --test website/tests/site.test.mjs
       - name: Caddyfile parses with every installer setting (public HTTPS, internal CA, with and without email)
         run: bash scripts/ci/caddy-check.sh
       - name: Workflows pass actionlint

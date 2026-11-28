@@ -66,12 +66,21 @@ const art = (code) => `/assets/icons3d/${ART[code] || (HUES[code] ? `svc_${code}
 
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } } };
 
+const navLang = () => (navigator.language || 'ko').toLowerCase().split('-')[0];
 function pickLang() {
   const saved = store.get('site.lang');
   if (saved) return LANGS[saved] ? saved : 'en';
-  const nav = (navigator.language || 'ko').toLowerCase().split('-')[0];
-  return LANGS[nav] ? nav : 'ko';
+  return LANGS[navLang()] ? navLang() : 'ko';
 }
+// No saved choice and no copy in the visitor's language: the install's first language that has copy
+// (/v1/brand `locales`, default first). A Korean install lists ko first, so it reads as before.
+function installLang(locales) {
+  if (store.get('site.lang') || LANGS[navLang()]) return null;
+  return (Array.isArray(locales) ? locales : []).find((c) => LANGS[c]) || null;
+}
+// Right-to-left scripts: the page's dir follows its language, and site.css mirrors through logical properties.
+const RTL = new Set(['ar', 'he', 'fa', 'ur']);
+const dirFor = (code) => (RTL.has(code.split('-')[0]) ? 'rtl' : 'ltr');
 
 let lang = pickLang();
 let services = [];
@@ -91,6 +100,7 @@ const won = (n) => new Intl.NumberFormat(lang === 'ko' ? 'ko-KR' : lang, { style
 
 function applyCopy() {
   document.documentElement.lang = lang;
+  document.documentElement.dir = dirFor(lang);
   document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = text(el.dataset.t).replace('{brand}', brandName()); });
   document.querySelectorAll('[data-brand-name]').forEach((el) => { el.textContent = brandName(); });
   renderServices();
@@ -268,7 +278,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const [n, svc, brand] = await Promise.allSettled([fetch('/assets/services.json').then((r) => r.json()), getJson('/v1/services'), getJson('/v1/brand')]);
   if (n.status === 'fulfilled') names = n.value;
   if (svc.status === 'fulfilled' && Array.isArray(svc.value)) services = svc.value;
-  if (brand.status === 'fulfilled') applyBrand(brand.value);
+  if (brand.status === 'fulfilled') {
+    applyBrand(brand.value);
+    const own = installLang(brand.value?.locales);
+    if (own) { lang = own; const sel = document.getElementById('lang'); if (sel) sel.value = lang; }
+  }
   applyCopy();
   try { proof = await getJson('/v1/public/proof'); renderProof(); } catch { /* optional section stays hidden */ }
 });

@@ -40,7 +40,7 @@ function fakeElement() {
   };
 }
 
-function loadSite(lang) {
+function loadSite(lang, saved = null) {
   const grid = fakeElement();
   const document = {
     documentElement: { dataset: {}, lang: 'ko' },
@@ -50,7 +50,7 @@ function loadSite(lang) {
   };
   const ctx = vm.createContext({
     document, location: { hostname: 'shop.example' }, navigator: { language: lang },
-    localStorage: { getItem: () => null, setItem() {} }, matchMedia: () => ({ matches: true }),
+    localStorage: { getItem: () => saved, setItem() {} }, matchMedia: () => ({ matches: true }),
     fetch: () => Promise.reject(new Error('offline')), Intl, URL, URLSearchParams,
   });
   vm.runInContext(read(site, 'assets/site.js'), ctx);
@@ -100,4 +100,18 @@ test('a service the site does not know yet gets a plain label and the generic ar
   run('services = catalog; renderServices()');
   assert.equal(grid.children[0].querySelector('h3').textContent, '청소 서비스');
   assert.equal(run("art('balcony_x')"), '/assets/icons3d/svc_whole_home.webp');
+});
+
+test('the page language falls back to the install language, and dir follows the script', () => {
+  const { run } = loadSite('fr');
+  assert.equal(run("installLang(['en', 'ko'])"), 'en', 'no French copy: the install default');
+  assert.equal(run("installLang(['ar', 'ko'])"), 'ko', 'only a language the site has copy for');
+  assert.equal(run('installLang(undefined)'), null, 'an older server sends none');
+  assert.equal(loadSite('en').run("installLang(['ko'])"), null, 'the visitor language wins');
+  assert.equal(loadSite('fr', 'ko').run("installLang(['en'])"), null, 'a saved choice wins');
+  assert.equal(run("dirFor('ar')"), 'rtl');
+  assert.equal(run("dirFor('he-IL')"), 'rtl');
+  assert.equal(run("dirFor('ko')"), 'ltr');
+  run('applyCopy()');
+  assert.equal(run('document.documentElement.dir'), 'ltr');
 });
