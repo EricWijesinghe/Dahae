@@ -23,6 +23,7 @@ mod finance_payroll;
 pub(crate) mod growth;
 mod host_jobs;
 mod keys;
+pub mod legal;
 pub(crate) mod me;
 mod member;
 mod member_approval;
@@ -155,7 +156,8 @@ pub fn router(state: AppState) -> Router {
                 .merge(subscriptions::admin_routes())
                 .merge(audit::admin_routes())
                 .merge(privacy_requests::admin_routes())
-                .merge(renewals::admin_routes()),
+                .merge(renewals::admin_routes())
+                .merge(legal::admin_routes()),
         )
         .nest(
             "/partner",

@@ -90,7 +90,7 @@ async fn seller_info(State(s): State<AppState>, Query(q): Query<SellerQuery>) ->
 }
 
 /// Seller, brand or live-setting fragment for `field`; `None` for an unknown field (404, as before).
-async fn any_fragment(s: &AppState, business: &Value, field: Option<&str>) -> ApiResult<Option<String>> {
+pub(crate) async fn any_fragment(s: &AppState, business: &Value, field: Option<&str>) -> ApiResult<Option<String>> {
     if let Some(f) = field {
         if let Some(html) = live::brand_fragment(&s.config.public_base_url, business, f) {
             return Ok(Some(html));

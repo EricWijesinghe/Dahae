@@ -18,9 +18,22 @@ use serde_json::Value;
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
-/// Version of the policy texts the customer agrees to (privacy, terms, overseas transfer notice, marketing, location terms).
-/// Bump when any of them changes: every stored consent with another version stops counting.
+/// Version of the built-in policy texts (privacy, terms, overseas transfer notice, marketing, location terms): what every
+/// consent kind needs while no text of its document is published (`legal_documents`), and the version of the KR texts
+/// imported as the first published rows. After that a kind needs its document's published version ([`consent_versions`]).
 pub const CONSENT_VERSION: &str = "2026-11-17";
+
+/// The legal document behind each consent kind (the pack's `privacy.consent_kinds[].doc`).
+pub const CONSENT_DOCS: [(&str, &str); 5] = [
+    ("terms", "terms"),
+    ("privacy", "privacy"),
+    ("overseas_transfer", "privacy"),
+    ("marketing", "privacy"),
+    (LOCATION, "location_terms"),
+];
+
+/// The language whose published texts set the consent versions: the pack's first locale, the text that prevails.
+pub const LEGAL_LANG: &str = "ko";
 
 /// Kind and whether the service cannot run without it once signed up. Overseas transfer, marketing and location
 /// are withdrawable (the public notice promises it); withdrawing overseas transfer stops push and the AI chat.
@@ -60,19 +73,63 @@ async fn latest(db: &PgPool, user: Uuid) -> sqlx::Result<Vec<Latest>> {
         .await
 }
 
-/// A consent counts only if it was given for the current policy version.
-fn effective(rows: &[Latest], kind: &str) -> bool {
-    rows.iter().any(|r| r.kind == kind && r.granted && r.version == CONSENT_VERSION)
+/// The version each consent kind needs now.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Versions(Vec<(&'static str, String)>);
+
+impl Versions {
+    /// What a kind needs; an unknown kind needs a version nobody holds.
+    pub fn of(&self, kind: &str) -> &str {
+        self.0.iter().find(|(k, _)| *k == kind).map_or("", |(_, v)| v.as_str())
+    }
+
+    /// The newest version of any kind. Apps before per-document versions send one version for every kind (the one
+    /// `GET /me/consents` reports), so it stands for "the texts shown now" for each kind.
+    pub fn bundle(&self) -> &str {
+        self.0.iter().map(|(_, v)| v.as_str()).max().unwrap_or(CONSENT_VERSION)
+    }
+}
+
+/// The version each kind needs: the newest published version of its document (in [`LEGAL_LANG`]) that asked for
+/// re-consent, else [`CONSENT_VERSION`]. A publish without `requires_reconsent` leaves consents as they are.
+pub async fn consent_versions<'e>(db: impl sqlx::PgExecutor<'e>) -> sqlx::Result<Versions> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT DISTINCT ON (doc) doc, version FROM legal_documents WHERE lang = $1 AND requires_reconsent
+         ORDER BY doc, published_at DESC, id DESC",
+    )
+    .bind(LEGAL_LANG)
+    .fetch_all(db)
+    .await?;
+    Ok(Versions(
+        CONSENT_DOCS
+            .iter()
+            .map(|&(kind, doc)| {
+                let v = rows.iter().find(|(d, _)| d == doc).map_or(CONSENT_VERSION, |(_, v)| v.as_str());
+                (kind, v.to_string())
+            })
+            .collect(),
+    ))
+}
+
+/// A consent counts only if it was given for the version its kind needs now.
+fn effective(rows: &[Latest], versions: &Versions, kind: &str) -> bool {
+    rows.iter().any(|r| r.kind == kind && r.granted && r.version == versions.of(kind))
+}
+
+/// Whether the customer's latest choice for `kind` is a grant for the version it needs now.
+async fn allowed(db: &PgPool, user: Uuid, kind: &str) -> sqlx::Result<bool> {
+    let versions = consent_versions(db).await?;
+    Ok(effective(&latest(db, user).await?, &versions, kind))
 }
 
 /// Whether a marketing message may go to this customer now.
 pub async fn marketing_allowed(db: &PgPool, user: Uuid) -> sqlx::Result<bool> {
-    Ok(effective(&latest(db, user).await?, "marketing"))
+    allowed(db, user, "marketing").await
 }
 
 /// Whether this customer's data may go abroad now (Google FCM push, Anthropic AI chat).
 pub async fn overseas_allowed(db: &PgPool, user: Uuid) -> sqlx::Result<bool> {
-    Ok(effective(&latest(db, user).await?, "overseas_transfer"))
+    allowed(db, user, "overseas_transfer").await
 }
 
 #[derive(Serialize)]
@@ -85,36 +142,72 @@ pub struct ConsentItem {
 
 #[derive(Serialize)]
 pub struct ConsentState {
-    version: &'static str,
+    version: String,
     items: Vec<ConsentItem>,
     /// True while a required consent is missing or was given for an older policy version, or the overseas
     /// transfer grant is for an older version (a withdrawal is never asked again).
     reconsent_required: bool,
 }
 
-fn state_of(rows: &[Latest]) -> ConsentState {
+fn state_of(rows: &[Latest], versions: &Versions) -> ConsentState {
     let items: Vec<ConsentItem> = CONSENTS
         .iter()
         .map(|&(kind, required)| ConsentItem {
             kind,
             required,
-            granted: effective(rows, kind),
+            granted: effective(rows, versions, kind),
             granted_at: rows.iter().find(|r| r.kind == kind).map(|r| r.created_at),
         })
         .collect();
     // Overseas transfer is withdrawable, but a grant for an older policy text is asked again rather than lapsing:
     // otherwise push and the AI chat would switch off without the customer ever being told.
-    let stale_overseas = rows.iter().any(|r| r.kind == "overseas_transfer" && r.granted && r.version != CONSENT_VERSION);
+    let stale_overseas = rows
+        .iter()
+        .any(|r| r.kind == "overseas_transfer" && r.granted && r.version != versions.of("overseas_transfer"));
     let reconsent_required = stale_overseas || items.iter().any(|i| i.required && !i.granted);
     ConsentState {
-        version: CONSENT_VERSION,
+        version: versions.bundle().to_string(),
         items,
         reconsent_required,
     }
 }
 
 pub async fn consent_state(db: &PgPool, user: Uuid) -> ApiResult<ConsentState> {
-    Ok(state_of(&latest(db, user).await?))
+    let versions = consent_versions(db).await?;
+    Ok(state_of(&latest(db, user).await?, &versions))
+}
+
+/// A consent the customer is asked to give again: a required kind not held at its current version, or an optional
+/// kind granted for an older version of its document (it counts as withdrawn until accepted again).
+#[derive(Debug, Serialize, PartialEq, Eq)]
+pub struct Pending {
+    pub kind: &'static str,
+    pub doc: &'static str,
+    pub version: String,
+    pub required: bool,
+}
+
+fn pending_of(rows: &[Latest], versions: &Versions) -> Vec<Pending> {
+    CONSENTS
+        .iter()
+        .zip(CONSENT_DOCS)
+        .filter(|&(&(kind, required), _)| {
+            let stale_grant = rows.iter().any(|r| r.kind == kind && r.granted && r.version != versions.of(kind));
+            stale_grant || (required && !effective(rows, versions, kind))
+        })
+        .map(|(&(kind, required), (_, doc))| Pending {
+            kind,
+            doc,
+            version: versions.of(kind).to_string(),
+            required,
+        })
+        .collect()
+}
+
+/// The customer's pending consents (shown on `GET /me`).
+pub async fn pending_consents(db: &PgPool, user: Uuid) -> ApiResult<Vec<Pending>> {
+    let versions = consent_versions(db).await?;
+    Ok(pending_of(&latest(db, user).await?, &versions))
 }
 
 #[derive(Deserialize)]
@@ -135,9 +228,10 @@ pub async fn update_consents(db: &PgPool, user: Uuid, update: ConsentUpdate) -> 
     if update.consents.is_empty() || update.consents.len() > CONSENTS.len() {
         return Err(ApiError::BadRequest("invalid_consents"));
     }
-    check_kinds_and_versions(&update.consents)?;
+    let versions = consent_versions(db).await?;
+    let changes = current_changes(&update.consents, &versions, &[])?;
     let mut rows = latest(db, user).await?;
-    for c in &update.consents {
+    for c in &changes {
         rows.retain(|r| r.kind != c.kind);
         rows.push(Latest {
             kind: c.kind.clone(),
@@ -147,46 +241,102 @@ pub async fn update_consents(db: &PgPool, user: Uuid, update: ConsentUpdate) -> 
         });
     }
     // The location terms are their own agreement under 위치정보법: recording them alone never depends on the PIPA consents.
-    let location_only = update.consents.iter().all(|c| c.kind == LOCATION);
-    if !location_only && CONSENTS.iter().any(|(k, required)| *required && !effective(&rows, k)) {
+    let location_only = changes.iter().all(|c| c.kind == LOCATION);
+    if !location_only && CONSENTS.iter().any(|(k, required)| *required && !effective(&rows, &versions, k)) {
         return Err(ApiError::BadRequest("required_consent"));
     }
     let mut tx = db.begin().await?;
-    insert_rows(&mut tx, user, &update.consents).await?;
+    insert_rows(&mut tx, user, &changes).await?;
     tx.commit().await?;
     consent_state(db, user).await
 }
 
-/// Every change names a known kind and the current policy version, each kind at most once.
-fn check_kinds_and_versions(consents: &[ConsentChange]) -> ApiResult<()> {
+/// Checks each change (a known kind, at most once each) and returns it with the version to record. A change naming
+/// its kind's current version or [`Versions::bundle`] records the kind's current version; one naming a version in
+/// `older` (an earlier published version of its document) is recorded as sent; anything else is stale.
+fn current_changes(consents: &[ConsentChange], versions: &Versions, older: &[(String, String)]) -> ApiResult<Vec<ConsentChange>> {
+    let mut out = Vec::with_capacity(consents.len());
     for (i, c) in consents.iter().enumerate() {
-        if !CONSENTS.iter().any(|(k, _)| *k == c.kind) {
+        let Some(&(kind, doc)) = CONSENT_DOCS.iter().find(|(k, _)| *k == c.kind) else {
             return Err(ApiError::BadRequest("invalid_consent_kind"));
-        }
-        if c.version != CONSENT_VERSION {
+        };
+        let version = if c.version == versions.of(kind) || c.version == versions.bundle() {
+            versions.of(kind).to_string()
+        } else if older.iter().any(|(d, v)| d == doc && *v == c.version) {
+            c.version.clone()
+        } else {
             return Err(ApiError::BadRequest("stale_consent_version"));
-        }
+        };
         if consents[..i].iter().any(|p| p.kind == c.kind) {
             return Err(ApiError::BadRequest("duplicate_consent_kind"));
         }
+        out.push(ConsentChange {
+            kind: c.kind.clone(),
+            granted: c.granted,
+            version,
+        });
     }
-    Ok(())
+    Ok(out)
 }
 
-/// Signup must grant every required consent for the current policy version. Optional ones may be unticked.
-pub fn check_signup_consents(consents: &[ConsentChange]) -> ApiResult<()> {
-    check_kinds_and_versions(consents)?;
-    let missing = SIGNUP_REQUIRED.iter().any(|k| !consents.iter().any(|c| c.kind == *k && c.granted));
-    if missing {
+/// Records a new customer's consents inside the signup transaction, so a refused signup leaves no account. Signup
+/// must grant every required kind; optional ones may be unticked. An app that still shows an earlier published text
+/// (or the built-in one) can sign up: its version is recorded as sent, and the customer is asked again at once.
+pub async fn record_signup(tx: &mut Transaction<'_, Postgres>, user: Uuid, consents: &[ConsentChange]) -> ApiResult<()> {
+    let versions = consent_versions(&mut **tx).await?;
+    let mut older: Vec<(String, String)> = sqlx::query_as("SELECT DISTINCT doc, version FROM legal_documents WHERE lang = $1")
+        .bind(LEGAL_LANG)
+        .fetch_all(&mut **tx)
+        .await?;
+    older.extend(CONSENT_DOCS.iter().map(|(_, doc)| (doc.to_string(), CONSENT_VERSION.to_string())));
+    let changes = check_signup_consents(consents, &versions, &older)?;
+    insert_rows(tx, user, &changes).await
+}
+
+/// A signup's changes with the versions to record; every required kind must be granted.
+fn check_signup_consents(consents: &[ConsentChange], versions: &Versions, older: &[(String, String)]) -> ApiResult<Vec<ConsentChange>> {
+    let changes = current_changes(consents, versions, older)?;
+    if SIGNUP_REQUIRED.iter().any(|k| !changes.iter().any(|c| c.kind == *k && c.granted)) {
         return Err(ApiError::BadRequest("required_consent"));
     }
-    Ok(())
+    Ok(changes)
 }
 
-/// Records a new customer's consents inside the signup transaction, so a refused signup leaves no account.
-pub async fn record_signup(tx: &mut Transaction<'_, Postgres>, user: Uuid, consents: &[ConsentChange]) -> ApiResult<()> {
-    check_signup_consents(consents)?;
-    insert_rows(tx, user, consents).await
+#[derive(Deserialize)]
+pub struct AcceptItem {
+    kind: String,
+    version: String,
+}
+
+#[derive(Deserialize)]
+pub struct ConsentAccept {
+    consents: Vec<AcceptItem>,
+}
+
+/// `POST /me/consents/accept`: the customer agrees to the texts named (each kind at its current version), for
+/// example the pending ones `GET /me` lists. Only grants, so the required kinds can be accepted one at a time.
+pub async fn accept_consents(
+    State(s): State<AppState>,
+    crate::auth::Customer(a): crate::auth::Customer,
+    Json(b): Json<ConsentAccept>,
+) -> ApiResult<Json<Value>> {
+    if b.consents.is_empty() || b.consents.len() > CONSENTS.len() {
+        return Err(ApiError::BadRequest("invalid_consents"));
+    }
+    let grants: Vec<ConsentChange> = b
+        .consents
+        .into_iter()
+        .map(|c| ConsentChange {
+            kind: c.kind,
+            granted: true,
+            version: c.version,
+        })
+        .collect();
+    let changes = current_changes(&grants, &consent_versions(&s.db).await?, &[])?;
+    let mut tx = s.db.begin().await?;
+    insert_rows(&mut tx, a.id, &changes).await?;
+    tx.commit().await?;
+    Ok(Json(serde_json::json!({ "pending_consents": pending_consents(&s.db, a.id).await? })))
 }
 
 async fn insert_rows(tx: &mut Transaction<'_, Postgres>, user: Uuid, consents: &[ConsentChange]) -> ApiResult<()> {
@@ -620,12 +770,26 @@ mod tests {
         vec![change("terms", true), change("privacy", true), change("overseas_transfer", true)]
     }
 
-    fn refusal(r: ApiResult<()>) -> Option<&'static str> {
+    fn refusal<T>(r: ApiResult<T>) -> Option<&'static str> {
         match r {
             Err(ApiError::BadRequest(code)) => Some(code),
             Err(_) => Some("other"),
-            Ok(()) => None,
+            Ok(_) => None,
         }
+    }
+
+    /// Every kind at `CONSENT_VERSION` except those named.
+    fn versions(bumped: &[(&'static str, &str)]) -> Versions {
+        Versions(
+            CONSENT_DOCS
+                .iter()
+                .map(|&(kind, _)| (kind, bumped.iter().find(|(k, _)| *k == kind).map_or(CONSENT_VERSION, |(_, v)| v).to_string()))
+                .collect(),
+        )
+    }
+
+    fn signup(set: &[ConsentChange]) -> ApiResult<Vec<ConsentChange>> {
+        check_signup_consents(set, &versions(&[]), &[])
     }
 
     fn row(kind: &str, granted: bool, version: &str) -> Latest {
@@ -640,6 +804,8 @@ mod tests {
     #[test]
     fn overseas_grant_for_an_older_policy_text_asks_again() {
         let current = |overseas: Latest| vec![row("terms", true, CONSENT_VERSION), row("privacy", true, CONSENT_VERSION), overseas];
+        let v = versions(&[]);
+        let state_of = |rows: &[Latest]| state_of(rows, &v);
         let stale = state_of(&current(row("overseas_transfer", true, "2000-01-01")));
         assert!(stale.reconsent_required, "push and AI must not switch off silently after a policy change");
         assert!(
@@ -657,9 +823,75 @@ mod tests {
         );
     }
 
+    /// A new privacy text that asks for re-consent moves privacy, overseas transfer and marketing (its document), not
+    /// terms or location.
+    #[test]
+    fn a_new_privacy_version_asks_again_for_the_kinds_behind_it() {
+        let v = versions(&[("privacy", "2026-12-01"), ("overseas_transfer", "2026-12-01"), ("marketing", "2026-12-01")]);
+        assert_eq!(v.bundle(), "2026-12-01");
+        let rows = [
+            row("terms", true, CONSENT_VERSION),
+            row("privacy", true, CONSENT_VERSION),
+            row("overseas_transfer", true, CONSENT_VERSION),
+            row("marketing", true, CONSENT_VERSION),
+            row("location", false, CONSENT_VERSION),
+        ];
+        let s = state_of(&rows, &v);
+        assert!(s.reconsent_required);
+        assert_eq!(s.version, "2026-12-01");
+        let granted: Vec<&str> = s.items.iter().filter(|i| i.granted).map(|i| i.kind).collect();
+        assert_eq!(granted, ["terms"], "older grants behind the new text count as withdrawn");
+        let pending: Vec<(&str, &str, bool)> = pending_of(&rows, &v).iter().map(|p| (p.kind, p.doc, p.required)).collect();
+        assert_eq!(
+            pending,
+            [
+                ("privacy", "privacy", true),
+                ("overseas_transfer", "privacy", false),
+                ("marketing", "privacy", false)
+            ],
+            "a withdrawn location consent is not asked"
+        );
+        assert!(pending_of(&rows, &versions(&[])).is_empty(), "nothing pending on the built-in versions");
+    }
+
+    #[test]
+    fn a_single_version_from_an_older_app_records_each_kinds_own_version() {
+        let v = versions(&[("privacy", "2026-12-01")]);
+        let sent = vec![
+            ConsentChange {
+                kind: "terms".into(),
+                granted: true,
+                version: "2026-12-01".into(),
+            },
+            ConsentChange {
+                kind: "privacy".into(),
+                granted: true,
+                version: "2026-12-01".into(),
+            },
+        ];
+        let out = current_changes(&sent, &v, &[]).expect("bundle version accepted");
+        let recorded: Vec<(&str, &str)> = out.iter().map(|c| (c.kind.as_str(), c.version.as_str())).collect();
+        assert_eq!(recorded, [("terms", CONSENT_VERSION), ("privacy", "2026-12-01")]);
+        assert_eq!(refusal(current_changes(&[change("privacy", true)], &v, &[])), Some("stale_consent_version"));
+    }
+
+    #[test]
+    fn signup_from_an_app_on_an_earlier_published_text_is_recorded_as_sent() {
+        let v = versions(&[("privacy", "2026-12-01"), ("overseas_transfer", "2026-12-01")]);
+        let older = [
+            ("privacy".to_string(), CONSENT_VERSION.to_string()),
+            ("terms".to_string(), CONSENT_VERSION.to_string()),
+        ];
+        let out = check_signup_consents(&required_set(), &v, &older).expect("older published text accepted");
+        assert!(out.iter().all(|c| c.version == CONSENT_VERSION), "recorded as the customer saw it");
+        let mut bogus = required_set();
+        bogus[1].version = "2020-01-01".into();
+        assert_eq!(refusal(check_signup_consents(&bogus, &v, &older)), Some("stale_consent_version"));
+    }
+
     #[test]
     fn signup_with_required_consents_passes_without_marketing() {
-        assert_eq!(refusal(check_signup_consents(&required_set())), None);
+        assert_eq!(refusal(signup(&required_set())), None);
     }
 
     #[test]
@@ -667,7 +899,7 @@ mod tests {
         for kind in ["terms", "privacy", "overseas_transfer"] {
             let mut set = required_set();
             set.retain(|c| c.kind != kind);
-            assert_eq!(refusal(check_signup_consents(&set)), Some("required_consent"), "missing {kind}");
+            assert_eq!(refusal(signup(&set)), Some("required_consent"), "missing {kind}");
         }
     }
 
@@ -675,31 +907,31 @@ mod tests {
     fn signup_with_a_required_consent_declined_is_refused() {
         let mut set = required_set();
         set[2].granted = false;
-        assert_eq!(refusal(check_signup_consents(&set)), Some("required_consent"));
+        assert_eq!(refusal(signup(&set)), Some("required_consent"));
     }
 
     #[test]
     fn signup_with_stale_policy_version_is_refused() {
         let mut set = required_set();
         set[0].version = "1999-01-01".into();
-        assert_eq!(refusal(check_signup_consents(&set)), Some("stale_consent_version"));
+        assert_eq!(refusal(signup(&set)), Some("stale_consent_version"));
     }
 
     #[test]
     fn signup_with_unknown_or_repeated_kind_is_refused() {
         let mut unknown = required_set();
         unknown.push(change("ads_everywhere", true));
-        assert_eq!(refusal(check_signup_consents(&unknown)), Some("invalid_consent_kind"));
+        assert_eq!(refusal(signup(&unknown)), Some("invalid_consent_kind"));
 
         let mut repeated = required_set();
         repeated.push(change("terms", false));
-        assert_eq!(refusal(check_signup_consents(&repeated)), Some("duplicate_consent_kind"));
+        assert_eq!(refusal(signup(&repeated)), Some("duplicate_consent_kind"));
     }
 
     #[test]
     fn optional_marketing_granted_is_accepted_with_required() {
         let mut set = required_set();
         set.push(change("marketing", true));
-        assert_eq!(refusal(check_signup_consents(&set)), None);
+        assert_eq!(refusal(signup(&set)), None);
     }
 }

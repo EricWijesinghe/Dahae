@@ -7220,6 +7220,90 @@
           }
         }
       }
+    },
+    "/v1/me/consents/accept": {
+      "post": {
+        "operationId": "acceptConsents",
+        "tags": [
+          "customer"
+        ],
+        "summary": "Agree to the current version of the named consents",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK. {pending_consents: [{kind, doc, version, required}]} after the grants. Body {consents: [{kind, version}]}: each kind once, version its current one (or the newest of all, as GET /v1/me/consents reports it); 400 stale_consent_version otherwise. GET /v1/me lists the pending ones."
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/legal": {
+      "get": {
+        "operationId": "adminLegalInbox",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Legal inbox: pack documents with their published versions",
+        "responses": {
+          "200": {
+            "description": "OK. {country, documents: [{doc, lang, title, pending, template {doc, lang, title, version, effective_from, requires_reconsent, law_refs, reviewed_by}, draft_html, published {id, version, effective_at, published_at, body_html} | null, versions [{id, doc, lang, version, template_version, requires_reconsent, effective_at, published_at, published_by}]}]}. pending: the pack text is not published yet (none published or a newer template version). Admin only."
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/legal/publish": {
+      "post": {
+        "operationId": "adminLegalPublish",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Publish the pack's current text of one document in one language",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK. {id, doc, lang, version}: a new immutable version, rendered with this install's values now. Body {doc, lang}; 404 for a document the pack does not carry. A version that asks for re-consent makes customers agree again. Admin only (stored role), audited."
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/legal/versions/{id}": {
+      "get": {
+        "operationId": "adminLegalVersion",
+        "tags": [
+          "admin"
+        ],
+        "summary": "One published legal text version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. {id, doc, lang, version, template_version, requires_reconsent, effective_at, published_at, published_by, body_html}"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {

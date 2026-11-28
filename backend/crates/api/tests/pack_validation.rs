@@ -110,6 +110,10 @@ fn kr_mirrors_consent_constants() {
     assert_eq!(p.privacy.consent_version, privacy::CONSENT_VERSION);
     let kinds: Vec<(&str, bool)> = p.privacy.consent_kinds.iter().map(|k| (k.kind.as_str(), k.required)).collect();
     assert_eq!(kinds, privacy::CONSENTS);
+    let docs: Vec<(&str, &str)> = p.privacy.consent_kinds.iter().map(|k| (k.kind.as_str(), k.doc.as_str())).collect();
+    assert_eq!(docs, privacy::CONSENT_DOCS);
+    assert_eq!(p.locales[0], privacy::LEGAL_LANG, "consent versions follow the pack's first-locale texts");
+
     assert_eq!(p.privacy.signup_required, privacy::SIGNUP_REQUIRED);
 }
 
@@ -217,4 +221,45 @@ fn overlapping_or_malformed_values_are_refused() {
 fn extends_chains_must_resolve() {
     refused(|v| v["extends"] = json!("EU"), "missing file EU/pack.json");
     refused(|v| v["extends"] = json!("KR"), "too deep or cyclic");
+}
+
+/// The embedded files with one file's text replaced (or removed when `text` is None).
+fn with_file(path: &str, text: Option<&str>) -> Result<Pack, PackError> {
+    let files: Vec<(&str, &str)> = EMBEDDED
+        .iter()
+        .filter_map(|(p, b)| if *p == path { text.map(|t| (*p, t)) } else { Some((*p, *b)) })
+        .collect();
+    pack::load_from("KR", &files)
+}
+
+fn kr_text(path: &str) -> &'static str {
+    EMBEDDED.iter().find(|(p, _)| *p == path).expect("embedded").1
+}
+
+#[test]
+fn every_kr_legal_document_has_a_korean_template_and_every_consent_names_one() {
+    let docs: Vec<String> = api::legal::templates(&kr(), EMBEDDED)
+        .expect("templates")
+        .iter()
+        .map(|t| format!("{}.{}@{}", t.doc, t.lang, t.version))
+        .collect();
+    assert_eq!(docs, ["terms.ko@2026-11-17", "privacy.ko@2026-11-17", "location_terms.ko@2026-11-17"]);
+    refused(|p| p["privacy"]["consent_kinds"][3]["doc"] = json!("cookies"), "not in legal");
+}
+
+#[test]
+fn broken_legal_templates_are_refused() {
+    let terms = kr_text("KR/legal/terms.ko.md");
+    let check = |text: Option<&str>, needle: &str| {
+        let e = with_file("KR/legal/terms.ko.md", text).expect_err("pack must be refused");
+        assert!(e.to_string().contains(needle), "{e} should mention {needle}");
+    };
+    check(None, "has no ko text");
+    check(Some(&terms.replace("{seller.ceo}", "{seller.shoe_size}")), "unknown slot {seller.shoe_size}");
+    check(Some(&terms.replace("{pack.privacy.min_age}", "{pack.privacy}")), "unknown slot {pack.privacy}");
+    check(Some(&terms.replace("{seller.ceo}", "{seller.ceo")), "terms.ko.md");
+    check(Some(&terms.replace("version: 2026-11-17", "version: v2")), "version must be");
+    check(Some(&terms.replace("doc: terms", "doc: privacy")), "does not match");
+    let install = terms.replace("{seller.ceo}", "{install.currency}");
+    assert!(with_file("KR/legal/terms.ko.md", Some(&install)).is_ok(), "install facts are slots");
 }

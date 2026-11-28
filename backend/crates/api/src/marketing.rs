@@ -10,8 +10,7 @@
 use crate::{
     auth::Admin,
     error::{ApiError, ApiResult},
-    lifecycle,
-    privacy::{self, CONSENT_VERSION},
+    lifecycle, privacy,
     providers::sms::TPL_REMINDER,
     realtime::{Recipient, notify_at},
     routes::audit,
@@ -170,10 +169,10 @@ fn push_audience(qb: &mut QueryBuilder<'_, Postgres>, segments: &[Segment]) {
     }
 }
 
-/// Latest marketing consent row is a grant for the current policy version.
-fn push_consented(qb: &mut QueryBuilder<'_, Postgres>) {
+/// Latest marketing consent row is a grant for `version`, the version marketing needs now (`privacy::consent_versions`).
+fn push_consented(qb: &mut QueryBuilder<'_, Postgres>, version: String) {
     qb.push("EXISTS (SELECT 1 FROM (SELECT DISTINCT ON (kind) kind, granted, version FROM user_consents WHERE user_id = u.id ORDER BY kind, created_at DESC, id DESC) c WHERE c.kind = 'marketing' AND c.granted AND c.version = ");
-    qb.push_bind(CONSENT_VERSION);
+    qb.push_bind(version);
     qb.push(")");
 }
 
@@ -674,8 +673,10 @@ async fn preview(State(s): State<AppState>, _st: Admin, Json(b): Json<PreviewBod
     if !b.audience.iter().all(segment_ok) {
         return Err(ApiError::BadRequest("audience"));
     }
+    let version = privacy::consent_versions(&s.db).await?.of("marketing").to_string();
     let mut qb = QueryBuilder::new("SELECT count(*), count(*) FILTER (WHERE ");
-    push_consented(&mut qb);
+    push_consented(&mut qb, version);
+
     qb.push(") FROM (");
     push_audience(&mut qb, &b.audience);
     qb.push(") u");

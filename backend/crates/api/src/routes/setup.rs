@@ -83,7 +83,7 @@ pub fn admin_routes() -> Router<AppState> {
 /// Whether a real staff account exists: one that can sign in, or the owner. Rows `demo load` added (listed in
 /// `demo_rows`, inactive, nobody can sign in) do not count, so a demo-only install can still create its owner.
 /// The owner row always counts, so setup can never replace an install's owner.
-const REAL_STAFF_EXISTS: &str = "SELECT EXISTS (SELECT 1 FROM staff s WHERE (s.active OR s.is_owner) \
+pub(crate) const REAL_STAFF_EXISTS: &str = "SELECT EXISTS (SELECT 1 FROM staff s WHERE (s.active OR s.is_owner) \
      AND NOT EXISTS (SELECT 1 FROM demo_rows d WHERE d.tbl = 'staff' AND d.row_key = s.id::text))";
 
 async fn has_staff(db: &PgPool) -> Result<bool, sqlx::Error> {

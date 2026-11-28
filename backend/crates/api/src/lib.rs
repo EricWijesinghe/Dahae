@@ -30,6 +30,7 @@ pub mod image_meta;
 pub mod integrations;
 pub mod jobs;
 pub mod keys_bundle;
+pub mod legal;
 pub mod lifecycle;
 pub mod lockout;
 pub mod marketing;
@@ -142,6 +143,12 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     let state = build_state(db, config)?;
     spawn_phone_backfill(state.db.clone(), active_pack.id, state.phone_e164_reads.clone());
     routes::setup::reload(&state).await?;
+    // After the reload, so the processor rows of the privacy text show the saved integrations.
+    let imported = routes::legal::import_baseline(&state).await?;
+    if imported > 0 {
+        tracing::info!(imported, "legal texts recorded as their first published versions");
+    }
+
     let jobs = vec![
         spawn_settings_refresh(state.clone()),
         reconciler::spawn(state.clone()),

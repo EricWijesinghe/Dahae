@@ -46,6 +46,7 @@ pub fn routes() -> Router<AppState> {
         .route("/me/notifications", get(list_notifications))
         .route("/me/notifications/read", post(read_notifications))
         .route("/me/consents", get(crate::privacy::get_consents).put(crate::privacy::put_consents))
+        .route("/me/consents/accept", post(crate::privacy::accept_consents))
         .route("/me/export", get(crate::privacy::export))
 }
 
@@ -63,8 +64,17 @@ struct Profile {
     logins: Vec<String>,
 }
 
-async fn profile(State(s): State<AppState>, Customer(a): Customer) -> ApiResult<Json<Profile>> {
-    let p = sqlx::query_as(
+/// The profile plus the consents the customer is asked to give again after a policy change (`POST /me/consents/accept`).
+/// Apps that predate the field ignore it and keep using `reconsent_required` from `GET /me/consents`.
+#[derive(Serialize)]
+struct ProfileView {
+    #[serde(flatten)]
+    profile: Profile,
+    pending_consents: Vec<crate::privacy::Pending>,
+}
+
+async fn profile(State(s): State<AppState>, Customer(a): Customer) -> ApiResult<Json<ProfileView>> {
+    let profile = sqlx::query_as(
         "SELECT id, phone, phone IS NOT NULL AS phone_verified, identity_verified_at IS NOT NULL AS identity_verified, name, email, locale, created_at,
                 ARRAY(SELECT DISTINCT i.provider FROM user_identities i WHERE i.role = 'customer' AND i.subject_id = users.id ORDER BY 1) AS logins
          FROM users WHERE id = $1 AND deleted_at IS NULL",
@@ -72,11 +82,12 @@ async fn profile(State(s): State<AppState>, Customer(a): Customer) -> ApiResult<
     .bind(a.id)
     .fetch_one(&s.db)
     .await?;
-    Ok(Json(p))
+    let pending_consents = crate::privacy::pending_consents(&s.db, a.id).await?;
+    Ok(Json(ProfileView { profile, pending_consents }))
 }
 
 /// Binds a phone number proven by a login code. A number held by another account is a conflict.
-async fn bind_phone(State(s): State<AppState>, Customer(a): Customer, Json(b): Json<PhoneBind>) -> ApiResult<Json<Profile>> {
+async fn bind_phone(State(s): State<AppState>, Customer(a): Customer, Json(b): Json<PhoneBind>) -> ApiResult<Json<ProfileView>> {
     let phone = normalize_phone(&b.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
     consume_otp(&s, &phone, &b.code).await?;
     sqlx::query("UPDATE users SET phone = $2, phone_e164 = $3 WHERE id = $1 AND deleted_at IS NULL")
@@ -142,7 +153,7 @@ async fn identity_session(State(s): State<AppState>, Customer(a): Customer) -> A
 
 /// PASS / 본인인증: only an id issued to this customer and still unused is checked with PortOne.
 /// The id is burnt on success; only a hash of the CI is kept.
-async fn verify_identity(State(s): State<AppState>, Customer(a): Customer, Json(i): Json<IdentityInput>) -> ApiResult<Json<Profile>> {
+async fn verify_identity(State(s): State<AppState>, Customer(a): Customer, Json(i): Json<IdentityInput>) -> ApiResult<Json<ProfileView>> {
     let id = i.identity_verification_id;
     let issued: Option<String> = sqlx::query_scalar("SELECT id FROM identity_sessions WHERE id = $1 AND user_id = $2 AND used_at IS NULL")
         .bind(&id)
@@ -186,7 +197,7 @@ struct ProfilePatch {
     locale: Option<String>,
 }
 
-async fn update_profile(State(s): State<AppState>, Customer(a): Customer, Json(p): Json<ProfilePatch>) -> ApiResult<Json<Profile>> {
+async fn update_profile(State(s): State<AppState>, Customer(a): Customer, Json(p): Json<ProfilePatch>) -> ApiResult<Json<ProfileView>> {
     if p.name.as_ref().is_some_and(|n| n.chars().count() > MAX_NAME_LEN) {
         return Err(ApiError::BadRequest("name_too_long"));
     }

@@ -41,13 +41,15 @@
     "consent_model": "opt_in",
     "consent_version": "2026-11-17",
     "consent_kinds": [
-      { "kind": "terms", "required": true },
-      { "kind": "privacy", "required": true },
-      { "kind": "overseas_transfer", "required": false },
-      { "kind": "marketing", "required": false },
-      { "kind": "location", "required": false }
+      { "kind": "terms", "required": true, "doc": "terms" },
+      { "kind": "privacy", "required": true, "doc": "privacy" },
+      { "kind": "overseas_transfer", "required": false, "doc": "privacy" },
+      { "kind": "marketing", "required": false, "doc": "privacy" },
+      { "kind": "location", "required": false, "doc": "location_terms" }
     ],
-    "signup_required": ["terms", "privacy", "overseas_transfer"]
+    "signup_required": ["terms", "privacy", "overseas_transfer"],
+    "min_age": 14,
+    "dsr_deadline_days": 10
   },
   "consumer": {
     "withdrawal_days": null,

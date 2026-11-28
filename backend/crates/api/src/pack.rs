@@ -22,6 +22,9 @@ pub const EMBEDDED: &[(&str, &str)] = &[
     ("KR/pack.json", include_str!("../../../packs/KR/pack.json")),
     ("KR/areas.json", include_str!("../../../packs/KR/areas.json")),
     ("KR/banks.json", include_str!("../../../packs/KR/banks.json")),
+    ("KR/legal/privacy.ko.md", include_str!("../../../packs/KR/legal/privacy.ko.md")),
+    ("KR/legal/terms.ko.md", include_str!("../../../packs/KR/legal/terms.ko.md")),
+    ("KR/legal/location_terms.ko.md", include_str!("../../../packs/KR/legal/location_terms.ko.md")),
 ];
 
 /// Ids a pack may name, each backed by code in this build. Adapter ids come from the registry (`adapters`): the
@@ -214,12 +217,14 @@ pub enum ConsentModel {
     OptOut,
 }
 
-/// One consent kind and whether the service cannot run without it once signed up.
+/// One consent kind, whether the service cannot run without it once signed up, and the legal document (an id in
+/// `legal`) whose published version the consent is given for.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ConsentKind {
     pub kind: String,
     pub required: bool,
+    pub doc: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -266,7 +271,7 @@ pub struct Bank {
     pub aliases: Vec<String>,
 }
 
-fn err(pack: &str, msg: impl Into<String>) -> PackError {
+pub(crate) fn err(pack: &str, msg: impl Into<String>) -> PackError {
     PackError {
         pack: pack.to_string(),
         msg: msg.into(),
@@ -297,6 +302,18 @@ fn merge(base: Value, over: Value) -> Value {
         }
         (_, over) => over,
     }
+}
+
+/// The pack and its parents, nearest first (`KR`, `_base`): where a file missing from a pack is looked up next.
+pub fn scopes(id: &str, files: &[(&str, &str)]) -> Result<Vec<String>, PackError> {
+    let mut out = vec![id.to_string()];
+    while let Some(Value::String(parent)) = parse_json(id, files, &format!("{}/pack.json", out[out.len() - 1]))?.get("extends").cloned() {
+        if out.len() >= 4 || out.contains(&parent) {
+            return Err(err(id, "extends chain too deep or cyclic"));
+        }
+        out.push(parent);
+    }
+    Ok(out)
 }
 
 /// The pack's JSON with every parent merged under it, `extends` removed. Refuses cycles and deep chains.
@@ -467,6 +484,7 @@ fn validate(p: &Pack, files: &[(&str, &str)]) -> Result<(), PackError> {
         ensure(hhmm(from).is_some() && hhmm(to).is_some(), "quiet hours must be HH:MM")?;
     }
     check_consents(p)?;
+    crate::legal::templates(p, files)?;
     let policy: domain::cancel_policy::CancelPolicy =
         serde_json::from_value(p.consumer.cancel_default.clone()).map_err(|e| err(id, format!("cancel_default: {e}")))?;
     policy.validate().map_err(|e| err(id, format!("cancel_default: {e}")))?;
@@ -534,6 +552,9 @@ fn check_consents(p: &Pack) -> Result<(), PackError> {
         let ok = (1..=40).contains(&k.kind.len()) && k.kind.bytes().all(|b| b.is_ascii_lowercase() || b == b'_');
         if !ok || !seen.insert(k.kind.as_str()) {
             return Err(err(&p.id, format!("consent kind {} is malformed or repeated", k.kind)));
+        }
+        if !p.legal.contains(&k.doc) {
+            return Err(err(&p.id, format!("consent kind {} names {}, which is not in legal", k.kind, k.doc)));
         }
     }
     match p.privacy.signup_required.iter().find(|k| !seen.contains(k.as_str())) {
