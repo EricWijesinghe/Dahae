@@ -132,7 +132,7 @@ Use this when an empty screen makes the product hard to try. It adds 40 fake cus
 Automatic: **a backup every day at 3:30 a.m.** (kept 14 days), **an update every Monday at 4 a.m.** (rolled back automatically on failure), **automatic HTTPS certificate renewal**.
 Running the install command again is safe: settings and data stay, and it backs up before updating.
 A beta-channel server installs from the address above with `main` changed to `beta`. The install guide given to owners uses `stable`.
-In the delivery repository, the install address in the guides is pinned to a version tag (`…/v1.2.3/install.sh`). Tags never change, and you can check the file against that tag's `SHA256SUMS` (`sha256sum -c SHA256SUMS`).
+In the delivery repository, the install address in the guides is pinned to a version tag (`…/v1.2.3/install.sh`). Tags never change, and you can check the file against that tag's `SHA256SUMS` (`sha256sum -c --ignore-missing SHA256SUMS`).
 
 ## When something goes wrong
 | Symptom | Fix |

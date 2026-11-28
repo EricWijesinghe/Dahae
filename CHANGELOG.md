@@ -12,36 +12,35 @@ from the release branches; no tags existed for them.
 
 1.6.6 prepares servers for other countries and for other release streams. A Korean server keeps working exactly as
 on 1.6.5: the same amounts, tax, cancel rules, messages, exports and times (golden tests freeze them). Every database
-change is additive, so a rollback to 1.6.5 keeps running on the new schema.
+change is additive, so a rollback to the version the server ran before keeps running on the new schema (proven with
+1.6.5; see the upgrade notes for older versions).
 
 ### Added
-- Update editions: a signed edition table (`deploy/editions`, baked into the delivered installer and listed in `SHA256SUMS`) names the release streams a server may follow (image repository, signer, delivery repository) and the domains allowed to switch. `dahae edition <name>` checks the new stream first (its channel version must be newer than anything this server ran, and its `SHA256SUMS` must be signed by that stream's signer at that tag), keeps the old values in `host/edition.prev`, then runs the normal update. If the new version does not answer, the old values come back (exit 3). A switch cut off by a reboot is put back by the next update or auto-update.
+- Update editions: a signed edition table (`deploy/editions`, baked into the delivered installer and listed in `SHA256SUMS`) names the release streams a server may follow (image repository, signer, delivery repository) and the domains allowed to switch. `dahae edition <name>` checks the new stream first (its channel version must be newer than anything this server ran, and its `SHA256SUMS` must be signed by that stream's signer at that tag), keeps the old values in `host/edition.prev` (written whole before `.env` changes), then runs the normal update. If the new version does not answer, the old values come back (exit 3), also when the old images came back under the new repository. Edition rows are checked before they reach `.env` (registry hosts with a port are accepted). A switch cut off by a reboot is settled by the next state-changing `dahae` command (update, rollback, channel, edition, domain, restore, restore-offsite, auto-update): it is kept if the new edition's images already run, otherwise the old values come back. A server that follows another edition keeps that edition's image repository, signer and delivery address when an older installer runs again (for example in a rollback).
 - Console › Server: an "Update edition" card, shown only when the installer offered this server another edition. The switch needs the owner code and then the server approval code, like a rollback.
 - `dahae version` and the agent's `host.json` show the edition (`edition: dahae` on every existing server).
-- Console setup › business profile: a fill colour for buttons and selected items in the apps' light mode (empty keeps the brand colour). The apps put white or dark text on it, whichever reads better, and the preview shows the label and its contrast.
+- Console setup › Business profile: a fill colour for buttons and selected items in light mode (empty keeps the brand colour). The customer app and the console use it, with white or dark text on it, whichever reads better; the partner app keeps its own colours. The preview shows the label and its contrast.
 - Country packs: the Korean rules (VAT and withholding rates, rounding, cancel defaults, consent kinds, banks, areas) now live in a built-in KR pack checked at boot; a bad pack stops the server from starting instead of running with wrong rules. Tests prove every old constant equals its pack value.
-- Install facts: on first boot of 1.6.6 a server that already has staff records `install.country=KR`, currency KRW, time zone Asia/Seoul and its languages, and `install.locked_at` once it has taken a live payment. A fresh install leaves them unset.
-- Install time zone: business dates, booking slots, day windows, quiet hours and the cancel window follow `install.tz`. A server without it, which is every server today, uses Asia/Seoul as before.
+- Install facts: on first boot of 1.6.6 a server that already has staff records `install.country=KR`, currency KRW, time zone Asia/Seoul and its languages, and `install.locked_at` once it has taken a live payment. A fresh install leaves them unset. `install.locked_at` is also written at the first live payment on any server that does not have it yet.
+- Install time zone: business dates, booking slots, day windows, quiet hours and the cancel window follow `install.tz`. Existing servers get `install.tz = Asia/Seoul` on first boot; a fresh install without it also uses Asia/Seoul. Asia/Seoul is the only zone offered in this release. For zones with daylight saving, a time in the overlap resolves to the later instant, the same as Postgres, so the server and the database agree on every slot.
 - Money and tax types for other currencies (0, 2 and 3 decimal places) and rates, with the Korean VAT split and withholding proven equal to the old code on every total from -5,000,000 to 5,000,000 and the integer extremes.
-- Phone numbers are also stored in international form (E.164, for example `+821012345678`) next to each phone. Old rows are filled in the background after the update, in small batches; sign-in and lookups still read the old columns.
+- Phone numbers are also stored in international form (E.164, for example `+821012345678`) next to each phone. Old rows are filled in the background, in small batches; sign-in and lookups still read the old columns.
 - `/ready` reports two more fields. `adapters_ok` is false when a live payment, saved card, queued refund or open payout names a payment or payout provider this version does not know; readiness then fails, and an update to such a version rolls itself back. `pack_ok` is a warning only (false after a rollback to a version with an older country pack) and never fails readiness.
 - Every checkout and payment records its currency (KRW on existing rows).
 - CI fails on a new hard-coded Korean time zone (`Asia/Seoul`, `+09:00`, `KST`) outside the allowed places.
 
 ### Changed
 - Documentation is English first: README, guides, install page and store notes, with the Korean texts kept as linked translations.
-- A server that follows another edition keeps that edition's image repository, signer and delivery address when an older installer runs again (for example in a rollback), instead of falling back to this release's delivery address.
 - The job runner asks for CLI revision 3.
-- Finance (summary, series, services, monthly and VAT exports): VAT is taxed at the rate in force on each fee day and labelled from the rates used. Korean numbers and labels are unchanged; a day with no rate in force is an error instead of a silent 0. Payout withholding reads the pack rule.
+- Finance (summary, series, services, monthly and VAT exports): VAT is taxed at the rate in force on each fee day and labelled from the rates used. Korean numbers and labels are unchanged; finance refuses a day with no VAT rate in force. Payout withholding reads the pack rule.
 - Rounding works in wider integers and stops at the limit instead of wrapping on huge amounts; Korean rounding is unchanged.
 - A pre-release tag (`v1.6.6-beta.1`) without its own changelog section takes its release notes from the release it leads to (`[1.6.6]`).
+- The manual checksum check in the delivery README and the server guide uses `sha256sum -c --ignore-missing SHA256SUMS`, because `SHA256SUMS` also lists `agent.sh` and `editions`.
 
 ### Fixed
 - First install waits until the database really exists before preparing accounts, and update health waits use clock time, so a slow server no longer times out early.
 - The home page carries the saved Google Search Console and Naver Search Advisor verification tags, and the Naver verification file is served as plain text.
 - Sample data no longer uses the old brand in a team name.
-- Edition switch: every state-changing `dahae` command first settles a switch that was cut off; the journal is written whole before `.env` changes; a switch keeps the new edition once its images answer, and a failed switch whose old images came back under the new repository restores the old edition. Edition rows are checked before they reach `.env` (registry hosts with a port are accepted).
-- A daylight-saving overlap resolves to the later instant, the same as Postgres, so the server and the database agree on every slot.
 
 ### Security
 - Payment webhooks: each PortOne, Toss Payments and Toss payout delivery is recorded before it is handled, so a repeated delivery is answered and changes nothing. An event counts as done only after its work finishes; a delivery cut off mid-work, or one that overlaps a running attempt, is retried instead of acknowledged. Unsigned Toss Payments hints skip the record. Records older than 30 days are removed.
@@ -49,9 +48,10 @@ change is additive, so a rollback to 1.6.5 keeps running on the new schema.
 
 ### Upgrade notes
 - Nothing changes by itself: a server without `EDITION` in `.env` keeps its `.env` byte for byte (custom signer and image overrides and local-image installs included) and offers no edition. Only the domains listed in the table get `EDITIONS_OFFERED`.
-- Migrations 0503-0511 are additive (new tables, nullable or defaulted columns, partial unique indexes on the new columns only, triggers that touch only the new columns, a new SQL function). 1.6.5 ignores all of them, so "Roll back to the previous version" keeps working. 0508-0510 build their indexes without locking writes.
-- The phone backfill runs once in the background after the first start; the server is ready before it finishes.
-- Checked before release: a 1.6.5 server started on a database that 1.6.6 had migrated and used, applied nothing, answered `/ready`, and passed the 1.6.5 smoke test (sign-up, coupons, bookings, saved cards, checkout and payment, quotes, chat, settlement, cancellation); its new rows got `KRW` and empty phone copies. 1.6.6 then started again on the same database, filled those copies and passed its own smoke test.
+- Migrations 0503-0511 are additive (new tables, nullable or defaulted columns, partial unique indexes on the new columns only, triggers that touch only the new columns, a new SQL function). Older versions ignore all of them, so "Roll back to the previous version" keeps working. 0508-0510 build their indexes without locking writes.
+- A rollback goes to the version the server ran before this update, not always 1.6.5: a server with automatic updates off or skipped may go back to 1.6.2, 1.6.3 or 1.6.4. Only 1.6.5 was started on the new schema (below). 1.6.2-1.6.4 ship the same migrations (last 0502), the same migration runner (missing ones ignored) and the same readiness check as 1.6.5, so they are expected to behave the same, but this was not run. Servers older than 1.6.2 are not covered: update them to 1.6.5 before 1.6.6.
+- The phone backfill runs in the background at every start and fills only empty copies; the server is ready before it finishes. Numbers that already belong to another row stay empty and are logged.
+- Checked before release: a 1.6.5 server started on a database that 1.6.6 had migrated and used, applied nothing, answered `/ready`, and passed the 1.6.5 smoke test (sign-up, coupons, bookings, saved cards, checkout and payment, quotes, chat, settlement, cancellation); its new rows got `KRW` and empty phone copies. 1.6.6 then started again on the same database, filled those copies and passed its own smoke test. Test saved cards were cleared between runs, because the smoke tests use fixed test card keys.
 
 | Migration | What it adds | Why 1.6.5 keeps working |
 |---|---|---|
@@ -65,12 +65,12 @@ change is additive, so a rollback to 1.6.5 keeps running on the new schema.
 1.6.5 runs its migrations with missing ones ignored, so the newer rows in the migration table do not stop it.
 
 ### 한국어 요약
-- 한국 서버는 1.6.5 와 똑같이 움직여요: 금액, 세금, 취소 규칙, 문자, 엑셀 내보내기, 시간이 그대로예요. 이번 버전은 다른 나라와 다른 업데이트 판(에디션)을 위한 바탕이에요.
-- 사장님 화면에서 바뀌는 것: 콘솔 설정 › 사업자 정보에서 버튼과 선택 항목의 채우기 색을 고를 수 있어요 (비우면 브랜드 색). 서버 화면의 "업데이트 판 (Edition)" 카드는 판 표에 이름이 있는 서버(uzipsa.co.kr, 데모, scratch.uzipsa.co.kr)에서만 보이고, 다른 서버에는 보이지 않아요.
+- 한국 서버는 1.6.5 와 똑같이 작동해요: 금액, 세금, 취소 규칙, 문자, CSV 내보내기, 시간이 그대로예요. 이번 버전은 다른 나라 서비스와 여러 업데이트 판(에디션)을 준비하는 바탕이에요.
+- 사장님 화면에서 바뀌는 것: 콘솔 설정 › 사업장 정보 › 채움 색상에서 버튼과 선택 항목의 색을 고를 수 있어요 (비우면 대표 색상). 고객 앱과 콘솔에 쓰이고, 파트너 앱은 지금 색 그대로예요. 서버 화면의 "업데이트 판 (Edition)" 카드는 판 표에 도메인이 적힌 서버에서만 보이고, 다른 서버에는 보이지 않아요.
 - 결제 알림(웹훅)은 받은 기록을 먼저 남기고 처리해서, 같은 알림이 다시 와도 두 번 처리하지 않아요. 결제 통화가 맞지 않으면 승인하지 않아요.
-- 전화번호를 국제 형식(+82…)으로도 함께 저장해요. 예전 데이터는 업데이트 뒤 서버가 뒤에서 조금씩 채워요. 로그인은 지금처럼 기존 번호로 해요.
-- 데이터베이스 변경(0503-0511)은 모두 추가만 해요. "이전 버전으로 되돌리기"로 1.6.5 에 돌아가도 그대로 돌아가요. 1.6.6 이 바꾼 DB 위에서 1.6.5 서버를 켜고 1.6.5 의 전체 점검을 돌려 확인했어요.
-- 서버 상태 점검(`/ready`)에 두 칸이 늘었어요. `adapters_ok` 는 이 버전이 모르는 결제사를 쓰는 결제가 남아 있으면 거짓이 되고, 그러면 업데이트가 스스로 되돌아가요. `pack_ok` 는 알림용이라 서비스를 멈추지 않아요.
+- 전화번호를 국제 형식(+82…)으로도 함께 저장해요. 비어 있는 번호는 서버가 켜질 때마다 뒤에서 조금씩 채워요. 로그인은 지금처럼 기존 번호로 해요.
+- 데이터베이스 변경(0503-0511)은 모두 추가만 해요. "이전 버전으로 되돌리기"는 이 서버가 바로 전에 쓰던 버전으로 돌아가고, 1.6.5 로 되돌려도 문제없이 작동해요. 1.6.6 이 바꾼 DB 위에서 1.6.5 서버를 켜고 1.6.5 의 전체 점검을 돌려 확인했어요.
+- 서버 상태 점검(`/ready`)에 두 칸이 늘었어요. `adapters_ok` 는 이 버전이 모르는 결제사를 쓰는 결제가 남아 있으면 `false` 가 되고, 그러면 업데이트가 스스로 되돌아가요. `pack_ok` 는 알림용이라 서비스를 멈추지 않아요.
 - 저절로 바뀌는 설정은 없어요. 판(에디션)을 바꾸지 않은 서버의 `.env` 는 한 글자도 바뀌지 않아요.
 
 ## [1.6.5] - 2026-11-24

@@ -21,7 +21,7 @@ curl -fsSL INSTALL_URL | sudo bash
 ```
 To check the downloaded file first (the checksum file `SHA256SUMS` is under the same tag):
 ```
-curl -fsSLO INSTALL_URL && curl -fsSLO SUMS_URL && sha256sum -c SHA256SUMS && sudo bash install.sh
+curl -fsSLO INSTALL_URL && curl -fsSLO SUMS_URL && sha256sum -c --ignore-missing SHA256SUMS && sudo bash install.sh
 ```
 The latest version of this channel is always at `BRANCH_URL` (`main` for stable, `beta` for beta).
 To try the beta first, use the install command in the README of this repository's `beta` branch.
