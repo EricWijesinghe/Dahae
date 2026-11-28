@@ -4254,6 +4254,48 @@ class TEn extends T {
       'Dahae software © 2026 Eric Wijesinghe. All rights reserved.';
 
   @override
+  String get lgiTitle => 'Legal inbox';
+
+  @override
+  String get lgiIntro =>
+      'The terms and privacy texts prepared for your country. A new text arrives here first and applies to customers only once you press Publish.';
+
+  @override
+  String lgiPublished(String version, String date) {
+    return 'Published · $version · $date';
+  }
+
+  @override
+  String get lgiNotPublished => 'Not published yet';
+
+  @override
+  String get lgiPending => 'New text';
+
+  @override
+  String get lgiPreview => 'Preview';
+
+  @override
+  String get lgiVersions => 'Versions';
+
+  @override
+  String get lgiNoVersions => 'No version has been published.';
+
+  @override
+  String get lgiPublish => 'Publish';
+
+  @override
+  String lgiPublishAsk(String title, String version) {
+    return 'Publish version $version of $title? It applies right away.';
+  }
+
+  @override
+  String get lgiReconsent =>
+      'Publishing this version asks customers to agree again.';
+
+  @override
+  String get lgiPublishedDone => 'Published.';
+
+  @override
   String get locUseCurrent => 'Use my current location';
 
   @override

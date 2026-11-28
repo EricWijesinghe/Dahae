@@ -4139,6 +4139,47 @@ class TKo extends T {
       '다해 소프트웨어 © 2026 Eric Wijesinghe. All rights reserved.';
 
   @override
+  String get lgiTitle => '약관·방침 문서함';
+
+  @override
+  String get lgiIntro =>
+      '이 나라에 맞춰 준비된 약관과 개인정보처리방침이에요. 새 문구는 여기에 먼저 오고, 게시를 눌러야 고객에게 적용돼요.';
+
+  @override
+  String lgiPublished(String version, String date) {
+    return '게시됨 · $version · $date';
+  }
+
+  @override
+  String get lgiNotPublished => '아직 게시하지 않았어요';
+
+  @override
+  String get lgiPending => '새 문구';
+
+  @override
+  String get lgiPreview => '미리보기';
+
+  @override
+  String get lgiVersions => '게시 기록';
+
+  @override
+  String get lgiNoVersions => '게시된 버전이 없어요.';
+
+  @override
+  String get lgiPublish => '게시';
+
+  @override
+  String lgiPublishAsk(String title, String version) {
+    return '$title $version 버전을 게시할까요? 게시하면 바로 적용돼요.';
+  }
+
+  @override
+  String get lgiReconsent => '이 버전을 게시하면 고객에게 다시 동의를 받아요.';
+
+  @override
+  String get lgiPublishedDone => '게시했어요.';
+
+  @override
   String get locUseCurrent => '현재 위치로 찾기';
 
   @override

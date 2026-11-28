@@ -2108,6 +2108,38 @@
  "quoteResent": "견적을 다시 보냈어요",
  "quoteSentChip": "견적 발송",
  "legalCopyright": "다해 소프트웨어 © 2026 Eric Wijesinghe. All rights reserved.",
+ "lgiTitle": "약관·방침 문서함",
+ "lgiIntro": "이 나라에 맞춰 준비된 약관과 개인정보처리방침이에요. 새 문구는 여기에 먼저 오고, 게시를 눌러야 고객에게 적용돼요.",
+ "lgiPublished": "게시됨 · {version} · {date}",
+ "@lgiPublished": {
+  "placeholders": {
+   "version": {
+    "type": "String"
+   },
+   "date": {
+    "type": "String"
+   }
+  }
+ },
+ "lgiNotPublished": "아직 게시하지 않았어요",
+ "lgiPending": "새 문구",
+ "lgiPreview": "미리보기",
+ "lgiVersions": "게시 기록",
+ "lgiNoVersions": "게시된 버전이 없어요.",
+ "lgiPublish": "게시",
+ "lgiPublishAsk": "{title} {version} 버전을 게시할까요? 게시하면 바로 적용돼요.",
+ "@lgiPublishAsk": {
+  "placeholders": {
+   "title": {
+    "type": "String"
+   },
+   "version": {
+    "type": "String"
+   }
+  }
+ },
+ "lgiReconsent": "이 버전을 게시하면 고객에게 다시 동의를 받아요.",
+ "lgiPublishedDone": "게시했어요.",
  "locUseCurrent": "현재 위치로 찾기",
  "locConsentTitle": "위치기반서비스 이용약관 동의",
  "locConsentBody": "현재 위치로 주소를 찾으려면 위치기반서비스 이용약관에 동의해 주세요. 위치는 '현재 위치로 찾기'를 누를 때 한 번만 확인하고, 주소를 제안하는 데만 써요. 위치 좌표는 서버에 저장하지 않아요. 동의는 동의 관리에서 언제든지 철회할 수 있어요.",

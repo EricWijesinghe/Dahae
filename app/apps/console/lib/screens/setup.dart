@@ -12,6 +12,7 @@ import '../state.dart';
 import '../widgets/copy_row.dart';
 import 'adapter_card.dart';
 import 'host_controls.dart';
+import 'legal_inbox.dart';
 import 'setup_app_links.dart';
 import 'setup_business.dart';
 import 'setup_domain.dart';
@@ -87,13 +88,19 @@ class _SetupScreenState extends State<SetupScreen> {
                 const AppLinksCard(),
                 const SizedBox(height: Space.md),
                 DomainCard(business: business),
+                const SizedBox(height: Space.md),
+                const LegalInboxCard(),
                 // A domain move needs the server approval code, so it can be made here too.
+
                 const SizedBox(height: Space.md),
                 const AppCard(child: ApprovalEnrollCard()),
                 for (final c in cards) ...[
                   const SizedBox(height: Space.md),
                   if (c['code'] == 'portone') ...[
-                    KeepAllText(t.cPaymentsTitle, style: context.text.titleMedium),
+                    KeepAllText(
+                      t.cPaymentsTitle,
+                      style: context.text.titleMedium,
+                    ),
                     if (_gatewayLine(t, data, context.lang) case final line?)
                       KeepAllText(line, style: context.text.bodyMedium),
                     const SizedBox(height: Space.sm),
@@ -220,7 +227,10 @@ class _Header extends StatelessWidget {
                 const Icon(Icons.science_rounded, size: 18),
                 const SizedBox(width: Space.xs),
                 Expanded(
-                  child: KeepAllText(t.cSetupDevMode, style: context.text.bodySmall),
+                  child: KeepAllText(
+                    t.cSetupDevMode,
+                    style: context.text.bodySmall,
+                  ),
                 ),
               ],
             ),
@@ -729,7 +739,10 @@ class _IntegrationCardState extends State<IntegrationCard> {
                 _slotField(context, name, e, savedSlots.contains(e.key)),
             if (entries.any((e) => otherSlotKeys.contains(e.key))) ...[
               const SizedBox(height: Space.xs),
-              KeepAllText(t.cSetupOtherMethods, style: context.text.labelMedium),
+              KeepAllText(
+                t.cSetupOtherMethods,
+                style: context.text.labelMedium,
+              ),
               for (final e in entries)
                 if (otherSlotKeys.contains(e.key))
                   _slotField(context, name, e, savedSlots.contains(e.key)),
@@ -851,7 +864,10 @@ class _Steps extends StatelessWidget {
               border: Border.all(color: Theme.of(context).dividerColor),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: KeepAllText(shot.of(context.lang), style: context.text.bodySmall),
+            child: KeepAllText(
+              shot.of(context.lang),
+              style: context.text.bodySmall,
+            ),
           ),
       ],
     );

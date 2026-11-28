@@ -7879,6 +7879,78 @@ abstract class T {
   /// **'다해 소프트웨어 © 2026 Eric Wijesinghe. All rights reserved.'**
   String get legalCopyright;
 
+  /// No description provided for @lgiTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'약관·방침 문서함'**
+  String get lgiTitle;
+
+  /// No description provided for @lgiIntro.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 나라에 맞춰 준비된 약관과 개인정보처리방침이에요. 새 문구는 여기에 먼저 오고, 게시를 눌러야 고객에게 적용돼요.'**
+  String get lgiIntro;
+
+  /// No description provided for @lgiPublished.
+  ///
+  /// In ko, this message translates to:
+  /// **'게시됨 · {version} · {date}'**
+  String lgiPublished(String version, String date);
+
+  /// No description provided for @lgiNotPublished.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 게시하지 않았어요'**
+  String get lgiNotPublished;
+
+  /// No description provided for @lgiPending.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 문구'**
+  String get lgiPending;
+
+  /// No description provided for @lgiPreview.
+  ///
+  /// In ko, this message translates to:
+  /// **'미리보기'**
+  String get lgiPreview;
+
+  /// No description provided for @lgiVersions.
+  ///
+  /// In ko, this message translates to:
+  /// **'게시 기록'**
+  String get lgiVersions;
+
+  /// No description provided for @lgiNoVersions.
+  ///
+  /// In ko, this message translates to:
+  /// **'게시된 버전이 없어요.'**
+  String get lgiNoVersions;
+
+  /// No description provided for @lgiPublish.
+  ///
+  /// In ko, this message translates to:
+  /// **'게시'**
+  String get lgiPublish;
+
+  /// No description provided for @lgiPublishAsk.
+  ///
+  /// In ko, this message translates to:
+  /// **'{title} {version} 버전을 게시할까요? 게시하면 바로 적용돼요.'**
+  String lgiPublishAsk(String title, String version);
+
+  /// No description provided for @lgiReconsent.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 버전을 게시하면 고객에게 다시 동의를 받아요.'**
+  String get lgiReconsent;
+
+  /// No description provided for @lgiPublishedDone.
+  ///
+  /// In ko, this message translates to:
+  /// **'게시했어요.'**
+  String get lgiPublishedDone;
+
   /// No description provided for @locUseCurrent.
   ///
   /// In ko, this message translates to:
