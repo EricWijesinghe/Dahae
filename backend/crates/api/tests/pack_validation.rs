@@ -164,6 +164,24 @@ fn urls_are_refused_outside_display_keys() {
 }
 
 #[test]
+fn docs_links_name_registry_adapters_and_open_over_https() {
+    assert_eq!(kr().docs["portone"].keys_url.as_deref(), Some("https://admin.portone.io"));
+    refused(
+        |v| v["docs"]["stripe"] = json!({"keys_url": "https://stripe.example"}),
+        "docs: unknown adapter id stripe",
+    );
+    refused(
+        |v| v["docs"]["portone"]["keys_url"] = json!("http://admin.portone.io"),
+        "links must start with https://",
+    );
+    refused(
+        |v| v["docs"]["portone"]["signup_url"] = json!("javascript:alert(1)"),
+        "links must start with https://",
+    );
+    refused(|v| v["docs"]["portone"]["help"] = json!("x"), "unknown field");
+}
+
+#[test]
 fn unknown_ids_and_fields_are_refused() {
     refused(|v| v["payments"]["recommended"] = json!(["stripe"]), "unknown adapter id stripe");
     refused(|v| v["tax"]["reports"] = json!(["gb_vat"]), "unknown report id gb_vat");

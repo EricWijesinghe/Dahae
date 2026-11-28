@@ -97,6 +97,42 @@ abstract class T {
     Locale('ko'),
   ];
 
+  /// No description provided for @cAdapterKeysLink.
+  ///
+  /// In ko, this message translates to:
+  /// **'키는 어디서 받나요?'**
+  String get cAdapterKeysLink;
+
+  /// No description provided for @cAdapterSignupLink.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정 만들기'**
+  String get cAdapterSignupLink;
+
+  /// No description provided for @cAdapterRecommended.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천'**
+  String get cAdapterRecommended;
+
+  /// No description provided for @cAdapterNotSet.
+  ///
+  /// In ko, this message translates to:
+  /// **'입력 안 됨'**
+  String get cAdapterNotSet;
+
+  /// No description provided for @cAdapterWebhook.
+  ///
+  /// In ko, this message translates to:
+  /// **'웹훅 주소 (이 서비스의 관리 화면에 붙여넣기)'**
+  String get cAdapterWebhook;
+
+  /// No description provided for @cAdapterOtherServices.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 서비스'**
+  String get cAdapterOtherServices;
+
   /// No description provided for @addressSearchHint.
   ///
   /// In ko, this message translates to:

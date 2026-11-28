@@ -99,21 +99,25 @@ async fn request_otp(
     Json(req): Json<OtpRequest>,
 ) -> ApiResult<Json<OtpSent>> {
     let phone = auth::normalize_phone(&req.phone).ok_or(ApiError::BadRequest("invalid_phone"))?;
-    let recent: i64 = sqlx::query_scalar("SELECT count(*) FROM otp_codes WHERE phone = $1 AND created_at > now() - interval '1 hour'")
-        .bind(&phone)
-        .fetch_one(&s.db)
-        .await?;
+    let (col, key) = phone_key(&s, &phone);
+    let recent: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM otp_codes WHERE {col} = $1 AND created_at > now() - interval '1 hour'"
+    ))
+    .bind(&key)
+    .fetch_one(&s.db)
+    .await?;
     // Global hard ceiling (10x the owner's alert level) bounds all SMS spend. Past it every number gets the same
     // refusal, account or not, so the answer never tells which numbers have one.
     let global: i64 = sqlx::query_scalar("SELECT count(*) FROM otp_codes WHERE created_at > now() - interval '1 hour'")
         .fetch_one(&s.db)
         .await?;
-    let cooling: bool =
-        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM otp_codes WHERE phone = $1 AND created_at > now() - ($2::float8 * interval '1 second'))")
-            .bind(&phone)
-            .bind(OTP_RESEND_COOLDOWN_SECS)
-            .fetch_one(&s.db)
-            .await?;
+    let cooling: bool = sqlx::query_scalar(&format!(
+        "SELECT EXISTS (SELECT 1 FROM otp_codes WHERE {col} = $1 AND created_at > now() - ($2::float8 * interval '1 second'))"
+    ))
+    .bind(&key)
+    .bind(OTP_RESEND_COOLDOWN_SECS)
+    .fetch_one(&s.db)
+    .await?;
     if recent >= OTP_MAX_PER_HOUR || cooling || global >= OTP_GLOBAL_CEILING_PER_HOUR {
         return Err(ApiError::RateLimited);
     }
@@ -293,20 +297,28 @@ async fn seed_pro(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: Uuid, phon
 
 /// Owner login wins: a phone that already owns a pro account is never treated as a member login.
 async fn owner_phone_exists(s: &AppState, phone: &str) -> ApiResult<bool> {
-    Ok(sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM pros WHERE phone = $1)")
-        .bind(phone)
+    let (col, key) = phone_key(s, phone);
+    Ok(sqlx::query_scalar(&format!("SELECT EXISTS (SELECT 1 FROM pros WHERE {col} = $1)"))
+        .bind(key)
         .fetch_one(&s.db)
         .await?)
+}
+
+/// The column and value login and OTP reads match for a normalized phone: the E.164 copy once the read switch is
+/// on (`phone::reads_ready`), the stored phone before.
+fn phone_key(s: &AppState, phone: &str) -> (&'static str, String) {
+    crate::phone::lookup(s.phone_e164_reads.load(std::sync::atomic::Ordering::Relaxed), phone, &s.pack.id)
 }
 
 /// Newest non-removed member invite for the phone. A phone invited to several teams signs in to the
 /// team it used most recently (one session = one team).
 async fn member_for_phone(s: &AppState, phone: &str) -> ApiResult<Option<Uuid>> {
-    Ok(sqlx::query_scalar(
-        "SELECT id FROM team_members WHERE phone = $1 AND role = 'member' AND invite_status <> 'removed'
-         ORDER BY last_login_at DESC NULLS LAST, created_at DESC LIMIT 1",
-    )
-    .bind(phone)
+    let (col, key) = phone_key(s, phone);
+    Ok(sqlx::query_scalar(&format!(
+        "SELECT id FROM team_members WHERE {col} = $1 AND role = 'member' AND invite_status <> 'removed'
+         ORDER BY last_login_at DESC NULLS LAST, created_at DESC LIMIT 1"
+    ))
+    .bind(key)
     .fetch_optional(&s.db)
     .await?)
 }
@@ -344,13 +356,14 @@ pub async fn consume_otp(s: &AppState, phone: &str, code: &str) -> ApiResult<()>
 /// Returns whether it was the store-review fixed code.
 async fn burn_code(s: &AppState, phone: &str, code: &str) -> ApiResult<bool> {
     // Count the attempt *before* comparing, atomically: parallel guesses can't share one budget.
-    let row: Option<String> = sqlx::query_scalar(
+    let (col, key) = phone_key(s, phone);
+    let row: Option<String> = sqlx::query_scalar(&format!(
         "UPDATE otp_codes SET attempts = attempts + 1
-         WHERE id = (SELECT id FROM otp_codes WHERE phone = $1 AND expires_at > now() ORDER BY created_at DESC LIMIT 1)
+         WHERE id = (SELECT id FROM otp_codes WHERE {col} = $1 AND expires_at > now() ORDER BY created_at DESC LIMIT 1)
            AND attempts < $2
-         RETURNING code_hash",
-    )
-    .bind(phone)
+         RETURNING code_hash"
+    ))
+    .bind(&key)
     .bind(OTP_MAX_ATTEMPTS)
     .fetch_optional(&s.db)
     .await?;
@@ -364,8 +377,8 @@ async fn burn_code(s: &AppState, phone: &str, code: &str) -> ApiResult<bool> {
         return Err(ApiError::BadRequest("otp_invalid"));
     }
     // Single use: only the request that deletes the code proceeds.
-    let consumed = sqlx::query("DELETE FROM otp_codes WHERE phone = $1 AND code_hash = $2")
-        .bind(phone)
+    let consumed = sqlx::query(&format!("DELETE FROM otp_codes WHERE {col} = $1 AND code_hash = $2"))
+        .bind(&key)
         .bind(&stored)
         .execute(&s.db)
         .await?;

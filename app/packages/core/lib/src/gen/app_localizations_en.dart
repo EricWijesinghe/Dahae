@@ -9,6 +9,25 @@ class TEn extends T {
   TEn([String locale = 'en']) : super(locale);
 
   @override
+  String get cAdapterKeysLink => 'Where do I get these keys?';
+
+  @override
+  String get cAdapterSignupLink => 'Create an account';
+
+  @override
+  String get cAdapterRecommended => 'Recommended';
+
+  @override
+  String get cAdapterNotSet => 'Not set';
+
+  @override
+  String get cAdapterWebhook =>
+      'Webhook URL (paste into this service\'s dashboard)';
+
+  @override
+  String get cAdapterOtherServices => 'Other services';
+
+  @override
   String get addressSearchHint => 'Road name, building or lot number';
 
   @override

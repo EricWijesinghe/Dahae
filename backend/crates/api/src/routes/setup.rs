@@ -8,6 +8,7 @@ use super::audit;
 use super::uploads;
 use crate::entropy;
 use crate::{
+    adapters::{self, Capability},
     address,
     auth::{Admin, Auth, hash_password},
     backup,
@@ -33,6 +34,7 @@ use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
 pub mod brand;
+mod catalog;
 pub mod install;
 mod operator;
 
@@ -71,6 +73,7 @@ pub fn admin_routes() -> Router<AppState> {
         .route("/setup/payout/switch", put(operator::put_payout_switch))
         .route("/setup/store-build/ack", post(operator::ack_store_build))
         .route("/setup/review", put(put_review).delete(clear_review))
+        .route("/setup/catalog", get(catalog::get_catalog))
         .route("/setup/{section}", put(put_section).delete(clear_section))
         .route("/setup/{section}/test", post(test_section))
         .route("/setup/{section}/unlock", post(unlock_section))
@@ -735,6 +738,13 @@ pub async fn reload(s: &AppState) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
+/// The section holds a payment gateway's keys, so saving it changes where checkout money goes.
+fn gateway_section(sec: Section) -> bool {
+    adapters::ADAPTERS
+        .iter()
+        .any(|a| a.capability == Capability::Payments && a.section == sec.code())
+}
+
 fn is_toss(values: &Map<String, Value>) -> bool {
     values.get("mode").and_then(Value::as_str) == Some("toss")
 }
@@ -760,9 +770,8 @@ async fn put_section(
     // money goes, and Toss payouts move real money. An unlock already checked it. The code is checked now and
     // spent only once the values validate, so a typo does not cost a code.
     let money_card = match sec {
-        Section::Portone | Section::TossPayments => true,
         Section::Payout => is_toss(&merged),
-        _ => false,
+        _ => gateway_section(sec),
     };
     let owner_step = if money_card && lock == LockState::Unsaved {
         Some(owner::check_owner(&s, a, &headers, Some(peer.ip()), true).await?)
@@ -1337,5 +1346,12 @@ mod tests {
         assert_eq!(solapi_result(StatusCode::BAD_REQUEST), (false, "invalid_key"));
         assert_eq!(solapi_result(StatusCode::OK), (true, "connected"));
         assert_eq!(solapi_result(StatusCode::INTERNAL_SERVER_ERROR), (false, "provider_error"));
+    }
+
+    /// The owner-code rule reads the registry and gives the same cards as before it: the two KR gateways.
+    #[test]
+    fn gateway_sections_are_the_payment_cards() {
+        let gateways: Vec<Section> = Section::ALL.into_iter().filter(|s| gateway_section(*s)).collect();
+        assert_eq!(gateways, [Section::Portone, Section::TossPayments]);
     }
 }

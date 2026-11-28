@@ -68,7 +68,14 @@ pub mod util;
 
 use crate::{config::Config, providers::Providers, realtime::Hub, state::AppState};
 use sqlx::PgPool;
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    net::SocketAddr,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 use tokio::task::JoinHandle;
 
 #[derive(Debug, thiserror::Error)]
@@ -91,6 +98,7 @@ pub fn build_state(db: PgPool, config: Config) -> Result<AppState, StateError> {
         ai_debounce: Default::default(),
         address_search: Default::default(),
         review_reports: Default::default(),
+        phone_e164_reads: Default::default(),
     })
 }
 
@@ -125,7 +133,6 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     routes::setup::ensure_setup_code(&db, config.setup_code.as_deref(), config.setup_code_at).await?;
     let active_pack = pack::load(pack::ACTIVE)?;
     routes::setup::install::first_boot(&db, &active_pack).await?;
-    spawn_phone_backfill(db.clone(), active_pack.id);
     tokio::fs::create_dir_all(&config.upload_dir).await?;
     if config.dev_mode {
         tracing::warn!("DEV_MODE on: fake SMS, payments and push");
@@ -133,6 +140,7 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
     domains::startup(&db, &mut config).await;
     let bind = config.bind;
     let state = build_state(db, config)?;
+    spawn_phone_backfill(state.db.clone(), active_pack.id, state.phone_e164_reads.clone());
     routes::setup::reload(&state).await?;
     let jobs = vec![
         spawn_settings_refresh(state.clone()),
@@ -169,13 +177,26 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Fills the E.164 phone copies in the background: a first upgrade touches every stored phone, which must not
-/// hold up readiness. A failed run is logged and the next start resumes it.
-fn spawn_phone_backfill(db: PgPool, region: String) {
+/// hold up readiness. A failed run is logged and the next start resumes it. After a complete run, login reads
+/// switch to the copies when `phone::reads_ready` holds; until then (and after any failure) they stay on the old
+/// columns.
+fn spawn_phone_backfill(db: PgPool, region: String, e164_reads: Arc<AtomicBool>) {
     tokio::spawn(async move {
         match phone::backfill(&db, &region, phone::BACKFILL_BATCH).await {
             Ok(0) => {}
             Ok(filled) => tracing::info!(filled, "phone numbers copied into E.164"),
-            Err(e) => tracing::warn!(error = %e, "E.164 phone backfill stopped; the next start resumes it"),
+            Err(e) => {
+                tracing::warn!(error = %e, "E.164 phone backfill stopped; the next start resumes it");
+                return;
+            }
+        }
+        match phone::reads_ready(&db, &region).await {
+            Ok(true) => {
+                e164_reads.store(true, Ordering::Relaxed);
+                tracing::info!("phone logins read the E.164 copies");
+            }
+            Ok(false) => tracing::warn!("phone logins stay on the old columns: some phones have no E.164 copy yet"),
+            Err(e) => tracing::warn!(error = %e, "phone read switch check failed; logins stay on the old columns"),
         }
     });
 }

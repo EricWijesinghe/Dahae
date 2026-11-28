@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../state.dart';
 import '../widgets/copy_row.dart';
+import 'adapter_card.dart';
 import 'host_controls.dart';
 import 'setup_app_links.dart';
 import 'setup_business.dart';
@@ -107,6 +108,8 @@ class _SetupScreenState extends State<SetupScreen> {
                     onChanged: _reload,
                   ),
                 ],
+                // Adapters without a card of their own; none today, so nothing shows on a Korean install.
+                AdapterCatalog(onChanged: _reload),
                 const SizedBox(height: Space.md),
                 // `env`: TOSS_PAYOUTS_ENABLED on the server turns payouts on whatever the saved switch says.
                 TossPayoutSwitchCard(

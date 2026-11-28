@@ -1,9 +1,10 @@
 // Copyright (c) 2026 Eric Wijesinghe. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-Proprietary
 
-//! Phone numbers in E.164 (+821012345678), parsed with the install's pack region. Step one of two (migration
-//! 0507): every writer stores the E.164 copy next to the phone it already stores, and a startup job fills the
-//! rows written before; logins and lookups still read the old columns until the next release switches them.
+//! Phone numbers in E.164 (+821012345678), parsed with the install's pack region. Step one (migration 0507):
+//! every writer stores the E.164 copy next to the phone it already stores, and a startup job fills the rows
+//! written before. Step two: once [`reads_ready`] holds, login and OTP reads match the copy ([`lookup`]); writers
+//! keep filling both columns, so the previous release, which reads only the old ones, still signs everyone in.
 
 use phonenumber::{Mode, country};
 use sqlx::PgPool;
@@ -85,14 +86,44 @@ pub const BACKFILL_BATCH: i64 = 1000;
 /// still the one parsed and the copy still empty, so concurrent runs (several replicas booting) and live writers
 /// never lose an update. Placeholders (empty, `deleted:<id>`, `hmac:<digest>`) are left without a copy.
 /// Returns the number of rows filled.
-/// shortcut: runs once per start, so a row an older replica writes after that waits for the next start; reads
-/// switch to the E.164 columns only in the next release, which must first find no unfilled phone.
+/// shortcut: runs once per start, so a row an older replica writes after that waits for the next start. The read
+/// switch ([`reads_ready`]) is decided once per start after this run; the previous release (1.6.6) writes both
+/// columns, but a phone a replica older than 0507 writes while reads are switched is found only after the next start.
 pub async fn backfill(db: &PgPool, region: &str, batch: i64) -> Result<u64, sqlx::Error> {
     let mut filled = 0;
     for column in COLUMNS {
-        filled += fill_column(db, region, column, batch).await?;
+        filled += scan_column(db, region, column, batch, true).await?;
     }
     Ok(filled)
+}
+
+/// Whether login reads may move to the E.164 copies. Both must hold:
+/// - the backfill is complete: no stored phone that parses for `region` lacks its copy (one it could not write
+///   because another row holds the number counts as missing);
+/// - the previous release still signs in: no row has a copy without the phone that release reads.
+///
+/// A phone that does not parse has no copy and needs none: [`lookup`] matches it on the old column.
+pub async fn reads_ready(db: &PgPool, region: &str) -> Result<bool, sqlx::Error> {
+    for c in COLUMNS {
+        if scan_column(db, region, c, BACKFILL_BATCH, false).await? > 0 {
+            return Ok(false);
+        }
+        let (t, p) = (c.table, c.phone);
+        let orphan = format!("SELECT EXISTS (SELECT 1 FROM {t} WHERE {p}_e164 IS NOT NULL AND ({p} IS NULL OR {p} = ''))");
+        if sqlx::query_scalar::<_, bool>(&orphan).fetch_one(db).await? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// The column a login or OTP read matches, and the value: the E.164 copy once reads switched and the number
+/// parses for `region`, the stored phone otherwise. Both names exist on every table in [`COLUMNS`] with `phone`.
+pub fn lookup(e164_reads: bool, phone: &str, region: &str) -> (&'static str, String) {
+    match e164_reads.then(|| e164(phone, region)).flatten() {
+        Some(e) => ("phone_e164", e),
+        None => ("phone", phone.to_string()),
+    }
 }
 
 /// The backfill's page query for one column: `$1` is the batch size and, when `after` is set, `$2` the last key
@@ -113,7 +144,9 @@ pub fn backfill_page_sql(table: &str, phone: &str, after: bool) -> Option<String
     COLUMNS.iter().find(|c| c.table == table && c.phone == phone).map(|c| page_sql(c, after))
 }
 
-async fn fill_column(db: &PgPool, region: &str, c: &Column, batch: i64) -> Result<u64, sqlx::Error> {
+/// Pages through one column's rows without a copy. Writing, it fills them and returns how many; otherwise it
+/// returns how many of the first page with any parse, without writing (0 means none is left to fill).
+async fn scan_column(db: &PgPool, region: &str, c: &Column, batch: i64, write: bool) -> Result<u64, sqlx::Error> {
     let (t, k, kt, p) = (c.table, c.key, c.key_type, c.phone);
     let (first, next) = (page_sql(c, false), page_sql(c, true));
     let update = format!(
@@ -134,7 +167,11 @@ async fn fill_column(db: &PgPool, region: &str, c: &Column, batch: i64) -> Resul
             .into_iter()
             .filter_map(|(key, phone)| e164(&phone, region).map(|e| (key, phone, e)))
             .collect();
-        filled += write_batch(db, &update, &parsed, t).await?;
+        if write {
+            filled += write_batch(db, &update, &parsed, t).await?;
+        } else if !parsed.is_empty() {
+            return Ok(parsed.len() as u64);
+        }
         if !full {
             break;
         }
@@ -172,7 +209,7 @@ async fn run_update(db: &PgPool, update: &str, rows: &[(String, String, String)]
 
 #[cfg(test)]
 mod tests {
-    use super::e164;
+    use super::{e164, lookup};
 
     #[test]
     fn korean_mobiles_as_stored_become_e164() {
@@ -201,6 +238,13 @@ mod tests {
         ] {
             assert_eq!(e164(raw, "KR"), None, "{raw}");
         }
+    }
+
+    #[test]
+    fn reads_match_the_copy_only_once_switched_and_parsed() {
+        assert_eq!(lookup(false, "01012345678", "KR"), ("phone", "01012345678".to_string()));
+        assert_eq!(lookup(true, "01012345678", "KR"), ("phone_e164", "+821012345678".to_string()));
+        assert_eq!(lookup(true, "123", "KR"), ("phone", "123".to_string()), "no copy to match: the old column");
     }
 
     #[test]

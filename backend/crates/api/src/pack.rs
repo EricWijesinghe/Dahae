@@ -32,7 +32,7 @@ pub const KNOWN_LEGAL: &[&str] = &["terms", "privacy", "location_terms"];
 pub const KNOWN_CHANNELS: &[&str] = &["alimtalk", "sms"];
 pub const KNOWN_MARKETPLACE_MODELS: &[&str] = &["merchant_of_record", "split_by_psp"];
 /// The only keys whose string values may be URLs; they are shown to the owner, never fetched (D4).
-const URL_KEYS: &[&str] = &["why_url", "url"];
+const URL_KEYS: &[&str] = &["why_url", "url", "keys_url", "signup_url"];
 const MAX_BPS: u32 = 10_000;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -67,6 +67,9 @@ pub struct Pack {
     pub consumer: Consumer,
     pub legal: Vec<String>,
     pub checklist: Vec<ChecklistItem>,
+    /// Setup-wizard links per adapter id, shown on its card (`/setup/catalog`), never fetched.
+    #[serde(default)]
+    pub docs: BTreeMap<String, AdapterDocs>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -234,6 +237,16 @@ pub struct ChecklistItem {
     pub blocks_live: bool,
     #[serde(default)]
     pub why_url: Option<String>,
+}
+
+/// Where the owner gets an adapter's keys and opens an account. Display only (D4); `https` only.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AdapterDocs {
+    #[serde(default)]
+    pub keys_url: Option<String>,
+    #[serde(default)]
+    pub signup_url: Option<String>,
 }
 
 /// One entry of an areas file: a district code and its names.
@@ -449,6 +462,7 @@ fn validate(p: &Pack, files: &[(&str, &str)]) -> Result<(), PackError> {
     known(id, "channel", &p.messaging.channel_order, KNOWN_CHANNELS)?;
     known(id, "marketplace model", &p.payments.marketplace_models, KNOWN_MARKETPLACE_MODELS)?;
     known(id, "legal document", &p.legal, KNOWN_LEGAL)?;
+    check_docs(p)?;
     if let Some([from, to]) = &p.messaging.quiet_hours {
         ensure(hhmm(from).is_some() && hhmm(to).is_some(), "quiet hours must be HH:MM")?;
     }
@@ -463,6 +477,19 @@ fn validate(p: &Pack, files: &[(&str, &str)]) -> Result<(), PackError> {
     )?;
     if let Some(h) = &p.holidays {
         parse_json(id, files, h)?;
+    }
+    Ok(())
+}
+
+/// Docs links name a registry adapter and open over https: the console renders them as links.
+fn check_docs(p: &Pack) -> Result<(), PackError> {
+    for (adapter, d) in &p.docs {
+        if crate::adapters::spec(adapter).is_none() {
+            return Err(err(&p.id, format!("docs: unknown adapter id {adapter}")));
+        }
+        if [&d.keys_url, &d.signup_url].into_iter().flatten().any(|u| !u.starts_with("https://")) {
+            return Err(err(&p.id, format!("docs.{adapter}: links must start with https://")));
+        }
     }
     Ok(())
 }

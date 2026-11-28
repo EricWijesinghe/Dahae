@@ -1,5 +1,11 @@
 {
  "@@locale": "ko",
+ "cAdapterKeysLink": "키는 어디서 받나요?",
+ "cAdapterSignupLink": "계정 만들기",
+ "cAdapterRecommended": "추천",
+ "cAdapterNotSet": "입력 안 됨",
+ "cAdapterWebhook": "웹훅 주소 (이 서비스의 관리 화면에 붙여넣기)",
+ "cAdapterOtherServices": "다른 서비스",
  "addressSearchHint": "도로명, 건물명, 지번으로 검색",
  "addressSearchButton": "검색",
  "addressSearchOffHint": "주소 검색은 아직 준비 중이에요. 주소를 직접 입력해 주세요.",

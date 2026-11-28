@@ -518,3 +518,138 @@ async fn backfill_pages_use_the_primary_key_in_a_generic_plan(db: PgPool) {
         sqlx::query("DEALLOCATE page").execute(&mut *tx).await.expect("deallocate");
     }
 }
+
+/// The router over a state whose read switch was decided like a start does: backfill, then `reads_ready`.
+async fn switched_app(db: &PgPool) -> (axum::Router, bool) {
+    phone::backfill(db, "KR", phone::BACKFILL_BATCH).await.expect("backfill");
+    let ready = phone::reads_ready(db, "KR").await.expect("switch check");
+    let state = build_state(db.clone(), test_config()).expect("state");
+    state.phone_e164_reads.store(ready, std::sync::atomic::Ordering::Relaxed);
+    (api::routes::router(state), ready)
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn the_read_switch_waits_for_a_complete_backfill(db: PgPool) {
+    previous_release_rows(&db).await;
+    assert!(!phone::reads_ready(&db, "KR").await.expect("check"), "old rows without copies");
+    phone::backfill(&db, "KR", 2).await.expect("backfill");
+    assert!(
+        phone::reads_ready(&db, "KR").await.expect("check"),
+        "every parseable phone has its copy; placeholders need none"
+    );
+
+    // A phone the previous release writes after a rollback holds the switch until the next backfill.
+    previous_release_login(&db, N1_USER_UPSERT, "01077778888").await;
+    assert!(!phone::reads_ready(&db, "KR").await.expect("check"));
+}
+
+/// A phone whose copy the backfill cannot write: another row already holds that copy.
+async fn blocked_copy(db: &PgPool) {
+    sqlx::query("INSERT INTO users (phone, name, phone_e164) VALUES ('01099990002', 'holder', $1)")
+        .bind(PHONE_E164)
+        .execute(db)
+        .await
+        .expect("holder");
+    user_with_phone(db, PHONE).await;
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn the_read_switch_waits_while_a_copy_cannot_be_written(db: PgPool) {
+    blocked_copy(&db).await;
+    phone::backfill(&db, "KR", 10).await.expect("backfill");
+    assert!(!phone::reads_ready(&db, "KR").await.expect("check"));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn the_read_switch_waits_while_the_previous_release_could_not_sign_a_row_in(db: PgPool) {
+    let pro: Uuid = sqlx::query_scalar("INSERT INTO pros (phone, phone_e164) VALUES ('01022220009', '+821022220009') RETURNING id")
+        .fetch_one(&db)
+        .await
+        .expect("pro");
+    assert!(phone::reads_ready(&db, "KR").await.expect("check"));
+    // A copy with no phone beside it: the previous release reads only the phone, so it could not find this member.
+    sqlx::query("INSERT INTO team_members (pro_id, name, phone, phone_e164, role, invite_status) VALUES ($1, '', '', '+821022220010', 'member', 'active')")
+        .bind(pro)
+        .execute(&db)
+        .await
+        .expect("member");
+    assert!(!phone::reads_ready(&db, "KR").await.expect("check"));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn switched_logins_read_the_copies_and_the_previous_release_still_signs_in(db: PgPool) {
+    let customer = user_with_phone(&db, "01011112222").await;
+    let pro: Uuid = sqlx::query_scalar("INSERT INTO pros (phone) VALUES ('01022223333') RETURNING id")
+        .fetch_one(&db)
+        .await
+        .expect("pro");
+    // A probe row whose copy names another number than its phone: only a read of the copy finds it by that number.
+    let member: Uuid = sqlx::query_scalar(
+        "INSERT INTO team_members (pro_id, name, phone, phone_e164, role, invite_status)
+         VALUES ($1, 'm', '01099990000', '+821044445555', 'member', 'active') RETURNING id",
+    )
+    .bind(pro)
+    .fetch_one(&db)
+    .await
+    .expect("member");
+    let (app, ready) = switched_app(&db).await;
+    assert!(ready);
+
+    let (_, subject) = login(&app, "01011112222", "customer").await;
+    assert_eq!(subject, customer.to_string(), "the existing customer, found by its copy");
+    let code = dev_code(&app, "01044445555").await;
+    let (st, tokens) = call(
+        &app,
+        "POST",
+        "/v1/auth/verify",
+        None,
+        Some(json!({ "phone": "01044445555", "code": code, "audience": "partner" })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{tokens}");
+    assert_eq!(
+        (tokens["role"].as_str(), tokens["subject"].as_str()),
+        (Some("member"), Some(member.to_string().as_str()))
+    );
+    let (_, subject) = login(&app, "01022223333", "partner").await;
+    assert_eq!(subject, pro.to_string());
+
+    // Accounts this release makes with the switch on are found by the previous release's statements.
+    let (_, made) = login(&app, "01066667777", "customer").await;
+    let (found, created) = previous_release_login(&db, N1_USER_UPSERT, "01066667777").await;
+    assert_eq!((found.to_string(), created), (made, false));
+    let (_, made) = login(&app, "01088889999", "partner").await;
+    let (found, created) = previous_release_login(&db, N1_PRO_UPSERT, "01088889999").await;
+    assert_eq!((found.to_string(), created), (made, false));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn before_the_switch_logins_read_the_old_columns(db: PgPool) {
+    let pro: Uuid = sqlx::query_scalar("INSERT INTO pros (phone) VALUES ('01022223334') RETURNING id")
+        .fetch_one(&db)
+        .await
+        .expect("pro");
+    sqlx::query(
+        "INSERT INTO team_members (pro_id, name, phone, phone_e164, role, invite_status)
+         VALUES ($1, 'm', '01099990001', '+821044445556', 'member', 'active')",
+    )
+    .bind(pro)
+    .execute(&db)
+    .await
+    .expect("member");
+    // A user without a copy keeps the switch off.
+    blocked_copy(&db).await;
+    let (app, ready) = switched_app(&db).await;
+    assert!(!ready);
+    let code = dev_code(&app, "01044445556").await;
+    let (st, tokens) = call(
+        &app,
+        "POST",
+        "/v1/auth/verify",
+        None,
+        Some(json!({ "phone": "01044445556", "code": code, "audience": "partner" })),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK, "{tokens}");
+    assert_eq!(tokens["role"], "pro", "the old column holds another number: a new partner account");
+}

@@ -9,6 +9,24 @@ class TKo extends T {
   TKo([String locale = 'ko']) : super(locale);
 
   @override
+  String get cAdapterKeysLink => '키는 어디서 받나요?';
+
+  @override
+  String get cAdapterSignupLink => '계정 만들기';
+
+  @override
+  String get cAdapterRecommended => '추천';
+
+  @override
+  String get cAdapterNotSet => '입력 안 됨';
+
+  @override
+  String get cAdapterWebhook => '웹훅 주소 (이 서비스의 관리 화면에 붙여넣기)';
+
+  @override
+  String get cAdapterOtherServices => '다른 서비스';
+
+  @override
   String get addressSearchHint => '도로명, 건물명, 지번으로 검색';
 
   @override

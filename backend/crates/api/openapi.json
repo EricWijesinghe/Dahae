@@ -4250,6 +4250,23 @@
         ]
       }
     },
+    "/v1/admin/setup/catalog": {
+      "get": {
+        "operationId": "adminSetupCatalog",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Adapters this install may offer, by capability",
+        "responses": {
+          "200": {
+            "description": "OK. {country, pack_version, sections: [{capability, adapters: [...]}]}: capability is payments | payouts | messaging | login | address | invoice | identity, only those with an adapter. Each adapter: id, name, section (the /v1/admin/setup/{section} card its keys live in, empty when it has none), recommended (named by the country pack; recommended ones come first in pack order), caps (names such as card, partial_refund, saved_method, split), webhook_url (null when it takes no webhooks), docs {keys_url, signup_url} (display-only links from the pack, either may be null), configured, source (none | console | env | aws_role | builtin), locked, mode (test | live | null), owner_code (the first save needs the owner TOTP header) and fields [{name, kind, required, set}] (a toggle also has value, its boolean position). No stored text is ever returned, masked or not: secrets are write-only and show only as set"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v1/admin/setup/{section}": {
       "parameters": [
         {

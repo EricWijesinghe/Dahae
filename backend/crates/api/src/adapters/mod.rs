@@ -67,7 +67,26 @@ impl Caps {
     pub const fn with(self, o: Caps) -> Caps {
         Caps(self.0 | o.0)
     }
+
+    /// The set flags by name, in `CAP_NAMES` order: what the setup catalog shows.
+    pub fn names(self) -> Vec<&'static str> {
+        CAP_NAMES.iter().filter(|(_, c)| self.has(*c)).map(|(n, _)| *n).collect()
+    }
 }
+
+const CAP_NAMES: [(&str, Caps); 11] = [
+    ("card", Caps::CARD),
+    ("local_methods", Caps::LOCAL_METHODS),
+    ("partial_refund", Caps::PARTIAL_REFUND),
+    ("saved_method", Caps::SAVED_METHOD),
+    ("split", Caps::SPLIT),
+    ("async_rail", Caps::ASYNC_RAIL),
+    ("installments", Caps::INSTALLMENTS),
+    ("webhook_signed", Caps::WEBHOOK_SIGNED),
+    ("templates_required", Caps::TEMPLATES_REQUIRED),
+    ("delivery_receipts", Caps::DELIVERY_RECEIPTS),
+    ("onboard_kyc", Caps::ONBOARD_KYC),
+];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Capability {
@@ -78,6 +97,30 @@ pub enum Capability {
     Address,
     Invoice,
     Identity,
+}
+
+impl Capability {
+    pub const ALL: [Capability; 7] = [
+        Self::Payments,
+        Self::Payouts,
+        Self::Messaging,
+        Self::Login,
+        Self::Address,
+        Self::Invoice,
+        Self::Identity,
+    ];
+
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::Payments => "payments",
+            Self::Payouts => "payouts",
+            Self::Messaging => "messaging",
+            Self::Login => "login",
+            Self::Address => "address",
+            Self::Invoice => "invoice",
+            Self::Identity => "identity",
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -125,6 +168,8 @@ pub type Build = fn(&Providers, &'static str) -> AnyAdapter;
 pub struct AdapterSpec {
     /// The code new rows store, forever.
     pub id: &'static str,
+    /// Brand name on its setup card; empty shows the id.
+    pub name: &'static str,
     /// Further codes this adapter writes or once wrote, forever (Toss's billing MID: `tosspayments_billing`).
     pub extra_codes: &'static [&'static str],
     /// `integration_settings.section` its keys live in; "" for an adapter without keys.
@@ -163,6 +208,7 @@ const ANYWHERE: &[&str] = &["*"];
 
 const BASE: AdapterSpec = AdapterSpec {
     id: "",
+    name: "",
     extra_codes: &[],
     section: "",
     capability: Capability::Payments,
@@ -181,6 +227,7 @@ const KR_PG: Caps = Caps::CARD.with(Caps::LOCAL_METHODS).with(Caps::PARTIAL_REFU
 pub static ADAPTERS: &[AdapterSpec] = &[
     AdapterSpec {
         id: "portone",
+        name: "PortOne",
         section: "portone",
         caps: KR_PG.with(Caps::WEBHOOK_SIGNED),
         hosts: &["api.portone.io"],
@@ -190,6 +237,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
     },
     AdapterSpec {
         id: TOSS,
+        name: "Toss Payments",
         extra_codes: &[TOSS_BILLING],
         section: TOSS,
         caps: KR_PG.with(Caps::INSTALLMENTS),
@@ -208,6 +256,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
     },
     AdapterSpec {
         id: "toss",
+        name: "Toss Payments payouts",
         section: "payout",
         capability: Capability::Payouts,
         caps: Caps::ONBOARD_KYC.with(Caps::WEBHOOK_SIGNED),
@@ -218,6 +267,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
     },
     AdapterSpec {
         id: "manual",
+        name: "Manual transfer",
         capability: Capability::Payouts,
         countries: ANYWHERE,
         build: Some(manual::build),
@@ -225,6 +275,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
     },
     AdapterSpec {
         id: "solapi",
+        name: "Solapi",
         section: "solapi",
         capability: Capability::Messaging,
         caps: Caps::TEMPLATES_REQUIRED,
@@ -234,6 +285,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
     },
     AdapterSpec {
         id: "kakao",
+        name: "Kakao",
         section: "kakao",
         capability: Capability::Login,
         hosts: &["kapi.kakao.com"],
@@ -242,6 +294,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
     },
     AdapterSpec {
         id: "naver",
+        name: "Naver",
         section: "naver",
         capability: Capability::Login,
         hosts: &["nid.naver.com", "openapi.naver.com"],
@@ -250,6 +303,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
     },
     AdapterSpec {
         id: "google",
+        name: "Google",
         section: "google",
         capability: Capability::Login,
         countries: ANYWHERE,
@@ -259,6 +313,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
     },
     AdapterSpec {
         id: "apple",
+        name: "Apple",
         section: "apple",
         capability: Capability::Login,
         countries: ANYWHERE,
@@ -268,6 +323,7 @@ pub static ADAPTERS: &[AdapterSpec] = &[
     },
     AdapterSpec {
         id: "juso",
+        name: "Juso",
         section: "juso",
         capability: Capability::Address,
         hosts: &["business.juso.go.kr"],
@@ -467,6 +523,14 @@ mod tests {
         }
         let dark: Vec<&str> = ADAPTERS.iter().filter(|s| s.status == AdapterStatus::Dark).map(|s| s.id).collect();
         assert_eq!(dark, ["portone_cash_receipt", "portone_identity"]);
+    }
+
+    #[test]
+    fn every_cap_has_one_name() {
+        let all = CAP_NAMES.iter().fold(Caps::NONE, |acc, (_, c)| acc.with(*c));
+        assert_eq!(all.0.count_ones() as usize, CAP_NAMES.len(), "one bit per name");
+        assert_eq!(Caps::ONBOARD_KYC.with(Caps::CARD).names(), ["card", "onboard_kyc"]);
+        assert!(Caps::NONE.names().is_empty());
     }
 
     #[test]

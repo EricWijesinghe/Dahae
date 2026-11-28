@@ -17,4 +17,6 @@ pub struct AppState {
     pub lockout: Arc<crate::lockout::Lockout>,
     /// The country pack this install runs, merged and validated at boot.
     pub pack: Arc<crate::pack::Pack>,
+    /// Login and OTP reads match the E.164 phone copies (`phone::reads_ready`, set once per start).
+    pub phone_e164_reads: Arc<std::sync::atomic::AtomicBool>,
 }
