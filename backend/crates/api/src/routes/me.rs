@@ -25,7 +25,7 @@ use serde_json::{Value, json};
 use uuid::Uuid;
 
 // i18n-archive: extra languages archived in archive/i18n-extra-languages (see README to restore)
-pub const SUPPORTED_LOCALES: [&str; 2] = ["ko", "en"];
+pub const SUPPORTED_LOCALES: [&str; 3] = ["ko", "en", "ar"];
 const MAX_NAME_LEN: usize = 40;
 const MAX_ADDRESS_LEN: usize = 200;
 

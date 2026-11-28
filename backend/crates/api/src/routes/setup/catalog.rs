@@ -33,7 +33,7 @@ pub(super) async fn get_catalog(State(s): State<AppState>, Admin(_): Admin) -> A
 }
 
 /// The pack's recommendations for a capability, in its order.
-fn recommended(p: &Pack, cap: Capability) -> Vec<&str> {
+pub(super) fn recommended(p: &Pack, cap: Capability) -> Vec<&str> {
     let list: Vec<&String> = match cap {
         Capability::Payments => p.payments.recommended.iter().collect(),
         Capability::Payouts => p.payouts.recommended.iter().collect(),

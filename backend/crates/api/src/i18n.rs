@@ -518,7 +518,11 @@ mod tests {
 
     #[test]
     fn table_has_no_blank_translation() {
-        assert_eq!(crate::routes::me::SUPPORTED_LOCALES, ["ko", "en"]);
+        assert_eq!(crate::routes::me::SUPPORTED_LOCALES, ["ko", "en", "ar"]);
+        // Every shipped locale is one the console may pick for the install, and the reverse.
+        assert_eq!(crate::routes::me::SUPPORTED_LOCALES, crate::settings_registry::LOCALES);
+        // Arabic is a machine-translated test locale on the apps: server text goes out in English for it.
+        assert_eq!(tr("ar", "새 예약"), "New booking");
         for (ko, en) in TABLE {
             assert!(!en.trim().is_empty(), "blank translation for {ko}");
         }

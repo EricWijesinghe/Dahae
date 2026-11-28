@@ -125,7 +125,9 @@ pub const INSTALL_GROUP: &str = "install";
 pub const COUNTRIES: &[&str] = &["KR"];
 pub const CURRENCIES: &[&str] = &["KRW"];
 pub const ZONES: &[&str] = &["Asia/Seoul"];
-pub const LOCALES: &[&str] = &["ko", "en"];
+/// Every locale this build ships, the console's and the customers' alike. `ar` is a machine-translated test locale
+/// (right to left) until a reviewed translation replaces it.
+pub const LOCALES: &[&str] = &["ko", "en", "ar"];
 
 pub const GROUPS: &[&str] = &["business", "marketing", "points", "quality", "ops", INSTALL_GROUP];
 
@@ -168,6 +170,10 @@ pub const SPECS: &[Spec] = &[
     text("install.pack_version_applied", INSTALL_GROUP, 32, ""),
     // RFC 3339 time of the first live payment; the country can no longer change after it.
     text("install.locked_at", INSTALL_GROUP, 40, ""),
+    // Who sells the cleaning: the owner's company (merchant of record) or the pros through a split-capable gateway.
+    choice("install.marketplace_model", crate::pack::KNOWN_MARKETPLACE_MODELS, false),
+    // RFC 3339 time the owner acknowledged a draft pack ("check with a local lawyer"); the audit log names who.
+    text("install.draft_ack", INSTALL_GROUP, 40, ""),
 ];
 
 /// Pairs whose order drives the alert levels: the first must stay below the second.
@@ -274,6 +280,11 @@ async fn load(db: &PgPool, cfg: &Config, key: &str) -> ApiResult<Value> {
         .fetch_optional(db)
         .await?;
     Ok(resolve(spec, stored.as_ref(), seed(cfg, key)).0)
+}
+
+/// The effective value of one key in stored form (Null for an unset choice), for handlers and jobs.
+pub async fn get_value(db: &PgPool, cfg: &Config, key: &str) -> ApiResult<Value> {
+    load(db, cfg, key).await
 }
 
 /// The effective integer value of one key, for handlers and jobs.

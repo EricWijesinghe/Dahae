@@ -234,6 +234,9 @@ async fn create(State(s): State<AppState>, Customer(a): Customer, Json(body): Js
     if matches!(req, CheckoutRequest::Booking { .. }) && super::config::maintenance_on(&s.db, &s.config).await? {
         return Err(ApiError::Unavailable("maintenance"));
     }
+    // D10: no live money while a hard go-live gate is red. shortcut: saved-card renewals are not gated, since they
+    // only follow a first checkout that passed; gate them too if an install can lose a gate after going live.
+    crate::golive::require_live_ready(&s, gw).await?;
     let intent = match &req {
         CheckoutRequest::Booking { booking, expected_total, .. } => booking_intent(&s, a.id, booking, *expected_total).await?,
         CheckoutRequest::Deposit {

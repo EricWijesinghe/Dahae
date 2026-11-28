@@ -22,6 +22,7 @@ pub mod demo;
 pub mod domains;
 pub mod entropy;
 pub mod error;
+pub mod golive;
 pub mod host_jobs;
 pub mod host_status;
 pub mod i18n;

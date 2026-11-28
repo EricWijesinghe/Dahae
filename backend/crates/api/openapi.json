@@ -378,7 +378,7 @@
         "security": [],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK. {needs_admin, dev_mode, preview}: preview is true while an install that chose its country in the setup wizard has a red go-live gate (the website shows a preview banner)"
           }
         }
       }
@@ -4260,6 +4260,143 @@
         "responses": {
           "200": {
             "description": "OK. {country, pack_version, sections: [{capability, adapters: [...]}]}: capability is payments | payouts | messaging | login | address | invoice | identity, only those with an adapter. Each adapter: id, name, section (the /v1/admin/setup/{section} card its keys live in, empty when it has none), recommended (named by the country pack; recommended ones come first in pack order), caps (names such as card, partial_refund, saved_method, split), webhook_url (null when it takes no webhooks), docs {keys_url, signup_url} (display-only links from the pack, either may be null), configured, source (none | console | env | aws_role | builtin), locked, mode (test | live | null), owner_code (the first save needs the owner TOTP header) and fields [{name, kind, required, set}] (a toggle also has value, its boolean position). No stored text is ever returned, masked or not: secrets are write-only and show only as set"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/languages": {
+      "get": {
+        "operationId": "adminSetupLanguages",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Console, customer and own languages",
+        "responses": {
+          "200": {
+            "description": "OK. {console_locale, locales, my_locale, pack_locales, shipped: [{code, name (in its own language), rtl, machine (machine-translated, shown with a banner)}]}. console_locale and locales are null until set"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "adminPutSetupLanguages",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Set languages (wizard step 0)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK, the same body as GET. Body: {console_locale?, locales? (non-empty, no repeats), my_locale? (empty clears it)}, each a shipped locale; anything else is 400 invalid_locale and nothing is saved. console_locale and locales need a staff admin (403 otherwise); any staff member may set my_locale"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/packs": {
+      "get": {
+        "operationId": "adminSetupPacks",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Country packs with preview cards (wizard step 1)",
+        "responses": {
+          "200": {
+            "description": "OK. {current: {country, currency, tz, locales, pack_version_applied, locked_at, marketplace_model, draft_ack, locked}, default (the pack this image runs; the owner still confirms it), packs: [{id, name, version, maturity, draft, currency, minor_units, zones, locales, legal, recommended: {capability: [adapter id]}, marketplace_models}]}. Only adapters offered to new setups are recommended"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/country": {
+      "put": {
+        "operationId": "adminPutSetupCountry",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Owner sets the install's country",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK, the same body as GET /v1/admin/setup/packs. Body: {country, draft_ack?}. A new country resets currency, time zone and customer languages to the pack's; draft_ack records the owner's acknowledgement of a draft pack. 400 unknown_country, 403 for anyone but the owner, 409 country_locked after the first live payment"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/country/preview": {
+      "get": {
+        "operationId": "adminSetupCountryPreview",
+        "tags": [
+          "admin"
+        ],
+        "summary": "What changing the country would change",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO 3166-1 alpha-2 code of a pack in this image"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. {country (preview card), changes: [{key, from, to}], unavailable_adapters (saved integrations the country does not offer; their keys stay stored), allowed, reason (country_locked or null)}. 400 unknown_country"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/marketplace": {
+      "put": {
+        "operationId": "adminPutSetupMarketplace",
+        "tags": [
+          "admin"
+        ],
+        "summary": "How you sell (wizard step 4)",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/Object"
+        },
+        "responses": {
+          "200": {
+            "description": "OK, the same body as GET /v1/admin/setup/gates. Body: {model}, one the country pack lists (merchant_of_record, split_by_psp); 400 invalid_marketplace_model, 403 for anyone but the owner"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/admin/setup/gates": {
+      "get": {
+        "operationId": "adminSetupGates",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Go-live gates (wizard review step)",
+        "responses": {
+          "200": {
+            "description": "OK. {preview (a hard gate is red), enforced (the install chose its country in the wizard; earlier installs are never put in preview), blocking (the red gates that refuse a checkout on live keys with 409 site_in_preview), gates: [{id (draft_pack_ack | business_fields | marketplace_model | payment_live_keys | legal_published | checklist), hard, ok, step (the wizard step that fixes it), missing (ids of what is missing)}]}. Checklist items only warn"
           },
           "default": {
             "$ref": "#/components/responses/Error"

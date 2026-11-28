@@ -35,6 +35,7 @@ use uuid::Uuid;
 
 pub mod brand;
 mod catalog;
+pub mod country;
 pub mod install;
 mod operator;
 
@@ -45,7 +46,7 @@ const SETUP_ALPHABET: &[u8] = b"23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const SETUP_CODE_KEY: &str = "setup_code";
 /// The installer's setup code works for seven days after it is issued: owners often finish DNS and payment signups later.
 const SETUP_CODE_TTL_SECS: i64 = 7 * 24 * 60 * 60;
-const BUSINESS_KEY: &str = "business";
+pub(crate) const BUSINESS_KEY: &str = "business";
 /// An owner unlock lets one save or clear through, then the card locks again.
 const UNLOCK_TTL_SECS: i64 = 5 * 60;
 const REVIEW_KEY: &str = "review_account";
@@ -74,6 +75,12 @@ pub fn admin_routes() -> Router<AppState> {
         .route("/setup/store-build/ack", post(operator::ack_store_build))
         .route("/setup/review", put(put_review).delete(clear_review))
         .route("/setup/catalog", get(catalog::get_catalog))
+        .route("/setup/languages", get(country::get_languages).put(country::put_languages))
+        .route("/setup/packs", get(country::get_packs))
+        .route("/setup/country", put(country::put_country))
+        .route("/setup/country/preview", get(country::get_preview))
+        .route("/setup/marketplace", put(country::put_marketplace))
+        .route("/setup/gates", get(country::get_gates))
         .route("/setup/{section}", put(put_section).delete(clear_section))
         .route("/setup/{section}/test", post(test_section))
         .route("/setup/{section}/unlock", post(unlock_section))
@@ -163,7 +170,12 @@ fn check_setup_code(expected: &str, issued_at: Option<i64>, given: &str, now: i6
 
 /// Public: whether the console should show "create the owner account" instead of login.
 async fn state(State(s): State<AppState>) -> ApiResult<Json<Value>> {
-    Ok(Json(json!({ "needs_admin": !has_staff(&s.db).await?, "dev_mode": s.config.dev_mode })))
+    Ok(Json(json!({
+        "needs_admin": !has_staff(&s.db).await?,
+        "dev_mode": s.config.dev_mode,
+        // D10: the website shows a preview banner while a hard go-live gate is red.
+        "preview": country::public_preview(&s).await?,
+    })))
 }
 
 #[derive(Deserialize)]
