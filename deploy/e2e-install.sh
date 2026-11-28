@@ -36,7 +36,7 @@ else
 fi
 ENVS+=("MALKKEUM_DOMAIN=$DOMAIN" "MALKKEUM_EMAIL=ci@example.com" "MALKKEUM_VERSION=$TAG" "MALKKEUM_TLS=internal"
   "MALKKEUM_HEALTH_WAIT=240" "MALKKEUM_AGENT_FILE=$(pwd)/deploy/agent.sh" "MALKKEUM_FIREWALL=on"
-  "DAHAE_LANG=ko") # the steps below read the Korean texts; step 9c checks English and Arabic
+  "DAHAE_LANG=ko") # the steps below read the Korean texts; step 9b checks English and Arabic
 mkdir -p "$LOG"
 
 step() { printf '\n== %s  (%s)\n' "$*" "$(date +%T)"; }
@@ -138,8 +138,10 @@ create_owner() {
 }
 staff_login() { post /v1/auth/staff/login "{\"email\":\"$OWNER_EMAIL\",\"password\":\"$OWNER_PASSWORD\"}"; }
 owner_token() { # console sign-in: password, then the TOTP second factor
-  local mfa; mfa=$(staff_login | json mfa_token)
-  post /v1/auth/staff/mfa/verify "{\"mfa_token\":\"$mfa\",\"code\":\"$(fresh_totp)\"}" | json access_token
+  local r mfa
+  r=$(staff_login); mfa=$(printf '%s' "$r" | json mfa_token 2>/dev/null) || { echo "sign-in answered: $r" >&2; return 1; }
+  r=$(post /v1/auth/staff/mfa/verify "{\"mfa_token\":\"$mfa\",\"code\":\"$(fresh_totp)\"}")
+  printf '%s' "$r" | json access_token 2>/dev/null || { echo "second factor answered: $r" >&2; return 1; }
 }
 wizard_has_sections() { local o; o=$(get_auth /v1/admin/setup "$TOKEN"); for s in portone tosspayments solapi backup business; do echo "$o" | grep -q "\"$s\"" || return 1; done; }
 heartbeat_on_in_wizard() { get_auth /v1/admin/setup "$(owner_token)" | grep -q '"heartbeat_configured":true'; }
@@ -159,7 +161,7 @@ stranger_refused() { ! curl -sk --max-time 20 --resolve "stranger.test:443:127.0
 bad_domain_refused() { ! $SUDO env DAHAE_YES=1 /usr/local/bin/dahae domain localhost </dev/null >/dev/null 2>&1; }
 drop_hosts_line() { $SUDO sed -i '/ # dahae-e2e$/d' /etc/hosts; }
 put_auth() { curl_d -H "Authorization: Bearer $2" -H 'Content-Type: application/json' -X PUT "https://$DOMAIN$1" -d "$3"; }
-# Step 9c (R4): the wizard of a fresh install, whose country is still unset, in English and in Arabic.
+# Step 9b (R4): the wizard of a fresh install, whose country is still unset, in English and in Arabic.
 no_country_yet() { [ "$(get_auth /v1/admin/setup/packs "$W" | json current country)" = None ]; }
 kr_pack_offered() { [ "$(get_auth /v1/admin/setup/packs "$W" | json default)" = KR ]; }
 no_dark_adapter_offered() { ! get_auth /v1/admin/setup/packs "$W" | grep -Eq '"(stripe|twilio|google_places|oidc)"'; }
@@ -429,7 +431,22 @@ expect "back to production config" wait_until 180 api_env_is DEV_MODE 0
 expect "API healthy in production mode" wait_until 180 api_healthy
 expect "no dev login codes in production mode" no_dev_code
 
-step "9b. domain move: the new domain serves, the old one keeps answering (apps) and sends pages over"
+step "9b. a fresh install's wizard in en and ar: languages, country card, go-live gates, CLI texts"
+W=$(owner_token)
+expect "the owner is signed in" test -n "$W"
+expect "no country chosen yet" no_country_yet
+expect "the KR pack is offered as the default" kr_pack_offered
+expect "dark adapters are never offered" no_dark_adapter_offered
+expect "the owner chooses the country" country_chosen
+expect "the chosen country turns the go-live gates on" gates_enforced
+expect "the website's preview flag follows the gates" site_preview_matches_gates
+for l in en ar; do
+  expect "languages set to $l" languages_set "$l"
+  expect "the website reads $l from the brand" wait_until 60 brand_lists_language "$l"
+  expect "dahae speaks $l without Korean" cli_speaks_without_korean "$l"
+done
+
+step "9c. domain move: the new domain serves, the old one keeps answering (apps) and sends pages over"
 OLD_DOMAIN=$DOMAIN
 # `dahae domain` checks https://<new>/health through the resolver, so the new name must resolve on this machine.
 echo "127.0.0.1 $NEW_DOMAIN # dahae-e2e" | $SUDO tee -a /etc/hosts >/dev/null
@@ -446,21 +463,6 @@ expect "the old domain names the new one for the apps" old_names_new_domain
 expect "old website pages move to the new domain (301)" old_page_moved
 expect "a stranger's host name gets no certificate" stranger_refused
 expect "a bad domain is refused" bad_domain_refused
-
-step "9c. a fresh install's wizard in en and ar: languages, country card, go-live gates, CLI texts"
-W=$(owner_token)
-expect "the owner is signed in" test -n "$W"
-expect "no country chosen yet" no_country_yet
-expect "the KR pack is offered as the default" kr_pack_offered
-expect "dark adapters are never offered" no_dark_adapter_offered
-expect "the owner chooses the country" country_chosen
-expect "the chosen country turns the go-live gates on" gates_enforced
-expect "the website's preview flag follows the gates" site_preview_matches_gates
-for l in en ar; do
-  expect "languages set to $l" languages_set "$l"
-  expect "the website reads $l from the brand" wait_until 60 brand_lists_language "$l"
-  expect "dahae speaks $l without Korean" cli_speaks_without_korean "$l"
-done
 
 step "10. uninstall"
 expect "--purge is not skipped by --yes or DAHAE_YES" purge_needs_domain
