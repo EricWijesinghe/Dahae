@@ -570,4 +570,28 @@ mod tests {
             assert!(banned.iter().all(|b| !src.contains(b)), "an adapter module uses sqlx or axum");
         }
     }
+
+    /// Test constructors drop the outbound rules (`HttpGuard` without https, PublicOnly or a connect timeout) or
+    /// send the stored Juso key to any URL: nothing under `src` calls them.
+    #[test]
+    fn test_only_constructors_are_never_called_from_src() {
+        let banned = [concat!("::allow_local", "_for_tests("), concat!("Juso::", "at(")];
+        let mut dirs = vec![std::path::PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/src"))];
+        let mut files = 0;
+        while let Some(dir) = dirs.pop() {
+            for entry in std::fs::read_dir(&dir).expect("read src") {
+                let path = entry.expect("entry").path();
+                if path.is_dir() {
+                    dirs.push(path);
+                } else if path.extension().is_some_and(|e| e == "rs") {
+                    files += 1;
+                    let src = std::fs::read_to_string(&path).expect("read file");
+                    for b in banned {
+                        assert!(!src.contains(b), "{} calls {b}", path.display());
+                    }
+                }
+            }
+        }
+        assert!(files > 100, "walked the source tree ({files} files)");
+    }
 }

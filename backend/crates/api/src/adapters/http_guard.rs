@@ -65,9 +65,11 @@ pub fn public_ip(ip: IpAddr) -> bool {
 }
 
 fn public_v4(ip: Ipv4Addr) -> bool {
-    let [a, b, ..] = ip.octets();
+    let [a, b, c, _] = ip.octets();
     let shared = a == 100 && (64..128).contains(&b); // 100.64.0.0/10, carrier-grade NAT
     let benchmark = a == 198 && (18..20).contains(&b); // 198.18.0.0/15
+    let protocol = a == 192 && b == 0 && c == 0; // 192.0.0.0/24, IETF protocol assignments
+    let relay = a == 192 && b == 88 && c == 99; // 192.88.99.0/24, 6to4 relay anycast
     !(ip.is_private()
         || ip.is_loopback()
         || ip.is_link_local()
@@ -77,17 +79,26 @@ fn public_v4(ip: Ipv4Addr) -> bool {
         || ip.is_multicast()
         || shared
         || benchmark
+        || protocol
+        || relay
         || a == 0
         || a >= 240)
 }
 
 fn public_v6(ip: Ipv6Addr) -> bool {
-    let first = ip.segments()[0];
-    let unique_local = first & 0xfe00 == 0xfc00; // fc00::/7
-    let link_local = first & 0xffc0 == 0xfe80; // fe80::/10
-    let documentation = first == 0x2001 && ip.segments()[1] == 0x0db8; // 2001:db8::/32
-    let nat64 = first == 0x0064 && ip.segments()[1] == 0xff9b; // 64:ff9b::/96 can embed a private v4
-    !(ip.is_loopback() || ip.is_unspecified() || ip.is_multicast() || unique_local || link_local || documentation || nat64)
+    let s = ip.segments();
+    let unique_local = s[0] & 0xfe00 == 0xfc00; // fc00::/7
+    let link_local = s[0] & 0xffc0 == 0xfe80; // fe80::/10
+    let documentation = s[0] == 0x2001 && s[1] == 0x0db8; // 2001:db8::/32
+    let discard = s[..4] == [0x0100, 0, 0, 0]; // 100::/64
+    // Forms that embed a v4 address, which may be private or loopback: NAT64 (64:ff9b::/96 and /48),
+    // IPv4-compatible ::/96 (also :: and ::1), IPv4-translated ::ffff:0:0/96, 6to4 2002::/16 and Teredo 2001::/32.
+    let nat64 = s[0] == 0x0064 && s[1] == 0xff9b;
+    let compatible = s[..6] == [0; 6];
+    let translated = s[..4] == [0; 4] && s[4] == 0xffff && s[5] == 0;
+    let six_to_four = s[0] == 0x2002;
+    let teredo = s[0] == 0x2001 && s[1] == 0;
+    !(ip.is_multicast() || unique_local || link_local || documentation || discard || nat64 || compatible || translated || six_to_four || teredo)
 }
 
 /// Resolves with the system resolver and keeps only public addresses. No public address: the lookup fails.
@@ -130,6 +141,8 @@ impl HttpGuard {
             .redirect(redirect::Policy::none())
             .https_only(true)
             .dns_resolver(Arc::new(PublicOnly))
+            // A proxy would resolve the target itself, past PublicOnly: HTTP(S)_PROXY and ALL_PROXY are ignored.
+            .no_proxy()
             .build()
             .map_err(upstream)?;
         Ok(Self { client, hosts, local: None })
@@ -143,6 +156,7 @@ impl HttpGuard {
         let client = reqwest::Client::builder()
             .timeout(TIMEOUT)
             .redirect(redirect::Policy::none())
+            .no_proxy()
             .build()
             .map_err(upstream)?;
         Ok(Self {
@@ -155,10 +169,15 @@ impl HttpGuard {
     /// A request to `url` once it passes the rules: https, a listed host, and no non-public address literal.
     pub fn request(&self, method: Method, url: &str) -> R<RequestBuilder> {
         let u = Url::parse(url).map_err(|_| refused("not a URL"))?;
-        if !self.local.as_ref().is_some_and(|l| l.origin() == u.origin()) {
-            self.check(&u)?;
-        }
+        self.allowed(&u)?;
         Ok(self.client.request(method, u))
+    }
+
+    fn allowed(&self, u: &Url) -> R<()> {
+        if self.local.as_ref().is_some_and(|l| l.origin() == u.origin()) {
+            return Ok(());
+        }
+        self.check(u)
     }
 
     fn check(&self, u: &Url) -> R<()> {
@@ -180,15 +199,18 @@ impl HttpGuard {
     }
 
     /// Sends a request. An idempotent one is retried on a transport error or a 502/503/504, with a short backoff;
-    /// anything else is sent once, because it may have taken effect.
+    /// anything else is sent once, because it may have taken effect. The URL is checked again and the guard's own
+    /// client sends it, so a builder from another client (or one whose URL changed) gets no way around the rules.
     pub async fn send(&self, rb: RequestBuilder, idempotent: bool) -> R<Response> {
+        let req = rb.build().map_err(upstream)?;
+        self.allowed(req.url())?;
         let attempts = if idempotent { ATTEMPTS } else { 1 };
         let mut last = refused("no attempt made");
         for attempt in 1..=attempts {
-            let Some(this) = rb.try_clone() else {
-                return rb.send().await.map_err(upstream);
+            let Some(this) = req.try_clone() else {
+                return self.client.execute(req).await.map_err(upstream);
             };
-            match this.send().await {
+            match self.client.execute(this).await {
                 Ok(r) if attempt < attempts && retryable(r.status()) => last = ProviderError::Upstream(format!("status {}", r.status())),
                 Ok(r) => return Ok(r),
                 Err(e) if e.is_builder() || e.is_redirect() => return Err(upstream(e)),
@@ -235,10 +257,19 @@ mod tests {
             "::ffff:127.0.0.1",
             "64:ff9b::a00:1",
             "2001:db8::1",
+            "::127.0.0.1",
+            "::10.0.0.1",
+            "::ffff:0:127.0.0.1",
+            "2002:7f00:1::1",
+            "2002:a9fe:a9fe::1",
+            "2001:0:4136:e378::1",
+            "100::1",
+            "192.0.0.170",
+            "192.88.99.1",
         ] {
             assert!(!public_ip(bad.parse().expect(bad)), "{bad}");
         }
-        for ok in ["1.1.1.1", "203.0.114.1", "2606:4700::1111"] {
+        for ok in ["1.1.1.1", "203.0.114.1", "192.0.1.1", "2606:4700::1111", "2001:4860::8888"] {
             assert!(public_ip(ok.parse().expect(ok)), "{ok}");
         }
     }
@@ -272,6 +303,16 @@ mod tests {
         let g = HttpGuard::new(Hosts::Owner("login.example.org".into())).expect("client");
         assert!(g.request(Method::GET, "https://login.example.org/.well-known/openid-configuration").is_ok());
         assert!(g.request(Method::GET, "https://other.example.org/").is_err());
+    }
+
+    #[tokio::test]
+    async fn a_builder_from_another_client_is_checked_before_sending() {
+        let g = guard();
+        for url in ["https://evil.example.com/", "http://api.example.com/", "https://127.0.0.1/"] {
+            let foreign = reqwest::Client::new().get(url);
+            let err = g.send(foreign, true).await.expect_err(url);
+            assert!(err.to_string().contains("outbound request refused"), "{url}: {err}");
+        }
     }
 
     #[tokio::test]

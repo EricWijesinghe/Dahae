@@ -182,6 +182,10 @@ pub async fn serve() -> Result<(), Box<dyn std::error::Error>> {
 /// columns.
 fn spawn_phone_backfill(db: PgPool, region: String, e164_reads: Arc<AtomicBool>) {
     tokio::spawn(async move {
+        if let Err(e) = phone::record_writer(&db, env!("CARGO_PKG_VERSION")).await {
+            tracing::warn!(error = %e, "phone copy writer not recorded; logins stay on the old columns");
+            return;
+        }
         match phone::backfill(&db, &region, phone::BACKFILL_BATCH).await {
             Ok(0) => {}
             Ok(filled) => tracing::info!(filled, "phone numbers copied into E.164"),
@@ -195,7 +199,8 @@ fn spawn_phone_backfill(db: PgPool, region: String, e164_reads: Arc<AtomicBool>)
                 e164_reads.store(true, Ordering::Relaxed);
                 tracing::info!("phone logins read the E.164 copies");
             }
-            Ok(false) => tracing::warn!("phone logins stay on the old columns: some phones have no E.164 copy yet"),
+            // reads_ready logged why.
+            Ok(false) => {}
             Err(e) => tracing::warn!(error = %e, "phone read switch check failed; logins stay on the old columns"),
         }
     });

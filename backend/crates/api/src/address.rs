@@ -100,7 +100,7 @@ pub fn parse(v: &Value) -> Result<Vec<Hit>, ProviderError> {
         .collect())
 }
 
-/// Same as [`search`] against `base`; tests point it at a local fake.
+/// Same as [`search`] against `base`; tests point it at a local fake. Errors drop the URL: it carries `confmKey`.
 pub async fn search_at(http: &reqwest::Client, base: &str, key: &str, keyword: &str, page: u32) -> Result<Vec<Hit>, ProviderError> {
     let page = page.to_string();
     let count = PAGE_SIZE.to_string();
@@ -115,11 +115,11 @@ pub async fn search_at(http: &reqwest::Client, base: &str, key: &str, keyword: &
         ])
         .send()
         .await
-        .map_err(|e| ProviderError::Upstream(e.to_string()))?;
+        .map_err(|e| ProviderError::Upstream(e.without_url().to_string()))?;
     if !resp.status().is_success() {
         return Err(ProviderError::Upstream(format!("status {}", resp.status())));
     }
-    let body: Value = resp.json().await.map_err(|e| ProviderError::Upstream(e.to_string()))?;
+    let body: Value = resp.json().await.map_err(|e| ProviderError::Upstream(e.without_url().to_string()))?;
     parse(&body)
 }
 
@@ -233,5 +233,14 @@ mod tests {
         let hits = search_at(&http, &base, "KEY-1", "테헤란로", 2).await.expect("search");
         assert_eq!(hits[0].road_address, "테헤란로|2|10");
         assert!(matches!(search_at(&http, &base, "WRONG", "테헤란로", 1).await, Err(ProviderError::Upstream(_))));
+    }
+
+    #[tokio::test]
+    async fn transport_errors_do_not_carry_the_key() {
+        let http = reqwest::Client::new();
+        let err = search_at(&http, "http://127.0.0.1:1/addrLinkApi.do", "SECRET-CONFM-KEY-123", "테헤란로", 1)
+            .await
+            .expect_err("nothing listens");
+        assert!(!err.to_string().contains("SECRET-CONFM-KEY-123"), "{err}");
     }
 }

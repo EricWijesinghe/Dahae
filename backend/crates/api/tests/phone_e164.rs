@@ -519,8 +519,15 @@ async fn backfill_pages_use_the_primary_key_in_a_generic_plan(db: PgPool) {
     }
 }
 
-/// The router over a state whose read switch was decided like a start does: backfill, then `reads_ready`.
+/// Any release older than this one that started here with writers of both columns.
+async fn older_writer(db: &PgPool) {
+    phone::record_writer(db, "1.0.0").await.expect("older writer");
+}
+
+/// The router over a state whose read switch was decided like a start does: record this release as a writer,
+/// backfill, then `reads_ready`.
 async fn switched_app(db: &PgPool) -> (axum::Router, bool) {
+    phone::record_writer(db, env!("CARGO_PKG_VERSION")).await.expect("writer");
     phone::backfill(db, "KR", phone::BACKFILL_BATCH).await.expect("backfill");
     let ready = phone::reads_ready(db, "KR").await.expect("switch check");
     let state = build_state(db.clone(), test_config()).expect("state");
@@ -530,6 +537,7 @@ async fn switched_app(db: &PgPool) -> (axum::Router, bool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn the_read_switch_waits_for_a_complete_backfill(db: PgPool) {
+    older_writer(&db).await;
     previous_release_rows(&db).await;
     assert!(!phone::reads_ready(&db, "KR").await.expect("check"), "old rows without copies");
     phone::backfill(&db, "KR", 2).await.expect("backfill");
@@ -538,30 +546,94 @@ async fn the_read_switch_waits_for_a_complete_backfill(db: PgPool) {
         "every parseable phone has its copy; placeholders need none"
     );
 
-    // A phone the previous release writes after a rollback holds the switch until the next backfill.
-    previous_release_login(&db, N1_USER_UPSERT, "01077778888").await;
+    // A partner phone the previous release writes after a rollback holds the switch until the next backfill.
+    previous_release_login(&db, N1_PRO_UPSERT, "01077778888").await;
     assert!(!phone::reads_ready(&db, "KR").await.expect("check"));
 }
 
-/// A phone whose copy the backfill cannot write: another row already holds that copy.
+/// A partner phone whose copy the backfill cannot write: another pro already holds that copy.
 async fn blocked_copy(db: &PgPool) {
-    sqlx::query("INSERT INTO users (phone, name, phone_e164) VALUES ('01099990002', 'holder', $1)")
+    sqlx::query("INSERT INTO pros (phone, phone_e164) VALUES ('01099990002', $1)")
         .bind(PHONE_E164)
         .execute(db)
         .await
         .expect("holder");
-    user_with_phone(db, PHONE).await;
+    sqlx::query("INSERT INTO pros (phone) VALUES ($1)").bind(PHONE).execute(db).await.expect("pro");
 }
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn the_read_switch_waits_while_a_copy_cannot_be_written(db: PgPool) {
+    older_writer(&db).await;
     blocked_copy(&db).await;
     phone::backfill(&db, "KR", 10).await.expect("backfill");
     assert!(!phone::reads_ready(&db, "KR").await.expect("check"));
 }
 
+/// Staff, referral, user and outbox phones are never read by login: a duplicate there leaves its copy empty without
+/// holding the switch.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_copy_missing_outside_the_login_tables_does_not_hold_the_switch(db: PgPool) {
+    older_writer(&db).await;
+    sqlx::query(
+        "INSERT INTO staff (email, name, password_hash, role, phone, phone_e164) VALUES ('a@test.local', 'a', 'x', 'admin', '01055550009', $1),
+                ('b@test.local', 'b', 'x', 'admin', $2, NULL)",
+    )
+    .bind(PHONE_E164)
+    .bind(PHONE)
+    .execute(&db)
+    .await
+    .expect("staff");
+    sqlx::query("INSERT INTO users (phone, name, phone_e164) VALUES ('01099990002', 'holder', $1)")
+        .bind(PHONE_E164)
+        .execute(&db)
+        .await
+        .expect("holder");
+    user_with_phone(&db, PHONE).await;
+    phone::backfill(&db, "KR", 10).await.expect("backfill");
+    let left: i64 = sqlx::query_scalar("SELECT (SELECT count(*) FROM staff WHERE phone_e164 IS NULL) + (SELECT count(*) FROM users WHERE phone_e164 IS NULL)")
+        .fetch_one(&db)
+        .await
+        .expect("count");
+    assert_eq!(left, 2, "both duplicates stay without a copy");
+    assert!(phone::reads_ready(&db, "KR").await.expect("check"));
+}
+
+/// The first release that writes the copies may run beside, or be rolled back to, one that writes none: a pro made
+/// by that older release would be missed by a switched read. Only a later release switches.
+#[sqlx::test(migrations = "../../migrations")]
+async fn the_first_release_that_writes_copies_never_switches(db: PgPool) {
+    let pro: Uuid = sqlx::query_scalar("INSERT INTO pros (phone) VALUES ('01022223335') RETURNING id")
+        .fetch_one(&db)
+        .await
+        .expect("pro");
+    // A probe row whose copy names another number than its phone: only a switched read finds it by that number.
+    let member: Uuid = sqlx::query_scalar(
+        "INSERT INTO team_members (pro_id, name, phone, phone_e164, role, invite_status)
+         VALUES ($1, 'm', '01099990003', '+821044445557', 'member', 'active') RETURNING id",
+    )
+    .bind(pro)
+    .fetch_one(&db)
+    .await
+    .expect("member");
+    let (app, ready) = switched_app(&db).await;
+    assert!(!ready, "every copy is filled, but no older release wrote them");
+    let (_, subject) = login(&app, "01044445557", "partner").await;
+    assert_ne!(subject, member.to_string(), "read by the old column: a new partner, not the member");
+    phone::record_writer(&db, "1.0.0")
+        .await
+        .expect("an older start cannot replace the first writer");
+    assert!(!phone::reads_ready(&db, "KR").await.expect("check"), "the first writer recorded stays");
+    sqlx::query("UPDATE settings SET value = to_jsonb('1.0.0'::text) WHERE key = $1")
+        .bind(phone::WRITER_KEY)
+        .execute(&db)
+        .await
+        .expect("as if 1.0.0 had started first");
+    assert!(phone::reads_ready(&db, "KR").await.expect("check"), "the next release switches");
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn the_read_switch_waits_while_the_previous_release_could_not_sign_a_row_in(db: PgPool) {
+    older_writer(&db).await;
     let pro: Uuid = sqlx::query_scalar("INSERT INTO pros (phone, phone_e164) VALUES ('01022220009', '+821022220009') RETURNING id")
         .fetch_one(&db)
         .await
@@ -592,6 +664,7 @@ async fn switched_logins_read_the_copies_and_the_previous_release_still_signs_in
     .fetch_one(&db)
     .await
     .expect("member");
+    older_writer(&db).await;
     let (app, ready) = switched_app(&db).await;
     assert!(ready);
 
@@ -637,7 +710,8 @@ async fn before_the_switch_logins_read_the_old_columns(db: PgPool) {
     .execute(&db)
     .await
     .expect("member");
-    // A user without a copy keeps the switch off.
+    // A partner without a copy keeps the switch off.
+    older_writer(&db).await;
     blocked_copy(&db).await;
     let (app, ready) = switched_app(&db).await;
     assert!(!ready);

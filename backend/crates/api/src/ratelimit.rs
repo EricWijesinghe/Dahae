@@ -71,6 +71,9 @@ pub fn bucket_for(path: &str) -> Bucket {
         "/v1/address/search" => Bucket::AddressSearch,
         "/v1/webhooks/toss" | "/v1/webhooks/tosspayments" => Bucket::Webhook,
         _ if path == "/v1/auth" || path.starts_with("/v1/auth/") => Bucket::Auth,
+        // An encoded webhook path (`/v1/webhooks/%74oss`) is never a real delivery; the route answers 404, counted
+        // in the tight bucket so it cannot ride the general budget.
+        _ if path.starts_with("/v1/webhooks/") && path.contains('%') => Bucket::Webhook,
         _ => Bucket::General,
     }
 }
@@ -442,6 +445,9 @@ mod tests {
         assert_eq!(bucket_for("/v1/webhooks/toss"), Bucket::Webhook);
         assert_eq!(bucket_for("/v1/webhooks/tosspayments"), Bucket::Webhook);
         assert_eq!(bucket_for("/v1/webhooks/portone"), Bucket::General, "only the Toss hooks are tightened");
+        for encoded in ["/v1/webhooks/%74oss", "/v1/webhooks/tosspayment%73", "/v1/webhooks/%70ortone"] {
+            assert_eq!(bucket_for(encoded), Bucket::Webhook, "{encoded}");
+        }
         assert_eq!(bucket_for("/v1/events/extra"), Bucket::General);
     }
 

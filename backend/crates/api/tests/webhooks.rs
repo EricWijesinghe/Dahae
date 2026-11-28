@@ -107,6 +107,17 @@ async fn the_generic_webhook_route_answers_404_for_anything_without_webhooks(poo
     assert_eq!(post(&app, "/v1/webhooks/portone", &headers, body).await, StatusCode::OK);
 }
 
+/// An encoded id would dodge the literal alias routes (and the Toss webhook rate-limit bucket): it is 404.
+#[sqlx::test(migrations = "../../migrations")]
+async fn the_generic_webhook_route_refuses_percent_encoded_ids(pool: PgPool) {
+    let app = app(pool);
+    for uri in ["/v1/webhooks/%74oss", "/v1/webhooks/tosspayment%73", "/v1/webhooks/%70ortone"] {
+        let body = payment_event(PAYMENT_ID);
+        let headers = signed_headers(KEY, "msg_encoded", &body);
+        assert_eq!(post(&app, uri, &headers, body).await, StatusCode::NOT_FOUND, "{uri}");
+    }
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn portone_event_signed_with_another_key_is_rejected(pool: PgPool) {
     let app = app(pool);

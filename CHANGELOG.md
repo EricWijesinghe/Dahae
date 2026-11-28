@@ -8,7 +8,13 @@ from the release branches; no tags existed for them.
 
 ## [Unreleased]
 
+### Added
+- Provider webhooks have one route, `POST /v1/webhooks/{adapter}`, for every registered adapter that takes deliveries. The paths providers were set up with (`/v1/webhooks/portone`, `/v1/webhooks/toss`, `/v1/webhooks/tosspayments`) stay as aliases of the same handlers and keep their rate limits. An unknown id, an adapter without webhooks, or a percent-encoded id answers 404.
+- `GET /admin/setup/catalog` lists the adapters this server offers, with links to the pack's provider docs; secrets are write-only. The console shows a generic card for an adapter without its own card.
+- Migrations 0512 and 0513 add indexes on the E.164 phone copies of OTP codes and team members. They are built with `CREATE INDEX CONCURRENTLY` at boot, so a large table delays readiness but blocks no writes; a failed build is cleaned up as each file says.
+
 ### Changed
+- Phone sign-in (OTP codes, partner owners, team members) reads the E.164 copies once three things hold at start: an older release that writes the copies already ran on this server, the background fill has given every login phone its copy, and no login row has a copy without its phone. The first release here that writes the copies never switches, so a rollback to, or a replica still running, a release that writes no copy keeps signing everyone in. The server logs "phone logins read the E.164 copies" when it switches; otherwise it logs why it stays on the old columns, with the table that holds it back. A duplicate number in staff, referral, customer or outbox phones no longer holds the switch.
 - Documentation: every guide has an English version (new English pages for guides 8 to 11; guide 5 English first; an English summary on the Korea-only AlimTalk guide), the install page points at the English provider guide, the manual book has an English entry page, and the bilingual reference docs link straight to their English half. README, architecture and deployment docs describe what 1.6.6 built for country packs (the built-in KR pack, install facts, `adapters_ok` and `pack_ok`) and the update editions.
 
 ## [1.6.6] - 2026-11-28

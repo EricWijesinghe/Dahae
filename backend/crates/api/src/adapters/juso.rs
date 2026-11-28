@@ -16,11 +16,16 @@ pub struct Juso {
 }
 
 pub fn build(p: &Providers, _code: &'static str) -> AnyAdapter {
-    AnyAdapter::Address(Arc::new(Juso::at(p, address::JUSO_API)))
+    AnyAdapter::Address(Arc::new(Juso {
+        p: p.clone(),
+        base: address::JUSO_API.to_string(),
+    }))
 }
 
 impl Juso {
-    /// Juso at another endpoint. Tests point it at a mock.
+    /// Juso at another endpoint, with the stored key. Tests only (they point it at a mock): a source test keeps
+    /// every call out of `src`.
+    #[doc(hidden)]
     pub fn at(p: &Providers, base: &str) -> Self {
         Self {
             p: p.clone(),

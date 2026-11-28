@@ -87,8 +87,8 @@ pub const BACKFILL_BATCH: i64 = 1000;
 /// never lose an update. Placeholders (empty, `deleted:<id>`, `hmac:<digest>`) are left without a copy.
 /// Returns the number of rows filled.
 /// shortcut: runs once per start, so a row an older replica writes after that waits for the next start. The read
-/// switch ([`reads_ready`]) is decided once per start after this run; the previous release (1.6.6) writes both
-/// columns, but a phone a replica older than 0507 writes while reads are switched is found only after the next start.
+/// switch ([`reads_ready`]) is decided once per start after this run, and only once an older release with writers
+/// of both columns started here, so no release older than 0507 is the rollback target or still running.
 pub async fn backfill(db: &PgPool, region: &str, batch: i64) -> Result<u64, sqlx::Error> {
     let mut filled = 0;
     for column in COLUMNS {
@@ -97,20 +97,65 @@ pub async fn backfill(db: &PgPool, region: &str, batch: i64) -> Result<u64, sqlx
     Ok(filled)
 }
 
-/// Whether login reads may move to the E.164 copies. Both must hold:
-/// - the backfill is complete: no stored phone that parses for `region` lacks its copy (one it could not write
-///   because another row holds the number counts as missing);
-/// - the previous release still signs in: no row has a copy without the phone that release reads.
+/// The tables whose reads switch (`routes::auth`): OTP codes, partner owners and team members. The other phone
+/// columns are filled too, but a copy they cannot get (a duplicate staff or referral number) never holds the switch.
+const LOGIN_TABLES: [&str; 3] = ["otp_codes", "pros", "team_members"];
+
+/// Settings row naming the first release that started here with writers of both columns.
+pub const WRITER_KEY: &str = "phone.e164_writer_since";
+
+/// Records that `version` writes both columns, unless an earlier start already recorded a release.
+pub async fn record_writer(db: &PgPool, version: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("INSERT INTO settings (key, value) VALUES ($1, to_jsonb($2::text)) ON CONFLICT (key) DO NOTHING")
+        .bind(WRITER_KEY)
+        .bind(version)
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
+/// `1.6.7` (or `1.6.7-beta.1`) as numbers, for ordering releases.
+fn release(v: &str) -> Option<Vec<u64>> {
+    v.split('-').next()?.split('.').map(|p| p.parse().ok()).collect()
+}
+
+/// Whether a release older than `current` already started here with writers of both columns. A release without
+/// them (older than 0507) writes phones with no copy, which a switched read never finds; the previous release, the
+/// rollback target, and any replica still running it must write the copies too (plan §8.3).
+pub async fn previous_release_writes(db: &PgPool, current: &str) -> Result<bool, sqlx::Error> {
+    let first: Option<String> = sqlx::query_scalar("SELECT value #>> '{}' FROM settings WHERE key = $1")
+        .bind(WRITER_KEY)
+        .fetch_optional(db)
+        .await?;
+    Ok(first.and_then(|f| release(&f)).zip(release(current)).is_some_and(|(f, c)| f < c))
+}
+
+/// Whether login reads may move to the E.164 copies. All must hold:
+/// - an older release already wrote both columns here ([`previous_release_writes`]), so the first release with
+///   writers never switches: it may run beside, or be rolled back to, one that writes no copy;
+/// - the backfill is complete for the login tables: no stored phone that parses for `region` lacks its copy (one
+///   it could not write because another row holds the number counts as missing);
+/// - the previous release still signs in: no login row has a copy without the phone that release reads.
 ///
-/// A phone that does not parse has no copy and needs none: [`lookup`] matches it on the old column.
+/// A phone that does not parse has no copy and needs none: [`lookup`] matches it on the old column. The reason a
+/// check fails is logged with its table, so the owner can find the row.
 pub async fn reads_ready(db: &PgPool, region: &str) -> Result<bool, sqlx::Error> {
-    for c in COLUMNS {
+    if !previous_release_writes(db, env!("CARGO_PKG_VERSION")).await? {
+        tracing::info!("phone logins stay on the old columns until the next release: this is the first one here that writes E.164 copies");
+        return Ok(false);
+    }
+    for c in COLUMNS.iter().filter(|c| LOGIN_TABLES.contains(&c.table)) {
         if scan_column(db, region, c, BACKFILL_BATCH, false).await? > 0 {
+            tracing::warn!(
+                table = c.table,
+                "phone logins stay on the old columns: phones without an E.164 copy (a duplicate number is logged by the backfill)"
+            );
             return Ok(false);
         }
         let (t, p) = (c.table, c.phone);
         let orphan = format!("SELECT EXISTS (SELECT 1 FROM {t} WHERE {p}_e164 IS NOT NULL AND ({p} IS NULL OR {p} = ''))");
         if sqlx::query_scalar::<_, bool>(&orphan).fetch_one(db).await? {
+            tracing::warn!(table = t, "phone logins stay on the old columns: an E.164 copy without its phone");
             return Ok(false);
         }
     }
@@ -209,7 +254,15 @@ async fn run_update(db: &PgPool, update: &str, rows: &[(String, String, String)]
 
 #[cfg(test)]
 mod tests {
-    use super::{e164, lookup};
+    use super::{e164, lookup, release};
+
+    #[test]
+    fn releases_order_by_number_not_text() {
+        assert!(release("1.6.6") < release("1.6.7"));
+        assert!(release("1.6.9") < release("1.6.10"));
+        assert!(release("1.6.7-beta.1") == release("1.6.7"), "a beta is not older than its release");
+        assert_eq!(release("x.y"), None);
+    }
 
     #[test]
     fn korean_mobiles_as_stored_become_e164() {

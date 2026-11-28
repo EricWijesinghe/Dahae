@@ -24,7 +24,7 @@ use axum::{
     Json, Router,
     body::Bytes,
     extract::{Path, State},
-    http::HeaderMap,
+    http::{HeaderMap, Uri},
     response::{IntoResponse, Response},
     routing::post,
 };
@@ -58,7 +58,12 @@ pub fn webhook_handler(adapter: &str) -> Option<&'static str> {
     crate::adapters::ADAPTERS.iter().find(|s| s.id == adapter && s.webhook.is_some()).map(|s| s.id)
 }
 
-async fn by_adapter(State(s): State<AppState>, Path(adapter): Path<String>, headers: HeaderMap, body: Bytes) -> ApiResult<Response> {
+/// Adapter ids never need percent-encoding, and the router matches the raw path: an encoded segment
+/// (`/webhooks/%74oss`) would reach a handler that has a literal alias while missing that alias's rate-limit bucket.
+async fn by_adapter(State(s): State<AppState>, uri: Uri, Path(adapter): Path<String>, headers: HeaderMap, body: Bytes) -> ApiResult<Response> {
+    if uri.path().contains('%') {
+        return Err(ApiError::NotFound);
+    }
     match webhook_handler(&adapter) {
         Some("portone") => portone(State(s), headers, body).await.map(IntoResponse::into_response),
         Some(TOSS) => toss_payments(State(s), headers, body).await.map(IntoResponse::into_response),
