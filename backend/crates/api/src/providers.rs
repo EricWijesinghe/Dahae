@@ -231,6 +231,11 @@ impl Providers {
         *self.live.write().unwrap_or_else(|e| e.into_inner()) = Live::new(integ);
     }
 
+    /// The key that opens sealed billing keys (`Config::data_key`), for the dev-only fake gateways.
+    pub fn data_key(&self) -> &[u8; 32] {
+        &self.cfg.data_key
+    }
+
     pub fn http(&self) -> &reqwest::Client {
         &self.http
     }

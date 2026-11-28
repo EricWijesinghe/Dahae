@@ -555,12 +555,30 @@ fn dev_providers(dev_mode: bool) -> Providers {
 #[tokio::test]
 async fn unknown_codes_fail_closed() {
     let p = dev_providers(true);
-    for code in ["stripe", "", "solapi", "manual"] {
+    for code in ["mollie", "", "solapi", "manual"] {
         assert!(
             matches!(adapters::payment_gateway(&p, code).err(), Some(ProviderError::NotConfigured(_))),
             "{code}"
         );
     }
+}
+
+/// The Dark global adapters run on dev-only fakes (8.4): refused in production, one shared fake each in dev mode.
+#[tokio::test]
+async fn dark_adapters_are_dev_only_fakes() {
+    let prod = dev_providers(false);
+    assert!(matches!(
+        adapters::payment_gateway(&prod, "stripe").err(),
+        Some(ProviderError::NotConfigured(_))
+    ));
+    assert!(adapters::messenger(&prod, "twilio").is_err());
+    assert!(adapters::address_lookup(&prod, "google_places").is_err());
+    assert!(adapters::social_verifier(&prod, "oidc").is_err());
+    let dev = dev_providers(true);
+    assert!(adapters::payment_gateway(&dev, "stripe").is_ok());
+    assert!(adapters::messenger(&dev, "twilio").is_ok());
+    assert!(adapters::address_lookup(&dev, "google_places").is_ok());
+    assert!(adapters::social_verifier(&dev, "oidc").is_ok());
 }
 
 #[tokio::test]

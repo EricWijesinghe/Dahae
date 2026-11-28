@@ -59,12 +59,12 @@ async fn a_legacy_pg_payment_stays_ready(pool: PgPool) {
 fn the_known_adapters_cover_every_code_ever_written() {
     let mut known = api::lifecycle::known_adapters();
     known.sort_unstable();
-    assert_eq!(known, ["manual", "pg", "portone", "toss", "tosspayments", "tosspayments_billing"]);
+    assert_eq!(known, ["manual", "pg", "portone", "stripe", "toss", "tosspayments", "tosspayments_billing"]);
 }
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn a_refundable_payment_on_an_unknown_adapter_fails_readiness(pool: PgPool) {
-    payment(&pool, "stripe", "paid").await;
+    payment(&pool, "mollie", "paid").await;
     let (st, doc) = call(&common::app(pool), "GET", "/ready", None, None).await;
     assert_eq!(st, StatusCode::SERVICE_UNAVAILABLE, "{doc}");
     assert_eq!((doc["ready"].clone(), doc["adapters_ok"].clone()), (json!(false), json!(false)), "{doc}");
@@ -73,7 +73,7 @@ async fn a_refundable_payment_on_an_unknown_adapter_fails_readiness(pool: PgPool
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn an_unknown_adapter_with_nothing_left_to_refund_stays_ready(pool: PgPool) {
-    payment(&pool, "stripe", "refunded").await;
+    payment(&pool, "mollie", "refunded").await;
     let (st, doc) = call(&common::app(pool), "GET", "/ready", None, None).await;
     assert_eq!((st, doc["adapters_ok"].clone()), (StatusCode::OK, json!(true)), "{doc}");
 }
@@ -85,7 +85,7 @@ async fn a_live_saved_card_on_an_unknown_adapter_fails_readiness(pool: PgPool) {
         .fetch_one(&pool)
         .await
         .expect("user");
-    sqlx::query("INSERT INTO payment_methods (user_id, provider, billing_key, display_name, gateway) VALUES ($1, 'card', 'bk', 'card', 'stripe')")
+    sqlx::query("INSERT INTO payment_methods (user_id, provider, billing_key, display_name, gateway) VALUES ($1, 'card', 'bk', 'card', 'mollie')")
         .bind(user)
         .execute(&pool)
         .await

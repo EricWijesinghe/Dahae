@@ -181,8 +181,8 @@ fn urls_are_refused_outside_display_keys() {
 fn docs_links_name_registry_adapters_and_open_over_https() {
     assert_eq!(kr().docs["portone"].keys_url.as_deref(), Some("https://admin.portone.io"));
     refused(
-        |v| v["docs"]["stripe"] = json!({"keys_url": "https://stripe.example"}),
-        "docs: unknown adapter id stripe",
+        |v| v["docs"]["mollie"] = json!({"keys_url": "https://mollie.example"}),
+        "docs: unknown adapter id mollie",
     );
     refused(
         |v| v["docs"]["portone"]["keys_url"] = json!("http://admin.portone.io"),

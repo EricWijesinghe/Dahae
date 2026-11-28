@@ -184,6 +184,8 @@ pub struct AdapterSpec {
     pub status: AdapterStatus,
     /// None for a code with nothing of its own to call.
     pub build: Option<Build>,
+    /// Its build is a dev-only fake until the real shim ships: refused outside dev mode (8.4).
+    pub fake: bool,
 }
 
 impl AdapterSpec {
@@ -205,6 +207,8 @@ impl AdapterSpec {
 
 const KR: &[&str] = &["KR"];
 const ANYWHERE: &[&str] = &["*"];
+/// The first-wave countries after KR (PLAN 9).
+const FIRST_WAVE: &[&str] = &["GB", "IE", "AU", "NZ", "SG", "DE", "NL", "FR", "JP"];
 
 const BASE: AdapterSpec = AdapterSpec {
     id: "",
@@ -218,6 +222,7 @@ const BASE: AdapterSpec = AdapterSpec {
     webhook: None,
     status: AdapterStatus::Available,
     build: None,
+    fake: false,
 };
 
 const KR_PG: Caps = Caps::CARD.with(Caps::LOCAL_METHODS).with(Caps::PARTIAL_REFUND).with(Caps::SAVED_METHOD);
@@ -350,6 +355,59 @@ pub static ADAPTERS: &[AdapterSpec] = &[
         build: Some(portone_identity::build),
         ..BASE
     },
+    // The first-wave global adapters (PLAN 9), Dark (D11): compiled in so a rollback target knows their codes, never
+    // offered or written, running on dev-only fakes until their shims and keys land (R5). No webhook route yet.
+    AdapterSpec {
+        id: "stripe",
+        name: "Stripe",
+        countries: FIRST_WAVE,
+        caps: Caps::CARD
+            .with(Caps::LOCAL_METHODS)
+            .with(Caps::PARTIAL_REFUND)
+            .with(Caps::SAVED_METHOD)
+            .with(Caps::SPLIT)
+            .with(Caps::ASYNC_RAIL)
+            .with(Caps::WEBHOOK_SIGNED),
+        hosts: &["api.stripe.com"],
+        status: AdapterStatus::Dark,
+        build: Some(fake_ports::build_dark),
+        fake: true,
+        ..BASE
+    },
+    AdapterSpec {
+        id: "twilio",
+        name: "Twilio",
+        capability: Capability::Messaging,
+        countries: ANYWHERE,
+        caps: Caps::DELIVERY_RECEIPTS,
+        hosts: &["api.twilio.com", "verify.twilio.com"],
+        status: AdapterStatus::Dark,
+        build: Some(fake_ports::build_dark),
+        fake: true,
+        ..BASE
+    },
+    AdapterSpec {
+        id: "google_places",
+        name: "Google Places",
+        capability: Capability::Address,
+        countries: ANYWHERE,
+        hosts: &["places.googleapis.com"],
+        status: AdapterStatus::Dark,
+        build: Some(fake_ports::build_dark),
+        fake: true,
+        ..BASE
+    },
+    // Owner-entered issuers go through HttpGuard's `Hosts::Owner`, so no fixed hosts.
+    AdapterSpec {
+        id: "oidc",
+        name: "OpenID Connect",
+        capability: Capability::Login,
+        countries: ANYWHERE,
+        status: AdapterStatus::Dark,
+        build: Some(fake_ports::build_dark),
+        fake: true,
+        ..BASE
+    },
 ];
 
 /// The spec a stored code belongs to, whatever its status: rows written by any release stay readable.
@@ -375,6 +433,9 @@ pub fn offerable_codes() -> Vec<&'static str> {
 /// yet, is `NotConfigured`: fail closed.
 pub fn adapter(p: &Providers, code: &str) -> R<AnyAdapter> {
     let spec = spec(code).ok_or(ProviderError::NotConfigured("adapter"))?;
+    if spec.fake && !p.dev() {
+        return Err(ProviderError::NotConfigured("adapter"));
+    }
     let build = spec.build.ok_or(ProviderError::NotConfigured("adapter"))?;
     let code = spec.codes().find(|c| *c == code).unwrap_or(spec.id);
     Ok(build(p, code))
@@ -475,7 +536,8 @@ mod tests {
     fn readiness_knows_the_same_codes_as_before_the_registry() {
         let mut known = stored_codes(&[Capability::Payments, Capability::Payouts]);
         known.sort_unstable();
-        assert_eq!(known, ["manual", "pg", "portone", "toss", "tosspayments", "tosspayments_billing"]);
+        // `stripe` is Dark: readiness knows it one release before any row can name it (D11).
+        assert_eq!(known, ["manual", "pg", "portone", "stripe", "toss", "tosspayments", "tosspayments_billing"]);
     }
 
     #[test]
@@ -511,7 +573,7 @@ mod tests {
     #[test]
     fn spec_finds_extra_codes_and_refuses_unknown_ones() {
         assert_eq!(spec(TOSS_BILLING).map(|s| s.id), Some(TOSS));
-        assert!(spec("stripe").is_none());
+        assert!(spec("mollie").is_none());
         assert!(spec("").is_none());
     }
 
@@ -522,7 +584,28 @@ mod tests {
             assert!(s.build.is_some(), "{} has no shim", s.id);
         }
         let dark: Vec<&str> = ADAPTERS.iter().filter(|s| s.status == AdapterStatus::Dark).map(|s| s.id).collect();
-        assert_eq!(dark, ["portone_cash_receipt", "portone_identity"]);
+        assert_eq!(dark, ["portone_cash_receipt", "portone_identity", "stripe", "twilio", "google_places", "oidc"]);
+    }
+
+    /// The Dark global adapters run on fakes in dev mode only, are never offered to a pack, and take no webhook yet.
+    #[test]
+    fn dark_global_adapters_are_fakes_never_offered() {
+        let offered = offerable_codes();
+        for id in ["stripe", "twilio", "google_places", "oidc"] {
+            let s = spec(id).expect(id);
+            assert_eq!(s.status, AdapterStatus::Dark, "{id}");
+            assert!(s.fake && !s.writable() && s.webhook.is_none(), "{id}");
+            assert!(!offered.contains(&id), "{id} is offered while Dark");
+            assert!(!READ_BY_PREVIOUS_RELEASE.contains(&id), "{id}");
+        }
+        assert!(
+            spec("stripe").is_some_and(|s| s.caps.has(Caps::SPLIT)),
+            "a marketplace country needs a split gateway"
+        );
+        assert!(
+            ADAPTERS.iter().filter(|s| s.fake).all(|s| s.status == AdapterStatus::Dark),
+            "a fake is never offered"
+        );
     }
 
     #[test]

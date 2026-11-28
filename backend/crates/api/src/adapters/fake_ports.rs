@@ -351,6 +351,32 @@ impl IdentityVerifier for FakeIdentity {
     }
 }
 
+// ---- the Dark adapters' stand-ins ----
+
+/// What the Dark adapters (`stripe`, `twilio`, `google_places`, `oidc`) run on until their real shims ship: one
+/// process-wide fake each, so a fresh-country flow keeps its state across calls. `adapters::adapter` refuses them
+/// outside dev mode before this runs (`AdapterSpec::fake`), so the dev-only constructors cannot fail here.
+pub fn build_dark(p: &crate::providers::Providers, code: &'static str) -> super::AnyAdapter {
+    use super::AnyAdapter;
+    use super::fake::{FakeGateway, Flavour};
+    use std::sync::{Arc, OnceLock};
+    static PAY: OnceLock<Arc<FakeGateway>> = OnceLock::new();
+    static MSG: OnceLock<Arc<FakeMessenger>> = OnceLock::new();
+    static ADDRESS: OnceLock<Arc<FakeAddress>> = OnceLock::new();
+    static LOGIN: OnceLock<Arc<FakeSocial>> = OnceLock::new();
+    const DEV: &str = "a Dark adapter is built only in dev mode";
+    match code {
+        // Checkout then read, like Stripe Checkout: the payment exists once the customer paid in the window.
+        "stripe" => AnyAdapter::Pay(
+            PAY.get_or_init(|| Arc::new(FakeGateway::new(Flavour::PortOne, true, *p.data_key(), "dark-fake").expect(DEV)))
+                .clone(),
+        ),
+        "twilio" => AnyAdapter::Msg(MSG.get_or_init(|| Arc::new(FakeMessenger::new(true).expect(DEV))).clone()),
+        "google_places" => AnyAdapter::Address(ADDRESS.get_or_init(|| Arc::new(FakeAddress::new(true).expect(DEV))).clone()),
+        _ => AnyAdapter::Login(LOGIN.get_or_init(|| Arc::new(FakeSocial::new(true).expect(DEV))).clone()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
